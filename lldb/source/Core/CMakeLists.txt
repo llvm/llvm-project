@@ -76,6 +76,8 @@ add_lldb_library(lldbCore
     Demangle
   )
 
+add_dependencies(lldbCore LLDBPropertiesGen LLDBPropertiesEnumGen)
+
 # Needed to properly resolve references in a debug build.
 # TODO: Remove once we have better layering
 set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 4)

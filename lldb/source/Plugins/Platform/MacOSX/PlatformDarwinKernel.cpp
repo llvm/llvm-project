@@ -178,14 +178,14 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
 /// Code to handle the PlatformDarwinKernel settings
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"search-locally-for-kexts", OptionValue::eTypeBoolean, true, true, NULL,
-     {}, "Automatically search for kexts on the local system when doing "
-           "kernel debugging."},
-    {"kext-directories", OptionValue::eTypeFileSpecList, false, 0, NULL, {},
-     "Directories/KDKs to search for kexts in when starting a kernel debug "
-     "session."}};
+#define LLDB_PROPERTIES_platformdarwinkernel
+#include "Properties.inc"
+};
 
-enum { ePropertySearchForKexts = 0, ePropertyKextDirectories };
+enum {
+#define LLDB_PROPERTIES_platformdarwinkernel
+#include "PropertiesEnum.inc"
+};
 
 class PlatformDarwinKernelProperties : public Properties {
 public:

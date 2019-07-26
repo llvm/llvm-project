@@ -111,39 +111,13 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout",
-     OptionValue::eTypeUInt64,
-     true,
-     5
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-         * 2
-#endif
-#endif
-     ,
-     nullptr,
-     {},
-     "Specify the default packet timeout in seconds."},
-    {"target-definition-file",
-     OptionValue::eTypeFileSpec,
-     true,
-     0,
-     nullptr,
-     {},
-     "The file that provides the description for remote target registers."},
-    {"use-libraries-svr4",
-     OptionValue::eTypeBoolean,
-     true,
-     false,
-     nullptr,
-     {},
-     "If true, the libraries-svr4 feature will be used to get a hold of the "
-     "process's loaded modules."}};
+#define LLDB_PROPERTIES_processgdbremote
+#include "Properties.inc"
+};
 
 enum {
-  ePropertyPacketTimeout,
-  ePropertyTargetDefinitionFile,
-  ePropertyUseSVR4
+#define LLDB_PROPERTIES_processgdbremote
+#include "PropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
@@ -2469,7 +2443,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
     // Clear the thread stop stack
     m_stop_packet_stack.clear();
   }
-  
+
   // If we have queried for a default thread id
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
