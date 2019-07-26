@@ -211,6 +211,23 @@ namespace TestSuppress {
     }
 }
 
+namespace TestLifetimeCategories {
+class [[gsl::Owner(int)]] AOwner{};
+// CHECK: CXXRecordDecl{{.*}} class AOwner
+// CHECK: OwnerAttr {{.*}} int
+class [[gsl::Pointer(int)]] APointer{};
+// CHECK: CXXRecordDecl{{.*}} class APointer
+// CHECK: PointerAttr {{.*}} int
+
+class [[gsl::Pointer]] PointerWithoutArgument{};
+// CHECK: CXXRecordDecl{{.*}} class PointerWithoutArgument
+// CHECK: PointerAttr
+
+class [[gsl::Owner]] OwnerWithoutArgument{};
+// CHECK: CXXRecordDecl{{.*}} class OwnerWithoutArgument
+// CHECK: OwnerAttr
+} // namespace TestLifetimeCategories
+
 // Verify the order of attributes in the Ast. It must reflect the order
 // in the parsed source.
 int mergeAttrTest() __attribute__((deprecated)) __attribute__((warn_unused_result));

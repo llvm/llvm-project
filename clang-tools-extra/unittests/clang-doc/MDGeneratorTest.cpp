@@ -38,7 +38,7 @@ TEST(MDGeneratorTest, emitNamespaceMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(# namespace Namespace
 
@@ -101,7 +101,7 @@ TEST(MDGeneratorTest, emitRecordMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(# class r
 
@@ -162,7 +162,7 @@ TEST(MDGeneratorTest, emitFunctionMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(### f
 
@@ -190,7 +190,7 @@ TEST(MDGeneratorTest, emitEnumMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(| enum class e |
 
@@ -320,7 +320,7 @@ TEST(MDGeneratorTest, emitCommentMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(### f

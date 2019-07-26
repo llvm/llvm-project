@@ -1,0 +1,205 @@
+body,div {
+  margin: 0;
+  padding: 0;
+}
+
+body[no-overflow] {
+  overflow: hidden;
+}
+
+li>p:first-child {
+  margin-top: 0;
+}
+
+li>p:last-child {
+  margin-bottom: 0;
+}
+
+html {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+*,*::before,*::after {
+  -webkit-box-sizing: inherit;
+  box-sizing: inherit;
+}
+
+body,html {
+  color: #202124;
+  font: 400 16px/24px Roboto,sans-serif;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+  margin: 36px;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body[devsite-framebox] {
+  overflow: hidden;
+  padding: 20px;
+}
+
+body[sitemask--active] {
+  overflow: hidden;
+}
+
+p {
+  margin: 16px 0;
+  padding: 0;
+}
+
+:link,:visited {
+  color: #039be5;
+  outline: 0;
+  text-decoration: none;
+}
+
+ul {
+  margin: 0;
+  padding-left: 40px;
+}
+
+ul {
+  list-style: disc outside;
+}
+
+li,li p {
+  margin: 12px 0;
+  padding: 0;
+}
+
+*[visually-hidden] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+*[hidden] {
+  display: none !important;
+}
+
+[render-hidden] {
+  display: inline !important;
+  position: absolute !important;
+  visibility: hidden !important;
+}
+
+*[no-scroll] {
+  overflow: hidden;
+}
+
+@supports (display: flex) {
+  body[ready] .devsite-wrapper {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+  }
+}
+
+@media screen and (max-width: 840px) {
+  body[devsite-book-nav--open] {
+    overflow: hidden;
+  }
+}
+
+h1,h2,h3,h4,h5,h6 {
+  overflow: hidden;
+  padding: 0;
+  text-overflow: ellipsis;
+}
+
+h1 {
+  color: #80868b;
+  font: 300 34px/40px Roboto,sans-serif;
+  letter-spacing: -0.01em;
+  margin: 40px 0 20px;
+}
+
+[layout=docs] h2 {
+  border-bottom: 1px solid #e8eaed;
+  padding-bottom: 3px;
+}
+
+h2 {
+  font: 300 24px/32px Roboto,sans-serif;
+  letter-spacing: -0.01em;
+  margin: 40px 0 20px;
+}
+
+h3 {
+  font: 400 20px/32px Roboto,sans-serif;
+  margin: 32px 0 16px;
+}
+
+h4,h5,h6 {
+  margin: 32px 0 16px;
+}
+
+h4 {
+  font: 500 16px/24px Roboto,sans-serif;
+}
+
+h5 {
+  font: 700 14px/24px Roboto,sans-serif;
+}
+
+h6 {
+  font: 500 14px/24px Roboto,sans-serif;
+}
+
+h1+h1,h1+h2,h1+h3,h1+h4,h1+h5,h1+h6,h2+h1,h2+h2,h2+h3,h2+h4,h2+h5,h2+h6,h3+h1,h3+h2,h3+h3,h3+h4,h3+h5,h3+h6,h4+h1,h4+h2,h4+h3,h4+h4,h4+h5,h4+h6,h5+h1,h5+h2,h5+h3,h5+h4,h5+h5,h5+h6,h6+h1,h6+h2,h6+h3,h6+h4,h6+h5,h6+h6 {
+  margin-top: 0;
+}
+
+@media screen and (max-width: 600px) {
+  h1 {
+    font: 300 24px/32px Roboto,sans-serif;
+  }
+}
+
+[scrollbars]::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+[scrollbars]::-webkit-scrollbar-thumb {
+  background: rgba(128,134,139,.26);
+  border-radius: 8px;
+}
+
+[no-horizontal-scrollbars]::-webkit-scrollbar {
+  height: 0;
+  width: 0;
+}
+
+[scrollbars]::-webkit-scrollbar-corner {
+  background: 0;
+}
+
+[background] h2 {
+  color: #fff;
+}
+
+@media print {
+  body,  html,  :link,  :visited,  h1,  h2,  h3,  h4,  h5,  h6 {
+    color: #000 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  :link,  :visited {
+    text-decoration: underline;
+  }
+}
+
+@page {
+  margin: .75in;
+}

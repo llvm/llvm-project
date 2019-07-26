@@ -203,14 +203,33 @@ public:
     return false;
   }
 
-  static unsigned getMergeOpcode(LLT OpTy, LLT DestTy) {
+  static unsigned canFoldMergeOpcode(unsigned MergeOp, unsigned ConvertOp,
+                                     LLT OpTy, LLT DestTy) {
     if (OpTy.isVector() && DestTy.isVector())
-      return TargetOpcode::G_CONCAT_VECTORS;
+      return MergeOp == TargetOpcode::G_CONCAT_VECTORS;
 
-    if (OpTy.isVector() && !DestTy.isVector())
-      return TargetOpcode::G_BUILD_VECTOR;
+    if (OpTy.isVector() && !DestTy.isVector()) {
+      if (MergeOp == TargetOpcode::G_BUILD_VECTOR)
+        return true;
 
-    return TargetOpcode::G_MERGE_VALUES;
+      if (MergeOp == TargetOpcode::G_CONCAT_VECTORS) {
+        if (ConvertOp == 0)
+          return true;
+
+        const unsigned OpEltSize = OpTy.getElementType().getSizeInBits();
+
+        // Don't handle scalarization with a cast that isn't in the same
+        // direction as the vector cast. This could be handled, but it would
+        // require more intermediate unmerges.
+        if (ConvertOp == TargetOpcode::G_TRUNC)
+          return DestTy.getSizeInBits() <= OpEltSize;
+        return DestTy.getSizeInBits() >= OpEltSize;
+      }
+
+      return false;
+    }
+
+    return MergeOp == TargetOpcode::G_MERGE_VALUES;
   }
 
   bool tryCombineMerges(MachineInstr &MI,
@@ -237,16 +256,14 @@ public:
       MergeI = getDefIgnoringCopies(SrcDef->getOperand(1).getReg(), MRI);
     }
 
-    // FIXME: Handle scalarizing concat_vectors (scalar result type with vector
-    // source)
-    unsigned MergingOpcode = getMergeOpcode(OpTy, DestTy);
-    if (!MergeI || MergeI->getOpcode() != MergingOpcode)
+    if (!MergeI || !canFoldMergeOpcode(MergeI->getOpcode(),
+                                       ConvertOp, OpTy, DestTy))
       return false;
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
 
     if (NumMergeRegs < NumDefs) {
-      if (ConvertOp != 0 || NumDefs % NumMergeRegs != 0)
+      if (NumDefs % NumMergeRegs != 0)
         return false;
 
       Builder.setInstr(MI);
@@ -264,7 +281,22 @@ public:
              ++j, ++DefIdx)
           DstRegs.push_back(MI.getOperand(DefIdx).getReg());
 
-        Builder.buildUnmerge(DstRegs, MergeI->getOperand(Idx + 1).getReg());
+        if (ConvertOp) {
+          SmallVector<Register, 2> TmpRegs;
+          // This is a vector that is being scalarized and casted. Extract to
+          // the element type, and do the conversion on the scalars.
+          LLT MergeEltTy
+            = MRI.getType(MergeI->getOperand(0).getReg()).getElementType();
+          for (unsigned j = 0; j < NumMergeRegs; ++j)
+            TmpRegs.push_back(MRI.createGenericVirtualRegister(MergeEltTy));
+
+          Builder.buildUnmerge(TmpRegs, MergeI->getOperand(Idx + 1).getReg());
+
+          for (unsigned j = 0; j < NumMergeRegs; ++j)
+            Builder.buildInstr(ConvertOp, {DstRegs[j]}, {TmpRegs[j]});
+        } else {
+          Builder.buildUnmerge(DstRegs, MergeI->getOperand(Idx + 1).getReg());
+        }
       }
 
     } else if (NumMergeRegs > NumDefs) {

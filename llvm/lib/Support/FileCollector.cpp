@@ -132,6 +132,25 @@ std::error_code FileCollector::copyFiles(bool StopOnError) {
         return EC;
     }
 
+    // Get the status of the original file/directory.
+    sys::fs::file_status Stat;
+    if (std::error_code EC = sys::fs::status(entry.VPath, Stat)) {
+      if (StopOnError)
+        return EC;
+      continue;
+    }
+
+    if (Stat.type() == sys::fs::file_type::directory_file) {
+      // Construct a directory when it's just a directory entry.
+      if (std::error_code EC =
+              sys::fs::create_directories(entry.RPath,
+                                          /*IgnoreExisting=*/true)) {
+        if (StopOnError)
+          return EC;
+      }
+      continue;
+    }
+
     // Copy file over.
     if (std::error_code EC = sys::fs::copy_file(entry.VPath, entry.RPath)) {
       if (StopOnError)
@@ -147,12 +166,6 @@ std::error_code FileCollector::copyFiles(bool StopOnError) {
     }
 
     // Copy over modification time.
-    sys::fs::file_status Stat;
-    if (std::error_code EC = sys::fs::status(entry.VPath, Stat)) {
-      if (StopOnError)
-        return EC;
-      continue;
-    }
     copyAccessAndModificationTime(entry.RPath, Stat);
   }
   return {};

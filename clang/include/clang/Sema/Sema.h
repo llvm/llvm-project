@@ -2114,48 +2114,6 @@ public:
   bool SetParamDefaultArgument(ParmVarDecl *Param, Expr *DefaultArg,
                                SourceLocation EqualLoc);
 
-  // Contexts where using non-trivial C union types can be disallowed. This is
-  // passed to err_non_trivial_c_union_in_invalid_context.
-  enum NonTrivialCUnionContext {
-    // Function parameter.
-    NTCUC_FunctionParam,
-    // Function return.
-    NTCUC_FunctionReturn,
-    // Default-initialized object.
-    NTCUC_DefaultInitializedObject,
-    // Variable with automatic storage duration.
-    NTCUC_AutoVar,
-    // Initializer expression that might copy from another object.
-    NTCUC_CopyInit,
-    // Assignment.
-    NTCUC_Assignment,
-    // Compound literal.
-    NTCUC_CompoundLiteral,
-    // Block capture.
-    NTCUC_BlockCapture,
-    // lvalue-to-rvalue conversion of volatile type.
-    NTCUC_LValueToRValueVolatile,
-  };
-
-  /// Emit diagnostics if the initializer or any of its explicit or
-  /// implicitly-generated subexpressions require copying or
-  /// default-initializing a type that is or contains a C union type that is
-  /// non-trivial to copy or default-initialize.
-  void checkNonTrivialCUnionInInitializer(const Expr *Init, SourceLocation Loc);
-
-  // These flags are passed to checkNonTrivialCUnion.
-  enum NonTrivialCUnionKind {
-    NTCUK_Init = 0x1,
-    NTCUK_Destruct = 0x2,
-    NTCUK_Copy = 0x4,
-  };
-
-  /// Emit diagnostics if a non-trivial C union type or a struct that contains
-  /// a non-trivial C union is used in an invalid context.
-  void checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
-                             NonTrivialCUnionContext UseContext,
-                             unsigned NonTrivialKind);
-
   void AddInitializerToDecl(Decl *dcl, Expr *init, bool DirectInit);
   void ActOnUninitializedDecl(Decl *dcl);
   void ActOnInitializerError(Decl *Dcl);
