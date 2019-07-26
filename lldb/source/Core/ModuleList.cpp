@@ -66,23 +66,14 @@ using namespace lldb_private;
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
-     {},
-     "Control the use of external tools and repositories to locate symbol "
-     "files. Directories listed in target.debug-file-search-paths and "
-     "directory of the executable are always checked first for separate debug "
-     "info files. Then depending on this setting: "
-     "On macOS, Spotlight would be also used to locate a matching .dSYM "
-     "bundle based on the UUID of the executable. "
-     "On NetBSD, directory /usr/libdata/debug would be also searched. "
-     "On platforms other than NetBSD directory /usr/lib/debug would be "
-     "also searched."
-    },
-    {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     {},
-     "The path to the clang modules cache directory (-fmodules-cache-path)."}};
+#define LLDB_PROPERTIES_modulelist
+#include "lldb/Core/Properties.inc"
+};
 
-enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
+enum {
+#define LLDB_PROPERTIES_modulelist
+#include "lldb/Core/PropertiesEnum.inc"
+};
 
 } // namespace
 

@@ -164,7 +164,7 @@ void *kmp_aligned_malloc(size_t sz, size_t a) {
 #if KMP_OS_WINDOWS
   res = _aligned_malloc(sz, a);
 #else
-  if (err = posix_memalign(&res, a, sz)) {
+  if ((err = posix_memalign(&res, a, sz))) {
     errno = err; // can be EINVAL or ENOMEM
     res = NULL;
   }
@@ -277,7 +277,7 @@ void __kmps_get_schedule(kmp_sched_t *kind, int *modifier) {
 
 kmp_proc_bind_t __kmps_get_proc_bind(void) {
   i;
-  return 0;
+  return proc_bind_false;
 } // __kmps_get_proc_bind
 
 double __kmps_get_wtime(void) {

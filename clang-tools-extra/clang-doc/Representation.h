@@ -349,6 +349,8 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 struct ClangDocContext {
   tooling::ExecutionContext *ECtx;
   bool PublicOnly;
+  std::string OutDirectory;
+  std::vector<std::string> UserStylesheets;
 };
 
 } // namespace doc

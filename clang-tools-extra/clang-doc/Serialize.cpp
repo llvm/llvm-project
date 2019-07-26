@@ -44,7 +44,6 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 // }
 llvm::SmallString<128>
 getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
-  std::error_code OK;
   llvm::SmallString<128> Path;
   for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
     llvm::sys::path::append(Path, R->Name);

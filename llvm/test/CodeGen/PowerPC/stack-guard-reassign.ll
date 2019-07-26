@@ -9,9 +9,8 @@
 ; CHECK-NEXT: ori 0, 0, 65488
 ; CHECK-NEXT: stwux 1, 1, 0
 ; CHECK-NEXT: subf 0, 0, 1
-; CHECK-NEXT: lis 4, 1
-; CHECK-NEXT: ori 4, 4, 44
-; CHECK-NEXT: add 4, 1, 4
-; CHECK-NEXT: lis 5, __stack_chk_guard@ha
-; CHECK-NEXT: lwz 6, __stack_chk_guard@l(5)
-; CHECK-NEXT: stw 6, 0(4)
+; CHECK-NEXT: lis 4, __stack_chk_guard@ha
+; CHECK-NEXT: lwz 5, __stack_chk_guard@l(4)
+; CHECK-NEXT: lis 6, 1
+; CHECK-NEXT: ori 6, 6, 44
+; CHECK-NEXT: stwx 5, 1, 6
