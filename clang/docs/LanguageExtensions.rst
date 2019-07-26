@@ -1779,7 +1779,7 @@ invoked.
 
 .. code-block:: console
 
- clang -cl-std=c++ test.cl
+ clang -cl-std=clc++ test.cl
 
 If there are any global objects to be initialized the final binary will
 contain ``@_GLOBAL__sub_I_test.cl`` kernel to be enqueued.

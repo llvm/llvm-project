@@ -1,4 +1,4 @@
-//RUN: %clang_cc1 %s -cl-std=c++ -pedantic -ast-dump -verify | FileCheck %s
+//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -ast-dump -verify | FileCheck %s
 
 //expected-no-diagnostics
 

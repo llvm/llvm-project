@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -pedantic -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -pedantic -verify -fsyntax-only
 // expected-no-diagnostics
 
 // Extract from PR38614

@@ -2449,12 +2449,19 @@ def WarnUnused : InheritableAttr {
 }
 
 def WarnUnusedResult : InheritableAttr {
-  let Spellings = [CXX11<"", "nodiscard", 201603>, C2x<"", "nodiscard">,
+  let Spellings = [CXX11<"", "nodiscard", 201907>, C2x<"", "nodiscard">,
                    CXX11<"clang", "warn_unused_result">,
                    GCC<"warn_unused_result">];
   let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike]>;
   let Args = [StringArgument<"Message", 1>];
   let Documentation = [WarnUnusedResultsDocs];
+  let AdditionalMembers = [{
+    // Check whether this the C++11 nodiscard version, even in non C++11
+    // spellings.
+    bool IsCXX11NoDiscard() const {
+      return this->getSemanticSpelling() == CXX11_nodiscard;
+    }
+  }];
 }
 
 def Weak : InheritableAttr {
@@ -2901,6 +2908,20 @@ def TypeTagForDatatype : InheritableAttr {
 //  let Subjects = SubjectList<[Var], ErrorDiag>;
   let HasCustomParsing = 1;
   let Documentation = [TypeTagForDatatypeDocs];
+}
+
+def Owner : InheritableAttr {
+  let Spellings = [CXX11<"gsl", "Owner">];
+  let Subjects = SubjectList<[Struct]>;
+  let Args = [TypeArgument<"DerefType", /*opt=*/1>];
+  let Documentation = [LifetimeOwnerDocs];
+}
+
+def Pointer : InheritableAttr {
+  let Spellings = [CXX11<"gsl", "Pointer">];
+  let Subjects = SubjectList<[Struct]>;
+  let Args = [TypeArgument<"DerefType", /*opt=*/1>];
+  let Documentation = [LifetimePointerDocs];
 }
 
 // Microsoft-related attributes

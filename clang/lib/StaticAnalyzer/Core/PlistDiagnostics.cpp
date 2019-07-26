@@ -15,6 +15,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
@@ -75,12 +76,14 @@ class PlistPrinter {
   const FIDMap& FM;
   AnalyzerOptions &AnOpts;
   const Preprocessor &PP;
+  const cross_tu::CrossTranslationUnitContext &CTU;
   llvm::SmallVector<const PathDiagnosticMacroPiece *, 0> MacroPieces;
 
 public:
   PlistPrinter(const FIDMap& FM, AnalyzerOptions &AnOpts,
-               const Preprocessor &PP)
-    : FM(FM), AnOpts(AnOpts), PP(PP) {
+               const Preprocessor &PP,
+               const cross_tu::CrossTranslationUnitContext &CTU)
+    : FM(FM), AnOpts(AnOpts), PP(PP), CTU(CTU) {
   }
 
   void ReportDiag(raw_ostream &o, const PathDiagnosticPiece& P) {
@@ -162,8 +165,8 @@ struct ExpansionInfo {
 } // end of anonymous namespace
 
 static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
-                         AnalyzerOptions &AnOpts,
-                         const Preprocessor &PP,
+                         AnalyzerOptions &AnOpts, const Preprocessor &PP,
+                         const cross_tu::CrossTranslationUnitContext &CTU,
                          const PathPieces &Path);
 
 /// Print coverage information to output stream {@code o}.
@@ -174,8 +177,9 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
-                                      const Preprocessor &PP);
+static ExpansionInfo
+getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
+                 const cross_tu::CrossTranslationUnitContext &CTU);
 
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
@@ -349,7 +353,7 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
 
   for (const PathDiagnosticMacroPiece *P : MacroPieces) {
     const SourceManager &SM = PP.getSourceManager();
-    ExpansionInfo EI = getExpandedMacro(P->getLocation().asLocation(), PP);
+    ExpansionInfo EI = getExpandedMacro(P->getLocation().asLocation(), PP, CTU);
 
     Indent(o, indent) << "<dict>\n";
     ++indent;
@@ -471,10 +475,10 @@ static void printCoverage(const PathDiagnostic *D,
 }
 
 static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
-                         AnalyzerOptions &AnOpts,
-                         const Preprocessor &PP,
+                         AnalyzerOptions &AnOpts, const Preprocessor &PP,
+                         const cross_tu::CrossTranslationUnitContext &CTU,
                          const PathPieces &Path) {
-  PlistPrinter Printer(FM, AnOpts, PP);
+  PlistPrinter Printer(FM, AnOpts, PP, CTU);
   assert(std::is_partitioned(
            Path.begin(), Path.end(),
            [](const std::shared_ptr<PathDiagnosticPiece> &E)
@@ -619,7 +623,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "  <dict>\n";
 
     const PathDiagnostic *D = *DI;
-    printBugPath(o, FM, AnOpts, PP, D->path);
+    printBugPath(o, FM, AnOpts, PP, CTU, D->path);
 
     // Output the bug type and bug category.
     o << "   <key>description</key>";
@@ -872,17 +876,23 @@ static const MacroInfo *getMacroInfoForLocation(const Preprocessor &PP,
 // Definitions of helper functions and methods for expanding macros.
 //===----------------------------------------------------------------------===//
 
-static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
-                                      const Preprocessor &PP) {
+static ExpansionInfo
+getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
+                 const cross_tu::CrossTranslationUnitContext &CTU) {
+
+  const Preprocessor *PPToUse = &PP;
+  if (auto LocAndUnit = CTU.getImportedFromSourceLocation(MacroLoc)) {
+    MacroLoc = LocAndUnit->first;
+    PPToUse = &LocAndUnit->second->getPreprocessor();
+  }
 
   llvm::SmallString<200> ExpansionBuf;
   llvm::raw_svector_ostream OS(ExpansionBuf);
-  TokenPrinter Printer(OS, PP);
+  TokenPrinter Printer(OS, *PPToUse);
   llvm::SmallPtrSet<IdentifierInfo*, 8> AlreadyProcessedTokens;
 
-  std::string MacroName =
-            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{},
-                                         AlreadyProcessedTokens);
+  std::string MacroName = getMacroNameAndPrintExpansion(
+      Printer, MacroLoc, *PPToUse, MacroArgMap{}, AlreadyProcessedTokens);
   return { MacroName, OS.str() };
 }
 

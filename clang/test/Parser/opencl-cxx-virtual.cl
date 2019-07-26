@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -fsyntax-only -verify
 
 // Test that virtual functions and abstract classes are rejected.
 class virtual_functions {

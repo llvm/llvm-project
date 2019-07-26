@@ -1435,7 +1435,7 @@ test_prefetch() {
 // CHECK: store i8* {{[0-9a-zA-Z_%.]+}}, i8** {{[0-9a-zA-Z_%.]+}}, align 8
 // CHECK-NEXT: store i32 {{[0-9a-zA-Z_%.]+}}, i32* {{[0-9a-zA-Z_%.]+}}, align 4
 // CHECK-NEXT: [[REG715:[0-9a-zA-Z_%.]+]] = load i8*, i8** {{[0-9a-zA-Z_%.]+}}, align 8
-// CHECK-NEXT: call void @llvm.prefetch(i8* [[REG715]], i32 0, i32 3, i32 1)
+// CHECK-NEXT: call void @llvm.prefetch.p0i8(i8* [[REG715]], i32 0, i32 3, i32 1)
 // CHECK-NEXT: ret void
 
 void __attribute__((noinline))

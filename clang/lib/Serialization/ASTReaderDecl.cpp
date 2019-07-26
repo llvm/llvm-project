@@ -794,9 +794,6 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setNonTrivialToPrimitiveDefaultInitialize(Record.readInt());
   RD->setNonTrivialToPrimitiveCopy(Record.readInt());
   RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveDefaultInitializeCUnion(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveDestructCUnion(Record.readInt());
-  RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
   return Redecl;

@@ -1,4 +1,4 @@
-//RUN: %clang_cc1 %s -cl-std=c++ -triple spir -emit-llvm -o - | FileCheck %s
+//RUN: %clang_cc1 %s -cl-std=clc++ -triple spir -emit-llvm -o - | FileCheck %s
 
 int bar(const unsigned int &i);
 // CHECK-LABEL: define spir_func void @_Z3foov() 

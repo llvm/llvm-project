@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -verify %s 
+// RUN: %clang_cc1 -verify %s
 
 kernel __attribute__((vec_type_hint)) void kernel1() {} //expected-error{{'vec_type_hint' attribute takes one argument}}
 
 kernel __attribute__((vec_type_hint(not_type))) void kernel2() {} //expected-error{{unknown type name 'not_type'}}
 
-kernel __attribute__((vec_type_hint(void))) void kernel3() {} //expected-error{{invalid attribute argument 'void' - expecting a vector or vectorizable scalar type}}
+kernel __attribute__((vec_type_hint(void))) void kernel3() {} //expected-error{{a non-vector or non-vectorizable scalar type is an invalid argument to attribute 'vec_type_hint'}}
 
-kernel __attribute__((vec_type_hint(bool))) void kernel4() {} //expected-error{{invalid attribute argument 'bool' - expecting a vector or vectorizable scalar type}}
+kernel __attribute__((vec_type_hint(bool))) void kernel4() {} //expected-error{{a non-vector or non-vectorizable scalar type is an invalid argument to attribute 'vec_type_hint'}}
 
 kernel __attribute__((vec_type_hint(int))) __attribute__((vec_type_hint(float))) void kernel5() {} //expected-warning{{attribute 'vec_type_hint' is already applied with different parameters}}
 
