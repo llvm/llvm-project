@@ -83,34 +83,22 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
     ".swiftinterface files."} };
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
-     {},
-     "Control the use of external tools and repositories to locate symbol "
-     "files. Directories listed in target.debug-file-search-paths and "
-     "directory of the executable are always checked first for separate debug "
-     "info files. Then depending on this setting: "
-     "On macOS, Spotlight would be also used to locate a matching .dSYM "
-     "bundle based on the UUID of the executable. "
-     "On NetBSD, directory /usr/libdata/debug would be also searched. "
-     "On platforms other than NetBSD directory /usr/lib/debug would be "
-     "also searched."
-    },
     {"use-swift-dwarfimporter", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Reconstruct Clang module dependencies from DWARF "
          "when debugging Swift code"},
-    {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     {},
-     "The path to the clang modules cache directory (-fmodules-cache-path)."},
     {"swift-module-loading-mode", OptionValue::eTypeEnum, false,
      eSwiftModuleLoadingModePreferSerialized, nullptr,
      OptionEnumValues(g_swift_module_loading_mode_enums),
-     "The module loading mode to use when loading modules for Swift."}};
+     "The module loading mode to use when loading modules for Swift."},
+#define LLDB_PROPERTIES_modulelist
+#include "lldb/Core/Properties.inc"
+};
 
 enum {
-  ePropertyEnableExternalLookup,
   ePropertyUseDWARFImporter,
-  ePropertyClangModulesCachePath,
-  ePropertySwiftModuleLoadingMode
+  ePropertySwiftModuleLoadingMode,
+#define LLDB_PROPERTIES_modulelist
+#include "lldb/Core/PropertiesEnum.inc"
 };
 
 } // namespace
@@ -183,9 +171,9 @@ ModuleList::ModuleList(ModuleList::Notifier *notifier)
 const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
   if (this != &rhs) {
     std::lock(m_modules_mutex, rhs.m_modules_mutex);
-    std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex, 
+    std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex,
                                                     std::adopt_lock);
-    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex, 
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex,
                                                     std::adopt_lock);
     m_modules = rhs.m_modules;
   }
@@ -203,8 +191,8 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
   }
 }
 
-void ModuleList::Append(const ModuleSP &module_sp, bool notify) { 
-  AppendImpl(module_sp, notify); 
+void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
+  AppendImpl(module_sp, notify);
 }
 
 void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
