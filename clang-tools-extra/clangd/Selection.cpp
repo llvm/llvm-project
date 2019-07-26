@@ -452,5 +452,12 @@ const DeclContext& SelectionTree::Node::getDeclContext() const {
   llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
 }
 
+const SelectionTree::Node &SelectionTree::Node::ignoreImplicit() const {
+  if (Children.size() == 1 &&
+      Children.front()->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+    return Children.front()->ignoreImplicit();
+  return *this;
+}
+
 } // namespace clangd
 } // namespace clang

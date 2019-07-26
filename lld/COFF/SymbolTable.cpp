@@ -69,7 +69,8 @@ static Symbol *getSymbol(SectionChunk *sc, uint32_t addr) {
 
   for (Symbol *s : sc->file->getSymbols()) {
     auto *d = dyn_cast_or_null<DefinedRegular>(s);
-    if (!d || !d->data || d->getChunk() != sc || d->getValue() > addr ||
+    if (!d || !d->data || d->file != sc->file || d->getChunk() != sc ||
+        d->getValue() > addr ||
         (candidate && d->getValue() < candidate->getValue()))
       continue;
 
@@ -77,6 +78,15 @@ static Symbol *getSymbol(SectionChunk *sc, uint32_t addr) {
   }
 
   return candidate;
+}
+
+static std::vector<std::string> getSymbolLocations(BitcodeFile *file) {
+  std::string res("\n>>> referenced by ");
+  StringRef source = file->obj->getSourceFileName();
+  if (!source.empty())
+    res += source.str() + "\n>>>               ";
+  res += toString(file);
+  return {res};
 }
 
 // Given a file and the index of a symbol in that file, returns a description
@@ -123,13 +133,23 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
   return symbolLocations;
 }
 
+std::vector<std::string> getSymbolLocations(InputFile *file,
+                                            uint32_t symIndex) {
+  if (auto *o = dyn_cast<ObjFile>(file))
+    return getSymbolLocations(o, symIndex);
+  if (auto *b = dyn_cast<BitcodeFile>(file))
+    return getSymbolLocations(b);
+  llvm_unreachable("unsupported file type passed to getSymbolLocations");
+  return {};
+}
+
 // For an undefined symbol, stores all files referencing it and the index of
 // the undefined symbol in each file.
 struct UndefinedDiag {
   Symbol *sym;
   struct File {
-    ObjFile *oFile;
-    uint64_t symIndex;
+    InputFile *file;
+    uint32_t symIndex;
   };
   std::vector<File> files;
 };
@@ -143,7 +163,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   size_t i = 0, numRefs = 0;
   for (const UndefinedDiag::File &ref : undefDiag.files) {
     std::vector<std::string> symbolLocations =
-        getSymbolLocations(ref.oFile, ref.symIndex);
+        getSymbolLocations(ref.file, ref.symIndex);
     numRefs += symbolLocations.size();
     for (const std::string &s : symbolLocations) {
       if (i >= maxUndefReferences)
@@ -183,10 +203,14 @@ void SymbolTable::loadMinGWAutomaticImports() {
   }
 }
 
-bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
+Defined *SymbolTable::impSymbol(StringRef name) {
   if (name.startswith("__imp_"))
-    return false;
-  Defined *imp = dyn_cast_or_null<Defined>(find(("__imp_" + name).str()));
+    return nullptr;
+  return dyn_cast_or_null<Defined>(find(("__imp_" + name).str()));
+}
+
+bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
+  Defined *imp = impSymbol(name);
   if (!imp)
     return false;
 
@@ -232,7 +256,97 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
   return true;
 }
 
-void SymbolTable::reportRemainingUndefines() {
+/// Helper function for reportUnresolvable and resolveRemainingUndefines.
+/// This function emits an "undefined symbol" diagnostic for each symbol in
+/// undefs. If localImports is not nullptr, it also emits a "locally
+/// defined symbol imported" diagnostic for symbols in localImports.
+/// objFiles and bitcodeFiles (if not nullptr) are used to report where
+/// undefined symbols are referenced.
+static void
+reportProblemSymbols(const SmallPtrSetImpl<Symbol *> &undefs,
+                     const DenseMap<Symbol *, Symbol *> *localImports,
+                     const std::vector<ObjFile *> objFiles,
+                     const std::vector<BitcodeFile *> *bitcodeFiles) {
+
+  // Return early if there is nothing to report (which should be
+  // the common case).
+  if (undefs.empty() && (!localImports || localImports->empty()))
+    return;
+
+  for (Symbol *b : config->gcroot) {
+    if (undefs.count(b))
+      errorOrWarn("<root>: undefined symbol: " + toString(*b));
+    if (localImports)
+      if (Symbol *imp = localImports->lookup(b))
+        warn("<root>: locally defined symbol imported: " + toString(*imp) +
+             " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+  }
+
+  std::vector<UndefinedDiag> undefDiags;
+  DenseMap<Symbol *, int> firstDiag;
+
+  auto processFile = [&](InputFile *file, ArrayRef<Symbol *> symbols) {
+    uint32_t symIndex = (uint32_t)-1;
+    for (Symbol *sym : symbols) {
+      ++symIndex;
+      if (!sym)
+        continue;
+      if (undefs.count(sym)) {
+        auto it = firstDiag.find(sym);
+        if (it == firstDiag.end()) {
+          firstDiag[sym] = undefDiags.size();
+          undefDiags.push_back({sym, {{file, symIndex}}});
+        } else {
+          undefDiags[it->second].files.push_back({file, symIndex});
+        }
+      }
+      if (localImports)
+        if (Symbol *imp = localImports->lookup(sym))
+          warn(toString(file) +
+               ": locally defined symbol imported: " + toString(*imp) +
+               " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+    }
+  };
+
+  for (ObjFile *file : objFiles)
+    processFile(file, file->getSymbols());
+
+  if (bitcodeFiles)
+    for (BitcodeFile *file : *bitcodeFiles)
+      processFile(file, file->getSymbols());
+
+  for (const UndefinedDiag &undefDiag : undefDiags)
+    reportUndefinedSymbol(undefDiag);
+}
+
+void SymbolTable::reportUnresolvable() {
+  SmallPtrSet<Symbol *, 8> undefs;
+  for (auto &i : symMap) {
+    Symbol *sym = i.second;
+    auto *undef = dyn_cast<Undefined>(sym);
+    if (!undef)
+      continue;
+    if (Defined *d = undef->getWeakAlias())
+      continue;
+    StringRef name = undef->getName();
+    if (name.startswith("__imp_")) {
+      Symbol *imp = find(name.substr(strlen("__imp_")));
+      if (imp && isa<Defined>(imp))
+        continue;
+    }
+    if (name.contains("_PchSym_"))
+      continue;
+    if (config->mingw && impSymbol(name))
+      continue;
+    undefs.insert(sym);
+  }
+
+  reportProblemSymbols(undefs,
+                       /* localImports */ nullptr, ObjFile::instances,
+                       &BitcodeFile::instances);
+}
+
+void SymbolTable::resolveRemainingUndefines() {
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
 
@@ -290,46 +404,9 @@ void SymbolTable::reportRemainingUndefines() {
     undefs.insert(sym);
   }
 
-  if (undefs.empty() && localImports.empty())
-    return;
-
-  for (Symbol *b : config->gcroot) {
-    if (undefs.count(b))
-      errorOrWarn("<root>: undefined symbol: " + toString(*b));
-    if (config->warnLocallyDefinedImported)
-      if (Symbol *imp = localImports.lookup(b))
-        warn("<root>: locally defined symbol imported: " + toString(*imp) +
-             " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
-  }
-
-  std::vector<UndefinedDiag> undefDiags;
-  DenseMap<Symbol *, int> firstDiag;
-
-  for (ObjFile *file : ObjFile::instances) {
-    size_t symIndex = (size_t)-1;
-    for (Symbol *sym : file->getSymbols()) {
-      ++symIndex;
-      if (!sym)
-        continue;
-      if (undefs.count(sym)) {
-        auto it = firstDiag.find(sym);
-        if (it == firstDiag.end()) {
-          firstDiag[sym] = undefDiags.size();
-          undefDiags.push_back({sym, {{file, symIndex}}});
-        } else {
-          undefDiags[it->second].files.push_back({file, symIndex});
-        }
-      }
-      if (config->warnLocallyDefinedImported)
-        if (Symbol *imp = localImports.lookup(sym))
-          warn(toString(file) +
-               ": locally defined symbol imported: " + toString(*imp) +
-               " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
-    }
-  }
-
-  for (const UndefinedDiag& undefDiag : undefDiags)
-    reportUndefinedSymbol(undefDiag);
+  reportProblemSymbols(
+      undefs, config->warnLocallyDefinedImported ? &localImports : nullptr,
+      ObjFile::instances, /* bitcode files no longer needed */ nullptr);
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {

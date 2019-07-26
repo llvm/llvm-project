@@ -371,6 +371,8 @@ TEST(TweakTest, ExtractVariable) {
       auto lamb = [&[[a]], &[[b]]](int r = [[1]]) {return 1;}
       // assigment
       [[a = 5]];
+      [[a >>= 5]];
+      [[a *= 5]];
       // Variable DeclRefExpr
       a = [[b]];
       // label statement
@@ -474,10 +476,79 @@ TEST(TweakTest, ExtractVariable) {
            R"cpp(int f() {
                    auto dummy = f(); return dummy;
                  })cpp"},
-          
           // FIXME: Wrong result for \[\[clang::uninitialized\]\] int b = [[1]];
           // since the attr is inside the DeclStmt and the bounds of
           // DeclStmt don't cover the attribute.
+
+          // Binary subexpressions
+          {R"cpp(void f() {
+                   int x = 1 + [[2 + 3 + 4]] + 5;
+                 })cpp",
+           R"cpp(void f() {
+                   auto dummy = 2 + 3 + 4; int x = 1 + dummy + 5;
+                 })cpp"},
+          {R"cpp(void f() {
+                   int x = [[1 + 2 + 3]] + 4 + 5;
+                 })cpp",
+           R"cpp(void f() {
+                   auto dummy = 1 + 2 + 3; int x = dummy + 4 + 5;
+                 })cpp"},
+          {R"cpp(void f() {
+                   int x = 1 + 2 + [[3 + 4 + 5]];
+                 })cpp",
+           R"cpp(void f() {
+                   auto dummy = 3 + 4 + 5; int x = 1 + 2 + dummy;
+                 })cpp"},
+          // Non-associative operations have no special support
+          {R"cpp(void f() {
+                   int x = 1 - [[2 - 3 - 4]] - 5;
+                 })cpp",
+           R"cpp(void f() {
+                   auto dummy = 1 - 2 - 3 - 4; int x = dummy - 5;
+                 })cpp"},
+          // A mix of associative operators isn't associative.
+          {R"cpp(void f() {
+                   int x = 0 + 1 * [[2 + 3]] * 4 + 5;
+                 })cpp",
+           R"cpp(void f() {
+                   auto dummy = 1 * 2 + 3 * 4; int x = 0 + dummy + 5;
+                 })cpp"},
+          // Overloaded operators are supported, we assume associativity
+          // as if they were built-in.
+          {R"cpp(struct S {
+                   S(int);
+                 };
+                 S operator+(S, S);
+
+                 void f() {
+                   S x = S(1) + [[S(2) + S(3) + S(4)]] + S(5);
+                 })cpp",
+           R"cpp(struct S {
+                   S(int);
+                 };
+                 S operator+(S, S);
+
+                 void f() {
+                   auto dummy = S(2) + S(3) + S(4); S x = S(1) + dummy + S(5);
+                 })cpp"},
+           // Don't try to analyze across macro boundaries
+           // FIXME: it'd be nice to do this someday (in a safe way)
+          {R"cpp(#define ECHO(X) X
+                 void f() {
+                   int x = 1 + [[ECHO(2 + 3) + 4]] + 5;
+                 })cpp",
+           R"cpp(#define ECHO(X) X
+                 void f() {
+                   auto dummy = 1 + ECHO(2 + 3) + 4; int x = dummy + 5;
+                 })cpp"},
+          {R"cpp(#define ECHO(X) X
+                 void f() {
+                   int x = 1 + [[ECHO(2) + ECHO(3) + 4]] + 5;
+                 })cpp",
+           R"cpp(#define ECHO(X) X
+                 void f() {
+                   auto dummy = 1 + ECHO(2) + ECHO(3) + 4; int x = dummy + 5;
+                 })cpp"},
       };
   for (const auto &IO : InputOutputs) {
     checkTransform(ID, IO.first, IO.second);
