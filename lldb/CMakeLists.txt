@@ -54,7 +54,6 @@ endif()
 
 # TableGen
 add_subdirectory(utils/TableGen)
-add_subdirectory(include/lldb/Core)
 
 add_subdirectory(source)
 add_subdirectory(tools)

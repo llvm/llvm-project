@@ -1,4 +1,4 @@
-include "PropertiesBase.td"
+include "../../include/lldb/Core/PropertiesBase.td"
 
 let Definition = "modulelist" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
