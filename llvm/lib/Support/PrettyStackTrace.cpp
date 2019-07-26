@@ -121,31 +121,63 @@ extern "C" const char *__crashreporter_info__
 asm(".desc ___crashreporter_info__, 0x10");
 #endif
 
-/// CrashHandler - This callback is run if a fatal signal is delivered to the
-/// process, it prints the pretty stack trace.
+static void setCrashLogMessage(const char *msg) LLVM_ATTRIBUTE_UNUSED;
+static void setCrashLogMessage(const char *msg) {
+#ifdef HAVE_CRASHREPORTERCLIENT_H
+  (void)CRSetCrashLogMessage(msg);
+#elif HAVE_CRASHREPORTER_INFO
+  __crashreporter_info__ = msg;
+#endif
+  // Don't reorder subsequent operations: whatever comes after might crash and
+  // we want the system crash handling to see the message we just set.
+  std::atomic_signal_fence(std::memory_order_seq_cst);
+}
+
+#ifdef __APPLE__
+using CrashHandlerString = SmallString<2048>;
+using CrashHandlerStringStorage =
+    std::aligned_storage<sizeof(CrashHandlerString),
+                         alignof(CrashHandlerString)>::type;
+static CrashHandlerStringStorage crashHandlerStringStorage;
+#endif
+
+/// This callback is run if a fatal signal is delivered to the process, it
+/// prints the pretty stack trace.
 static void CrashHandler(void *) {
 #ifndef __APPLE__
   // On non-apple systems, just emit the crash stack trace to stderr.
   PrintCurStackTrace(errs());
 #else
-  // Otherwise, emit to a smallvector of chars, send *that* to stderr, but also
-  // put it into __crashreporter_info__.
-  SmallString<2048> TmpStr;
+  // Emit the crash stack trace to a SmallString, put it where the system crash
+  // handling will find it, and also send it to stderr.
+  //
+  // The SmallString is fairly large in the hope that we don't allocate (we're
+  // handling a fatal signal, something is already pretty wrong, allocation
+  // might not work). Further, we don't use a magic static in case that's also
+  // borked. We leak any allocation that does occur because the program is about
+  // to die anyways. This is technically racy if we were handling two fatal
+  // signals, however if we're in that situation a race is the least of our
+  // worries.
+  auto &crashHandlerString =
+      *new (&crashHandlerStringStorage) CrashHandlerString;
+
+  // If we crash while trying to print the stack trace, we still want the system
+  // crash handling to have some partial information. That'll work out as long
+  // as the SmallString doesn't allocate. If it does allocate then the system
+  // crash handling will see some garbage because the inline buffer now contains
+  // a pointer.
+  setCrashLogMessage(crashHandlerString.c_str());
+
   {
-    raw_svector_ostream Stream(TmpStr);
+    raw_svector_ostream Stream(crashHandlerString);
     PrintCurStackTrace(Stream);
   }
 
-  if (!TmpStr.empty()) {
-#ifdef HAVE_CRASHREPORTERCLIENT_H
-    // Cast to void to avoid warning.
-    (void)CRSetCrashLogMessage(TmpStr.c_str());
-#elif HAVE_CRASHREPORTER_INFO
-    __crashreporter_info__ = strdup(TmpStr.c_str());
-#endif
-    errs() << TmpStr.str();
-  }
-
+  if (!crashHandlerString.empty()) {
+    setCrashLogMessage(crashHandlerString.c_str());
+    errs() << crashHandlerString.str();
+  } else
+    setCrashLogMessage("No crash information.");
 #endif
 }
 

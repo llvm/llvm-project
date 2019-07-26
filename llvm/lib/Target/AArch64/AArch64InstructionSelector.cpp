@@ -2027,21 +2027,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT: {
     unsigned Opcode = I.getOpcode();
-    const LLT DstTy = MRI.getType(I.getOperand(0).getReg()),
-              SrcTy = MRI.getType(I.getOperand(1).getReg());
-    const bool isSigned = Opcode == TargetOpcode::G_SEXT;
+    const bool IsSigned = Opcode == TargetOpcode::G_SEXT;
     const Register DefReg = I.getOperand(0).getReg();
     const Register SrcReg = I.getOperand(1).getReg();
-    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+    const LLT DstTy = MRI.getType(DefReg);
+    const LLT SrcTy = MRI.getType(SrcReg);
+    unsigned DstSize = DstTy.getSizeInBits();
+    unsigned SrcSize = SrcTy.getSizeInBits();
 
-    if (RB.getID() != AArch64::GPRRegBankID) {
-      LLVM_DEBUG(dbgs() << TII.getName(I.getOpcode()) << " on bank: " << RB
-                        << ", expected: GPR\n");
-      return false;
-    }
+    assert((*RBI.getRegBank(DefReg, MRI, TRI)).getID() ==
+               AArch64::GPRRegBankID &&
+           "Unexpected ext regbank");
 
+    MachineIRBuilder MIB(I);
     MachineInstr *ExtI;
-    if (DstTy == LLT::scalar(64)) {
+    if (DstTy.isVector())
+      return false; // Should be handled by imported patterns.
+
+    if (DstSize == 64) {
       // FIXME: Can we avoid manually doing this?
       if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI)) {
         LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
@@ -2049,33 +2052,26 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
         return false;
       }
 
-      const Register SrcXReg =
-          MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::SUBREG_TO_REG))
-          .addDef(SrcXReg)
-          .addImm(0)
-          .addUse(SrcReg)
-          .addImm(AArch64::sub_32);
+      auto SubregToReg =
+          MIB.buildInstr(AArch64::SUBREG_TO_REG, {&AArch64::GPR64RegClass}, {})
+              .addImm(0)
+              .addUse(SrcReg)
+              .addImm(AArch64::sub_32);
 
-      const unsigned NewOpc = isSigned ? AArch64::SBFMXri : AArch64::UBFMXri;
-      ExtI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
-                 .addDef(DefReg)
-                 .addUse(SrcXReg)
-                 .addImm(0)
-                 .addImm(SrcTy.getSizeInBits() - 1);
-    } else if (DstTy.isScalar() && DstTy.getSizeInBits() <= 32) {
-      const unsigned NewOpc = isSigned ? AArch64::SBFMWri : AArch64::UBFMWri;
-      ExtI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
-                 .addDef(DefReg)
-                 .addUse(SrcReg)
-                 .addImm(0)
-                 .addImm(SrcTy.getSizeInBits() - 1);
+      ExtI = MIB.buildInstr(IsSigned ? AArch64::SBFMXri : AArch64::UBFMXri,
+                             {DefReg}, {SubregToReg})
+                  .addImm(0)
+                  .addImm(SrcSize - 1);
+    } else if (DstSize <= 32) {
+      ExtI = MIB.buildInstr(IsSigned ? AArch64::SBFMWri : AArch64::UBFMWri,
+                             {DefReg}, {SrcReg})
+                  .addImm(0)
+                  .addImm(SrcSize - 1);
     } else {
       return false;
     }
 
     constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
-
     I.eraseFromParent();
     return true;
   }

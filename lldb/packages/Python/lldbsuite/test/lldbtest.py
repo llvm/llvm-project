@@ -51,7 +51,6 @@ from subprocess import *
 import sys
 import time
 import traceback
-import types
 import distutils.spawn
 
 # Third-party modules
@@ -61,7 +60,6 @@ from six import StringIO as SixStringIO
 import six
 
 # LLDB modules
-import use_lldb_suite
 import lldb
 from . import configuration
 from . import decorators

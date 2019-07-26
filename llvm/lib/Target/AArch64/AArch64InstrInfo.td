@@ -133,6 +133,10 @@ def HasBTI           : Predicate<"Subtarget->hasBTI()">,
                        AssemblerPredicate<"FeatureBranchTargetId", "bti">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                        AssemblerPredicate<"FeatureMTE", "mte">;
+def HasETE           : Predicate<"Subtarget->hasETE()">,
+                       AssemblerPredicate<"FeatureETE", "ete">;
+def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
+                       AssemblerPredicate<"FeatureTRBE", "trbe">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;

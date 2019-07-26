@@ -104,11 +104,14 @@ public:
 
 /// Handle array type.
 class BTFTypeArray : public BTFTypeBase {
+  const DIType *ElemTyNoQual;
   uint32_t ElemSize;
   struct BTF::BTFArray ArrayInfo;
+  uint32_t ElemTypeNoQual;
 
 public:
-  BTFTypeArray(uint32_t ElemTypeId, uint32_t ElemSize, uint32_t NumElems);
+  BTFTypeArray(const DIType *Ty, uint32_t ElemTypeId,
+               uint32_t ElemSize, uint32_t NumElems);
   uint32_t getSize() { return BTFTypeBase::getSize() + BTF::BTFArraySize; }
   void completeType(BTFDebug &BDebug);
   void emitType(MCStreamer &OS);
@@ -120,6 +123,7 @@ class BTFTypeStruct : public BTFTypeBase {
   const DICompositeType *STy;
   bool HasBitField;
   std::vector<struct BTF::BTFMember> Members;
+  std::vector<uint32_t> MemberTypeNoQual;
 
 public:
   BTFTypeStruct(const DICompositeType *STy, bool IsStruct, bool HasBitField,

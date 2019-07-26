@@ -240,6 +240,7 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
   case eNoAction:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 bool DYLDRendezvous::UpdateSOEntries() {
@@ -256,6 +257,7 @@ bool DYLDRendezvous::UpdateSOEntries() {
   case eNoAction:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 bool DYLDRendezvous::FillSOEntryFromModuleInfo(

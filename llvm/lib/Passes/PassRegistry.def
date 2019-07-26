@@ -88,6 +88,7 @@ MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass(nullptr, nullptr))
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("asan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/false, false, true, false))
 MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, false, true, false))
+MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
 #undef MODULE_PASS
 
@@ -245,6 +246,7 @@ FUNCTION_PASS("kasan", AddressSanitizerPass(true, false, false))
 FUNCTION_PASS("msan", MemorySanitizerPass({}))
 FUNCTION_PASS("kmsan", MemorySanitizerPass({0, false, /*Kernel=*/true}))
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
+FUNCTION_PASS("sancov-func", SanitizerCoveragePass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS

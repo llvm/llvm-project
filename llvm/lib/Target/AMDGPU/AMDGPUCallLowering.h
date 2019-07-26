@@ -20,6 +20,7 @@
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class MachineInstrBuilder;
 
 class AMDGPUCallLowering: public CallLowering {
   Register lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
@@ -37,6 +38,10 @@ class AMDGPUCallLowering: public CallLowering {
                          const DataLayout &DL, MachineRegisterInfo &MRI,
                          CallingConv::ID CallConv,
                          SplitArgTy SplitArg) const;
+
+  bool lowerReturnVal(MachineIRBuilder &MIRBuilder,
+                      const Value *Val, ArrayRef<Register> VRegs,
+                      MachineInstrBuilder &Ret) const;
 
 public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);

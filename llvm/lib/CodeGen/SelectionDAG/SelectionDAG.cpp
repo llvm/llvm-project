@@ -2154,12 +2154,8 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
   }
   case ISD::OR:
   case ISD::XOR:
-    // If the LHS or RHS don't contribute bits to the or, drop them.
-    if (MaskedValueIsZero(V.getOperand(0), DemandedBits))
-      return V.getOperand(1);
-    if (MaskedValueIsZero(V.getOperand(1), DemandedBits))
-      return V.getOperand(0);
-    break;
+    return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
+                                                *this, 0);
   case ISD::SRL:
     // Only look at single-use SRLs.
     if (!V.getNode()->hasOneUse())

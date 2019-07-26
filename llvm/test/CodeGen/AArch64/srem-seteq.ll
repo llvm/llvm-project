@@ -101,11 +101,11 @@ define i16 @test_srem_even(i16 %X) nounwind {
 ; CHECK-NEXT:    movk w9, #37449, lsl #16
 ; CHECK-NEXT:    smull x9, w8, w9
 ; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    add w9, w9, w8
-; CHECK-NEXT:    asr w10, w9, #3
-; CHECK-NEXT:    add w9, w10, w9, lsr #31
-; CHECK-NEXT:    mov w10, #14
-; CHECK-NEXT:    msub w8, w9, w10, w8
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    asr w9, w8, #3
+; CHECK-NEXT:    add w8, w9, w8, lsr #31
+; CHECK-NEXT:    mov w9, #14
+; CHECK-NEXT:    msub w8, w8, w9, w0
 ; CHECK-NEXT:    tst w8, #0xffff
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

@@ -111,6 +111,10 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
 // WQM pass processes it.
 def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
+// Pseudoinstruction for @llvm.amdgcn.softwqm. Like @llvm.amdgcn.wqm it is
+// turned into a copy by WQM pass, but does not seed WQM requirements.
+def SOFT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+
 // Pseudoinstruction for @llvm.amdgcn.wwm. It is turned into a copy post-RA, so
 // that the @earlyclobber is respected. The @earlyclobber is to make sure that
 // the instruction that defines $src0 (which is run in WWM) doesn't

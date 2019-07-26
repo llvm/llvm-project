@@ -252,6 +252,8 @@ TransformationMode hasLICMVersioningTransformation(Loop *L);
 /// @}
 
 /// Set input string into loop metadata by keeping other values intact.
+/// If the string is already in loop metadata update value if it is
+/// different.
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 

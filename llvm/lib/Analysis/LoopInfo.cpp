@@ -359,6 +359,41 @@ bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
   return SE.isLoopInvariant(IndDesc.getStep(), this);
 }
 
+BranchInst *Loop::getLoopGuardBranch() const {
+  assert(isLoopSimplifyForm() && "Only valid for loop in simplify form");
+  BasicBlock *Preheader = getLoopPreheader();
+  BasicBlock *Latch = getLoopLatch();
+  assert(Preheader && Latch &&
+         "Expecting a loop with valid preheader and latch");
+  assert(isLoopExiting(Latch) && "Only valid for rotated loop");
+
+  Instruction *LatchTI = Latch->getTerminator();
+  if (!LatchTI || LatchTI->getNumSuccessors() != 2)
+    return nullptr;
+
+  BasicBlock *ExitFromLatch = (LatchTI->getSuccessor(0) == getHeader())
+                                  ? LatchTI->getSuccessor(1)
+                                  : LatchTI->getSuccessor(0);
+  BasicBlock *ExitFromLatchSucc = ExitFromLatch->getUniqueSuccessor();
+  if (!ExitFromLatchSucc)
+    return nullptr;
+
+  BasicBlock *GuardBB = Preheader->getUniquePredecessor();
+  if (!GuardBB)
+    return nullptr;
+
+  assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
+
+  BranchInst *GuardBI = dyn_cast<BranchInst>(GuardBB->getTerminator());
+  if (!GuardBI || GuardBI->isUnconditional())
+    return nullptr;
+
+  BasicBlock *GuardOtherSucc = (GuardBI->getSuccessor(0) == Preheader)
+                                   ? GuardBI->getSuccessor(1)
+                                   : GuardBI->getSuccessor(0);
+  return (GuardOtherSucc == ExitFromLatchSucc) ? GuardBI : nullptr;
+}
+
 bool Loop::isCanonical(ScalarEvolution &SE) const {
   InductionDescriptor IndDesc;
   if (!getInductionDescriptor(SE, IndDesc))
