@@ -3589,13 +3589,13 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_target
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 
 enum {
 #define LLDB_PROPERTIES_target
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
   ePropertyExperimental,
 };
 
@@ -3673,12 +3673,12 @@ protected:
 // TargetProperties
 static constexpr PropertyDefinition g_experimental_properties[]{
 #define LLDB_PROPERTIES_experimental
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_experimental
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {

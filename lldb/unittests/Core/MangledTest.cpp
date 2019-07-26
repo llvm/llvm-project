@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Mangled.h"
@@ -54,7 +54,7 @@ TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   FileSystem::Initialize();
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
-  SymbolVendorELF::Initialize();
+  SymbolFileSymtab::Initialize();
 
   llvm::SmallString<128> Obj;
   ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
@@ -146,7 +146,7 @@ TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeBase));
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeMethod));
 
-  SymbolVendorELF::Terminate();
+  SymbolFileSymtab::Terminate();
   ObjectFileELF::Terminate();
   HostInfo::Terminate();
   FileSystem::Terminate();

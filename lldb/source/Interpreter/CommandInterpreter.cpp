@@ -91,12 +91,12 @@ static constexpr const char *InitFileWarning =
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_commandinterpreter
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_commandinterpreter
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 ConstString &CommandInterpreter::GetStaticBroadcasterClass() {

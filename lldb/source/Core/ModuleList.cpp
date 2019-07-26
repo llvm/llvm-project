@@ -84,12 +84,12 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_modulelist
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_modulelist
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 } // namespace
