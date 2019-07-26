@@ -81,7 +81,13 @@ static void emitOption(Record *Option, raw_ostream &OS) {
       OS << "eRequiredArgument";
   } else
     OS << "eNoArgument";
-  OS << ", nullptr, ";
+  OS << ", ";
+
+  if (Option->getValue("Validator"))
+    OS << Option->getValueAsString("Validator");
+  else
+    OS << "nullptr";
+  OS << ", ";
 
   if (Option->getValue("ArgEnum"))
     OS << Option->getValueAsString("ArgEnum");

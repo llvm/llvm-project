@@ -49,5 +49,11 @@ int main(int, char**)
     static_assert(h2.count() == 3, "");
     }
 
+    {
+//  Make sure it works for durations that are not LCD'ed - example from LWG3091
+    constexpr auto d = std::chrono::abs(std::chrono::duration<int, std::ratio<60, 100>>{2});
+    static_assert(d.count() == 2, "");
+    }
+
   return 0;
 }
