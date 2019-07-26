@@ -91,6 +91,7 @@ llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
   }
+  llvm_unreachable("unhandled ParseFormat");
 }
 
 // Wrapper that holds the state needed to interact with the C API.
