@@ -7,6 +7,9 @@ let Definition = "experimental" in {
   def UseModernTypeLookup : Property<"use-modern-type-lookup", "Boolean">,
     Global, DefaultFalse,
     Desc<"If true, use Clang's modern type lookup infrastructure.">;
+  def SwiftCreateModuleContextsInParallel : Property<"swift-create-module-contexts-in-parallel", "Boolean">,
+    DefaultTrue,
+    Desc<"Create the per-module Swift AST contexts in parallel.">;
 }
 
 let Definition = "target" in {
@@ -154,6 +157,21 @@ let Definition = "target" in {
   def RequireHardwareBreakpoints: Property<"require-hardware-breakpoint", "Boolean">,
     DefaultFalse,
     Desc<"Require all breakpoints to be hardware breakpoints.">;
+  def SwiftFrameworkSearchPaths: Property<"swift-framework-search-paths", "FileSpecList">,
+    DefaultStringValue<"">,
+    Desc<"List of directories to be searched when locating frameworks for Swift.">;
+  def SwiftModuleSearchPaths: Property<"swift-module-search-paths", "FileSpecList">,
+    DefaultStringValue<"">,
+    Desc<"List of directories to be searched when locating modules for Swift.">;
+  def SwiftExtraClangFlags: Property<"swift-extra-clang-flags", "String">,
+    DefaultStringValue<"">,
+    Desc<"Additional -Xcc flags to be passed to the Swift ClangImporter.">;
+  def UseAllCompilerFlags: Property<"use-all-compiler-flags", "Boolean">,
+    DefaultStringValue<"">,
+    Desc<"The path to the SDK used to build the current target.">;
+  def SDKPath: Property<"sdk-path", "FileSpec">,
+    DefaultStringValue<"">,
+    Desc<"The path to the SDK used to build the current target.">;
 }
 
 let Definition = "process" in {
@@ -242,6 +260,13 @@ let Definition = "modulelist" in {
     Global,
     DefaultStringValue<"">,
     Desc<"The path to the clang modules cache directory (-fmodules-cache-path).">;
+  def UseDWARFImporter: Property<"use-swift-dwarfimporter", "Boolean">,
+    DefaultTrue,
+    Desc<"Reconstruct Clang module dependencies from DWARF when debugging Swift code">;
+  def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
+    DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
+    EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
+    Desc<"The module loading mode to use when loading modules for Swift.">;
 }
 
 let Definition = "debugger" in {

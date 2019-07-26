@@ -3588,53 +3588,12 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
      "this setting loads sections and all symbols."} };
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"swift-framework-search-paths",
-     OptionValue::eTypeFileSpecList,
-     false,
-     0,
-     nullptr,
-     {},
-     "List of directories to be searched when locating frameworks for Swift."},
-    {"swift-module-search-paths",
-     OptionValue::eTypeFileSpecList,
-     false,
-     0,
-     nullptr,
-     {},
-     "List of directories to be searched when locating modules for Swift."},
-    {"swift-extra-clang-flags",
-     OptionValue::eTypeString,
-     false,
-     0,
-     nullptr,
-     {},
-     "Additional -Xcc flags to be passed to the Swift ClangImporter."},
-    {"use-all-compiler-flags",
-     OptionValue::eTypeBoolean,
-     false,
-     true,
-     nullptr,
-     {},
-     "Try to use compiler flags for all modules when setting up the "
-     "Swift expression parser, not just the main executable."},
-    {"sdk-path",
-     OptionValue::eTypeFileSpec,
-     false,
-     0,
-     nullptr,
-     {},
-     "The path to the SDK used to build the current target."},
 #define LLDB_PROPERTIES_target
 #include "lldb/Core/Properties.inc"
 };
 
 
 enum {
-  ePropertySwiftFrameworkSearchPaths,
-  ePropertySwiftModuleSearchPaths,
-  ePropertySwiftExtraClangFlags,
-  ePropertyUseAllCompilerFlags,
-  ePropertySDKPath,
 #define LLDB_PROPERTIES_target
 #include "lldb/Core/PropertiesEnum.inc"
   ePropertyExperimental,
@@ -3713,19 +3672,11 @@ protected:
 
 // TargetProperties
 static constexpr PropertyDefinition g_experimental_properties[]{
-    {"swift-create-module-contexts-in-parallel",
-     OptionValue::eTypeBoolean,
-     false,
-     true,
-     nullptr,
-     {},
-     "Create the per-module Swift AST contexts in parallel."},
 #define LLDB_PROPERTIES_experimental
 #include "lldb/Core/Properties.inc"
 };
 
 enum {
-  ePropertySwiftCreateModuleContextsInParallel = 0,
 #define LLDB_PROPERTIES_experimental
 #include "lldb/Core/PropertiesEnum.inc"
 };

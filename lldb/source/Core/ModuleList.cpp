@@ -83,20 +83,11 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
     ".swiftinterface files."} };
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"use-swift-dwarfimporter", OptionValue::eTypeBoolean, false, true, nullptr,
-     {}, "Reconstruct Clang module dependencies from DWARF "
-         "when debugging Swift code"},
-    {"swift-module-loading-mode", OptionValue::eTypeEnum, false,
-     eSwiftModuleLoadingModePreferSerialized, nullptr,
-     OptionEnumValues(g_swift_module_loading_mode_enums),
-     "The module loading mode to use when loading modules for Swift."},
 #define LLDB_PROPERTIES_modulelist
 #include "lldb/Core/Properties.inc"
 };
 
 enum {
-  ePropertyUseDWARFImporter,
-  ePropertySwiftModuleLoadingMode,
 #define LLDB_PROPERTIES_modulelist
 #include "lldb/Core/PropertiesEnum.inc"
 };
