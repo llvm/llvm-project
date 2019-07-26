@@ -1041,7 +1041,8 @@ protected:
 
 // "platform process list"
 
-static OptionDefinition g_platform_process_list_options[] = {
+static PosixPlatformCommandOptionValidator posix_validator;
+static constexpr OptionDefinition g_platform_process_list_options[] = {
 #define LLDB_OPTIONS_platform_process_list
 #include "CommandOptions.inc"
 };
@@ -1166,23 +1167,6 @@ protected:
   public:
     CommandOptions()
         : Options(), match_info(), show_args(false), verbose(false) {
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, []() {
-        PosixPlatformCommandOptionValidator *posix_validator =
-            new PosixPlatformCommandOptionValidator();
-        for (auto &Option : g_platform_process_list_options) {
-          switch (Option.short_option) {
-          case 'u':
-          case 'U':
-          case 'g':
-          case 'G':
-            Option.validator = posix_validator;
-            break;
-          default:
-            break;
-          }
-        }
-      });
     }
 
     ~CommandOptions() override = default;

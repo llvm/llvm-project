@@ -46,7 +46,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Field: validator
 // Default value: 0 (No validator for option)
-// Set by: Nothing. This is currently only set after initialization in LLDB.
+// Set by:
+//  - `Validator`: Sets the value to a given validator (which has to exist in
+//                 the surrounding code.
 ////////////////////////////////////////////////////////////////////////////////
 // Field: enum_values
 // Default value: {} (No enum associated with this option)
@@ -168,4 +170,9 @@ class Completions<list<string> completions> {
 // Sets a single completion for the given option.
 class Completion<string completion> {
   list<string> Completions = [completion];
+}
+
+// Sets the validator for a given option.
+class Validator<string validator> {
+  string Validator = validator;
 }

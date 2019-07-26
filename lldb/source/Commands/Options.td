@@ -576,16 +576,16 @@ let Command = "platform process list" in {
   def platform_process_list_parent : Option<"parent", "P">, GroupRange<2, 6>,
     Arg<"Pid">, Desc<"Find processes that have a matching parent process ID.">;
   def platform_process_list_uid : Option<"uid", "u">, GroupRange<2, 6>,
-    Arg<"UnsignedInteger">,
+    Arg<"UnsignedInteger">, Validator<"&posix_validator">,
     Desc<"Find processes that have a matching user ID.">;
   def platform_process_list_euid : Option<"euid", "U">, GroupRange<2, 6>,
-    Arg<"UnsignedInteger">,
+    Arg<"UnsignedInteger">, Validator<"&posix_validator">,
     Desc<"Find processes that have a matching effective user ID.">;
   def platform_process_list_gid : Option<"gid", "g">, GroupRange<2, 6>,
-    Arg<"UnsignedInteger">,
+    Arg<"UnsignedInteger">, Validator<"&posix_validator">,
     Desc<"Find processes that have a matching group ID.">;
   def platform_process_list_egid : Option<"egid", "G">, GroupRange<2, 6>,
-    Arg<"UnsignedInteger">,
+    Arg<"UnsignedInteger">, Validator<"&posix_validator">,
     Desc<"Find processes that have a matching effective group ID.">;
   def platform_process_list_arch : Option<"arch", "a">, GroupRange<2, 6>,
     Arg<"Architecture">,
