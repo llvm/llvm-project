@@ -114,12 +114,12 @@ public:
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_process
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_process
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)

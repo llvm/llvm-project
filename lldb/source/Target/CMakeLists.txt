@@ -1,3 +1,11 @@
+lldb_tablegen(Properties.inc -gen-lldb-property-defs
+  SOURCE Properties.td
+  TARGET LLDBTargetPropertiesGen)
+
+lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE Properties.td
+  TARGET LLDBTargetPropertiesEnumGen)
+
 add_lldb_library(lldbTarget
   ABI.cpp
   ExecutionContext.cpp
@@ -71,4 +79,6 @@ add_lldb_library(lldbTarget
     Support
   )
 
-add_dependencies(lldbTarget LLDBPropertiesGen LLDBPropertiesEnumGen)
+add_dependencies(lldbTarget
+  LLDBTargetPropertiesGen
+  LLDBTargetPropertiesEnumGen)

@@ -65,12 +65,12 @@ namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_platform
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_platform
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 } // namespace
@@ -1722,7 +1722,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
         return LLDB_INVALID_IMAGE_TOKEN;
     }
     return DoLoadImage(process, target_file, nullptr, error);
-  } 
+  }
 
   if (remote_file) {
     // Only remote file was specified so we don't have to do any copying
@@ -1755,7 +1755,7 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
                            remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
-    
+
   return DoLoadImage(process, file_to_use, &paths, error, loaded_path);
 }
 
