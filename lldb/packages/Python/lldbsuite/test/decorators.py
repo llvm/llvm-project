@@ -2,9 +2,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 # System modules
-from distutils.version import LooseVersion, StrictVersion
+from distutils.version import LooseVersion
 from functools import wraps
-import inspect
 import os
 import platform
 import re
@@ -17,8 +16,6 @@ import six
 import unittest2
 
 # LLDB modules
-import use_lldb_suite
-
 import lldb
 from . import configuration
 from . import test_categories
