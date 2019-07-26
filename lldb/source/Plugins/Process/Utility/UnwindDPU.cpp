@@ -95,16 +95,21 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   // have the good value for r22, but it's normal as its frame is not yet set,
   // let's just add 1 to it so that we are sure that it will be seen as the
   // youngest one when comparing StackID). pc is in r23.
-  Function *fct;
+  Function *fct = NULL;
   GetFunction(&fct, first_pc_addr);
-  lldb::addr_t start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
-  if (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
-      PCIsInstructionReturn(fct, first_pc_addr)) {
-    prev_frame->cfa++;
-    RegisterValue reg_r23;
-    reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
-    SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()),
-             reg_ctx_sp);
+  if (fct != NULL) {
+    lldb::addr_t start_addr =
+        fct->GetAddressRange().GetBaseAddress().GetFileAddress();
+    if (((first_pc_addr >= start_addr) &&
+         (first_pc_addr < (start_addr + 16))) ||
+        PCIsInstructionReturn(fct, first_pc_addr)) {
+      prev_frame->cfa++;
+      RegisterValue reg_r23;
+      reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"),
+                               reg_r23);
+      SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()),
+               reg_ctx_sp);
+    }
   }
 
   while (true) {
