@@ -1,3 +1,11 @@
+lldb_tablegen(Properties.inc -gen-lldb-property-defs
+  SOURCE Properties.td
+  TARGET LLDBInterpreterPropertiesGen)
+
+lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE Properties.td
+  TARGET LLDBInterpreterPropertiesEnumGen)
+
 add_lldb_library(lldbInterpreter
   CommandAlias.cpp
   CommandHistory.cpp
@@ -56,7 +64,9 @@ add_lldb_library(lldbInterpreter
     Support
   )
 
-add_dependencies(lldbInterpreter LLDBPropertiesGen LLDBPropertiesEnumGen)
+add_dependencies(lldbInterpreter
+  LLDBInterpreterPropertiesGen
+  LLDBInterpreterPropertiesEnumGen)
 
 if (NOT LLDB_DISABLE_LIBEDIT)
   target_include_directories(lldbInterpreter PRIVATE ${libedit_INCLUDE_DIRS})
