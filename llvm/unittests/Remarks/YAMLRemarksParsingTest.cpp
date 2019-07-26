@@ -63,14 +63,6 @@ bool parseExpectError(const char (&Buf)[N], const char *Error) {
   return StringRef(Stream.str()).contains(Error);
 }
 
-static std::string toLower(StringRef S) {
-  std::string R;
-  R.reserve(S.size());
-  for (char C : S)
-    R += std::tolower(C);
-  return R;
-}
-
 void parseExpectErrorMeta(StringRef Buf, const char *Error) {
   std::string ErrorStr;
   raw_string_ostream Stream(ErrorStr);
@@ -82,7 +74,7 @@ void parseExpectErrorMeta(StringRef Buf, const char *Error) {
 
   // Use a case insensitive comparision due to case differences in error strings
   // for different OSs.
-  EXPECT_EQ(toLower(Stream.str()), toLower(Error));
+  EXPECT_EQ(StringRef(Stream.str()).lower(), StringRef(Error).lower());
 }
 
 TEST(YAMLRemarks, ParsingEmpty) {
