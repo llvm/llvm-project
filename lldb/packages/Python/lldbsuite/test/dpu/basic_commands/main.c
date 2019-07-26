@@ -16,6 +16,7 @@ int fct3(int val) {
 int fct2(int val) {
   val += 3; // StepIn entry location
   val = fct3(val);
+  val = fct3(val); // Step location 2
   val++;
   return val;
 }
@@ -24,7 +25,7 @@ int fct1(int val) {
   val++;
   val = fct2(val);
   val *= 2;
-  val = fct2(val); // Step location
+  val = fct2(val); // Step location 1
   val = val + val * 4;
   return val;
 }
