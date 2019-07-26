@@ -29,7 +29,6 @@ import logging
 import platform
 import re
 import signal
-import socket
 import subprocess
 import sys
 
@@ -58,7 +57,7 @@ def is_exe(fpath):
 
 def which(program):
     """Returns the full path to a program; None otherwise."""
-    fpath, fname = os.path.split(program)
+    fpath, _ = os.path.split(program)
     if fpath:
         if is_exe(program):
             return program
@@ -68,27 +67,6 @@ def which(program):
             if is_exe(exe_file):
                 return exe_file
     return None
-
-
-class _WritelnDecorator(object):
-    """Used to decorate file-like objects with a handy 'writeln' method"""
-
-    def __init__(self, stream):
-        self.stream = stream
-
-    def __getattr__(self, attr):
-        if attr in ('stream', '__getstate__'):
-            raise AttributeError(attr)
-        return getattr(self.stream, attr)
-
-    def writeln(self, arg=None):
-        if arg:
-            self.write(arg)
-        self.write('\n')  # text-mode streams translate to \r\n if needed
-
-#
-# Global variables:
-#
 
 
 def usage(parser):
@@ -558,17 +536,6 @@ def getXcodeOutputPaths(lldbRootDirectory):
     return result
 
 
-def createSocketToLocalPort(port):
-    def socket_closer(s):
-        """Close down an opened socket properly."""
-        s.shutdown(socket.SHUT_RDWR)
-        s.close()
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(("localhost", port))
-    return (sock, lambda: socket_closer(sock))
-
-
 def setupTestResults():
     """Sets up test results-related objects based on arg settings."""
     # Setup the results formatter configuration.
@@ -639,7 +606,7 @@ def getOutputPaths(lldbRootDirectory):
 def get_llvm_bin_dirs():
     """
     Returns an array of paths that may have the llvm/clang/etc binaries
-    in them, relative to this current file.  
+    in them, relative to this current file.
     Returns an empty array if none are found.
     """
     result = []
@@ -1088,14 +1055,6 @@ def getVersionForSDK(sdk):
     basename = str.lower(basename)
     ver = basename.replace(sdk, '')
     return ver
-
-
-def getPathForSDK(sdk):
-    sdk = str.lower(sdk)
-    full_path = seven.get_command_output('xcrun -sdk %s --show-sdk-path' % sdk)
-    if os.path.exists(full_path):
-        return full_path
-    return None
 
 
 def setDefaultTripleForPlatform():
