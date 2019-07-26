@@ -111,6 +111,12 @@ C Language Changes in Clang
   in all C-family languages. This macro is similar to ``__FILE__`` except it
   will always provide the last path component when possible.
 
+- Initial support for ``asm goto`` statements (a GNU C extension) has been
+  added for control flow from inline assembly to labels. The main consumers of
+  this construct are the Linux kernel (CONFIG_JUMP_LABEL=y) and glib. There are
+  still a few unsupported corner cases in Clang's integrated assembler and
+  IfConverter. Please file bugs for any issues you run into.
+
 - ...
 
 C11 Feature Support
@@ -241,6 +247,33 @@ The following methods have been added:
 
 Significant Known Problems
 ==========================
+
+Linux Kernel
+============
+
+With support for asm goto, the mainline Linux kernel for x86_64 is now buildable
+(and bootable) with Clang 9.  Other architectures that don't require
+CONFIG_JUMP_LABEL=y such as arm, aarch64, ppc32, ppc64le, (and possibly mips)
+have been supported with older releases of Clang (Clang 4 was first used with
+aarch64).
+
+The Android and ChromeOS Linux distributions have moved to building their Linux
+kernels with Clang, and Google is currently testing Clang built kernels for
+their production Linux kernels.
+
+Further, LLD, llvm-objcopy, llvm-ar, llvm-nm, llvm-objdump can all be used to
+build a working Linux kernel.
+
+More information about building Linux kernels with Clang can be found:
+
+- `ClangBuiltLinux web page <https://clangbuiltlinux.github.io/>`_.
+- `Issue Tracker <https://github.com/ClangBuiltLinux/linux/issues>`_.
+- `Wiki <https://github.com/ClangBuiltLinux/linux/wiki>`_.
+- `Mailing List <clang-built-linux@googlegroups.com>`_.
+- `Bi-weekly Meeting <https://calendar.google.com/calendar/embed?src=google.com_bbf8m6m4n8nq5p2bfjpele0n5s%40group.calendar.google.com>`_.
+- #clangbuiltlinux on Freenode.
+- `Clang Meta bug <https://bugs.llvm.org/show_bug.cgi?id=4068>`_.
+- `Continuous Integration <https://travis-ci.com/ClangBuiltLinux/continuous-integration>`_.
 
 Additional Information
 ======================
