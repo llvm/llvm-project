@@ -40,7 +40,7 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -94,7 +94,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -158,7 +158,7 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -206,7 +206,7 @@ TEST(YAMLGeneratorTest, emitEnumYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -343,7 +343,7 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---

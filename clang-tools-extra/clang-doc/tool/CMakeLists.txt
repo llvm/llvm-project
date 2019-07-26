@@ -14,4 +14,7 @@ target_link_libraries(clang-doc
   clangTooling
   clangToolingCore
   )
-  
+
+install(FILES ../stylesheets/clang-doc-default-stylesheet.css
+  DESTINATION share/clang
+  COMPONENT clang-doc)

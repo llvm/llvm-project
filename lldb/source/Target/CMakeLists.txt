@@ -70,3 +70,5 @@ add_lldb_library(lldbTarget
   LINK_COMPONENTS
     Support
   )
+
+add_dependencies(lldbTarget LLDBPropertiesGen LLDBPropertiesEnumGen)

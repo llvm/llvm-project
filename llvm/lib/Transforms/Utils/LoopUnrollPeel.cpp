@@ -575,11 +575,30 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   DenseMap<BasicBlock *, BasicBlock *> ExitIDom;
   if (DT) {
+    // We'd like to determine the idom of exit block after peeling one
+    // iteration.
+    // Let Exit is exit block.
+    // Let ExitingSet - is a set of predecessors of Exit block. They are exiting
+    // blocks.
+    // Let Latch' and ExitingSet' are copies after a peeling.
+    // We'd like to find an idom'(Exit) - idom of Exit after peeling.
+    // It is an evident that idom'(Exit) will be the nearest common dominator
+    // of ExitingSet and ExitingSet'.
+    // idom(Exit) is a nearest common dominator of ExitingSet.
+    // idom(Exit)' is a nearest common dominator of ExitingSet'.
+    // Taking into account that we have a single Latch, Latch' will dominate
+    // Header and idom(Exit).
+    // So the idom'(Exit) is nearest common dominator of idom(Exit)' and Latch'.
+    // All these basic blocks are in the same loop, so what we find is
+    // (nearest common dominator of idom(Exit) and Latch)'.
+    // In the loop below we remember nearest common dominator of idom(Exit) and
+    // Latch to update idom of Exit later.
     assert(L->hasDedicatedExits() && "No dedicated exits?");
     for (auto Edge : ExitEdges) {
       if (ExitIDom.count(Edge.second))
         continue;
-      BasicBlock *BB = DT->getNode(Edge.second)->getIDom()->getBlock();
+      BasicBlock *BB = DT->findNearestCommonDominator(
+          DT->getNode(Edge.second)->getIDom()->getBlock(), Latch);
       assert(L->contains(BB) && "IDom is not in a loop");
       ExitIDom[Edge.second] = BB;
     }

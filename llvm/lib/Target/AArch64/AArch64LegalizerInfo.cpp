@@ -315,8 +315,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                  {v8s16, v8s16},
                  {v8s8, v8s8},
                  {v16s8, v16s8}})
-      .clampScalar(0, s32, s32)
       .clampScalar(1, s32, s64)
+      .clampScalar(0, s32, s32)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {
             const LLT &Ty = Query.Types[0];

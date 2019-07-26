@@ -11,14 +11,21 @@
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 
+// We need to supprt Windows paths as well. In order to have paths with the same
+// length, use a different path according to the platform.
+#ifdef _WIN32
+#define EXTERNALFILETESTPATH "C:/externalfi"
+#else
+#define EXTERNALFILETESTPATH "/externalfile"
+#endif
+
 using namespace llvm;
 
 static void check(const remarks::Remark &R, StringRef ExpectedR,
-                  Optional<StringRef> ExpectedStrTab = None,
+                  StringRef ExpectedMeta, bool UseStrTab = false,
                   Optional<remarks::StringTable> StrTab = None) {
   std::string Buf;
   raw_string_ostream OS(Buf);
-  bool UseStrTab = ExpectedStrTab.hasValue();
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
     if (UseStrTab) {
       if (StrTab)
@@ -34,12 +41,12 @@ static void check(const remarks::Remark &R, StringRef ExpectedR,
 
   S->emit(R);
   EXPECT_EQ(OS.str(), ExpectedR);
-  if (ExpectedStrTab) {
-    Buf.clear();
-    EXPECT_TRUE(S->StrTab);
-    S->StrTab->serialize(OS);
-    EXPECT_EQ(OS.str(), *ExpectedStrTab);
-  }
+
+  Buf.clear();
+  std::unique_ptr<remarks::MetaSerializer> MS =
+      S->metaSerializer(OS, StringRef(EXTERNALFILETESTPATH));
+  MS->emit();
+  EXPECT_EQ(OS.str(), ExpectedMeta);
 }
 
 TEST(YAMLRemarks, SerializerRemark) {
@@ -57,17 +64,23 @@ TEST(YAMLRemarks, SerializerRemark) {
   R.Args.back().Key = "keydebug";
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(R, "--- !Missed\n"
-           "Pass:            pass\n"
-           "Name:            name\n"
-           "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
-           "Function:        func\n"
-           "Hotness:         5\n"
-           "Args:\n"
-           "  - key:             value\n"
-           "  - keydebug:        valuedebug\n"
-           "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
-           "...\n");
+  check(R,
+        "--- !Missed\n"
+        "Pass:            pass\n"
+        "Name:            name\n"
+        "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
+        "Function:        func\n"
+        "Hotness:         5\n"
+        "Args:\n"
+        "  - key:             value\n"
+        "  - keydebug:        valuedebug\n"
+        "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
+        "...\n",
+        StringRef("REMARKS\0"
+                  "\0\0\0\0\0\0\0\0"
+                  "\0\0\0\0\0\0\0\0"
+                  EXTERNALFILETESTPATH"\0",
+                  38));
 }
 
 TEST(YAMLRemarks, SerializerRemarkStrTab) {
@@ -97,7 +110,13 @@ TEST(YAMLRemarks, SerializerRemarkStrTab) {
         "  - keydebug:        5\n"
         "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
         "...\n",
-        StringRef("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45));
+        StringRef("REMARKS\0"
+                  "\0\0\0\0\0\0\0\0"
+                  "\x2d\0\0\0\0\0\0\0"
+                  "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
+                  EXTERNALFILETESTPATH"\0",
+                  83),
+        /*UseStrTab=*/true);
 }
 
 TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
@@ -128,5 +147,12 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
         "  - keydebug:        5\n"
         "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
         "...\n",
-        StrTab, remarks::StringTable(remarks::ParsedStringTable(StrTab)));
+        StringRef("REMARKS\0"
+                  "\0\0\0\0\0\0\0\0"
+                  "\x2d\0\0\0\0\0\0\0"
+                  "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
+                  EXTERNALFILETESTPATH"\0",
+                  83),
+        /*UseStrTab=*/true,
+        remarks::StringTable(remarks::ParsedStringTable(StrTab)));
 }

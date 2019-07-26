@@ -148,6 +148,37 @@ TEST(FileCollectorTest, copyFiles) {
   EXPECT_FALSE(ec);
 }
 
+TEST(FileCollectorTest, recordAndConstructDirectory) {
+  ScopedDir file_root("dir_root", true);
+  ScopedDir subdir(file_root + "/subdir");
+  ScopedDir subdir2(file_root + "/subdir2");
+  ScopedFile a(subdir2 + "/a");
+
+  // Create file collector and add files.
+  ScopedDir root("copy_files_root", true);
+  std::string root_fs = root.Path.str();
+  TestingFileCollector FileCollector(root_fs, root_fs);
+  FileCollector.addFile(a.Path);
+
+  // The empty directory isn't seen until we add it.
+  EXPECT_TRUE(FileCollector.hasSeen(a.Path));
+  EXPECT_FALSE(FileCollector.hasSeen(subdir.Path));
+
+  FileCollector.addFile(subdir.Path);
+  EXPECT_TRUE(FileCollector.hasSeen(subdir.Path));
+
+  // Make sure we can construct the directory.
+  std::error_code ec = FileCollector.copyFiles(true);
+  EXPECT_FALSE(ec);
+  bool IsDirectory = false;
+  llvm::SmallString<128> SubdirInRoot = root.Path;
+  llvm::sys::path::append(SubdirInRoot,
+                          llvm::sys::path::relative_path(subdir.Path));
+  ec = sys::fs::is_directory(SubdirInRoot, IsDirectory);
+  EXPECT_FALSE(ec);
+  ASSERT_TRUE(IsDirectory);
+}
+
 #ifndef _WIN32
 TEST(FileCollectorTest, Symlinks) {
   // Root where the original files live.

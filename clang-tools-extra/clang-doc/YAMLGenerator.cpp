@@ -243,12 +243,15 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS) override;
+  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                 const ClangDocContext &CDCtx) override;
+  bool createResources(ClangDocContext CDCtx) override { return true; }
 };
 
 const char *YAMLGenerator::Format = "yaml";
 
-llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
+llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                              const ClangDocContext &CDCtx) {
   llvm::yaml::Output InfoYAML(OS);
   switch (I->IT) {
   case InfoType::IT_namespace:

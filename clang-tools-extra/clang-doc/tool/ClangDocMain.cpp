@@ -62,6 +62,11 @@ static llvm::cl::opt<bool> DoxygenOnly(
     llvm::cl::desc("Use only doxygen-style comments to generate docs."),
     llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::list<std::string> UserStylesheets(
+    "stylesheets", llvm::cl::CommaSeparated,
+    llvm::cl::desc("CSS stylesheets to extend the default styles."),
+    llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy {
   md,
   yaml,
@@ -89,6 +94,15 @@ std::string getFormatString() {
     return "html";
   }
   llvm_unreachable("Unknown OutputFormatTy");
+}
+
+// This function isn't referenced outside its translation unit, but it
+// can't use the "static" keyword because its address is used for
+// GetMainExecutable (since some platforms don't support taking the
+// address of main, and some platforms can't implement GetMainExecutable
+// without being given the address of a function in the main executable).
+std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
+  return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
 bool CreateDirectory(const Twine &DirName, bool ClearDirectory = false) {
@@ -129,7 +143,6 @@ llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
                                                          StringRef RelativePath,
                                                          StringRef Name,
                                                          StringRef Ext) {
-  std::error_code OK;
   llvm::SmallString<128> Path;
   llvm::sys::path::native(Root, Path);
   llvm::sys::path::append(Path, RelativePath);
@@ -193,10 +206,26 @@ int main(int argc, const char **argv) {
                                   tooling::ArgumentInsertPosition::END),
         ArgAdjuster);
 
+  clang::doc::ClangDocContext CDCtx = {
+      Exec->get()->getExecutionContext(),
+      PublicOnly,
+      OutDirectory,
+      {UserStylesheets.begin(), UserStylesheets.end()}};
+
+  if (Format == "html") {
+    void *MainAddr = (void *)(intptr_t)GetExecutablePath;
+    std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
+    llvm::SmallString<128> DefaultStylesheet;
+    llvm::sys::path::native(ClangDocPath, DefaultStylesheet);
+    DefaultStylesheet = llvm::sys::path::parent_path(DefaultStylesheet);
+    llvm::sys::path::append(DefaultStylesheet,
+                            "../share/clang/clang-doc-default-stylesheet.css");
+    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                                 DefaultStylesheet.str());
+  }
+
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  clang::doc::ClangDocContext CDCtx = {Exec->get()->getExecutionContext(),
-                                       PublicOnly};
   auto Err =
       Exec->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
@@ -235,9 +264,12 @@ int main(int argc, const char **argv) {
       continue;
     }
 
-    if (auto Err = G->get()->generateDocForInfo(I, InfoOS))
+    if (auto Err = G->get()->generateDocForInfo(I, InfoOS, CDCtx))
       llvm::errs() << toString(std::move(Err)) << "\n";
   }
+
+  if (!G->get()->createResources(CDCtx))
+    return 1;
 
   return 0;
 }

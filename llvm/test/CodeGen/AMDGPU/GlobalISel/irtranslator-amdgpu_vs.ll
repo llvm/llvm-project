@@ -56,7 +56,7 @@ define amdgpu_vs void @test_order(float inreg %arg0, float inreg %arg1, float %a
 ; CHECK: [[S1:%[0-9]+]]:_(s32) = COPY $sgpr3
 ; CHECK: $sgpr0 = COPY [[S0]]
 ; CHECK: $sgpr1 = COPY [[S1]]
-; CHECK: SI_RETURN_TO_EPILOG $sgpr0, $sgpr1
+; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
 define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
 main_body:
   %tmp0 = insertvalue <{ i32, i32 }> undef, i32 %arg0, 0

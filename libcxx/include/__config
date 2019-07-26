@@ -1097,17 +1097,27 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
        _LIBCPP_HAS_NO_THREADS is defined.
 #endif
 
-// The Apple, glibc, and Bionic implementation of pthreads implements
+// The glibc and Bionic implementation of pthreads implements
 // pthread_mutex_destroy as nop for regular mutexes. Additionally, Win32
 // mutexes have no destroy mechanism.
-// TODO(EricWF): Enable this optimization on Apple and Bionic platforms after
-// speaking to their respective stakeholders.
+//
+// This optimization can't be performed on Apple platforms, where
+// pthread_mutex_destroy can allow the kernel to release resources.
+// See https://llvm.org/D64298 for details.
+//
+// TODO(EricWF): Enable this optimization on Bionic after speaking to their
+//               respective stakeholders.
 #if (defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && defined(__GLIBC__)) \
   || defined(_LIBCPP_HAS_THREAD_API_WIN32)
 # define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
 #endif
 
 // Destroying a condvar is a nop on Windows.
+//
+// This optimization can't be performed on Apple platforms, where
+// pthread_cond_destroy can allow the kernel to release resources.
+// See https://llvm.org/D64298 for details.
+//
 // TODO(EricWF): This is potentially true for some pthread implementations
 // as well.
 #if defined(_LIBCPP_HAS_THREAD_API_WIN32)
