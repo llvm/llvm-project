@@ -204,12 +204,12 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
 
 static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_debugger
-#include "lldb/Core/Properties.inc"
+#include "Properties.inc"
 };
 
 enum {
 #define LLDB_PROPERTIES_debugger
-#include "lldb/Core/PropertiesEnum.inc"
+#include "PropertiesEnum.inc"
 };
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
