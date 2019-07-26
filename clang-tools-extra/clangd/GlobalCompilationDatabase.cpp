@@ -117,20 +117,41 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   return None;
 }
 
-std::pair<tooling::CompilationDatabase *, /*SentBroadcast*/ bool>
+// For platforms where paths are case-insensitive (but case-preserving),
+// we need to do case-insensitive comparisons and use lowercase keys.
+// FIXME: Make Path a real class with desired semantics instead.
+//        This class is not the only place this problem exists.
+// FIXME: Mac filesystems default to case-insensitive, but may be sensitive.
+
+static std::string maybeCaseFoldPath(PathRef Path) {
+#if defined(_WIN32) || defined(__APPLE__)
+  return Path.lower();
+#else
+  return Path;
+#endif
+}
+
+static bool pathEqual(PathRef A, PathRef B) {
+#if defined(_WIN32) || defined(__APPLE__)
+  return A.equals_lower(B);
+#else
+  return A == B;
+#endif
+}
+
+DirectoryBasedGlobalCompilationDatabase::CachedCDB &
 DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
   // FIXME(ibiryukov): Invalidate cached compilation databases on changes
-  auto CachedIt = CompilationDatabases.find(Dir);
-  if (CachedIt != CompilationDatabases.end())
-    return {CachedIt->second.CDB.get(), CachedIt->second.SentBroadcast};
-  std::string Error = "";
-
-  CachedCDB Entry;
-  Entry.CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
-  auto Result = Entry.CDB.get();
-  CompilationDatabases[Dir] = std::move(Entry);
-
-  return {Result, false};
+  // FIXME(sammccall): this function hot, avoid copying key when hitting cache.
+  auto Key = maybeCaseFoldPath(Dir);
+  auto R = CompilationDatabases.try_emplace(Key);
+  if (R.second) { // Cache miss, try to load CDB.
+    CachedCDB &Entry = R.first->second;
+    std::string Error = "";
+    Entry.CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
+    Entry.Path = Dir;
+  }
+  return R.first->second;
 }
 
 llvm::Optional<DirectoryBasedGlobalCompilationDatabase::CDBLookupResult>
@@ -139,38 +160,41 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   assert(llvm::sys::path::is_absolute(Request.FileName) &&
          "path must be absolute");
 
+  bool ShouldBroadcast = false;
   CDBLookupResult Result;
-  bool SentBroadcast = false;
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
+    CachedCDB *Entry = nullptr;
     if (CompileCommandsDir) {
-      std::tie(Result.CDB, SentBroadcast) =
-          getCDBInDirLocked(*CompileCommandsDir);
-      Result.PI.SourceRoot = *CompileCommandsDir;
+      Entry = &getCDBInDirLocked(*CompileCommandsDir);
     } else {
       // Traverse the canonical version to prevent false positives. i.e.:
       // src/build/../a.cc can detect a CDB in /src/build if not canonicalized.
+      // FIXME(sammccall): this loop is hot, use a union-find-like structure.
       actOnAllParentDirectories(removeDots(Request.FileName),
-                                [this, &SentBroadcast, &Result](PathRef Path) {
-                                  std::tie(Result.CDB, SentBroadcast) =
-                                      getCDBInDirLocked(Path);
-                                  Result.PI.SourceRoot = Path;
-                                  return Result.CDB != nullptr;
+                                [&](PathRef Path) {
+                                  Entry = &getCDBInDirLocked(Path);
+                                  return Entry->CDB != nullptr;
                                 });
     }
 
-    if (!Result.CDB)
+    if (!Entry || !Entry->CDB)
       return llvm::None;
 
     // Mark CDB as broadcasted to make sure discovery is performed once.
-    if (Request.ShouldBroadcast && !SentBroadcast)
-      CompilationDatabases[Result.PI.SourceRoot].SentBroadcast = true;
+    if (Request.ShouldBroadcast && !Entry->SentBroadcast) {
+      Entry->SentBroadcast = true;
+      ShouldBroadcast = true;
+    }
+
+    Result.CDB = Entry->CDB.get();
+    Result.PI.SourceRoot = Entry->Path;
   }
 
   // FIXME: Maybe make the following part async, since this can block retrieval
   // of compile commands.
-  if (Request.ShouldBroadcast && !SentBroadcast)
+  if (ShouldBroadcast)
     broadcastCDB(Result);
   return Result;
 }
@@ -200,9 +224,9 @@ void DirectoryBasedGlobalCompilationDatabase::broadcastCDB(
         if (!It.second)
           return true;
 
-        auto Res = getCDBInDirLocked(Path);
-        It.first->second = Res.first != nullptr;
-        return Path == Result.PI.SourceRoot;
+        CachedCDB &Entry = getCDBInDirLocked(Path);
+        It.first->second = Entry.CDB != nullptr;
+        return pathEqual(Path, Result.PI.SourceRoot);
       });
     }
   }
@@ -213,7 +237,7 @@ void DirectoryBasedGlobalCompilationDatabase::broadcastCDB(
     // Independent of whether it has an entry for that file or not.
     actOnAllParentDirectories(File, [&](PathRef Path) {
       if (DirectoryHasCDB.lookup(Path)) {
-        if (Path == Result.PI.SourceRoot)
+        if (pathEqual(Path, Result.PI.SourceRoot))
           // Make sure listeners always get a canonical path for the file.
           GovernedFiles.push_back(removeDots(File));
         // Stop as soon as we hit a CDB.
