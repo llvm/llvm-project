@@ -58,7 +58,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
 
 // SymbolVendor constructor
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
-    : ModuleChild(module_sp), m_sym_file_up(), m_symtab() {}
+    : ModuleChild(module_sp), m_sym_file_up() {}
 
 // Destructor
 SymbolVendor::~SymbolVendor() {}
@@ -384,35 +384,9 @@ FileSpec SymbolVendor::GetMainFileSpec() const {
 }
 
 Symtab *SymbolVendor::GetSymtab() {
-  ModuleSP module_sp(GetModule());
-  if (!module_sp)
-    return nullptr;
-
-  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-
-  if (m_symtab)
-    return m_symtab;
-
-  ObjectFile *objfile = module_sp->GetObjectFile();
-  if (!objfile)
-    return nullptr;
-
-  m_symtab = objfile->GetSymtab();
-  if (m_symtab && m_sym_file_up)
-    m_sym_file_up->AddSymbols(*m_symtab);
-
-  return m_symtab;
-}
-
-void SymbolVendor::ClearSymtab() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    ObjectFile *objfile = module_sp->GetObjectFile();
-    if (objfile) {
-      // Clear symbol table from unified section list.
-      objfile->ClearSymtab();
-    }
-  }
+  if (m_sym_file_up)
+    return m_sym_file_up->GetSymtab();
+  return nullptr;
 }
 
 void SymbolVendor::SectionFileAddressesChanged() {

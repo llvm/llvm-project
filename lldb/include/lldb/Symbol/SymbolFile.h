@@ -114,6 +114,8 @@ public:
   uint32_t GetNumCompileUnits();
   lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx);
 
+  Symtab *GetSymtab();
+
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
@@ -246,6 +248,7 @@ protected:
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
   llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
+  Symtab *m_symtab = nullptr;
   uint32_t m_abilities;
   bool m_calculated_abilities;
 

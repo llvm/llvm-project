@@ -9,7 +9,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbHost
     lldbSymbol
     lldbPluginObjectFileELF
-    lldbPluginSymbolVendorELF
+    lldbPluginSymbolFileSymtab
     lldbUtilityHelpers
     LLVMTestingSupport
   LINK_COMPONENTS
