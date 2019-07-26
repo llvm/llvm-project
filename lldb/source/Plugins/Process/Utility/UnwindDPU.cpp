@@ -56,15 +56,11 @@ lldb::addr_t UnwindDPU::ReadMemory(lldb::addr_t src_addr) {
   return addr;
 }
 
-bool UnwindDPU::PCIsInstructionReturn(Function *fct, lldb::addr_t pc) {
-  ExecutionContext exe_ctx;
-  m_thread.GetProcess()->GetTarget().CalculateExecutionContext(exe_ctx);
-  return fct->GetInstructions(exe_ctx, NULL, true)
-             ->GetInstructionList()
-             .GetInstructionAtOffset(pc & (~0x80000000U))
-             ->GetOpcode()
-             .GetOpcode64() ==
-         0x8c5f00000000ULL; // 0x8c5f00000000 => 'jump r23'
+bool UnwindDPU::PCIsInstructionReturn(lldb::addr_t pc) {
+  Status error;
+  uint64_t instruction;
+  m_thread.GetProcess()->ReadMemory(pc, &instruction, 8, error);
+  return instruction == 0x8c5f00000000ULL; // 0x8c5f00000000 => 'jump r23'
 }
 
 #define NB_FRAME_MAX (8 * 1024)
@@ -96,20 +92,18 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   // let's just add 1 to it so that we are sure that it will be seen as the
   // youngest one when comparing StackID). pc is in r23.
   Function *fct = NULL;
+  lldb::addr_t start_addr = 0;
   GetFunction(&fct, first_pc_addr);
   if (fct != NULL) {
-    lldb::addr_t start_addr =
-        fct->GetAddressRange().GetBaseAddress().GetFileAddress();
-    if (((first_pc_addr >= start_addr) &&
-         (first_pc_addr < (start_addr + 16))) ||
-        PCIsInstructionReturn(fct, first_pc_addr)) {
-      prev_frame->cfa++;
-      RegisterValue reg_r23;
-      reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"),
-                               reg_r23);
-      SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()),
-               reg_ctx_sp);
-    }
+    start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
+  }
+  if (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
+      PCIsInstructionReturn(first_pc_addr)) {
+    prev_frame->cfa++;
+    RegisterValue reg_r23;
+    reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
+    SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()),
+             reg_ctx_sp);
   }
 
   while (true) {

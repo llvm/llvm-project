@@ -65,7 +65,7 @@ private:
 
   lldb::addr_t ReadMemory(lldb::addr_t src_addr);
 
-  bool PCIsInstructionReturn(Function *fct, lldb::addr_t pc);
+  bool PCIsInstructionReturn(lldb::addr_t pc);
 };
 } // namespace lldb_private
 #endif /* dpu_UnwindDPU_h_ */
