@@ -49,7 +49,7 @@ enum ArchExtKind : unsigned {
   AEK_SVE2AES =     1 << 20,
   AEK_SVE2SM4 =     1 << 21,
   AEK_SVE2SHA3 =    1 << 22,
-  AEK_BITPERM =     1 << 23,
+  AEK_SVE2BITPERM = 1 << 23,
   AEK_FP_DP   =     1 << 24,
   AEK_LOB     =     1 << 25,
   // Unsupported extensions.

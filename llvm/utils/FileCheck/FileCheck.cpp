@@ -93,7 +93,8 @@ static cl::opt<bool> VerboseVerbose(
 static const char * DumpInputEnv = "FILECHECK_DUMP_INPUT_ON_FAILURE";
 
 static cl::opt<bool> DumpInputOnFailure(
-    "dump-input-on-failure", cl::init(std::getenv(DumpInputEnv)),
+    "dump-input-on-failure",
+    cl::init(std::getenv(DumpInputEnv) && *std::getenv(DumpInputEnv)),
     cl::desc("Dump original input to stderr before failing.\n"
              "The value can be also controlled using\n"
              "FILECHECK_DUMP_INPUT_ON_FAILURE environment variable.\n"

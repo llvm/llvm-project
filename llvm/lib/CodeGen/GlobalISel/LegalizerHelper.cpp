@@ -567,6 +567,26 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SEXT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    if (NarrowTy.getSizeInBits() != SizeOp0 / 2) {
+      LLVM_DEBUG(dbgs() << "Can't narrow sext to type " << NarrowTy << "\n");
+      return UnableToLegalize;
+    }
+
+    Register SrcReg = MI.getOperand(1).getReg();
+
+    // Shift the sign bit of the low register through the high register.
+    auto ShiftAmt =
+        MIRBuilder.buildConstant(LLT::scalar(64), NarrowTy.getSizeInBits() - 1);
+    auto Shift = MIRBuilder.buildAShr(NarrowTy, SrcReg, ShiftAmt);
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {SrcReg, Shift.getReg(0)});
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   case TargetOpcode::G_ADD: {
     // FIXME: add support for when SizeOp0 isn't an exact multiple of
     // NarrowSize.

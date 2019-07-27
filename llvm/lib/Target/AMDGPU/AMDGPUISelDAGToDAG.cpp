@@ -2244,8 +2244,14 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
   unsigned Opcode;
   switch (IntrID) {
+  case Intrinsic::amdgcn_wqm:
+    Opcode = AMDGPU::WQM;
+    break;
   case Intrinsic::amdgcn_softwqm:
     Opcode = AMDGPU::SOFT_WQM;
+    break;
+  case Intrinsic::amdgcn_wwm:
+    Opcode = AMDGPU::WWM;
     break;
   default:
     SelectCode(N);

@@ -115,7 +115,7 @@ def FeatureSVE2SM4 : SubtargetFeature<"sve2-sm4", "HasSVE2SM4", "true",
 def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
   "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
 
-def FeatureSVE2BitPerm : SubtargetFeature<"bitperm", "HasSVE2BitPerm", "true",
+def FeatureSVE2BitPerm : SubtargetFeature<"sve2-bitperm", "HasSVE2BitPerm", "true",
   "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
 
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",

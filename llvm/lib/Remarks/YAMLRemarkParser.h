@@ -18,6 +18,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -58,6 +59,9 @@ struct YAMLRemarkParser : public RemarkParser {
   yaml::Stream Stream;
   /// Iterator in the YAML stream.
   yaml::document_iterator YAMLIt;
+  /// If we parse remark metadata in separate mode, we need to open a new file
+  /// and parse that.
+  std::unique_ptr<MemoryBuffer> SeparateBuf;
 
   YAMLRemarkParser(StringRef Buf);
 
@@ -104,6 +108,11 @@ protected:
   /// Parse one value to a string.
   Expected<StringRef> parseStr(yaml::KeyValueNode &Node) override;
 };
+
+Expected<std::unique_ptr<YAMLRemarkParser>>
+createYAMLParserFromMeta(StringRef Buf,
+                         Optional<ParsedStringTable> StrTab = None);
+
 } // end namespace remarks
 } // end namespace llvm
 

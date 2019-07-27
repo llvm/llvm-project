@@ -14,6 +14,7 @@
 #include "YAMLRemarkParser.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Remarks/RemarkParser.h"
+#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -52,6 +53,110 @@ static SourceMgr setupSM(std::string &LastErrorMessage) {
   SourceMgr SM;
   SM.setDiagHandler(handleDiagnostic, &LastErrorMessage);
   return SM;
+}
+
+// Parse the magic number. This function returns true if this represents remark
+// metadata, false otherwise.
+static Expected<bool> parseMagic(StringRef &Buf) {
+  if (!Buf.consume_front(remarks::Magic))
+    return false;
+
+  if (Buf.size() < 1 || !Buf.consume_front(StringRef("\0", 1)))
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "Expecting \\0 after magic number.");
+  return true;
+}
+
+static Expected<uint64_t> parseVersion(StringRef &Buf) {
+  if (Buf.size() < sizeof(uint64_t))
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "Expecting version number.");
+
+  uint64_t Version =
+      support::endian::read<uint64_t, support::little, support::unaligned>(
+          Buf.data());
+  if (Version != remarks::Version)
+    return createStringError(
+        std::errc::illegal_byte_sequence,
+        "Mismatching remark version. Got %u, expected %u.", Version,
+        remarks::Version);
+  Buf = Buf.drop_front(sizeof(uint64_t));
+  return Version;
+}
+
+static Expected<uint64_t> parseStrTabSize(StringRef &Buf) {
+  if (Buf.size() < sizeof(uint64_t))
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "Expecting string table size.");
+  uint64_t StrTabSize =
+      support::endian::read<uint64_t, support::little, support::unaligned>(
+          Buf.data());
+  Buf = Buf.drop_front(sizeof(uint64_t));
+  return StrTabSize;
+}
+
+static Expected<ParsedStringTable> parseStrTab(StringRef &Buf,
+                                               uint64_t StrTabSize) {
+  if (Buf.size() < StrTabSize)
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "Expecting string table.");
+
+  // Attach the string table to the parser.
+  ParsedStringTable Result(StringRef(Buf.data(), StrTabSize));
+  Buf = Buf.drop_front(StrTabSize);
+  return Expected<ParsedStringTable>(std::move(Result));
+}
+
+Expected<std::unique_ptr<YAMLRemarkParser>>
+remarks::createYAMLParserFromMeta(StringRef Buf,
+                                  Optional<ParsedStringTable> StrTab) {
+  // We now have a magic number. The metadata has to be correct.
+  Expected<bool> isMeta = parseMagic(Buf);
+  if (!isMeta)
+    return isMeta.takeError();
+  // If it's not recognized as metadata, roll back.
+  std::unique_ptr<MemoryBuffer> SeparateBuf;
+  if (*isMeta) {
+    Expected<uint64_t> Version = parseVersion(Buf);
+    if (!Version)
+      return Version.takeError();
+
+    Expected<uint64_t> StrTabSize = parseStrTabSize(Buf);
+    if (!StrTabSize)
+      return StrTabSize.takeError();
+
+    // If the size of string table is not 0, try to build one.
+    if (*StrTabSize != 0) {
+      if (StrTab)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "String table already provided.");
+      Expected<ParsedStringTable> MaybeStrTab = parseStrTab(Buf, *StrTabSize);
+      if (!MaybeStrTab)
+        return MaybeStrTab.takeError();
+      StrTab = std::move(*MaybeStrTab);
+    }
+    // If it starts with "---", there is no external file.
+    if (!Buf.startswith("---")) {
+      // At this point, we expect Buf to contain the external file path.
+      // Try to open the file and start parsing from there.
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+          MemoryBuffer::getFile(Buf);
+      if (std::error_code EC = BufferOrErr.getError())
+        return errorCodeToError(EC);
+
+      // Keep the buffer alive.
+      SeparateBuf = std::move(*BufferOrErr);
+      Buf = SeparateBuf->getBuffer();
+    }
+  }
+
+  std::unique_ptr<YAMLRemarkParser> Result =
+      StrTab
+          ? llvm::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(*StrTab))
+          : llvm::make_unique<YAMLRemarkParser>(Buf);
+  if (SeparateBuf)
+    Result->SeparateBuf = std::move(SeparateBuf);
+  return std::move(Result);
 }
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)

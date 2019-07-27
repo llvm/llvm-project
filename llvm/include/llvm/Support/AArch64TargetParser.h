@@ -53,7 +53,7 @@ enum ArchExtKind : unsigned {
   AEK_SVE2AES =     1 << 24,
   AEK_SVE2SM4 =     1 << 25,
   AEK_SVE2SHA3 =    1 << 26,
-  AEK_BITPERM =     1 << 27,
+  AEK_SVE2BITPERM = 1 << 27,
 };
 
 enum class ArchKind {
