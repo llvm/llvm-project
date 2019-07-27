@@ -754,13 +754,14 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
       continue;
 
     for (const Instruction &I : *BB) {
-      // Ignore sync instructions in this analysis
-      if (isa<SyncInst>(I))
-	continue;
-
       // Fail fast if we encounter an invalid CFG.
       assert(!(D == &I) &&
              "Invalid CFG found: Detached CFG reaches its own Detach.");
+
+      // No need to recursively check nested syncs or detaches, as nested tasks
+      // are wholly contained in the detached sub-CFG we're iterating through.
+      if (isa<SyncInst>(&*I) || isa<DetachInst>(&*I))
+        continue;
 
       Result = unionModRef(Result, getModRefInfo(&I, Loc));
 
