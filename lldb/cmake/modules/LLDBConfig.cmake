@@ -226,7 +226,7 @@ if (NOT LLDB_DISABLE_PYTHON)
     # version for the system provided interpreter and libraries.
     if (NOT PYTHON_VERSION_MAJOR VERSION_EQUAL pythonlibs_major OR
         NOT PYTHON_VERSION_MINOR VERSION_EQUAL pythonlibs_minor)
-      message(FATAL_ERROR "Found incompatible Python interpreter (${python_major}.${python_minor})"
+      message(FATAL_ERROR "Found incompatible Python interpreter (${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})"
                           " and Python libraries (${pythonlibs_major}.${pythonlibs_minor})")
     endif()
   endif()

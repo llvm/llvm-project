@@ -1756,7 +1756,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
 void UnwrappedLineParser::parseIfThenElse() {
   assert(FormatTok->Tok.is(tok::kw_if) && "'if' expected");
   nextToken();
-  if (FormatTok->Tok.is(tok::kw_constexpr))
+  if (FormatTok->Tok.isOneOf(tok::kw_constexpr, tok::identifier))
     nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();

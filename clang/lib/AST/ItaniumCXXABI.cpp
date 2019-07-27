@@ -177,7 +177,7 @@ public:
     if (!isVariadic && T.isWindowsGNUEnvironment() &&
         T.getArch() == llvm::Triple::x86)
       return CC_X86ThisCall;
-    return CC_C;
+    return Context.getTargetInfo().getDefaultCallingConv();
   }
 
   // We cheat and just check that the class has a vtable pointer, and that it's
