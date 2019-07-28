@@ -44,10 +44,9 @@ static void AddBreakpointDescription(Stream *s, Breakpoint *bp,
 
 // Modifiable Breakpoint Options
 #pragma mark Modify::CommandOptions
-static constexpr OptionDefinition g_breakpoint_modify_options[] = {
 #define LLDB_OPTIONS_breakpoint_modify
 #include "CommandOptions.inc"
-};
+
 class lldb_private::BreakpointOptionGroup : public OptionGroup
 {
 public:
@@ -181,10 +180,9 @@ public:
   BreakpointOptions m_bp_opts;
 
 };
-static constexpr OptionDefinition g_breakpoint_dummy_options[] = {
+
 #define LLDB_OPTIONS_breakpoint_dummy
 #include "CommandOptions.inc"
-};
 
 class BreakpointDummyOptionGroup : public OptionGroup
 {
@@ -224,10 +222,8 @@ public:
 
 };
 
-static constexpr OptionDefinition g_breakpoint_set_options[] = {
 #define LLDB_OPTIONS_breakpoint_set
 #include "CommandOptions.inc"
-};
 
 // CommandObjectBreakpointSet
 
@@ -1154,10 +1150,8 @@ protected:
 // CommandObjectBreakpointList
 
 #pragma mark List::CommandOptions
-static constexpr OptionDefinition g_breakpoint_list_options[] = {
 #define LLDB_OPTIONS_breakpoint_list
 #include "CommandOptions.inc"
-};
 
 #pragma mark List
 
@@ -1311,10 +1305,8 @@ private:
 // CommandObjectBreakpointClear
 #pragma mark Clear::CommandOptions
 
-static constexpr OptionDefinition g_breakpoint_clear_options[] = {
 #define LLDB_OPTIONS_breakpoint_clear
 #include "CommandOptions.inc"
-};
 
 #pragma mark Clear
 
@@ -1462,10 +1454,8 @@ private:
 };
 
 // CommandObjectBreakpointDelete
-static constexpr OptionDefinition g_breakpoint_delete_options[] = {
 #define LLDB_OPTIONS_breakpoint_delete
 #include "CommandOptions.inc"
-};
 
 #pragma mark Delete
 
@@ -1614,11 +1604,9 @@ private:
 };
 
 // CommandObjectBreakpointName
-
-static constexpr OptionDefinition g_breakpoint_name_options[] = {
 #define LLDB_OPTIONS_breakpoint_name
 #include "CommandOptions.inc"
-};
+
 class BreakpointNameOptionGroup : public OptionGroup {
 public:
   BreakpointNameOptionGroup()
@@ -1680,10 +1668,8 @@ public:
   OptionValueString m_help_string;
 };
 
-static constexpr OptionDefinition g_breakpoint_access_options[] = {
 #define LLDB_OPTIONS_breakpoint_access
 #include "CommandOptions.inc"
-};
 
 class BreakpointAccessOptionGroup : public OptionGroup {
 public:
@@ -2142,10 +2128,8 @@ public:
 
 // CommandObjectBreakpointRead
 #pragma mark Read::CommandOptions
-static constexpr OptionDefinition g_breakpoint_read_options[] = {
 #define LLDB_OPTIONS_breakpoint_read
 #include "CommandOptions.inc"
-};
 
 #pragma mark Read
 
@@ -2269,10 +2253,8 @@ private:
 
 // CommandObjectBreakpointWrite
 #pragma mark Write::CommandOptions
-static constexpr OptionDefinition g_breakpoint_write_options[] = {
 #define LLDB_OPTIONS_breakpoint_write
 #include "CommandOptions.inc"
-};
 
 #pragma mark Write
 class CommandObjectBreakpointWrite : public CommandObjectParsed {

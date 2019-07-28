@@ -33,11 +33,8 @@ using namespace lldb_private;
 
 #pragma mark CommandObjectSourceInfo
 // CommandObjectSourceInfo - debug line entries dumping command
-
-static constexpr OptionDefinition g_source_info_options[] = {
 #define LLDB_OPTIONS_source_info
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -636,11 +633,8 @@ protected:
 
 #pragma mark CommandObjectSourceList
 // CommandObjectSourceList
-
-static constexpr OptionDefinition g_source_list_options[] = {
 #define LLDB_OPTIONS_source_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {

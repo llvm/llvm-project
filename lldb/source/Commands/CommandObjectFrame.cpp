@@ -53,10 +53,8 @@ using namespace lldb_private;
 
 // CommandObjectFrameDiagnose
 
-static constexpr OptionDefinition g_frame_diag_options[] = {
 #define LLDB_OPTIONS_frame_diag
 #include "CommandOptions.inc"
-};
 
 class CommandObjectFrameDiagnose : public CommandObjectParsed {
 public:
@@ -234,10 +232,8 @@ protected:
 
 // CommandObjectFrameSelect
 
-static OptionDefinition g_frame_select_options[] = {
 #define LLDB_OPTIONS_frame_select
 #include "CommandOptions.inc"
-};
 
 class CommandObjectFrameSelect : public CommandObjectParsed {
 public:
@@ -739,10 +735,8 @@ protected:
 
 #pragma mark CommandObjectFrameRecognizer
 
-static OptionDefinition g_frame_recognizer_add_options[] = {
 #define LLDB_OPTIONS_frame_recognizer_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectFrameRecognizerAdd : public CommandObjectParsed {
 private:

@@ -47,10 +47,8 @@ static constexpr OptionEnumValues DescriptionVerbosityTypes() {
   return OptionEnumValues(g_description_verbosity_type);
 }
 
-static constexpr OptionDefinition g_expression_options[] = {
 #define LLDB_OPTIONS_expression
 #include "CommandOptions.inc"
-};
 
 Status CommandObjectExpression::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,

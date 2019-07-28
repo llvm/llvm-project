@@ -31,10 +31,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_log_options[] = {
 #define LLDB_OPTIONS_log
 #include "CommandOptions.inc"
-};
 
 class CommandObjectLogEnable : public CommandObjectParsed {
 public:

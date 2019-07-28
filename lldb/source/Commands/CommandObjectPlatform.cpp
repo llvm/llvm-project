@@ -58,10 +58,8 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
   return user | group | world;
 }
 
-static constexpr OptionDefinition g_permissions_options[] = {
 #define LLDB_OPTIONS_permissions
 #include "CommandOptions.inc"
-};
 
 class OptionPermissions : public OptionGroup {
 public:
@@ -574,10 +572,8 @@ public:
 
 // "platform fread"
 
-static constexpr OptionDefinition g_platform_fread_options[] = {
 #define LLDB_OPTIONS_platform_fread
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformFRead : public CommandObjectParsed {
 public:
@@ -665,10 +661,8 @@ protected:
 
 // "platform fwrite"
 
-static constexpr OptionDefinition g_platform_fwrite_options[] = {
 #define LLDB_OPTIONS_platform_fwrite
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformFWrite : public CommandObjectParsed {
 public:
@@ -1042,10 +1036,8 @@ protected:
 // "platform process list"
 
 static PosixPlatformCommandOptionValidator posix_validator;
-static constexpr OptionDefinition g_platform_process_list_options[] = {
 #define LLDB_OPTIONS_platform_process_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformProcessList : public CommandObjectParsed {
 public:
@@ -1391,10 +1383,8 @@ protected:
   }
 };
 
-static constexpr OptionDefinition g_platform_process_attach_options[] = {
 #define LLDB_OPTIONS_platform_process_attach
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformProcessAttach : public CommandObjectParsed {
 public:
@@ -1566,10 +1556,8 @@ private:
 };
 
 // "platform shell"
-static constexpr OptionDefinition g_platform_shell_options[] = {
 #define LLDB_OPTIONS_platform_shell
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformShell : public CommandObjectRaw {
 public:

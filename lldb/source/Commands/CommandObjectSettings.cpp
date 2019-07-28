@@ -20,11 +20,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 // CommandObjectSettingsSet
-
-static constexpr OptionDefinition g_settings_set_options[] = {
 #define LLDB_OPTIONS_settings_set
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSettingsSet : public CommandObjectRaw {
 public:
@@ -309,11 +306,8 @@ protected:
 };
 
 // CommandObjectSettingsWrite -- Write settings to file
-
-static constexpr OptionDefinition g_settings_write_options[] = {
 #define LLDB_OPTIONS_settings_write
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSettingsWrite : public CommandObjectParsed {
 public:
@@ -432,11 +426,8 @@ private:
 };
 
 // CommandObjectSettingsRead -- Read settings from file
-
-static constexpr OptionDefinition g_settings_read_options[] = {
 #define LLDB_OPTIONS_settings_read
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSettingsRead : public CommandObjectParsed {
 public:

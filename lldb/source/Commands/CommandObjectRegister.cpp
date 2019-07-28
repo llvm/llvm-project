@@ -32,11 +32,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 // "register read"
-
-static constexpr OptionDefinition g_register_read_options[] = {
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
-};
 
 class CommandObjectRegisterRead : public CommandObjectParsed {
 public:
