@@ -9,6 +9,7 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
+// CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
 // CHECK-NEXT: c++-allocator-inlining = true
 // CHECK-NEXT: c++-container-inlining = false
@@ -91,4 +92,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 88
+// CHECK-NEXT: num-entries = 89
