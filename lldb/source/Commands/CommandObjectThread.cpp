@@ -237,11 +237,8 @@ protected:
 };
 
 // CommandObjectThreadBacktrace
-
-static constexpr OptionDefinition g_thread_backtrace_options[] = {
 #define LLDB_OPTIONS_thread_backtrace
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadBacktrace : public CommandObjectIterateOverThreads {
 public:
@@ -403,10 +400,8 @@ static constexpr OptionEnumValues TriRunningModes() {
   return OptionEnumValues(g_tri_running_mode);
 }
 
-static constexpr OptionDefinition g_thread_step_scope_options[] = {
 #define LLDB_OPTIONS_thread_step_scope
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadStepWithTypeAndScope : public CommandObjectParsed {
 public:
@@ -983,10 +978,8 @@ static constexpr OptionEnumValues DuoRunningModes() {
   return OptionEnumValues(g_duo_running_mode);
 }
 
-static constexpr OptionDefinition g_thread_until_options[] = {
 #define LLDB_OPTIONS_thread_until
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadUntil : public CommandObjectParsed {
 public:
@@ -1402,11 +1395,8 @@ protected:
 };
 
 // CommandObjectThreadInfo
-
-static constexpr OptionDefinition g_thread_info_options[] = {
 #define LLDB_OPTIONS_thread_info
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadInfo : public CommandObjectIterateOverThreads {
 public:
@@ -1536,11 +1526,8 @@ class CommandObjectThreadException : public CommandObjectIterateOverThreads {
 };
 
 // CommandObjectThreadReturn
-
-static constexpr OptionDefinition g_thread_return_options[] = {
 #define LLDB_OPTIONS_thread_return
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadReturn : public CommandObjectRaw {
 public:
@@ -1711,11 +1698,8 @@ protected:
 };
 
 // CommandObjectThreadJump
-
-static constexpr OptionDefinition g_thread_jump_options[] = {
 #define LLDB_OPTIONS_thread_jump
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadJump : public CommandObjectParsed {
 public:
@@ -1854,11 +1838,8 @@ protected:
 // Next are the subcommands of CommandObjectMultiwordThreadPlan
 
 // CommandObjectThreadPlanList
-
-static constexpr OptionDefinition g_thread_plan_list_options[] = {
 #define LLDB_OPTIONS_thread_plan_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadPlanList : public CommandObjectIterateOverThreads {
 public:

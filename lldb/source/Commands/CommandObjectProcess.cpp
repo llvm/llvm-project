@@ -255,10 +255,8 @@ protected:
   ProcessLaunchCommandOptions m_options;
 };
 
-static constexpr OptionDefinition g_process_attach_options[] = {
 #define LLDB_OPTIONS_process_attach
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessAttach
 class CommandObjectProcessAttach : public CommandObjectProcessLaunchOrAttach {
@@ -499,10 +497,8 @@ protected:
 
 // CommandObjectProcessContinue
 
-static constexpr OptionDefinition g_process_continue_options[] = {
 #define LLDB_OPTIONS_process_continue
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessContinue
 
@@ -659,10 +655,8 @@ protected:
 };
 
 // CommandObjectProcessDetach
-static constexpr OptionDefinition g_process_detach_options[] = {
 #define LLDB_OPTIONS_process_detach
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessDetach
 
@@ -754,11 +748,8 @@ protected:
 };
 
 // CommandObjectProcessConnect
-
-static constexpr OptionDefinition g_process_connect_options[] = {
 #define LLDB_OPTIONS_process_connect
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessConnect
 
@@ -878,11 +869,8 @@ public:
 };
 
 // CommandObjectProcessLoad
-
-static constexpr OptionDefinition g_process_load_options[] = {
 #define LLDB_OPTIONS_process_load
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessLoad
 
@@ -1261,11 +1249,8 @@ public:
 };
 
 // CommandObjectProcessHandle
-
-static constexpr OptionDefinition g_process_handle_options[] = {
 #define LLDB_OPTIONS_process_handle
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectProcessHandle
 
