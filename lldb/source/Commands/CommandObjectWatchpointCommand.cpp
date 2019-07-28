@@ -42,10 +42,8 @@ static constexpr OptionEnumValues ScriptOptionEnum() {
   return OptionEnumValues(g_script_option_enumeration);
 }
 
-static constexpr OptionDefinition g_watchpoint_command_add_options[] = {
 #define LLDB_OPTIONS_watchpoint_command_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectWatchpointCommandAdd : public CommandObjectParsed,
                                           public IOHandlerDelegateMultiline {

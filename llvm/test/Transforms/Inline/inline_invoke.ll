@@ -345,5 +345,5 @@ terminate:
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: attributes #1 = { nounwind readnone }
 ; CHECK: attributes #2 = { ssp uwtable }
-; CHECK: attributes #3 = { argmemonly nounwind }
+; CHECK: attributes #3 = { argmemonly nounwind willreturn }
 ; CHECK: attributes #4 = { noreturn nounwind }

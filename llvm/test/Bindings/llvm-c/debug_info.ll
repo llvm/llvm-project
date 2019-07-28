@@ -18,7 +18,7 @@
 ; CHECK:      ; Function Attrs: nounwind readnone speculatable
 ; CHECK-NEXT: declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
-; CHECK:      attributes #0 = { nounwind readnone speculatable }
+; CHECK:      attributes #0 = { nounwind readnone speculatable willreturn }
 
 ; CHECK:      !llvm.dbg.cu = !{!0}
 ; CHECK-NEXT: !FooType = !{!16}

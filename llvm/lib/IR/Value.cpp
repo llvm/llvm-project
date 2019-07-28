@@ -723,9 +723,11 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
       if (AllocatedType->isSized())
         Align = DL.getPrefTypeAlignment(AllocatedType);
     }
-  } else if (const auto *Call = dyn_cast<CallBase>(this))
-    Align = Call->getAttributes().getRetAlignment();
-  else if (const LoadInst *LI = dyn_cast<LoadInst>(this))
+  } else if (const auto *Call = dyn_cast<CallBase>(this)) {
+    Align = Call->getRetAlignment();
+    if (Align == 0 && Call->getCalledFunction())
+      Align = Call->getCalledFunction()->getAttributes().getRetAlignment();
+  } else if (const LoadInst *LI = dyn_cast<LoadInst>(this))
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       Align = CI->getLimitedValue();

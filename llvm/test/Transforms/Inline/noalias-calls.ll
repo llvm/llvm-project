@@ -32,7 +32,7 @@ entry:
 ; CHECK:   ret void
 ; CHECK: }
 
-attributes #0 = { nounwind argmemonly }
+attributes #0 = { nounwind argmemonly willreturn }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind uwtable }
 
