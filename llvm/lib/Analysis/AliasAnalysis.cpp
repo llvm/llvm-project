@@ -760,7 +760,7 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
 
       // No need to recursively check nested syncs or detaches, as nested tasks
       // are wholly contained in the detached sub-CFG we're iterating through.
-      if (isa<SyncInst>(&*I) || isa<DetachInst>(&*I))
+      if (isa<SyncInst>(I) || isa<DetachInst>(I))
         continue;
 
       Result = unionModRef(Result, getModRefInfo(&I, Loc));
