@@ -811,7 +811,7 @@ void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
   llvm::Optional<TaintConfig> Config =
       getConfiguration<TaintConfig>(Mgr, Checker, Option, ConfigFile);
   if (Config)
-    Checker->parseConfiguration(Mgr, Option, std::move(Config).getValue());
+    Checker->parseConfiguration(Mgr, Option, std::move(Config.getValue()));
 }
 
 bool ento::shouldRegisterGenericTaintChecker(const LangOptions &LO) {
