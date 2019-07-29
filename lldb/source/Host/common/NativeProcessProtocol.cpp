@@ -523,6 +523,7 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
   static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_dpu_opcode[] = { 0x00, 0x00,0x00, 0x20,0x63,0x7e,0x00,0x00};
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
@@ -546,6 +547,9 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
   case llvm::Triple::ppc64le:
     return llvm::makeArrayRef(g_ppc64le_opcode);
+
+  case llvm::Triple::dpu:
+    return llvm::makeArrayRef(g_dpu_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
