@@ -76,10 +76,10 @@ static Expected<uint64_t> parseVersion(StringRef &Buf) {
       support::endian::read<uint64_t, support::little, support::unaligned>(
           Buf.data());
   if (Version != remarks::Version)
-    return createStringError(
-        std::errc::illegal_byte_sequence,
-        "Mismatching remark version. Got %u, expected %u.", Version,
-        remarks::Version);
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "Mismatching remark version. Got %" PRId64
+                             ", expected %" PRId64 ".",
+                             Version, remarks::Version);
   Buf = Buf.drop_front(sizeof(uint64_t));
   return Version;
 }
