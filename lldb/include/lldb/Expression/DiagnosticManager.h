@@ -23,7 +23,6 @@ enum DiagnosticOrigin {
   eDiagnosticOriginUnknown = 0,
   eDiagnosticOriginLLDB,
   eDiagnosticOriginClang,
-  eDiagnosticOriginGo,
   eDiagnosticOriginSwift,
   eDiagnosticOriginLLVM
 };
@@ -47,7 +46,6 @@ public:
     switch (kind) {
     case eDiagnosticOriginUnknown:
     case eDiagnosticOriginLLDB:
-    case eDiagnosticOriginGo:
     case eDiagnosticOriginLLVM:
       return true;
     case eDiagnosticOriginClang:

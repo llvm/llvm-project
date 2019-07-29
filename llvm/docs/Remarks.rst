@@ -218,6 +218,28 @@ support this format.
 
 .. _optviewer:
 
+YAML metadata
+-------------
+
+The metadata used together with the YAML format is:
+
+* a magic number: "REMARKS\\0"
+* the version number: a little-endian uint64_t
+* the total size of the string table (the size itself excluded):
+  little-endian uint64_t
+* a list of null-terminated strings
+
+Optional:
+
+* the absolute file path to the serialized remark diagnostics: a
+  null-terminated string.
+
+When the metadata is serialized separately from the remarks, the file path
+should be present and point to the file where the remarks are serialized to.
+
+In case the metadata only acts as a header to the remarks, the file path can be
+omitted.
+
 opt-viewer
 ==========
 
@@ -295,15 +317,8 @@ Emitting remark diagnostics in the object file
 ==============================================
 
 A section containing metadata on remark diagnostics will be emitted when
--remarks-section is passed. The section contains:
-
-* a magic number: "REMARKS\\0"
-* the version number: a little-endian uint64_t
-* the total size of the string table (the size itself excluded):
-  little-endian uint64_t
-* a list of null-terminated strings
-* the absolute file path to the serialized remark diagnostics: a
-  null-terminated string.
+-remarks-section is passed. The section contains the metadata associated to the
+format used to serialize the remarks.
 
 The section is named:
 

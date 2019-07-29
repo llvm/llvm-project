@@ -799,6 +799,13 @@ let ParentPackage = Taint in {
 
 def GenericTaintChecker : Checker<"TaintPropagation">,
   HelpText<"Generate taint information used by other checkers">,
+  CheckerOptions<[
+    CmdLineOption<String,
+                  "Config",
+                  "Specifies the name of the configuration file.",
+                  "",
+                  InAlpha>,
+  ]>,
   Documentation<HasAlphaDocumentation>;
 
 } // end "alpha.security.taint"

@@ -5217,11 +5217,13 @@ def t2LoopDec :
   t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
                4, IIC_Br, []>, Sched<[WriteBr]>;
 
-let isBranch = 1, isTerminator = 1, hasSideEffects = 1 in {
+let isBranch = 1, isTerminator = 1, hasSideEffects = 1, Defs = [CPSR] in {
+// Set WhileLoopStart and LoopEnd to occupy 8 bytes because they may
+// get converted into t2CMP and t2Bcc.
 def t2WhileLoopStart :
     t2PseudoInst<(outs),
                  (ins rGPR:$elts, brtarget:$target),
-                 4, IIC_Br, []>,
+                 8, IIC_Br, []>,
                  Sched<[WriteBr]>;
 
 def t2LoopEnd :

@@ -146,11 +146,8 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
 
 // CommandObjectWatchpointList::Options
 #pragma mark List::CommandOptions
-
-static constexpr OptionDefinition g_watchpoint_list_options[] = {
 #define LLDB_OPTIONS_watchpoint_list
 #include "CommandOptions.inc"
-};
 
 #pragma mark List
 
@@ -507,10 +504,8 @@ protected:
 // CommandObjectWatchpointIgnore
 
 #pragma mark Ignore::CommandOptions
-static constexpr OptionDefinition g_watchpoint_ignore_options[] = {
 #define LLDB_OPTIONS_watchpoint_ignore
 #include "CommandOptions.inc"
-};
 
 class CommandObjectWatchpointIgnore : public CommandObjectParsed {
 public:
@@ -625,11 +620,8 @@ private:
 // CommandObjectWatchpointModify
 
 #pragma mark Modify::CommandOptions
-
-static constexpr OptionDefinition g_watchpoint_modify_options[] = {
 #define LLDB_OPTIONS_watchpoint_modify
 #include "CommandOptions.inc"
-};
 
 #pragma mark Modify
 

@@ -2079,6 +2079,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     break;
   }
 
+  // If you add more args here, also add them to the block below that
+  // starts with "// If CollectArgsForIntegratedAssembler() isn't called below".
+
   // When passing -I arguments to the assembler we sometimes need to
   // unconditionally take the next argument.  For example, when parsing
   // '-Wa,-I -Wa,foo' we need to accept the -Wa,foo arg after seeing the
@@ -3542,6 +3545,36 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
+
+  // If CollectArgsForIntegratedAssembler() isn't called below, claim the args
+  // it claims when not running an assembler. Otherwise, clang would emit
+  // "argument unused" warnings for assembler flags when e.g. adding "-E" to
+  // flags while debugging something. That'd be somewhat inconvenient, and it's
+  // also inconsistent with most other flags -- we don't warn on
+  // -ffunction-sections not being used in -E mode either for example, even
+  // though it's not really used either.
+  if (!isa<AssembleJobAction>(JA)) {
+    // The args claimed here should match the args used in
+    // CollectArgsForIntegratedAssembler().
+    if (TC.useIntegratedAs()) {
+      Args.ClaimAllArgs(options::OPT_mrelax_all);
+      Args.ClaimAllArgs(options::OPT_mno_relax_all);
+      Args.ClaimAllArgs(options::OPT_mincremental_linker_compatible);
+      Args.ClaimAllArgs(options::OPT_mno_incremental_linker_compatible);
+      switch (C.getDefaultToolChain().getArch()) {
+      case llvm::Triple::arm:
+      case llvm::Triple::armeb:
+      case llvm::Triple::thumb:
+      case llvm::Triple::thumbeb:
+        Args.ClaimAllArgs(options::OPT_mimplicit_it_EQ);
+        break;
+      default:
+        break;
+      }
+    }
+    Args.ClaimAllArgs(options::OPT_Wa_COMMA);
+    Args.ClaimAllArgs(options::OPT_Xassembler);
+  }
 
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");

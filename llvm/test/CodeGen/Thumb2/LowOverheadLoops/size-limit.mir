@@ -4,12 +4,8 @@
 # CHECK: for.body:
 # CHECK: $lr = t2LEUpdate renamable $lr
 
---- |
-  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-unknown-unknown"
-  
-  ; Function Attrs: norecurse nounwind
-  define dso_local arm_aapcscc void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) local_unnamed_addr #0 {
+--- |  
+  define dso_local arm_aapcscc void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
     %cmp8 = icmp eq i32 %N, 0
     br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -30,13 +26,13 @@
     %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
     %0 = phi i32 [ %N, %for.body.preheader ], [ %3, %for.body ]
     %size = call i32 @llvm.arm.space(i32 4070, i32 undef)
-    %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
-    %1 = load i32, i32* %scevgep11, align 4, !tbaa !3
-    %scevgep7 = getelementptr i32, i32* %lsr.iv5, i32 1
-    %2 = load i32, i32* %scevgep7, align 4, !tbaa !3
+    %scevgep1 = getelementptr i32, i32* %lsr.iv9, i32 1
+    %1 = load i32, i32* %scevgep1, align 4
+    %scevgep5 = getelementptr i32, i32* %lsr.iv5, i32 1
+    %2 = load i32, i32* %scevgep5, align 4
     %mul = mul nsw i32 %2, %1
-    %scevgep3 = getelementptr i32, i32* %lsr.iv1, i32 1
-    store i32 %mul, i32* %scevgep3, align 4, !tbaa !3
+    %scevgep9 = getelementptr i32, i32* %lsr.iv1, i32 1
+    store i32 %mul, i32* %scevgep9, align 4
     %scevgep2 = getelementptr i32, i32* %lsr.iv1, i32 1
     %scevgep6 = getelementptr i32, i32* %lsr.iv5, i32 1
     %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 1
@@ -46,31 +42,14 @@
   }
   
   ; Function Attrs: nounwind
-  declare i32 @llvm.arm.space(i32, i32) #1
-  
+  declare i32 @llvm.arm.space(i32 immarg, i32) #0
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #2
-  
+  declare void @llvm.set.loop.iterations.i32(i32) #1
   ; Function Attrs: noduplicate nounwind
-  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
   
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
-  
-  attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+hwdiv,+ras,+soft-float,+strict-align,+thumb-mode,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8d16,-fp-armv8d16sp,-fp-armv8sp,-fp16,-fp16fml,-fp64,-fpregs,-fullfp16,-neon,-vfp2,-vfp2d16,-vfp2d16sp,-vfp2sp,-vfp3,-vfp3d16,-vfp3d16sp,-vfp3sp,-vfp4,-vfp4d16,-vfp4d16sp,-vfp4sp" "unsafe-fp-math"="false" "use-soft-float"="true" }
-  attributes #1 = { nounwind }
-  attributes #2 = { noduplicate nounwind }
-  
-  !llvm.module.flags = !{!0, !1}
-  !llvm.ident = !{!2}
-  
-  !0 = !{i32 1, !"wchar_size", i32 4}
-  !1 = !{i32 1, !"min_enum_size", i32 4}
-  !2 = !{!"clang version 9.0.0 (http://llvm.org/git/clang.git a9c7c0fc5d468f3d18a5c6beb697ab0d5be2ff4c) (http://llvm.org/git/llvm.git f34bff0c141a04a5182d57e2cfb1e4bc582c81b0)"}
-  !3 = !{!4, !4, i64 0}
-  !4 = !{!"int", !5, i64 0}
-  !5 = !{!"omnipotent char", !6, i64 0}
-  !6 = !{!"Simple C/C++ TBAA"}
+  attributes #0 = { nounwind }
+  attributes #1 = { noduplicate nounwind }
 
 ...
 ---
@@ -84,12 +63,12 @@ failedISel:      false
 tracksRegLiveness: false
 hasWinCFI:       false
 registers:       []
-liveins:         
+liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }
   - { reg: '$r3', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -109,25 +88,24 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      []
-stack:           
+stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
   
-    frame-setup tPUSH 14, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    $r7 = frame-setup tMOVr $sp, 14, $noreg
-    frame-setup CFI_INSTRUCTION def_cfa_register $r7
     tCMPi8 $r3, 0, 14, $noreg, implicit-def $cpsr
     t2IT 0, 8, implicit-def $itstate
     tPOP_RET 0, killed $cpsr, def $r7, def $pc, implicit killed $itstate
@@ -141,15 +119,17 @@ body:             |
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   
     dead renamable $r3 = SPACE 4070, undef renamable $r0
-    renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep11, !tbaa !3)
-    renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep7, !tbaa !3)
+    renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep1)
+    renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep5)
     renamable $r3 = nsw t2MUL killed renamable $r3, killed renamable $r12, 14, $noreg
-    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep3, !tbaa !3)
+    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep9)
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    t2LoopEnd renamable $lr, %bb.1
+    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
   
   bb.2.for.cond.cleanup:
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...
+
+

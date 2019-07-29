@@ -13,6 +13,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginSymbolFileDWARF
+    lldbPluginSymbolFileSymtab
     LLVMTestingSupport
   )
 

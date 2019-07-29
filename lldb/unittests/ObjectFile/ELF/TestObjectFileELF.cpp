@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -34,11 +34,11 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
-    SymbolVendorELF::Initialize();
+    SymbolFileSymtab::Initialize();
   }
 
   void TearDown() override {
-    SymbolVendorELF::Terminate();
+    SymbolFileSymtab::Terminate();
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();

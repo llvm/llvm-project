@@ -1234,6 +1234,16 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     return &I;
   }
 
+  // Sink negation: -X / Y --> -(X / Y)
+  // But don't transform constant expressions because there's an inverse fold.
+  if (match(Op0, m_OneUse(m_FNeg(m_Value(X)))) && !isa<ConstantExpr>(Op0))
+    return BinaryOperator::CreateFNegFMF(Builder.CreateFDivFMF(X, Op1, &I), &I);
+
+  // Sink negation: Y / -X --> -(Y / X)
+  // But don't transform constant expressions because there's an inverse fold.
+  if (match(Op1, m_OneUse(m_FNeg(m_Value(X)))) && !isa<ConstantExpr>(Op1))
+    return BinaryOperator::CreateFNegFMF(Builder.CreateFDivFMF(Op0, X, &I), &I);
+
   // X / (X * Y) --> 1.0 / Y
   // Reassociate to (X / X -> 1.0) is legal when NaNs are not allowed.
   // We can ignore the possibility that X is infinity because INF/INF is NaN.

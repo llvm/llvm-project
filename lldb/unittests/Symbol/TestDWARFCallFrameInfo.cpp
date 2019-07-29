@@ -11,6 +11,7 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Module.h"
@@ -36,9 +37,11 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
+    SymbolFileSymtab::Initialize();
   }
 
   void TearDown() override {
+    SymbolFileSymtab::Terminate();
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();

@@ -31,10 +31,8 @@ using namespace lldb_private;
 
 // CommandObjectCommandsSource
 
-static constexpr OptionDefinition g_history_options[] = {
 #define LLDB_OPTIONS_history
 #include "CommandOptions.inc"
-};
 
 class CommandObjectCommandsHistory : public CommandObjectParsed {
 public:
@@ -184,10 +182,8 @@ protected:
 
 // CommandObjectCommandsSource
 
-static constexpr OptionDefinition g_source_options[] = {
 #define LLDB_OPTIONS_source
 #include "CommandOptions.inc"
-};
 
 class CommandObjectCommandsSource : public CommandObjectParsed {
 public:
@@ -336,10 +332,8 @@ protected:
 #pragma mark CommandObjectCommandsAlias
 // CommandObjectCommandsAlias
 
-static constexpr OptionDefinition g_alias_options[] = {
 #define LLDB_OPTIONS_alias
 #include "CommandOptions.inc"
-};
 
 static const char *g_python_command_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
@@ -902,10 +896,8 @@ protected:
 
 // CommandObjectCommandsAddRegex
 
-static constexpr OptionDefinition g_regex_options[] = {
 #define LLDB_OPTIONS_regex
 #include "CommandOptions.inc"
-};
 
 #pragma mark CommandObjectCommandsAddRegex
 
@@ -1374,11 +1366,8 @@ private:
 };
 
 // CommandObjectCommandsScriptImport
-
-static constexpr OptionDefinition g_script_import_options[] = {
 #define LLDB_OPTIONS_script_import
 #include "CommandOptions.inc"
-};
 
 class CommandObjectCommandsScriptImport : public CommandObjectParsed {
 public:
@@ -1508,10 +1497,8 @@ static constexpr OptionEnumValues ScriptSynchroType() {
   return OptionEnumValues(g_script_synchro_type);
 }
 
-static constexpr OptionDefinition g_script_add_options[] = {
 #define LLDB_OPTIONS_script_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectCommandsScriptAdd : public CommandObjectParsed,
                                        public IOHandlerDelegateMultiline {

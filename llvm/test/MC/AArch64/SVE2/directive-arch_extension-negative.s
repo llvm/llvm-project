@@ -24,8 +24,8 @@ rax1 z0.d, z0.d, z0.d
 // CHECK: error: instruction requires: sve2-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
-.arch_extension bitperm
-.arch_extension nobitperm
+.arch_extension sve2-bitperm
+.arch_extension nosve2-bitperm
 bgrp z21.s, z10.s, z21.s
-// CHECK: error: instruction requires: bitperm
+// CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s

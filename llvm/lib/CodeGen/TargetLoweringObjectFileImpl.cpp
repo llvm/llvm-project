@@ -1843,6 +1843,9 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
                                         Kind, /* BeginSymbolName */ nullptr);
   }
 
+  if (Kind.isText())
+    return TextSection;
+
   report_fatal_error("XCOFF other section types not yet implemented.");
 }
 

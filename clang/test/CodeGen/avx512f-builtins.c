@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 
@@ -10480,20 +10480,24 @@ __m512i test_mm512_maskz_abs_epi64 (__mmask8 __U, __m512i __A)
 
 __m512i test_mm512_mask_abs_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
 {
-  // CHECK-LABEL: @test_mm512_mask_abs_epi32 
+  // CHECK-LABEL: @test_mm512_mask_abs_epi32
   // CHECK: [[SUB:%.*]] = sub <16 x i32> zeroinitializer, [[A:%.*]]
   // CHECK: [[CMP:%.*]] = icmp sgt <16 x i32> [[A]], zeroinitializer
   // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[A]], <16 x i32> [[SUB]]
+  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[SEL]] to <8 x i64>
+  // CHECK: [[SEL:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[SEL]], <16 x i32> %{{.*}}
   return _mm512_mask_abs_epi32 (__W,__U,__A);
 }
 
 __m512i test_mm512_maskz_abs_epi32 (__mmask16 __U, __m512i __A)
 {
-  // CHECK-LABEL: @test_mm512_maskz_abs_epi32 
+  // CHECK-LABEL: @test_mm512_maskz_abs_epi32
   // CHECK: [[SUB:%.*]] = sub <16 x i32> zeroinitializer, [[A:%.*]]
   // CHECK: [[CMP:%.*]] = icmp sgt <16 x i32> [[A]], zeroinitializer
   // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[A]], <16 x i32> [[SUB]]
+  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[SEL]] to <8 x i64>
+  // CHECK: [[SEL:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[SEL]], <16 x i32> %{{.*}}
   return _mm512_maskz_abs_epi32 (__U,__A);
 }

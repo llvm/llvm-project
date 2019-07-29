@@ -184,14 +184,14 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN64-KNL-LABEL: test_prolog_epilog:
 ; WIN64-KNL:       # %bb.0:
 ; WIN64-KNL-NEXT:    pushq %rbp
-; WIN64-KNL-NEXT:    subq $1328, %rsp # imm = 0x530
+; WIN64-KNL-NEXT:    subq $1264, %rsp # imm = 0x4F0
 ; WIN64-KNL-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
-; WIN64-KNL-NEXT:    kmovw %k7, 1198(%rbp) # 2-byte Spill
-; WIN64-KNL-NEXT:    kmovw %k6, 1196(%rbp) # 2-byte Spill
-; WIN64-KNL-NEXT:    kmovw %k5, 1194(%rbp) # 2-byte Spill
-; WIN64-KNL-NEXT:    kmovw %k4, 1192(%rbp) # 2-byte Spill
-; WIN64-KNL-NEXT:    vmovaps %zmm21, 1104(%rbp) # 64-byte Spill
-; WIN64-KNL-NEXT:    vmovaps %zmm20, 992(%rbp) # 64-byte Spill
+; WIN64-KNL-NEXT:    kmovw %k7, 1134(%rbp) # 2-byte Spill
+; WIN64-KNL-NEXT:    kmovw %k6, 1132(%rbp) # 2-byte Spill
+; WIN64-KNL-NEXT:    kmovw %k5, 1130(%rbp) # 2-byte Spill
+; WIN64-KNL-NEXT:    kmovw %k4, 1128(%rbp) # 2-byte Spill
+; WIN64-KNL-NEXT:    vmovaps %zmm21, 1024(%rbp) # 64-byte Spill
+; WIN64-KNL-NEXT:    vmovaps %zmm20, 960(%rbp) # 64-byte Spill
 ; WIN64-KNL-NEXT:    vmovaps %zmm19, 896(%rbp) # 64-byte Spill
 ; WIN64-KNL-NEXT:    vmovaps %zmm18, 832(%rbp) # 64-byte Spill
 ; WIN64-KNL-NEXT:    vmovaps %zmm17, 768(%rbp) # 64-byte Spill
@@ -226,26 +226,26 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN64-KNL-NEXT:    vmovaps 768(%rbp), %zmm17 # 64-byte Reload
 ; WIN64-KNL-NEXT:    vmovaps 832(%rbp), %zmm18 # 64-byte Reload
 ; WIN64-KNL-NEXT:    vmovaps 896(%rbp), %zmm19 # 64-byte Reload
-; WIN64-KNL-NEXT:    vmovaps 992(%rbp), %zmm20 # 64-byte Reload
-; WIN64-KNL-NEXT:    vmovaps 1104(%rbp), %zmm21 # 64-byte Reload
-; WIN64-KNL-NEXT:    kmovw 1192(%rbp), %k4 # 2-byte Reload
-; WIN64-KNL-NEXT:    kmovw 1194(%rbp), %k5 # 2-byte Reload
-; WIN64-KNL-NEXT:    kmovw 1196(%rbp), %k6 # 2-byte Reload
-; WIN64-KNL-NEXT:    kmovw 1198(%rbp), %k7 # 2-byte Reload
-; WIN64-KNL-NEXT:    leaq 1200(%rbp), %rsp
+; WIN64-KNL-NEXT:    vmovaps 960(%rbp), %zmm20 # 64-byte Reload
+; WIN64-KNL-NEXT:    vmovaps 1024(%rbp), %zmm21 # 64-byte Reload
+; WIN64-KNL-NEXT:    kmovw 1128(%rbp), %k4 # 2-byte Reload
+; WIN64-KNL-NEXT:    kmovw 1130(%rbp), %k5 # 2-byte Reload
+; WIN64-KNL-NEXT:    kmovw 1132(%rbp), %k6 # 2-byte Reload
+; WIN64-KNL-NEXT:    kmovw 1134(%rbp), %k7 # 2-byte Reload
+; WIN64-KNL-NEXT:    leaq 1136(%rbp), %rsp
 ; WIN64-KNL-NEXT:    popq %rbp
 ; WIN64-KNL-NEXT:    retq
 ;
 ; WIN64-SKX-LABEL: test_prolog_epilog:
 ; WIN64-SKX:       # %bb.0:
 ; WIN64-SKX-NEXT:    pushq %rbp
-; WIN64-SKX-NEXT:    subq $1328, %rsp # imm = 0x530
+; WIN64-SKX-NEXT:    subq $1264, %rsp # imm = 0x4F0
 ; WIN64-SKX-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
-; WIN64-SKX-NEXT:    kmovq %k7, 1192(%rbp) # 8-byte Spill
-; WIN64-SKX-NEXT:    kmovq %k6, 1184(%rbp) # 8-byte Spill
-; WIN64-SKX-NEXT:    kmovq %k5, 1176(%rbp) # 8-byte Spill
-; WIN64-SKX-NEXT:    kmovq %k4, 1168(%rbp) # 8-byte Spill
-; WIN64-SKX-NEXT:    vmovaps %zmm21, 1056(%rbp) # 64-byte Spill
+; WIN64-SKX-NEXT:    kmovq %k7, 1128(%rbp) # 8-byte Spill
+; WIN64-SKX-NEXT:    kmovq %k6, 1120(%rbp) # 8-byte Spill
+; WIN64-SKX-NEXT:    kmovq %k5, 1112(%rbp) # 8-byte Spill
+; WIN64-SKX-NEXT:    kmovq %k4, 1104(%rbp) # 8-byte Spill
+; WIN64-SKX-NEXT:    vmovaps %zmm21, 1024(%rbp) # 64-byte Spill
 ; WIN64-SKX-NEXT:    vmovaps %zmm20, 960(%rbp) # 64-byte Spill
 ; WIN64-SKX-NEXT:    vmovaps %zmm19, 896(%rbp) # 64-byte Spill
 ; WIN64-SKX-NEXT:    vmovaps %zmm18, 832(%rbp) # 64-byte Spill
@@ -282,12 +282,12 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN64-SKX-NEXT:    vmovaps 832(%rbp), %zmm18 # 64-byte Reload
 ; WIN64-SKX-NEXT:    vmovaps 896(%rbp), %zmm19 # 64-byte Reload
 ; WIN64-SKX-NEXT:    vmovaps 960(%rbp), %zmm20 # 64-byte Reload
-; WIN64-SKX-NEXT:    vmovaps 1056(%rbp), %zmm21 # 64-byte Reload
-; WIN64-SKX-NEXT:    kmovq 1168(%rbp), %k4 # 8-byte Reload
-; WIN64-SKX-NEXT:    kmovq 1176(%rbp), %k5 # 8-byte Reload
-; WIN64-SKX-NEXT:    kmovq 1184(%rbp), %k6 # 8-byte Reload
-; WIN64-SKX-NEXT:    kmovq 1192(%rbp), %k7 # 8-byte Reload
-; WIN64-SKX-NEXT:    leaq 1200(%rbp), %rsp
+; WIN64-SKX-NEXT:    vmovaps 1024(%rbp), %zmm21 # 64-byte Reload
+; WIN64-SKX-NEXT:    kmovq 1104(%rbp), %k4 # 8-byte Reload
+; WIN64-SKX-NEXT:    kmovq 1112(%rbp), %k5 # 8-byte Reload
+; WIN64-SKX-NEXT:    kmovq 1120(%rbp), %k6 # 8-byte Reload
+; WIN64-SKX-NEXT:    kmovq 1128(%rbp), %k7 # 8-byte Reload
+; WIN64-SKX-NEXT:    leaq 1136(%rbp), %rsp
 ; WIN64-SKX-NEXT:    popq %rbp
 ; WIN64-SKX-NEXT:    retq
 ;
@@ -346,7 +346,7 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; X64-SKX:       ## %bb.0:
 ; X64-SKX-NEXT:    pushq %rsi
 ; X64-SKX-NEXT:    pushq %rdi
-; X64-SKX-NEXT:    subq $1192, %rsp ## imm = 0x4A8
+; X64-SKX-NEXT:    subq $1064, %rsp ## imm = 0x428
 ; X64-SKX-NEXT:    kmovq %k7, {{[0-9]+}}(%rsp) ## 8-byte Spill
 ; X64-SKX-NEXT:    kmovq %k6, {{[0-9]+}}(%rsp) ## 8-byte Spill
 ; X64-SKX-NEXT:    kmovq %k5, {{[0-9]+}}(%rsp) ## 8-byte Spill
@@ -388,7 +388,7 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; X64-SKX-NEXT:    kmovq {{[0-9]+}}(%rsp), %k5 ## 8-byte Reload
 ; X64-SKX-NEXT:    kmovq {{[0-9]+}}(%rsp), %k6 ## 8-byte Reload
 ; X64-SKX-NEXT:    kmovq {{[0-9]+}}(%rsp), %k7 ## 8-byte Reload
-; X64-SKX-NEXT:    addq $1192, %rsp ## imm = 0x4A8
+; X64-SKX-NEXT:    addq $1064, %rsp ## imm = 0x428
 ; X64-SKX-NEXT:    popq %rdi
 ; X64-SKX-NEXT:    popq %rsi
 ; X64-SKX-NEXT:    retq

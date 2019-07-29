@@ -140,7 +140,6 @@ function(find_python_libs_windows)
          PYTHONLIBS_VERSION_STRING "${python_version_str}")
     message(STATUS "Found Python library version ${PYTHONLIBS_VERSION_STRING}")
     string(REGEX REPLACE "([0-9]+)[.]([0-9]+)[.][0-9]+" "python\\1\\2" PYTHONLIBS_BASE_NAME "${PYTHONLIBS_VERSION_STRING}")
-    set(PYTHONLIBS_VERSION_STRING "${PYTHONLIBS_VERSION_STRING}" PARENT_SCOPE)
     unset(python_version_str)
   else()
     message(WARNING "Unable to find ${PYTHON_INCLUDE_DIR}/patchlevel.h, Python installation is corrupt.")
@@ -175,13 +174,32 @@ function(find_python_libs_windows)
     return()
   endif()
 
-  set (PYTHON_EXECUTABLE ${PYTHON_EXE} PARENT_SCOPE)
-  set (PYTHON_LIBRARY ${PYTHON_LIB} PARENT_SCOPE)
-  set (PYTHON_DLL ${PYTHON_DLL} PARENT_SCOPE)
-  set (PYTHON_INCLUDE_DIR ${PYTHON_INCLUDE_DIR} PARENT_SCOPE)
+  # Find the version of the Python interpreter.
+  execute_process(COMMAND "${PYTHON_EXE}" -c
+                  "import sys; sys.stdout.write(';'.join([str(x) for x in sys.version_info[:3]]))"
+                  OUTPUT_VARIABLE PYTHON_VERSION_OUTPUT
+                  RESULT_VARIABLE PYTHON_VERSION_RESULT
+                  ERROR_QUIET)
+  if(NOT PYTHON_VERSION_RESULT)
+    string(REPLACE ";" "." PYTHON_VERSION_STRING "${PYTHON_VERSION_OUTPUT}")
+    list(GET PYTHON_VERSION_OUTPUT 0 PYTHON_VERSION_MAJOR)
+    list(GET PYTHON_VERSION_OUTPUT 1 PYTHON_VERSION_MINOR)
+    list(GET PYTHON_VERSION_OUTPUT 2 PYTHON_VERSION_PATCH)
+  endif()
 
-  message(STATUS "LLDB Found PythonExecutable: ${PYTHON_EXE}")
-  message(STATUS "LLDB Found PythonLibs: ${PYTHON_LIB}")
+  # Set the same variables as FindPythonInterp and FindPythonLibs.
+  set(PYTHON_EXECUTABLE ${PYTHON_EXE} PARENT_SCOPE)
+  set(PYTHON_LIBRARY ${PYTHON_LIB} PARENT_SCOPE)
+  set(PYTHON_DLL ${PYTHON_DLL} PARENT_SCOPE)
+  set(PYTHON_INCLUDE_DIR ${PYTHON_INCLUDE_DIR} PARENT_SCOPE)
+  set(PYTHONLIBS_VERSION_STRING "${PYTHONLIBS_VERSION_STRING}" PARENT_SCOPE)
+  set(PYTHON_VERSION_STRING ${PYTHON_VERSION_STRING} PARENT_SCOPE)
+  set(PYTHON_VERSION_MAJOR ${PYTHON_VERSION_MAJOR} PARENT_SCOPE)
+  set(PYTHON_VERSION_MINOR ${PYTHON_VERSION_MINOR} PARENT_SCOPE)
+  set(PYTHON_VERSION_PATCH ${PYTHON_VERSION_PATCH} PARENT_SCOPE)
+
+  message(STATUS "LLDB Found PythonExecutable: ${PYTHON_EXECUTABLE} (${PYTHON_VERSION_STRING})")
+  message(STATUS "LLDB Found PythonLibs: ${PYTHON_LIB} (${PYTHONLIBS_VERSION_STRING})")
   message(STATUS "LLDB Found PythonDLL: ${PYTHON_DLL}")
   message(STATUS "LLDB Found PythonIncludeDirs: ${PYTHON_INCLUDE_DIR}")
 endfunction(find_python_libs_windows)
@@ -199,9 +217,18 @@ if (NOT LLDB_DISABLE_PYTHON)
     find_package(PythonLibs REQUIRED)
   endif()
 
-  if (NOT PYTHON_VERSION_STRING VERSION_EQUAL PYTHONLIBS_VERSION_STRING AND
-      NOT CMAKE_CROSSCOMPILING)
-    message(FATAL_ERROR "Found incompatible Python interpreter (${PYTHON_VERSION_STRING}) and Python libraries (${PYTHONLIBS_VERSION_STRING})")
+  if (NOT CMAKE_CROSSCOMPILING)
+    string(REPLACE "." ";" pythonlibs_version_list ${PYTHONLIBS_VERSION_STRING})
+    list(GET pythonlibs_version_list 0 pythonlibs_major)
+    list(GET pythonlibs_version_list 1 pythonlibs_minor)
+
+    # Ignore the patch version. Some versions of macOS report a different patch
+    # version for the system provided interpreter and libraries.
+    if (NOT PYTHON_VERSION_MAJOR VERSION_EQUAL pythonlibs_major OR
+        NOT PYTHON_VERSION_MINOR VERSION_EQUAL pythonlibs_minor)
+      message(FATAL_ERROR "Found incompatible Python interpreter (${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})"
+                          " and Python libraries (${pythonlibs_major}.${pythonlibs_minor})")
+    endif()
   endif()
 
   if (PYTHON_INCLUDE_DIR)

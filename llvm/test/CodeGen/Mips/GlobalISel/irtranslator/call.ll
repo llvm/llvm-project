@@ -167,3 +167,27 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dest, i8* align 1 %src, i32 %length, i1 false)
   ret void
 }
+
+declare void @f_with_void_ret();
+
+define void @call_f_with_void_ret() {
+  ; MIPS32-LABEL: name: call_f_with_void_ret
+  ; MIPS32: bb.1.entry:
+  ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32:   JAL @f_with_void_ret, csr_o32, implicit-def $ra, implicit-def $sp
+  ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32:   RetRA
+  ; MIPS32_PIC-LABEL: name: call_f_with_void_ret
+  ; MIPS32_PIC: bb.1.entry:
+  ; MIPS32_PIC:   liveins: $t9, $v0
+  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $v0, $t9
+  ; MIPS32_PIC:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32_PIC:   [[GV:%[0-9]+]]:gpr32(p0) = G_GLOBAL_VALUE target-flags(mips-got-call) @f_with_void_ret
+  ; MIPS32_PIC:   $gp = COPY [[ADDu]]
+  ; MIPS32_PIC:   JALRPseudo [[GV]](p0), csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $gp
+  ; MIPS32_PIC:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32_PIC:   RetRA
+entry:
+  call void @f_with_void_ret()
+  ret void
+}

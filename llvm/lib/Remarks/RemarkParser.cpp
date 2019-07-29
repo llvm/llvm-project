@@ -80,6 +80,22 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
   llvm_unreachable("unhandled ParseFormat");
 }
 
+Expected<std::unique_ptr<RemarkParser>>
+llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
+                                          Optional<ParsedStringTable> StrTab) {
+  switch (ParserFormat) {
+  // Depending on the metadata, the format can be either yaml or yaml-strtab,
+  // regardless of the input argument.
+  case Format::YAML:
+  case Format::YAMLStrTab:
+    return createYAMLParserFromMeta(Buf, std::move(StrTab));
+  case Format::Unknown:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  }
+  llvm_unreachable("unhandled ParseFormat");
+}
+
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
   std::unique_ptr<RemarkParser> TheParser;

@@ -80,6 +80,10 @@ Expected<std::unique_ptr<RemarkParser>>
 createRemarkParser(Format ParserFormat, StringRef Buf,
                    ParsedStringTable StrTab);
 
+Expected<std::unique_ptr<RemarkParser>>
+createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
+                           Optional<ParsedStringTable> StrTab = None);
+
 } // end namespace remarks
 } // end namespace llvm
 

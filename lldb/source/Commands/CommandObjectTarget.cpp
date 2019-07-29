@@ -144,10 +144,8 @@ static constexpr OptionEnumValueElement g_dependents_enumaration[] = {
     {eLoadDependentsYes, "false",
      "Load dependents, even if the target is not an executable."}};
 
-static constexpr OptionDefinition g_dependents_options[] = {
 #define LLDB_OPTIONS_target_dependents
 #include "CommandOptions.inc"
-};
 
 class OptionGroupDependents : public OptionGroup {
 public:
@@ -156,7 +154,7 @@ public:
   ~OptionGroupDependents() override {}
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_dependents_options);
+    return llvm::makeArrayRef(g_target_dependents_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -169,11 +167,13 @@ public:
       return error;
     }
 
-    const char short_option = g_dependents_options[option_idx].short_option;
+    const char short_option =
+        g_target_dependents_options[option_idx].short_option;
     if (short_option == 'd') {
       LoadDependentFiles tmp_load_dependents;
       tmp_load_dependents = (LoadDependentFiles)OptionArgParser::ToOptionEnum(
-          option_value, g_dependents_options[option_idx].enum_values, 0, error);
+          option_value, g_target_dependents_options[option_idx].enum_values, 0,
+          error);
       if (error.Success())
         m_load_dependent_files = tmp_load_dependents;
     } else {
@@ -1964,10 +1964,8 @@ static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
     {eSortOrderByAddress, "address", "Sort output by symbol address."},
     {eSortOrderByName, "name", "Sort output by symbol name."} };
 
-static constexpr OptionDefinition g_target_modules_dump_symtab_options[] = {
 #define LLDB_OPTIONS_target_modules_dump_symtab
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTargetModulesDumpSymtab
     : public CommandObjectTargetModulesModuleAutoComplete {
@@ -2364,6 +2362,8 @@ protected:
 };
 
 #pragma mark CommandObjectTargetModulesDumpLineTable
+#define LLDB_OPTIONS_target_modules_dump
+#include "CommandOptions.inc"
 
 // Image debug line table dumping command
 
@@ -2452,11 +2452,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      static constexpr OptionDefinition g_options[] = {
-#define LLDB_OPTIONS_target_modules_dump
-#include "CommandOptions.inc"
-      };
-      return llvm::makeArrayRef(g_options);
+      return llvm::makeArrayRef(g_target_modules_dump_options);
     }
 
     bool m_verbose;
@@ -2958,11 +2954,8 @@ protected:
 };
 
 // List images with associated information
-
-static constexpr OptionDefinition g_target_modules_list_options[] = {
 #define LLDB_OPTIONS_target_modules_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTargetModulesList : public CommandObjectParsed {
 public:
@@ -3307,11 +3300,8 @@ protected:
 #pragma mark CommandObjectTargetModulesShowUnwind
 
 // Lookup unwind information in images
-
-static constexpr OptionDefinition g_target_modules_show_unwind_options[] = {
 #define LLDB_OPTIONS_target_modules_show_unwind
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTargetModulesShowUnwind : public CommandObjectParsed {
 public:
@@ -3616,11 +3606,8 @@ protected:
 };
 
 // Lookup information in images
-
-static constexpr OptionDefinition g_target_modules_lookup_options[] = {
 #define LLDB_OPTIONS_target_modules_lookup
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTargetModulesLookup : public CommandObjectParsed {
 public:
@@ -4471,11 +4458,8 @@ private:
 #pragma mark CommandObjectTargetStopHookAdd
 
 // CommandObjectTargetStopHookAdd
-
-static constexpr OptionDefinition g_target_stop_hook_add_options[] = {
 #define LLDB_OPTIONS_target_stop_hook_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTargetStopHookAdd : public CommandObjectParsed,
                                        public IOHandlerDelegateMultiline {
