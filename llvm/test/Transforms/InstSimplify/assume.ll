@@ -33,15 +33,15 @@ define i64 @PR31809() !dbg !7 {
 }
 
 ; Similar to above: there's no way to know which assumption is truthful,
-; so just don't crash. The second icmp+assume gets processed later, so that
-; determines the return value.
+; so just don't crash.
 
 define i8 @conflicting_assumptions(i8 %x) !dbg !10 {
 ; CHECK-LABEL: @conflicting_assumptions(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1, !dbg !10
 ; CHECK-NEXT:    call void @llvm.assume(i1 false)
-; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 %x, 4
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[X]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
-; CHECK-NEXT:    ret i8 5
+; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %add = add i8 %x, 1, !dbg !11
   %cond1 = icmp eq i8 %x, 3

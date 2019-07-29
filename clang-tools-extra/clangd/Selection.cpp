@@ -77,6 +77,7 @@ void printNodeKind(llvm::raw_ostream &OS, const DynTypedNode &N) {
   }
 }
 
+#ifndef NDEBUG
 std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
   std::string S;
   llvm::raw_string_ostream OS(S);
@@ -84,6 +85,7 @@ std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
   OS << " ";
   return std::move(OS.str());
 }
+#endif
 
 // We find the selection by visiting written nodes in the AST, looking for nodes
 // that intersect with the selected character range.
@@ -177,7 +179,10 @@ private:
   SelectionVisitor(ASTContext &AST, const PrintingPolicy &PP, unsigned SelBegin,
                    unsigned SelEnd, FileID SelFile)
       : SM(AST.getSourceManager()), LangOpts(AST.getLangOpts()),
-        PrintPolicy(PP), SelBegin(SelBegin), SelEnd(SelEnd), SelFile(SelFile),
+#ifndef NDEBUG
+        PrintPolicy(PP),
+#endif
+        SelBegin(SelBegin), SelEnd(SelEnd), SelFile(SelFile),
         SelBeginTokenStart(SM.getFileOffset(Lexer::GetBeginningOfToken(
             SM.getComposedLoc(SelFile, SelBegin), SM, LangOpts))) {
     // Ensure we have a node for the TU decl, regardless of traversal scope.
@@ -348,7 +353,9 @@ private:
 
   SourceManager &SM;
   const LangOptions &LangOpts;
+#ifndef NDEBUG
   const PrintingPolicy &PrintPolicy;
+#endif
   std::stack<Node *> Stack;
   RangeSet Claimed;
   std::deque<Node> Nodes; // Stable pointers as we add more nodes.

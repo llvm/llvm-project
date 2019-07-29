@@ -1964,6 +1964,21 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (match(Op1, m_OneUse(m_FPExt(m_FNeg(m_Value(Y))))))
     return BinaryOperator::CreateFAddFMF(Op0, Builder.CreateFPExt(Y, Ty), &I);
 
+  // Similar to above, but look through fmul/fdiv of the negated value:
+  // Op0 - (-X * Y) --> Op0 + (X * Y)
+  // Op0 - (Y * -X) --> Op0 + (X * Y)
+  if (match(Op1, m_OneUse(m_c_FMul(m_FNeg(m_Value(X)), m_Value(Y))))) {
+    Value *FMul = Builder.CreateFMulFMF(X, Y, &I);
+    return BinaryOperator::CreateFAddFMF(Op0, FMul, &I);
+  }
+  // Op0 - (-X / Y) --> Op0 + (X / Y)
+  // Op0 - (X / -Y) --> Op0 + (X / Y)
+  if (match(Op1, m_OneUse(m_FDiv(m_FNeg(m_Value(X)), m_Value(Y)))) ||
+      match(Op1, m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))))) {
+    Value *FDiv = Builder.CreateFDivFMF(X, Y, &I);
+    return BinaryOperator::CreateFAddFMF(Op0, FDiv, &I);
+  }
+
   // Handle special cases for FSub with selects feeding the operation
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);

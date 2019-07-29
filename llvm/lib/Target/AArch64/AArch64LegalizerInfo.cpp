@@ -340,30 +340,36 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .widenScalarToNextPow2(1);
 
   // Extensions
-  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalIf([=](const LegalityQuery &Query) {
-        unsigned DstSize = Query.Types[0].getSizeInBits();
+  auto ExtLegalFunc = [=](const LegalityQuery &Query) {
+    unsigned DstSize = Query.Types[0].getSizeInBits();
 
-        // Make sure that we have something that will fit in a register, and
-        // make sure it's a power of 2.
-        if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
-          return false;
+    if (DstSize == 128 && !Query.Types[0].isVector())
+      return false; // Extending to a scalar s128 is not legal.
+    
+    // Make sure that we have something that will fit in a register, and
+    // make sure it's a power of 2.
+    if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
+      return false;
 
-        const LLT &SrcTy = Query.Types[1];
+    const LLT &SrcTy = Query.Types[1];
 
-        // Special case for s1.
-        if (SrcTy == s1)
-          return true;
+    // Special case for s1.
+    if (SrcTy == s1)
+      return true;
 
-        // Make sure we fit in a register otherwise. Don't bother checking that
-        // the source type is below 128 bits. We shouldn't be allowing anything
-        // through which is wider than the destination in the first place.
-        unsigned SrcSize = SrcTy.getSizeInBits();
-        if (SrcSize < 8 || !isPowerOf2_32(SrcSize))
-          return false;
+    // Make sure we fit in a register otherwise. Don't bother checking that
+    // the source type is below 128 bits. We shouldn't be allowing anything
+    // through which is wider than the destination in the first place.
+    unsigned SrcSize = SrcTy.getSizeInBits();
+    if (SrcSize < 8 || !isPowerOf2_32(SrcSize))
+      return false;
 
-        return true;
-      });
+    return true;
+  };
+  getActionDefinitionsBuilder({G_ZEXT, G_ANYEXT}).legalIf(ExtLegalFunc);
+  getActionDefinitionsBuilder(G_SEXT)
+      .legalIf(ExtLegalFunc)
+      .clampScalar(0, s64, s64); // Just for s128, others are handled above.
 
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 

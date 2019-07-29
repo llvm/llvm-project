@@ -224,13 +224,21 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
          BasicBlock *PhiBB) -> std::pair<BasicBlock *, BasicBlock *> {
     auto *PredBB = IncomingBB;
     auto *SuccBB = PhiBB;
+    SmallPtrSet<BasicBlock *, 16> Visited;
     while (true) {
       BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
       if (PredBr && PredBr->isConditional())
         return {PredBB, SuccBB};
+      Visited.insert(PredBB);
       auto *SinglePredBB = PredBB->getSinglePredecessor();
       if (!SinglePredBB)
         return {nullptr, nullptr};
+
+      // Stop searching when SinglePredBB has been visited. It means we see
+      // an unreachable loop.
+      if (Visited.count(SinglePredBB))
+        return {nullptr, nullptr};
+
       SuccBB = PredBB;
       PredBB = SinglePredBB;
     }
@@ -253,7 +261,9 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
       return;
 
     BasicBlock *PredBB = PredOutEdge.first;
-    BranchInst *PredBr = cast<BranchInst>(PredBB->getTerminator());
+    BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
+    if (!PredBr)
+      return;
 
     uint64_t PredTrueWeight, PredFalseWeight;
     // FIXME: We currently only set the profile data when it is missing.

@@ -15,16 +15,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Taint.h"
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "Yaml.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
-#include <climits>
-#include <initializer_list>
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <limits>
 #include <utility>
 
 using namespace clang;
@@ -44,14 +46,51 @@ public:
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) const override;
+  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
+                  const char *Sep) const override;
+
+  using ArgVector = SmallVector<unsigned, 2>;
+  using SignedArgVector = SmallVector<int, 2>;
+
+  enum class VariadicType { None, Src, Dst };
+
+  /// Used to parse the configuration file.
+  struct TaintConfiguration {
+    using NameArgsPair = std::pair<std::string, ArgVector>;
+
+    struct Propagation {
+      std::string Name;
+      ArgVector SrcArgs;
+      SignedArgVector DstArgs;
+      VariadicType VarType;
+      unsigned VarIndex;
+    };
+
+    std::vector<Propagation> Propagations;
+    std::vector<NameArgsPair> Filters;
+    std::vector<NameArgsPair> Sinks;
+
+    TaintConfiguration() = default;
+    TaintConfiguration(const TaintConfiguration &) = delete;
+    TaintConfiguration(TaintConfiguration &&) = default;
+    TaintConfiguration &operator=(const TaintConfiguration &) = delete;
+    TaintConfiguration &operator=(TaintConfiguration &&) = default;
+  };
+
+  /// Convert SignedArgVector to ArgVector.
+  ArgVector convertToArgVector(CheckerManager &Mgr, const std::string &Option,
+                               SignedArgVector Args);
+
+  /// Parse the config.
+  void parseConfiguration(CheckerManager &Mgr, const std::string &Option,
+                          TaintConfiguration &&Config);
+
+  static const unsigned InvalidArgIndex{std::numeric_limits<unsigned>::max()};
+  /// Denotes the return vale.
+  static const unsigned ReturnValueIndex{std::numeric_limits<unsigned>::max() -
+                                         1};
 
 private:
-  static const unsigned InvalidArgIndex = UINT_MAX;
-  /// Denotes the return vale.
-  static const unsigned ReturnValueIndex = UINT_MAX - 1;
-
   mutable std::unique_ptr<BugType> BT;
   void initBugType() const {
     if (!BT)
@@ -97,8 +136,6 @@ private:
   bool generateReportIfTainted(const Expr *E, const char Msg[],
                                CheckerContext &C) const;
 
-  using ArgVector = SmallVector<unsigned, 2>;
-
   /// A struct used to specify taint propagation rules for a function.
   ///
   /// If any of the possible taint source arguments is tainted, all of the
@@ -109,8 +146,6 @@ private:
   /// ReturnValueIndex is added to the dst list, the return value will be
   /// tainted.
   struct TaintPropagationRule {
-    enum class VariadicType { None, Src, Dst };
-
     using PropagationFuncType = bool (*)(bool IsTainted, const CallExpr *,
                                          CheckerContext &C);
 
@@ -131,8 +166,7 @@ private:
         : VariadicIndex(InvalidArgIndex), VarType(VariadicType::None),
           PropagationFunc(nullptr) {}
 
-    TaintPropagationRule(std::initializer_list<unsigned> &&Src,
-                         std::initializer_list<unsigned> &&Dst,
+    TaintPropagationRule(ArgVector &&Src, ArgVector &&Dst,
                          VariadicType Var = VariadicType::None,
                          unsigned VarIndex = InvalidArgIndex,
                          PropagationFuncType Func = nullptr)
@@ -176,6 +210,19 @@ private:
     static bool postSocket(bool IsTainted, const CallExpr *CE,
                            CheckerContext &C);
   };
+
+  using NameRuleMap = llvm::StringMap<TaintPropagationRule>;
+  using NameArgMap = llvm::StringMap<ArgVector>;
+
+  /// Defines a map between the propagation function's name and
+  /// TaintPropagationRule.
+  NameRuleMap CustomPropagations;
+
+  /// Defines a map between the filter function's name and filtering args.
+  NameArgMap CustomFilters;
+
+  /// Defines a map between the sink function's name and sinking args.
+  NameArgMap CustomSinks;
 };
 
 const unsigned GenericTaintChecker::ReturnValueIndex;
@@ -193,14 +240,93 @@ const char GenericTaintChecker::MsgTaintedBufferSize[] =
     "Untrusted data is used to specify the buffer size "
     "(CERT/STR31-C. Guarantee that storage for strings has sufficient space "
     "for character data and the null terminator)";
-
 } // end of anonymous namespace
+
+using TaintConfig = GenericTaintChecker::TaintConfiguration;
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(TaintConfig::Propagation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(TaintConfig::NameArgsPair)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<TaintConfig> {
+  static void mapping(IO &IO, TaintConfig &Config) {
+    IO.mapOptional("Propagations", Config.Propagations);
+    IO.mapOptional("Filters", Config.Filters);
+    IO.mapOptional("Sinks", Config.Sinks);
+  }
+};
+
+template <> struct MappingTraits<TaintConfig::Propagation> {
+  static void mapping(IO &IO, TaintConfig::Propagation &Propagation) {
+    IO.mapRequired("Name", Propagation.Name);
+    IO.mapOptional("SrcArgs", Propagation.SrcArgs);
+    IO.mapOptional("DstArgs", Propagation.DstArgs);
+    IO.mapOptional("VariadicType", Propagation.VarType,
+                   GenericTaintChecker::VariadicType::None);
+    IO.mapOptional("VariadicIndex", Propagation.VarIndex,
+                   GenericTaintChecker::InvalidArgIndex);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<GenericTaintChecker::VariadicType> {
+  static void enumeration(IO &IO, GenericTaintChecker::VariadicType &Value) {
+    IO.enumCase(Value, "None", GenericTaintChecker::VariadicType::None);
+    IO.enumCase(Value, "Src", GenericTaintChecker::VariadicType::Src);
+    IO.enumCase(Value, "Dst", GenericTaintChecker::VariadicType::Dst);
+  }
+};
+
+template <> struct MappingTraits<TaintConfig::NameArgsPair> {
+  static void mapping(IO &IO, TaintConfig::NameArgsPair &NameArg) {
+    IO.mapRequired("Name", NameArg.first);
+    IO.mapRequired("Args", NameArg.second);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 /// A set which is used to pass information from call pre-visit instruction
 /// to the call post-visit. The values are unsigned integers, which are either
 /// ReturnValueIndex, or indexes of the pointer/reference argument, which
 /// points to data, which should be tainted on return.
 REGISTER_SET_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, unsigned)
+
+GenericTaintChecker::ArgVector GenericTaintChecker::convertToArgVector(
+    CheckerManager &Mgr, const std::string &Option, SignedArgVector Args) {
+  ArgVector Result;
+  for (int Arg : Args) {
+    if (Arg == -1)
+      Result.push_back(ReturnValueIndex);
+    else if (Arg < -1) {
+      Result.push_back(InvalidArgIndex);
+      Mgr.reportInvalidCheckerOptionValue(
+          this, Option,
+          "an argument number for propagation rules greater or equal to -1");
+    } else
+      Result.push_back(static_cast<unsigned>(Arg));
+  }
+  return Result;
+}
+
+void GenericTaintChecker::parseConfiguration(CheckerManager &Mgr,
+                                             const std::string &Option,
+                                             TaintConfiguration &&Config) {
+  for (auto &P : Config.Propagations) {
+    GenericTaintChecker::CustomPropagations.try_emplace(
+        P.Name, std::move(P.SrcArgs),
+        convertToArgVector(Mgr, Option, P.DstArgs), P.VarType, P.VarIndex);
+  }
+
+  for (auto &F : Config.Filters) {
+    GenericTaintChecker::CustomFilters.try_emplace(F.first,
+                                                   std::move(F.second));
+  }
+
+  for (auto &S : Config.Sinks) {
+    GenericTaintChecker::CustomSinks.try_emplace(S.first, std::move(S.second));
+  }
+}
 
 GenericTaintChecker::TaintPropagationRule
 GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
@@ -218,7 +344,8 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
           .Case("freopen", TaintPropagationRule({}, {ReturnValueIndex}))
           .Case("getch", TaintPropagationRule({}, {ReturnValueIndex}))
           .Case("getchar", TaintPropagationRule({}, {ReturnValueIndex}))
-          .Case("getchar_unlocked", TaintPropagationRule({}, {ReturnValueIndex}))
+          .Case("getchar_unlocked",
+                TaintPropagationRule({}, {ReturnValueIndex}))
           .Case("getenv", TaintPropagationRule({}, {ReturnValueIndex}))
           .Case("gets", TaintPropagationRule({}, {0, ReturnValueIndex}))
           .Case("scanf", TaintPropagationRule({}, {}, VariadicType::Dst, 1))
@@ -454,7 +581,7 @@ GenericTaintChecker::TaintPropagationRule::process(const CallExpr *CE,
   // Check for taint in variadic arguments.
   if (!IsTainted && VariadicType::Src == VarType) {
     // Check if any of the arguments is tainted
-    for (unsigned int i = VariadicIndex; i < CE->getNumArgs(); ++i) {
+    for (unsigned i = VariadicIndex; i < CE->getNumArgs(); ++i) {
       if ((IsTainted = isTaintedOrPointsToTainted(CE->getArg(i), State, C)))
         break;
     }
@@ -485,7 +612,7 @@ GenericTaintChecker::TaintPropagationRule::process(const CallExpr *CE,
     //   If they are not pointing to const data, mark data as tainted.
     //   TODO: So far we are just going one level down; ideally we'd need to
     //         recurse here.
-    for (unsigned int i = VariadicIndex; i < CE->getNumArgs(); ++i) {
+    for (unsigned i = VariadicIndex; i < CE->getNumArgs(); ++i) {
       const Expr *Arg = CE->getArg(i);
       // Process pointer argument.
       const Type *ArgTy = Arg->getType().getTypePtr();
@@ -550,7 +677,7 @@ bool GenericTaintChecker::isStdin(const Expr *E, CheckerContext &C) {
 
 static bool getPrintfFormatArgumentNum(const CallExpr *CE,
                                        const CheckerContext &C,
-                                       unsigned int &ArgNum) {
+                                       unsigned &ArgNum) {
   // Find if the function contains a format string argument.
   // Handles: fprintf, printf, sprintf, snprintf, vfprintf, vprintf, vsprintf,
   // vsnprintf, syslog, custom annotated functions.
@@ -603,7 +730,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E,
 bool GenericTaintChecker::checkUncontrolledFormatString(
     const CallExpr *CE, CheckerContext &C) const {
   // Check if the function contains a format string argument.
-  unsigned int ArgNum = 0;
+  unsigned ArgNum = 0;
   if (!getPrintfFormatArgumentNum(CE, C, ArgNum))
     return false;
 
@@ -676,8 +803,15 @@ bool GenericTaintChecker::checkTaintedBufferSize(const CallExpr *CE,
          generateReportIfTainted(CE->getArg(ArgNum), MsgTaintedBufferSize, C);
 }
 
-void ento::registerGenericTaintChecker(CheckerManager &mgr) {
-  mgr.registerChecker<GenericTaintChecker>();
+void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
+  auto *Checker = Mgr.registerChecker<GenericTaintChecker>();
+  std::string Option{"Config"};
+  StringRef ConfigFile =
+      Mgr.getAnalyzerOptions().getCheckerStringOption(Checker, Option);
+  llvm::Optional<TaintConfig> Config =
+      getConfiguration<TaintConfig>(Mgr, Checker, Option, ConfigFile);
+  if (Config)
+    Checker->parseConfiguration(Mgr, Option, std::move(Config.getValue()));
 }
 
 bool ento::shouldRegisterGenericTaintChecker(const LangOptions &LO) {

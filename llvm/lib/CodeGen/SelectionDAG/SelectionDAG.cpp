@@ -2425,7 +2425,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     return Known;
   }
 
-  if (Depth == 6)
+  if (Depth >= 6)
     return Known;  // Limit search depth.
 
   KnownBits Known2;
@@ -3415,7 +3415,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Val.getNumSignBits();
   }
 
-  if (Depth == 6)
+  if (Depth >= 6)
     return 1;  // Limit search depth.
 
   if (!DemandedElts)
@@ -3964,7 +3964,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
     return true;
 
-  if (Depth == 6)
+  if (Depth >= 6)
     return false; // Limit search depth.
 
   // TODO: Handle vectors.

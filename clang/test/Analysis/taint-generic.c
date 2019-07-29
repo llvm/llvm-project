@@ -1,5 +1,49 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
-// RUN: %clang_analyze_cc1  -DFILE_IS_STRUCT -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
+// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+
+// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN:   -DFILE_IS_STRUCT \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
+
+// CHECK-INVALID-FILE: (frontend): invalid input for checker option
+// CHECK-INVALID-FILE-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
+// CHECK-INVALID-FILE-SAME:        'justguessit'
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-ILL-FORMED
+
+// CHECK-ILL-FORMED: (frontend): invalid input for checker option
+// CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: Invalid argument
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
+
+// CHECK-INVALID-ARG: (frontend): invalid input for checker option
+// CHECK-INVALID-ARG-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
+// CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
