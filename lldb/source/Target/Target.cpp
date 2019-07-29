@@ -4033,7 +4033,7 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
 bool TargetProperties::GetUseAllCompilerFlags() const {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      NULL, idx, g_properties[idx].default_uint_value != 0);
+      NULL, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableImportStdModule() const {
