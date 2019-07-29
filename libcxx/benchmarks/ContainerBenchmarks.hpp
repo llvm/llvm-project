@@ -7,6 +7,23 @@
 
 namespace ContainerBenchmarks {
 
+template <class Container>
+void BM_ConstructSize(benchmark::State& st, Container) {
+  auto size = st.range(0);
+  for (auto _ : st) {
+    Container c(size);
+    benchmark::DoNotOptimize(c.data());
+  }
+}
+
+template <class Container>
+void BM_ConstructSizeValue(benchmark::State& st, Container, typename Container::value_type const& val) {
+  const auto size = st.range(0);
+  for (auto _ : st) {
+    Container c(size, val);
+    benchmark::DoNotOptimize(c.data());
+  }
+}
 
 template <class Container, class GenInputs>
 void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {

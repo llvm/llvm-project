@@ -766,7 +766,6 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-template <class ELFT>
 static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   if (!sym.isUndefined() || sym.isWeak())
@@ -1125,7 +1124,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
 
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
-  if (symIndex != 0 && maybeReportUndefined<ELFT>(sym, sec, rel.r_offset))
+  if (symIndex != 0 && maybeReportUndefined(sym, sec, rel.r_offset))
     return;
 
   const uint8_t *relocatedAddr = sec.data().begin() + rel.r_offset;

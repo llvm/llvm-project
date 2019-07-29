@@ -88,6 +88,11 @@ static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
              : STI.getTargetMachine().isPositionIndependent() ? -12U : -8U;
 }
 
+static unsigned computeCRSaveOffset() {
+  // The condition register save offset needs to be updated for AIX PPC32.
+  return 8;
+}
+
 PPCFrameLowering::PPCFrameLowering(const PPCSubtarget &STI)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           STI.getPlatformStackAlignment(), 0),
@@ -95,7 +100,8 @@ PPCFrameLowering::PPCFrameLowering(const PPCSubtarget &STI)
       TOCSaveOffset(computeTOCSaveOffset(Subtarget)),
       FramePointerSaveOffset(computeFramePointerSaveOffset(Subtarget)),
       LinkageSize(computeLinkageSize(Subtarget)),
-      BasePointerSaveOffset(computeBasePointerSaveOffset(STI)) {}
+      BasePointerSaveOffset(computeBasePointerSaveOffset(Subtarget)),
+      CRSaveOffset(computeCRSaveOffset()) {}
 
 // With the SVR4 ABI, callee-saved registers have fixed offsets on the stack.
 const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
@@ -966,7 +972,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       MIB.addReg(MustSaveCRs[i], CrState);
     BuildMI(MBB, MBBI, dl, TII.get(PPC::STW8))
       .addReg(TempReg, getKillRegState(true))
-      .addImm(8)
+      .addImm(getCRSaveOffset())
       .addReg(SPReg);
   }
 
@@ -1020,7 +1026,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     assert(HasRedZone && "A red zone is always available on PPC64");
     BuildMI(MBB, MBBI, dl, TII.get(PPC::STW8))
       .addReg(TempReg, getKillRegState(true))
-      .addImm(8)
+      .addImm(getCRSaveOffset())
       .addReg(SPReg);
   }
 
@@ -1324,7 +1330,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // actually saved gets its own CFI record.
         unsigned CRReg = isELFv2ABI? Reg : (unsigned) PPC::CR2;
         unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr, MRI->getDwarfRegNum(CRReg, true), 8));
+            nullptr, MRI->getDwarfRegNum(CRReg, true), getCRSaveOffset()));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
         continue;
@@ -1590,7 +1596,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     // is live here.
     assert(HasRedZone && "Expecting red zone");
     BuildMI(MBB, MBBI, dl, TII.get(PPC::LWZ8), TempReg)
-      .addImm(8)
+      .addImm(getCRSaveOffset())
       .addReg(SPReg);
     for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
       BuildMI(MBB, MBBI, dl, TII.get(PPC::MTOCRF8), MustSaveCRs[i])
@@ -1614,7 +1620,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     assert(isPPC64 && "Expecting 64-bit mode");
     assert(RBReg == SPReg && "Should be using SP as a base register");
     BuildMI(MBB, MBBI, dl, TII.get(PPC::LWZ8), TempReg)
-      .addImm(8)
+      .addImm(getCRSaveOffset())
       .addReg(RBReg);
   }
 

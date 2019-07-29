@@ -598,7 +598,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return nullptr;
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
+DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
   if (!m_ranges) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
@@ -613,7 +613,7 @@ DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
   return m_ranges.get();
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRngLists() {
+DWARFDebugRngLists *SymbolFileDWARF::GetDebugRngLists() {
   if (!m_rnglists) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,

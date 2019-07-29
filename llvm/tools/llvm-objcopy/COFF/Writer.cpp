@@ -120,12 +120,12 @@ size_t COFFWriter::finalizeStringTable() {
   StrTabBuilder.finalize();
 
   for (auto &S : Obj.getMutableSections()) {
+    memset(S.Header.Name, 0, sizeof(S.Header.Name));
     if (S.Name.size() > COFF::NameSize) {
-      memset(S.Header.Name, 0, sizeof(S.Header.Name));
       snprintf(S.Header.Name, sizeof(S.Header.Name), "/%d",
                (int)StrTabBuilder.getOffset(S.Name));
     } else {
-      strncpy(S.Header.Name, S.Name.data(), COFF::NameSize);
+      memcpy(S.Header.Name, S.Name.data(), S.Name.size());
     }
   }
   for (auto &S : Obj.getMutableSymbols()) {

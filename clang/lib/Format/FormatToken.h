@@ -327,6 +327,11 @@ struct FormatToken {
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
 
+  bool isIf(bool AllowConstexprMacro = true) const {
+    return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
+           (endsSequence(tok::identifier, tok::kw_if) && AllowConstexprMacro);
+  }
+
   bool closesScopeAfterBlock() const {
     if (BlockKind == BK_Block)
       return true;
@@ -344,6 +349,10 @@ struct FormatToken {
 
   /// \c true if this token ends a sequence with the given tokens in order,
   /// following the ``Previous`` pointers, ignoring comments.
+  /// For example, given tokens [T1, T2, T3], the function returns true if
+  /// 3 tokens ending at this (ignoring comments) are [T3, T2, T1]. In other
+  /// words, the tokens passed to this function need to the reverse of the
+  /// order the tokens appear in code.
   template <typename A, typename... Ts>
   bool endsSequence(A K1, Ts... Tokens) const {
     return endsSequenceInternal(K1, Tokens...);

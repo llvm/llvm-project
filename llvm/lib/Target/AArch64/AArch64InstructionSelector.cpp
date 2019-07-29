@@ -3892,7 +3892,9 @@ static unsigned findIntrinsicID(MachineInstr &I) {
 /// intrinsic.
 static unsigned getStlxrOpcode(unsigned NumBytesToStore) {
   switch (NumBytesToStore) {
-  // TODO: 1, 2, and 4 byte stores.
+  // TODO: 1 and 2 byte stores
+  case 4:
+    return AArch64::STLXRW;
   case 8:
     return AArch64::STLXRX;
   default:
@@ -3946,8 +3948,24 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     unsigned Opc = getStlxrOpcode(NumBytesToStore);
     if (!Opc)
       return false;
-
-    auto StoreMI = MIRBuilder.buildInstr(Opc, {StatReg}, {SrcReg, PtrReg});
+    unsigned NumBitsToStore = NumBytesToStore * 8;
+    if (NumBitsToStore != 64) {
+      // The intrinsic always has a 64-bit source, but we might actually want
+      // a differently-sized source for the instruction. Try to get it.
+      // TODO: For 1 and 2-byte stores, this will have a G_AND. For now, let's
+      // just handle 4-byte stores.
+      // TODO: If we don't find a G_ZEXT, we'll have to truncate the value down
+      // to the right size for the STLXR.
+      MachineInstr *Zext = getOpcodeDef(TargetOpcode::G_ZEXT, SrcReg, MRI);
+      if (!Zext)
+        return false;
+      SrcReg = Zext->getOperand(1).getReg();
+      // We should get an appropriately-sized register here.
+      if (RBI.getSizeInBits(SrcReg, MRI, TRI) != NumBitsToStore)
+        return false;
+    }
+    auto StoreMI = MIRBuilder.buildInstr(Opc, {StatReg}, {SrcReg, PtrReg})
+                       .addMemOperand(*I.memoperands_begin());
     constrainSelectedInstRegOperands(*StoreMI, TII, TRI, RBI);
   }
 

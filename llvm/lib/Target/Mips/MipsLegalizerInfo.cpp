@@ -89,8 +89,11 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({s32})
       .clampScalar(0, s32, s32);
 
-  getActionDefinitionsBuilder(G_GEP)
+  getActionDefinitionsBuilder({G_GEP, G_INTTOPTR})
       .legalFor({{p0, s32}});
+
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({{s32, p0}});
 
   getActionDefinitionsBuilder(G_FRAME_INDEX)
       .legalFor({p0});

@@ -11257,9 +11257,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // Check for self-references within variable initializers.
   // Variables declared within a function/method body (except for references)
   // are handled by a dataflow analysis.
-  if (!VDecl->hasLocalStorage() || VDecl->getType()->isRecordType() ||
-      VDecl->getType()->isReferenceType()) {
-    CheckSelfReference(*this, RealDecl, Init, DirectInit);
+  // This is undefined behavior in C++, but valid in C.
+  if (getLangOpts().CPlusPlus) {
+    if (!VDecl->hasLocalStorage() || VDecl->getType()->isRecordType() ||
+        VDecl->getType()->isReferenceType()) {
+      CheckSelfReference(*this, RealDecl, Init, DirectInit);
+    }
   }
 
   // If the type changed, it means we had an incomplete type that was

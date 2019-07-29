@@ -144,6 +144,10 @@ protected:
   bool HasSVE2SHA3 = false;
   bool HasSVE2BitPerm = false;
 
+  // Future architecture extensions.
+  bool HasETE = false;
+  bool HasTRBE = false;
+
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
 

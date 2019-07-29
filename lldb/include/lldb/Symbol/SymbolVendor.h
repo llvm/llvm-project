@@ -121,9 +121,6 @@ public:
   // Get module unified section list symbol table.
   virtual Symtab *GetSymtab();
 
-  // Clear module unified section list symbol table.
-  virtual void ClearSymtab();
-
   /// Notify the SymbolVendor that the file addresses in the Sections
   /// for this module have been changed.
   virtual void SectionFileAddressesChanged();
@@ -140,8 +137,6 @@ protected:
                                    // file)
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses
                                              // can add more of these if needed.
-  Symtab *m_symtab; // Save a symtab once to not pass it through `AddSymbols` of
-                    // the symbol file each time when it is needed
 
 private:
   // For SymbolVendor only

@@ -265,6 +265,11 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .add(I.getOperand(2));
     break;
   }
+  case G_INTTOPTR:
+  case G_PTRTOINT: {
+    I.setDesc(TII.get(COPY));
+    return selectCopy(I, MRI);
+  }
   case G_FRAME_INDEX: {
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDiu))
              .add(I.getOperand(0))

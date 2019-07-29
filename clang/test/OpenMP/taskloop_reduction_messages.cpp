@@ -16,6 +16,13 @@ extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
 extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
+void xxx(int argc) {
+  int fp; // expected-note {{initialize the variable 'fp' to silence this warning}}
+#pragma omp taskloop reduction(+:fp) // expected-warning {{variable 'fp' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 void foo() {
 }
 

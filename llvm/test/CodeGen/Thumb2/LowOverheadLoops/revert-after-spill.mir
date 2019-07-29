@@ -4,10 +4,7 @@
 # CHECK-NOT: t2DLS
 # CHECK-NOT: t2LEUpdate
 
---- |
-  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-arm-none-eabi"
-  
+--- |  
   define i32 @skip_spill(i32 %n) #0 {
   entry:
     %cmp6 = icmp eq i32 %n, 0
@@ -32,8 +29,15 @@
   }
   
   declare i32 @bar(...) local_unnamed_addr #0
+  
+  ; Function Attrs: noduplicate nounwind
   declare void @llvm.set.loop.iterations.i32(i32) #1
+  
+  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
   
   attributes #0 = { "target-features"="+mve.fp" }
   attributes #1 = { noduplicate nounwind }
@@ -51,9 +55,9 @@ failedISel:      false
 tracksRegLiveness: false
 hasWinCFI:       false
 registers:       []
-liveins:         
+liveins:
   - { reg: '$r0', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -73,7 +77,7 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      []
-stack:           
+stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
@@ -86,6 +90,7 @@ stack:
   - { id: 3, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
@@ -115,7 +120,7 @@ body:             |
     $lr = tMOVr killed $r5, 14, $noreg
     renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r0, 14, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    t2LoopEnd renamable $lr, %bb.2
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg
   
   bb.3.while.end:
@@ -128,3 +133,4 @@ body:             |
     tPOP_RET 14, $noreg, def $r4, def $r5, def $r7, def $pc, implicit killed $r0
 
 ...
+

@@ -312,6 +312,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   char GlobalFlags = 0;
   bool WQMOutputs = MF.getFunction().hasFnAttribute("amdgpu-ps-wqm-outputs");
   SmallVector<MachineInstr *, 4> SetInactiveInstrs;
+  SmallVector<MachineInstr *, 4> SoftWQMInstrs;
 
   // We need to visit the basic blocks in reverse post-order so that we visit
   // defs before uses, in particular so that we don't accidentally mark an
@@ -340,6 +341,10 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         // correct, so we need it to be in WQM.
         Flags = StateWQM;
         LowerToCopyInstrs.push_back(&MI);
+      } else if (Opcode == AMDGPU::SOFT_WQM) {
+        LowerToCopyInstrs.push_back(&MI);
+        SoftWQMInstrs.push_back(&MI);
+        continue;
       } else if (Opcode == AMDGPU::WWM) {
         // The WWM intrinsic doesn't make the same guarantee, and plus it needs
         // to be executed in WQM or Exact so that its copy doesn't clobber
@@ -407,8 +412,11 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   // Mark sure that any SET_INACTIVE instructions are computed in WQM if WQM is
   // ever used anywhere in the function. This implements the corresponding
   // semantics of @llvm.amdgcn.set.inactive.
+  // Similarly for SOFT_WQM instructions, implementing @llvm.amdgcn.softwqm.
   if (GlobalFlags & StateWQM) {
     for (MachineInstr *MI : SetInactiveInstrs)
+      markInstruction(*MI, StateWQM, Worklist);
+    for (MachineInstr *MI : SoftWQMInstrs)
       markInstruction(*MI, StateWQM, Worklist);
   }
 
@@ -885,7 +893,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   unsigned Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   if (!(GlobalFlags & StateWQM)) {
     lowerLiveMaskQueries(Exec);
-    if (!(GlobalFlags & StateWWM))
+    if (!(GlobalFlags & StateWWM) && LowerToCopyInstrs.empty())
       return !LiveMaskQueries.empty();
   } else {
     // Store a copy of the original live mask when required

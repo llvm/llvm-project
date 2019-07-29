@@ -617,6 +617,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         continue;
       case AMDGPU::COPY:
       case AMDGPU::WQM:
+      case AMDGPU::SOFT_WQM:
       case AMDGPU::WWM: {
         // If the destination register is a physical register there isn't really
         // much we can do to fix this.

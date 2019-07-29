@@ -80,8 +80,13 @@ public:
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
 private:
-  std::pair<tooling::CompilationDatabase *, /*SentBroadcast*/ bool>
-  getCDBInDirLocked(PathRef File) const;
+  /// Caches compilation databases loaded from directories.
+  struct CachedCDB {
+    std::string Path; // Not case-folded.
+    std::unique_ptr<clang::tooling::CompilationDatabase> CDB = nullptr;
+    bool SentBroadcast = false;
+  };
+  CachedCDB &getCDBInDirLocked(PathRef File) const;
 
   struct CDBLookupRequest {
     PathRef FileName;
@@ -98,12 +103,7 @@ private:
   void broadcastCDB(CDBLookupResult Res) const;
 
   mutable std::mutex Mutex;
-  /// Caches compilation databases loaded from directories(keys are
-  /// directories).
-  struct CachedCDB {
-    std::unique_ptr<clang::tooling::CompilationDatabase> CDB = nullptr;
-    bool SentBroadcast = false;
-  };
+  // Keyed by possibly-case-folded directory path.
   mutable llvm::StringMap<CachedCDB> CompilationDatabases;
 
   /// Used for command argument pointing to folder where compile_commands.json

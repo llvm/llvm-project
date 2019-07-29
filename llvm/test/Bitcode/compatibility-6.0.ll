@@ -1259,10 +1259,10 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #42
+  ; CHECK: call void @f.nobuiltin() #43
 
   call void @f.strictfp() strictfp
-  ; CHECK: call void @f.strictfp() #43
+  ; CHECK: call void @f.strictfp() #44
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1627,10 +1627,10 @@ normal:
 
 
 declare void @f.writeonly() writeonly
-; CHECK: declare void @f.writeonly() #39
+; CHECK: declare void @f.writeonly() #40
 
 declare void @f.speculatable() speculatable
-; CHECK: declare void @f.speculatable() #40
+; CHECK: declare void @f.speculatable() #41
 
 ;; Constant Expressions
 
@@ -1674,15 +1674,16 @@ define i8** @constexpr() {
 ; CHECK: attributes #32 = { norecurse }
 ; CHECK: attributes #33 = { inaccessiblememonly }
 ; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #35 = { nounwind readnone }
+; CHECK: attributes #35 = { nounwind readnone willreturn }
 ; CHECK: attributes #36 = { argmemonly nounwind readonly }
 ; CHECK: attributes #37 = { argmemonly nounwind }
-; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { writeonly }
-; CHECK: attributes #40 = { speculatable }
-; CHECK: attributes #41 = { inaccessiblemem_or_argmemonly nounwind }
-; CHECK: attributes #42 = { builtin }
-; CHECK: attributes #43 = { strictfp }
+; CHECK: attributes #38 = { nounwind readnone }
+; CHECK: attributes #39 = { nounwind readonly }
+; CHECK: attributes #40 = { writeonly }
+; CHECK: attributes #41 = { speculatable }
+; CHECK: attributes #42 = { inaccessiblemem_or_argmemonly nounwind willreturn }
+; CHECK: attributes #43 = { builtin }
+; CHECK: attributes #44 = { strictfp }
 
 ;; Metadata
 

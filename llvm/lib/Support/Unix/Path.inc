@@ -1203,7 +1203,7 @@ namespace fs {
 /// implementation.
 std::error_code copy_file(const Twine &From, const Twine &To) {
   uint32_t Flag = COPYFILE_DATA;
-#if __has_builtin(__builtin_available)
+#if __has_builtin(__builtin_available) && defined(COPYFILE_CLONE)
   if (__builtin_available(macos 10.12, *)) {
     bool IsSymlink;
     if (std::error_code Error = is_symlink_file(From, IsSymlink))

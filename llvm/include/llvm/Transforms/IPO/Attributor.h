@@ -905,6 +905,31 @@ struct AADereferenceable : public AbstractAttribute {
   static constexpr Attribute::AttrKind ID = Attribute::Dereferenceable;
 };
 
+/// An abstract interface for all align attributes.
+struct AAAlign : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAAlign(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAAlign(Value *AssociatedVal, Value &AnchoredValue,
+          InformationCache &InfoCache)
+      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
+
+  /// See AbastractState::getAttrKind().
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// Return assumed alignment.
+  virtual unsigned getAssumedAlign() const = 0;
+
+  /// Return known alignemnt.
+  virtual unsigned getKnownAlign() const = 0;
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::Alignment;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

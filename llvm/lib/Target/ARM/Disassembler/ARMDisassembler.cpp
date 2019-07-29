@@ -561,6 +561,8 @@ static DecodeStatus DecodeMVEVCMP(MCInst &Inst, unsigned Insn,
                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMveVCTP(MCInst &Inst, unsigned Insn,
                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMVEVPNOT(MCInst &Inst, unsigned Insn,
+                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMVEOverlappingLongShift(MCInst &Inst, unsigned Insn,
                                                   uint64_t Address,
                                                   const void *Decoder);
@@ -6577,5 +6579,13 @@ static DecodeStatus DecodeMveVCTP(MCInst &Inst, unsigned Insn, uint64_t Address,
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   if (!Check(S, DecoderGPRRegisterClass(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
+  return S;
+}
+
+static DecodeStatus DecodeMVEVPNOT(MCInst &Inst, unsigned Insn, uint64_t Address,
+                                   const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  Inst.addOperand(MCOperand::createReg(ARM::VPR));
+  Inst.addOperand(MCOperand::createReg(ARM::VPR));
   return S;
 }

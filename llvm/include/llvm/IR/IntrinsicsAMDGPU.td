@@ -1431,6 +1431,13 @@ def int_amdgcn_wqm : Intrinsic<[llvm_any_ty],
   [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
 
+// Copies the source value to the destination value, such that the source
+// is computed as if the entire program were executed in WQM if any other
+// program code executes in WQM.
+def int_amdgcn_softwqm : Intrinsic<[llvm_any_ty],
+  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
 // Return true if at least one thread within the pixel quad passes true into
 // the function.
 def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],

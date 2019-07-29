@@ -30,10 +30,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_disassemble_options[] = {
 #define LLDB_OPTIONS_disassemble
 #include "CommandOptions.inc"
-};
 
 CommandObjectDisassemble::CommandOptions::CommandOptions()
     : Options(), num_lines_context(0), num_instructions(0), func_name(),

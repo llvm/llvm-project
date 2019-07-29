@@ -36,8 +36,19 @@ struct YAMLRemarkSerializer : public RemarkSerializer {
 
   YAMLRemarkSerializer(raw_ostream &OS);
 
-  /// Emit a remark to the stream.
   void emit(const Remark &Remark) override;
+  std::unique_ptr<MetaSerializer>
+  metaSerializer(raw_ostream &OS,
+                 Optional<StringRef> ExternalFilename = None) override;
+};
+
+struct YAMLMetaSerializer : public MetaSerializer {
+  Optional<StringRef> ExternalFilename;
+
+  YAMLMetaSerializer(raw_ostream &OS, Optional<StringRef> ExternalFilename)
+      : MetaSerializer(OS), ExternalFilename(ExternalFilename) {}
+
+  void emit() override;
 };
 
 /// Serialize the remarks to YAML using a string table. An remark entry looks
@@ -52,6 +63,21 @@ struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
       : YAMLRemarkSerializer(OS) {
     StrTab = std::move(StrTabIn);
   }
+  std::unique_ptr<MetaSerializer>
+  metaSerializer(raw_ostream &OS,
+                 Optional<StringRef> ExternalFilename = None) override;
+};
+
+struct YAMLStrTabMetaSerializer : public YAMLMetaSerializer {
+  /// The string table is part of the metadata.
+  StringTable StrTab;
+
+  YAMLStrTabMetaSerializer(raw_ostream &OS,
+                           Optional<StringRef> ExternalFilename,
+                           StringTable StrTab)
+      : YAMLMetaSerializer(OS, ExternalFilename), StrTab(std::move(StrTab)) {}
+
+  void emit() override;
 };
 
 } // end namespace remarks

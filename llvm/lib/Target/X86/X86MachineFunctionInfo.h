@@ -40,6 +40,14 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// stack frame in bytes.
   unsigned CalleeSavedFrameSize = 0;
 
+  /// CalleeSavedXMMFrameSize - Size of the callee-saved XMM register portion
+  /// of the stack frame in bytes.
+  unsigned CalleeSavedXMMFrameSize = 0;
+
+  /// CalleeSavedXMMFrameOrigin - Origin slot of the callee-saved XMM register
+  /// portion of the stack frame.
+  int CalleeSavedXMMFrameOrigin = 0;
+
   /// BytesToPopOnReturn - Number of bytes function pops on return (in addition
   /// to the space used by the return address).
   /// Used on windows platform for stdcall & fastcall name decoration
@@ -122,6 +130,11 @@ public:
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
+
+  unsigned getCalleeSavedXMMFrameInfo(int &origin) const
+           { origin = CalleeSavedXMMFrameOrigin; return CalleeSavedXMMFrameSize; }
+  void setCalleeSavedXMMFrameInfo(unsigned size, int origin)
+       { CalleeSavedXMMFrameSize = size; CalleeSavedXMMFrameOrigin = origin; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
   void setBytesToPopOnReturn (unsigned bytes) { BytesToPopOnReturn = bytes;}

@@ -64,6 +64,7 @@ static_library("Support") {
     "Error.cpp",
     "ErrorHandling.cpp",
     "FileCheck.cpp",
+    "FileCollector.cpp",
     "FileOutputBuffer.cpp",
     "FileUtilities.cpp",
     "FoldingSet.cpp",
