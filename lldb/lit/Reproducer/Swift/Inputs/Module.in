@@ -1,0 +1,8 @@
+breakpoint set -f Module.swift -l 4
+run
+bt
+p let $bar = Foo(i: 95126)
+p $bar.i
+cont
+reproducer status
+reproducer generate
