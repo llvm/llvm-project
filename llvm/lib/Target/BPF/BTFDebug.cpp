@@ -1006,19 +1006,20 @@ void BTFDebug::generateOffsetReloc(const MachineInstr *MI,
   unsigned RootId = populateStructType(RootTy);
   setTypeFromId(RootId, &PrevStructType, &PrevArrayType);
   unsigned RootTySize = PrevStructType->getStructSize();
+  StringRef IndexPattern = AccessPattern.substr(AccessPattern.find_first_of(':') + 1);
 
   BTFOffsetReloc OffsetReloc;
   OffsetReloc.Label = ORSym;
-  OffsetReloc.OffsetNameOff = addString(AccessPattern.drop_back());
+  OffsetReloc.OffsetNameOff = addString(IndexPattern.drop_back());
   OffsetReloc.TypeID = RootId;
 
   uint32_t Start = 0, End = 0, Offset = 0;
   bool FirstAccess = true;
-  for (auto C : AccessPattern) {
+  for (auto C : IndexPattern) {
     if (C != ':') {
       End++;
     } else {
-      std::string SubStr = AccessPattern.substr(Start, End - Start);
+      std::string SubStr = IndexPattern.substr(Start, End - Start);
       int Loc = std::stoi(SubStr);
 
       if (FirstAccess) {
@@ -1043,7 +1044,7 @@ void BTFDebug::generateOffsetReloc(const MachineInstr *MI,
       End = Start;
     }
   }
-  AccessOffsets[RootTy->getName().str() + ":" + AccessPattern.str()] = Offset;
+  AccessOffsets[AccessPattern.str()] = Offset;
   OffsetRelocTable[SecNameOff].push_back(OffsetReloc);
 }
 
@@ -1227,7 +1228,7 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
         DIType *Ty = dyn_cast<DIType>(MDN);
         std::string TypeName = Ty->getName();
-        int64_t Imm = AccessOffsets[TypeName + ":" + GVar->getName().str()];
+        int64_t Imm = AccessOffsets[GVar->getName().str()];
 
         // Emit "mov ri, <imm>" for abstract member accesses.
         OutMI.setOpcode(BPF::MOV_ri);
