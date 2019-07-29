@@ -28,15 +28,12 @@ public:
     PathToStdlibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/stdlib");
     PathToSyslibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/syslib");
     PathToLinkScript = GetUpmemSdkPath("/usr/share/upmem/include/link/dpu.lds");
-    PathToRtLibDirectory =
-        Args.hasArg(options::OPT_pg)
-            ? GetUpmemSdkPath("/usr/share/upmem/include/built-in-profiling")
-            : GetUpmemSdkPath("/usr/share/upmem/include/built-in");
+    PathToRtLibDirectory = GetUpmemSdkPath("/usr/share/upmem/include/built-in");
+    RtLibName = Args.hasArg(options::OPT_pg) ? "rt" : "rt_p";
     PathToRtLibBc =
         Args.hasArg(options::OPT_pg)
-            ? GetUpmemSdkPath(
-                  "/usr/share/upmem/include/built-in-profiling/rtlib.bc")
-            : GetUpmemSdkPath("/usr/share/upmem/include/built-in/rtlib.bc");
+            ? GetUpmemSdkPath("/usr/share/upmem/include/built-in/librtlto_p.a")
+            : GetUpmemSdkPath("/usr/share/upmem/include/built-in/librtlto.a");
   }
 
   ~DPURTE() override {
@@ -77,6 +74,7 @@ private:
   char *PathToStdlibIncludes;
   char *PathToLinkScript;
   char *PathToRtLibDirectory;
+  const char *RtLibName;
   char *PathToRtLibBc;
 };
 } // end namespace toolchains
@@ -85,10 +83,11 @@ namespace dpu {
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
   Linker(const ToolChain &TC, const char *Script, const char *RtLibDir,
-         const char *PathToRtLibBc)
+         const char *RtLibName, const char *PathToRtLibBc)
       : GnuTool("dpu::Linker", "ld.lld", TC) {
     LinkScript = Script;
     RtLibraryPath = RtLibDir;
+    RtLibraryName = RtLibName;
     RtBcLibrary = PathToRtLibBc;
   }
 
@@ -104,6 +103,7 @@ public:
 private:
   const char *LinkScript;
   const char *RtLibraryPath;
+  const char *RtLibraryName;
   const char *RtBcLibrary;
 };
 } // end namespace dpu
