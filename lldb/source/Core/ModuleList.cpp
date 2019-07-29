@@ -82,8 +82,6 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
     "Only load Swift modules via their .swiftmodule file - ignore "
     ".swiftinterface files."} };
 
-static constexpr PropertyDefinition g_properties[] = {
-
 #define LLDB_PROPERTIES_modulelist
 #include "CoreProperties.inc"
 
