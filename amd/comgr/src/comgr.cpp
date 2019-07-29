@@ -42,6 +42,7 @@
 #include "comgr-env.h"
 #include "comgr-metadata.h"
 #include "comgr-objdump.h"
+#include "comgr-signal.h"
 #include "comgr-symbol.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -1047,6 +1048,11 @@ amd_comgr_status_t AMD_API
 
   ensureLLVMInitialized();
 
+  // Save signal handlers so that they can be restored after the action has
+  // completed.
+  if (auto Status = signal::saveHandlers())
+    return Status;
+
   // The normal log stream, used to return via a AMD_COMGR_DATA_KIND_LOG object.
   std::string LogStr;
   raw_string_ostream LogS(LogStr);
@@ -1119,6 +1125,10 @@ amd_comgr_status_t AMD_API
   default:
     ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+
+  // Restore signal handlers.
+  if (auto Status = signal::restoreHandlers())
+    return Status;
 
   if (env::shouldEmitVerboseLogs())
     *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
