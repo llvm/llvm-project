@@ -390,19 +390,8 @@ Symtab *SymbolVendor::GetSymtab() {
 }
 
 void SymbolVendor::SectionFileAddressesChanged() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    ObjectFile *module_objfile = module_sp->GetObjectFile();
-    if (m_sym_file_up) {
-      ObjectFile *symfile_objfile = m_sym_file_up->GetObjectFile();
-      if (symfile_objfile != module_objfile)
-        symfile_objfile->SectionFileAddressesChanged();
-    }
-    Symtab *symtab = GetSymtab();
-    if (symtab) {
-      symtab->SectionFileAddressesChanged();
-    }
-  }
+  if (m_sym_file_up)
+    m_sym_file_up->SectionFileAddressesChanged();
 }
 
 // PluginInterface protocol

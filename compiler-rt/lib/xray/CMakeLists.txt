@@ -118,6 +118,9 @@ endforeach()
 include_directories(..)
 include_directories(../../include)
 
+if(COMPILER_RT_USE_LIBCXX)
+  set(SANITIZER_COMMON_CFLAGS "${SANITIZER_COMMON_CFLAGS} -isystem ${COMPILER_RT_LIBCXX_PATH}/include")
+endif()
 set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
 

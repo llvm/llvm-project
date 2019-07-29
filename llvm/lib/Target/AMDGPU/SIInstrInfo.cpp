@@ -3609,7 +3609,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (DC >= DppCtrl::BCAST15 && DC <= DppCtrl::BCAST31 &&
         ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
       ErrInfo = "Invalid dpp_ctrl value: "
-                "broadcats are not supported on GFX10+";
+                "broadcasts are not supported on GFX10+";
       return false;
     }
     if (DC >= DppCtrl::ROW_SHARE_FIRST && DC <= DppCtrl::ROW_XMASK_LAST &&

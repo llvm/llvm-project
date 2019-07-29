@@ -212,6 +212,7 @@ public:
 
   ObjectFile *GetObjectFile() { return m_obj_file; }
   const ObjectFile *GetObjectFile() const { return m_obj_file; }
+  ObjectFile *GetMainObjectFile();
 
   virtual std::vector<CallEdge> ParseCallEdgesInFunction(UserID func_id) {
     return {};
@@ -221,7 +222,7 @@ public:
 
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.
-  virtual void SectionFileAddressesChanged() {}
+  virtual void SectionFileAddressesChanged();
 
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor

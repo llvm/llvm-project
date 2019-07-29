@@ -32,7 +32,7 @@
   }
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, 0, implicit $exec :: (store 8 into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test1
 liveins:
@@ -124,7 +124,7 @@ body: |
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, 1, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, 1, implicit $exec :: (store 8 into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test4
 liveins:
