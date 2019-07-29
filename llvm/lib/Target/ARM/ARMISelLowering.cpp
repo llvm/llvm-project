@@ -349,10 +349,6 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Expand);
-    setOperationAction(ISD::FP_TO_SINT, VT, Expand);
-    setOperationAction(ISD::FP_TO_UINT, VT, Expand);
-    setOperationAction(ISD::SINT_TO_FP, VT, Expand);
-    setOperationAction(ISD::UINT_TO_FP, VT, Expand);
   }
 }
 

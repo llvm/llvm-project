@@ -127,18 +127,18 @@ static bool isCompatible(InputFile *file) {
 
   if (!config->emulation.empty()) {
     error(toString(file) + " is incompatible with " + config->emulation);
-  } else {
-    InputFile *existing;
-    if (!objectFiles.empty())
-      existing = objectFiles[0];
-    else if (!sharedFiles.empty())
-      existing = sharedFiles[0];
-    else
-      existing = bitcodeFiles[0];
-
-    error(toString(file) + " is incompatible with " + toString(existing));
+    return false;
   }
 
+  InputFile *existing;
+  if (!objectFiles.empty())
+    existing = objectFiles[0];
+  else if (!sharedFiles.empty())
+    existing = sharedFiles[0];
+  else
+    existing = bitcodeFiles[0];
+
+  error(toString(file) + " is incompatible with " + toString(existing));
   return false;
 }
 

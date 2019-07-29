@@ -653,6 +653,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FADD, MVT::v4f16, Custom);
     setOperationAction(ISD::FMUL, MVT::v4f16, Custom);
+    setOperationAction(ISD::FMA, MVT::v4f16, Custom);
 
     setOperationAction(ISD::FMAXNUM, MVT::v2f16, Custom);
     setOperationAction(ISD::FMINNUM, MVT::v2f16, Custom);
@@ -3971,6 +3972,30 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
 
+SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  unsigned Opc = Op.getOpcode();
+  EVT VT = Op.getValueType();
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16);
+
+  SDValue Lo0, Hi0;
+  std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  SDValue Lo1, Hi1;
+  std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
+  SDValue Lo2, Hi2;
+  std::tie(Lo2, Hi2) = DAG.SplitVectorOperand(Op.getNode(), 2);
+
+  SDLoc SL(Op);
+
+  SDValue OpLo = DAG.getNode(Opc, SL, Lo0.getValueType(), Lo0, Lo1, Lo2,
+                             Op->getFlags());
+  SDValue OpHi = DAG.getNode(Opc, SL, Hi0.getValueType(), Hi0, Hi1, Hi2,
+                             Op->getFlags());
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
+}
+
+
 SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
@@ -4023,6 +4048,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
+  case ISD::FMA:
+    return splitTernaryVectorOp(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
