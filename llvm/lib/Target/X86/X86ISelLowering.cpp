@@ -6668,7 +6668,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
 static bool resolveTargetShuffleInputs(SDValue Op,
                                        SmallVectorImpl<SDValue> &Inputs,
                                        SmallVectorImpl<int> &Mask,
-                                       SelectionDAG &DAG);
+                                       SelectionDAG &DAG, unsigned Depth);
 
 // Attempt to decode ops that could be represented as a shuffle mask.
 // The decoded shuffle mask may contain a different number of elements to the
@@ -6676,7 +6676,7 @@ static bool resolveTargetShuffleInputs(SDValue Op,
 static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<SDValue> &Ops,
-                               SelectionDAG &DAG) {
+                               SelectionDAG &DAG, unsigned Depth) {
   Mask.clear();
   Ops.clear();
 
@@ -6728,8 +6728,10 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   case ISD::OR: {
     // Inspect each operand at the byte level. We can merge these into a
     // blend shuffle mask if for each byte at least one is masked out (zero).
-    KnownBits Known0 = DAG.computeKnownBits(N.getOperand(0), DemandedElts);
-    KnownBits Known1 = DAG.computeKnownBits(N.getOperand(1), DemandedElts);
+    KnownBits Known0 =
+        DAG.computeKnownBits(N.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits Known1 =
+        DAG.computeKnownBits(N.getOperand(1), DemandedElts, Depth + 1);
     if (Known0.One.isNullValue() && Known1.One.isNullValue()) {
       bool IsByteMask = true;
       unsigned NumSizeInBytes = NumSizeInBits / 8;
@@ -6768,8 +6770,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       return false;
     SmallVector<int, 64> SrcMask0, SrcMask1;
     SmallVector<SDValue, 2> SrcInputs0, SrcInputs1;
-    if (!resolveTargetShuffleInputs(N0, SrcInputs0, SrcMask0, DAG) ||
-        !resolveTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG))
+    if (!resolveTargetShuffleInputs(N0, SrcInputs0, SrcMask0, DAG, Depth + 1) ||
+        !resolveTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG, Depth + 1))
       return false;
     int MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
@@ -6819,7 +6821,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SmallVector<int, 64> SubMask;
     SmallVector<SDValue, 2> SubInputs;
     if (!resolveTargetShuffleInputs(peekThroughOneUseBitcasts(Sub), SubInputs,
-                                    SubMask, DAG))
+                                    SubMask, DAG, Depth + 1))
       return false;
     if (SubMask.size() != NumSubElts) {
       assert(((SubMask.size() % NumSubElts) == 0 ||
@@ -6943,14 +6945,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     // as a truncation shuffle.
     if (Opcode == X86ISD::PACKSS) {
       if ((!N0.isUndef() &&
-           DAG.ComputeNumSignBits(N0, EltsLHS) <= NumBitsPerElt) ||
+           DAG.ComputeNumSignBits(N0, EltsLHS, Depth + 1) <= NumBitsPerElt) ||
           (!N1.isUndef() &&
-           DAG.ComputeNumSignBits(N1, EltsRHS) <= NumBitsPerElt))
+           DAG.ComputeNumSignBits(N1, EltsRHS, Depth + 1) <= NumBitsPerElt))
         return false;
     } else {
       APInt ZeroMask = APInt::getHighBitsSet(2 * NumBitsPerElt, NumBitsPerElt);
-      if ((!N0.isUndef() && !DAG.MaskedValueIsZero(N0, ZeroMask, EltsLHS)) ||
-          (!N1.isUndef() && !DAG.MaskedValueIsZero(N1, ZeroMask, EltsRHS)))
+      if ((!N0.isUndef() &&
+           !DAG.MaskedValueIsZero(N0, ZeroMask, EltsLHS, Depth + 1)) ||
+          (!N1.isUndef() &&
+           !DAG.MaskedValueIsZero(N1, ZeroMask, EltsRHS, Depth + 1)))
         return false;
     }
 
@@ -7101,11 +7105,11 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 static bool resolveTargetShuffleInputs(SDValue Op,
                                        SmallVectorImpl<SDValue> &Inputs,
                                        SmallVectorImpl<int> &Mask,
-                                       SelectionDAG &DAG) {
+                                       SelectionDAG &DAG, unsigned Depth) {
   unsigned NumElts = Op.getValueType().getVectorNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(NumElts);
   if (!setTargetShuffleZeroElements(Op, Mask, Inputs))
-    if (!getFauxShuffleMask(Op, DemandedElts, Mask, Inputs, DAG))
+    if (!getFauxShuffleMask(Op, DemandedElts, Mask, Inputs, DAG, Depth))
       return false;
 
   resolveTargetShuffleInputsAndMask(Inputs, Mask);
@@ -32033,7 +32037,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   unsigned NumRootElts = RootVT.getVectorNumElements();
   unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
   bool FloatDomain = VT1.isFloatingPoint() || VT2.isFloatingPoint() ||
-                     (RootVT.isFloatingPoint() && Depth >= 2) ||
+                     (RootVT.isFloatingPoint() && Depth >= 1) ||
                      (RootVT.is256BitVector() && !Subtarget.hasAVX2());
 
   // Don't combine if we are a AVX512/EVEX target and the mask element size
@@ -32072,7 +32076,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (UnaryShuffle && RootVT.is256BitVector() && NumBaseMaskElts == 2 &&
       !(Subtarget.hasAVX2() && BaseMask[0] >= -1 && BaseMask[1] >= -1) &&
       !isSequentialOrUndefOrZeroInRange(BaseMask, 0, 2, 0)) {
-    if (Depth == 1 && Root.getOpcode() == X86ISD::VPERM2X128)
+    if (Depth == 0 && Root.getOpcode() == X86ISD::VPERM2X128)
       return SDValue(); // Nothing to do!
     MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
     unsigned PermMask = 0;
@@ -32117,8 +32121,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Which shuffle domains are permitted?
   // Permit domain crossing at higher combine depths.
   // TODO: Should we indicate which domain is preferred if both are allowed?
-  bool AllowFloatDomain = FloatDomain || (Depth > 3);
-  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) && Subtarget.hasSSE2() &&
+  bool AllowFloatDomain = FloatDomain || (Depth >= 3);
+  bool AllowIntDomain = (!FloatDomain || (Depth >= 3)) && Subtarget.hasSSE2() &&
                         (!MaskVT.is256BitVector() || Subtarget.hasAVX2());
 
   // Determine zeroable mask elements.
@@ -32153,14 +32157,14 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         if (V1.getValueType() == MaskVT &&
             V1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
             MayFoldLoad(V1.getOperand(0))) {
-          if (Depth == 1 && Root.getOpcode() == X86ISD::VBROADCAST)
+          if (Depth == 0 && Root.getOpcode() == X86ISD::VBROADCAST)
             return SDValue(); // Nothing to do!
           Res = V1.getOperand(0);
           Res = DAG.getNode(X86ISD::VBROADCAST, DL, MaskVT, Res);
           return DAG.getBitcast(RootVT, Res);
         }
         if (Subtarget.hasAVX2()) {
-          if (Depth == 1 && Root.getOpcode() == X86ISD::VBROADCAST)
+          if (Depth == 0 && Root.getOpcode() == X86ISD::VBROADCAST)
             return SDValue(); // Nothing to do!
           Res = DAG.getBitcast(MaskVT, V1);
           Res = DAG.getNode(X86ISD::VBROADCAST, DL, MaskVT, Res);
@@ -32174,7 +32178,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                           DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
                           ShuffleVT) &&
         (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
-      if (Depth == 1 && Root.getOpcode() == Shuffle)
+      if (Depth == 0 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleSrcVT, NewV1);
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
@@ -32185,7 +32189,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                  AllowIntDomain, Subtarget, Shuffle, ShuffleVT,
                                  PermuteImm) &&
         (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
-      if (Depth == 1 && Root.getOpcode() == Shuffle)
+      if (Depth == 0 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, V1);
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res,
@@ -32200,7 +32204,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                          NewV2, DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
                          ShuffleVT, UnaryShuffle) &&
       (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
-    if (Depth == 1 && Root.getOpcode() == Shuffle)
+    if (Depth == 0 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleSrcVT, NewV1);
     NewV2 = DAG.getBitcast(ShuffleSrcVT, NewV2);
@@ -32214,7 +32218,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           MaskVT, Mask, Zeroable, AllowFloatDomain, AllowIntDomain, NewV1,
           NewV2, DL, DAG, Subtarget, Shuffle, ShuffleVT, PermuteImm) &&
       (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
-    if (Depth == 1 && Root.getOpcode() == Shuffle)
+    if (Depth == 0 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
     NewV1 = DAG.getBitcast(ShuffleVT, NewV1);
     NewV2 = DAG.getBitcast(ShuffleVT, NewV2);
@@ -32232,7 +32236,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     uint64_t BitLen, BitIdx;
     if (matchShuffleAsEXTRQ(IntMaskVT, V1, V2, Mask, BitLen, BitIdx,
                             Zeroable)) {
-      if (Depth == 1 && Root.getOpcode() == X86ISD::EXTRQI)
+      if (Depth == 0 && Root.getOpcode() == X86ISD::EXTRQI)
         return SDValue(); // Nothing to do!
       V1 = DAG.getBitcast(IntMaskVT, V1);
       Res = DAG.getNode(X86ISD::EXTRQI, DL, IntMaskVT, V1,
@@ -32242,7 +32246,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
 
     if (matchShuffleAsINSERTQ(IntMaskVT, V1, V2, Mask, BitLen, BitIdx)) {
-      if (Depth == 1 && Root.getOpcode() == X86ISD::INSERTQI)
+      if (Depth == 0 && Root.getOpcode() == X86ISD::INSERTQI)
         return SDValue(); // Nothing to do!
       V1 = DAG.getBitcast(IntMaskVT, V1);
       V2 = DAG.getBitcast(IntMaskVT, V2);
@@ -32255,11 +32259,11 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   // Don't try to re-form single instruction chains under any circumstances now
   // that we've done encoding canonicalization for them.
-  if (Depth < 2)
+  if (Depth < 1)
     return SDValue();
 
   // Depth threshold above which we can efficiently use variable mask shuffles.
-  int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 2 : 3;
+  int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 1 : 2;
   AllowVariableMask &= (Depth >= VariableShuffleDepth) || HasVariableMask;
 
   bool MaskContainsZeros =
@@ -32741,7 +32745,7 @@ static SDValue combineX86ShufflesRecursively(
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
   const unsigned MaxRecursionDepth = 8;
-  if (Depth > MaxRecursionDepth)
+  if (Depth >= MaxRecursionDepth)
     return SDValue();
 
   // Directly rip through bitcasts to find the underlying operand.
@@ -32760,7 +32764,7 @@ static SDValue combineX86ShufflesRecursively(
   // Extract target shuffle mask and resolve sentinels and inputs.
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
-  if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG))
+  if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG, Depth))
     return SDValue();
 
   // Add the inputs to the Ops list, avoiding duplicates.
@@ -32944,7 +32948,7 @@ static SDValue combineX86ShufflesRecursively(
 /// Helper entry wrapper to combineX86ShufflesRecursively.
 static SDValue combineX86ShufflesRecursively(SDValue Op, SelectionDAG &DAG,
                                              const X86Subtarget &Subtarget) {
-  return combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+  return combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 0,
                                        /*HasVarMask*/ false,
                                        /*AllowVarMask*/ true, DAG, Subtarget);
 }
@@ -33179,7 +33183,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       for (unsigned i = 0; i != Scale; ++i)
         DemandedMask[i] = i;
       if (SDValue Res = combineX86ShufflesRecursively(
-              {BC}, 0, BC, DemandedMask, {}, /*Depth*/ 1,
+              {BC}, 0, BC, DemandedMask, {}, /*Depth*/ 0,
               /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
         return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                            DAG.getBitcast(SrcVT, Res));
@@ -35552,7 +35556,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Resolve the target shuffle inputs and mask.
   SmallVector<int, 16> Mask;
   SmallVector<SDValue, 2> Ops;
-  if (!resolveTargetShuffleInputs(SrcBC, Ops, Mask, DAG))
+  if (!resolveTargetShuffleInputs(SrcBC, Ops, Mask, DAG, 0))
     return SDValue();
 
   // Attempt to narrow/widen the shuffle mask to the correct size.
@@ -38697,7 +38701,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       }
 
       if (SDValue Shuffle = combineX86ShufflesRecursively(
-              {SrcVec}, 0, SrcVec, ShuffleMask, {}, /*Depth*/ 2,
+              {SrcVec}, 0, SrcVec, ShuffleMask, {}, /*Depth*/ 1,
               /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
         return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), VT, Shuffle,
                            N->getOperand(0).getOperand(1));

@@ -412,6 +412,12 @@ bool DivergenceAnalysis::isDivergent(const Value &V) const {
   return DivergentValues.find(&V) != DivergentValues.end();
 }
 
+bool DivergenceAnalysis::isDivergentUse(const Use &U) const {
+  Value &V = *U.get();
+  Instruction &I = *cast<Instruction>(U.getUser());
+  return isDivergent(V) || isTemporalDivergent(*I.getParent(), V);
+}
+
 void DivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
   if (DivergentValues.empty())
     return;
@@ -447,6 +453,10 @@ GPUDivergenceAnalysis::GPUDivergenceAnalysis(Function &F,
 
 bool GPUDivergenceAnalysis::isDivergent(const Value &val) const {
   return DA.isDivergent(val);
+}
+
+bool GPUDivergenceAnalysis::isDivergentUse(const Use &use) const {
+  return DA.isDivergentUse(use);
 }
 
 void GPUDivergenceAnalysis::print(raw_ostream &OS, const Module *mod) const {

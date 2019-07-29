@@ -113,10 +113,8 @@ using namespace lldb_private;
 
 namespace {
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_symbolfiledwarf
 #include "Properties.inc"
-};
 
 enum {
 #define LLDB_PROPERTIES_symbolfiledwarf
@@ -131,7 +129,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_symbolfiledwarf_properties);
   }
 
   FileSpecList GetSymLinkPaths() {

@@ -18020,7 +18020,11 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
   if (!TLI.isBinOp(BinOpcode) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
 
+  EVT VecVT = BinOp.getValueType();
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
+  if (VecVT != Bop0.getValueType() || VecVT != Bop1.getValueType())
+    return SDValue();
+
   SDValue Index = Extract->getOperand(1);
   EVT SubVT = Extract->getValueType(0);
   if (!TLI.isOperationLegalOrCustom(BinOpcode, SubVT))

@@ -510,6 +510,17 @@ define double @fdiv_fneg1(double %x, double %y) {
   ret double %div
 }
 
+define double @fdiv_unary_fneg1(double %x, double %y) {
+; CHECK-LABEL: @fdiv_unary_fneg1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %neg = fneg double %x
+  %div = fdiv double %neg, %y
+  ret double %div
+}
+
 define <2 x float> @fdiv_fneg2(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fdiv_fneg2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <2 x float> [[Y:%.*]], [[X:%.*]]
@@ -517,6 +528,17 @@ define <2 x float> @fdiv_fneg2(<2 x float> %x, <2 x float> %y) {
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv <2 x float> %y, %neg
+  ret <2 x float> %div
+}
+
+define <2 x float> @fdiv_unary_fneg2(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fdiv_unary_fneg2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <2 x float> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fneg <2 x float> %x
   %div = fdiv <2 x float> %y, %neg
   ret <2 x float> %div
 }

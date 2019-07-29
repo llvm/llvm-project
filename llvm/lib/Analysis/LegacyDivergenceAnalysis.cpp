@@ -93,8 +93,9 @@ namespace {
 class DivergencePropagator {
 public:
   DivergencePropagator(Function &F, TargetTransformInfo &TTI, DominatorTree &DT,
-                       PostDominatorTree &PDT, DenseSet<const Value *> &DV)
-      : F(F), TTI(TTI), DT(DT), PDT(PDT), DV(DV) {}
+                       PostDominatorTree &PDT, DenseSet<const Value *> &DV,
+                       DenseSet<const Use *> &DU)
+      : F(F), TTI(TTI), DT(DT), PDT(PDT), DV(DV), DU(DU) {}
   void populateWithSourcesOfDivergence();
   void propagate();
 
@@ -118,11 +119,14 @@ private:
   PostDominatorTree &PDT;
   std::vector<Value *> Worklist; // Stack for DFS.
   DenseSet<const Value *> &DV;   // Stores all divergent values.
+  DenseSet<const Use *> &DU;   // Stores divergent uses of possibly uniform
+                               // values.
 };
 
 void DivergencePropagator::populateWithSourcesOfDivergence() {
   Worklist.clear();
   DV.clear();
+  DU.clear();
   for (auto &I : instructions(F)) {
     if (TTI.isSourceOfDivergence(&I)) {
       Worklist.push_back(&I);
@@ -197,8 +201,10 @@ void DivergencePropagator::exploreSyncDependency(Instruction *TI) {
   // dominators of TI until it is outside the influence region.
   BasicBlock *InfluencedBB = ThisBB;
   while (InfluenceRegion.count(InfluencedBB)) {
-    for (auto &I : *InfluencedBB)
-      findUsersOutsideInfluenceRegion(I, InfluenceRegion);
+    for (auto &I : *InfluencedBB) {
+      if (!DV.count(&I))
+        findUsersOutsideInfluenceRegion(I, InfluenceRegion);
+    }
     DomTreeNode *IDomNode = DT.getNode(InfluencedBB)->getIDom();
     if (IDomNode == nullptr)
       break;
@@ -208,9 +214,10 @@ void DivergencePropagator::exploreSyncDependency(Instruction *TI) {
 
 void DivergencePropagator::findUsersOutsideInfluenceRegion(
     Instruction &I, const DenseSet<BasicBlock *> &InfluenceRegion) {
-  for (User *U : I.users()) {
-    Instruction *UserInst = cast<Instruction>(U);
+  for (Use &Use : I.uses()) {
+    Instruction *UserInst = cast<Instruction>(Use.getUser());
     if (!InfluenceRegion.count(UserInst->getParent())) {
+      DU.insert(&Use);
       if (DV.insert(UserInst).second)
         Worklist.push_back(UserInst);
     }
@@ -320,6 +327,7 @@ bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
     return false;
 
   DivergentValues.clear();
+  DivergentUses.clear();
   gpuDA = nullptr;
 
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -332,7 +340,7 @@ bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
 
   } else {
     // run LLVM's existing DivergenceAnalysis
-    DivergencePropagator DP(F, TTI, DT, PDT, DivergentValues);
+    DivergencePropagator DP(F, TTI, DT, PDT, DivergentValues, DivergentUses);
     DP.populateWithSourcesOfDivergence();
     DP.propagate();
   }
@@ -349,6 +357,13 @@ bool LegacyDivergenceAnalysis::isDivergent(const Value *V) const {
     return gpuDA->isDivergent(*V);
   }
   return DivergentValues.count(V);
+}
+
+bool LegacyDivergenceAnalysis::isDivergentUse(const Use *U) const {
+  if (gpuDA) {
+    return gpuDA->isDivergentUse(*U);
+  }
+  return DivergentValues.count(U->get()) || DivergentUses.count(U);
 }
 
 void LegacyDivergenceAnalysis::print(raw_ostream &OS, const Module *) const {

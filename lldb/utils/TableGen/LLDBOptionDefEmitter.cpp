@@ -33,49 +33,85 @@ static RecordsByCommand getCommandList(std::vector<Record *> Options) {
   return result;
 }
 
-static void emitOption(Record *Option, raw_ostream &OS) {
-  OS << "  {";
-
-  // List of option groups this option is in.
+namespace {
+struct CommandOption {
   std::vector<std::string> GroupsArg;
+  bool Required = false;
+  std::string FullName;
+  std::string ShortName;
+  std::string ArgType;
+  bool OptionalArg = false;
+  std::string Validator;
+  std::string ArgEnum;
+  std::vector<StringRef> Completions;
+  std::string Description;
 
-  if (Option->getValue("Groups")) {
-    // The user specified a list of groups.
-    auto Groups = Option->getValueAsListOfInts("Groups");
-    for (int Group : Groups)
-      GroupsArg.push_back("LLDB_OPT_SET_" + std::to_string(Group));
-  } else if (Option->getValue("GroupStart")) {
-    // The user specified a range of groups (with potentially only one element).
-    int GroupStart = Option->getValueAsInt("GroupStart");
-    int GroupEnd = Option->getValueAsInt("GroupEnd");
-    for (int i = GroupStart; i <= GroupEnd; ++i)
-      GroupsArg.push_back("LLDB_OPT_SET_" + std::to_string(i));
+  CommandOption() = default;
+  CommandOption(Record *Option) {
+    if (Option->getValue("Groups")) {
+      // The user specified a list of groups.
+      auto Groups = Option->getValueAsListOfInts("Groups");
+      for (int Group : Groups)
+        GroupsArg.push_back("LLDB_OPT_SET_" + std::to_string(Group));
+    } else if (Option->getValue("GroupStart")) {
+      // The user specified a range of groups (with potentially only one
+      // element).
+      int GroupStart = Option->getValueAsInt("GroupStart");
+      int GroupEnd = Option->getValueAsInt("GroupEnd");
+      for (int i = GroupStart; i <= GroupEnd; ++i)
+        GroupsArg.push_back("LLDB_OPT_SET_" + std::to_string(i));
+    }
+
+    // Check if this option is required.
+    Required = Option->getValue("Required");
+
+    // Add the full and short name for this option.
+    FullName = Option->getValueAsString("FullName");
+    ShortName = Option->getValueAsString("ShortName");
+
+    if (auto A = Option->getValue("ArgType"))
+      ArgType = A->getValue()->getAsUnquotedString();
+    OptionalArg = Option->getValue("OptionalArg") != nullptr;
+
+    if (Option->getValue("Validator"))
+      Validator = Option->getValueAsString("Validator");
+
+    if (Option->getValue("ArgEnum"))
+      ArgEnum = Option->getValueAsString("ArgEnum");
+
+    if (Option->getValue("Completions"))
+      Completions = Option->getValueAsListOfStrings("Completions");
+
+    if (auto D = Option->getValue("Description"))
+      Description = D->getValue()->getAsUnquotedString();
   }
+};
+} // namespace
+
+static void emitOption(const CommandOption &O, raw_ostream &OS) {
+  OS << "  {";
 
   // If we have any groups, we merge them. Otherwise we move this option into
   // the all group.
-  if (GroupsArg.empty())
+  if (O.GroupsArg.empty())
     OS << "LLDB_OPT_SET_ALL";
   else
-    OS << llvm::join(GroupsArg.begin(), GroupsArg.end(), " | ");
+    OS << llvm::join(O.GroupsArg.begin(), O.GroupsArg.end(), " | ");
 
   OS << ", ";
 
   // Check if this option is required.
-  OS << (Option->getValue("Required") ? "true" : "false");
+  OS << (O.Required ? "true" : "false");
 
   // Add the full and short name for this option.
-  OS << ", \"" << Option->getValueAsString("FullName") << "\", ";
-  OS << '\'' << Option->getValueAsString("ShortName") << "'";
-
-  auto ArgType = Option->getValue("ArgType");
-  bool IsOptionalArg = Option->getValue("OptionalArg") != nullptr;
+  OS << ", \"" << O.FullName << "\", ";
+  OS << '\'' << O.ShortName << "'";
 
   // Decide if we have either an option, required or no argument for this
   // option.
   OS << ", OptionParser::";
-  if (ArgType) {
-    if (IsOptionalArg)
+  if (!O.ArgType.empty()) {
+    if (O.OptionalArg)
       OS << "eOptionalArgument";
     else
       OS << "eRequiredArgument";
@@ -83,43 +119,41 @@ static void emitOption(Record *Option, raw_ostream &OS) {
     OS << "eNoArgument";
   OS << ", ";
 
-  if (Option->getValue("Validator"))
-    OS << Option->getValueAsString("Validator");
+  if (!O.Validator.empty())
+    OS << O.Validator;
   else
     OS << "nullptr";
   OS << ", ";
 
-  if (Option->getValue("ArgEnum"))
-    OS << Option->getValueAsString("ArgEnum");
+  if (!O.ArgEnum.empty())
+    OS << O.ArgEnum;
   else
     OS << "{}";
   OS << ", ";
 
   // Read the tab completions we offer for this option (if there are any)
-  if (Option->getValue("Completions")) {
-    auto Completions = Option->getValueAsListOfStrings("Completions");
+  if (!O.Completions.empty()) {
     std::vector<std::string> CompletionArgs;
-    for (llvm::StringRef Completion : Completions)
+    for (llvm::StringRef Completion : O.Completions)
       CompletionArgs.push_back("CommandCompletions::e" + Completion.str() +
                                "Completion");
 
     OS << llvm::join(CompletionArgs.begin(), CompletionArgs.end(), " | ");
-  } else {
+  } else
     OS << "CommandCompletions::eNoCompletion";
-  }
 
   // Add the argument type.
   OS << ", eArgType";
-  if (ArgType) {
-    OS << ArgType->getValue()->getAsUnquotedString();
+  if (!O.ArgType.empty()) {
+    OS << O.ArgType;
   } else
     OS << "None";
   OS << ", ";
 
   // Add the description if there is any.
-  if (auto D = Option->getValue("Description")) {
+  if (!O.Description.empty()) {
     OS << "\"";
-    llvm::printEscapedString(D->getValue()->getAsUnquotedString(), OS);
+    llvm::printEscapedString(O.Description, OS);
     OS << "\"";
   } else
     OS << "\"\"";
@@ -127,8 +161,12 @@ static void emitOption(Record *Option, raw_ostream &OS) {
 }
 
 /// Emits all option initializers to the raw_ostream.
-static void emitOptions(std::string Command, std::vector<Record *> Option,
+static void emitOptions(std::string Command, std::vector<Record *> Records,
                         raw_ostream &OS) {
+  std::vector<CommandOption> Options;
+  for (Record *R : Records)
+    Options.emplace_back(R);
+
   std::string ID = Command;
   std::replace(ID.begin(), ID.end(), ' ', '_');
   // Generate the macro that the user needs to define before including the
@@ -140,8 +178,8 @@ static void emitOptions(std::string Command, std::vector<Record *> Option,
   OS << "// Options for " << Command << "\n";
   OS << "#ifdef " << NeededMacro << "\n";
   OS << "constexpr static OptionDefinition g_" + ID + "_options[] = {\n";
-  for (Record *R : Option)
-    emitOption(R, OS);
+  for (CommandOption &CO : Options)
+    emitOption(CO, OS);
   // We undefine the macro for the user like Clang's include files are doing it.
   OS << "};\n";
   OS << "#undef " << NeededMacro << "\n";

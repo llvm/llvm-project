@@ -342,8 +342,8 @@ BreakableBlockComment::BreakableBlockComment(
 
   StringRef TokenText(Tok.TokenText);
   assert(TokenText.startswith("/*") && TokenText.endswith("*/"));
-  TokenText.substr(2, TokenText.size() - 4).split(Lines,
-                                                  UseCRLF ? "\r\n" : "\n");
+  TokenText.substr(2, TokenText.size() - 4)
+      .split(Lines, UseCRLF ? "\r\n" : "\n");
 
   int IndentDelta = StartColumn - OriginalStartColumn;
   Content.resize(Lines.size());
@@ -456,10 +456,9 @@ BreakableBlockComment::BreakableBlockComment(
   });
 }
 
-BreakableToken::Split
-BreakableBlockComment::getSplit(unsigned LineIndex, unsigned TailOffset,
-                           unsigned ColumnLimit, unsigned ContentStartColumn,
-                           llvm::Regex &CommentPragmasRegex) const {
+BreakableToken::Split BreakableBlockComment::getSplit(
+    unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
+    unsigned ContentStartColumn, llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
   if (CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);

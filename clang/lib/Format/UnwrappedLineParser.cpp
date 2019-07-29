@@ -174,8 +174,7 @@ public:
                             const FormatStyle &Style, unsigned &LineLevel)
       : CompoundStatementIndenter(Parser, LineLevel,
                                   Style.BraceWrapping.AfterControlStatement,
-                                  Style.BraceWrapping.IndentBraces) {
-  }
+                                  Style.BraceWrapping.IndentBraces) {}
   CompoundStatementIndenter(UnwrappedLineParser *Parser, unsigned &LineLevel,
                             bool WrapBrace, bool IndentBrace)
       : LineLevel(LineLevel), OldLineLevel(LineLevel) {
@@ -1216,7 +1215,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       nextToken();
       if (FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
                              Keywords.kw_CF_ENUM, Keywords.kw_CF_OPTIONS,
-                             Keywords.kw_CF_CLOSED_ENUM, Keywords.kw_NS_CLOSED_ENUM))
+                             Keywords.kw_CF_CLOSED_ENUM,
+                             Keywords.kw_NS_CLOSED_ENUM))
         parseEnum();
       break;
     case tok::kw_struct:

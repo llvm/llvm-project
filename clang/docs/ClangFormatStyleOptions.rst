@@ -138,7 +138,7 @@ the configuration (without a prefix: ``Auto``).
     <https://llvm.org/docs/CodingStandards.html>`_
   * ``Google``
     A style complying with `Google's C++ style guide
-    <http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml>`_
+    <https://google.github.io/styleguide/cppguide.html>`_
   * ``Chromium``
     A style complying with `Chromium's style guide
     <https://www.chromium.org/developers/coding-style>`_
