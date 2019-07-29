@@ -96,8 +96,8 @@ bool AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+sve2-sm4");
   if (Extensions & AEK_SVE2SHA3)
     Features.push_back("+sve2-sha3");
-  if (Extensions & AEK_BITPERM)
-    Features.push_back("+bitperm");
+  if (Extensions & AEK_SVE2BITPERM)
+    Features.push_back("+sve2-bitperm");
   if (Extensions & AEK_RCPC)
     Features.push_back("+rcpc");
 

@@ -114,17 +114,13 @@ using namespace lldb_private;
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"comp-dir-symlink-paths", OptionValue::eTypeFileSpecList, true, 0, nullptr,
-     {},
-     "If the DW_AT_comp_dir matches any of these paths the symbolic "
-     "links will be resolved at DWARF parse time."},
-    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr, {},
-     "Ignore indexes present in the object files and always index DWARF "
-     "manually."}};
+#define LLDB_PROPERTIES_symbolfiledwarf
+#include "Properties.inc"
+};
 
 enum {
-  ePropertySymLinkPaths,
-  ePropertyIgnoreIndexes,
+#define LLDB_PROPERTIES_symbolfiledwarf
+#include "PropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
@@ -202,15 +198,13 @@ SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFile *obj_file) {
                              /*dwo_section_list*/ nullptr);
 }
 
-TypeList *SymbolFileDWARF::GetTypeList() {
+TypeList &SymbolFileDWARF::GetTypeList() {
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-  if (debug_map_symfile)
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeList();
-  else
-    return m_obj_file->GetModule()->GetTypeList();
+  return SymbolFile::GetTypeList();
 }
 void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
                                dw_offset_t max_die_offset, uint32_t type_mask,
@@ -604,7 +598,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return nullptr;
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
+DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
   if (!m_ranges) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
@@ -619,7 +613,7 @@ DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
   return m_ranges.get();
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRngLists() {
+DWARFDebugRngLists *SymbolFileDWARF::GetDebugRngLists() {
   if (!m_rnglists) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
@@ -2971,9 +2965,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
   TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, log, type_is_new_ptr);
   if (type_sp) {
-    TypeList *type_list = GetTypeList();
-    if (type_list)
-      type_list->Insert(type_sp);
+    GetTypeList().Insert(type_sp);
 
     if (die.Tag() == DW_TAG_subprogram) {
       std::string scope_qualified_name(GetDeclContextForUID(die.GetID())

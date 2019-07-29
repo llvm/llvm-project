@@ -82,7 +82,7 @@ public:
     if (!isVariadic &&
         Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
       return CC_X86ThisCall;
-    return CC_C;
+    return Context.getTargetInfo().getDefaultCallingConv();
   }
 
   bool isNearlyEmpty(const CXXRecordDecl *RD) const override {

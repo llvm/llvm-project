@@ -802,6 +802,13 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
      and also gives the user the stack space they requested for all threads */
   stack_size += gtid * __kmp_stkoffset * 2;
 
+#if defined(__ANDROID__) && __ANDROID_API__ < 19
+    // Round the stack size to a multiple of the page size. Older versions of
+    // Android (until KitKat) would fail pthread_attr_setstacksize with EINVAL
+    // if the stack size was not a multiple of the page size.
+    stack_size = (stack_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+#endif
+
   KA_TRACE(10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
                 "__kmp_stksize = %lu bytes, final stacksize = %lu bytes\n",
                 gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size));
@@ -2331,7 +2338,8 @@ finish: // Clean up and exit.
 #endif // USE_LOAD_BALANCE
 
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
-      ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) || KMP_ARCH_PPC64)
+      ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
+      KMP_ARCH_PPC64 || KMP_ARCH_RISCV64)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

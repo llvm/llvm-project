@@ -1,0 +1,56 @@
+# RUN: yaml2obj %s > %t
+
+## Test that llvm-objcopy adds a section to the given object with expected
+## contents.
+# RUN: echo DEADBEEF > %t.sec
+# RUN: llvm-objcopy --add-section=.test.section=%t.sec %t %t1
+# RUN: llvm-readobj --file-headers --sections --section-data %t1 | FileCheck %s --check-prefixes=CHECK-ADD
+
+# CHECK-ADD:      SectionCount: 2
+# CHECK-ADD:      Name: .text
+# CHECK-ADD:      Name: .test.section
+# CHECK-ADD:      Characteristics [
+# CHECK-ADD-NEXT:   IMAGE_SCN_ALIGN_1BYTES
+# CHECK-ADD-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-ADD-NEXT: ]
+# CHECK-ADD:      SectionData (
+# CHECK-ADD-NEXT:  0000: {{.+}}|DEADBEEF{{.+}}|
+# CHECK-ADD-NEXT: )
+
+## Test that llvm-objcopy can add a section with an empty name.
+# RUN: llvm-objcopy --add-section==%t.sec %t %t1.empty.name
+# RUN: llvm-readobj --file-headers --sections --section-data %t1.empty.name | FileCheck %s --check-prefixes=CHECK-ADD-EMPTY-NAME
+
+# CHECK-ADD-EMPTY-NAME:      SectionCount: 2
+# CHECK-ADD-EMPTY-NAME:      Name: .text
+# CHECK-ADD-EMPTY-NAME:      Name: (00 00 00 00 00 00 00 00)
+# CHECK-ADD-EMPTY-NAME:      Characteristics [
+# CHECK-ADD-EMPTY-NAME-NEXT:   IMAGE_SCN_ALIGN_1BYTES
+# CHECK-ADD-EMPTY-NAME-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-ADD-EMPTY-NAME-NEXT: ]
+# CHECK-ADD-EMPTY-NAME:      SectionData (
+# CHECK-ADD-EMPTY-NAME-NEXT:  0000: {{.+}}|DEADBEEF{{.+}}|
+# CHECK-ADD-EMPTY-NAME-NEXT: )
+
+## Test that llvm-objcopy produces an error if the file with section contents
+## to be added does not exist.
+# RUN: not llvm-objcopy --add-section=.another.section=%t2 %t %t3 2>&1 | FileCheck -DFILE=%t -DFILE1=%t2 %s --check-prefixes=CHECK-ERR1
+
+# CHECK-ERR1: llvm-objcopy{{(.exe)?}}: error: '[[FILE]]': '[[FILE1]]': {{[Nn]}}o such file or directory
+
+## Another negative test for invalid --add-sections command line argument.
+# RUN: not llvm-objcopy --add-section=.another.section %t %t3 2>&1 | FileCheck -DFILE=%t %s --check-prefixes=CHECK-ERR2
+
+# CHECK-ERR2: llvm-objcopy{{(.exe)?}}: error: '[[FILE]]': bad format for --add-section
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [  ]
+    Alignment:       4
+    SectionData:     488B0500000000C3
+symbols:
+...

@@ -11,44 +11,52 @@
 # CHECK-NEXT:   t2CMPri $lr, 0, 14, $cpsr
 # CHECK-NEXT:   t2Bcc %bb.2, 1, $cpsr
 # CHECK-NEXT:   tB %bb.3, 14
+
 --- |
-  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main"
-  
   define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) #0 {
   entry:
-    %cmp = icmp ne i32 %N, 0
     %0 = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
     br i1 %0, label %do.body.preheader, label %if.end
   
   do.body.preheader:                                ; preds = %entry
+    %scevgep2 = getelementptr i32, i32* %a, i32 -1
+    %scevgep5 = getelementptr i32, i32* %b, i32 -1
     br label %do.body
   
   do.body:                                          ; preds = %do.body.preheader, %do.body
-    %i.0 = phi i32 [ %inc, %do.body ], [ 0, %do.body.preheader ]
-    %1 = phi i32 [ %N, %do.body.preheader ], [ %2, %do.body ]
-    %scevgep = getelementptr i32, i32* %b, i32 %i.0
-    %scevgep1 = getelementptr i32, i32* %a, i32 %i.0
+    %lsr.iv6 = phi i32* [ %scevgep5, %do.body.preheader ], [ %scevgep7, %do.body ]
+    %lsr.iv = phi i32* [ %scevgep2, %do.body.preheader ], [ %scevgep3, %do.body ]
+    %1 = phi i32 [ %2, %do.body ], [ %N, %do.body.preheader ]
+    %scevgep8 = getelementptr i32, i32* %lsr.iv6, i32 1
+    %scevgep4 = getelementptr i32, i32* %lsr.iv, i32 1
     %size = call i32 @llvm.arm.space(i32 4096, i32 undef)
-    %tmp = load i32, i32* %scevgep, align 4
-    store i32 %tmp, i32* %scevgep1, align 4
-    %inc = add nuw i32 %i.0, 1
+    %tmp = load i32, i32* %scevgep8, align 4
+    store i32 %tmp, i32* %scevgep4, align 4
     %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1)
     %3 = icmp ne i32 %2, 0
+    %scevgep3 = getelementptr i32, i32* %lsr.iv, i32 1
+    %scevgep7 = getelementptr i32, i32* %lsr.iv6, i32 1
     br i1 %3, label %do.body, label %if.end
   
   if.end:                                           ; preds = %do.body, %entry
     ret void
   }
   
-  declare i32 @llvm.arm.space(i32, i32) #1
+  ; Function Attrs: nounwind
+  declare i32 @llvm.arm.space(i32 immarg, i32) #1
+  
+  ; Function Attrs: noduplicate nounwind
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #2
+  
+  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
   
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
   attributes #0 = { "target-features"="+lob" }
-  attributes #1 = { nounwind "target-features"="+lob" }
+  attributes #1 = { nounwind }
   attributes #2 = { noduplicate nounwind }
-  attributes #3 = { nounwind }
 
 ...
 ---
@@ -62,11 +70,11 @@ failedISel:      false
 tracksRegLiveness: false
 hasWinCFI:       false
 registers:       []
-liveins:         
+liveins:
   - { reg: '$r1', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }
   - { reg: '$r3', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -86,7 +94,7 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      []
-stack:           
+stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
@@ -104,27 +112,28 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    t2WhileLoopStart $r3, %bb.3
+    t2WhileLoopStart $r3, %bb.3, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
   
   bb.1.do.body.preheader:
     successors: %bb.2(0x80000000)
   
+    renamable $r0, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14, $noreg
+    renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14, $noreg
     $lr = tMOVr killed $r3, 14, $noreg
-    renamable $r0, dead $cpsr = tMOVi8 0, 14, $noreg
   
   bb.2.do.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   
-    dead renamable $r3 = SPACE 4096, undef renamable $r0
-    renamable $r3 = t2LDRs renamable $r2, renamable $r0, 2, 14, $noreg :: (load 4 from %ir.scevgep)
-    t2STRs killed renamable $r3, renamable $r1, renamable $r0, 2, 14, $noreg :: (store 4 into %ir.scevgep1)
-    renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 1, 14, $noreg
+    dead renamable $r2 = SPACE 4096, undef renamable $r0
+    renamable $r2, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14, $noreg :: (load 4 from %ir.scevgep8)
+    early-clobber renamable $r1 = t2STR_PRE killed renamable $r2, killed renamable $r1, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    t2LoopEnd renamable $lr, %bb.2
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg
   
   bb.3.if.end:
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...
+

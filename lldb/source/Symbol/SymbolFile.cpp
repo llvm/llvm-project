@@ -82,12 +82,6 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   return best_symfile_up.release();
 }
 
-TypeList *SymbolFile::GetTypeList() {
-  if (m_obj_file)
-    return m_obj_file->GetModule()->GetTypeList();
-  return nullptr;
-}
-
 TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
   TypeSystem *type_system =
       m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
@@ -195,6 +189,7 @@ void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t num_compile_units = GetNumCompileUnits();
   assert(idx < num_compile_units);
+  (void)num_compile_units;
 
   // Fire off an assertion if this compile unit already exists for now. The
   // partial parsing should take care of only setting the compile unit
@@ -205,7 +200,26 @@ void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
   (*m_compile_units)[idx] = cu_sp;
 }
 
+Symtab *SymbolFile::GetSymtab() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (m_symtab)
+    return m_symtab;
+
+  // Fetch the symtab from the main object file.
+  m_symtab = m_obj_file->GetModule()->GetObjectFile()->GetSymtab();
+
+  // Then add our symbols to it.
+  if (m_symtab)
+    AddSymbols(*m_symtab);
+
+  return m_symtab;
+}
+
 void SymbolFile::Dump(Stream &s) {
+  s.PutCString("Types:\n");
+  m_type_list.Dump(&s, /*show_context*/ false);
+  s.PutChar('\n');
+
   s.PutCString("Compile units:\n");
   if (m_compile_units) {
     for (const CompUnitSP &cu_sp : *m_compile_units) {

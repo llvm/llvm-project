@@ -1,4 +1,4 @@
-//RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -pedantic -verify
+//RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -pedantic -verify
 
 struct C {
   auto fGlob() __global -> decltype(this);

@@ -30,15 +30,12 @@
 // of this type, or null if unspecified.
 
 // The fifth value is a string containing option flags. Valid values:
-//  a - The type should only be assembled.
-//  p - The type should only be precompiled.
 //  u - The type can be user specified (with -x).
-//  m - Precompiling this type produces a module file.
-//  A - The type's temporary suffix should be appended when generating
-//      outputs of this type.
 
 // The sixth value is a variadic list of phases for each type. Eventually the
 // options flag string will be replaced with this variadic list.
+// Most of the options in Flags have been removed in favor of subsuming their
+// meaning from the phases list.
 
 // C family source language (with and without preprocessing).
 TYPE("cpp-output",               PP_C,         INVALID,         "i",     "u", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
@@ -61,22 +58,22 @@ TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",    "u", ph
 TYPE("renderscript",             RenderScript, PP_C,            "rs",    "u", phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 // C family input files to precompile.
-TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",     "p",  phases::Precompile)
-TYPE("c-header",                 CHeader,      PP_CHeader,      "h",     "pu", phases::Preprocess, phases::Precompile)
-TYPE("cl-header",                CLHeader,     PP_CHeader,      "h",     "pu", phases::Preprocess, phases::Precompile)
-TYPE("objective-c-header-cpp-output", PP_ObjCHeader, INVALID,   "mi",    "p",  phases::Precompile)
-TYPE("objective-c-header",       ObjCHeader,   PP_ObjCHeader,   "h",     "pu", phases::Preprocess, phases::Precompile)
-TYPE("c++-header-cpp-output",    PP_CXXHeader, INVALID,         "ii",    "p",  phases::Precompile)
-TYPE("c++-header",               CXXHeader,    PP_CXXHeader,    "hh",    "pu", phases::Preprocess, phases::Precompile)
-TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID, "mii", "p",  phases::Precompile)
-TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",     "pu", phases::Preprocess, phases::Precompile)
-TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",  "mu", phases::Preprocess, phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",   "m",  phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",     "",   phases::Precompile)
+TYPE("c-header",                 CHeader,      PP_CHeader,      "h",     "u",  phases::Preprocess, phases::Precompile)
+TYPE("cl-header",                CLHeader,     PP_CHeader,      "h",     "u",  phases::Preprocess, phases::Precompile)
+TYPE("objective-c-header-cpp-output", PP_ObjCHeader, INVALID,   "mi",    "",   phases::Precompile)
+TYPE("objective-c-header",       ObjCHeader,   PP_ObjCHeader,   "h",     "u",  phases::Preprocess, phases::Precompile)
+TYPE("c++-header-cpp-output",    PP_CXXHeader, INVALID,         "ii",    "",   phases::Precompile)
+TYPE("c++-header",               CXXHeader,    PP_CXXHeader,    "hh",    "u",  phases::Preprocess, phases::Precompile)
+TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID, "mii", "",   phases::Precompile)
+TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",     "u",  phases::Preprocess, phases::Precompile)
+TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",  "u",  phases::Preprocess, phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",   "",   phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 // Other languages.
 TYPE("ada",                      Ada,          INVALID,         nullptr, "u",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("assembler",                PP_Asm,       INVALID,         "s",     "au", phases::Assemble, phases::Link)
-TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",     "au", phases::Preprocess, phases::Assemble, phases::Link)
+TYPE("assembler",                PP_Asm,       INVALID,         "s",     "u",  phases::Assemble, phases::Link)
+TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",     "u",  phases::Preprocess, phases::Assemble, phases::Link)
 TYPE("f95",                      PP_Fortran,   INVALID,         nullptr, "u",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("f95-cpp-input",            Fortran,      PP_Fortran,      nullptr, "u",  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr, "u",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
@@ -96,12 +93,12 @@ TYPE("plist",                    Plist,        INVALID,         "plist", "",  ph
 TYPE("rewritten-objc",           RewrittenObjC,INVALID,         "cpp",   "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("rewritten-legacy-objc",    RewrittenLegacyObjC,INVALID,   "cpp",   "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("remap",                    Remap,        INVALID,         "remap", "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("precompiled-header",       PCH,          INVALID,         "gch",   "A", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("precompiled-header",       PCH,          INVALID,         "gch",   "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("object",                   Object,       INVALID,         "o",     "",  phases::Link)
 TYPE("treelang",                 Treelang,     INVALID,         nullptr, "u", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("image",                    Image,        INVALID,         "out",   "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("dSYM",                     dSYM,         INVALID,         "dSYM",  "A", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("dSYM",                     dSYM,         INVALID,         "dSYM",  "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("dependencies",             Dependencies, INVALID,         "d",     "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin","A", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb", "A", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin","",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb", "",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("none",                     Nothing,      INVALID,         nullptr, "u", phases::Compile, phases::Backend, phases::Assemble, phases::Link)

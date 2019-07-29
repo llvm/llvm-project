@@ -506,7 +506,7 @@ int main(int argc, char **argv) {
     break;
   case AC_MDisassemble:
     assert(IP && "Expected assembly output");
-    IP->setUseMarkup(1);
+    IP->setUseMarkup(true);
     disassemble = true;
     break;
   case AC_Disassemble:

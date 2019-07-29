@@ -46,7 +46,8 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugRangesBase;
+class DWARFDebugRanges;
+class DWARFDebugRngLists;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
@@ -186,8 +187,6 @@ public:
   size_t FindTypes(const std::vector<lldb_private::CompilerContext> &context,
                    bool append, lldb_private::TypeMap &types) override;
 
-  lldb_private::TypeList *GetTypeList() override;
-
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   lldb::TypeClass type_mask,
                   lldb_private::TypeList &type_list) override;
@@ -219,8 +218,8 @@ public:
 
   const DWARFDebugInfo *DebugInfo() const;
 
-  DWARFDebugRangesBase *GetDebugRanges();
-  DWARFDebugRangesBase *GetDebugRngLists();
+  DWARFDebugRanges *GetDebugRanges();
+  DWARFDebugRngLists *GetDebugRngLists();
 
   const lldb_private::DWARFDataExtractor &DebugLocData();
 
@@ -330,6 +329,8 @@ protected:
   uint32_t CalculateNumCompileUnits() override;
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
+  lldb_private::TypeList &GetTypeList() override;
 
   virtual DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
@@ -477,8 +478,8 @@ protected:
   typedef std::set<lldb::user_id_t> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
-  std::unique_ptr<DWARFDebugRangesBase> m_ranges;
-  std::unique_ptr<DWARFDebugRangesBase> m_rnglists;
+  std::unique_ptr<DWARFDebugRanges> m_ranges;
+  std::unique_ptr<DWARFDebugRngLists> m_rnglists;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;

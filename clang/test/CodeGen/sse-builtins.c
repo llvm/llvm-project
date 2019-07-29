@@ -503,7 +503,7 @@ __m128 test_mm_or_ps(__m128 A, __m128 B) {
 
 void test_mm_prefetch(char const* p) {
   // CHECK-LABEL: test_mm_prefetch
-  // CHECK: call void @llvm.prefetch(i8* {{.*}}, i32 0, i32 0, i32 1)
+  // CHECK: call void @llvm.prefetch.p0i8(i8* {{.*}}, i32 0, i32 0, i32 1)
   _mm_prefetch(p, 0);
 }
 

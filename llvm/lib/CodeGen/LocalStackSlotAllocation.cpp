@@ -351,6 +351,14 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     assert(MFI.isObjectPreAllocated(FrameIdx) &&
            "Only pre-allocated locals expected!");
 
+    // We need to keep the references to the stack protector slot through frame
+    // index operands so that it gets resolved by PEI rather than this pass.
+    // This avoids accesses to the stack protector though virtual base
+    // registers, and forces PEI to address it using fp/sp/bp.
+    if (MFI.hasStackProtectorIndex() &&
+        FrameIdx == MFI.getStackProtectorIndex())
+      continue;
+
     LLVM_DEBUG(dbgs() << "Considering: " << MI);
 
     unsigned idx = 0;

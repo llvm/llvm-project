@@ -79,6 +79,8 @@ void AArch64Subtarget::initializeProperties() {
     MaxInterleaveFactor = 4;
     PrefFunctionAlignment = 4;
     break;
+  case CortexA65:
+    break;
   case CortexA72:
   case CortexA73:
   case CortexA75:
@@ -121,6 +123,9 @@ void AArch64Subtarget::initializeProperties() {
     MaxPrefetchIterationsAhead = 11;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
+    break;
+  case NeoverseE1:
+  case NeoverseN1:
     break;
   case Saphira:
     MaxInterleaveFactor = 4;

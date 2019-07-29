@@ -14,7 +14,6 @@
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/SourceModule.h"
-#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
@@ -112,10 +111,6 @@ public:
 
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  TypeList &GetTypeList() { return m_type_list; }
-
-  const TypeList &GetTypeList() const { return m_type_list; }
-
   virtual size_t GetTypes(SymbolContextScope *sc_scope,
                           lldb::TypeClass type_mask, TypeList &type_list);
 
@@ -125,9 +120,6 @@ public:
 
   // Get module unified section list symbol table.
   virtual Symtab *GetSymtab();
-
-  // Clear module unified section list symbol table.
-  virtual void ClearSymtab();
 
   /// Notify the SymbolVendor that the file addresses in the Sections
   /// for this module have been changed.
@@ -139,15 +131,12 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  TypeList m_type_list; // Uniqued types for all parsers owned by this module
   lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
                                    // case it isn't the same as the module
                                    // object file (debug symbols in a separate
                                    // file)
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses
                                              // can add more of these if needed.
-  Symtab *m_symtab; // Save a symtab once to not pass it through `AddSymbols` of
-                    // the symbol file each time when it is needed
 
 private:
   // For SymbolVendor only

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=c++
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++
 
 global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
 global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t' type cannot be used to declare a program scope variable}}

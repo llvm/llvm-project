@@ -882,6 +882,9 @@ bool GCNPassConfig::addInstSelector() {
   addPass(createSILowerI1CopiesPass());
   addPass(createSIFixupVectorISelPass());
   addPass(createSIAddIMGInitPass());
+  // FIXME: Remove this once the phi on CF_END is cleaned up by either removing
+  // LCSSA or other ways.
+  addPass(&UnreachableMachineBlockElimID);
   return false;
 }
 

@@ -1500,6 +1500,33 @@ in any resulting diagnostics.
   }
   error_info &foo();
   void f() { foo(); } // Does not diagnose, error_info is a reference.
+
+Additionally, discarded temporaries resulting from a call to a constructor
+marked with ``[[nodiscard]]`` or a constructor of a type marked
+``[[nodiscard]]`` will also diagnose. This also applies to type conversions that
+use the annotated ``[[nodiscard]]`` constructor or result in an annotated type.
+
+.. code-block: c++
+  struct [[nodiscard]] marked_type {/*..*/ };
+  struct marked_ctor {
+    [[nodiscard]] marked_ctor();
+    marked_ctor(int);
+  };
+
+  struct S {
+    operator marked_type() const;
+    [[nodiscard]] operator int() const;
+  };
+
+  void usages() {
+    marked_type(); // diagnoses.
+    marked_ctor(); // diagnoses.
+    marked_ctor(3); // Does not diagnose, int constructor isn't marked nodiscard.
+
+    S s;
+    static_cast<marked_type>(s); // diagnoses
+    (int)s; // diagnoses
+  }
   }];
 }
 
@@ -2716,9 +2743,10 @@ def LoopHintDocs : Documentation {
   let Content = [{
 The ``#pragma clang loop`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows pipelining to be
-disabled, or vectorization, interleaving, and unrolling to be enabled or disabled.
-Vector width, interleave count, unrolling count, and the initiation interval
-for pipelining can be explicitly specified. See `language extensions
+disabled, or vectorization, vector predication, interleaving, and unrolling to
+be enabled or disabled. Vector width, vector predication, interleave count,
+unrolling count, and the initiation interval for pipelining can be explicitly
+specified. See `language extensions
 <http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations>`_
 for details.
   }];
@@ -4201,4 +4229,72 @@ be accessed on both device side and host side. It has external linkage and is
 not initialized on device side. It has internal linkage and is initialized by
 the initializer on host side.
   }];
+}
+
+def LifetimeOwnerDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+.. Note:: This attribute is experimental and its effect on analysis is subject to change in
+  a future version of clang.
+
+The attribute ``[[gsl::Owner(T)]]`` applies to structs and classes that own an
+object of type ``T``:
+
+.. code-block:: c++
+
+  class [[gsl::Owner(int)]] IntOwner {
+  private:
+    int value;
+  public:
+    int *getInt() { return &value; }
+  };
+
+The argument ``T`` is optional and currently ignored.
+This attribute may be used by analysis tools and has no effect on code
+generation.
+
+See Pointer_ for an example.
+}];
+}
+
+def LifetimePointerDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+.. Note:: This attribute is experimental and its effect on analysis is subject to change in
+  a future version of clang.
+
+The attribute ``[[gsl::Pointer(T)]]`` applies to structs and classes that behave
+like pointers to an object of type ``T``:
+
+.. code-block:: c++
+
+  class [[gsl::Pointer(int)]] IntPointer {
+  private:
+    int *valuePointer;
+  public:
+    int *getInt() { return &valuePointer; }
+  };
+
+The argument ``T`` is optional and currently ignored.
+This attribute may be used by analysis tools and has no effect on code
+generation.
+
+Example:
+When constructing an instance of a class annotated like this (a Pointer) from
+an instance of a class annotated with ``[[gsl::Owner]]`` (an Owner),
+then the analysis will consider the Pointer to point inside the Owner.
+When the Owner's lifetime ends, it will consider the Pointer to be dangling.
+
+.. code-block:: c++
+
+  int f() {
+    IntPointer P;
+    if (true) {
+      IntOwner O(7);
+      P = IntPointer(O); // P "points into" O
+    } // P is dangling
+    return P.get(); // error: Using a dangling Pointer.
+  }
+
+}];
 }

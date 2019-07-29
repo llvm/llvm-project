@@ -1,7 +1,11 @@
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a75 --disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a -mattr=+rcpc --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65ae --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a75 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-e1 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-n1 --disassemble < %s | FileCheck %s
 
 # CHECK: ldaprb w0, [x0]
 # CHECK: ldaprh w0, [x0]
@@ -26,4 +30,3 @@
 # CHECK-V8_2A: warning: invalid instruction encoding
 # CHECK-V8_2A: [0x00,0xc0,0xbf,0xf8]
 # CHECK-V8_2A:  ^
-

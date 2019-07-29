@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -cl-ext=+cl_khr_subgroups -O0 -cl-std=c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -cl-ext=+cl_khr_subgroups -O0 -cl-std=clc++ -o - %s | FileCheck %s
 // FIXME: Add MS ABI manglings of OpenCL things and remove %itanium_abi_triple
 // above to support OpenCL in the MS C++ ABI.
 

@@ -183,6 +183,7 @@ Clang-Tidy Checks
    hicpp-use-nullptr (redirects to modernize-use-nullptr) <hicpp-use-nullptr>
    hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    hicpp-vararg (redirects to cppcoreguidelines-pro-type-vararg) <hicpp-vararg>
+   linuxkernel-must-use-errs
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment

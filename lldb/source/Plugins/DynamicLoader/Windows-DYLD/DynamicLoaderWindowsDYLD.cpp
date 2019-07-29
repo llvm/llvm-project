@@ -146,7 +146,8 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
     ModuleList module_list;
     module_list.Append(executable);
     m_process->GetTarget().ModulesDidLoad(module_list);
-    m_process->LoadModules();
+    auto error = m_process->LoadModules();
+    LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
 }
 
 void DynamicLoaderWindowsDYLD::DidLaunch() {
@@ -165,7 +166,8 @@ void DynamicLoaderWindowsDYLD::DidLaunch() {
     ModuleList module_list;
     module_list.Append(executable);
     m_process->GetTarget().ModulesDidLoad(module_list);
-    m_process->LoadModules();
+    auto error = m_process->LoadModules();
+    LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
   }
 }
 

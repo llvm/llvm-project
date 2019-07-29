@@ -11,6 +11,14 @@
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 
+// We need to supprt Windows paths as well. In order to have paths with the same
+// length, use a different path according to the platform.
+#ifdef _WIN32
+#define EXTERNALFILETESTPATH "C:/externalfi"
+#else
+#define EXTERNALFILETESTPATH "/externalfile"
+#endif
+
 using namespace llvm;
 
 static void check(const remarks::Remark &R, StringRef ExpectedR,
@@ -36,7 +44,7 @@ static void check(const remarks::Remark &R, StringRef ExpectedR,
 
   Buf.clear();
   std::unique_ptr<remarks::MetaSerializer> MS =
-      S->metaSerializer(OS, StringRef("/externalfile"));
+      S->metaSerializer(OS, StringRef(EXTERNALFILETESTPATH));
   MS->emit();
   EXPECT_EQ(OS.str(), ExpectedMeta);
 }
@@ -71,7 +79,7 @@ TEST(YAMLRemarks, SerializerRemark) {
         StringRef("REMARKS\0"
                   "\0\0\0\0\0\0\0\0"
                   "\0\0\0\0\0\0\0\0"
-                  "/externalfile\0",
+                  EXTERNALFILETESTPATH"\0",
                   38));
 }
 
@@ -106,7 +114,7 @@ TEST(YAMLRemarks, SerializerRemarkStrTab) {
                   "\0\0\0\0\0\0\0\0"
                   "\x2d\0\0\0\0\0\0\0"
                   "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
-                  "/externalfile\0",
+                  EXTERNALFILETESTPATH"\0",
                   83),
         /*UseStrTab=*/true);
 }
@@ -143,7 +151,7 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
                   "\0\0\0\0\0\0\0\0"
                   "\x2d\0\0\0\0\0\0\0"
                   "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
-                  "/externalfile\0",
+                  EXTERNALFILETESTPATH"\0",
                   83),
         /*UseStrTab=*/true,
         remarks::StringTable(remarks::ParsedStringTable(StrTab)));

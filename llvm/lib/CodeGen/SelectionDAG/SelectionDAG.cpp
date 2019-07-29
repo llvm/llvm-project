@@ -2154,12 +2154,9 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
   }
   case ISD::OR:
   case ISD::XOR:
-    // If the LHS or RHS don't contribute bits to the or, drop them.
-    if (MaskedValueIsZero(V.getOperand(0), DemandedBits))
-      return V.getOperand(1);
-    if (MaskedValueIsZero(V.getOperand(1), DemandedBits))
-      return V.getOperand(0);
-    break;
+  case ISD::SIGN_EXTEND_INREG:
+    return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
+                                                *this, 0);
   case ISD::SRL:
     // Only look at single-use SRLs.
     if (!V.getNode()->hasOneUse())
@@ -2203,15 +2200,6 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
       return getNode(ISD::ANY_EXTEND, SDLoc(V), V.getValueType(), DemandedSrc);
     break;
   }
-  case ISD::SIGN_EXTEND_INREG:
-    EVT ExVT = cast<VTSDNode>(V.getOperand(1))->getVT();
-    unsigned ExVTBits = ExVT.getScalarSizeInBits();
-
-    // If none of the extended bits are demanded, eliminate the sextinreg.
-    if (DemandedBits.getActiveBits() <= ExVTBits)
-      return V.getOperand(0);
-
-    break;
   }
   return SDValue();
 }

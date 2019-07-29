@@ -165,7 +165,8 @@ typedef unsigned long long kmp_uint64;
 
 #if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
-#elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64
+#elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
@@ -840,7 +841,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #endif /* KMP_OS_WINDOWS */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS ||     \
-    KMP_ARCH_MIPS64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64
 #define KMP_MB() __sync_synchronize()
 #endif
 

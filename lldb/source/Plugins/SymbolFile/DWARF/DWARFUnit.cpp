@@ -870,7 +870,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) const {
 
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromIndex(uint32_t index) const {
-  const DWARFDebugRangesBase *debug_rnglists = m_dwarf.GetDebugRngLists();
+  const DWARFDebugRngLists *debug_rnglists = m_dwarf.GetDebugRngLists();
   if (!debug_rnglists)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No debug_rnglists section");

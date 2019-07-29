@@ -514,7 +514,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  if (OrigRet.Regs[0] && !isSupportedType(OrigRet.Ty))
+  if (!OrigRet.Ty->isVoidTy() && !isSupportedType(OrigRet.Ty))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -599,7 +599,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                          *STI.getRegBankInfo());
   }
 
-  if (OrigRet.Regs[0]) {
+  if (!OrigRet.Ty->isVoidTy()) {
     ArgInfos.clear();
     SmallVector<unsigned, 8> OrigRetIndices;
 

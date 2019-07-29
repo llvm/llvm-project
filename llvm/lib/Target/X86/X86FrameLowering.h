@@ -217,6 +217,10 @@ private:
   void emitCatchRetReturnValue(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineInstr *CatchRet) const;
+
+  /// Select the best opcode for the subtarget when funclet XMM CSRs
+  /// save/restore.
+  unsigned getXMMAlignedLoadStoreOp(const bool IsLoad) const;
 };
 
 } // End llvm namespace

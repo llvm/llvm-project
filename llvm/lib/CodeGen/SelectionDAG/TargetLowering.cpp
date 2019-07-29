@@ -609,6 +609,13 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(1);
     break;
   }
+  case ISD::SIGN_EXTEND_INREG: {
+    // If none of the extended bits are demanded, eliminate the sextinreg.
+    EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    if (DemandedBits.getActiveBits() <= ExVT.getScalarSizeInBits())
+      return Op.getOperand(0);
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 

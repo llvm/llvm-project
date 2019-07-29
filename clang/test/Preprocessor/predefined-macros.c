@@ -131,7 +131,7 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL20
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-fast-relaxed-math \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FRM
-// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=c++ \
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=clc++ \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CLCPP10
 // CHECK-CL10: #define CL_VERSION_1_0 100
 // CHECK-CL10: #define CL_VERSION_1_1 110

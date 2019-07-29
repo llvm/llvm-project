@@ -430,7 +430,8 @@ public:
 
   bool classIsDerivedFrom(const CXXRecordDecl *Declaration,
                           const Matcher<NamedDecl> &Base,
-                          BoundNodesTreeBuilder *Builder) override;
+                          BoundNodesTreeBuilder *Builder,
+                          bool Directly) override;
 
   // Implements ASTMatchFinder::matchesChildOf.
   bool matchesChildOf(const ast_type_traits::DynTypedNode &Node,
@@ -817,7 +818,8 @@ getAsCXXRecordDeclOrPrimaryTemplate(const Type *TypeNode) {
 // derived from itself.
 bool MatchASTVisitor::classIsDerivedFrom(const CXXRecordDecl *Declaration,
                                          const Matcher<NamedDecl> &Base,
-                                         BoundNodesTreeBuilder *Builder) {
+                                         BoundNodesTreeBuilder *Builder,
+                                         bool Directly) {
   if (!Declaration->hasDefinition())
     return false;
   for (const auto &It : Declaration->bases()) {
@@ -842,7 +844,7 @@ bool MatchASTVisitor::classIsDerivedFrom(const CXXRecordDecl *Declaration,
       *Builder = std::move(Result);
       return true;
     }
-    if (classIsDerivedFrom(ClassDecl, Base, Builder))
+    if (!Directly && classIsDerivedFrom(ClassDecl, Base, Builder, Directly))
       return true;
   }
   return false;

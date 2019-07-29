@@ -111,39 +111,13 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout",
-     OptionValue::eTypeUInt64,
-     true,
-     5
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-         * 2
-#endif
-#endif
-     ,
-     nullptr,
-     {},
-     "Specify the default packet timeout in seconds."},
-    {"target-definition-file",
-     OptionValue::eTypeFileSpec,
-     true,
-     0,
-     nullptr,
-     {},
-     "The file that provides the description for remote target registers."},
-    {"use-libraries-svr4",
-     OptionValue::eTypeBoolean,
-     true,
-     false,
-     nullptr,
-     {},
-     "If true, the libraries-svr4 feature will be used to get a hold of the "
-     "process's loaded modules."}};
+#define LLDB_PROPERTIES_processgdbremote
+#include "Properties.inc"
+};
 
 enum {
-  ePropertyPacketTimeout,
-  ePropertyTargetDefinitionFile,
-  ePropertyUseSVR4
+#define LLDB_PROPERTIES_processgdbremote
+#include "PropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
@@ -2390,7 +2364,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
         description = ostr.GetString();
       } else if (key.compare("library") == 0) {
-        LoadModules();
+        auto error = LoadModules();
+        if (error) {
+          Log *log(
+              ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+          LLDB_LOG_ERROR(log, std::move(error), "Failed to load modules: {0}");
+        }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
@@ -2464,7 +2443,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
     // Clear the thread stop stack
     m_stop_packet_stack.clear();
   }
-  
+
   // If we have queried for a default thread id
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
@@ -2742,9 +2721,13 @@ addr_t ProcessGDBRemote::GetImageInfoAddress() {
 
   // the loaded module list can also provides a link map address
   if (addr == LLDB_INVALID_ADDRESS) {
-    LoadedModuleInfoList list;
-    if (GetLoadedModuleList(list).Success())
-      addr = list.m_link_map;
+    llvm::Expected<LoadedModuleInfoList> list = GetLoadedModuleList();
+    if (!list) {
+      Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+      LLDB_LOG_ERROR(log, list.takeError(), "Failed to read module list: {0}");
+    } else {
+      addr = list->m_link_map;
+    }
   }
 
   return addr;
@@ -4682,39 +4665,43 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   return m_register_info.GetNumRegisters() > 0;
 }
 
-Status ProcessGDBRemote::GetLoadedModuleList(LoadedModuleInfoList &list) {
+llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
   // Make sure LLDB has an XML parser it can use first
   if (!XMLDocument::XMLEnabled())
-    return Status(0, ErrorType::eErrorTypeGeneric);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "XML parsing not available");
 
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS);
   LLDB_LOGF(log, "ProcessGDBRemote::%s", __FUNCTION__);
 
+  LoadedModuleInfoList list;
   GDBRemoteCommunicationClient &comm = m_gdb_comm;
   bool can_use_svr4 = GetGlobalPluginProperties()->GetUseSVR4();
 
   // check that we have extended feature read support
   if (can_use_svr4 && comm.GetQXferLibrariesSVR4ReadSupported()) {
-    list.clear();
-
     // request the loaded library list
     std::string raw;
     lldb_private::Status lldberr;
 
     if (!comm.ReadExtFeature(ConstString("libraries-svr4"), ConstString(""),
                              raw, lldberr))
-      return Status(0, ErrorType::eErrorTypeGeneric);
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error in libraries-svr4 packet");
 
     // parse the xml file in memory
     LLDB_LOGF(log, "parsing: %s", raw.c_str());
     XMLDocument doc;
 
     if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
-      return Status(0, ErrorType::eErrorTypeGeneric);
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error reading noname.xml");
 
     XMLNode root_element = doc.GetRootElement("library-list-svr4");
     if (!root_element)
-      return Status();
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Error finding library-list-svr4 xml element");
 
     // main link map structure
     llvm::StringRef main_lm = root_element.GetAttributeValue("main-lm");
@@ -4778,28 +4765,31 @@ Status ProcessGDBRemote::GetLoadedModuleList(LoadedModuleInfoList &list) {
                        // node
         });
 
-    LLDB_LOGF(log, "found %" PRId32 " modules in total",
-              (int)list.m_list.size());
+    if (log)
+      LLDB_LOGF(log, "found %" PRId32 " modules in total",
+                (int)list.m_list.size());
+    return list;
   } else if (comm.GetQXferLibrariesReadSupported()) {
-    list.clear();
-
     // request the loaded library list
     std::string raw;
     lldb_private::Status lldberr;
 
     if (!comm.ReadExtFeature(ConstString("libraries"), ConstString(""), raw,
                              lldberr))
-      return Status(0, ErrorType::eErrorTypeGeneric);
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error in libraries packet");
 
     LLDB_LOGF(log, "parsing: %s", raw.c_str());
     XMLDocument doc;
 
     if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
-      return Status(0, ErrorType::eErrorTypeGeneric);
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error reading noname.xml");
 
     XMLNode root_element = doc.GetRootElement("library-list");
     if (!root_element)
-      return Status();
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error finding library-list xml element");
 
     root_element.ForEachChildElementWithName(
         "library", [log, &list](const XMLNode &library) -> bool {
@@ -4836,13 +4826,14 @@ Status ProcessGDBRemote::GetLoadedModuleList(LoadedModuleInfoList &list) {
                        // node
         });
 
-    LLDB_LOGF(log, "found %" PRId32 " modules in total",
-              (int)list.m_list.size());
+    if (log)
+      LLDB_LOGF(log, "found %" PRId32 " modules in total",
+                (int)list.m_list.size());
+    return list;
   } else {
-    return Status(0, ErrorType::eErrorTypeGeneric);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Remote libraries not supported");
   }
-
-  return Status();
 }
 
 lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
@@ -4857,17 +4848,18 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
                                      value_is_offset);
 }
 
-size_t ProcessGDBRemote::LoadModules(LoadedModuleInfoList &module_list) {
+llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
   // request a list of loaded libraries from GDBServer
-  if (GetLoadedModuleList(module_list).Fail())
-    return 0;
+  llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();
+  if (!module_list)
+    return module_list.takeError();
 
   // get a list of all the modules
   ModuleList new_modules;
 
-  for (LoadedModuleInfoList::LoadedModuleInfo &modInfo : module_list.m_list) {
+  for (LoadedModuleInfoList::LoadedModuleInfo &modInfo : module_list->m_list) {
     std::string mod_name;
     lldb::addr_t mod_base;
     lldb::addr_t link_map;
@@ -4934,12 +4926,7 @@ size_t ProcessGDBRemote::LoadModules(LoadedModuleInfoList &module_list) {
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }
 
-  return new_modules.GetSize();
-}
-
-size_t ProcessGDBRemote::LoadModules() {
-  LoadedModuleInfoList module_list;
-  return LoadModules(module_list);
+  return llvm::ErrorSuccess();
 }
 
 Status ProcessGDBRemote::GetFileLoadAddress(const FileSpec &file,

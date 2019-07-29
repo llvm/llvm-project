@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -34,6 +35,7 @@ public:
     TAG_UL,
     TAG_LI,
     TAG_A,
+    TAG_LINK,
   };
 
   HTMLTag() = default;
@@ -43,9 +45,6 @@ public:
   operator bool() = delete;
 
   bool IsSelfClosing() const;
-
-  bool HasInlineChildren() const;
-
   llvm::SmallString<16> ToString() const;
 
 private:
@@ -66,29 +65,20 @@ struct HTMLNode {
 };
 
 struct TextNode : public HTMLNode {
-  TextNode(const Twine &Text, bool Indented = true)
-      : HTMLNode(NodeType::NODE_TEXT), Text(Text.str()), Indented(Indented) {}
+  TextNode(const Twine &Text)
+      : HTMLNode(NodeType::NODE_TEXT), Text(Text.str()) {}
 
   std::string Text; // Content of node
-  bool Indented; // Indicates if an indentation must be rendered before the text
   void Render(llvm::raw_ostream &OS, int IndentationLevel) override;
 };
 
 struct TagNode : public HTMLNode {
-  TagNode(HTMLTag Tag)
-      : HTMLNode(NodeType::NODE_TAG), Tag(Tag),
-        InlineChildren(Tag.HasInlineChildren()),
-        SelfClosing(Tag.IsSelfClosing()) {}
+  TagNode(HTMLTag Tag) : HTMLNode(NodeType::NODE_TAG), Tag(Tag) {}
   TagNode(HTMLTag Tag, const Twine &Text) : TagNode(Tag) {
-    Children.emplace_back(
-        llvm::make_unique<TextNode>(Text.str(), !InlineChildren));
+    Children.emplace_back(llvm::make_unique<TextNode>(Text.str()));
   }
 
-  HTMLTag Tag;         // Name of HTML Tag (p, div, h1)
-  bool InlineChildren; // Indicates if children nodes are rendered in the same
-                       // line as itself or if children must rendered in the
-                       // next line and with additional indentation
-  bool SelfClosing;    // Indicates if tag is self-closing
+  HTMLTag Tag; // Name of HTML Tag (p, div, h1)
   std::vector<std::unique_ptr<HTMLNode>> Children; // List of child nodes
   llvm::StringMap<llvm::SmallString<16>>
       Attributes; // List of key-value attributes for tag
@@ -114,6 +104,7 @@ struct HTMLFile {
 bool HTMLTag::IsSelfClosing() const {
   switch (Value) {
   case HTMLTag::TAG_META:
+  case HTMLTag::TAG_LINK:
     return true;
   case HTMLTag::TAG_TITLE:
   case HTMLTag::TAG_DIV:
@@ -124,24 +115,6 @@ bool HTMLTag::IsSelfClosing() const {
   case HTMLTag::TAG_UL:
   case HTMLTag::TAG_LI:
   case HTMLTag::TAG_A:
-    return false;
-  }
-  llvm_unreachable("Unhandled HTMLTag::TagType");
-}
-
-bool HTMLTag::HasInlineChildren() const {
-  switch (Value) {
-  case HTMLTag::TAG_META:
-  case HTMLTag::TAG_TITLE:
-  case HTMLTag::TAG_H1:
-  case HTMLTag::TAG_H2:
-  case HTMLTag::TAG_H3:
-  case HTMLTag::TAG_LI:
-  case HTMLTag::TAG_A:
-    return true;
-  case HTMLTag::TAG_DIV:
-  case HTMLTag::TAG_P:
-  case HTMLTag::TAG_UL:
     return false;
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
@@ -169,22 +142,30 @@ llvm::SmallString<16> HTMLTag::ToString() const {
     return llvm::SmallString<16>("li");
   case HTMLTag::TAG_A:
     return llvm::SmallString<16>("a");
+  case HTMLTag::TAG_LINK:
+    return llvm::SmallString<16>("link");
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
 void TextNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
-  if (Indented)
-    OS.indent(IndentationLevel * 2);
-  OS << Text;
+  OS.indent(IndentationLevel * 2);
+  printHTMLEscaped(Text, OS);
 }
 
 void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
+  // Children nodes are rendered in the same line if all of them are text nodes
+  bool InlineChildren = true;
+  for (const auto &C : Children)
+    if (C->Type == NodeType::NODE_TAG) {
+      InlineChildren = false;
+      break;
+    }
   OS.indent(IndentationLevel * 2);
   OS << "<" << Tag.ToString();
   for (const auto &A : Attributes)
     OS << " " << A.getKey() << "=\"" << A.getValue() << "\"";
-  if (SelfClosing) {
+  if (Tag.IsSelfClosing()) {
     OS << "/>";
     return;
   }
@@ -240,6 +221,21 @@ static SmallString<128> computeRelativePath(StringRef FilePath,
 }
 
 // HTML generation
+
+std::vector<std::unique_ptr<TagNode>>
+genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
+  std::vector<std::unique_ptr<TagNode>> Out;
+  for (const auto &FilePath : CDCtx.UserStylesheets) {
+    auto LinkNode = llvm::make_unique<TagNode>(HTMLTag::TAG_LINK);
+    LinkNode->Attributes.try_emplace("rel", "stylesheet");
+    SmallString<128> StylesheetPath = computeRelativePath("", InfoPath);
+    llvm::sys::path::append(StylesheetPath,
+                            llvm::sys::path::filename(FilePath));
+    LinkNode->Attributes.try_emplace("href", StylesheetPath);
+    Out.emplace_back(std::move(LinkNode));
+  }
+  return Out;
+}
 
 static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
   auto LinkNode = llvm::make_unique<TagNode>(HTMLTag::TAG_A, Text);
@@ -384,7 +380,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
   } else if (I.Kind == "TextComment") {
     if (I.Text == "")
       return nullptr;
-    return llvm::make_unique<TextNode>(I.Text, true);
+    return llvm::make_unique<TextNode>(I.Text);
   }
   return nullptr;
 }
@@ -548,12 +544,15 @@ class HTMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS) override;
+  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                 const ClangDocContext &CDCtx) override;
+  bool createResources(ClangDocContext CDCtx) override;
 };
 
 const char *HTMLGenerator::Format = "html";
 
-llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
+llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                              const ClangDocContext &CDCtx) {
   HTMLFile F;
 
   auto MetaNode = llvm::make_unique<TagNode>(HTMLTag::TAG_META);
@@ -595,10 +594,35 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
 
   F.Children.emplace_back(
       llvm::make_unique<TagNode>(HTMLTag::TAG_TITLE, InfoTitle));
+  std::vector<std::unique_ptr<TagNode>> StylesheetsNodes =
+      genStylesheetsHTML(I->Path, CDCtx);
+  AppendVector(std::move(StylesheetsNodes), F.Children);
   F.Children.emplace_back(std::move(MainContentNode));
   F.Render(OS);
 
   return llvm::Error::success();
+}
+
+bool HTMLGenerator::createResources(ClangDocContext CDCtx) {
+  llvm::outs() << "Generating stylesheet for docs...\n";
+  for (const auto &FilePath : CDCtx.UserStylesheets) {
+    llvm::SmallString<128> StylesheetPathWrite;
+    llvm::sys::path::native(CDCtx.OutDirectory, StylesheetPathWrite);
+    llvm::sys::path::append(StylesheetPathWrite,
+                            llvm::sys::path::filename(FilePath));
+    llvm::SmallString<128> StylesheetPathRead;
+    llvm::sys::path::native(FilePath, StylesheetPathRead);
+    std::error_code OK;
+    std::error_code FileErr =
+        llvm::sys::fs::copy_file(StylesheetPathRead, StylesheetPathWrite);
+    if (FileErr != OK) {
+      llvm::errs() << "Error creating stylesheet file "
+                   << llvm::sys::path::filename(FilePath) << ": "
+                   << FileErr.message() << "\n";
+      return false;
+    }
+  }
+  return true;
 }
 
 static GeneratorRegistry::Add<HTMLGenerator> HTML(HTMLGenerator::Format,

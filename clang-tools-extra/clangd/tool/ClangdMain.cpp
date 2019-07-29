@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -433,15 +434,19 @@ int main(int argc, char *argv[]) {
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
     OS << clang::getClangToolFullVersion("clangd") << "\n";
   });
+  const char *FlagsEnvVar = "CLANGD_FLAGS";
+  const char *Overview =
+      R"(clangd is a language server that provides IDE-like features to editors.
+
+It should be used via an editor plugin rather than invoked directly. For more information, see:
+	https://clang.llvm.org/extra/clangd/
+	https://microsoft.github.io/language-server-protocol/
+
+clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
+)";
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
-  llvm::cl::ParseCommandLineOptions(
-      argc, argv,
-      "clangd is a language server that provides IDE-like features to editors. "
-      "\n\nIt should be used via an editor plugin rather than invoked "
-      "directly. "
-      "For more information, see:"
-      "\n\thttps://clang.llvm.org/extra/clangd.html"
-      "\n\thttps://microsoft.github.io/language-server-protocol/");
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview,
+                                    /*Errs=*/nullptr, FlagsEnvVar);
   if (Test) {
     Sync = true;
     InputStyle = JSONStreamStyle::Delimited;
@@ -510,6 +515,11 @@ int main(int argc, char *argv[]) {
   if (Tracer)
     TracingSession.emplace(*Tracer);
 
+  // If a user ran `clangd` in a terminal without redirecting anything,
+  // it's somewhat likely they're confused about how to use clangd.
+  // Show them the help overview, which explains.
+  if (llvm::outs().is_displayed() && llvm::errs().is_displayed())
+    llvm::errs() << Overview << "\n";
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
@@ -526,6 +536,8 @@ int main(int argc, char *argv[]) {
   }
   for (int I = 0; I < argc; ++I)
     log("argv[{0}]: {1}", I, argv[I]);
+  if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
+    log("{0}: {1}", FlagsEnvVar, *EnvFlags);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
