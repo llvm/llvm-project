@@ -28,6 +28,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextLinux_mips64.cpp
   RegisterContextLinux_mips.cpp
   RegisterContextLinux_s390x.cpp
+  RegisterContextDPU.cpp
   RegisterContextMach_arm.cpp
   RegisterContextMach_i386.cpp
   RegisterContextMach_x86_64.cpp

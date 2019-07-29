@@ -20,6 +20,7 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "UnwindDPU.h"
+#include "RegisterContextDPU.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -28,39 +29,18 @@ UnwindDPU::UnwindDPU(Thread &thread) : Unwind(thread), m_frames() {}
 
 void UnwindDPU::DoClear() { m_frames.clear(); }
 
-void UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc,
-                              lldb::RegisterContextSP reg_ctx_sp) {
+void UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
+                         lldb::addr_t pc) {
   CursorSP new_frame(new Cursor());
+  RegisterContextDPUSP prev_reg_ctx_sp =
+      *prev_frame != NULL ? (*prev_frame)->reg_ctx_sp : NULL;
+  RegisterContextDPUSP new_reg_ctx_sp(new RegisterContextDPU(
+      m_thread, prev_reg_ctx_sp, cfa, pc, m_frames.size()));
   new_frame->cfa = cfa;
   new_frame->pc = pc;
-  new_frame->reg_ctx_sp = reg_ctx_sp;
+  new_frame->reg_ctx_sp = new_reg_ctx_sp;
   m_frames.push_back(new_frame);
   *prev_frame = new_frame;
-}
-
-void UnwindDPU::GetFunction(Function **fct, lldb::addr_t pc) {
-  Address resolved_addr;
-  m_thread.GetProcess()->GetTarget().ResolveLoadAddress(pc, resolved_addr);
-
-  SymbolContext sc;
-  ModuleSP module_sp(resolved_addr.GetModule());
-  module_sp->ResolveSymbolContextForAddress(resolved_addr,
-                                            eSymbolContextFunction, sc);
-  *fct = sc.function;
-}
-
-lldb::addr_t UnwindDPU::ReadMemory(lldb::addr_t src_addr) {
-  Status error;
-  lldb::addr_t addr = 0;
-  m_thread.GetProcess()->ReadMemory(src_addr, &addr, 4, error);
-  return addr;
-}
-
-bool UnwindDPU::PCIsInstructionReturn(lldb::addr_t pc) {
-  Status error;
-  uint64_t instruction;
-  m_thread.GetProcess()->ReadMemory(pc, &instruction, 8, error);
-  return instruction == 0x8c5f00000000ULL; // 0x8c5f00000000 => 'jump r23'
 }
 
 #define NB_FRAME_MAX (8 * 1024)
@@ -80,10 +60,10 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r22"), reg_r22);
   reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("pc"), reg_pc);
 
-  CursorSP prev_frame;
+  CursorSP prev_frame = NULL;
   lldb::addr_t first_pc_addr = reg_pc.GetAsUInt32();
   lldb::addr_t first_r22_value = reg_r22.GetAsUInt32();
-  SetFrame(&prev_frame, first_r22_value, first_pc_addr, reg_ctx_sp);
+  SetFrame(&prev_frame, first_r22_value, first_pc_addr);
 
   // If we are in the 2 first instruction of the function, or in the return
   // instruction of the function, the information to get the next frame are not
@@ -93,29 +73,31 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   // youngest one when comparing StackID). pc is in r23.
   Function *fct = NULL;
   lldb::addr_t start_addr = 0;
-  GetFunction(&fct, first_pc_addr);
+  prev_frame->reg_ctx_sp->GetFunction(&fct, first_pc_addr);
   if (fct != NULL) {
     start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
   }
   if (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
-      PCIsInstructionReturn(first_pc_addr)) {
+      prev_frame->reg_ctx_sp->PCIsInstructionReturn(first_pc_addr)) {
     prev_frame->cfa++;
     RegisterValue reg_r23;
     reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
-    SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()),
-             reg_ctx_sp);
+    SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()));
   }
 
   while (true) {
-    lldb::addr_t cfa_addr = ReadMemory(prev_frame->cfa - 4);
-    lldb::addr_t pc_addr = ReadMemory(prev_frame->cfa - 8);
+    Status error;
+    lldb::addr_t cfa_addr = 0;
+    lldb::addr_t pc_addr = 0;
+    m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 4, &cfa_addr, 4, error);
+    m_thread.GetProcess()->ReadMemory(prev_frame->cfa - 8, &pc_addr, 4, error);
 
     if (cfa_addr == STACK_BACKTRACE_STOP_VALUE || cfa_addr == 0 ||
         cfa_addr > WRAM_SIZE || pc_addr > NB_INSTRUCTION_MAX ||
         m_frames.size() > NB_FRAME_MAX)
       break;
 
-    SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr), reg_ctx_sp);
+    SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr));
   }
 
   return m_frames.size();

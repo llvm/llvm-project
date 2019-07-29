@@ -24,6 +24,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 
+#include "RegisterContextDPU.h"
+
 namespace lldb_private {
 
 class UnwindDPU : public lldb_private::Unwind {
@@ -48,7 +50,7 @@ private:
     lldb::addr_t pc; // The start address of the function/symbol for this
                            // frame - current pc if unknown
     lldb::addr_t cfa;      // The canonical frame address for this stack frame
-    lldb::RegisterContextSP reg_ctx_sp;
+    RegisterContextDPUSP reg_ctx_sp;
 
     Cursor()
         : pc(LLDB_INVALID_ADDRESS), cfa(LLDB_INVALID_ADDRESS),
@@ -58,14 +60,7 @@ private:
   typedef std::shared_ptr<Cursor> CursorSP;
   std::vector<CursorSP> m_frames;
 
-  void SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc,
-                lldb::RegisterContextSP reg_ctx_sp);
-
-  void GetFunction(Function **fct, lldb::addr_t pc);
-
-  lldb::addr_t ReadMemory(lldb::addr_t src_addr);
-
-  bool PCIsInstructionReturn(lldb::addr_t pc);
+  void SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc);
 };
 } // namespace lldb_private
 #endif /* dpu_UnwindDPU_h_ */
