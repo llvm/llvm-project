@@ -124,7 +124,7 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
 bool ModuleListProperties::GetUseDWARFImporter() const {
   const uint32_t idx = ePropertyUseDWARFImporter;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      NULL, idx, g_properties[idx].default_uint_value != 0);
+      NULL, idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
@@ -135,8 +135,8 @@ bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return (SwiftModuleLoadingMode)
-  m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      m_collection_sp->GetPropertyAtIndexAsEnumeration(
+          nullptr, idx, g_modulelist_properties[idx].default_uint_value);
 }
 
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
