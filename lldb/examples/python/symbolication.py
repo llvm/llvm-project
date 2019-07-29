@@ -418,7 +418,6 @@ class Image:
         if self.locate_module_and_debug_symbols():
             resolved_path = self.get_resolved_path()
             path_spec = lldb.SBFileSpec(resolved_path)
-            #result.PutCString ('plist[%s] = %s' % (uuid, self.plist))
             error = lldb.SBError()
             target = lldb.debugger.CreateTarget(
                 resolved_path, self.arch, None, False, error)
@@ -574,7 +573,6 @@ def disassemble_instructions(
         mnemonic = inst.GetMnemonic(target)
         operands = inst.GetOperands(target)
         comment = inst.GetComment(target)
-        #data = inst.GetData (target)
         lines.append("%#16.16x: %8s %s" % (inst_pc, mnemonic, operands))
         if comment:
             line_len = len(lines[-1])
