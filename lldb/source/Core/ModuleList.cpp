@@ -83,13 +83,13 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
     ".swiftinterface files."} };
 
 static constexpr PropertyDefinition g_properties[] = {
+
 #define LLDB_PROPERTIES_modulelist
-#include "Properties.inc"
-};
+#include "CoreProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_modulelist
-#include "PropertiesEnum.inc"
+#include "CorePropertiesEnum.inc"
 };
 
 } // namespace
@@ -97,7 +97,7 @@ enum {
 ModuleListProperties::ModuleListProperties() {
   m_collection_sp =
       std::make_shared<OptionValueProperties>(ConstString("symbols"));
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_modulelist_properties);
 
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
@@ -108,7 +108,7 @@ ModuleListProperties::ModuleListProperties() {
 bool ModuleListProperties::GetEnableExternalLookup() const {
   const uint32_t idx = ePropertyEnableExternalLookup;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {

@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(ProcessGDBRemoteProperties.inc -gen-lldb-property-defs
+  SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")

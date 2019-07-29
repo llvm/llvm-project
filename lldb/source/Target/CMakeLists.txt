@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(TargetProperties.inc -gen-lldb-property-defs
+  SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
 add_lldb_library(lldbTarget

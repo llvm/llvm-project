@@ -124,8 +124,11 @@ static void emityProperties(std::string PropertyName,
   // user to define the macro for the options that are needed.
   OS << "// Property definitions for " << PropertyName << "\n";
   OS << "#ifdef " << NeededMacro << "\n";
+  OS << "static constexpr PropertyDefinition g_" << PropertyName
+     << "_properties[] = {\n";
   for (Record *R : PropertyRecords)
     emitProperty(R, OS);
+  OS << "};\n";
   // We undefine the macro for the user like Clang's include files are doing it.
   OS << "#undef " << NeededMacro << "\n";
   OS << "#endif // " << PropertyName << " Property\n\n";

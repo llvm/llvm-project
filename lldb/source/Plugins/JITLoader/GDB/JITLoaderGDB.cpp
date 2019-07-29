@@ -66,14 +66,12 @@ static constexpr OptionEnumValueElement g_enable_jit_loader_gdb_enumerators[] = 
     {eEnableJITLoaderGDBOff, "off", "Disable JIT compilation interface"}
  };
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_jitloadergdb
-#include "Properties.inc"
-};
+#include "JITLoaderGDBProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_jitloadergdb
-#include "PropertiesEnum.inc"
+#include "JITLoaderGDBPropertiesEnum.inc"
   ePropertyEnableJITBreakpoint
 };
 
@@ -85,13 +83,13 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_jitloadergdb_properties);
   }
 
   EnableJITLoaderGDB GetEnable() const {
     return (EnableJITLoaderGDB)m_collection_sp->GetPropertyAtIndexAsEnumeration(
         nullptr, ePropertyEnable,
-        g_properties[ePropertyEnable].default_uint_value);
+        g_jitloadergdb_properties[ePropertyEnable].default_uint_value);
   }
 };
 

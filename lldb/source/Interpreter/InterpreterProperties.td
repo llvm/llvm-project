@@ -1,6 +1,6 @@
 include "../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "commandinterpreter" in {
+let Definition = "interpreter" in {
   def ExpandRegexAliases: Property<"expand-regex-aliases", "Boolean">,
     Global,
     DefaultFalse,

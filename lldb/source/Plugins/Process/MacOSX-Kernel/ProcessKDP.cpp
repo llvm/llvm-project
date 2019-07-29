@@ -52,14 +52,12 @@ using namespace lldb_private;
 
 namespace {
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_processkdp
-#include "Properties.inc"
-};
+#include "ProcessKDPProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_processkdp
-#include "PropertiesEnum.inc"
+#include "ProcessKDPPropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
@@ -70,7 +68,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_processkdp_properties);
   }
 
   virtual ~PluginProperties() {}
@@ -78,7 +76,7 @@ public:
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
     return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        NULL, idx, g_properties[idx].default_uint_value);
+        NULL, idx, g_processkdp_properties[idx].default_uint_value);
   }
 };
 

@@ -63,14 +63,12 @@ const ThreadPropertiesSP &Thread::GetGlobalProperties() {
   return *g_settings_sp_ptr;
 }
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_thread
-#include "Properties.inc"
-};
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_thread
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 class ThreadOptionValueProperties : public OptionValueProperties {
@@ -108,7 +106,7 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
     m_collection_sp =
         std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_thread_properties);
   } else
     m_collection_sp = std::make_shared<ThreadOptionValueProperties>(
         Thread::GetGlobalProperties().get());
@@ -133,25 +131,25 @@ FileSpecList ThreadProperties::GetLibrariesToAvoid() const {
 bool ThreadProperties::GetTraceEnabledState() const {
   const uint32_t idx = ePropertyEnableThreadTrace;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepInAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepInAvoidsNoDebug;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepOutAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepOutAvoidsNoDebug;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
   const uint32_t idx = ePropertyMaxBacktraceDepth;
   return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 // Thread Event Data
