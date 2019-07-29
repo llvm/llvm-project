@@ -4221,22 +4221,9 @@ OverflowResult llvm::computeOverflowForSignedAdd(const Value *LHS,
 }
 
 bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
-  // A memory operation returns normally if it isn't volatile. A volatile
-  // operation is allowed to trap.
-  //
-  // An atomic operation isn't guaranteed to return in a reasonable amount of
-  // time because it's possible for another thread to interfere with it for an
+  // Note: An atomic operation isn't guaranteed to return in a reasonable amount
+  // of time because it's possible for another thread to interfere with it for an
   // arbitrary length of time, but programs aren't allowed to rely on that.
-  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
-    return !LI->isVolatile();
-  if (const StoreInst *SI = dyn_cast<StoreInst>(I))
-    return !SI->isVolatile();
-  if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
-    return !CXI->isVolatile();
-  if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
-    return !RMWI->isVolatile();
-  if (const MemIntrinsic *MII = dyn_cast<MemIntrinsic>(I))
-    return !MII->isVolatile();
 
   // If there is no successor, then execution can't transfer to it.
   if (const auto *CRI = dyn_cast<CleanupReturnInst>(I))

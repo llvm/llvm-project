@@ -17,8 +17,8 @@
 namespace clang {
 namespace format {
 
-bool WhitespaceManager::Change::IsBeforeInFile::
-operator()(const Change &C1, const Change &C2) const {
+bool WhitespaceManager::Change::IsBeforeInFile::operator()(
+    const Change &C1, const Change &C2) const {
   return SourceMgr.isBeforeInTranslationUnit(
       C1.OriginalWhitespaceRange.getBegin(),
       C2.OriginalWhitespaceRange.getBegin());

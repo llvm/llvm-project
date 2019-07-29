@@ -47,48 +47,32 @@ DisableParallelDSP("disable-arm-parallel-dsp", cl::Hidden, cl::init(false),
 
 namespace {
   struct OpChain;
-  struct BinOpChain;
+  struct MulCandidate;
   class Reduction;
 
-  using OpChainList     = SmallVector<std::unique_ptr<BinOpChain>, 8>;
+  using MulCandList     = SmallVector<std::unique_ptr<MulCandidate>, 8>;
   using ReductionList   = SmallVector<Reduction, 8>;
   using ValueList       = SmallVector<Value*, 8>;
   using MemInstList     = SmallVector<LoadInst*, 8>;
-  using PMACPair        = std::pair<BinOpChain*,BinOpChain*>;
+  using PMACPair        = std::pair<MulCandidate*,MulCandidate*>;
   using PMACPairList    = SmallVector<PMACPair, 8>;
-  using Instructions    = SmallVector<Instruction*,16>;
-  using MemLocList      = SmallVector<MemoryLocation, 4>;
 
-  // 'BinOpChain' holds the multiplication instructions that are candidates
+  // 'MulCandidate' holds the multiplication instructions that are candidates
   // for parallel execution.
-  struct BinOpChain {
+  struct MulCandidate {
     Instruction   *Root;
-    ValueList     AllValues;
-    MemInstList   Loads;
-    MemInstList   VecLd;    // List of all load instructions.
-    ValueList     LHS;      // List of all (narrow) left hand operands.
-    ValueList     RHS;      // List of all (narrow) right hand operands.
+    MemInstList   VecLd;    // Container for loads to widen.
+    Value*        LHS;
+    Value*        RHS;
     bool          Exchange = false;
     bool          ReadOnly = true;
 
-    BinOpChain(Instruction *I, ValueList &lhs, ValueList &rhs) :
-      Root(I), LHS(lhs), RHS(rhs) {
-        for (auto *V : LHS)
-          AllValues.push_back(V);
-        for (auto *V : RHS)
-          AllValues.push_back(V);
+    MulCandidate(Instruction *I, ValueList &lhs, ValueList &rhs) :
+      Root(I), LHS(lhs.front()), RHS(rhs.front()) { }
+
+    bool HasTwoLoadInputs() const {
+      return isa<LoadInst>(LHS) && isa<LoadInst>(RHS);
     }
-
-    void PopulateLoads() {
-      for (auto *V : AllValues) {
-        if (auto *Ld = dyn_cast<LoadInst>(V))
-          Loads.push_back(Ld);
-      }
-    }
-
-    unsigned size() const { return AllValues.size(); }
-
-    bool AreSymmetrical(BinOpChain *Other);
   };
 
   /// Represent a sequence of multiply-accumulate operations with the aim to
@@ -96,7 +80,7 @@ namespace {
   class Reduction {
     Instruction     *Root = nullptr;
     Value           *Acc = nullptr;
-    OpChainList     Muls;
+    MulCandList     Muls;
     PMACPairList        MulPairs;
     SmallPtrSet<Instruction*, 4> Adds;
 
@@ -108,10 +92,10 @@ namespace {
     /// Record an Add instruction that is a part of the this reduction.
     void InsertAdd(Instruction *I) { Adds.insert(I); }
 
-    /// Record a BinOpChain, rooted at a Mul instruction, that is a part of
+    /// Record a MulCandidate, rooted at a Mul instruction, that is a part of
     /// this reduction.
     void InsertMul(Instruction *I, ValueList &LHS, ValueList &RHS) {
-      Muls.push_back(make_unique<BinOpChain>(I, LHS, RHS));
+      Muls.push_back(make_unique<MulCandidate>(I, LHS, RHS));
     }
 
     /// Add the incoming accumulator value, returns true if a value had not
@@ -124,9 +108,9 @@ namespace {
       return true;
     }
 
-    /// Set two BinOpChains, rooted at muls, that can be executed as a single
+    /// Set two MulCandidates, rooted at muls, that can be executed as a single
     /// parallel operation.
-    void AddMulPair(BinOpChain *Mul0, BinOpChain *Mul1) {
+    void AddMulPair(MulCandidate *Mul0, MulCandidate *Mul1) {
       MulPairs.push_back(std::make_pair(Mul0, Mul1));
     }
 
@@ -143,11 +127,11 @@ namespace {
     /// Return the set of adds that comprise the reduction.
     SmallPtrSetImpl<Instruction*> &getAdds() { return Adds; }
 
-    /// Return the BinOpChain, rooted at mul instruction, that comprise the
+    /// Return the MulCandidate, rooted at mul instruction, that comprise the
     /// the reduction.
-    OpChainList &getMuls() { return Muls; }
+    MulCandList &getMuls() { return Muls; }
 
-    /// Return the BinOpChain, rooted at mul instructions, that have been
+    /// Return the MulCandidate, rooted at mul instructions, that have been
     /// paired for parallel execution.
     PMACPairList &getMulPairs() { return MulPairs; }
 
@@ -556,78 +540,57 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
     return false;
 
   // Check that the muls operate directly upon sign extended loads.
-  for (auto &MulChain : R.getMuls()) {
-    // A mul has 2 operands, and a narrow op consist of sext and a load; thus
-    // we expect at least 4 items in this operand value list.
-    if (MulChain->size() < 4) {
-      LLVM_DEBUG(dbgs() << "Operand list too short.\n");
+  for (auto &MulCand : R.getMuls()) {
+    if (!MulCand->HasTwoLoadInputs())
       return false;
-    }
-    MulChain->PopulateLoads();
-    ValueList &LHS = static_cast<BinOpChain*>(MulChain.get())->LHS;
-    ValueList &RHS = static_cast<BinOpChain*>(MulChain.get())->RHS;
-
-    // Use +=2 to skip over the expected extend instructions.
-    for (unsigned i = 0, e = LHS.size(); i < e; i += 2) {
-      if (!isa<LoadInst>(LHS[i]) || !isa<LoadInst>(RHS[i]))
-        return false;
-    }
   }
 
-  auto CanPair = [&](Reduction &R, BinOpChain *PMul0, BinOpChain *PMul1) {
-    if (!PMul0->AreSymmetrical(PMul1))
-      return false;
-
+  auto CanPair = [&](Reduction &R, MulCandidate *PMul0, MulCandidate *PMul1) {
     // The first elements of each vector should be loads with sexts. If we
     // find that its two pairs of consecutive loads, then these can be
     // transformed into two wider loads and the users can be replaced with
     // DSP intrinsics.
-    for (unsigned x = 0; x < PMul0->LHS.size(); x += 2) {
-      auto *Ld0 = dyn_cast<LoadInst>(PMul0->LHS[x]);
-      auto *Ld1 = dyn_cast<LoadInst>(PMul1->LHS[x]);
-      auto *Ld2 = dyn_cast<LoadInst>(PMul0->RHS[x]);
-      auto *Ld3 = dyn_cast<LoadInst>(PMul1->RHS[x]);
+    auto Ld0 = static_cast<LoadInst*>(PMul0->LHS);
+    auto Ld1 = static_cast<LoadInst*>(PMul1->LHS);
+    auto Ld2 = static_cast<LoadInst*>(PMul0->RHS);
+    auto Ld3 = static_cast<LoadInst*>(PMul1->RHS);
 
-      if (!Ld0 || !Ld1 || !Ld2 || !Ld3)
-        return false;
+    LLVM_DEBUG(dbgs() << "Loads:\n"
+               << " - " << *Ld0 << "\n"
+               << " - " << *Ld1 << "\n"
+               << " - " << *Ld2 << "\n"
+               << " - " << *Ld3 << "\n");
 
-      LLVM_DEBUG(dbgs() << "Loads:\n"
-                 << " - " << *Ld0 << "\n"
-                 << " - " << *Ld1 << "\n"
-                 << " - " << *Ld2 << "\n"
-                 << " - " << *Ld3 << "\n");
-
-      if (AreSequentialLoads(Ld0, Ld1, PMul0->VecLd)) {
-        if (AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
-          LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
-          R.AddMulPair(PMul0, PMul1);
-          return true;
-        } else if (AreSequentialLoads(Ld3, Ld2, PMul1->VecLd)) {
-          LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
-          LLVM_DEBUG(dbgs() << "    exchanging Ld2 and Ld3\n");
-          PMul1->Exchange = true;
-          R.AddMulPair(PMul0, PMul1);
-          return true;
-        }
-      } else if (AreSequentialLoads(Ld1, Ld0, PMul0->VecLd) &&
-                 AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
+    if (AreSequentialLoads(Ld0, Ld1, PMul0->VecLd)) {
+      if (AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
         LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
-        LLVM_DEBUG(dbgs() << "    exchanging Ld0 and Ld1\n");
-        LLVM_DEBUG(dbgs() << "    and swapping muls\n");
-        PMul0->Exchange = true;
-        // Only the second operand can be exchanged, so swap the muls.
-        R.AddMulPair(PMul1, PMul0);
+        R.AddMulPair(PMul0, PMul1);
+        return true;
+      } else if (AreSequentialLoads(Ld3, Ld2, PMul1->VecLd)) {
+        LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
+        LLVM_DEBUG(dbgs() << "    exchanging Ld2 and Ld3\n");
+        PMul1->Exchange = true;
+        R.AddMulPair(PMul0, PMul1);
         return true;
       }
+    } else if (AreSequentialLoads(Ld1, Ld0, PMul0->VecLd) &&
+               AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
+      LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
+      LLVM_DEBUG(dbgs() << "    exchanging Ld0 and Ld1\n");
+      LLVM_DEBUG(dbgs() << "    and swapping muls\n");
+      PMul0->Exchange = true;
+      // Only the second operand can be exchanged, so swap the muls.
+      R.AddMulPair(PMul1, PMul0);
+      return true;
     }
     return false;
   };
 
-  OpChainList &Muls = R.getMuls();
+  MulCandList &Muls = R.getMuls();
   const unsigned Elems = Muls.size();
   SmallPtrSet<const Instruction*, 4> Paired;
   for (unsigned i = 0; i < Elems; ++i) {
-    BinOpChain *PMul0 = static_cast<BinOpChain*>(Muls[i].get());
+    MulCandidate *PMul0 = static_cast<MulCandidate*>(Muls[i].get());
     if (Paired.count(PMul0->Root))
       continue;
 
@@ -635,7 +598,7 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
       if (i == j)
         continue;
 
-      BinOpChain *PMul1 = static_cast<BinOpChain*>(Muls[j].get());
+      MulCandidate *PMul1 = static_cast<MulCandidate*>(Muls[j].get());
       if (Paired.count(PMul1->Root))
         continue;
 
@@ -696,8 +659,8 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
   LLVM_DEBUG(dbgs() << "Root: " << *InsertAfter << "\n"
              << "Acc: " << *Acc << "\n");
   for (auto &Pair : R.getMulPairs()) {
-    BinOpChain *PMul0 = Pair.first;
-    BinOpChain *PMul1 = Pair.second;
+    MulCandidate *PMul0 = Pair.first;
+    MulCandidate *PMul1 = Pair.second;
     LLVM_DEBUG(dbgs() << "Muls:\n"
                << "- " << *PMul0->Root << "\n"
                << "- " << *PMul1->Root << "\n");
@@ -773,44 +736,6 @@ LoadInst* ARMParallelDSP::CreateWideLoad(SmallVectorImpl<LoadInst*> &Loads,
   WideLoads.emplace(std::make_pair(Base,
                                    make_unique<WidenedLoad>(Loads, WideLoad)));
   return WideLoad;
-}
-
-// Compare the value lists in Other to this chain.
-bool BinOpChain::AreSymmetrical(BinOpChain *Other) {
-  // Element-by-element comparison of Value lists returning true if they are
-  // instructions with the same opcode or constants with the same value.
-  auto CompareValueList = [](const ValueList &VL0,
-                             const ValueList &VL1) {
-    if (VL0.size() != VL1.size()) {
-      LLVM_DEBUG(dbgs() << "Muls are mismatching operand list lengths: "
-                        << VL0.size() << " != " << VL1.size() << "\n");
-      return false;
-    }
-
-    const unsigned Pairs = VL0.size();
-
-    for (unsigned i = 0; i < Pairs; ++i) {
-      const Value *V0 = VL0[i];
-      const Value *V1 = VL1[i];
-      const auto *Inst0 = dyn_cast<Instruction>(V0);
-      const auto *Inst1 = dyn_cast<Instruction>(V1);
-
-      if (!Inst0 || !Inst1)
-        return false;
-
-      if (Inst0->isSameOperationAs(Inst1))
-        continue;
-
-      const APInt *C0, *C1;
-      if (!(match(V0, m_APInt(C0)) && match(V1, m_APInt(C1)) && C0 == C1))
-        return false;
-    }
-
-    return true;
-  };
-
-  return CompareValueList(LHS, Other->LHS) &&
-         CompareValueList(RHS, Other->RHS);
 }
 
 Pass *llvm::createARMParallelDSPPass() {
