@@ -202,14 +202,12 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
      "display thread stop locations."},
     {eStopShowColumnNone, "none", "Do not highlight the stop column."}};
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_debugger
-#include "Properties.inc"
-};
+#include "CoreProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_debugger
-#include "PropertiesEnum.inc"
+#include "CorePropertiesEnum.inc"
 };
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
@@ -230,7 +228,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
   Status error(Properties::SetPropertyValue(exe_ctx, op, property_path, value));
   if (error.Success()) {
     // FIXME it would be nice to have "on-change" callbacks for properties
-    if (property_path == g_properties[ePropertyPrompt].name) {
+    if (property_path == g_debugger_properties[ePropertyPrompt].name) {
       llvm::StringRef new_prompt = GetPrompt();
       std::string str = lldb_utility::ansi::FormatAnsiTerminalCodes(
           new_prompt, GetUseColor());
@@ -241,7 +239,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       auto prompt_change_event_sp = std::make_shared<Event>(
           CommandInterpreter::eBroadcastBitResetPrompt, bytes.release());
       GetCommandInterpreter().BroadcastEvent(prompt_change_event_sp);
-    } else if (property_path == g_properties[ePropertyUseColor].name) {
+    } else if (property_path == g_debugger_properties[ePropertyUseColor].name) {
       // use-color changed. Ping the prompt so it can reset the ansi terminal
       // codes.
       SetPrompt(GetPrompt());
@@ -272,7 +270,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
 bool Debugger::GetAutoConfirm() const {
   const uint32_t idx = ePropertyAutoConfirm;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 const FormatEntity::Entry *Debugger::GetDisassemblyFormat() const {
@@ -293,13 +291,13 @@ const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
 bool Debugger::GetNotifyVoid() const {
   const uint32_t idx = ePropertyNotiftVoid;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 llvm::StringRef Debugger::GetPrompt() const {
   const uint32_t idx = ePropertyPrompt;
   return m_collection_sp->GetPropertyAtIndexAsString(
-      nullptr, idx, g_properties[idx].default_cstr_value);
+      nullptr, idx, g_debugger_properties[idx].default_cstr_value);
 }
 
 void Debugger::SetPrompt(llvm::StringRef p) {
@@ -331,7 +329,7 @@ const FormatEntity::Entry *Debugger::GetThreadStopFormat() const {
 lldb::ScriptLanguage Debugger::GetScriptLanguage() const {
   const uint32_t idx = ePropertyScriptLanguage;
   return (lldb::ScriptLanguage)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetScriptLanguage(lldb::ScriptLanguage script_lang) {
@@ -343,7 +341,7 @@ bool Debugger::SetScriptLanguage(lldb::ScriptLanguage script_lang) {
 uint32_t Debugger::GetTerminalWidth() const {
   const uint32_t idx = ePropertyTerminalWidth;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetTerminalWidth(uint32_t term_width) {
@@ -354,7 +352,7 @@ bool Debugger::SetTerminalWidth(uint32_t term_width) {
 bool Debugger::GetUseExternalEditor() const {
   const uint32_t idx = ePropertyUseExternalEditor;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetUseExternalEditor(bool b) {
@@ -365,7 +363,7 @@ bool Debugger::SetUseExternalEditor(bool b) {
 bool Debugger::GetUseColor() const {
   const uint32_t idx = ePropertyUseColor;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetUseColor(bool b) {
@@ -378,13 +376,13 @@ bool Debugger::SetUseColor(bool b) {
 bool Debugger::GetHighlightSource() const {
   const uint32_t idx = ePropertyHighlightSource;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 StopShowColumn Debugger::GetStopShowColumn() const {
   const uint32_t idx = ePropertyStopShowColumn;
   return (lldb::StopShowColumn)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 llvm::StringRef Debugger::GetStopShowColumnAnsiPrefix() const {
@@ -401,20 +399,20 @@ uint32_t Debugger::GetStopSourceLineCount(bool before) const {
   const uint32_t idx =
       before ? ePropertyStopLineCountBefore : ePropertyStopLineCountAfter;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 Debugger::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
   const uint32_t idx = ePropertyStopDisassemblyDisplay;
   return (Debugger::StopDisassemblyType)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 uint32_t Debugger::GetDisassemblyLineCount() const {
   const uint32_t idx = ePropertyStopDisassemblyCount;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::GetAutoOneLineSummaries() const {
@@ -450,7 +448,7 @@ bool Debugger::SetPrintDecls(bool b) {
 uint32_t Debugger::GetTabSize() const {
   const uint32_t idx = ePropertyTabSize;
   return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetTabSize(uint32_t tab_size) {
@@ -684,7 +682,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   assert(default_platform_sp);
   m_platform_list.Append(default_platform_sp, true);
 
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
       ConstString("target"),
       ConstString("Settings specify to debugging targets."), true,

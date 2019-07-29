@@ -63,14 +63,12 @@ const char *Platform::GetHostPlatformName() { return "host"; }
 
 namespace {
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_platform
-#include "Properties.inc"
-};
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_platform
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 } // namespace
@@ -82,7 +80,7 @@ ConstString PlatformProperties::GetSettingName() {
 
 PlatformProperties::PlatformProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_platform_properties);
 
   auto module_cache_dir = GetModuleCacheDirectory();
   if (module_cache_dir)
@@ -101,7 +99,7 @@ PlatformProperties::PlatformProperties() {
 bool PlatformProperties::GetUseModuleCache() const {
   const auto idx = ePropertyUseModuleCache;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_platform_properties[idx].default_uint_value != 0);
 }
 
 bool PlatformProperties::SetUseModuleCache(bool use_module_cache) {

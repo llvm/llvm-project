@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(CoreProperties.inc -gen-lldb-property-defs
+  SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesEnumGen)
 
 set(LLDB_CURSES_LIBS)

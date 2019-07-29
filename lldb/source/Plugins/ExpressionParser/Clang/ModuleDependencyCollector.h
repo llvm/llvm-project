@@ -17,13 +17,15 @@ namespace lldb_private {
 class ModuleDependencyCollectorAdaptor
     : public clang::ModuleDependencyCollector {
 public:
-  ModuleDependencyCollectorAdaptor(llvm::FileCollector &file_collector)
+  ModuleDependencyCollectorAdaptor(
+      std::shared_ptr<llvm::FileCollector> file_collector)
       : clang::ModuleDependencyCollector(""), m_file_collector(file_collector) {
   }
 
   void addFile(llvm::StringRef Filename,
                llvm::StringRef FileDst = {}) override {
-    m_file_collector.addFile(Filename);
+    if (m_file_collector)
+      m_file_collector->addFile(Filename);
   }
 
   bool insertSeen(llvm::StringRef Filename) override { return false; }
@@ -31,7 +33,7 @@ public:
   void writeFileMap() override {}
 
 private:
-  llvm::FileCollector &m_file_collector;
+  std::shared_ptr<llvm::FileCollector> m_file_collector;
 };
 } // namespace lldb_private
 
