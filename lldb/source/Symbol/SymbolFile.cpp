@@ -200,6 +200,21 @@ void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
   (*m_compile_units)[idx] = cu_sp;
 }
 
+Symtab *SymbolFile::GetSymtab() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (m_symtab)
+    return m_symtab;
+
+  // Fetch the symtab from the main object file.
+  m_symtab = m_obj_file->GetModule()->GetObjectFile()->GetSymtab();
+
+  // Then add our symbols to it.
+  if (m_symtab)
+    AddSymbols(*m_symtab);
+
+  return m_symtab;
+}
+
 void SymbolFile::Dump(Stream &s) {
   s.PutCString("Types:\n");
   m_type_list.Dump(&s, /*show_context*/ false);

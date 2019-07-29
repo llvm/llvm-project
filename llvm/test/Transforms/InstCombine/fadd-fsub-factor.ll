@@ -473,10 +473,9 @@ define float @fdiv_fsub_denorm(float %x) {
 
 define float @lerp_commute0(float %a, float %b, float %c) {
 ; CHECK-LABEL: @lerp_commute0(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float 1.000000e+00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul fast float [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL]], [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %sub = fsub fast float 1.0, %c
@@ -488,10 +487,9 @@ define float @lerp_commute0(float %a, float %b, float %c) {
 
 define <2 x float> @lerp_commute1(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: @lerp_commute1(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul <2 x float> [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast <2 x float> [[BC]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x float> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast <2 x float> [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret <2 x float> [[ADD]]
 ;
   %sub = fsub <2 x float> <float 1.0, float 1.0>, %c
@@ -503,10 +501,9 @@ define <2 x float> @lerp_commute1(<2 x float> %a, <2 x float> %b, <2 x float> %c
 
 define float @lerp_commute2(float %a, float %b, float %c) {
 ; CHECK-LABEL: @lerp_commute2(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub float 1.000000e+00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul float [[B:%.*]], [[C]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %sub = fsub float 1.0, %c
@@ -518,10 +515,9 @@ define float @lerp_commute2(float %a, float %b, float %c) {
 
 define float @lerp_commute3(float %a, float %b, float %c) {
 ; CHECK-LABEL: @lerp_commute3(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float 1.000000e+00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul float [[B:%.*]], [[C]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc ninf nsz float [[BC]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc ninf nsz float [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc ninf nsz float [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc ninf nsz float [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %sub = fsub fast float 1.0, %c
@@ -533,10 +529,9 @@ define float @lerp_commute3(float %a, float %b, float %c) {
 
 define double @lerp_commute4(double %a, double %b, double %c) {
 ; CHECK-LABEL: @lerp_commute4(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double 1.000000e+00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul fast double [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL]], [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast double [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret double [[ADD]]
 ;
   %sub = fsub fast double 1.0, %c
@@ -548,10 +543,9 @@ define double @lerp_commute4(double %a, double %b, double %c) {
 
 define double @lerp_commute5(double %a, double %b, double %c) {
 ; CHECK-LABEL: @lerp_commute5(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double 1.000000e+00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul fast double [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[BC]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast double [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret double [[ADD]]
 ;
   %sub = fsub fast double 1.0, %c
@@ -563,10 +557,9 @@ define double @lerp_commute5(double %a, double %b, double %c) {
 
 define half @lerp_commute6(half %a, half %b, half %c) {
 ; CHECK-LABEL: @lerp_commute6(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast half 0xH3C00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast half [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul fast half [[B:%.*]], [[C]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[MUL]], [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast half [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast half [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %sub = fsub fast half 1.0, %c
@@ -578,10 +571,9 @@ define half @lerp_commute6(half %a, half %b, half %c) {
 
 define half @lerp_commute7(half %a, half %b, half %c) {
 ; CHECK-LABEL: @lerp_commute7(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast half 0xH3C00, [[C:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast half [[SUB]], [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = fmul fast half [[B:%.*]], [[C]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[BC]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast half [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast half [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[TMP2]], [[A]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %sub = fsub fast half 1.0, %c

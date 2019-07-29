@@ -95,10 +95,8 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
   return false;
 }
 
-static constexpr OptionDefinition g_type_summary_add_options[] = {
 #define LLDB_OPTIONS_type_summary_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeSummaryAdd : public CommandObjectParsed,
                                     public IOHandlerDelegateMultiline {
@@ -282,10 +280,8 @@ static const char *g_synth_addreader_instructions =
     "        '''Optional'''\n"
     "class synthProvider:\n";
 
-static constexpr OptionDefinition g_type_synth_add_options[] = {
 #define LLDB_OPTIONS_type_synth_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeSynthAdd : public CommandObjectParsed,
                                   public IOHandlerDelegateMultiline {
@@ -503,10 +499,8 @@ public:
 
 // CommandObjectTypeFormatAdd
 
-static constexpr OptionDefinition g_type_format_add_options[] = {
 #define LLDB_OPTIONS_type_format_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeFormatAdd : public CommandObjectParsed {
 private:
@@ -720,10 +714,8 @@ protected:
   }
 };
 
-static constexpr OptionDefinition g_type_formatter_delete_options[] = {
 #define LLDB_OPTIONS_type_formatter_delete
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeFormatterDelete : public CommandObjectParsed {
 protected:
@@ -859,10 +851,8 @@ protected:
   }
 };
 
-static constexpr OptionDefinition g_type_formatter_clear_options[] = {
 #define LLDB_OPTIONS_type_formatter_clear
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeFormatterClear : public CommandObjectParsed {
 private:
@@ -971,11 +961,8 @@ public:
             "type format clear", "Delete all existing format styles.") {}
 };
 
-
-static constexpr OptionDefinition g_type_formatter_list_options[] = {
 #define LLDB_OPTIONS_type_formatter_list
 #include "CommandOptions.inc"
-};
 
 template <typename FormatterType>
 class CommandObjectTypeFormatterList : public CommandObjectParsed {
@@ -1731,11 +1718,8 @@ protected:
 };
 
 // CommandObjectTypeCategoryDefine
-
-static constexpr OptionDefinition g_type_category_define_options[] = {
 #define LLDB_OPTIONS_type_category_define
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -1834,11 +1818,8 @@ protected:
 };
 
 // CommandObjectTypeCategoryEnable
-
-static constexpr OptionDefinition g_type_category_enable_options[] = {
 #define LLDB_OPTIONS_type_category_enable
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -2006,11 +1987,8 @@ protected:
 };
 
 // CommandObjectTypeCategoryDisable
-
-OptionDefinition constexpr g_type_category_disable_options[] = {
 #define LLDB_OPTIONS_type_category_disable
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -2415,11 +2393,8 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
 }
 
 #endif // LLDB_DISABLE_PYTHON
-
-static constexpr OptionDefinition g_type_filter_add_options[] = {
 #define LLDB_OPTIONS_type_filter_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeFilterAdd : public CommandObjectParsed {
 private:
@@ -2663,10 +2638,8 @@ protected:
 };
 
 // "type lookup"
-static constexpr OptionDefinition g_type_lookup_options[] = {
 #define LLDB_OPTIONS_type_lookup
 #include "CommandOptions.inc"
-};
 
 class CommandObjectTypeLookup : public CommandObjectRaw {
 protected:

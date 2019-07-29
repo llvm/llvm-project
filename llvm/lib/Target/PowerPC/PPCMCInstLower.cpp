@@ -193,6 +193,9 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     OutMO = GetSymbolRef(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP,
                          isDarwin);
     return true;
+  case MachineOperand::MO_MCSymbol:
+    OutMO = GetSymbolRef(MO, MO.getMCSymbol(), AP, isDarwin);
+    return true;
   case MachineOperand::MO_RegisterMask:
     return false;
   }

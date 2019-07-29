@@ -1460,6 +1460,29 @@ def : RWSysReg<"TFSRE0_EL1",       0b11, 0b000, 0b0110, 0b0110, 0b001>;
 def : ROSysReg<"GMID_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b100>;
 } // HasMTE
 
+// Embedded Trace Extension R/W System registers
+let Requires = [{ {AArch64::FeatureETE} }] in {
+//              Name            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TRCRSR",        0b10, 0b001, 0b0000, 0b1010, 0b000>;
+//  TRCEXTINSELR0 has the same encoding as ETM TRCEXTINSELR
+def : RWSysReg<"TRCEXTINSELR0", 0b10, 0b001, 0b0000, 0b1000, 0b100>;
+def : RWSysReg<"TRCEXTINSELR1", 0b10, 0b001, 0b0000, 0b1001, 0b100>;
+def : RWSysReg<"TRCEXTINSELR2", 0b10, 0b001, 0b0000, 0b1010, 0b100>;
+def : RWSysReg<"TRCEXTINSELR3", 0b10, 0b001, 0b0000, 0b1011, 0b100>;
+} // FeatureETE
+
+// Trace Buffer Extension System registers
+let Requires = [{ {AArch64::FeatureTRBE} }] in {
+//                   Name       Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TRBLIMITR_EL1", 0b11, 0b000, 0b1001, 0b1011, 0b000>;
+def : RWSysReg<"TRBPTR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b001>;
+def : RWSysReg<"TRBBASER_EL1",  0b11, 0b000, 0b1001, 0b1011, 0b010>;
+def : RWSysReg<"TRBSR_EL1",     0b11, 0b000, 0b1001, 0b1011, 0b011>;
+def : RWSysReg<"TRBMAR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b100>;
+def : RWSysReg<"TRBTRG_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b110>;
+def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
+} // FeatureTRBE
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcCyclone} }] in

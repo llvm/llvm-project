@@ -265,7 +265,8 @@ define void @test_32bit_opnd1_better(i32* %existing, i32* %new) {
 define i32 @test_nouseful_bits(i8 %a, i32 %b) {
 ; CHECK-LABEL: test_nouseful_bits:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w0, w8, lsl #8
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    bfi w8, w8, #8, #24
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    bfi w9, w8, #8, #24
 ; CHECK-NEXT:    bfi w0, w9, #8, #24

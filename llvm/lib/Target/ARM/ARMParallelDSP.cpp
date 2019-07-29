@@ -50,7 +50,7 @@ namespace {
   struct BinOpChain;
   class Reduction;
 
-  using OpChainList     = SmallVector<std::unique_ptr<OpChain>, 8>;
+  using OpChainList     = SmallVector<std::unique_ptr<BinOpChain>, 8>;
   using ReductionList   = SmallVector<Reduction, 8>;
   using ValueList       = SmallVector<Value*, 8>;
   using MemInstList     = SmallVector<LoadInst*, 8>;
@@ -59,15 +59,25 @@ namespace {
   using Instructions    = SmallVector<Instruction*,16>;
   using MemLocList      = SmallVector<MemoryLocation, 4>;
 
-  struct OpChain {
+  // 'BinOpChain' holds the multiplication instructions that are candidates
+  // for parallel execution.
+  struct BinOpChain {
     Instruction   *Root;
     ValueList     AllValues;
-    MemInstList   VecLd;    // List of all load instructions.
     MemInstList   Loads;
+    MemInstList   VecLd;    // List of all load instructions.
+    ValueList     LHS;      // List of all (narrow) left hand operands.
+    ValueList     RHS;      // List of all (narrow) right hand operands.
+    bool          Exchange = false;
     bool          ReadOnly = true;
 
-    OpChain(Instruction *I, ValueList &vl) : Root(I), AllValues(vl) { }
-    virtual ~OpChain() = default;
+    BinOpChain(Instruction *I, ValueList &lhs, ValueList &rhs) :
+      Root(I), LHS(lhs), RHS(rhs) {
+        for (auto *V : LHS)
+          AllValues.push_back(V);
+        for (auto *V : RHS)
+          AllValues.push_back(V);
+    }
 
     void PopulateLoads() {
       for (auto *V : AllValues) {
@@ -77,20 +87,6 @@ namespace {
     }
 
     unsigned size() const { return AllValues.size(); }
-  };
-
-  // 'BinOpChain' holds the multiplication instructions that are candidates
-  // for parallel execution.
-  struct BinOpChain : public OpChain {
-    ValueList     LHS;      // List of all (narrow) left hand operands.
-    ValueList     RHS;      // List of all (narrow) right hand operands.
-    bool Exchange = false;
-
-    BinOpChain(Instruction *I, ValueList &lhs, ValueList &rhs) :
-      OpChain(I, lhs), LHS(lhs), RHS(rhs) {
-        for (auto *V : RHS)
-          AllValues.push_back(V);
-      }
 
     bool AreSymmetrical(BinOpChain *Other);
   };
@@ -335,38 +331,17 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
 // why we check that types are equal to MaxBitWidth, and not <= MaxBitWidth.
 template<unsigned MaxBitWidth>
 bool ARMParallelDSP::IsNarrowSequence(Value *V, ValueList &VL) {
-  ConstantInt *CInt;
-
-  if (match(V, m_ConstantInt(CInt))) {
-    // TODO: if a constant is used, it needs to fit within the bit width.
-    return false;
-  }
-
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return false;
-
-  Value *Val, *LHS, *RHS;
-  if (match(V, m_Trunc(m_Value(Val)))) {
-    if (cast<TruncInst>(I)->getDestTy()->getIntegerBitWidth() == MaxBitWidth)
-      return IsNarrowSequence<MaxBitWidth>(Val, VL);
-  } else if (match(V, m_Add(m_Value(LHS), m_Value(RHS)))) {
-    // TODO: we need to implement sadd16/sadd8 for this, which enables to
-    // also do the rewrite for smlad8.ll, but it is unsupported for now.
-    return false;
-  } else if (match(V, m_ZExtOrSExt(m_Value(Val)))) {
-    if (cast<CastInst>(I)->getSrcTy()->getIntegerBitWidth() != MaxBitWidth)
+  if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    if (SExt->getSrcTy()->getIntegerBitWidth() != MaxBitWidth)
       return false;
 
-    if (match(Val, m_Load(m_Value()))) {
-      auto *Ld = cast<LoadInst>(Val);
-
+    if (auto *Ld = dyn_cast<LoadInst>(SExt->getOperand(0))) {
       // Check that these load could be paired.
       if (!LoadPairs.count(Ld) && !OffsetLoads.count(Ld))
         return false;
 
-      VL.push_back(Val);
-      VL.push_back(I);
+      VL.push_back(Ld);
+      VL.push_back(SExt);
       return true;
     }
   }

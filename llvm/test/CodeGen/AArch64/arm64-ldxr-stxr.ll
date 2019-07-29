@@ -248,11 +248,16 @@ define i32 @test_store_release_i16(i32, i16 %val, i16* %addr) {
   ret i32 %res
 }
 
+; FALLBACK-NOT: remark:{{.*}}test_store_release_i32
 define i32 @test_store_release_i32(i32, i32 %val, i32* %addr) {
 ; CHECK-LABEL: test_store_release_i32:
 ; CHECK-NOT: uxtw
 ; CHECK-NOT: and
 ; CHECK: stlxr w0, w1, [x2]
+; GISEL-LABEL: test_store_release_i32:
+; GISEL-NOT: uxtw
+; GISEL-NOT: and
+; GISEL: stlxr w0, w1, [x2]
   %extval = zext i32 %val to i64
   %res = call i32 @llvm.aarch64.stlxr.p0i32(i64 %extval, i32* %addr)
   ret i32 %res

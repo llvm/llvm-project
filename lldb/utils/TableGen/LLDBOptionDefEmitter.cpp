@@ -81,7 +81,13 @@ static void emitOption(Record *Option, raw_ostream &OS) {
       OS << "eRequiredArgument";
   } else
     OS << "eNoArgument";
-  OS << ", nullptr, ";
+  OS << ", ";
+
+  if (Option->getValue("Validator"))
+    OS << Option->getValueAsString("Validator");
+  else
+    OS << "nullptr";
+  OS << ", ";
 
   if (Option->getValue("ArgEnum"))
     OS << Option->getValueAsString("ArgEnum");
@@ -123,18 +129,21 @@ static void emitOption(Record *Option, raw_ostream &OS) {
 /// Emits all option initializers to the raw_ostream.
 static void emitOptions(std::string Command, std::vector<Record *> Option,
                         raw_ostream &OS) {
+  std::string ID = Command;
+  std::replace(ID.begin(), ID.end(), ' ', '_');
   // Generate the macro that the user needs to define before including the
   // *.inc file.
-  std::string NeededMacro = "LLDB_OPTIONS_" + Command;
-  std::replace(NeededMacro.begin(), NeededMacro.end(), ' ', '_');
+  std::string NeededMacro = "LLDB_OPTIONS_" + ID;
 
   // All options are in one file, so we need put them behind macros and ask the
   // user to define the macro for the options that are needed.
   OS << "// Options for " << Command << "\n";
   OS << "#ifdef " << NeededMacro << "\n";
+  OS << "constexpr static OptionDefinition g_" + ID + "_options[] = {\n";
   for (Record *R : Option)
     emitOption(R, OS);
   // We undefine the macro for the user like Clang's include files are doing it.
+  OS << "};\n";
   OS << "#undef " << NeededMacro << "\n";
   OS << "#endif // " << Command << " command\n\n";
 }

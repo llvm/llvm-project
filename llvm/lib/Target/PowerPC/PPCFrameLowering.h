@@ -26,6 +26,7 @@ class PPCFrameLowering: public TargetFrameLowering {
   const unsigned FramePointerSaveOffset;
   const unsigned LinkageSize;
   const unsigned BasePointerSaveOffset;
+  const unsigned CRSaveOffset;
 
   /**
    * Find register[s] that can be used in function prologue and epilogue
@@ -151,6 +152,10 @@ public:
   /// getBasePointerSaveOffset - Return the previous frame offset to save the
   /// base pointer.
   unsigned getBasePointerSaveOffset() const { return BasePointerSaveOffset; }
+
+  /// getCRSaveOffset - Return the previous frame offset to save the
+  /// CR register.
+  unsigned getCRSaveOffset() const { return CRSaveOffset; }
 
   /// getLinkageSize - Return the size of the PowerPC ABI linkage area.
   ///

@@ -1,24 +1,18 @@
-# RUN: llc -run-pass=arm-low-overhead-loops %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -verify-machineinstrs -o - | FileCheck %s
 
 # CHECK-NOT: DoLoopStart
 # CHECK-NOT: DLS
-# CHECK: bb.2.for.body:
+# CHECK: bb.1.for.body:
 # CHECK:   t2CMPri $lr, 0, 14, $cpsr, implicit-def $cpsr
-# CHECK:   t2Bcc %bb.4, 1, $cpsr
-# CHECK:   tB %bb.3, 14, $noreg
-# CHECK: bb.3.for.cond.cleanup:
-# CHECK: bb.4.for.header:
+# CHECK:   t2Bcc %bb.3, 1, $cpsr
+# CHECK:   tB %bb.2, 14, $noreg
+# CHECK: bb.2.for.cond.cleanup:
+# CHECK: bb.3.for.header:
 
---- |
-  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-unknown-unknown"
-  
-  define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) #0 {
+--- |  
+  define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
     call void @llvm.set.loop.iterations.i32(i32 %N)
-    br label %for.body.preheader
-  
-  for.body.preheader:                               ; preds = %entry
     %scevgep = getelementptr i32, i32* %a, i32 -1
     %scevgep4 = getelementptr i32, i32* %c, i32 -1
     %scevgep8 = getelementptr i32, i32* %b, i32 -1
@@ -37,35 +31,28 @@
     %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 1
     %count.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %count, i32 1)
     %cmp = icmp ne i32 %count.next, 0
-    br i1 %cmp, label %for.cond.cleanup, label %for.header
+    br i1 %cmp, label %for.header, label %for.cond.cleanup
   
   for.cond.cleanup:                                 ; preds = %for.body
     ret void
   
-  for.header:                                       ; preds = %for.body, %for.body.preheader
-    %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
-    %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
-    %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-    %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  for.header:                                       ; preds = %for.body, %entry
+    %lsr.iv9 = phi i32* [ %scevgep8, %entry ], [ %scevgep10, %for.body ]
+    %lsr.iv5 = phi i32* [ %scevgep4, %entry ], [ %scevgep6, %for.body ]
+    %lsr.iv1 = phi i32* [ %scevgep, %entry ], [ %scevgep2, %for.body ]
+    %count = phi i32 [ %N, %entry ], [ %count.next, %for.body ]
     br label %for.body
   }
   
   ; Function Attrs: nounwind
-  declare i32 @llvm.arm.space(i32, i32) #1
-  
+  declare i32 @llvm.arm.space(i32 immarg, i32) #0 
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #2
-  
+  declare void @llvm.set.loop.iterations.i32(i32) #1 
   ; Function Attrs: noduplicate nounwind
-  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
   
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
-  
-  attributes #0 = { "target-features"="+lob" }
-  attributes #1 = { nounwind "target-features"="+lob" }
-  attributes #2 = { noduplicate nounwind "target-features"="+lob" }
-  attributes #3 = { nounwind }
+  attributes #0 = { nounwind }
+  attributes #1 = { noduplicate nounwind }
 
 ...
 ---
@@ -79,17 +66,17 @@ failedISel:      false
 tracksRegLiveness: false
 hasWinCFI:       false
 registers:       []
-liveins:         
+liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }
   - { reg: '$r3', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
   hasPatchPoint:   false
-  stackSize:       56
+  stackSize:       40
   offsetAdjustment: 0
   maxAlignment:    4
   adjustsStack:    false
@@ -104,7 +91,7 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      []
-stack:           
+stack:
   - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
@@ -129,96 +116,73 @@ stack:
   - { id: 7, name: '', type: spill-slot, offset: -40, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 8, name: '', type: spill-slot, offset: -44, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 9, name: '', type: spill-slot, offset: -48, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 10, name: '', type: spill-slot, offset: -52, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 11, name: '', type: spill-slot, offset: -56, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 12, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+  - { id: 8, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
       stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 13, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true, 
+  - { id: 9, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    successors: %bb.1(0x80000000)
+    successors: %bb.3(0x80000000)
   
-    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
-    frame-setup CFI_INSTRUCTION offset $r4, -8
-    $sp = frame-setup tSUBspi $sp, 12, 14, $noreg
-    frame-setup CFI_INSTRUCTION def_cfa_offset 56
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $sp = frame-setup tSUBspi $sp, 8, 14, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 40
     t2DoLoopStart renamable $r3
-    tSTRspi killed $r3, $sp, 11, 14, $noreg :: (store 4 into %stack.0)
-    tSTRspi killed $r2, $sp, 10, 14, $noreg :: (store 4 into %stack.1)
-    tSTRspi killed $r1, $sp, 9, 14, $noreg :: (store 4 into %stack.2)
-    tSTRspi killed $r0, $sp, 8, 14, $noreg :: (store 4 into %stack.3)
-    tB %bb.1, 14, $noreg
+    renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14, $noreg
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
+    renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14, $noreg
+    tSTRspi killed $r1, $sp, 7, 14, $noreg :: (store 4 into %stack.0)
+    tSTRspi killed $r2, $sp, 6, 14, $noreg :: (store 4 into %stack.1)
+    tSTRspi killed $r0, $sp, 5, 14, $noreg :: (store 4 into %stack.2)
+    tSTRspi killed $r3, $sp, 4, 14, $noreg :: (store 4 into %stack.3)
+    tB %bb.3, 14, $noreg
   
-  bb.1.for.body.preheader:
-    successors: %bb.4(0x80000000)
+  bb.1.for.body:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
   
-    $r0 = tLDRspi $sp, 8, 14, $noreg :: (load 4 from %stack.3)
-    renamable $r1, dead $cpsr = tSUBi3 killed renamable $r0, 4, 14, $noreg
-    $r2 = tLDRspi $sp, 10, 14, $noreg :: (load 4 from %stack.1)
-    renamable $r3, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14, $noreg
-    $r12 = t2LDRi12 $sp, 36, 14, $noreg :: (load 4 from %stack.2)
-    renamable $lr = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
-    $r4 = tLDRspi $sp, 11, 14, $noreg :: (load 4 from %stack.0)
-    t2STRi12 killed $lr, $sp, 28, 14, $noreg :: (store 4 into %stack.4)
-    tSTRspi killed $r3, $sp, 6, 14, $noreg :: (store 4 into %stack.5)
-    tSTRspi killed $r1, $sp, 5, 14, $noreg :: (store 4 into %stack.6)
-    tSTRspi killed $r4, $sp, 4, 14, $noreg :: (store 4 into %stack.7)
-    tB %bb.4, 14, $noreg
-  
-  bb.2.for.body:
-    successors: %bb.3(0x40000000), %bb.4(0x40000000)
-  
-    $r0 = tLDRspi $sp, 3, 14, $noreg :: (load 4 from %stack.8)
+    $r0 = tLDRspi $sp, 3, 14, $noreg :: (load 4 from %stack.4)
     renamable $r1, renamable $r0 = t2LDR_PRE renamable $r0, 4, 14, $noreg :: (load 4 from %ir.scevgep11)
-    $r2 = tLDRspi $sp, 2, 14, $noreg :: (load 4 from %stack.9)
+    $r2 = tLDRspi $sp, 2, 14, $noreg :: (load 4 from %stack.5)
     renamable $r3, renamable $r2 = t2LDR_PRE renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep7)
     renamable $r1, dead $cpsr = nsw tMUL killed renamable $r3, killed renamable $r1, 14, $noreg
-    $r3 = tLDRspi $sp, 1, 14, $noreg :: (load 4 from %stack.10)
+    $r3 = tLDRspi $sp, 1, 14, $noreg :: (load 4 from %stack.6)
     early-clobber renamable $r3 = t2STR_PRE killed renamable $r1, renamable $r3, 4, 14, $noreg :: (store 4 into %ir.scevgep3)
-    $r1 = tLDRspi $sp, 0, 14, $noreg :: (load 4 from %stack.11)
+    $r1 = tLDRspi $sp, 0, 14, $noreg :: (load 4 from %stack.7)
     $lr = tMOVr killed $r1, 14, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     $r12 = tMOVr $lr, 14, $noreg
-    tSTRspi killed $r0, $sp, 7, 14, $noreg :: (store 4 into %stack.4)
-    tSTRspi killed $r2, $sp, 6, 14, $noreg :: (store 4 into %stack.5)
-    tSTRspi killed $r3, $sp, 5, 14, $noreg :: (store 4 into %stack.6)
-    t2STRi12 killed $r12, $sp, 16, 14, $noreg :: (store 4 into %stack.7)
-    t2LoopEnd killed renamable $lr, %bb.4
-    tB %bb.3, 14, $noreg
-  
-  bb.3.for.cond.cleanup:
-    $sp = tADDspi $sp, 12, 14, $noreg
-    tPOP_RET 14, $noreg, def $r4, def $pc
-  
-  bb.4.for.header:
-    successors: %bb.2(0x80000000)
-  
-    $r0 = tLDRspi $sp, 4, 14, $noreg :: (load 4 from %stack.7)
-    $r1 = tLDRspi $sp, 5, 14, $noreg :: (load 4 from %stack.6)
-    $r2 = tLDRspi $sp, 6, 14, $noreg :: (load 4 from %stack.5)
-    $r3 = tLDRspi $sp, 7, 14, $noreg :: (load 4 from %stack.4)
-    tSTRspi killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.11)
-    tSTRspi killed $r1, $sp, 1, 14, $noreg :: (store 4 into %stack.10)
-    tSTRspi killed $r2, $sp, 2, 14, $noreg :: (store 4 into %stack.9)
-    tSTRspi killed $r3, $sp, 3, 14, $noreg :: (store 4 into %stack.8)
+    tSTRspi killed $r0, $sp, 7, 14, $noreg :: (store 4 into %stack.0)
+    tSTRspi killed $r2, $sp, 6, 14, $noreg :: (store 4 into %stack.1)
+    tSTRspi killed $r3, $sp, 5, 14, $noreg :: (store 4 into %stack.2)
+    t2STRi12 killed $r12, $sp, 16, 14, $noreg :: (store 4 into %stack.3)
+    t2LoopEnd killed renamable $lr, %bb.3, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
+  
+  bb.2.for.cond.cleanup:
+    $sp = tADDspi $sp, 8, 14, $noreg
+    tPOP_RET 14, $noreg, def $r7, def $pc
+  
+  bb.3.for.header:
+    successors: %bb.1(0x80000000)
+  
+    $r0 = tLDRspi $sp, 4, 14, $noreg :: (load 4 from %stack.3)
+    $r1 = tLDRspi $sp, 5, 14, $noreg :: (load 4 from %stack.2)
+    $r2 = tLDRspi $sp, 6, 14, $noreg :: (load 4 from %stack.1)
+    $r3 = tLDRspi $sp, 7, 14, $noreg :: (load 4 from %stack.0)
+    tSTRspi killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.7)
+    tSTRspi killed $r1, $sp, 1, 14, $noreg :: (store 4 into %stack.6)
+    tSTRspi killed $r2, $sp, 2, 14, $noreg :: (store 4 into %stack.5)
+    tSTRspi killed $r3, $sp, 3, 14, $noreg :: (store 4 into %stack.4)
+    tB %bb.1, 14, $noreg
 
 ...
+
+

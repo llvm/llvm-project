@@ -1308,6 +1308,22 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+/// Eliminate an op from a linear interpolation (lerp) pattern.
+static Instruction *factorizeLerp(BinaryOperator &I,
+                                  InstCombiner::BuilderTy &Builder) {
+  Value *X, *Y, *Z;
+  if (!match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_Value(Y),
+                                            m_OneUse(m_FSub(m_FPOne(),
+                                                            m_Value(Z))))),
+                          m_OneUse(m_c_FMul(m_Value(X), m_Deferred(Z))))))
+    return nullptr;
+
+  // (Y * (1.0 - Z)) + (X * Z) --> Y + Z * (X - Y) [8 commuted variants]
+  Value *XY = Builder.CreateFSubFMF(X, Y, &I);
+  Value *MulZ = Builder.CreateFMulFMF(Z, XY, &I);
+  return BinaryOperator::CreateFAddFMF(Y, MulZ, &I);
+}
+
 /// Factor a common operand out of fadd/fsub of fmul/fdiv.
 static Instruction *factorizeFAddFSub(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
@@ -1315,6 +1331,10 @@ static Instruction *factorizeFAddFSub(BinaryOperator &I,
           I.getOpcode() == Instruction::FSub) && "Expecting fadd/fsub");
   assert(I.hasAllowReassoc() && I.hasNoSignedZeros() &&
          "FP factorization requires FMF");
+
+  if (Instruction *Lerp = factorizeLerp(I, Builder))
+    return Lerp;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *X, *Y, *Z;
   bool IsFMul;
@@ -1943,6 +1963,21 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   // X - (fpext(-Y)) --> X + fpext(Y)
   if (match(Op1, m_OneUse(m_FPExt(m_FNeg(m_Value(Y))))))
     return BinaryOperator::CreateFAddFMF(Op0, Builder.CreateFPExt(Y, Ty), &I);
+
+  // Similar to above, but look through fmul/fdiv of the negated value:
+  // Op0 - (-X * Y) --> Op0 + (X * Y)
+  // Op0 - (Y * -X) --> Op0 + (X * Y)
+  if (match(Op1, m_OneUse(m_c_FMul(m_FNeg(m_Value(X)), m_Value(Y))))) {
+    Value *FMul = Builder.CreateFMulFMF(X, Y, &I);
+    return BinaryOperator::CreateFAddFMF(Op0, FMul, &I);
+  }
+  // Op0 - (-X / Y) --> Op0 + (X / Y)
+  // Op0 - (X / -Y) --> Op0 + (X / Y)
+  if (match(Op1, m_OneUse(m_FDiv(m_FNeg(m_Value(X)), m_Value(Y)))) ||
+      match(Op1, m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))))) {
+    Value *FDiv = Builder.CreateFDivFMF(X, Y, &I);
+    return BinaryOperator::CreateFAddFMF(Op0, FDiv, &I);
+  }
 
   // Handle special cases for FSub with selects feeding the operation
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))

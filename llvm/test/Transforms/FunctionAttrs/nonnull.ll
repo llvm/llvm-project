@@ -40,14 +40,14 @@ define i8* @test3() {
 ; just never return period.)
 define i8* @test4_helper() {
 ; FNATTR: define noalias nonnull i8* @test4_helper
-; ATTRIBUTOR: define noalias nonnull dereferenceable(4294967295) i8* @test4_helper
+; ATTRIBUTOR: define noalias nonnull align 536870912 dereferenceable(4294967295) i8* @test4_helper
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
 ; FNATTR: define noalias nonnull i8* @test4
-; ATTRIBUTOR: define noalias nonnull dereferenceable(4294967295) i8* @test4
+; ATTRIBUTOR: define noalias nonnull align 536870912 dereferenceable(4294967295) i8* @test4
   %ret = call i8* @test4_helper()
   ret i8* %ret
 }

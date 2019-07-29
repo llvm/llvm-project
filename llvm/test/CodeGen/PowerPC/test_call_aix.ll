@@ -1,8 +1,13 @@
+; XFAIL: asserts
+
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp < %s | \
 ; RUN: FileCheck --check-prefix=32BIT %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
+
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s
 
 declare void @foo(...)
 
@@ -15,6 +20,10 @@ entry:
 ; 64BIT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT: BL8_NOP <mcsymbol .foo>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x2, implicit-def $r1
 ; 64BIT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; CHECK-LABEL: test_call
+; CHECK: bl .foo
+; CHECK-NEXT: nop
 
   call void bitcast (void (...)* @foo to void ()*)()
   ret void
@@ -34,6 +43,10 @@ entry:
 ; 64BIT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT: BL8 <mcsymbol .foo_local>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x2, implicit-def $r1
 ; 64BIT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; CHECK-LABEL: test_local_call
+; CHECK: bl .foo_local
+; CHECK-NOT: nop
 
   call void @foo_local()
   ret void

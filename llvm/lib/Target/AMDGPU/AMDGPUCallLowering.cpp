@@ -308,8 +308,8 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
   auto const &ST = MIRBuilder.getMF().getSubtarget<GCNSubtarget>();
 
-  unsigned ReturnOpc = ReturnOpc = IsShader ?
-    AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::S_SETPC_B64_return;
+  unsigned ReturnOpc =
+      IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::S_SETPC_B64_return;
 
   auto Ret = MIRBuilder.buildInstrNoInsert(ReturnOpc);
   Register ReturnAddrVReg;

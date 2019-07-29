@@ -166,20 +166,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @uitofp_v4i1_v4f32(<4 x i32> %src) {
 ; CHECK-LABEL: uitofp_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+00
 ; CHECK-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    ubfx r1, r0, #8, #1
-; CHECK-NEXT:    ubfx r2, r0, #12, #1
-; CHECK-NEXT:    vmov s0, r2
-; CHECK-NEXT:    vmov s4, r1
-; CHECK-NEXT:    vcvt.f32.u32 s3, s0
-; CHECK-NEXT:    ubfx r2, r0, #4, #1
-; CHECK-NEXT:    vcvt.f32.u32 s2, s4
-; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    vmov s4, r2
-; CHECK-NEXT:    vcvt.f32.u32 s1, s4
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vcvt.f32.u32 s0, s4
+; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %src, zeroinitializer
@@ -190,24 +180,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @sitofp_v4i1_v4f32(<4 x i32> %src) {
 ; CHECK-LABEL: sitofp_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.f32 q2, #-1.000000e+00
 ; CHECK-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    and r1, r0, #1
-; CHECK-NEXT:    ubfx r2, r0, #8, #1
-; CHECK-NEXT:    ubfx r3, r0, #4, #1
-; CHECK-NEXT:    ubfx r0, r0, #12, #1
-; CHECK-NEXT:    rsbs r2, r2, #0
-; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    vmov s4, r2
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    rsbs r0, r3, #0
-; CHECK-NEXT:    vcvt.f32.s32 s3, s0
-; CHECK-NEXT:    vcvt.f32.s32 s2, s4
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    rsbs r0, r1, #0
-; CHECK-NEXT:    vcvt.f32.s32 s1, s4
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vcvt.f32.s32 s0, s4
+; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %src, zeroinitializer
@@ -218,26 +194,9 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fptoui_v4i1_v4f32(<4 x float> %src) {
 ; CHECK-LABEL: fptoui_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.s32.f32 s4, s0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov.f32 q2, #1.000000e+00
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #0, #4
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s2
-; CHECK-NEXT:    vcvt.s32.f32 s0, s3
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #4, #4
-; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #8, #4
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #12, #4
-; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+00
+; CHECK-NEXT:    vcmp.f32 ne, q0, zr
 ; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -249,22 +208,9 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fptosi_v4i1_v4f32(<4 x float> %src) {
 ; CHECK-LABEL: fptosi_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.s32.f32 s4, s0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov.f32 q2, #1.000000e+00
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s1
-; CHECK-NEXT:    bfi r0, r1, #0, #4
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s2
-; CHECK-NEXT:    bfi r0, r1, #4, #4
-; CHECK-NEXT:    vcvt.s32.f32 s0, s3
-; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    bfi r0, r1, #8, #4
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    bfi r0, r1, #12, #4
-; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+00
+; CHECK-NEXT:    vcmp.f32 ne, q0, zr
 ; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -273,3 +219,60 @@ entry:
   ret <4 x float> %s
 }
 
+
+
+define arm_aapcs_vfpcc <8 x half> @uitofp_v8i1_v8f16(<8 x i16> %src) {
+; CHECK-LABEL: uitofp_v8i1_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q1, #0x0
+; CHECK-NEXT:    vmov.i16 q2, #0x3c00
+; CHECK-NEXT:    vcmp.s16 gt, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp sgt <8 x i16> %src, zeroinitializer
+  %0 = uitofp <8 x i1> %c to <8 x half>
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @sitofp_v8i1_v8f16(<8 x i16> %src) {
+; CHECK-LABEL: sitofp_v8i1_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q1, #0x0
+; CHECK-NEXT:    vmov.i16 q2, #0xbc00
+; CHECK-NEXT:    vcmp.s16 gt, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp sgt <8 x i16> %src, zeroinitializer
+  %0 = sitofp <8 x i1> %c to <8 x half>
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @fptoui_v8i1_v8f16(<8 x half> %src) {
+; CHECK-LABEL: fptoui_v8i1_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i16 q2, #0x3c00
+; CHECK-NEXT:    vcmp.f16 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = fptoui <8 x half> %src to <8 x i1>
+  %s = select <8 x i1> %0, <8 x half> <half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0>, <8 x half> zeroinitializer
+  ret <8 x half> %s
+}
+
+define arm_aapcs_vfpcc <8 x half> @fptosi_v8i1_v8f16(<8 x half> %src) {
+; CHECK-LABEL: fptosi_v8i1_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i16 q2, #0x3c00
+; CHECK-NEXT:    vcmp.f16 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = fptosi <8 x half> %src to <8 x i1>
+  %s = select <8 x i1> %0, <8 x half> <half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0, half 1.0>, <8 x half> zeroinitializer
+  ret <8 x half> %s
+}

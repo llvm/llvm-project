@@ -1428,7 +1428,7 @@ typename enable_if
 >::type
 abs(duration<_Rep, _Period> __d)
 {
-    return __d >= __d.zero() ? __d : -__d;
+    return __d >= __d.zero() ? +__d : -__d;
 }
 #endif
 

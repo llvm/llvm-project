@@ -154,7 +154,7 @@ void Writer<ELFT>::removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
   });
 }
 
-template <class ELFT> static void copySectionsIntoPartitions() {
+static void copySectionsIntoPartitions() {
   std::vector<InputSectionBase *> newSections;
   for (unsigned part = 2; part != partitions.size() + 1; ++part) {
     for (InputSectionBase *s : inputSections) {
@@ -546,7 +546,7 @@ template <class ELFT> static void createSyntheticSections() {
 template <class ELFT> void Writer<ELFT>::run() {
   // Make copies of any input sections that need to be copied into each
   // partition.
-  copySectionsIntoPartitions<ELFT>();
+  copySectionsIntoPartitions();
 
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.

@@ -103,6 +103,9 @@ public:
     const DeclContext& getDeclContext() const;
     // Printable node kind, like "CXXRecordDecl" or "AutoTypeLoc".
     std::string kind() const;
+    // If this node is a wrapper with no syntax (e.g. implicit cast), return
+    // its contents. (If multiple wrappers are present, unwraps all of them).
+    const Node& ignoreImplicit() const;
   };
   // The most specific common ancestor of all the selected nodes.
   // Returns nullptr if the common ancestor is the root.

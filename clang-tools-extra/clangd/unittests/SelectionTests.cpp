@@ -343,6 +343,23 @@ TEST(SelectionTest, Selected) {
   }
 }
 
+TEST(SelectionTest, Implicit) {
+  const char* Test = R"cpp(
+    struct S { S(const char*); };
+    int f(S);
+    int x = f("^");
+  )cpp";
+  auto AST = TestTU::withCode(Annotations(Test).code()).build();
+  auto T = makeSelectionTree(Test, AST);
+
+  const SelectionTree::Node *Str = T.commonAncestor();
+  EXPECT_EQ("StringLiteral", nodeKind(Str)) << "Implicit selected?";
+  EXPECT_EQ("ImplicitCastExpr", nodeKind(Str->Parent));
+  EXPECT_EQ("CXXConstructExpr", nodeKind(Str->Parent->Parent));
+  EXPECT_EQ(Str, &Str->Parent->Parent->ignoreImplicit())
+      << "Didn't unwrap " << nodeKind(&Str->Parent->Parent->ignoreImplicit());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
