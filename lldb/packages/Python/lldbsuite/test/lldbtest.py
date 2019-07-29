@@ -696,6 +696,17 @@ class Base(unittest2.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    @staticmethod
+    def setUpCommands():
+        return [
+            # Disable Spotlight lookup. The testsuite creates
+            # different binaries with the same UUID, because they only
+            # differ in the debug info, which is not being hashed.
+            "settings set symbols.enable-external-lookup false",
+
+            # Testsuite runs in parallel and the host can have also other load.
+            "settings set plugin.process.gdb-remote.packet-timeout 60"]
+
     def setUp(self):
         """Fixture for unittest test case setup.
 
@@ -714,7 +725,8 @@ class Base(unittest2.TestCase):
         else:
             self.lldbVSCodeExec = None
 
-        self.lldbOption = "-o 'settings set symbols.enable-external-lookup false'"
+        self.lldbOption = " ".join(
+            "-o '" + s + "'" for s in self.setUpCommands())
 
         # If we spawn an lldb process for test (via pexpect), do not load the
         # init file unless told otherwise.
@@ -1854,10 +1866,8 @@ class TestBase(Base):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
 
-        # Disable Spotlight lookup. The testsuite creates
-        # different binaries with the same UUID, because they only
-        # differ in the debug info, which is not being hashed.
-        self.runCmd('settings set symbols.enable-external-lookup false')
+        for s in self.setUpCommands():
+            self.runCmd(s)
 
         # Disable color.
         self.runCmd("settings set use-color false")

@@ -32,6 +32,8 @@ int main(int argc, char** argv) {
   SBDebugger::Initialize();
   SBDebugger dbg = SBDebugger::Create();
   dbg.HandleCommand("settings set symbols.enable-external-lookup false");
+  dbg.HandleCommand(
+      "settings set plugin.process.gdb-remote.packet-timeout 60");
 
   try {
     if (!dbg.IsValid())

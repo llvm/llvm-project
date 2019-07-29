@@ -976,6 +976,10 @@ int main(int argc, const char *argv[]) {
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);
+  CommandReturnObject Result;
+  Dbg->GetCommandInterpreter().HandleCommand(
+      "settings set plugin.process.gdb-remote.packet-timeout 60",
+      /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
     Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, errs());
