@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(SymbolFileDWARFProperties.inc -gen-lldb-property-defs
+  SOURCE SymbolFileDWARFProperties.td
   TARGET LLDBPluginSymbolFileDWARFPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(SymbolFileDWARFPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE SymbolFileDWARFProperties.td
   TARGET LLDBPluginSymbolFileDWARFPropertiesEnumGen)
 
 add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN

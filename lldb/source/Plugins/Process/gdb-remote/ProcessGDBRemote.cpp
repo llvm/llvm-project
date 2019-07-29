@@ -111,11 +111,11 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 #define LLDB_PROPERTIES_processgdbremote
-#include "Properties.inc"
+#include "ProcessGDBRemoteProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_processgdbremote
-#include "PropertiesEnum.inc"
+#include "ProcessGDBRemotePropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {

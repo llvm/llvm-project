@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(DynamicLoaderDarwinKernelProperties.inc -gen-lldb-property-defs
+  SOURCE DynamicLoaderDarwinKernelProperties.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(DynamicLoaderDarwinKernelPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE DynamicLoaderDarwinKernelProperties.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelPropertiesEnumGen)
 
 add_lldb_library(lldbPluginDynamicLoaderDarwinKernel PLUGIN

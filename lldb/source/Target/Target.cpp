@@ -3274,11 +3274,11 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
      "this setting loads sections and all symbols."} };
 
 #define LLDB_PROPERTIES_target
-#include "Properties.inc"
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_target
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
   ePropertyExperimental,
 };
 
@@ -3355,11 +3355,11 @@ protected:
 
 // TargetProperties
 #define LLDB_PROPERTIES_experimental
-#include "Properties.inc"
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_experimental
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {

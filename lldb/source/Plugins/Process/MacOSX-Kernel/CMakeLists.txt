@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(ProcessKDPProperties.inc -gen-lldb-property-defs
+  SOURCE ProcessKDPProperties.td
   TARGET LLDBPluginProcessMacOSXKernelPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(ProcessKDPPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE ProcessKDPProperties.td
   TARGET LLDBPluginProcessMacOSXKernelPropertiesEnumGen)
 
 add_lldb_library(lldbPluginProcessMacOSXKernel PLUGIN

@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(JITLoaderGDBProperties.inc -gen-lldb-property-defs
+  SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(JITLoaderGDBPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesEnumGen)
 
 add_lldb_library(lldbPluginJITLoaderGDB PLUGIN

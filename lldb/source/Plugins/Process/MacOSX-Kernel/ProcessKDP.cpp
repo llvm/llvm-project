@@ -53,11 +53,11 @@ using namespace lldb_private;
 namespace {
 
 #define LLDB_PROPERTIES_processkdp
-#include "Properties.inc"
+#include "ProcessKDPProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_processkdp
-#include "PropertiesEnum.inc"
+#include "ProcessKDPPropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {

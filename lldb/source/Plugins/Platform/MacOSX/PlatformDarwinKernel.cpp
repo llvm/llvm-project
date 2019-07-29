@@ -178,11 +178,11 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
 /// Code to handle the PlatformDarwinKernel settings
 
 #define LLDB_PROPERTIES_platformdarwinkernel
-#include "Properties.inc"
+#include "PlatformMacOSXProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_platformdarwinkernel
-#include "PropertiesEnum.inc"
+#include "PlatformMacOSXPropertiesEnum.inc"
 };
 
 class PlatformDarwinKernelProperties : public Properties {

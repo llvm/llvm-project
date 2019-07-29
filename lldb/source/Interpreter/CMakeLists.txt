@@ -1,9 +1,9 @@
-lldb_tablegen(Properties.inc -gen-lldb-property-defs
-  SOURCE Properties.td
+lldb_tablegen(InterpreterProperties.inc -gen-lldb-property-defs
+  SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesGen)
 
-lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE Properties.td
+lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
 add_lldb_library(lldbInterpreter

@@ -114,11 +114,11 @@ using namespace lldb_private;
 namespace {
 
 #define LLDB_PROPERTIES_symbolfiledwarf
-#include "Properties.inc"
+#include "SymbolFileDWARFProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_symbolfiledwarf
-#include "PropertiesEnum.inc"
+#include "SymbolFileDWARFPropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {

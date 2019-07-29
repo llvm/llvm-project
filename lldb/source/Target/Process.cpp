@@ -113,11 +113,11 @@ public:
 };
 
 #define LLDB_PROPERTIES_process
-#include "Properties.inc"
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_process
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)

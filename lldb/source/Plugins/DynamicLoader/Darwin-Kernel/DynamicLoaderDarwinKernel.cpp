@@ -73,11 +73,11 @@ static constexpr OptionEnumValueElement g_kaslr_kernel_scan_enum_values[] = {
      "on 32-bit targets)."}};
 
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "Properties.inc"
+#include "DynamicLoaderDarwinKernelProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "PropertiesEnum.inc"
+#include "DynamicLoaderDarwinKernelPropertiesEnum.inc"
 };
 
 class DynamicLoaderDarwinKernelProperties : public Properties {
