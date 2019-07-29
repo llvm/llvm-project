@@ -248,7 +248,6 @@ class Image:
         obj = cls(module.file.fullpath, module.uuid)
         obj.resolved_path = module.platform_file.fullpath
         obj.resolved = True
-        obj.arch = module.triple
         for section in module.sections:
             symb_section = Section.InitWithSBTargetAndSBSection(
                 target, section)
