@@ -2277,7 +2277,6 @@ ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
                           name && name[0] ? &ast->Idents.get(name) : nullptr,
                           ClangUtil::GetQualType(param_type), nullptr,
                           (clang::StorageClass)storage, nullptr);
-  decl_ctx->addDecl(decl);
   return decl;
 }
 
