@@ -928,7 +928,7 @@ static void ParseDWARFLineTableCallback(dw_offset_t offset,
 }
 
 bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (comp_unit.GetLineTable() != nullptr)
     return true;
 
