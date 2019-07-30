@@ -28,6 +28,7 @@
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/GenericSignature.h"
 #include "swift/AST/IRGenOptions.h"
+#include "swift/AST/ModuleLoader.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/SubstitutionMap.h"
@@ -837,6 +838,13 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
     : TypeSystem(TypeSystem::eKindSwift),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_description(description) {
+  // Set the dependency tracker.
+  if (auto g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    m_dependency_tracker = llvm::make_unique<swift::DependencyTracker>(
+        true, fp.GetFileCollector());
+  }
+
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(GetClangModulesCacheProperty());
 
@@ -3135,7 +3143,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
          m_initialized_clang_importer_options &&
          "search path options must be initialized before ClangImporter");
 
-  swift::DependencyTracker *tracker = nullptr;
   if (m_ast_context_ap.get())
     return m_ast_context_ap.get();
 
@@ -3157,8 +3164,9 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
-      clang_importer_ap = swift::ClangImporter::create(*m_ast_context_ap,
-                                                       clang_importer_options);
+      clang_importer_ap = swift::ClangImporter::create(
+          *m_ast_context_ap, clang_importer_options, {},
+          m_dependency_tracker.get());
       if (!clang_importer_ap || HasErrors()) {
         std::string message;
         if (!HasErrors())
@@ -3194,7 +3202,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using Clang module cache path: %s",
              moduleCachePath.c_str());
-  
+
   // Compute the prebuilt module cache path to use:
   // <resource-dir>/<platform>/prebuilt-modules
   llvm::Triple triple(GetTriple());
@@ -3227,8 +3235,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   // The order here matters due to fallback behaviors:
   // 1. Create and install the memory buffer serialized module loader.
   std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_ap(
-      swift::MemoryBufferSerializedModuleLoader::create(*m_ast_context_ap,
-                                                        tracker, loading_mode));
+      swift::MemoryBufferSerializedModuleLoader::create(
+          *m_ast_context_ap, m_dependency_tracker.get(), loading_mode));
   if (memory_buffer_loader_ap) {
     m_memory_buffer_module_loader =
         static_cast<swift::MemoryBufferSerializedModuleLoader *>(
@@ -3248,15 +3256,15 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
         swift::ParseableInterfaceModuleLoader::create(
             *m_ast_context_ap, moduleCachePath, prebuiltModuleCachePath,
-            tracker, loading_mode));
+            m_dependency_tracker.get(), loading_mode));
     if (parseable_module_loader_ap)
       m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
   }
 
   // 3. Create and install the serialized module loader.
   std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
-      swift::SerializedModuleLoader::create(*m_ast_context_ap, tracker,
-                                            loading_mode));
+      swift::SerializedModuleLoader::create(
+          *m_ast_context_ap, m_dependency_tracker.get(), loading_mode));
   if (serialized_module_loader_ap)
     m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
 

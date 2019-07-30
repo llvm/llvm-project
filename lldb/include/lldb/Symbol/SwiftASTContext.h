@@ -34,6 +34,7 @@
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
+class DependencyTracker;
 class DWARFImporter;
 class IRGenOptions;
 class NominalTypeDecl;
@@ -822,6 +823,7 @@ protected:
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
+  std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
   /// A collection of (not necessarily fatal) error messages that
   /// should be printed by Process::PrintWarningCantLoadSwift().
