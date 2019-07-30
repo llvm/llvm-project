@@ -1,4 +1,8 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+//
+// 32-bit: Bug 42493, 64-bit: Bug 42496
+// XFAIL: sparc
+//
 //===-- divtc3_test.c - Test __divtc3 -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
