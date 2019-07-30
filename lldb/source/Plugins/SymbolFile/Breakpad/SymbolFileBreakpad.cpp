@@ -228,6 +228,7 @@ size_t SymbolFileBreakpad::ParseFunctions(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit.GetID()).data;
 
   if (!data.line_table_up)
@@ -239,6 +240,7 @@ bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
 
 bool SymbolFileBreakpad::ParseSupportFiles(CompileUnit &comp_unit,
                                            FileSpecList &support_files) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit.GetID()).data;
   if (!data.support_files)
     ParseLineTableAndSupportFiles(comp_unit, data);
@@ -251,6 +253,7 @@ uint32_t
 SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
                                          SymbolContextItem resolve_scope,
                                          SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!(resolve_scope & (eSymbolContextCompUnit | eSymbolContextLineEntry)))
     return 0;
 
@@ -275,6 +278,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
 uint32_t SymbolFileBreakpad::ResolveSymbolContext(
     const FileSpec &file_spec, uint32_t line, bool check_inlines,
     lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!(resolve_scope & eSymbolContextCompUnit))
     return 0;
 

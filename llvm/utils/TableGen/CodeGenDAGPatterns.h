@@ -1075,8 +1075,11 @@ public:
     std::string C = IsHwMode
         ? std::string("MF->getSubtarget().checkFeatures(\"" + Features + "\")")
         : std::string(Def->getValueAsString("CondString"));
+    if (C.empty())
+      return "";
     return IfCond ? C : "!("+C+')';
   }
+
   bool operator==(const Predicate &P) const {
     return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def;
   }

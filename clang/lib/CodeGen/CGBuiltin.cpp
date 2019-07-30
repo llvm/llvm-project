@@ -8014,6 +8014,151 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vgetq_lane");
   }
+  case AArch64::BI_BitScanForward:
+  case AArch64::BI_BitScanForward64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanForward, E);
+  case AArch64::BI_BitScanReverse:
+  case AArch64::BI_BitScanReverse64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
+  case AArch64::BI_InterlockedAnd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E);
+  case AArch64::BI_InterlockedExchange64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E);
+  case AArch64::BI_InterlockedExchangeAdd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E);
+  case AArch64::BI_InterlockedExchangeSub64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E);
+  case AArch64::BI_InterlockedOr64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E);
+  case AArch64::BI_InterlockedXor64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E);
+  case AArch64::BI_InterlockedDecrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
+  case AArch64::BI_InterlockedIncrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
+  case AArch64::BI_InterlockedExchangeAdd8_acq:
+  case AArch64::BI_InterlockedExchangeAdd16_acq:
+  case AArch64::BI_InterlockedExchangeAdd_acq:
+  case AArch64::BI_InterlockedExchangeAdd64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_acq, E);
+  case AArch64::BI_InterlockedExchangeAdd8_rel:
+  case AArch64::BI_InterlockedExchangeAdd16_rel:
+  case AArch64::BI_InterlockedExchangeAdd_rel:
+  case AArch64::BI_InterlockedExchangeAdd64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_rel, E);
+  case AArch64::BI_InterlockedExchangeAdd8_nf:
+  case AArch64::BI_InterlockedExchangeAdd16_nf:
+  case AArch64::BI_InterlockedExchangeAdd_nf:
+  case AArch64::BI_InterlockedExchangeAdd64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_nf, E);
+  case AArch64::BI_InterlockedExchange8_acq:
+  case AArch64::BI_InterlockedExchange16_acq:
+  case AArch64::BI_InterlockedExchange_acq:
+  case AArch64::BI_InterlockedExchange64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_acq, E);
+  case AArch64::BI_InterlockedExchange8_rel:
+  case AArch64::BI_InterlockedExchange16_rel:
+  case AArch64::BI_InterlockedExchange_rel:
+  case AArch64::BI_InterlockedExchange64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_rel, E);
+  case AArch64::BI_InterlockedExchange8_nf:
+  case AArch64::BI_InterlockedExchange16_nf:
+  case AArch64::BI_InterlockedExchange_nf:
+  case AArch64::BI_InterlockedExchange64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_nf, E);
+  case AArch64::BI_InterlockedCompareExchange8_acq:
+  case AArch64::BI_InterlockedCompareExchange16_acq:
+  case AArch64::BI_InterlockedCompareExchange_acq:
+  case AArch64::BI_InterlockedCompareExchange64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_acq, E);
+  case AArch64::BI_InterlockedCompareExchange8_rel:
+  case AArch64::BI_InterlockedCompareExchange16_rel:
+  case AArch64::BI_InterlockedCompareExchange_rel:
+  case AArch64::BI_InterlockedCompareExchange64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_rel, E);
+  case AArch64::BI_InterlockedCompareExchange8_nf:
+  case AArch64::BI_InterlockedCompareExchange16_nf:
+  case AArch64::BI_InterlockedCompareExchange_nf:
+  case AArch64::BI_InterlockedCompareExchange64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E);
+  case AArch64::BI_InterlockedOr8_acq:
+  case AArch64::BI_InterlockedOr16_acq:
+  case AArch64::BI_InterlockedOr_acq:
+  case AArch64::BI_InterlockedOr64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_acq, E);
+  case AArch64::BI_InterlockedOr8_rel:
+  case AArch64::BI_InterlockedOr16_rel:
+  case AArch64::BI_InterlockedOr_rel:
+  case AArch64::BI_InterlockedOr64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_rel, E);
+  case AArch64::BI_InterlockedOr8_nf:
+  case AArch64::BI_InterlockedOr16_nf:
+  case AArch64::BI_InterlockedOr_nf:
+  case AArch64::BI_InterlockedOr64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_nf, E);
+  case AArch64::BI_InterlockedXor8_acq:
+  case AArch64::BI_InterlockedXor16_acq:
+  case AArch64::BI_InterlockedXor_acq:
+  case AArch64::BI_InterlockedXor64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_acq, E);
+  case AArch64::BI_InterlockedXor8_rel:
+  case AArch64::BI_InterlockedXor16_rel:
+  case AArch64::BI_InterlockedXor_rel:
+  case AArch64::BI_InterlockedXor64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_rel, E);
+  case AArch64::BI_InterlockedXor8_nf:
+  case AArch64::BI_InterlockedXor16_nf:
+  case AArch64::BI_InterlockedXor_nf:
+  case AArch64::BI_InterlockedXor64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_nf, E);
+  case AArch64::BI_InterlockedAnd8_acq:
+  case AArch64::BI_InterlockedAnd16_acq:
+  case AArch64::BI_InterlockedAnd_acq:
+  case AArch64::BI_InterlockedAnd64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_acq, E);
+  case AArch64::BI_InterlockedAnd8_rel:
+  case AArch64::BI_InterlockedAnd16_rel:
+  case AArch64::BI_InterlockedAnd_rel:
+  case AArch64::BI_InterlockedAnd64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_rel, E);
+  case AArch64::BI_InterlockedAnd8_nf:
+  case AArch64::BI_InterlockedAnd16_nf:
+  case AArch64::BI_InterlockedAnd_nf:
+  case AArch64::BI_InterlockedAnd64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_nf, E);
+  case AArch64::BI_InterlockedIncrement16_acq:
+  case AArch64::BI_InterlockedIncrement_acq:
+  case AArch64::BI_InterlockedIncrement64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_acq, E);
+  case AArch64::BI_InterlockedIncrement16_rel:
+  case AArch64::BI_InterlockedIncrement_rel:
+  case AArch64::BI_InterlockedIncrement64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_rel, E);
+  case AArch64::BI_InterlockedIncrement16_nf:
+  case AArch64::BI_InterlockedIncrement_nf:
+  case AArch64::BI_InterlockedIncrement64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_nf, E);
+  case AArch64::BI_InterlockedDecrement16_acq:
+  case AArch64::BI_InterlockedDecrement_acq:
+  case AArch64::BI_InterlockedDecrement64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_acq, E);
+  case AArch64::BI_InterlockedDecrement16_rel:
+  case AArch64::BI_InterlockedDecrement_rel:
+  case AArch64::BI_InterlockedDecrement64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_rel, E);
+  case AArch64::BI_InterlockedDecrement16_nf:
+  case AArch64::BI_InterlockedDecrement_nf:
+  case AArch64::BI_InterlockedDecrement64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_nf, E);
+
+  case AArch64::BI_InterlockedAdd: {
+    Value *Arg0 = EmitScalarExpr(E->getArg(0));
+    Value *Arg1 = EmitScalarExpr(E->getArg(1));
+    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
+      AtomicRMWInst::Add, Arg0, Arg1,
+      llvm::AtomicOrdering::SequentiallyConsistent);
+    return Builder.CreateAdd(RMWI, Arg1);
+  }
   }
 
   llvm::VectorType *VTy = GetNeonType(this, Type);
@@ -9130,151 +9275,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vuqaddq_v: {
     Int = Intrinsic::aarch64_neon_suqadd;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vuqadd");
-  }
-  case AArch64::BI_BitScanForward:
-  case AArch64::BI_BitScanForward64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanForward, E);
-  case AArch64::BI_BitScanReverse:
-  case AArch64::BI_BitScanReverse64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
-  case AArch64::BI_InterlockedAnd64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E);
-  case AArch64::BI_InterlockedExchange64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E);
-  case AArch64::BI_InterlockedExchangeAdd64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E);
-  case AArch64::BI_InterlockedExchangeSub64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E);
-  case AArch64::BI_InterlockedOr64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E);
-  case AArch64::BI_InterlockedXor64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E);
-  case AArch64::BI_InterlockedDecrement64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
-  case AArch64::BI_InterlockedIncrement64:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
-  case AArch64::BI_InterlockedExchangeAdd8_acq:
-  case AArch64::BI_InterlockedExchangeAdd16_acq:
-  case AArch64::BI_InterlockedExchangeAdd_acq:
-  case AArch64::BI_InterlockedExchangeAdd64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_acq, E);
-  case AArch64::BI_InterlockedExchangeAdd8_rel:
-  case AArch64::BI_InterlockedExchangeAdd16_rel:
-  case AArch64::BI_InterlockedExchangeAdd_rel:
-  case AArch64::BI_InterlockedExchangeAdd64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_rel, E);
-  case AArch64::BI_InterlockedExchangeAdd8_nf:
-  case AArch64::BI_InterlockedExchangeAdd16_nf:
-  case AArch64::BI_InterlockedExchangeAdd_nf:
-  case AArch64::BI_InterlockedExchangeAdd64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd_nf, E);
-  case AArch64::BI_InterlockedExchange8_acq:
-  case AArch64::BI_InterlockedExchange16_acq:
-  case AArch64::BI_InterlockedExchange_acq:
-  case AArch64::BI_InterlockedExchange64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_acq, E);
-  case AArch64::BI_InterlockedExchange8_rel:
-  case AArch64::BI_InterlockedExchange16_rel:
-  case AArch64::BI_InterlockedExchange_rel:
-  case AArch64::BI_InterlockedExchange64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_rel, E);
-  case AArch64::BI_InterlockedExchange8_nf:
-  case AArch64::BI_InterlockedExchange16_nf:
-  case AArch64::BI_InterlockedExchange_nf:
-  case AArch64::BI_InterlockedExchange64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_nf, E);
-  case AArch64::BI_InterlockedCompareExchange8_acq:
-  case AArch64::BI_InterlockedCompareExchange16_acq:
-  case AArch64::BI_InterlockedCompareExchange_acq:
-  case AArch64::BI_InterlockedCompareExchange64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_acq, E);
-  case AArch64::BI_InterlockedCompareExchange8_rel:
-  case AArch64::BI_InterlockedCompareExchange16_rel:
-  case AArch64::BI_InterlockedCompareExchange_rel:
-  case AArch64::BI_InterlockedCompareExchange64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_rel, E);
-  case AArch64::BI_InterlockedCompareExchange8_nf:
-  case AArch64::BI_InterlockedCompareExchange16_nf:
-  case AArch64::BI_InterlockedCompareExchange_nf:
-  case AArch64::BI_InterlockedCompareExchange64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E);
-  case AArch64::BI_InterlockedOr8_acq:
-  case AArch64::BI_InterlockedOr16_acq:
-  case AArch64::BI_InterlockedOr_acq:
-  case AArch64::BI_InterlockedOr64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_acq, E);
-  case AArch64::BI_InterlockedOr8_rel:
-  case AArch64::BI_InterlockedOr16_rel:
-  case AArch64::BI_InterlockedOr_rel:
-  case AArch64::BI_InterlockedOr64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_rel, E);
-  case AArch64::BI_InterlockedOr8_nf:
-  case AArch64::BI_InterlockedOr16_nf:
-  case AArch64::BI_InterlockedOr_nf:
-  case AArch64::BI_InterlockedOr64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_nf, E);
-  case AArch64::BI_InterlockedXor8_acq:
-  case AArch64::BI_InterlockedXor16_acq:
-  case AArch64::BI_InterlockedXor_acq:
-  case AArch64::BI_InterlockedXor64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_acq, E);
-  case AArch64::BI_InterlockedXor8_rel:
-  case AArch64::BI_InterlockedXor16_rel:
-  case AArch64::BI_InterlockedXor_rel:
-  case AArch64::BI_InterlockedXor64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_rel, E);
-  case AArch64::BI_InterlockedXor8_nf:
-  case AArch64::BI_InterlockedXor16_nf:
-  case AArch64::BI_InterlockedXor_nf:
-  case AArch64::BI_InterlockedXor64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor_nf, E);
-  case AArch64::BI_InterlockedAnd8_acq:
-  case AArch64::BI_InterlockedAnd16_acq:
-  case AArch64::BI_InterlockedAnd_acq:
-  case AArch64::BI_InterlockedAnd64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_acq, E);
-  case AArch64::BI_InterlockedAnd8_rel:
-  case AArch64::BI_InterlockedAnd16_rel:
-  case AArch64::BI_InterlockedAnd_rel:
-  case AArch64::BI_InterlockedAnd64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_rel, E);
-  case AArch64::BI_InterlockedAnd8_nf:
-  case AArch64::BI_InterlockedAnd16_nf:
-  case AArch64::BI_InterlockedAnd_nf:
-  case AArch64::BI_InterlockedAnd64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd_nf, E);
-  case AArch64::BI_InterlockedIncrement16_acq:
-  case AArch64::BI_InterlockedIncrement_acq:
-  case AArch64::BI_InterlockedIncrement64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_acq, E);
-  case AArch64::BI_InterlockedIncrement16_rel:
-  case AArch64::BI_InterlockedIncrement_rel:
-  case AArch64::BI_InterlockedIncrement64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_rel, E);
-  case AArch64::BI_InterlockedIncrement16_nf:
-  case AArch64::BI_InterlockedIncrement_nf:
-  case AArch64::BI_InterlockedIncrement64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement_nf, E);
-  case AArch64::BI_InterlockedDecrement16_acq:
-  case AArch64::BI_InterlockedDecrement_acq:
-  case AArch64::BI_InterlockedDecrement64_acq:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_acq, E);
-  case AArch64::BI_InterlockedDecrement16_rel:
-  case AArch64::BI_InterlockedDecrement_rel:
-  case AArch64::BI_InterlockedDecrement64_rel:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_rel, E);
-  case AArch64::BI_InterlockedDecrement16_nf:
-  case AArch64::BI_InterlockedDecrement_nf:
-  case AArch64::BI_InterlockedDecrement64_nf:
-    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement_nf, E);
-
-  case AArch64::BI_InterlockedAdd: {
-    Value *Arg0 = EmitScalarExpr(E->getArg(0));
-    Value *Arg1 = EmitScalarExpr(E->getArg(1));
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Add, Arg0, Arg1,
-      llvm::AtomicOrdering::SequentiallyConsistent);
-    return Builder.CreateAdd(RMWI, Arg1);
   }
   }
 }

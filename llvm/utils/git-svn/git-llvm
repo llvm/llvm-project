@@ -27,6 +27,11 @@ import time
 assert sys.version_info >= (2, 7)
 
 try:
+    exec("import __builtin__")  # To avoid IDE's grammar check
+except ImportError:
+    import builtins
+
+try:
     dict.iteritems
 except AttributeError:
     # Python 3
@@ -97,6 +102,21 @@ def log_verbose(*args, **kwargs):
 def die(msg):
     eprint(msg)
     sys.exit(1)
+
+
+def ask_confirm(prompt):
+    # Python 2/3 compatibility
+    try:
+        input = eval("__builtin__.raw_input")
+    except NameError:
+        input = builtins.input
+
+    while True:
+        query = input('%s (y/N): ' % (prompt))
+        if query.lower() not in ['y','n', '']:
+           print('Expect y or n!')
+           continue
+        return query.lower() == 'y'
 
 
 def split_first_path_component(d):
@@ -427,6 +447,12 @@ def cmd_push(args):
          's' if len(revs) != 1 else '',
          '\n'.join('  ' + git('show', '--oneline', '--quiet', c)
                    for c in revs)))
+
+    # Ask confirmation if multiple commits are about to be pushed
+    if len(revs) != 1:
+        if not ask_confirm("Are you sure?"):
+            die("Aborting")
+
     for r in revs:
         clean_svn(svn_root)
         svn_push_one_rev(svn_root, r, git_to_svn_mapping, dry_run)
@@ -616,6 +642,15 @@ if __name__ == '__main__':
     args = p.parse_args(argv)
     VERBOSE = args.verbose
     QUIET = args.quiet
+
+    # Python3 workaround, for when not arguments are provided.
+    # See https://bugs.python.org/issue16308
+    try:
+        func = args.func
+    except AttributeError:
+        # No arguments or subcommands were given.
+        parser.print_help()
+        parser.exit()
 
     # Dispatch to the right subcommand
     args.func(args)

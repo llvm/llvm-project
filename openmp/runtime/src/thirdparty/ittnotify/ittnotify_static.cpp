@@ -226,7 +226,7 @@ static __itt_api_info api_list[] = {
 #pragma warning(pop)
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 
-static const char dll_path[PATH_MAX] = { 0 };
+static char dll_path[PATH_MAX] = { 0 };
 
 /* static part descriptor which handles. all notification api attributes. */
 __itt_global _N_(_ittapi_global) = {

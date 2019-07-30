@@ -119,13 +119,6 @@ endif()
 set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
 set_property(GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY ${LLDB_DOTEST_ARGS})
 
-add_python_test_target(check-lldb-single
-  ${LLDB_SOURCE_DIR}/test/dotest.py
-  "--no-multiprocess;${LLDB_DOTEST_ARGS}"
-  "Testing LLDB with args: ${LLDB_DOTEST_ARGS}"
-  )
-set_target_properties(check-lldb-single PROPERTIES FOLDER "lldb misc")
-
 # If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_custom_target(check-lldb)

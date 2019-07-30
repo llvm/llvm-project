@@ -147,6 +147,26 @@ Other tools that support remarks:
     .. option:: -opt-remarks-format=<format>
     .. option:: -opt-remarks-with-hotness
 
+Serialization modes
+===================
+
+There are two modes available for serializing remarks:
+
+``Separate``
+
+    In this mode, the remarks and the metadata are serialized separately. The
+    client is responsible for parsing the metadata first, then use the metadata
+    to correctly parse the remarks.
+
+``Standalone``
+
+    In this mode, the remarks and the metadata are serialized to the same
+    stream. The metadata will always come before the remarks.
+
+    The compiler does not support emitting standalone remarks. This mode is
+    more suited for post-processing tools like linkers, that can merge the
+    remarks for one whole project.
+
 .. _yamlremarks:
 
 YAML remarks

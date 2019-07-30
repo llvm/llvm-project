@@ -75,7 +75,7 @@ class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
      let isCodeGenOnly = 1;
 }
 
-def TruePredicate : Predicate<"true">;
+def TruePredicate : Predicate<"">;
 
 class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;

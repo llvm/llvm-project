@@ -3212,7 +3212,7 @@ Error
 GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
                                         ArrayRef<Predicate> Predicates) {
   for (const Predicate &P : Predicates) {
-    if (!P.Def)
+    if (!P.Def || P.getCondString().empty())
       continue;
     declareSubtargetFeature(P.Def);
     M.addRequiredFeature(P.Def);

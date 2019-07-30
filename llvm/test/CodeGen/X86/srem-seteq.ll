@@ -359,29 +359,92 @@ define i32 @test_srem_odd_setne(i32 %X) nounwind {
   ret i32 %ret
 }
 
+; The fold is only valid for positive divisors, negative-ones should be negated.
+define i32 @test_srem_negative_odd(i32 %X) nounwind {
+; X86-LABEL: test_srem_negative_odd:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $-1717986919, %edx # imm = 0x99999999
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    imull %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    sarl %edx
+; X86-NEXT:    addl %eax, %edx
+; X86-NEXT:    leal (%edx,%edx,4), %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_srem_negative_odd:
+; X64:       # %bb.0:
+; X64-NEXT:    movslq %edi, %rcx
+; X64-NEXT:    imulq $-1717986919, %rcx, %rax # imm = 0x99999999
+; X64-NEXT:    movq %rax, %rdx
+; X64-NEXT:    shrq $63, %rdx
+; X64-NEXT:    sarq $33, %rax
+; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    leal (%rax,%rax,4), %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    addl %edx, %ecx
+; X64-NEXT:    setne %al
+; X64-NEXT:    retq
+  %srem = srem i32 %X, -5
+  %cmp = icmp ne i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+define i32 @test_srem_negative_even(i32 %X) nounwind {
+; X86-LABEL: test_srem_negative_even:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $1840700269, %edx # imm = 0x6DB6DB6D
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    imull %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    sarl $3, %edx
+; X86-NEXT:    addl %eax, %edx
+; X86-NEXT:    imull $-14, %edx, %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_srem_negative_even:
+; X64:       # %bb.0:
+; X64-NEXT:    movslq %edi, %rcx
+; X64-NEXT:    imulq $1840700269, %rcx, %rax # imm = 0x6DB6DB6D
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    shrl $31, %edx
+; X64-NEXT:    sarl $3, %eax
+; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    imull $-14, %eax, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %edx, %ecx
+; X64-NEXT:    setne %al
+; X64-NEXT:    retq
+  %srem = srem i32 %X, -14
+  %cmp = icmp ne i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
 ;------------------------------------------------------------------------------;
 ; Negative tests
 ;------------------------------------------------------------------------------;
 
-; The fold is invalid if divisor is 1.
+; We can lower remainder of division by one much better elsewhere.
 define i32 @test_srem_one(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
   %srem = srem i32 %X, 1
-  %cmp = icmp eq i32 %srem, 0
-  %ret = zext i1 %cmp to i32
-  ret i32 %ret
-}
-
-; We can lower remainder of division by all-ones much better elsewhere.
-define i32 @test_srem_allones(i32 %X) nounwind {
-; CHECK-LABEL: test_srem_allones:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
-  %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
@@ -414,6 +477,50 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %srem = srem i32 %X, 16
+  %cmp = icmp eq i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+; The fold is only valid for positive divisors, and we can't negate INT_MIN.
+define i32 @test_srem_int_min(i32 %X) nounwind {
+; X86-LABEL: test_srem_int_min:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    shrl %edx
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    andl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_srem_int_min:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    sarl $31, %ecx
+; X64-NEXT:    shrl %ecx
+; X64-NEXT:    addl %edi, %ecx
+; X64-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    addl %edi, %ecx
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+  %srem = srem i32 %X, 2147483648
+  %cmp = icmp eq i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+; We can lower remainder of division by all-ones much better elsewhere.
+define i32 @test_srem_allones(i32 %X) nounwind {
+; CHECK-LABEL: test_srem_allones:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret

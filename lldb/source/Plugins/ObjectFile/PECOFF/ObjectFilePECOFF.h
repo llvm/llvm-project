@@ -171,36 +171,36 @@ protected:
   } data_directory_t;
 
   typedef struct coff_opt_header {
-    uint16_t magic;
-    uint8_t major_linker_version;
-    uint8_t minor_linker_version;
-    uint32_t code_size;
-    uint32_t data_size;
-    uint32_t bss_size;
-    uint32_t entry;
-    uint32_t code_offset;
-    uint32_t data_offset;
+    uint16_t magic = 0;
+    uint8_t major_linker_version = 0;
+    uint8_t minor_linker_version = 0;
+    uint32_t code_size = 0;
+    uint32_t data_size = 0;
+    uint32_t bss_size = 0;
+    uint32_t entry = 0;
+    uint32_t code_offset = 0;
+    uint32_t data_offset = 0;
 
-    uint64_t image_base;
-    uint32_t sect_alignment;
-    uint32_t file_alignment;
-    uint16_t major_os_system_version;
-    uint16_t minor_os_system_version;
-    uint16_t major_image_version;
-    uint16_t minor_image_version;
-    uint16_t major_subsystem_version;
-    uint16_t minor_subsystem_version;
-    uint32_t reserved1;
-    uint32_t image_size;
-    uint32_t header_size;
-    uint32_t checksum;
-    uint16_t subsystem;
-    uint16_t dll_flags;
-    uint64_t stack_reserve_size;
-    uint64_t stack_commit_size;
-    uint64_t heap_reserve_size;
-    uint64_t heap_commit_size;
-    uint32_t loader_flags;
+    uint64_t image_base = 0;
+    uint32_t sect_alignment = 0;
+    uint32_t file_alignment = 0;
+    uint16_t major_os_system_version = 0;
+    uint16_t minor_os_system_version = 0;
+    uint16_t major_image_version = 0;
+    uint16_t minor_image_version = 0;
+    uint16_t major_subsystem_version = 0;
+    uint16_t minor_subsystem_version = 0;
+    uint32_t reserved1 = 0;
+    uint32_t image_size = 0;
+    uint32_t header_size = 0;
+    uint32_t checksum = 0;
+    uint16_t subsystem = 0;
+    uint16_t dll_flags = 0;
+    uint64_t stack_reserve_size = 0;
+    uint64_t stack_commit_size = 0;
+    uint64_t heap_reserve_size = 0;
+    uint64_t heap_commit_size = 0;
+    uint32_t loader_flags = 0;
     //    uint32_t	num_data_dir_entries;
     std::vector<data_directory>
         data_dirs; // will contain num_data_dir_entries entries

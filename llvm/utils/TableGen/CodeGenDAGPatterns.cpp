@@ -1373,8 +1373,10 @@ getPatternComplexity(const CodeGenDAGPatterns &CGP) const {
 ///
 std::string PatternToMatch::getPredicateCheck() const {
   SmallVector<const Predicate*,4> PredList;
-  for (const Predicate &P : Predicates)
-    PredList.push_back(&P);
+  for (const Predicate &P : Predicates) {
+    if (!P.getCondString().empty())
+      PredList.push_back(&P);
+  }
   llvm::sort(PredList, deref<llvm::less>());
 
   std::string Check;

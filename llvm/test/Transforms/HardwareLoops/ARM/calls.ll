@@ -1,8 +1,11 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MAIN
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fullfp16 -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fp-armv8,+fullfp16 -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP64
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVE
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve.fp -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVEFP
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MAIN
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fullfp16 -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fp-armv8,+fullfp16 -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP64
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVE
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve.fp -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVEFP
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=true %s -S -o - | FileCheck %s --check-prefix=DISABLED
+
+; DISABLED-NOT: call i32 @llvm.loop.decrement
 
 ; CHECK-LABEL: skip_call
 ; CHECK-NOT: call void @llvm.set.loop.iterations

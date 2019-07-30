@@ -867,7 +867,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildFCmp(CmpInst::Predicate Pred, const DstOp &Res,
-                                const SrcOp &Op0, const SrcOp &Op1);
+                                const SrcOp &Op0, const SrcOp &Op1,
+                                Optional<unsigned> Flags = None);
 
   /// Build and insert a \p Res = G_SELECT \p Tst, \p Op0, \p Op1
   ///
@@ -880,7 +881,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSelect(const DstOp &Res, const SrcOp &Tst,
-                                  const SrcOp &Op0, const SrcOp &Op1);
+                                  const SrcOp &Op0, const SrcOp &Op1,
+                                  Optional<unsigned> Flags = None);
 
   /// Build and insert \p Res = G_INSERT_VECTOR_ELT \p Val,
   /// \p Elt, \p Idx
@@ -1210,6 +1212,12 @@ public:
     return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
   }
 
+  MachineInstrBuilder buildFMul(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMUL, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
                                Optional<unsigned> Flags = None) {
@@ -1322,8 +1330,9 @@ public:
   }
 
   /// Build and insert \p Res = G_FABS \p Op0
-  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0});
+  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_FCANONICALIZE \p Src0

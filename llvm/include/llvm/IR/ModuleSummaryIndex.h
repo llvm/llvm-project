@@ -119,7 +119,7 @@ class GlobalValueSummary;
 
 using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;
 
-struct LLVM_ALIGNAS(8) GlobalValueSummaryInfo {
+struct alignas(8) GlobalValueSummaryInfo {
   union NameOrGV {
     NameOrGV(bool HaveGVs) {
       if (HaveGVs)

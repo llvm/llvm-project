@@ -697,17 +697,19 @@ MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
+                                                const SrcOp &Op1,
+                                                Optional<unsigned> Flags) {
 
-  return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1});
+  return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildSelect(const DstOp &Res,
                                                   const SrcOp &Tst,
                                                   const SrcOp &Op0,
-                                                  const SrcOp &Op1) {
+                                                  const SrcOp &Op1,
+                                                  Optional<unsigned> Flags) {
 
-  return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1});
+  return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder

@@ -35,7 +35,7 @@ endif()
 
 # We need extra libraries on Windows
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  target_link_libraries(benchmark Shlwapi)
+  target_link_libraries(benchmark shlwapi)
 endif()
 
 # We need extra libraries on Solaris

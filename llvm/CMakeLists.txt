@@ -833,6 +833,11 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_definitions("-D_LARGE_FILE_API")
 endif()
 
+# Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+          add_definitions("-D_FILE_OFFSET_BITS=64")
+endif()
+
 # Work around a broken bfd ld behavior. When linking a binary with a
 # foo.so library, it will try to find any library that foo.so uses and
 # check its symbols. This is wasteful (the check was done when foo.so

@@ -10,7 +10,7 @@
 
 // <thread>
 
-// #define __STDCPP_THREADS__ __cplusplus
+// #define __STDCPP_THREADS__ 1
 
 #include <thread>
 
@@ -20,6 +20,8 @@ int main(int, char**)
 {
 #ifndef __STDCPP_THREADS__
 #error __STDCPP_THREADS__ is not defined
+#elif __STDCPP_THREADS__ != 1
+#error __STDCPP_THREADS__ has the wrong value
 #endif
 
   return 0;

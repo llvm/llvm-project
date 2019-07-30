@@ -1092,7 +1092,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "unsigned char",
-// CHECK-NEXT:   "qualType": "UnsignedChar"
+// CHECK-NEXT:   "qualType": "UnsignedChar",
+// CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "valueCategory": "rvalue",
 // CHECK-NEXT:  "castKind": "NoOp",
@@ -1112,7 +1113,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "unsigned char",
-// CHECK-NEXT:     "qualType": "UnsignedChar"
+// CHECK-NEXT:     "qualType": "UnsignedChar",
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
 // CHECK-NEXT:    "castKind": "IntegralCast",
@@ -1133,7 +1135,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "unsigned int",
-// CHECK-NEXT:       "qualType": "UnsignedInt"
+// CHECK-NEXT:       "qualType": "UnsignedInt",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
 // CHECK-NEXT:      "castKind": "LValueToRValue",
@@ -1154,7 +1157,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "unsigned int",
-// CHECK-NEXT:         "qualType": "UnsignedInt"
+// CHECK-NEXT:         "qualType": "UnsignedInt",
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "referencedDecl": {
@@ -1163,7 +1167,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:         "name": "x",
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "desugaredQualType": "unsigned int",
-// CHECK-NEXT:          "qualType": "UnsignedInt"
+// CHECK-NEXT:          "qualType": "UnsignedInt",
+// CHECK-NEXT:          "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -1188,7 +1193,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "signed char",
-// CHECK-NEXT:   "qualType": "SignedChar"
+// CHECK-NEXT:   "qualType": "SignedChar",
+// CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "valueCategory": "rvalue",
 // CHECK-NEXT:  "castKind": "NoOp",
@@ -1208,7 +1214,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "signed char",
-// CHECK-NEXT:     "qualType": "SignedChar"
+// CHECK-NEXT:     "qualType": "SignedChar",
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
 // CHECK-NEXT:    "castKind": "IntegralCast",
@@ -1229,7 +1236,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "unsigned int",
-// CHECK-NEXT:       "qualType": "UnsignedInt"
+// CHECK-NEXT:       "qualType": "UnsignedInt",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
 // CHECK-NEXT:      "castKind": "LValueToRValue",
@@ -1250,7 +1258,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "unsigned int",
-// CHECK-NEXT:         "qualType": "UnsignedInt"
+// CHECK-NEXT:         "qualType": "UnsignedInt",
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "referencedDecl": {
@@ -1259,7 +1268,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:         "name": "x",
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "desugaredQualType": "unsigned int",
-// CHECK-NEXT:          "qualType": "UnsignedInt"
+// CHECK-NEXT:          "qualType": "UnsignedInt",
+// CHECK-NEXT:          "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -1284,7 +1294,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "unsigned char",
-// CHECK-NEXT:   "qualType": "UnsignedChar"
+// CHECK-NEXT:   "qualType": "UnsignedChar",
+// CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "valueCategory": "rvalue",
 // CHECK-NEXT:  "castKind": "NoOp",
@@ -1304,7 +1315,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "unsigned char",
-// CHECK-NEXT:     "qualType": "UnsignedChar"
+// CHECK-NEXT:     "qualType": "UnsignedChar",
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
 // CHECK-NEXT:    "castKind": "IntegralCast",
@@ -1325,7 +1337,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "int",
-// CHECK-NEXT:       "qualType": "SignedInt"
+// CHECK-NEXT:       "qualType": "SignedInt",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
 // CHECK-NEXT:      "castKind": "LValueToRValue",
@@ -1346,7 +1359,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "int",
-// CHECK-NEXT:         "qualType": "SignedInt"
+// CHECK-NEXT:         "qualType": "SignedInt",
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "referencedDecl": {
@@ -1355,7 +1369,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:         "name": "x",
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "desugaredQualType": "int",
-// CHECK-NEXT:          "qualType": "SignedInt"
+// CHECK-NEXT:          "qualType": "SignedInt",
+// CHECK-NEXT:          "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -1380,7 +1395,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "signed char",
-// CHECK-NEXT:   "qualType": "SignedChar"
+// CHECK-NEXT:   "qualType": "SignedChar",
+// CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "valueCategory": "rvalue",
 // CHECK-NEXT:  "castKind": "NoOp",
@@ -1400,7 +1416,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "signed char",
-// CHECK-NEXT:     "qualType": "SignedChar"
+// CHECK-NEXT:     "qualType": "SignedChar",
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "rvalue",
 // CHECK-NEXT:    "castKind": "IntegralCast",
@@ -1421,7 +1438,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "int",
-// CHECK-NEXT:       "qualType": "SignedInt"
+// CHECK-NEXT:       "qualType": "SignedInt",
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
 // CHECK-NEXT:      "castKind": "LValueToRValue",
@@ -1442,7 +1460,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "int",
-// CHECK-NEXT:         "qualType": "SignedInt"
+// CHECK-NEXT:         "qualType": "SignedInt",
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "referencedDecl": {
@@ -1451,7 +1470,8 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:         "name": "x",
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "desugaredQualType": "int",
-// CHECK-NEXT:          "qualType": "SignedInt"
+// CHECK-NEXT:          "qualType": "SignedInt",
+// CHECK-NEXT:          "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }

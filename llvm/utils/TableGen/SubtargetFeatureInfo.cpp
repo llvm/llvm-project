@@ -38,6 +38,10 @@ SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
     if (Pred->getName().empty())
       PrintFatalError(Pred->getLoc(), "Predicate has no name!");
 
+    // Ignore always true predicates.
+    if (Pred->getValueAsString("CondString").empty())
+      continue;
+
     SubtargetFeatures.emplace_back(
         Pred, SubtargetFeatureInfo(Pred, SubtargetFeatures.size()));
   }
@@ -95,8 +99,10 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
   OS << "  PredicateBitset Features;\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
+    StringRef CondStr = SFI.TheDef->getValueAsString("CondString");
+    assert(!CondStr.empty() && "true predicate should have been filtered");
 
-    OS << "  if (" << SFI.TheDef->getValueAsString("CondString") << ")\n";
+    OS << "  if (" << CondStr << ")\n";
     OS << "    Features[" << SFI.getEnumBitName() << "] = 1;\n";
   }
   OS << "  return Features;\n";
