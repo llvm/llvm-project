@@ -624,6 +624,7 @@ size_t SymbolFileDWARFDebugMap::GetCompUnitInfosForModule(
 
 lldb::LanguageType
 SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseLanguage(comp_unit);
@@ -631,6 +632,7 @@ SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARFDebugMap::ParseFunctions(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseFunctions(comp_unit);
@@ -638,6 +640,7 @@ size_t SymbolFileDWARFDebugMap::ParseFunctions(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileDWARFDebugMap::ParseLineTable(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseLineTable(comp_unit);
@@ -645,6 +648,7 @@ bool SymbolFileDWARFDebugMap::ParseLineTable(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseDebugMacros(comp_unit);
@@ -653,6 +657,7 @@ bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
                                                 FileSpecList &support_files) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseSupportFiles(comp_unit, support_files);
@@ -660,6 +665,7 @@ bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
 }
 
 bool SymbolFileDWARFDebugMap::ParseIsOptimized(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseIsOptimized(comp_unit);
@@ -668,6 +674,7 @@ bool SymbolFileDWARFDebugMap::ParseIsOptimized(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARFDebugMap::ParseImportedModules(
     const SymbolContext &sc, std::vector<SourceModule> &imported_modules) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
   if (oso_dwarf)
     return oso_dwarf->ParseImportedModules(sc, imported_modules);
@@ -675,6 +682,7 @@ bool SymbolFileDWARFDebugMap::ParseImportedModules(
 }
 
 size_t SymbolFileDWARFDebugMap::ParseBlocksRecursive(Function &func) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompileUnit *comp_unit = func.GetCompileUnit();
   if (!comp_unit)
     return 0;
@@ -686,6 +694,7 @@ size_t SymbolFileDWARFDebugMap::ParseBlocksRecursive(Function &func) {
 }
 
 size_t SymbolFileDWARFDebugMap::ParseTypes(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
     return oso_dwarf->ParseTypes(comp_unit);
@@ -694,6 +703,7 @@ size_t SymbolFileDWARFDebugMap::ParseTypes(CompileUnit &comp_unit) {
 
 size_t
 SymbolFileDWARFDebugMap::ParseVariablesForContext(const SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
   if (oso_dwarf)
     return oso_dwarf->ParseVariablesForContext(sc);
@@ -701,6 +711,7 @@ SymbolFileDWARFDebugMap::ParseVariablesForContext(const SymbolContext &sc) {
 }
 
 Type *SymbolFileDWARFDebugMap::ResolveTypeUID(lldb::user_id_t type_uid) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
@@ -737,6 +748,7 @@ uint32_t
 SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
                                               SymbolContextItem resolve_scope,
                                               SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   uint32_t resolved_flags = 0;
   Symtab *symtab = m_obj_file->GetSymtab();
   if (symtab) {
@@ -779,6 +791,7 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
 uint32_t SymbolFileDWARFDebugMap::ResolveSymbolContext(
     const FileSpec &file_spec, uint32_t line, bool check_inlines,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const uint32_t initial = sc_list.GetSize();
   const uint32_t cu_count = GetNumCompileUnits();
 
@@ -833,6 +846,7 @@ uint32_t SymbolFileDWARFDebugMap::PrivateFindGlobalVariables(
 uint32_t SymbolFileDWARFDebugMap::FindGlobalVariables(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
@@ -869,6 +883,7 @@ uint32_t
 SymbolFileDWARFDebugMap::FindGlobalVariables(const RegularExpression &regex,
                                              uint32_t max_matches,
                                              VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
@@ -996,6 +1011,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::FindFunctions (name = %s)",
@@ -1024,6 +1040,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
                                                 bool include_inlines,
                                                 bool append,
                                                 SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::FindFunctions (regex = '%s')",
@@ -1051,6 +1068,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
 size_t SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
                                          lldb::TypeClass type_mask,
                                          TypeList &type_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::GetTypes (type_mask = 0x%8.8x)",
@@ -1181,6 +1199,7 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
     bool append, uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     types.Clear();
 
@@ -1211,6 +1230,7 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
     lldb_private::ConstString name,
     const CompilerDeclContext *parent_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompilerDeclContext matching_namespace;
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
