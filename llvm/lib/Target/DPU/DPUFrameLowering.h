@@ -17,10 +17,14 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
+
+class DPUSubtarget;
+
 class DPUFrameLowering : public TargetFrameLowering {
 public:
-  explicit DPUFrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, 8, 0) {}
+  explicit DPUFrameLowering(const DPUSubtarget &SubtargetInfo)
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, 8, 0),
+        STI(SubtargetInfo) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -33,6 +37,9 @@ public:
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
+
+private:
+  const DPUSubtarget &STI;
 };
 } // namespace llvm
 #endif

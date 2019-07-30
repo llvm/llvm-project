@@ -33,6 +33,9 @@ public:
     InlineAsmEnd = " inline asm";
 
     SupportsDebugInformation = true;
+
+    ExceptionsType = ExceptionHandling::DwarfCFI;
+    DwarfRegNumForCFI = true;
   }
 };
 } // namespace llvm

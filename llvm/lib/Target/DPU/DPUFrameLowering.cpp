@@ -46,6 +46,11 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   const DPUInstrInfo &DPUII =
       *static_cast<const DPUInstrInfo *>(MF.getSubtarget().getInstrInfo());
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  const MCRegisterInfo *MRI = MF.getMMI().getContext().getRegisterInfo();
+  const DPURegisterInfo &RegInfo =
+      *static_cast<const DPURegisterInfo *>(STI.getRegisterInfo());
+  const DPUInstrInfo &TII =
+      *static_cast<const DPUInstrInfo *>(STI.getInstrInfo());
   DebugLoc DL;
 
   // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
@@ -56,12 +61,47 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
       alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
   MFI.setStackSize(StackSize);
 
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+      nullptr, MRI->getDwarfRegNum(DPU::RADD, true), -STACK_SIZE_FOR_D22));
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(MachineInstr::FrameSetup);
+  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+      nullptr, MRI->getDwarfRegNum(DPU::STKP, true), 4 - STACK_SIZE_FOR_D22));
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(MachineInstr::FrameSetup);
+
   BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::STKP)
       .addImm(StackSize - STACK_SIZE_FOR_D22)
       .addReg(DPU::RDFUN);
   BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::STKP)
       .addReg(DPU::STKP)
       .addImm(StackSize);
+
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  if (!CSI.empty()) {
+    for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
+           E = CSI.end(); I != E; ++I) {
+      int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
+      unsigned Reg = I->getReg();
+      unsigned Reg0 =
+          MRI->getDwarfRegNum(RegInfo.getSubReg(Reg, DPU::sub_32bit), true);
+      unsigned Reg1 =
+          MRI->getDwarfRegNum(RegInfo.getSubReg(Reg, DPU::sub_32bit_hi), true);
+      CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createOffset(nullptr, Reg0, Offset - StackSize));
+      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameSetup);
+      CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+          nullptr, Reg1, Offset + 4 - StackSize));
+      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameSetup);
+      ++MBBI;
+    }
+  }
 }
 
 void DPUFrameLowering::emitEpilogue(MachineFunction &MF,

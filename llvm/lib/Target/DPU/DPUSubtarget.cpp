@@ -28,7 +28,7 @@ void DPUSubtarget::anchor() {}
 
 DPUSubtarget::DPUSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
-    : DPUGenSubtargetInfo(TT, CPU, FS), InstrInfo(), FrameLowering(),
+    : DPUGenSubtargetInfo(TT, CPU, FS), InstrInfo(), FrameLowering(*this),
       TargetLowering(TM, *this), TSInfo() {}
 
 bool DPUSubtarget::enableMachineScheduler() const { return true; }
