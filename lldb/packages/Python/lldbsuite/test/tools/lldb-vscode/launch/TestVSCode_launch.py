@@ -68,7 +68,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             directory.
         '''
         program = self.getBuildArtifact("a.out")
-        program_parent_dir = os.path.dirname(os.path.dirname(program))
+        program_parent_dir = os.path.realpath(
+            os.path.dirname(os.path.dirname(program)))
         self.build_and_launch(program,
                               cwd=program_parent_dir)
         self.continue_to_exit()
@@ -96,7 +97,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             the lldb-vscode debug adaptor.
         '''
         program = self.getBuildArtifact("a.out")
-        program_parent_dir = os.path.dirname(os.path.dirname(program))
+        program_parent_dir = os.path.realpath(
+            os.path.dirname(os.path.dirname(program)))
         commands = ['platform shell echo cwd = $PWD']
         self.build_and_launch(program,
                               debuggerRoot=program_parent_dir,
