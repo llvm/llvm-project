@@ -66,11 +66,11 @@ using namespace lldb_private;
 namespace {
 
 #define LLDB_PROPERTIES_modulelist
-#include "Properties.inc"
+#include "CoreProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_modulelist
-#include "PropertiesEnum.inc"
+#include "CorePropertiesEnum.inc"
 };
 
 } // namespace

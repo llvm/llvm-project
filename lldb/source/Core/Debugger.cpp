@@ -203,11 +203,11 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     {eStopShowColumnNone, "none", "Do not highlight the stop column."}};
 
 #define LLDB_PROPERTIES_debugger
-#include "Properties.inc"
+#include "CoreProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_debugger
-#include "PropertiesEnum.inc"
+#include "CorePropertiesEnum.inc"
 };
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;

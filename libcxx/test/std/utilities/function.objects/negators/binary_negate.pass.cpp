@@ -10,6 +10,7 @@
 
 // binary_negate
 
+// MODULES_DEFINES: _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 #define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>

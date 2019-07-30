@@ -67,11 +67,11 @@ static constexpr OptionEnumValueElement g_enable_jit_loader_gdb_enumerators[] = 
  };
 
 #define LLDB_PROPERTIES_jitloadergdb
-#include "Properties.inc"
+#include "JITLoaderGDBProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_jitloadergdb
-#include "PropertiesEnum.inc"
+#include "JITLoaderGDBPropertiesEnum.inc"
   ePropertyEnableJITBreakpoint
 };
 

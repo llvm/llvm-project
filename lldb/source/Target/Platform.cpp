@@ -64,11 +64,11 @@ const char *Platform::GetHostPlatformName() { return "host"; }
 namespace {
 
 #define LLDB_PROPERTIES_platform
-#include "Properties.inc"
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_platform
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 } // namespace

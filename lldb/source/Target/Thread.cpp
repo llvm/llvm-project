@@ -64,11 +64,11 @@ const ThreadPropertiesSP &Thread::GetGlobalProperties() {
 }
 
 #define LLDB_PROPERTIES_thread
-#include "Properties.inc"
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_thread
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 class ThreadOptionValueProperties : public OptionValueProperties {

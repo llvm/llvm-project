@@ -224,6 +224,12 @@ will need to:
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
 
+Logging
+=======
+
+The default log file for diagnostics is "stderr". To log diagnostics to another
+file, you can set ``UBSAN_OPTIONS=log_path=...``.
+
 Silencing Unsigned Integer Overflow
 ===================================
 To silence reports from unsigned integer overflow, you can set

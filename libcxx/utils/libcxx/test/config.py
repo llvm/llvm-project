@@ -657,19 +657,18 @@ class Configuration(object):
         # The __config_site header should be non-empty. Otherwise it should
         # have never been emitted by CMake.
         assert len(feature_macros) > 0
-        # FIXME: This is a hack that should be fixed using module maps (or something)
+        # FIXME: This is a hack that should be fixed using module maps.
         # If modules are enabled then we have to lift all of the definitions
         # in __config_site onto the command line.
-        modules_enabled = self.get_modules_enabled()
+        for m in feature_macros:
+            define = '-D%s' % m
+            if feature_macros[m]:
+                define += '=%s' % (feature_macros[m])
+            self.cxx.modules_flags += [define]
         self.cxx.compile_flags += ['-Wno-macro-redefined']
         # Transform each macro name into the feature name used in the tests.
         # Ex. _LIBCPP_HAS_NO_THREADS -> libcpp-has-no-threads
         for m in feature_macros:
-            if modules_enabled:
-                define = '-D%s' % m
-                if feature_macros[m]:
-                    define += '=%s' % (feature_macros[m])
-                self.cxx.compile_flags += [define]
             if m == '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS' or \
                m == '_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT':
                 continue
@@ -1014,7 +1013,7 @@ class Configuration(object):
         if os.path.isdir(module_cache):
             shutil.rmtree(module_cache)
         os.makedirs(module_cache)
-        self.cxx.modules_flags = modules_flags + \
+        self.cxx.modules_flags += modules_flags + \
             ['-fmodules-cache-path=' + module_cache]
         if enable_modules:
             self.config.available_features.add('-fmodules')

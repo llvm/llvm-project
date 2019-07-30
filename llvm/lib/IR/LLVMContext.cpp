@@ -36,34 +36,9 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   // Create the fixed metadata kinds. This is done in the same order as the
   // MD_* enum values so that they correspond.
   std::pair<unsigned, StringRef> MDKinds[] = {
-    {MD_dbg, "dbg"},
-    {MD_tbaa, "tbaa"},
-    {MD_prof, "prof"},
-    {MD_fpmath, "fpmath"},
-    {MD_range, "range"},
-    {MD_tbaa_struct, "tbaa.struct"},
-    {MD_invariant_load, "invariant.load"},
-    {MD_alias_scope, "alias.scope"},
-    {MD_noalias, "noalias"},
-    {MD_nontemporal, "nontemporal"},
-    {MD_mem_parallel_loop_access, "llvm.mem.parallel_loop_access"},
-    {MD_nonnull, "nonnull"},
-    {MD_dereferenceable, "dereferenceable"},
-    {MD_dereferenceable_or_null, "dereferenceable_or_null"},
-    {MD_make_implicit, "make.implicit"},
-    {MD_unpredictable, "unpredictable"},
-    {MD_invariant_group, "invariant.group"},
-    {MD_align, "align"},
-    {MD_loop, "llvm.loop"},
-    {MD_type, "type"},
-    {MD_section_prefix, "section_prefix"},
-    {MD_absolute_symbol, "absolute_symbol"},
-    {MD_associated, "associated"},
-    {MD_callees, "callees"},
-    {MD_irr_loop, "irr_loop"},
-    {MD_access_group, "llvm.access.group"},
-    {MD_callback, "callback"},
-    {MD_preserve_access_index, "llvm.preserve.access.index"},
+#define LLVM_FIXED_MD_KIND(EnumID, Name, Value) {EnumID, Name},
+#include "llvm/IR/FixedMetadataKinds.def"
+#undef LLVM_FIXED_MD_KIND
   };
 
   for (auto &MDKind : MDKinds) {

@@ -253,6 +253,7 @@ module LLVM_IR {
   textual header "IR/DebugInfoFlags.def"
   textual header "IR/Instruction.def"
   textual header "IR/Metadata.def"
+  textual header "IR/FixedMetadataKinds.def"
   textual header "IR/Value.def"
   textual header "IR/RuntimeLibcalls.def"
 }

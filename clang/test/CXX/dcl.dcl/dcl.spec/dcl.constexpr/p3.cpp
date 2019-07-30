@@ -157,11 +157,8 @@ constexpr int DisallowedStmtsCXX1Y_2_1() {
 constexpr int DisallowedStmtsCXX1Y_3() {
   //  - a try-block,
   try {} catch (...) {}
-#ifndef CXX2A
+#if !defined(CXX2A)
   // expected-error@-2 {{use of this statement in a constexpr function is a C++2a extension}}
-#ifndef CXX1Y
-  // expected-error@-4 {{use of this statement in a constexpr function is a C++14 extension}}
-#endif
 #endif
   return 0;
 }

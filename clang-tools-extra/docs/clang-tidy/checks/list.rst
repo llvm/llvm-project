@@ -153,6 +153,7 @@ Clang-Tidy Checks
    google-runtime-int
    google-runtime-operator
    google-runtime-references
+   google-upgrade-googletest-case
    hicpp-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <hicpp-avoid-c-arrays>
    hicpp-avoid-goto
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>

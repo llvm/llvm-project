@@ -105,11 +105,11 @@ void SetGlobalEnableOptions(const DebuggerSP &debugger_sp,
 /// Code to handle the StructuredDataDarwinLog settings
 
 #define LLDB_PROPERTIES_darwinlog
-#include "Properties.inc"
+#include "StructuredDataDarwinLogProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_darwinlog
-#include "PropertiesEnum.inc"
+#include "StructuredDataDarwinLogPropertiesEnum.inc"
 };
 
 class StructuredDataDarwinLogProperties : public Properties {
