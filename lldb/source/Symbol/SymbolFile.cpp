@@ -179,6 +179,7 @@ uint32_t SymbolFile::GetNumCompileUnits() {
 }
 
 CompUnitSP SymbolFile::GetCompileUnitAtIndex(uint32_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   uint32_t num = GetNumCompileUnits();
   if (idx >= num)
     return nullptr;
