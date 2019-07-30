@@ -713,10 +713,7 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
   };
 
   Publicist p;
-
-  for (swift::Decl *decl : m_source_file.Decls) {
-    decl->walk(p);
-  }
+  m_source_file.walk(p);
 }
 
 static bool hasInit(swift::PatternBindingDecl *pattern_binding) {
