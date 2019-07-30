@@ -179,6 +179,46 @@ TEST(FileCollectorTest, recordAndConstructDirectory) {
   ASSERT_TRUE(IsDirectory);
 }
 
+TEST(FileCollectorTest, recordVFSAccesses) {
+  ScopedDir file_root("dir_root", true);
+  ScopedDir subdir(file_root + "/subdir");
+  ScopedDir subdir2(file_root + "/subdir2");
+  ScopedFile a(subdir2 + "/a");
+  ScopedFile b(file_root + "/b");
+  ScopedDir subdir3(file_root + "/subdir3");
+  ScopedFile subdir3a(subdir3 + "/aa");
+  ScopedDir subdir3b(subdir3 + "/subdirb");
+  {
+    ScopedFile subdir3fileremoved(subdir3 + "/removed");
+  }
+
+  // Create file collector and add files.
+  ScopedDir root("copy_files_root", true);
+  std::string root_fs = root.Path.str();
+  auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
+  auto VFS =
+      FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);
+  VFS->status(a.Path);
+  EXPECT_TRUE(Collector->hasSeen(a.Path));
+
+  VFS->openFileForRead(b.Path);
+  EXPECT_TRUE(Collector->hasSeen(b.Path));
+
+  VFS->status(subdir.Path);
+  EXPECT_TRUE(Collector->hasSeen(subdir.Path));
+
+#ifndef _WIN32
+  std::error_code EC;
+  auto It = VFS->dir_begin(subdir3.Path, EC);
+  EXPECT_FALSE(EC);
+  EXPECT_TRUE(Collector->hasSeen(subdir3.Path));
+  EXPECT_TRUE(Collector->hasSeen(subdir3a.Path));
+  EXPECT_TRUE(Collector->hasSeen(subdir3b.Path));
+  std::string RemovedFileName = (Twine(subdir3.Path) + "/removed").str();
+  EXPECT_FALSE(Collector->hasSeen(RemovedFileName));
+#endif
+}
+
 #ifndef _WIN32
 TEST(FileCollectorTest, Symlinks) {
   // Root where the original files live.
@@ -238,5 +278,22 @@ TEST(FileCollectorTest, Symlinks) {
     printf("%s -> %s\n", vpath.c_str(), rpath.c_str());
     EXPECT_THAT(mapping, testing::Contains(vfs::YAMLVFSEntry(vpath, rpath)));
   }
+}
+
+TEST(FileCollectorTest, recordVFSSymlinkAccesses) {
+  ScopedDir file_root("dir_root", true);
+  ScopedFile a(file_root + "/a");
+  ScopedLink symlink(file_root + "/a", file_root + "/b");
+
+  // Create file collector and add files.
+  ScopedDir root("copy_files_root", true);
+  std::string root_fs = root.Path.str();
+  auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
+  auto VFS =
+      FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);
+  SmallString<256> Output;
+  VFS->getRealPath(symlink.Path, Output);
+  EXPECT_TRUE(Collector->hasSeen(a.Path));
+  EXPECT_TRUE(Collector->hasSeen(symlink.Path));
 }
 #endif

@@ -116,6 +116,7 @@ def _get_run_infos(run_lines, args):
       _warn('could not split tool and filecheck commands: {}'.format(run_line))
       continue
 
+    common.verify_filecheck_prefixes(filecheck_cmd)
     tool_basename = os.path.splitext(os.path.basename(args.llvm_mca_binary))[0]
 
     if not tool_cmd.startswith(tool_basename + ' '):

@@ -82,11 +82,18 @@ enum class LipoAction {
   VerifyArch,
   ThinArch,
   CreateUniversal,
+  ReplaceArch,
+};
+
+struct Replacement {
+  StringRef ArchType;
+  StringRef FileName;
 };
 
 struct Config {
   SmallVector<std::string, 1> InputFiles;
   SmallVector<std::string, 1> VerifyArchList;
+  SmallVector<Replacement, 1> Replacements;
   std::string ThinArchType;
   std::string OutputFile;
   LipoAction ActionToPerform;
@@ -158,7 +165,14 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
   SmallVector<opt::Arg *, 1> ActionArgs(InputArgs.filtered(LIPO_action_group));
   if (ActionArgs.empty())
     reportError("at least one action should be specified");
-  if (ActionArgs.size() > 1) {
+  // errors if multiple actions specified other than replace
+  // multiple replace flags may be specified, as long as they are not mixed with
+  // other action flags
+  auto ReplacementArgsRange = InputArgs.filtered(LIPO_replace);
+  if (ActionArgs.size() > 1 &&
+      ActionArgs.size() !=
+          static_cast<size_t>(std::distance(ReplacementArgsRange.begin(),
+                                            ReplacementArgsRange.end()))) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     OS << "only one of the following actions can be specified:";
@@ -204,6 +218,23 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     if (C.OutputFile.empty())
       reportError("create expects a single output file to be specified");
     C.ActionToPerform = LipoAction::CreateUniversal;
+    return C;
+
+  case LIPO_replace:
+    for (auto Action : ActionArgs) {
+      if (!Action->getValue(1))
+        reportError(
+            "replace is missing an argument: expects -replace arch_type "
+            "file_name");
+      C.Replacements.push_back(
+          Replacement{Action->getValue(0), Action->getValue(1)});
+    }
+
+    if (C.OutputFile.empty())
+      reportError("replace expects a single output file to be specified");
+    if (C.InputFiles.size() > 1)
+      reportError("replace expects a single input file");
+    C.ActionToPerform = LipoAction::ReplaceArch;
     return C;
 
   default:
@@ -557,6 +588,81 @@ static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
   exit(EXIT_SUCCESS);
 }
 
+static StringMap<Slice>
+buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
+                       ArrayRef<Replacement> Replacements) {
+  assert(ReplacementBinaries.size() == Replacements.size() &&
+         "Number of replacment binaries does not match the number of "
+         "replacements");
+  StringMap<Slice> Slices;
+  // populates StringMap of slices to replace with; error checks for mismatched
+  // replace flag args, fat files, and duplicate arch_types
+  for (size_t Index = 0, Size = Replacements.size(); Index < Size; ++Index) {
+    StringRef ReplacementArch = Replacements[Index].ArchType;
+    const Binary *ReplacementBinary = ReplacementBinaries[Index].getBinary();
+    validateArchitectureName(ReplacementArch);
+
+    auto O = dyn_cast<MachOObjectFile>(ReplacementBinary);
+    if (!O)
+      reportError("replacement file: " + ReplacementBinary->getFileName() +
+                  " is a fat file (must be a thin file)");
+
+    if (O->getArch() != Triple(ReplacementArch).getArch())
+      reportError("specified architecture: " + ReplacementArch +
+                  " for replacement file: " + ReplacementBinary->getFileName() +
+                  " does not match the file's architecture");
+
+    auto Entry =
+        Slices.try_emplace(ReplacementArch, Slice{O, calculateAlignment(O)});
+    if (!Entry.second)
+      reportError("-replace " + ReplacementArch +
+                  " <file_name> specified multiple times: " +
+                  Entry.first->second.ObjectFile->getFileName() + ", " +
+                  O->getFileName());
+  }
+  return Slices;
+}
+
+LLVM_ATTRIBUTE_NORETURN
+static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                          StringRef OutputFileName,
+                          ArrayRef<Replacement> Replacements) {
+  assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
+  assert(!OutputFileName.empty() && "Replace expects a single output file");
+
+  if (InputBinaries.front().getBinary()->isMachO())
+    reportError("input file " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " must be a fat file when the -replace option is specified");
+
+  SmallVector<std::string, 1> ReplacementFiles;
+  for (const auto &R : Replacements)
+    ReplacementFiles.push_back(R.FileName);
+  SmallVector<OwningBinary<Binary>, 1> ReplacementBinaries =
+      readInputBinaries(ReplacementFiles);
+
+  StringMap<Slice> ReplacementSlices =
+      buildReplacementSlices(ReplacementBinaries, Replacements);
+  SmallVector<std::unique_ptr<MachOObjectFile>, 2> ExtractedObjects;
+  SmallVector<Slice, 2> Slices = buildSlices(InputBinaries, ExtractedObjects);
+
+  for (auto &Slice : Slices) {
+    auto It = ReplacementSlices.find(getArchString(*Slice.ObjectFile));
+    if (It != ReplacementSlices.end()) {
+      Slice = It->second;
+      ReplacementSlices.erase(It); // only keep remaining replacing arch_types
+    }
+  }
+
+  if (!ReplacementSlices.empty())
+    reportError("-replace " + ReplacementSlices.begin()->first() +
+                " <file_name> specified but fat file: " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " does not contain that architecture");
+  createUniversalBinary(Slices, OutputFileName);
+  exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   Config C = parseLipoOptions(makeArrayRef(argv + 1, argc));
@@ -578,6 +684,9 @@ int main(int argc, char **argv) {
     break;
   case LipoAction::CreateUniversal:
     createUniversalBinary(InputBinaries, C.OutputFile);
+    break;
+  case LipoAction::ReplaceArch:
+    replaceSlices(InputBinaries, C.OutputFile, C.Replacements);
     break;
   }
   return EXIT_SUCCESS;

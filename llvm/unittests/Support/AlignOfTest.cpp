@@ -233,16 +233,5 @@ TEST(AlignOfTest, BasicAlignedArray) {
 #ifndef _MSC_VER
   EXPECT_EQ(sizeof(V8), sizeof(AlignedCharArrayUnion<V8>));
 #endif
-
-  EXPECT_EQ(1u, (alignof(AlignedCharArray<1, 1>)));
-  EXPECT_EQ(2u, (alignof(AlignedCharArray<2, 1>)));
-  EXPECT_EQ(4u, (alignof(AlignedCharArray<4, 1>)));
-  EXPECT_EQ(8u, (alignof(AlignedCharArray<8, 1>)));
-  EXPECT_EQ(16u, (alignof(AlignedCharArray<16, 1>)));
-
-  EXPECT_EQ(1u, sizeof(AlignedCharArray<1, 1>));
-  EXPECT_EQ(7u, sizeof(AlignedCharArray<1, 7>));
-  EXPECT_EQ(2u, sizeof(AlignedCharArray<2, 2>));
-  EXPECT_EQ(16u, sizeof(AlignedCharArray<2, 16>));
 }
 } // end anonymous namespace

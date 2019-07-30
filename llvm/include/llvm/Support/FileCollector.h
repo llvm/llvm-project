@@ -37,6 +37,12 @@ public:
   /// removed after it was added to the mapping.
   std::error_code copyFiles(bool StopOnError = true);
 
+  /// Create a VFS that collects all the paths that might be looked at by the
+  /// file system accesses.
+  static IntrusiveRefCntPtr<vfs::FileSystem>
+  createCollectorVFS(IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
+                     std::shared_ptr<FileCollector> Collector);
+
 private:
   void addFileImpl(StringRef SrcPath);
 

@@ -246,8 +246,10 @@ struct packed_endian_specific_integral {
   }
 
 private:
-  AlignedCharArray<PickAlignment<value_type, alignment>::value,
-                   sizeof(value_type)> Value;
+  struct {
+    alignas(PickAlignment<value_type,
+                          alignment>::value) char buffer[sizeof(value_type)];
+  } Value;
 
 public:
   struct ref {

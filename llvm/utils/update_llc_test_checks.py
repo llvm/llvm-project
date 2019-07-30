@@ -89,6 +89,7 @@ def main():
       filecheck_cmd = ''
       if len(commands) > 1:
         filecheck_cmd = commands[1]
+      common.verify_filecheck_prefixes(filecheck_cmd)
       if not llc_cmd.startswith('llc '):
         print('WARNING: Skipping non-llc RUN line: ' + l, file=sys.stderr)
         continue

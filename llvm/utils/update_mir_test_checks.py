@@ -122,6 +122,7 @@ def build_run_list(test, run_lines, verbose=False):
         commands = [cmd.strip() for cmd in l.split('|', 1)]
         llc_cmd = commands[0]
         filecheck_cmd = commands[1] if len(commands) > 1 else ''
+        common.verify_filecheck_prefixes(filecheck_cmd)
 
         if not llc_cmd.startswith('llc '):
             warn('Skipping non-llc RUN line: {}'.format(l), test_file=test)

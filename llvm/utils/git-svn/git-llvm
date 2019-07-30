@@ -397,7 +397,7 @@ def cmd_push(args):
     os.chdir(git_root)
 
     # Get the remote URL, and check if it's one of the standalone repos.
-    git_remote_url = git('remote', 'get-url', 'origin')
+    git_remote_url = git('ls-remote', '--get-url', 'origin')
     git_remote_url = git_remote_url.rstrip('.git').rstrip('/')
     git_remote_repo_name = git_remote_url.rsplit('/', 1)[-1]
     split_repo_path = SPLIT_REPO_NAMES.get(git_remote_repo_name)

@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fp-armv8 -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+soft-float -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SOFT
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fp-armv8 -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+soft-float -hardware-loops %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SOFT
 
 ; CHECK-LABEL: test_fptosi
 ; CHECK-SOFT-NOT: call void @llvm.set.loop.iterations
