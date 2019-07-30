@@ -5222,7 +5222,9 @@ bool SwiftASTContext::IsVoidType(void *type) {
 }
 
 bool SwiftASTContext::CanPassInRegisters(const CompilerType &type) {
-  abort();
+  // FIXME: Implement this. There was an abort() here to figure out which tests
+  // where hitting this code. At least TestSwiftReturns and TestSwiftStepping
+  // were failing because of this Darwin.
   return false;
 }
 
