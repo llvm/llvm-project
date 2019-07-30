@@ -4,7 +4,6 @@ from __future__ import absolute_import
 # System modules
 import argparse
 import sys
-import multiprocessing
 import os
 import textwrap
 
@@ -32,15 +31,6 @@ def parse_args(parser, argv):
             os.environ['LLDB_TEST_ARGUMENTS'].split()), namespace=args)
 
     return parser.parse_args(args=argv, namespace=args)
-
-
-def default_thread_count():
-    # Check if specified in the environment
-    num_threads_str = os.environ.get("LLDB_TEST_THREADS")
-    if num_threads_str:
-        return int(num_threads_str)
-    else:
-        return multiprocessing.cpu_count()
 
 
 def create_parser():
@@ -223,35 +213,6 @@ def create_parser():
         action='store_false',
         help='(Windows only) When LLDB crashes, display the Windows crash dialog.')
     group.set_defaults(disable_crash_dialog=True)
-
-    group = parser.add_argument_group('Parallel execution options')
-    group.add_argument(
-        '--inferior',
-        action='store_true',
-        help=('specify this invocation is a multiprocess inferior, '
-              'used internally'))
-    group.add_argument(
-        '--no-multiprocess',
-        action='store_true',
-        help='skip running the multiprocess test runner')
-    group.add_argument(
-        '--threads',
-        type=int,
-        dest='num_threads',
-        default=default_thread_count(),
-        help=('The number of threads/processes to use when running tests '
-              'separately, defaults to the number of CPU cores available'))
-    group.add_argument(
-        '--test-subdir',
-        action='store',
-        help='Specify a test subdirectory to use relative to the test root dir'
-    )
-    group.add_argument(
-        '--test-runner-name',
-        action='store',
-        help=('Specify a test runner strategy.  Valid values: multiprocessing,'
-              ' multiprocessing-pool, serial, threading, threading-pool')
-    )
 
     # Test results support.
     group = parser.add_argument_group('Test results options')
