@@ -78,22 +78,84 @@ macOS
 * If you are building both Clang and LLDB together, be sure to also check out
   libc++, which is a required for testing on macOS.
 
-Building LLDB with CMake & Ninja
---------------------------------
+Building LLDB with CMake
+------------------------
 
-CMake is a cross-platform build-generator tool. CMake does not build the
-project, it generates the files needed by your build tool. Assuming you're
-using Ninja, the invocation looks like this:
+The LLVM project is migrating to a single monolithic respository for LLVM and
+its subprojects. This is the recommended way to build LLDB. Check out the
+source-tree with git:
 
 ::
 
-  > cmake -G Ninja <cmake variables> <path to root of llvm source tree>
+  > git clone https://github.com/llvm/llvm-project.git
 
-Once CMake has configured your build, you can run ``ninja`` to build LLDB.
+CMake is a cross-platform build-generator tool. CMake does not build the
+project, it generates the files needed by your build tool. The recommended
+build tool for LLVM is Ninja, but other generators like Xcode or Visual Studio
+may be used as well. Please also read `Building LLVM with CMake
+<http://llvm.org/docs/CMake.html>`_.
+
+Regular in-tree builds
+**********************
+
+Create a new directory for your build-tree. From there run CMake and point it
+to the ``llvm`` directory in the source-tree:
+
+::
+
+  > cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
+
+We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
+subprojects to build in addition to LLVM (for more options see
+:ref:`CommonCMakeOptions` and :ref:`CMakeCaches`). Parts of the LLDB test suite
+require ``lld``. Add it to the list in order to run all tests. Once CMake is done,
+run ninja to perform the actual build. We pass ``lldb`` here as the target, so
+it only builds what is necessary to run the lldb driver:
 
 ::
 
   > ninja lldb
+
+Standalone builds
+*****************
+
+This is another way to build LLDB. We can use the same source-tree as we
+checked out above, but now we will have two build-trees:
+
+* the main build-tree for LLDB in ``/path/to/lldb-build``
+* a provided build-tree for LLVM and Clang in ``/path/to/llvm-build``
+
+Run CMake with ``-B`` pointing to a new directory for the provided build-tree
+and the positional argument pointing to the ``llvm`` directory in the
+source-tree. Note that we leave out LLDB here and only include Clang.
+Then we build the ``ALL`` target with ninja:
+
+::
+
+  > cmake -B /path/to/llvm-build -G Ninja \
+          -DLLVM_ENABLE_PROJECTS=clang \
+          [<more cmake options>] /path/to/llvm-project/llvm
+  > ninja
+
+Now run CMake a second time with ``-B`` pointing to a new directory for the
+main build-tree and the positional argument pointing to the ``lldb`` directory
+in the source-tree. In order to find the provided build-tree, the build-system
+needs the options ``LLVM_DIR`` and ``Clang_DIR`` (CMake variables are
+case-sensitive!):
+
+::
+
+  > cmake -B /path/to/lldb-build -G Ninja \
+          -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
+          -DClang_DIR=/path/to/llvm-build/lib/cmake/clang \
+          [<more cmake options>] /path/to/llvm-project/lldb
+  > ninja lldb
+
+
+.. _CommonCMakeOptions:
+
+Common CMake options
+********************
 
 Following is a description of some of the most important CMake variables which
 you are likely to encounter. A variable FOO is set by adding ``-DFOO=value`` to
@@ -128,7 +190,11 @@ It is strongly recommend to use a release build for the compiler to speed up
 test execution.
 
 Windows
-*******
+^^^^^^^
+
+On Windows the LLDB test suite requires lld. Either add ``lld`` to
+``LLVM_ENABLE_PROJECTS`` or disable the test suite with
+``LLDB_ENABLE_TESTS=OFF``.
 
 Although the following CMake variables are by no means Windows specific, they
 are commonly used on Windows.
@@ -161,8 +227,27 @@ Sample command line:
       -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
       <path to root of llvm source tree>
 
+
+Building with ninja is both faster and simpler than building with Visual Studio,
+but chances are you still want to debug LLDB with an IDE. One solution is to run
+cmake twice and generate the output into two different folders. One for
+compiling (the ninja folder), and one for editing, browsing and debugging.
+
+Follow the previous instructions in one directory, and generate a Visual Studio
+project in another directory.
+
+::
+
+  > cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+
+Then you can open the .sln file in Visual Studio, set lldb as the startup
+project, and use F5 to run it. You need only edit the project settings to set
+the executable and the working directory to point to binaries inside of the
+ninja tree.
+
+
 NetBSD
-******
+^^^^^^
 
 Current stable NetBSD release doesn't ship with libpanel(3), therefore it's
 required to disable curses(3) support with the
@@ -170,48 +255,71 @@ required to disable curses(3) support with the
 ``/usr/include/panel.h`` exists in your system.
 
 macOS
-*****
+^^^^^
 
-Here are some commonly used LLDB-specific CMake variables on macOS.
+On macOS the LLDB test suite requires libc++. Either add ``libcxx`` to
+``LLVM_ENABLE_PROJECTS`` or disable the test suite with
+``LLDB_ENABLE_TESTS=OFF``. Further useful options:
 
-* ``LLDB_BUILD_FRAMEWORK:BOOL`` : Builds the LLDB.framework.
-* ``LLDB_CODESIGN_IDENTITY:STRING`` : Determines the codesign identity to use.
-  An empty string means skip building debugserver to avoid codesigning.
-
-Building LLDB with CMake and Other Generators
----------------------------------------------
-
-Compiling with ninja is both faster and simpler than compiling with MSVC or
-Xcode, but chances are you still want to debug LLDB with those IDEs. One
-solution to this is to run cmake twice and generate the output into two
-different folders. One for compiling (the ninja folder), and one for editing,
-browsing and debugging.
+* ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
+* ``LLDB_CODESIGN_IDENTITY:STRING``: Set the identity to use for code-signing
+  all executables. If not explicitly specified, only ``debugserver`` will be
+  code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
+* ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
+  functional without setting up code-signing.
 
 
-Visual Studio
-*************
+.. _CMakeCaches:
 
-Follow the previous instructions in one directory, and generate a Visual Studio
-project in another directory.
+CMake caches
+************
 
-::
+CMake caches allow to store common sets of configuration options in the form of
+CMake scripts and can be useful to reproduce builds for particular use-cases
+(see by analogy `usage in LLVM and Clang <http://llvm.org/docs/AdvancedBuilds.html>`_).
+A cache is passed to CMake with the ``-C`` flag, following the absolute path to
+the file on disk. Subsequent ``-D`` options are still allowed. Please find the
+currently available caches in the `lldb/cmake/caches/
+<https://github.com/llvm/llvm-project/tree/master/lldb/cmake/caches>`_
+directory.
 
-  > cmake -G "Visual Studio 14 2015" <cmake variables> <path to root of llvm source tree>
+Common configurations on macOS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Then you can open the .sln file in Visual Studio, set lldb as the startup
-project, and use F5 to run it. You need only edit the project settings to set
-the executable and the working directory to point to binaries inside of the
-ninja tree.
-
-Xcode
-*****
-
-Follow the previous instructions in one directory, and generate an Xcode
-project in another directory.
+Build, test and install a distribution of LLDB from the `monorepo
+<https://github.com/llvm/llvm-project>`_ (see also `Building a Distribution of
+LLVM <http://llvm.org/docs/BuildingADistribution.html>`_):
 
 ::
 
-  > cmake -G Xcode <cmake variables> <path to root of llvm source tree>
+  > git clone https://github.com/llvm/llvm-project
+
+  > cmake -B /path/to/lldb-build -G Ninja \
+          -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
+          -DLLVM_ENABLE_PROJECTS="clang;libcxx;lldb" \
+          llvm-project/llvm
+
+  > DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
+
+Build LLDB standalone for development with Xcode:
+
+::
+
+  > git clone https://github.com/llvm/llvm-project
+
+  > cmake -B /path/to/llvm-build -G Ninja \
+          -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
+          -DLLVM_ENABLE_PROJECTS="clang;libcxx" \
+          llvm-project/llvm
+  > ninja -C /path/to/llvm-build
+
+  > cmake -B /path/to/lldb-build -G Xcode \
+          -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-Xcode.cmake \
+          -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
+          -DClang_DIR=/path/to/llvm-build/lib/cmake/clang \
+          llvm-project/lldb
+  > open lldb.xcodeproj
+  > cmake --build /path/to/lldb-build --target check-lldb
 
 
 Building The Documentation
@@ -233,7 +341,7 @@ do:
   > sudo apt-get install doxygen graphviz python3-sphinx
   > sudo pip install epydoc
 
-To build the documentation, build the desired target(s).
+To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
 ::
 
@@ -418,7 +526,7 @@ signing certificate.
 
 Note that it's possible to build and use lldb on macOS without setting up code
 signing by using the system's debug server. To configure lldb in this way with
-cmake, specify ``-DLLDB_CODESIGN_IDENTITY=''``.
+cmake, specify ``-DLLDB_USE_SYSTEM_DEBUGSERVER=ON``.
 
 If you have re-installed a new OS, please delete all old ``lldb_codesign`` items
 from your keychain. There will be a code signing certification and a public
