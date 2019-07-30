@@ -19,14 +19,11 @@
 #include <vector>
 
 using namespace llvm;
-
-/// Map of properties definitions to their associated records. Also makes sure
-/// our property definitions are sorted in a deterministic way.
-typedef std::map<std::string, std::vector<Record *>> RecordsByDefinition;
+using namespace lldb_private;
 
 /// Groups all properties by their definition.
-static RecordsByDefinition getPropertyList(std::vector<Record *> Properties) {
-  RecordsByDefinition result;
+static RecordsByName getPropertyList(std::vector<Record *> Properties) {
+  RecordsByName result;
   for (Record *Property : Properties)
     result[Property->getValueAsString("Definition").str()].push_back(Property);
   return result;

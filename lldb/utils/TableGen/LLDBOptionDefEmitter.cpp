@@ -20,14 +20,11 @@
 #include <vector>
 
 using namespace llvm;
-
-/// Map of command names to their associated records. Also makes sure our
-/// commands are sorted in a deterministic way.
-typedef std::map<std::string, std::vector<Record *>> RecordsByCommand;
+using namespace lldb_private;
 
 /// Groups all records by their command.
-static RecordsByCommand getCommandList(std::vector<Record *> Options) {
-  RecordsByCommand result;
+static RecordsByName getCommandList(std::vector<Record *> Options) {
+  RecordsByName result;
   for (Record *Option : Options)
     result[Option->getValueAsString("Command").str()].push_back(Option);
   return result;
@@ -187,14 +184,10 @@ static void emitOptions(std::string Command, std::vector<Record *> Records,
 }
 
 void lldb_private::EmitOptionDefs(RecordKeeper &Records, raw_ostream &OS) {
-
-  std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
-
   emitSourceFileHeader("Options for LLDB command line commands.", OS);
 
-  RecordsByCommand ByCommand = getCommandList(Options);
-
-  for (auto &CommandRecordPair : ByCommand) {
+  std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
+  for (auto &CommandRecordPair : getCommandList(Options)) {
     emitOptions(CommandRecordPair.first, CommandRecordPair.second, OS);
   }
 }
