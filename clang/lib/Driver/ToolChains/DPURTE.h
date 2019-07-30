@@ -29,7 +29,7 @@ public:
     PathToSyslibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/syslib");
     PathToLinkScript = GetUpmemSdkPath("/usr/share/upmem/include/link/dpu.lds");
     PathToRtLibDirectory = GetUpmemSdkPath("/usr/share/upmem/include/built-in");
-    RtLibName = Args.hasArg(options::OPT_pg) ? "rt" : "rt_p";
+    RtLibName = Args.hasArg(options::OPT_pg) ? "rt_p" : "rt";
     PathToRtLibBc =
         Args.hasArg(options::OPT_pg)
             ? GetUpmemSdkPath("/usr/share/upmem/include/built-in/librtlto_p.a")
