@@ -494,6 +494,7 @@ bool SwiftASTManipulator::RewriteResult() {
 
       // Don't step into function declarations, they may have returns, but we
       // don't want to instrument them.
+      case swift::DeclKind::Accessor:
       case swift::DeclKind::Func:
       case swift::DeclKind::Class:
       case swift::DeclKind::Struct:
