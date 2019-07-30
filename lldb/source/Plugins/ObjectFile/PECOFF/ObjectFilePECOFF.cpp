@@ -267,11 +267,10 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t file_offset,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
+      m_dos_header(), m_coff_header(), m_sect_headers(),
       m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
-  ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
@@ -279,11 +278,10 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
+      m_dos_header(), m_coff_header(), m_sect_headers(),
       m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
-  ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
 }
 
 ObjectFilePECOFF::~ObjectFilePECOFF() {}
