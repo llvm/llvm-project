@@ -31,7 +31,7 @@ add_custom_command(
 
 # Set the -D definitions for all sources
 # UNICODE and _UNICODE are set in LLVM's CMake system.  They affect the
-# ittnotify code and should only be set when compiling ittnotify_static.c
+# ittnotify code and should only be set when compiling ittnotify_static.cpp
 # on Windows (done below).
 # TODO: Fix the UNICODE usage in ittnotify code for Windows.
 remove_definitions(-DUNICODE -D_UNICODE)
@@ -51,11 +51,10 @@ if(${LIBOMP_USE_HWLOC})
 endif()
 
 # Getting correct source files to build library
-set(LIBOMP_CFILES)
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
-if(${STUBS_LIBRARY})
-  set(LIBOMP_CFILES kmp_stub.cpp)
+if(STUBS_LIBRARY)
+  set(LIBOMP_CXXFILES kmp_stub.cpp)
 else()
   # Get C++ files
   set(LIBOMP_CXXFILES
@@ -93,7 +92,7 @@ else()
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
     libomp_append(LIBOMP_ASMFILES z_Linux_asm.S) # Unix assembly file
   endif()
-  libomp_append(LIBOMP_CFILES thirdparty/ittnotify/ittnotify_static.c LIBOMP_USE_ITT_NOTIFY)
+  libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
   libomp_append(LIBOMP_CXXFILES kmp_stats.cpp LIBOMP_STATS)
   libomp_append(LIBOMP_CXXFILES kmp_stats_timing.cpp LIBOMP_STATS)
@@ -107,16 +106,14 @@ libomp_append(LIBOMP_CXXFILES kmp_version.cpp)
 libomp_append(LIBOMP_CXXFILES ompt-general.cpp IF_TRUE LIBOMP_OMPT_SUPPORT)
 libomp_append(LIBOMP_CXXFILES tsan_annotations.cpp IF_TRUE LIBOMP_TSAN_SUPPORT)
 
-set(LIBOMP_SOURCE_FILES ${LIBOMP_CFILES} ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
+set(LIBOMP_SOURCE_FILES ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
 # For Windows, there is a resource file (.rc -> .res) that is also compiled
 libomp_append(LIBOMP_SOURCE_FILES libomp.rc WIN32)
 
 # Get compiler and assembler flags
-libomp_get_cflags(LIBOMP_CONFIGURED_CFLAGS)
 libomp_get_cxxflags(LIBOMP_CONFIGURED_CXXFLAGS)
 libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 # Set the compiler flags for each type of source
-set_source_files_properties(${LIBOMP_CFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CFLAGS}")
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 # Let the compiler handle the assembly files on Unix-like systems
@@ -191,12 +188,12 @@ if(WIN32)
   libomp_append(LIBOMP_MASM_DEFINITIONS "-DOMPT_SUPPORT" IF_TRUE_1_0 LIBOMP_OMPT_SUPPORT)
   libomp_list_to_string("${LIBOMP_MASM_DEFINITIONS}" LIBOMP_MASM_DEFINITIONS)
   set_property(SOURCE z_Windows_NT-586_asm.asm APPEND_STRING PROPERTY COMPILE_FLAGS " ${LIBOMP_MASM_DEFINITIONS}")
-  set_source_files_properties(thirdparty/ittnotify/ittnotify_static.c PROPERTIES COMPILE_DEFINITIONS "UNICODE")
+  set_source_files_properties(thirdparty/ittnotify/ittnotify_static.cpp PROPERTIES COMPILE_DEFINITIONS "UNICODE")
 
   # Create Windows import library
   # the import library is "re-linked" to include kmp_import.cpp which prevents
   # linking of both Visual Studio OpenMP and newly built OpenMP
-  set_source_files_properties(kmp_import.cpp PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CFLAGS}")
+  set_source_files_properties(kmp_import.cpp PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
   set(LIBOMP_IMP_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
   set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_LIB_FILE}${CMAKE_STATIC_LIBRARY_SUFFIX})
   set_target_properties(omp PROPERTIES

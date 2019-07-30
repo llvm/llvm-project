@@ -221,9 +221,6 @@ These flags are **appended**, they do not overwrite any of the preset flags.
 **LIBOMP_CPPFLAGS** = <space-separated flags>
   Additional C preprocessor flags.
 
-**LIBOMP_CFLAGS** = <space-separated flags>
-  Additional C compiler flags.
-
 **LIBOMP_CXXFLAGS** = <space-separated flags>
   Additional C++ compiler flags.
 
@@ -321,12 +318,12 @@ Advanced Builds with Various Options
 
     $ cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort -DLIBOMP_FORTRAN_MODULES=on ..
 
-- Have CMake find the C/C++ compiler and specify additional flags for the C
-  compiler, preprocessor, and C++ compiler.
+- Have CMake find the C/C++ compiler and specify additional flags for the
+  preprocessor and C++ compiler.
 
   .. code-blocks:: console
 
-    $ cmake -DLIBOMP_CFLAGS='-specific-flag' -DLIBOMP_CPPFLAGS='-DNEW_FEATURE=1 -DOLD_FEATURE=0' -DLIBOMP_CXXFLAGS='--one-specific-flag --two-specific-flag' ..
+    $ cmake -DLIBOMP_CPPFLAGS='-DNEW_FEATURE=1 -DOLD_FEATURE=0' -DLIBOMP_CXXFLAGS='--one-specific-flag --two-specific-flag' ..
 
 - Build the stubs library
 
