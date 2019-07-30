@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL2.0 -DSYNTAX
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=c++ -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=clc++ -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -fblocks -DBLOCKS -DSYNTAX

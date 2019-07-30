@@ -2776,7 +2776,7 @@ restrictions from OpenCL C v2.0 will inherently apply. All OpenCL C builtin type
 and function libraries are supported and can be used in the new mode.
 
 To enable the new mode pass the following command line option when compiling ``.cl``
-file ``-cl-std=c++`` or ``-std=c++``.
+file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or ``-std=CLC++``.
 
    .. code-block:: c++
 
@@ -2794,7 +2794,7 @@ file ``-cl-std=c++`` or ``-std=c++``.
 
    .. code-block:: console
 
-     clang -cl-std=c++ test.cl
+     clang -cl-std=clc++ test.cl
 
 .. _target_features:
 
