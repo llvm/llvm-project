@@ -1063,47 +1063,13 @@ public:
 
   PathMappingList &GetImageSearchPathList();
 
-#ifdef __clang_analyzer__
-  // This enables an analyzer warning for unchecked use of the TypeSystem *
-  // returned by this call.
-  // It tells the analyzer that the return value is something that has been
-  // null-checked once.
-  // The analyzer will then assume that it must be null-checked at every use,
-  // which is what we want.
-  TypeSystem *GetScratchTypeSystemForLanguage(
-      Status *error, lldb::LanguageType language, bool create_on_demand = true,
-      const char *compiler_options = nullptr) __attribute__((always_inline)) {
-    TypeSystem *ret =
-        GetScratchTypeSystemForLanguageImpl(error, language, create_on_demand);
-    return ret ? ret : nullptr;
-  }
-
-  TypeSystem *GetScratchTypeSystemForLanguageImpl(
-      Status *error, lldb::LanguageType language, bool create_on_demand = true,
-      const char *compiler_options = nullptr);
-#else
   TypeSystem *
   GetScratchTypeSystemForLanguage(Status *error, lldb::LanguageType language,
                                   bool create_on_demand = true,
                                   const char *compiler_options = nullptr);
-#endif
 
-#ifdef __clang_analyzer__
-  // See GetScratchTypeSystemForLanguage
-  PersistentExpressionState *
-  GetPersistentExpressionStateForLanguage(lldb::LanguageType language)
-      __attribute__((always_inline)) {
-    PersistentExpressionState *ret =
-        GetPersistentExpressionStateForLanguageImpl(language);
-    return ret ? ret : nullptr;
-  }
-
-  PersistentExpressionState *
-  GetPersistentExpressionStateForLanguageImpl(lldb::LanguageType language);
-#else
   PersistentExpressionState *
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
-#endif
 
   SwiftPersistentExpressionState *
   GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope);

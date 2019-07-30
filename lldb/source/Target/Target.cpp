@@ -2155,16 +2155,9 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
     target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h
-TypeSystem *Target::GetScratchTypeSystemForLanguageImpl(
-    Status *error, lldb::LanguageType language, bool create_on_demand,
-    const char *compiler_options)
-#else
 TypeSystem *Target::GetScratchTypeSystemForLanguage(
     Status *error, lldb::LanguageType language, bool create_on_demand,
     const char *compiler_options)
-#endif
 {
   if (!m_valid)
     return nullptr;
@@ -2278,14 +2271,8 @@ const TypeSystemMap &Target::GetTypeSystemMap() {
   return m_scratch_type_system_map;
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h
-PersistentExpressionState *
-Target::GetPersistentExpressionStateForLanguageImpl(lldb::LanguageType language)
-#else
 PersistentExpressionState *
 Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language)
-#endif
 {
   TypeSystem *type_system =
       GetScratchTypeSystemForLanguage(nullptr, language, true);
@@ -2398,12 +2385,7 @@ Target::GetUtilityFunctionForLanguage(const char *text,
   return utility_fn;
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h
-ClangASTContext *Target::GetScratchClangASTContextImpl(bool create_on_demand)
-#else
 ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand)
-#endif
 {
   if (m_valid) {
     if (TypeSystem *type_system = GetScratchTypeSystemForLanguage(
