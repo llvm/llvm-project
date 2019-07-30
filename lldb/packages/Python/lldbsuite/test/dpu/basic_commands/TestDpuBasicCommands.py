@@ -55,7 +55,6 @@ class BasicCommandsTestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.GetLineEntry().GetLine() == self.main_first_line)
         self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 0)
-        self.assertTrue(frame0.FindVariable('ret').GetValueAsUnsigned() == 0)
         argv = frame0.FindVariable('argv').GetValueAsUnsigned()
 
         process.Continue()
@@ -63,8 +62,8 @@ class BasicCommandsTestCase(TestBase):
         self.assertTrue(frame0.GetLineEntry().GetLine() == self.fct1_call_line)
         self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 1)
         self.assertTrue(frame0.FindVariable('argv').GetValueAsUnsigned() == argv)
-        self.assertTrue(frame0.FindVariable('ret').GetValueAsUnsigned() == 0)
 
+        # step-inst
         while not re.search("->.*: call", frame0.Disassemble()) :
             thread.StepInstruction(False)
             frame0 = thread.GetFrameAtIndex(0)
@@ -72,16 +71,16 @@ class BasicCommandsTestCase(TestBase):
         self.assertTrue(frame0.GetFunction().GetName() == "main")
         self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 1)
         self.assertTrue(frame0.FindVariable('argv').GetValueAsUnsigned() == argv)
-        self.assertTrue(frame0.FindVariable('ret').GetValueAsUnsigned() == 0)
 
+        # step-inst
         thread.StepInstruction(False)
         self.assertTrue(thread.GetNumFrames() == 3)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "main")
         self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc').GetValueAsUnsigned() == 1)
         self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv').GetValueAsUnsigned() == argv)
-        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('ret').GetValueAsUnsigned() == 0)
 
+        # step-over
         frame0 = thread.GetFrameAtIndex(0)
         while frame0.GetLineEntry().GetLine() != self.step_1_line :
             thread.StepOver()
@@ -91,38 +90,50 @@ class BasicCommandsTestCase(TestBase):
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(0).FindVariable('val').GetValueAsUnsigned() == 66)
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "main")
-        # self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc').GetValueAsUnsigned() == 1)
-        # self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv').GetValueAsUnsigned() == argv)
-        # self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('ret').GetValueAsUnsigned() == 0)
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-into
         thread.StepInto()
         self.assertTrue(thread.GetNumFrames() == 4)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct2")
+        self.assertTrue(thread.GetFrameAtIndex(0).FindVariable('val').GetValueAsUnsigned() == 66)
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(2).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argv').GetValueAsUnsigned() == argv)
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.GetLineEntry().GetLine() == self.step_in_entry_line)
 
+        # step-over-inst
         while frame0.GetLineEntry().GetLine() != self.step_2_line :
             thread.StepInstruction(True)
             frame0 = thread.GetFrameAtIndex(0)
             self.assertTrue(thread.GetNumFrames() == 4)
 
+        # step-inst
         while not re.search("->.*: call", frame0.Disassemble()) :
             thread.StepInstruction(False)
             frame0 = thread.GetFrameAtIndex(0)
 
         self.assertTrue(thread.GetNumFrames() == 4)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct2")
+        self.assertTrue(thread.GetFrameAtIndex(0).FindVariable('val').GetValueAsUnsigned() == 142)
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(2).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argv').GetValueAsUnsigned() == argv)
+        # step-inst
         thread.StepInstruction(False)
         self.assertTrue(thread.GetNumFrames() == 5)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct3")
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "fct2")
         self.assertTrue(thread.GetFrameAtIndex(2).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(3).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(3).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(3).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-inst
         frame0 = thread.GetFrameAtIndex(0)
         while not re.search("->.*: jump.*r23", frame0.Disassemble()) :
             thread.StepInstruction(False)
@@ -132,18 +143,27 @@ class BasicCommandsTestCase(TestBase):
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "fct2")
         self.assertTrue(thread.GetFrameAtIndex(2).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(3).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(3).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(3).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-out
         thread.StepOut()
         self.assertTrue(thread.GetNumFrames() == 4)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct2")
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(2).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(2).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-out
         thread.StepOut()
         self.assertTrue(thread.GetNumFrames() == 3)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-inst
         frame0 = thread.GetFrameAtIndex(0)
         while not re.search("->.*: jump.*r23", frame0.Disassemble()) :
             thread.StepInstruction(False)
@@ -151,11 +171,18 @@ class BasicCommandsTestCase(TestBase):
         self.assertTrue(thread.GetNumFrames() == 3)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "fct1")
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+        # step-inst
         thread.StepInstruction(False)
         self.assertTrue(thread.GetNumFrames() == 2)
         self.assertTrue(thread.GetFrameAtIndex(0).GetFunction().GetName() == "main")
+        self.assertTrue(thread.GetFrameAtIndex(0).FindVariable('argc').GetValueAsUnsigned() == 1)
+        self.assertTrue(thread.GetFrameAtIndex(0).FindVariable('argv').GetValueAsUnsigned() == argv)
 
+
+        # step-out
         thread.StepOut()
         self.assertTrue(thread.GetNumFrames() == 1)
 

@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-int fct3(int val) {
+__attribute__((noinline)) int fct3(int val) {
   val += 2;
   val *= 2;
   return val;
 }
 
-int fct2(int val) {
+__attribute__((noinline)) int fct2(int val) {
   val += 3; // StepIn entry location
   val = fct3(val);
   val = fct3(val); // Step location 2
@@ -21,7 +21,7 @@ int fct2(int val) {
   return val;
 }
 
-int fct1(int val) {
+__attribute__((noinline)) int fct1(int val) {
   val++;
   val = fct2(val);
   val *= 2;
@@ -30,7 +30,7 @@ int fct1(int val) {
   return val;
 }
 
-int main(int argc, char const *argv[]) {
+__attribute__((noinline)) int main(int argc, char const *argv[]) {
   argc++; // Breakpoint location 1
   int ret = fct1(argc); // Breakpoint location 2
 
