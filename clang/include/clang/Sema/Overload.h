@@ -881,7 +881,7 @@ class Sema;
     constexpr static unsigned NumInlineBytes =
         24 * sizeof(ImplicitConversionSequence);
     unsigned NumInlineBytesUsed = 0;
-    llvm::AlignedCharArray<alignof(void *), NumInlineBytes> InlineSpace;
+    alignas(void *) char InlineSpace[NumInlineBytes];
 
     // Address space of the object being constructed.
     LangAS DestAS = LangAS::Default;
@@ -904,7 +904,7 @@ class Sema;
       unsigned NBytes = sizeof(T) * N;
       if (NBytes > NumInlineBytes - NumInlineBytesUsed)
         return SlabAllocator.Allocate<T>(N);
-      char *FreeSpaceStart = InlineSpace.buffer + NumInlineBytesUsed;
+      char *FreeSpaceStart = InlineSpace + NumInlineBytesUsed;
       assert(uintptr_t(FreeSpaceStart) % alignof(void *) == 0 &&
              "Misaligned storage!");
 

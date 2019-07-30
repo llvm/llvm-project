@@ -1776,10 +1776,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
       !Class->getDeclContext()->isDependentContext()) {
-    TentativeAnalysisScope DiagnosticScopeGuard(*this);
     CallOperator->setConstexprKind(
-        (CheckConstexprFunctionDecl(CallOperator) &&
-         CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()))
+        CheckConstexprFunctionDefinition(CallOperator,
+                                         CheckConstexprKind::CheckValid)
             ? CSK_constexpr
             : CSK_unspecified);
   }

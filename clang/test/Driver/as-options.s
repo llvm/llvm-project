@@ -74,12 +74,13 @@
 // -Wa flags shouldn't cause warnings without an assembler stage with
 // -fno-integrated-as either.
 // RUN: %clang -Wa,-mno-warn-deprecated -fno-integrated-as -x c++ %s -S 2>&1 \
+// RUN:   -o /dev/null \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 
 // But -m flags for the integrated assembler _should_ warn if the integrated
 // assembler is not in use.
-// RUN: %clang -mrelax-all -fintegrated-as -x c++ %s -S 2>&1 \
+// RUN: %clang -mrelax-all -fintegrated-as -x c++ %s -S -o /dev/null 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mrelax-all -fno-integrated-as -x c++ %s -S 2>&1 \
+// RUN: %clang -mrelax-all -fno-integrated-as -x c++ %s -S -o /dev/null 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 // WARN: unused

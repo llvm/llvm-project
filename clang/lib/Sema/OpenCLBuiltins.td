@@ -30,14 +30,14 @@ def CL20: Version<200>;
 // Address spaces
 // Pointer types need to be assigned an address space.
 class AddressSpace<string _AS> {
-  string AddrSpace = _AS;
+  string Name = _AS;
 }
-def default_as    : AddressSpace<"clang::LangAS::Default">;
-def private_as    : AddressSpace<"clang::LangAS::opencl_private">;
-def global_as     : AddressSpace<"clang::LangAS::opencl_global">;
-def constant_as   : AddressSpace<"clang::LangAS::opencl_constant">;
-def local_as      : AddressSpace<"clang::LangAS::opencl_local">;
-def generic_as    : AddressSpace<"clang::LangAS::opencl_generic">;
+def DefaultAS    : AddressSpace<"clang::LangAS::Default">;
+def PrivateAS    : AddressSpace<"clang::LangAS::opencl_private">;
+def GlobalAS     : AddressSpace<"clang::LangAS::opencl_global">;
+def ConstantAS   : AddressSpace<"clang::LangAS::opencl_constant">;
+def LocalAS      : AddressSpace<"clang::LangAS::opencl_local">;
+def GenericAS    : AddressSpace<"clang::LangAS::opencl_generic">;
 
 
 // Qualified Type. Allow to retrieve one ASTContext QualType.
@@ -79,10 +79,10 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
 }
 
 // OpenCL pointer types (e.g. int*, float*, ...)
-class PointerType<Type _Ty, AddressSpace _AS = global_as> :
+class PointerType<Type _Ty, AddressSpace _AS = GlobalAS> :
                                       Type<_Ty.Name, _Ty.QTName> {
   bit IsPointer = 1;
-  string AddrSpace = _AS.AddrSpace;
+  string AddrSpace = _AS.Name;
 }
 
 // OpenCL image types (e.g. image2d_t, ...)
@@ -156,37 +156,37 @@ multiclass Bif3<string _Name, list<Type> _Signature, list<bit> _IsVector> {
 //                 Definitions of OpenCL C types
 //===----------------------------------------------------------------------===//
 // OpenCL v1.2 s6.1.1: Built-in Scalar Data Types
-def bool_t      : Type<"bool", QualType<"BoolTy">>;
-def char_t      : Type<"char", QualType<"CharTy">>;
-def uchar_t     : Type<"uchar", QualType<"UnsignedCharTy">>;
-def short_t     : Type<"short", QualType<"ShortTy">>;
-def ushort_t    : Type<"ushort", QualType<"UnsignedShortTy">>;
-def int_t       : Type<"int", QualType<"IntTy">>;
-def uint_t      : Type<"uint", QualType<"UnsignedIntTy">>;
-def long_t      : Type<"long", QualType<"LongTy">>;
-def ulong_t     : Type<"ulong", QualType<"UnsignedLongTy">>;
-def float_t     : Type<"float", QualType<"FloatTy">>;
-def double_t    : Type<"double", QualType<"DoubleTy">>;
-def half_t      : Type<"half", QualType<"HalfTy">>;
-def size_t      : Type<"size_t",  QualType<"getSizeType()">>;
-def ptrdiff_t   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
-def intptr_t    : Type<"intptr_t", QualType<"getIntPtrType()">>;
-def uintptr_t   : Type<"uintptr_t", QualType<"getUIntPtrType()">>;
-def void_t      : Type<"void", QualType<"VoidTy">>;
+def Bool      : Type<"bool",      QualType<"BoolTy">>;
+def Char      : Type<"char",      QualType<"CharTy">>;
+def UChar     : Type<"uchar",     QualType<"UnsignedCharTy">>;
+def Short     : Type<"short",     QualType<"ShortTy">>;
+def UShort    : Type<"ushort",    QualType<"UnsignedShortTy">>;
+def Int       : Type<"int",       QualType<"IntTy">>;
+def UInt      : Type<"uint",      QualType<"UnsignedIntTy">>;
+def Long      : Type<"long",      QualType<"LongTy">>;
+def ULong     : Type<"ulong",     QualType<"UnsignedLongTy">>;
+def Float     : Type<"float",     QualType<"FloatTy">>;
+def Double    : Type<"double",    QualType<"DoubleTy">>;
+def Half      : Type<"half",      QualType<"HalfTy">>;
+def Size      : Type<"size_t",    QualType<"getSizeType()">>;
+def PtrDiff   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
+def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
+def UIntPtr   : Type<"uintPtr_t", QualType<"getUIntPtrType()">>;
+def Void      : Type<"void_t",    QualType<"VoidTy">>;
 
 // OpenCL v1.2 s6.1.2: Built-in Vector Data Types
 foreach v = [2, 3, 4, 8, 16] in {
-  def char#v#_t    : VectorType<char_t, v>;
-  def uchar#v#_t   : VectorType<uchar_t, v>;
-  def short#v#_t   : VectorType<short_t, v>;
-  def ushort#v#_t  : VectorType<ushort_t, v>;
-  def "int"#v#_t   : VectorType<int_t, v>;
-  def uint#v#_t    : VectorType<uint_t, v>;
-  def long#v#_t    : VectorType<long_t, v>;
-  def ulong#v#_t   : VectorType<ulong_t, v>;
-  def float#v#_t   : VectorType<float_t, v>;
-  def double#v#_t  : VectorType<double_t, v>;
-  def half#v#_t    : VectorType<half_t, v>;
+  def char#v#_t    : VectorType<Char, v>;
+  def uchar#v#_t   : VectorType<UChar, v>;
+  def short#v#_t   : VectorType<Short, v>;
+  def ushort#v#_t  : VectorType<UShort, v>;
+  def "int"#v#_t   : VectorType<Int, v>;
+  def uint#v#_t    : VectorType<UInt, v>;
+  def long#v#_t    : VectorType<Long, v>;
+  def ulong#v#_t   : VectorType<ULong, v>;
+  def float#v#_t   : VectorType<Float, v>;
+  def double#v#_t  : VectorType<Double, v>;
+  def half#v#_t    : VectorType<Half, v>;
 }
 
 // OpenCL v1.2 s6.1.3: Other Built-in Data Types
@@ -221,23 +221,26 @@ foreach v = ["RO", "WO", "RW"] in {
                                       v>;
 }
 
-def sampler_t         : Type<"sampler_t", QualType<"OCLSamplerTy">>;
-def event_t           : Type<"event_t", QualType<"OCLEventTy">>;
+def Sampler           : Type<"Sampler", QualType<"OCLSamplerTy">>;
+def Event             : Type<"Event", QualType<"OCLEventTy">>;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL builtin functions
 //===----------------------------------------------------------------------===//
-// OpenCL v1.2 s6.2.3: Explicit Conversions
-// Generate the convert_ builtins.
-foreach RType = [float_t, double_t, char_t, uchar_t, short_t, ushort_t,
-                int_t, uint_t, long_t, ulong_t] in {
-  foreach IType = [float_t, double_t, char_t, uchar_t, short_t, ushort_t,
-                   int_t, uint_t, long_t, ulong_t] in {
+//--------------------------------------------------------------------
+// OpenCL v1.1/1.2/2.0 s6.2.3 - Explicit conversions.
+// OpenCL v2.0 Extensions s5.1.1 and s6.1.1 - Conversions.
+
+// Generate the convert_* builtins functions.
+foreach RType = [Float, Double, Half, Char, UChar, Short,
+                 UShort, Int, UInt, Long, ULong] in {
+  foreach IType = [Float, Double, Half, Char, UChar, Short,
+                   UShort, Int, UInt, Long, ULong] in {
     foreach sat = ["", "_sat"] in {
-      foreach rte = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-        def : Builtin<"convert_"  # RType.Name # sat # rte, [RType, IType]>;
+      foreach rnd = ["", "_rte", "_rtn", "_rtp", "_rtz"] in {
+        def : Builtin<"convert_" # RType.Name # sat # rnd, [RType, IType]>;
         foreach v = [2, 3, 4, 8, 16] in {
-          def : Builtin<"convert_" # RType.Name # v # sat # rte,
+          def : Builtin<"convert_" # RType.Name # v # sat # rnd,
                         [VectorType<RType, v>,
                          VectorType<IType, v>]>;
         }
@@ -247,30 +250,30 @@ foreach RType = [float_t, double_t, char_t, uchar_t, short_t, ushort_t,
 }
 
 // OpenCL v1.2 s6.12.1: Work-Item Functions
-def get_work_dim : Builtin<"get_work_dim", [uint_t]>;
+def get_work_dim : Builtin<"get_work_dim", [UInt]>;
 foreach name = ["get_global_size", "get_global_id", "get_local_size",
                 "get_local_id", "get_num_groups", "get_group_id",
                 "get_global_offset"] in {
-  def : Builtin<name, [size_t, uint_t]>;
+  def : Builtin<name, [Size, UInt]>;
 }
 
 // OpenCL v1.2 s6.12.2: Math Functions
 foreach name = ["acos", "acosh", "acospi",
                 "asin", "asinh", "asinpi",
                 "atan", "atanh", "atanpi"] in {
-  foreach type = [float_t, double_t, half_t] in {
+  foreach type = [Float, Double, Half] in {
     defm : Bif1<name, [type, type], [1, 1]>;
   }
 }
 
 foreach name = ["atan2", "atan2pi"] in {
-  foreach type = [float_t, double_t, half_t] in {
+  foreach type = [Float, Double, Half] in {
     defm : Bif2<name, [type, type, type], [1, 1, 1]>;
   }
 }
 
 foreach name = ["fmax", "fmin"] in {
-  foreach type = [float_t, double_t, half_t] in {
+  foreach type = [Float, Double, Half] in {
     defm : Bif2<name, [type, type, type], [1, 1, 1]>;
     defm : Bif2<name, [type, type, type], [1, 1, 0]>;
   }
@@ -278,19 +281,19 @@ foreach name = ["fmax", "fmin"] in {
 
 // OpenCL v1.2 s6.12.14: Built-in Image Read Functions
 def read_imagef : Builtin<"read_imagef",
-                          [float4_t, image2d_RO_t, VectorType<int_t, 2>]>;
+                          [float4_t, image2d_RO_t, VectorType<Int, 2>]>;
 def write_imagef : Builtin<"write_imagef",
-                           [void_t,
+                           [Void,
                             image2d_WO_t,
-                            VectorType<int_t, 2>,
-                            VectorType<float_t, 4>]>;
+                            VectorType<Int, 2>,
+                            VectorType<Float, 4>]>;
 
 
 // OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
 let Version = CL20 in {
   let Extension = "cl_khr_subgroups" in {
-    def get_sub_group_size : Builtin<"get_sub_group_size", [uint_t]>;
-    def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [uint_t]>;
-    def get_num_sub_groups : Builtin<"get_num_sub_groups", [uint_t]>;
+    def get_sub_group_size : Builtin<"get_sub_group_size", [UInt]>;
+    def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [UInt]>;
+    def get_num_sub_groups : Builtin<"get_num_sub_groups", [UInt]>;
   }
 }
