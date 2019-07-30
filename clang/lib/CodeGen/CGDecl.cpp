@@ -2496,10 +2496,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   setAddrOfLocalVar(&D, DeclPtr);
 
-  // Emit debug info for param declaration.
+  // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().getDebugInfo() >=
-        codegenoptions::LimitedDebugInfo) {
+            codegenoptions::LimitedDebugInfo &&
+        !CurFuncIsThunk) {
       DI->EmitDeclareOfArgVariable(&D, DeclPtr.getPointer(), ArgNo, Builder);
     }
   }

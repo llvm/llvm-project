@@ -13,6 +13,7 @@ executable("clang-tidy") {
     "//clang-tools-extra/clang-tidy/fuchsia",
     "//clang-tools-extra/clang-tidy/google",
     "//clang-tools-extra/clang-tidy/hicpp",
+    "//clang-tools-extra/clang-tidy/linuxkernel",
     "//clang-tools-extra/clang-tidy/llvm",
     "//clang-tools-extra/clang-tidy/misc",
     "//clang-tools-extra/clang-tidy/modernize",

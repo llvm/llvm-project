@@ -51,7 +51,7 @@ void TypeLocBuilder::grow(size_t NewCapacity) {
          &Buffer[Index],
          Capacity - Index);
 
-  if (Buffer != InlineBuffer.buffer)
+  if (Buffer != InlineBuffer)
     delete[] Buffer;
 
   Buffer = NewBuffer;

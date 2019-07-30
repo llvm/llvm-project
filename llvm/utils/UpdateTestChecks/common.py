@@ -47,6 +47,7 @@ def invoke_tool(exe, cmd_args, ir):
 
 RUN_LINE_RE = re.compile('^\s*[;#]\s*RUN:\s*(.*)$')
 CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?[= ](\S+)')
+PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
 CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 OPT_FUNCTION_RE = re.compile(
@@ -264,3 +265,27 @@ def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict, func_nam
 def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
   check_label_format = '{} %s-LABEL: \'%s\''.format(comment_marker)
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False, True)
+
+
+def check_prefix(prefix):
+  if not PREFIX_RE.match(prefix):
+        hint = ""
+        if ',' in prefix:
+          hint = " Did you mean '--check-prefixes=" + prefix + "'?"
+        print(("WARNING: Supplied prefix '%s' is invalid. Prefix must contain only alphanumeric characters, hyphens and underscores." + hint) %
+              (prefix), file=sys.stderr)
+
+
+def verify_filecheck_prefixes(fc_cmd):
+  fc_cmd_parts = fc_cmd.split()
+  for part in fc_cmd_parts:
+    if "check-prefix=" in part:
+      prefix = part.split('=', 1)[1]
+      check_prefix(prefix)
+    elif "check-prefixes=" in part:
+      prefixes = part.split('=', 1)[1].split(',')
+      for prefix in prefixes:
+        check_prefix(prefix)
+        if prefixes.count(prefix) > 1:
+          print("WARNING: Supplied prefix '%s' is not unique in the prefix list." %
+                (prefix,), file=sys.stderr)

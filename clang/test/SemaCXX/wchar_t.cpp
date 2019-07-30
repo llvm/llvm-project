@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-signed-unsigned-wchar -verify=allow-signed %s
+// allow-signed-no-diagnostics
 wchar_t x;
 
 void f(wchar_t p) {
   wchar_t x;
-  unsigned wchar_t y; // expected-warning {{'wchar_t' cannot be signed or unsigned}}
-  signed wchar_t z; // expected-warning {{'wchar_t' cannot be signed or unsigned}}
+  unsigned wchar_t y; // expected-error {{'wchar_t' cannot be signed or unsigned}}
+  signed wchar_t z; // expected-error {{'wchar_t' cannot be signed or unsigned}}
   ++x;
 }
 

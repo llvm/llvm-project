@@ -89,14 +89,12 @@ static constexpr const char *InitFileWarning =
     "and\n"
     "accept the security risk.";
 
-static constexpr PropertyDefinition g_properties[] = {
-#define LLDB_PROPERTIES_commandinterpreter
-#include "Properties.inc"
-};
+#define LLDB_PROPERTIES_interpreter
+#include "InterpreterProperties.inc"
 
 enum {
-#define LLDB_PROPERTIES_commandinterpreter
-#include "PropertiesEnum.inc"
+#define LLDB_PROPERTIES_interpreter
+#include "InterpreterPropertiesEnum.inc"
 };
 
 ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
@@ -121,19 +119,19 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
   CheckInWithManager();
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_interpreter_properties);
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
   const uint32_t idx = ePropertyExpandRegexAliases;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetPromptOnQuit() const {
   const uint32_t idx = ePropertyPromptOnQuit;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetPromptOnQuit(bool b) {
@@ -144,7 +142,7 @@ void CommandInterpreter::SetPromptOnQuit(bool b) {
 bool CommandInterpreter::GetEchoCommands() const {
   const uint32_t idx = ePropertyEchoCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommands(bool b) {
@@ -155,7 +153,7 @@ void CommandInterpreter::SetEchoCommands(bool b) {
 bool CommandInterpreter::GetEchoCommentCommands() const {
   const uint32_t idx = ePropertyEchoCommentCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommentCommands(bool b) {
@@ -195,13 +193,13 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
 bool CommandInterpreter::GetStopCmdSourceOnError() const {
   const uint32_t idx = ePropertyStopCmdSourceOnError;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetSpaceReplPrompts() const {
   const uint32_t idx = ePropertySpaceReplPrompts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::Initialize() {

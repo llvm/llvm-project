@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONOPT %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -munwind-tables -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONOPT --check-prefix=CHECK-DBG %s
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck --check-prefix=CHECK --check-prefix=CHECK-OPT %s
 
 namespace Test1 {
@@ -20,6 +21,8 @@ struct C : A, B {
 };
 
 // CHECK-LABEL: define void @_ZThn8_N5Test11C1fEv(
+// CHECK-DBG-NOT: dbg.declare
+// CHECK: ret void
 void C::f() { }
 
 }
@@ -38,6 +41,8 @@ struct B : virtual A {
 };
 
 // CHECK-LABEL: define void @_ZTv0_n24_N5Test21B1fEv(
+// CHECK-DBG-NOT: dbg.declare
+// CHECK: ret void
 void B::f() { }
 
 }
@@ -83,6 +88,8 @@ struct __attribute__((visibility("protected"))) C : A, B {
 };
 
 // CHECK-LABEL: define protected void @_ZThn8_N5Test41C1fEv(
+// CHECK-DBG-NOT: dbg.declare
+// CHECK: ret void
 void C::f() { }
 
 }
@@ -166,6 +173,7 @@ namespace Test6 {
   };
 
   // CHECK-LABEL: define void @_ZThn16_N5Test66Thunks1fEv
+	// CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
   // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret}}
   // CHECK: ret void
@@ -212,6 +220,7 @@ namespace Test7 {
   void D::baz(X, X&, _Complex float, Small, Small&, Large) { }
 
   // CHECK-LABEL: define void @_ZThn8_N5Test71D3bazENS_1XERS1_CfNS_5SmallERS4_NS_5LargeE(
+  // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
   // CHECK: ret void
   void testD() { D d; }
@@ -227,6 +236,7 @@ namespace Test8 {
   void C::helper(NonPOD var) {}
 
   // CHECK-LABEL: define void @_ZThn8_N5Test81C3barENS_6NonPODE(
+  // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: load [[NONPODTYPE]], [[NONPODTYPE]]*
   // CHECK-NOT: memcpy
   // CHECK: ret void
@@ -269,10 +279,14 @@ namespace Test11 {
   //  The this-adjustment and return-adjustment thunk required when
   //  C::f appears in a vtable where A is at a nonzero offset from C.
   // CHECK: define {{.*}} @_ZTcv0_n24_v0_n32_N6Test111C1fEv(
+  // CHECK-DBG-NOT: dbg.declare
+  // CHECK: ret
 
   //  The return-adjustment thunk required when C::f appears in a vtable
   //  where A is at a zero offset from C.
   // CHECK: define {{.*}} @_ZTch0_v0_n32_N6Test111C1fEv(
+  // CHECK-DBG-NOT: dbg.declare
+  // CHECK: ret
 }
 
 // Varargs thunk test.
@@ -295,6 +309,7 @@ namespace Test12 {
   // Varargs thunk; check that both the this and covariant adjustments
   // are generated.
   // CHECK: define {{.*}} @_ZTchn8_h8_N6Test121C1fEiz
+  // CHECK-DBG-NOT: dbg.declare
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -8
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
 }
@@ -318,6 +333,7 @@ namespace Test13 {
     return *this;
   }
   // CHECK: define {{.*}} @_ZTcvn8_n32_v8_n24_N6Test131D4foo1Ev
+  // CHECK-DBG-NOT: dbg.declare
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -8
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -32
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -24
@@ -338,6 +354,8 @@ namespace Test14 {
   void C::f() {
   }
   // CHECK: define void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
+  // CHECK-DBG-NOT: dbg.declare
+  // CHECK: ret void
 }
 
 // Varargs non-covariant thunk test.
@@ -376,6 +394,8 @@ struct D : public C {
 };
 D::~D() {}
 // CHECK: define linkonce_odr void @_ZThn8_N6Test161C3fooEv({{.*}}) {{.*}} comdat
+// CHECK-DBG-NOT: dbg.declare
+// CHECK: ret void
 }
 
 /**** The following has to go at the end of the file ****/

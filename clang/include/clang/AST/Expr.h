@@ -2619,9 +2619,8 @@ public:
   /// + sizeof(Stmt *) bytes of storage, aligned to alignof(CallExpr):
   ///
   /// \code{.cpp}
-  ///   llvm::AlignedCharArray<alignof(CallExpr),
-  ///                          sizeof(CallExpr) + sizeof(Stmt *)> Buffer;
-  ///   CallExpr *TheCall = CallExpr::CreateTemporary(Buffer.buffer, etc);
+  ///   alignas(CallExpr) char Buffer[sizeof(CallExpr) + sizeof(Stmt *)];
+  ///   CallExpr *TheCall = CallExpr::CreateTemporary(Buffer, etc);
   /// \endcode
   static CallExpr *CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
                                    ExprValueKind VK, SourceLocation RParenLoc,

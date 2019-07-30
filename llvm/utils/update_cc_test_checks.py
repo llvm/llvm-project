@@ -168,6 +168,7 @@ def main():
 
       # Extract -check-prefix in FileCheck args
       filecheck_cmd = commands[-1]
+      common.verify_filecheck_prefixes(filecheck_cmd)
       if not filecheck_cmd.startswith('FileCheck '):
         print('WARNING: Skipping non-FileChecked RUN line: ' + l, file=sys.stderr)
         continue

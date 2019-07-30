@@ -21,6 +21,7 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
             def threadStopInfo(self, threadnum):
                 if threadnum == 0x1ff0d:
                     return "T02thread:1ff0d;thread-pcs:10001bc00;"
+                return ""
 
             def setBreakpoint(self, packet):
                 if packet.startswith("Z2,"):

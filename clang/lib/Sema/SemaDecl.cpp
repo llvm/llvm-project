@@ -13532,8 +13532,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     }
 
     if (!IsInstantiation && FD && FD->isConstexpr() && !FD->isInvalidDecl() &&
-        (!CheckConstexprFunctionDecl(FD) ||
-         !CheckConstexprFunctionBody(FD, Body)))
+        !CheckConstexprFunctionDefinition(FD, CheckConstexprKind::Diagnose))
       FD->setInvalidDecl();
 
     if (FD && FD->hasAttr<NakedAttr>()) {

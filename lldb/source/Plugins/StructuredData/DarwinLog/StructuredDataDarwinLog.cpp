@@ -104,14 +104,12 @@ void SetGlobalEnableOptions(const DebuggerSP &debugger_sp,
 
 /// Code to handle the StructuredDataDarwinLog settings
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_darwinlog
-#include "Properties.inc"
-};
+#include "StructuredDataDarwinLogProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_darwinlog
-#include "PropertiesEnum.inc"
+#include "StructuredDataDarwinLogPropertiesEnum.inc"
 };
 
 class StructuredDataDarwinLogProperties : public Properties {
@@ -123,7 +121,7 @@ public:
 
   StructuredDataDarwinLogProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_darwinlog_properties);
   }
 
   ~StructuredDataDarwinLogProperties() override {}
@@ -131,13 +129,13 @@ public:
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_properties[idx].default_uint_value != 0);
+        nullptr, idx, g_darwinlog_properties[idx].default_uint_value != 0);
   }
 
   llvm::StringRef GetAutoEnableOptions() const {
     const uint32_t idx = ePropertyAutoEnableOptions;
     return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, idx, g_properties[idx].default_cstr_value);
+        nullptr, idx, g_darwinlog_properties[idx].default_cstr_value);
   }
 
   const char *GetLoggingModuleName() const { return "libsystem_trace.dylib"; }

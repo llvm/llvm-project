@@ -177,14 +177,12 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
 
 /// Code to handle the PlatformDarwinKernel settings
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_platformdarwinkernel
-#include "Properties.inc"
-};
+#include "PlatformMacOSXProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_platformdarwinkernel
-#include "PropertiesEnum.inc"
+#include "PlatformMacOSXPropertiesEnum.inc"
 };
 
 class PlatformDarwinKernelProperties : public Properties {
@@ -196,7 +194,7 @@ public:
 
   PlatformDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_platformdarwinkernel_properties);
   }
 
   virtual ~PlatformDarwinKernelProperties() {}
@@ -204,7 +202,8 @@ public:
   bool GetSearchForKexts() const {
     const uint32_t idx = ePropertySearchForKexts;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        NULL, idx, g_properties[idx].default_uint_value != 0);
+        NULL, idx,
+        g_platformdarwinkernel_properties[idx].default_uint_value != 0);
   }
 
   FileSpecList GetKextDirectories() const {

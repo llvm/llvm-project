@@ -2076,8 +2076,16 @@ public:
                                      bool &AddToScope);
   bool AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD);
 
-  bool CheckConstexprFunctionDecl(const FunctionDecl *FD);
-  bool CheckConstexprFunctionBody(const FunctionDecl *FD, Stmt *Body);
+  enum class CheckConstexprKind {
+    /// Diagnose issues that are non-constant or that are extensions.
+    Diagnose,
+    /// Identify whether this function satisfies the formal rules for constexpr
+    /// functions in the current lanugage mode (with no extensions).
+    CheckValid
+  };
+
+  bool CheckConstexprFunctionDefinition(const FunctionDecl *FD,
+                                        CheckConstexprKind Kind);
 
   void DiagnoseHiddenVirtualMethods(CXXMethodDecl *MD);
   void FindHiddenVirtualMethods(CXXMethodDecl *MD,

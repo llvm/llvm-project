@@ -72,14 +72,12 @@ static constexpr OptionEnumValueElement g_kaslr_kernel_scan_enum_values[] = {
      "Scan through the entire potential address range of Darwin kernel (only "
      "on 32-bit targets)."}};
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "Properties.inc"
-};
+#include "DynamicLoaderDarwinKernelProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "PropertiesEnum.inc"
+#include "DynamicLoaderDarwinKernelPropertiesEnum.inc"
 };
 
 class DynamicLoaderDarwinKernelProperties : public Properties {
@@ -91,7 +89,7 @@ public:
 
   DynamicLoaderDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties);
   }
 
   ~DynamicLoaderDarwinKernelProperties() override {}
@@ -99,13 +97,15 @@ public:
   bool GetLoadKexts() const {
     const uint32_t idx = ePropertyLoadKexts;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_properties[idx].default_uint_value != 0);
+        nullptr, idx,
+        g_dynamicloaderdarwinkernel_properties[idx].default_uint_value != 0);
   }
 
   KASLRScanType GetScanType() const {
     const uint32_t idx = ePropertyScanType;
     return (KASLRScanType)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-        nullptr, idx, g_properties[idx].default_uint_value);
+        nullptr, idx,
+        g_dynamicloaderdarwinkernel_properties[idx].default_uint_value);
   }
 };
 
