@@ -257,6 +257,7 @@ lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitAtIndex(uint32_t index) {
 }
 
 lldb::LanguageType SymbolFilePDB::ParseLanguage(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto compiland_up = GetPDBCompilandByUID(comp_unit.GetID());
   if (!compiland_up)
     return lldb::eLanguageTypeUnknown;
@@ -311,6 +312,7 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 }
 
 size_t SymbolFilePDB::ParseFunctions(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   size_t func_added = 0;
   auto compiland_up = GetPDBCompilandByUID(comp_unit.GetID());
   if (!compiland_up)
@@ -329,6 +331,7 @@ size_t SymbolFilePDB::ParseFunctions(CompileUnit &comp_unit) {
 }
 
 bool SymbolFilePDB::ParseLineTable(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (comp_unit.GetLineTable())
     return true;
   return ParseCompileUnitLineTable(comp_unit, 0);
@@ -347,6 +350,7 @@ bool SymbolFilePDB::ParseSupportFiles(
   // second time seems like a waste.  Unfortunately, there's no good way around
   // this short of a moderate refactor since SymbolVendor depends on being able
   // to cache this list.
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto compiland_up = GetPDBCompilandByUID(comp_unit.GetID());
   if (!compiland_up)
     return false;
@@ -424,6 +428,7 @@ static size_t ParseFunctionBlocksForPDBSymbol(
 }
 
 size_t SymbolFilePDB::ParseBlocksRecursive(Function &func) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   size_t num_added = 0;
   auto uid = func.GetID();
   auto pdb_func_up = m_session_up->getConcreteSymbolById<PDBSymbolFunc>(uid);
@@ -436,6 +441,7 @@ size_t SymbolFilePDB::ParseBlocksRecursive(Function &func) {
 }
 
 size_t SymbolFilePDB::ParseTypes(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   size_t num_added = 0;
   auto compiland = GetPDBCompilandByUID(comp_unit.GetID());
@@ -488,6 +494,7 @@ size_t SymbolFilePDB::ParseTypes(CompileUnit &comp_unit) {
 
 size_t
 SymbolFilePDB::ParseVariablesForContext(const lldb_private::SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!sc.comp_unit)
     return 0;
 
@@ -536,6 +543,7 @@ SymbolFilePDB::ParseVariablesForContext(const lldb_private::SymbolContext &sc) {
 }
 
 lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto find_result = m_types.find(type_uid);
   if (find_result != m_types.end())
     return find_result->second.get();
@@ -666,6 +674,7 @@ uint32_t
 SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
                                     SymbolContextItem resolve_scope,
                                     lldb_private::SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   uint32_t resolved_flags = 0;
   if (resolve_scope & eSymbolContextCompUnit ||
       resolve_scope & eSymbolContextVariable ||
@@ -726,6 +735,7 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
 uint32_t SymbolFilePDB::ResolveSymbolContext(
     const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
     SymbolContextItem resolve_scope, lldb_private::SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t old_size = sc_list.GetSize();
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
@@ -1038,6 +1048,7 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
     lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return 0;
   if (name.IsEmpty())
@@ -1082,6 +1093,7 @@ uint32_t
 SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
                                    uint32_t max_matches,
                                    lldb_private::VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!regex.IsValid())
     return 0;
   auto results = m_global_scope_up->findAllChildren<PDBSymbolData>();
@@ -1239,6 +1251,7 @@ uint32_t SymbolFilePDB::FindFunctions(
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     lldb_private::SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     sc_list.Clear();
   lldbassert((name_type_mask & eFunctionNameTypeAuto) == 0);
@@ -1294,6 +1307,7 @@ uint32_t
 SymbolFilePDB::FindFunctions(const lldb_private::RegularExpression &regex,
                              bool include_inlines, bool append,
                              lldb_private::SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     sc_list.Clear();
   if (!regex.IsValid())
@@ -1380,6 +1394,7 @@ uint32_t SymbolFilePDB::FindTypes(
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     lldb_private::TypeMap &types) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     types.Clear();
   if (!name)
@@ -1567,6 +1582,7 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
 size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
                                TypeClass type_mask,
                                lldb_private::TypeList &type_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   TypeCollection type_collection;
   uint32_t old_size = type_list.GetSize();
   CompileUnit *cu =
@@ -1615,6 +1631,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
 lldb_private::CompilerDeclContext SymbolFilePDB::FindNamespace(
     lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   auto clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(type_system);
   if (!clang_type_system)

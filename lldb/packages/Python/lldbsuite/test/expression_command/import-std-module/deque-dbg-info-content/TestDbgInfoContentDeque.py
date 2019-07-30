@@ -25,12 +25,12 @@ class TestDbgInfoContentDeque(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         self.expect("expr (size_t)a.size()", substrs=['(size_t) $0 = 3'])
-        self.expect("expr (int)a.front()->a", substrs=['(int) $1 = 3'])
-        self.expect("expr (int)a.back()->a", substrs=['(int) $2 = 2'])
+        self.expect("expr (int)a.front().a", substrs=['(int) $1 = 3'])
+        self.expect("expr (int)a.back().a", substrs=['(int) $2 = 2'])
 
         self.expect("expr std::reverse(a.begin(), a.end())")
-        self.expect("expr (int)a.front()->a", substrs=['(int) $3 = 2'])
-        self.expect("expr (int)a.back()->a", substrs=['(int) $4 = 3'])
+        self.expect("expr (int)a.front().a", substrs=['(int) $3 = 2'])
+        self.expect("expr (int)a.back().a", substrs=['(int) $4 = 3'])
 
         self.expect("expr (int)(a.begin()->a)", substrs=['(int) $5 = 2'])
         self.expect("expr (int)(a.rbegin()->a)", substrs=['(int) $6 = 3'])
