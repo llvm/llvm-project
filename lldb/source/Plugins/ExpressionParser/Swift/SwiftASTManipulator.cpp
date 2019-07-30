@@ -495,6 +495,7 @@ bool SwiftASTManipulator::RewriteResult() {
 
       // Don't step into function declarations, they may have returns, but we
       // don't want to instrument them.
+      case swift::DeclKind::Accessor:
       case swift::DeclKind::Func:
       case swift::DeclKind::Class:
       case swift::DeclKind::Struct:
@@ -714,10 +715,7 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
   };
 
   Publicist p;
-
-  for (swift::Decl *decl : m_source_file.Decls) {
-    decl->walk(p);
-  }
+  m_source_file.walk(p);
 }
 
 static bool hasInit(swift::PatternBindingDecl *pattern_binding) {
