@@ -117,12 +117,6 @@ test_build_dir = None
 # takes precedence.
 exclusive_test_subdir = None
 
-# Parallel execution settings
-is_inferior_test_runner = False
-num_threads = None
-no_multiprocess_test_runner = False
-test_runner_name = None
-
 # Test results handling globals
 results_filename = None
 results_port = None
