@@ -136,7 +136,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
     return make_error<RemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
-      remarks::createRemarkSerializer(*Format, RemarksFile->os());
+      remarks::createRemarkSerializer(*Format, remarks::SerializerMode::Separate, RemarksFile->os());
   if (Error E = RemarkSerializer.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 

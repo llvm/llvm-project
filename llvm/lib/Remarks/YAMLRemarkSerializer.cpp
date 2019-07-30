@@ -149,10 +149,19 @@ template <> struct MappingTraits<Argument> {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Argument)
 
-YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS)
-    : RemarkSerializer(OS), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
+YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode)
+    : RemarkSerializer(OS, Mode), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
 
 void YAMLRemarkSerializer::emit(const Remark &Remark) {
+  // In standalone mode, emit the metadata first and set DidEmitMeta to avoid
+  // emitting it again.
+  if (Mode == SerializerMode::Standalone) {
+    std::unique_ptr<MetaSerializer> MetaSerializer =
+        metaSerializer(OS, /*ExternalFilename=*/None);
+    MetaSerializer->emit();
+    DidEmitMeta = true;
+  }
+
   // Again, YAMLTraits expect a non-const object for inputting, but we're not
   // using that here.
   auto R = const_cast<remarks::Remark *>(&Remark);
