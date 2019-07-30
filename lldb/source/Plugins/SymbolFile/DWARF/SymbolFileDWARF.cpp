@@ -364,17 +364,17 @@ UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
 }
 
-TypeSystem *SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
-  SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-  TypeSystem *type_system;
-  if (debug_map_symfile) {
-    type_system = debug_map_symfile->GetTypeSystemForLanguage(language);
-  } else {
-    type_system = m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
-    if (type_system)
-      type_system->SetSymbolFile(this);
+llvm::Expected<TypeSystem &>
+SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetTypeSystemForLanguage(language);
+
+  auto type_system_or_err =
+      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
+  if (type_system_or_err) {
+    type_system_or_err->SetSymbolFile(this);
   }
-  return type_system;
+  return type_system_or_err;
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -730,17 +730,21 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
 Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
                                          const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
-  if (die.IsValid()) {
-    TypeSystem *type_system =
-        GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  if (!die.IsValid())
+    return nullptr;
 
-    if (type_system) {
-      DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-      if (dwarf_ast)
-        return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
-    }
+  auto type_system_or_err =
+      GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Unable to parse function");
+    return nullptr;
   }
-  return nullptr;
+  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
+  if (!dwarf_ast)
+    return nullptr;
+
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
 }
 
 bool SymbolFileDWARF::FixupAddress(Address &addr) {
@@ -1177,7 +1181,9 @@ bool SymbolFileDWARF::ClassOrStructIsVirtual(const DWARFDIE &parent_die) {
 }
 
 void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
-  TypeSystem *type_system = decl_ctx.GetTypeSystem();
+  auto *type_system = decl_ctx.GetTypeSystem();
+  if (!type_system)
+    return;
   DWARFASTParser *ast_parser = type_system->GetDWARFParser();
   std::vector<DWARFDIE> decl_ctx_die_list =
       ast_parser->GetDIEForDeclContext(decl_ctx);
@@ -1948,9 +1954,16 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
   }
 
   TypeSystem *decl_ctx_type_system = decl_ctx->GetTypeSystem();
-  TypeSystem *type_system = GetTypeSystemForLanguage(
+  auto type_system_or_err = GetTypeSystemForLanguage(
       decl_ctx_type_system->GetMinimumLanguage(nullptr));
-  if (decl_ctx_type_system == type_system)
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err),
+                   "Unable to match namespace decl using TypeSystem");
+    return false;
+  }
+
+  if (decl_ctx_type_system == &type_system_or_err.get())
     return true; // The type systems match, return true
 
   // The namespace AST was valid, and it does not match...
@@ -2857,10 +2870,18 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
       // use this to ensure any matches we find are in a language that this
       // type system supports
       const LanguageType language = dwarf_decl_ctx.GetLanguage();
-      TypeSystem *type_system = (language == eLanguageTypeUnknown)
-                                    ? nullptr
-                                    : GetTypeSystemForLanguage(language);
-
+      TypeSystem *type_system = nullptr;
+      if (language != eLanguageTypeUnknown) {
+        auto type_system_or_err = GetTypeSystemForLanguage(language);
+        if (auto err = type_system_or_err.takeError()) {
+          LLDB_LOG_ERROR(
+              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+              std::move(err), "Cannot get TypeSystem for language {}",
+              Language::GetNameForLanguageType(language));
+        } else {
+          type_system = &type_system_or_err.get();
+        }
+      }
       if (num_matches) {
         for (size_t i = 0; i < num_matches; ++i) {
           const DIERef &die_ref = die_offsets[i];
@@ -2954,12 +2975,15 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  TypeSystem *type_system =
+  auto type_system_or_err =
       GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
-  if (!type_system)
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Unable to parse type");
     return {};
+  }
 
-  DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
+  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
   if (!dwarf_ast)
     return {};
 
@@ -3711,8 +3735,10 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
 }
 
 void SymbolFileDWARF::DumpClangAST(Stream &s) {
-  TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(ts);
+  auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  if (!ts_or_err)
+    return;
+  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(&ts_or_err.get());
   if (!clang)
     return;
   clang->Dump(s);

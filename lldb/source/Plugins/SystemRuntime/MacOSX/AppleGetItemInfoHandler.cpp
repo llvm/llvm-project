@@ -169,14 +169,19 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
       }
 
       // Next make the runner function for our implementation utility function.
-      Status error;
-
-      TypeSystem *type_system =
+      auto type_system_or_err =
           thread.GetProcess()->GetTarget().GetScratchTypeSystemForLanguage(
-              nullptr, eLanguageTypeC);
+              eLanguageTypeC);
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(log, std::move(err),
+                       "Error inseting get-item-info function");
+        return args_addr;
+      }
       CompilerType get_item_info_return_type =
-          type_system->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
+          type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
+              .GetPointerType();
 
+      Status error;
       get_item_info_caller = m_get_item_info_impl_code->MakeFunctionCaller(
           get_item_info_return_type, get_item_info_arglist,
           thread.shared_from_this(), error);

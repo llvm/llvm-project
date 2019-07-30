@@ -118,8 +118,11 @@ public:
   size_t FindTypes(const std::vector<CompilerContext> &context, bool append,
                    TypeMap &types) override;
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override {
-    return nullptr;
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language) override {
+    return llvm::make_error<llvm::StringError>(
+        "SymbolFileBreakpad does not support GetTypeSystemForLanguage",
+        llvm::inconvertibleErrorCode());
   }
 
   CompilerDeclContext

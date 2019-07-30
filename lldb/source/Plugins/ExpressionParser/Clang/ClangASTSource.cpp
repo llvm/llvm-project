@@ -74,14 +74,19 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
                                                        file_manager};
     std::vector<clang::ExternalASTMerger::ImporterSource> sources;
     for (lldb::ModuleSP module_sp : m_target->GetImages().Modules()) {
-      if (auto *module_ast_ctx = llvm::cast_or_null<ClangASTContext>(
-              module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeC))) {
+      auto type_system_or_err =
+          module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeC);
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(
+            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS),
+            std::move(err), "Failed to get ClangASTContext");
+      } else if (auto *module_ast_ctx = llvm::cast_or_null<ClangASTContext>(
+                     &type_system_or_err.get())) {
         lldbassert(module_ast_ctx->getASTContext());
         lldbassert(module_ast_ctx->getFileManager());
         sources.push_back({*module_ast_ctx->getASTContext(),
                            *module_ast_ctx->getFileManager(),
-                           module_ast_ctx->GetOriginMap()
-        });
+                           module_ast_ctx->GetOriginMap()});
       }
     }
 

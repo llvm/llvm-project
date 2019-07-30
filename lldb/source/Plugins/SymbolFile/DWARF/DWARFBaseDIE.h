@@ -12,6 +12,8 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/Support/Error.h"
+
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
@@ -55,7 +57,7 @@ public:
 
   llvm::Optional<DIERef> GetDIERef() const;
 
-  lldb_private::TypeSystem *GetTypeSystem() const;
+  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
 
   DWARFASTParser *GetDWARFParser() const;
 

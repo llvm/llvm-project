@@ -438,7 +438,7 @@ lldb::ByteOrder DWARFUnit::GetByteOrder() const {
   return m_dwarf.GetObjectFile()->GetByteOrder();
 }
 
-TypeSystem *DWARFUnit::GetTypeSystem() {
+llvm::Expected<TypeSystem &> DWARFUnit::GetTypeSystem() {
   return m_dwarf.GetTypeSystemForLanguage(GetLanguageType());
 }
 

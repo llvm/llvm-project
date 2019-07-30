@@ -812,7 +812,8 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language);
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language);
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with something appropriate for this module (like the

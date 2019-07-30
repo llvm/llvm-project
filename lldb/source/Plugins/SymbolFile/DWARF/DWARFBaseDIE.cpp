@@ -14,6 +14,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 
@@ -102,19 +103,22 @@ SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
     return nullptr;
 }
 
-lldb_private::TypeSystem *DWARFBaseDIE::GetTypeSystem() const {
-  if (m_cu)
-    return m_cu->GetTypeSystem();
-  else
-    return nullptr;
+llvm::Expected<lldb_private::TypeSystem &> DWARFBaseDIE::GetTypeSystem() const {
+  if (!m_cu)
+    return llvm::make_error<llvm::StringError>(
+        "Unable to get TypeSystem, no compilation unit available",
+        llvm::inconvertibleErrorCode());
+  return m_cu->GetTypeSystem();
 }
 
 DWARFASTParser *DWARFBaseDIE::GetDWARFParser() const {
-  lldb_private::TypeSystem *type_system = GetTypeSystem();
-  if (type_system)
-    return type_system->GetDWARFParser();
-  else
+  auto type_system_or_err = GetTypeSystem();
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Unable to get DWARFASTParser");
     return nullptr;
+  }
+  return type_system_or_err->GetDWARFParser();
 }
 
 bool DWARFBaseDIE::HasChildren() const {

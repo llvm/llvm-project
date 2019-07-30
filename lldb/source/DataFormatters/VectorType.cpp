@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -219,13 +220,20 @@ public:
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
     parent_type.IsVectorType(&element_type, nullptr);
-    TargetSP target_sp(m_backend.GetTargetSP());
-    m_child_type = ::GetCompilerTypeForFormat(
-        m_parent_format, element_type,
-        target_sp
-            ? target_sp->GetScratchTypeSystemForLanguage(nullptr,
-                                                         lldb::eLanguageTypeC)
-            : nullptr);
+    TypeSystem *type_system = nullptr;
+    if (auto target_sp = m_backend.GetTargetSP()) {
+      auto type_system_or_err =
+          target_sp->GetScratchTypeSystemForLanguage(lldb::eLanguageTypeC);
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(
+            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+            std::move(err), "Unable to update from scratch TypeSystem");
+      } else {
+        type_system = &type_system_or_err.get();
+      }
+    }
+    m_child_type =
+        ::GetCompilerTypeForFormat(m_parent_format, element_type, type_system);
     m_num_children = ::CalculateNumChildren(parent_type, m_child_type);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;

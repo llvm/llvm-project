@@ -869,20 +869,18 @@ public:
       return;
     }
 
-    Status type_system_error;
-    TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
-        &type_system_error, m_type.GetMinimumLanguage());
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());
 
-    if (!type_system) {
+    if (auto error = type_system_or_err.takeError()) {
       err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
                                    "couldn't get the corresponding type "
                                    "system: %s",
-                                   type_system_error.AsCString());
+                                   llvm::toString(std::move(error)).c_str());
       return;
     }
-
     PersistentExpressionState *persistent_state =
-        type_system->GetPersistentExpressionState();
+        type_system_or_err->GetPersistentExpressionState();
 
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: "

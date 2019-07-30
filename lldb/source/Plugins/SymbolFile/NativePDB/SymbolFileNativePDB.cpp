@@ -30,6 +30,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
@@ -321,12 +322,17 @@ void SymbolFileNativePDB::InitializeObject() {
   m_index->SetLoadAddress(m_obj_load_address);
   m_index->ParseSectionContribs();
 
-  TypeSystem *ts = m_obj_file->GetModule()->GetTypeSystemForLanguage(
+  auto ts_or_err = m_obj_file->GetModule()->GetTypeSystemForLanguage(
       lldb::eLanguageTypeC_plus_plus);
-  if (ts)
-    ts->SetSymbolFile(this);
-
-  m_ast = llvm::make_unique<PdbAstBuilder>(*m_obj_file, *m_index);
+  if (auto err = ts_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Failed to initialize");
+  } else {
+    ts_or_err->SetSymbolFile(this);
+    auto *clang = llvm::cast_or_null<ClangASTContext>(&ts_or_err.get());
+    lldbassert(clang);
+    m_ast = llvm::make_unique<PdbAstBuilder>(*m_obj_file, *m_index, *clang);
+  }
 }
 
 uint32_t SymbolFileNativePDB::CalculateNumCompileUnits() {
@@ -1585,13 +1591,14 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
   return {};
 }
 
-TypeSystem *
+llvm::Expected<TypeSystem &>
 SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
-  auto type_system =
+  auto type_system_or_err =
       m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system)
-    type_system->SetSymbolFile(this);
-  return type_system;
+  if (type_system_or_err) {
+    type_system_or_err->SetSymbolFile(this);
+  }
+  return type_system_or_err;
 }
 
 ConstString SymbolFileNativePDB::GetPluginName() {

@@ -353,7 +353,8 @@ void Module::SetUUID(const lldb_private::UUID &uuid) {
   }
 }
 
-TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language) {
+llvm::Expected<TypeSystem &>
+Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 

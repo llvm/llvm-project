@@ -30,7 +30,7 @@ public:
   size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                  DIEArray &method_die_offsets) override;
 
-  lldb_private::TypeSystem *
+  llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   DWARFDIE

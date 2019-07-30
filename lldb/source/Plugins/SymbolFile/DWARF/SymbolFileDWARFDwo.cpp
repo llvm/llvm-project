@@ -140,7 +140,7 @@ SymbolFileDWARFDwo::GetLocationListFormat() const {
   return DWARFExpression::SplitDwarfLocationList;
 }
 
-TypeSystem *
+llvm::Expected<TypeSystem &>
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
   return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
 }
