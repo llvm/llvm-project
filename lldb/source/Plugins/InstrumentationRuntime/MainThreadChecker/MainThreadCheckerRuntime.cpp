@@ -81,8 +81,14 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
   ModuleSP swiftModule = swiftFrame->GetFrameCodeAddress().GetModule();
   if (!swiftModule)
     return "";
-  SwiftASTContext *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-      swiftModule->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+
+  auto type_system_or_err = swiftModule->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return "";
+  }
+
+  auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
   if (!ctx)
     return "";
   swift::ClangImporter *imp = ctx->GetClangImporter();

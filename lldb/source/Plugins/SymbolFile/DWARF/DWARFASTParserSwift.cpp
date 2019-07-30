@@ -143,8 +143,13 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     // that look like they might be come from Objective-C (or C) as
     // Clang types. LLDB's Objective-C part is very robust against
     // malformed object pointers, so this isn't very risky.
-    if (auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-            sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeObjC))) {
+    auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeObjC);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return nullptr;
+    }
+
+    if (auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&*type_system_or_err)) {
       DWARFASTParserClang *clang_ast_parser =
           static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
       TypeMap clang_types;

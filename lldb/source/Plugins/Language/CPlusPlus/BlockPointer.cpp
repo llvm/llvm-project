@@ -17,6 +17,7 @@
 #include "lldb/Target/Target.h"
 
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,16 +40,17 @@ public:
       return;
     }
 
-    Status err;
-    TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
-        &err, lldb::eLanguageTypeC_plus_plus);
-
-    if (!err.Success() || !type_system) {
+    auto type_system_or_err = target_sp->GetScratchTypeSystemForLanguage(
+        lldb::eLanguageTypeC_plus_plus);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(
+          lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
+          std::move(err), "Failed to get scratch ClangASTContext");
       return;
     }
 
     ClangASTContext *clang_ast_context =
-        llvm::dyn_cast<ClangASTContext>(type_system);
+        llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
 
     if (!clang_ast_context) {
       return;

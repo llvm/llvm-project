@@ -2155,16 +2155,13 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
     target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 }
 
-TypeSystem *Target::GetScratchTypeSystemForLanguage(
-    Status *error, lldb::LanguageType language, bool create_on_demand,
-    const char *compiler_options)
-{
+llvm::Expected<TypeSystem &>
+Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
+                                        bool create_on_demand,
+                                        const char *compiler_options) {
   if (!m_valid)
-    return nullptr;
-
-  if (error) {
-    error->Clear();
-  }
+    return llvm::make_error<llvm::StringError>("Invalid Target",
+                                               llvm::inconvertibleErrorCode());
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2180,7 +2177,9 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
                                  // target language.
     } else {
       if (languages_for_expressions.empty()) {
-        return nullptr;
+        return llvm::make_error<llvm::StringError>(
+            "No expression support for any languages",
+            llvm::inconvertibleErrorCode());
       } else {
         language = *languages_for_expressions.begin();
       }
@@ -2188,13 +2187,17 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
   }
 
   if (m_cant_make_scratch_type_system.count(language))
-    return nullptr;
+    return llvm::make_error<llvm::StringError>("unable to construct scratch type system",
+                                               llvm::inconvertibleErrorCode());
 
-  TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
+  auto type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
       language, this, create_on_demand, compiler_options);
+  if (!type_system_or_err)
+    return std::move(type_system_or_err.takeError());
+
   if (language == eLanguageTypeSwift) {
-    if (SwiftASTContext *swift_ast_ctx =
-            llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
+    if (auto *swift_ast_ctx =
+            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err)) {
       if (swift_ast_ctx->CheckProcessChanged() ||
           swift_ast_ctx->HasFatalErrors()) {
         // If it is safe to replace the scratch context, do so. If
@@ -2223,11 +2226,13 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
           }
 
           m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-          type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
+          type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
               language, this, create_on_demand, compiler_options);
+          if (!type_system_or_err)
+            return std::move(type_system_or_err.takeError());
 
           if (SwiftASTContext *new_swift_ast_ctx =
-                  llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
+                  llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err)) {
             if (new_swift_ast_ctx->HasFatalErrors()) {
               if (StreamSP error_stream_sp =
                       GetDebugger().GetAsyncErrorStream()) {
@@ -2244,7 +2249,8 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
 
               m_cant_make_scratch_type_system[language] = true;
               m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-              type_system = nullptr;
+              type_system_or_err =
+                  llvm::make_error<llvm::StringError>("DIAF", llvm::inconvertibleErrorCode());
             }
           }
           GetSwiftScratchContextLock().unlock();
@@ -2264,7 +2270,7 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
       }
     }
   }
-  return type_system;
+  return type_system_or_err;
 }
 
 const TypeSystemMap &Target::GetTypeSystemMap() {
@@ -2272,16 +2278,18 @@ const TypeSystemMap &Target::GetTypeSystemMap() {
 }
 
 PersistentExpressionState *
-Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language)
-{
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(nullptr, language, true);
+Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language, true);
 
-  if (type_system) {
-    return type_system->GetPersistentExpressionState();
-  } else {
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err),
+                   "Unable to get persistent expression state for language {}",
+                   Language::GetNameForLanguageType(language));
     return nullptr;
   }
+
+  return type_system_or_err->GetPersistentExpressionState();
 }
 
 SwiftPersistentExpressionState *
@@ -2300,30 +2308,17 @@ UserExpression *Target::GetUserExpressionForLanguage(
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  Status type_system_error;
-
-  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  TypeSystem *type_system = nullptr;
-  std::unique_ptr<SwiftASTContextReader> reader;
-  if (language == eLanguageTypeSwift && exe_scope) {
-    reader = llvm::make_unique<SwiftASTContextReader>(
-        GetScratchSwiftASTContext(type_system_error, *exe_scope, true));
-    type_system = reader->get();
-  } else {
-    type_system = GetScratchTypeSystemForLanguage(&type_system_error, language);
-  }
-  UserExpression *user_expr = nullptr;
-
-  if (!type_system) {
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
+        llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
-  user_expr = type_system->GetUserExpression(expr, prefix, language,
-                                             desired_type, options, ctx_obj);
+  auto *user_expr = type_system_or_err->GetUserExpression(
+      expr, prefix, language, desired_type, options, ctx_obj);
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2336,21 +2331,17 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
     lldb::LanguageType language, const CompilerType &return_type,
     const Address &function_address, const ValueList &arg_value_list,
     const char *name, Status &error) {
-  Status type_system_error;
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
-  FunctionCaller *persistent_fn = nullptr;
-
-  if (!type_system) {
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
-    return persistent_fn;
+        llvm::toString(std::move(err)).c_str());
+    return nullptr;
   }
 
-  persistent_fn = type_system->GetFunctionCaller(return_type, function_address,
-                                                 arg_value_list, name);
+  auto *persistent_fn = type_system_or_err->GetFunctionCaller(
+      return_type, function_address, arg_value_list, name);
   if (!persistent_fn)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2363,20 +2354,17 @@ UtilityFunction *
 Target::GetUtilityFunctionForLanguage(const char *text,
                                       lldb::LanguageType language,
                                       const char *name, Status &error) {
-  Status type_system_error;
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
-  UtilityFunction *utility_fn = nullptr;
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
 
-  if (!type_system) {
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
-    return utility_fn;
+        llvm::toString(std::move(err)).c_str());
+    return nullptr;
   }
 
-  utility_fn = type_system->GetUtilityFunction(text, name);
+  auto *utility_fn = type_system_or_err->GetUtilityFunction(text, name);
   if (!utility_fn)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2385,14 +2373,18 @@ Target::GetUtilityFunctionForLanguage(const char *text,
   return utility_fn;
 }
 
-ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand)
-{
-  if (m_valid) {
-    if (TypeSystem *type_system = GetScratchTypeSystemForLanguage(
-            nullptr, eLanguageTypeC, create_on_demand))
-      return llvm::dyn_cast<ClangASTContext>(type_system);
+ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand) {
+  if (!m_valid)
+    return nullptr;
+
+  auto type_system_or_err =
+          GetScratchTypeSystemForLanguage(eLanguageTypeC, create_on_demand);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err), "Couldn't get scratch ClangASTContext");
+    return nullptr;
   }
-  return nullptr;
+  return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
 }
 
 ClangASTImporterSP Target::GetClangASTImporter() {
@@ -2439,8 +2431,13 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     if (!create_on_demand || !GetSwiftScratchContextLock().try_lock())
       return nullptr;
 
-    if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(
-            GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, false)))
+    auto type_system_or_err = GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return nullptr;
+    }
+
+    if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(&*type_system_or_err))
       DisplayFallbackSwiftContextErrors(global_scratch_ctx);
 
     bool fallback = true;
@@ -2458,9 +2455,12 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
   if (!swift_ast_ctx) {
     if (log)
       log->Printf("returned project-wide scratch context\n");
-    swift_ast_ctx =
-        llvm::cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(
-            &error, eLanguageTypeSwift, create_on_demand));
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, create_on_demand);
+    if (type_system_or_err)
+      swift_ast_ctx = llvm::cast_or_null<SwiftASTContext>(&*type_system_or_err);
+    else
+      llvm::consumeError(type_system_or_err.takeError());
   }
 
   StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
@@ -2598,13 +2598,19 @@ ExpressionResults Target::EvaluateExpression(
 
   // Make sure we aren't just trying to see the value of a persistent variable
   // (something like "$0")
-  lldb::ExpressionVariableSP persistent_var_sp;
   // Only check for persistent variables the expression starts with a '$'
-  if (expr[0] == '$')
-    persistent_var_sp = GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC)
-                            ->GetPersistentExpressionState()
-                            ->GetVariable(expr);
-
+  lldb::ExpressionVariableSP persistent_var_sp;
+  if (expr[0] == '$') {
+    auto type_system_or_err =
+            GetScratchTypeSystemForLanguage(eLanguageTypeC);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                     std::move(err), "Unable to get scratch type system");
+    } else {
+      persistent_var_sp =
+          type_system_or_err->GetPersistentExpressionState()->GetVariable(expr);
+    }
+  }
   if (persistent_var_sp) {
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;

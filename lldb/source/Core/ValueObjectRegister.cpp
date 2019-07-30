@@ -18,6 +18,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -256,15 +257,19 @@ ValueObjectRegister::~ValueObjectRegister() {}
 CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   if (!m_compiler_type.IsValid()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    Target *target = exe_ctx.GetTargetPtr();
-    if (target) {
-      Module *exe_module = target->GetExecutableModulePointer();
-      if (exe_module) {
-        TypeSystem *type_system =
+    if (auto *target = exe_ctx.GetTargetPtr()) {
+      if (auto *exe_module = target->GetExecutableModulePointer()) {
+        auto type_system_or_err =
             exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
-        if (type_system)
-          m_compiler_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
-              m_reg_info.encoding, m_reg_info.byte_size * 8);
+        if (auto err = type_system_or_err.takeError()) {
+          LLDB_LOG_ERROR(
+              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES),
+              std::move(err), "Unable to get CompilerType from TypeSystem");
+        } else {
+          m_compiler_type =
+              type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
+                  m_reg_info.encoding, m_reg_info.byte_size * 8);
+        }
       }
     }
   }

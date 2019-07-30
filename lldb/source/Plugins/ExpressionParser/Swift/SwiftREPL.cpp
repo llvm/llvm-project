@@ -82,9 +82,10 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
   }
 
   // Check that we can get a type system, or we aren't going anywhere:
-  TypeSystem *type_system = target.GetScratchTypeSystemForLanguage(
-      nullptr, eLanguageTypeSwift, true, repl_options);
-  if (!type_system) {
+  auto type_system_or_err =
+      target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true, repl_options);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
     err.SetErrorString("Could not construct an expression "
                        "context for the REPL.\n");
     return nullptr;
@@ -247,9 +248,10 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   // Check that we can get a type system, or we aren't
   // going anywhere.  Remember to pass in the repl_options
   // in case they set up framework paths we need, etc.
-  TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
-      nullptr, eLanguageTypeSwift, true, repl_options);
-  if (!type_system) {
+  auto type_system_or_err =
+      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true, repl_options);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
     err.SetErrorString("Could not construct an expression "
                        "context for the REPL.\n");
     return nullptr;
@@ -285,14 +287,15 @@ SwiftREPL::SwiftREPL(Target &target)
 SwiftREPL::~SwiftREPL() {}
 
 Status SwiftREPL::DoInitialization() {
-  Status error;
+  if (m_compiler_options.empty())
+    return Status();
 
-  if (!m_compiler_options.empty()) {
-    (void)m_target.GetScratchTypeSystemForLanguage(
-        &error, eLanguageTypeSwift, true, m_compiler_options.c_str());
-  }
-
-  return error;
+  auto type_system_or_err =
+      m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true,
+                                               m_compiler_options.c_str());
+  if (!type_system_or_err)
+    return Status(type_system_or_err.takeError());
+  return Status();
 }
 
 ConstString SwiftREPL::GetSourceFileBasename() {
@@ -543,8 +546,13 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   //----------------------------------------------------------------------
   Status error;
   if (!m_swift_ast_sp) {
-    SwiftASTContext *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-        m_target.GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift));
+    auto type_system_or_err = m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return 0;
+    }
+
+    auto *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
     if (target_swift_ast)
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
   }

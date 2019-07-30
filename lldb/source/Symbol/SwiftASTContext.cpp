@@ -1968,9 +1968,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     if (!HasSwiftModules(*module_sp))
       continue;
 
-    SwiftASTContext *module_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-        module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+    auto type_system_or_err = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      continue;
+    }
 
+    auto *module_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
     if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
         !module_swift_ast->GetClangImporter()) {
       // Make sure we warn about this module load failure, the one
@@ -2063,13 +2067,19 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       set_triple = true;
     }
 
-    if (!set_triple)
+    if (!set_triple) {
+      auto type_system_or_err = exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+      if (!type_system_or_err) {
+        llvm::consumeError(type_system_or_err.takeError());
+        return TypeSystemSP();
+      }
+
       if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
-        auto *exe_swift_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-            exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        auto *exe_swift_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
         if (exe_swift_ctx)
           swift_ast_sp->SetTriple(exe_swift_ctx->GetLanguageOptions().Target);
       }
+    }
   }
 
   llvm::Triple triple(swift_ast_sp->GetTriple());
@@ -2154,8 +2164,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           return;
 
         Status sym_file_error;
-        SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
-            sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+
+        auto type_system_or_err = sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+        if (!type_system_or_err) {
+          llvm::consumeError(type_system_or_err.takeError());
+          return;
+        }
+
+        SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
         if (ast_context && !ast_context->HasErrors()) {
           if (use_all_compiler_flags ||
               target.GetExecutableModulePointer() == module_sp.get()) {

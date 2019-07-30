@@ -469,10 +469,13 @@ lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
     sb_type = SBType(module_sp->FindFirstType(sc, name, exact_match));
 
     if (!sb_type.IsValid()) {
-      TypeSystem *type_system =
+      auto type_system_or_err =
           module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
-      if (type_system)
-        sb_type = SBType(type_system->GetBuiltinTypeByName(name));
+      if (auto err = type_system_or_err.takeError()) {
+        llvm::consumeError(std::move(err));
+        return LLDB_RECORD_RESULT(SBType());
+      }
+      sb_type = SBType(type_system_or_err->GetBuiltinTypeByName(name));
     }
   }
   return LLDB_RECORD_RESULT(sb_type);
@@ -484,10 +487,14 @@ lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    TypeSystem *type_system =
+    auto type_system_or_err =
         module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
-    if (type_system)
-      return LLDB_RECORD_RESULT(SBType(type_system->GetBasicTypeFromAST(type)));
+    if (auto err = type_system_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+    } else {
+      return LLDB_RECORD_RESULT(
+          SBType(type_system_or_err->GetBasicTypeFromAST(type)));
+    }
   }
   return LLDB_RECORD_RESULT(SBType());
 }
@@ -514,10 +521,13 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
           retval.Append(SBType(type_sp));
       }
     } else {
-      TypeSystem *type_system =
+      auto type_system_or_err =
           module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
-      if (type_system) {
-        CompilerType compiler_type = type_system->GetBuiltinTypeByName(name);
+      if (auto err = type_system_or_err.takeError()) {
+        llvm::consumeError(std::move(err));
+      } else {
+        CompilerType compiler_type =
+            type_system_or_err->GetBuiltinTypeByName(name);
         if (compiler_type)
           retval.Append(SBType(compiler_type));
       }
@@ -679,14 +689,14 @@ lldb::SBError SBModule::IsTypeSystemCompatible(lldb::LanguageType language) {
   SBError sb_error;
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    TypeSystem *type_system = module_sp->GetTypeSystemForLanguage(language);
-    if (type_system) {
-      sb_error.SetError(type_system->IsCompatible());
-    } else {
-      sb_error.SetErrorStringWithFormat(
-          "no type system for language %s",
+    auto type_system_or_err = module_sp->GetTypeSystemForLanguage(language);
+    if (!type_system_or_err) {
+      sb_error.SetErrorStringWithFormat("no type system for language %s",
           Language::GetNameForLanguageType(language));
+      llvm::consumeError(type_system_or_err.takeError());
+      return sb_error;
     }
+    sb_error.SetError(type_system_or_err->IsCompatible());
   } else {
     sb_error.SetErrorString("invalid module");
   }

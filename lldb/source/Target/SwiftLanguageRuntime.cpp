@@ -3133,11 +3133,12 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     Value &value, ConstString name, bool persistent)
 {
   ValueObjectSP error_valobj_sp;
-  Status error;
-  SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
-      m_process->GetTarget().GetScratchTypeSystemForLanguage(
-          &error, eLanguageTypeSwift));
-  if (!ast_context || error.Fail())
+  auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+  if (!type_system_or_err)
+    return error_valobj_sp;
+
+  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  if (!ast_context)
     return error_valobj_sp;
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
@@ -3243,13 +3244,14 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
 
 void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                                                lldb::addr_t addr) {
-  Status ast_context_error;
-  SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
-      target.GetScratchTypeSystemForLanguage(&ast_context_error,
-                                             eLanguageTypeSwift));
+  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
 
-  if (ast_context_error.Success() && ast_context &&
-      !ast_context->HasFatalErrors()) {
+  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  if (ast_context && !ast_context->HasFatalErrors()) {
     SwiftPersistentExpressionState *persistent_state =
         llvm::cast<SwiftPersistentExpressionState>(
             target.GetPersistentExpressionStateForLanguage(
@@ -3790,23 +3792,21 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression(
   if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
       !runs_in_playground_or_repl) {
     // We're executing the first user expression. Toggle the flag.
-    Status error;
-    TypeSystem *type_system =
-      m_process->GetTarget().GetScratchTypeSystemForLanguage(
-                                                      &error,
-                                                      eLanguageTypeC_plus_plus);
-    if (error.Fail()) {
-      if (log)
-        log->Printf("SwiftLanguageRuntime: Unable to get pointer to type "
-                    "system: %s", error.AsCString());
+
+    auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+    if (!type_system_or_err) {
+      LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
+                     "SwiftLanguageRuntime: Unable to get pointer to type system");
       return;
     }
+
     ConstString BoolName("bool");
     llvm::Optional<uint64_t> bool_size =
-        type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+        type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
     if (!bool_size)
       return;
 
+    Status error;
     Scalar original_value;
     m_process->ReadScalarIntegerFromMemory(*m_dynamic_exclusivity_flag_addr,
                                            *bool_size, false, original_value,
@@ -3855,23 +3855,20 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
 
   if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
       !runs_in_playground_or_repl) {
-    Status error;
-    TypeSystem *type_system =
-      m_process->GetTarget().GetScratchTypeSystemForLanguage(
-                                                      &error,
-                                                      eLanguageTypeC_plus_plus);
-    if (error.Fail()) {
-      if (log)
-        log->Printf("SwiftLanguageRuntime: Unable to get pointer to type "
-                    "system: %s", error.AsCString());
+    auto type_system_or_err = m_process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+    if (!type_system_or_err) {
+      LLDB_LOG_ERROR(log, type_system_or_err.takeError(),
+                     "SwiftLanguageRuntime: Unable to get pointer to type system");
       return;
     }
+
     ConstString BoolName("bool");
     llvm::Optional<uint64_t> bool_size =
-        type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+        type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
     if (!bool_size)
       return;
 
+    Status error;
     Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
     m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
                                    original_value, *bool_size, error);
