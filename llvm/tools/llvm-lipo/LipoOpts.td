@@ -34,6 +34,12 @@ def create : Option<["-", "--"], "create", KIND_FLAG>,
              HelpText<"Create a universal binary output file from the input "
                       "files. Requires -output option">;
 
+def replace
+    : MultiArg<["-", "--"], "replace", 2>,
+      Group<action_group>,
+      HelpText<"Replace the specified arch type with the contents of the "
+               "input_file in a universal binary. Requires -output option">;
+
 def output : Option<["-", "--"], "output", KIND_SEPARATE>,
              HelpText<"Create output file with specified name">;
 def o : JoinedOrSeparate<["-"], "o">, Alias<output>;

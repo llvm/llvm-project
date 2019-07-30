@@ -81,6 +81,13 @@ Improvements to clang-tidy
   ``__attribute__((warn_unused_result))``, but some kernel versions do not have
   this warning enabled for clang.
 
+- New :doc:`google-upgrade-googletest-case
+  <clang-tidy/checks/google-upgrade-googletest-case>` check.
+
+  Finds uses of deprecated Googletest APIs with names containing ``case`` and
+  replaces them with equivalent APIs with ``suite``.
+
+
 Improvements to include-fixer
 -----------------------------
 

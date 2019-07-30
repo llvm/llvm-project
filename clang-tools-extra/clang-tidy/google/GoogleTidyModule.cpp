@@ -27,6 +27,7 @@
 #include "OverloadedUnaryAndCheck.h"
 #include "TodoCommentCheck.h"
 #include "UnnamedNamespaceInHeaderCheck.h"
+#include "UpgradeGoogletestCaseCheck.h"
 #include "UsingNamespaceDirectiveCheck.h"
 
 using namespace clang::ast_matchers;
@@ -79,6 +80,8 @@ class GoogleModule : public ClangTidyModule {
     CheckFactories
         .registerCheck<clang::tidy::readability::NamespaceCommentCheck>(
             "google-readability-namespace-comments");
+    CheckFactories.registerCheck<UpgradeGoogletestCaseCheck>(
+        "google-upgrade-googletest-case");
   }
 
   ClangTidyOptions getModuleOptions() override {

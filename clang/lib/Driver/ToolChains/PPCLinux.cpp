@@ -16,10 +16,7 @@ using namespace llvm::opt;
 
 void PPCLinuxToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                   ArgStringList &CC1Args) const {
-  // PPC wrapper headers are implementation of x86 intrinsics on PowerPC, which
-  // is not supported on PPC32 platform.
-  if (getArch() != llvm::Triple::ppc &&
-      !DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) &&
+  if (!DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) &&
       !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     const Driver &D = getDriver();
     SmallString<128> P(D.ResourceDir);

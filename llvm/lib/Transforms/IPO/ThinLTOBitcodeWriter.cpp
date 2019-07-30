@@ -218,10 +218,18 @@ void splitAndWriteThinLTOBitcode(
 
   promoteTypeIds(M, ModuleId);
 
-  // Returns whether a global has attached type metadata. Such globals may
-  // participate in CFI or whole-program devirtualization, so they need to
-  // appear in the merged module instead of the thin LTO module.
+  // Returns whether a global or its associated global has attached type
+  // metadata. The former may participate in CFI or whole-program
+  // devirtualization, so they need to appear in the merged module instead of
+  // the thin LTO module. Similarly, globals that are associated with globals
+  // with type metadata need to appear in the merged module because they will
+  // reference the global's section directly.
   auto HasTypeMetadata = [](const GlobalObject *GO) {
+    if (MDNode *MD = GO->getMetadata(LLVMContext::MD_associated))
+      if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
+        if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
+          if (AssocGO->hasMetadata(LLVMContext::MD_type))
+            return true;
     return GO->hasMetadata(LLVMContext::MD_type);
   };
 

@@ -32,7 +32,7 @@
 
 // CHECK-ILL-FORMED: (frontend): invalid input for checker option
 // CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
-// CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: Invalid argument
+// CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: {{[Ii]}}nvalid argument
 
 // RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \

@@ -99,11 +99,11 @@ public:
   /// Return true if system files should be passed to sawDependency().
   virtual bool needSystemDependencies() { return false; }
 
-  // implementation detail
   /// Add a dependency \p Filename if it has not been seen before and
   /// sawDependency() returns true.
-  void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                          bool IsModuleFile, bool IsMissing);
+  virtual void maybeAddDependency(StringRef Filename, bool FromModule,
+                                  bool IsSystem, bool IsModuleFile,
+                                  bool IsMissing);
 
 protected:
   /// Return true if the filename was added to the list of dependencies, false

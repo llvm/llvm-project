@@ -252,6 +252,8 @@ static std::unique_ptr<HTMLNode> genTypeReference(const Reference &Type,
   llvm::SmallString<128> Path =
       computeRelativePath(Type.Path, CurrentDirectory);
   llvm::sys::path::append(Path, Type.Name + ".html");
+  // Paths in HTML must be in posix-style
+  llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
   return genLink(Type.Name, Path);
 }
 

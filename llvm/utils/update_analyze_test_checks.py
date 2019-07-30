@@ -92,6 +92,7 @@ def main():
     prefix_list = []
     for l in run_lines:
       (tool_cmd, filecheck_cmd) = tuple([cmd.strip() for cmd in l.split('|', 1)])
+      common.verify_filecheck_prefixes(filecheck_cmd)
 
       if not tool_cmd.startswith(opt_basename + ' '):
         print('WARNING: Skipping non-%s RUN line: %s' % (opt_basename, l), file=sys.stderr)

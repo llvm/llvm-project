@@ -90,11 +90,11 @@ static constexpr const char *InitFileWarning =
     "accept the security risk.";
 
 #define LLDB_PROPERTIES_interpreter
-#include "Properties.inc"
+#include "InterpreterProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_interpreter
-#include "PropertiesEnum.inc"
+#include "InterpreterPropertiesEnum.inc"
 };
 
 ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
