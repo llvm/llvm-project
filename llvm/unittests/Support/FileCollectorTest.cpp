@@ -207,6 +207,7 @@ TEST(FileCollectorTest, recordVFSAccesses) {
   VFS->status(subdir.Path);
   EXPECT_TRUE(Collector->hasSeen(subdir.Path));
 
+#ifndef _WIN32
   std::error_code EC;
   auto It = VFS->dir_begin(subdir3.Path, EC);
   EXPECT_FALSE(EC);
@@ -215,6 +216,7 @@ TEST(FileCollectorTest, recordVFSAccesses) {
   EXPECT_TRUE(Collector->hasSeen(subdir3b.Path));
   std::string RemovedFileName = (Twine(subdir3.Path) + "/removed").str();
   EXPECT_FALSE(Collector->hasSeen(RemovedFileName));
+#endif
 }
 
 #ifndef _WIN32
