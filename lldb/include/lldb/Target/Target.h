@@ -1026,6 +1026,8 @@ public:
   GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                   bool create_on_demand = true);
 
+  std::vector<TypeSystem *> GetScratchTypeSystems(bool create_on_demand = true);
+
   PersistentExpressionState *
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
 

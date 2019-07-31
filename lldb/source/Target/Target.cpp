@@ -2153,6 +2153,34 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
+std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
+  if (!m_valid)
+    return {};
+
+  std::vector<TypeSystem *> scratch_type_systems;
+
+  std::set<lldb::LanguageType> languages_for_types;
+  std::set<lldb::LanguageType> languages_for_expressions;
+
+  Language::GetLanguagesSupportingTypeSystems(languages_for_types,
+                                              languages_for_expressions);
+
+  for (auto lang : languages_for_expressions) {
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(lang, create_on_demand);
+    if (!type_system_or_err)
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                     type_system_or_err.takeError(),
+                     "Language '{}' has expression support but no scratch type "
+                     "system available",
+                     Language::GetNameForLanguageType(lang));
+    else
+      scratch_type_systems.emplace_back(&type_system_or_err.get());
+  }
+
+  return scratch_type_systems;
+}
+
 PersistentExpressionState *
 Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   auto type_system_or_err = GetScratchTypeSystemForLanguage(language, true);
