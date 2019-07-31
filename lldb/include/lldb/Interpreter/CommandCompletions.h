@@ -179,14 +179,6 @@ public:
     size_t DoCompletion(SearchFilter *filter) override;
 
   private:
-    //        struct NameCmp {
-    //            bool operator() (const ConstString& lhs, const ConstString&
-    //            rhs) const
-    //            {
-    //                return lhs < rhs;
-    //            }
-    //        };
-
     RegularExpression m_regex;
     typedef std::set<ConstString> collection;
     collection m_match_set;
