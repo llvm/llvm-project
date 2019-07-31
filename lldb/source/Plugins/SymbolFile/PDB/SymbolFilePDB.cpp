@@ -735,7 +735,7 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
       resolve_scope & eSymbolContextLineEntry) {
     auto cu_sp = GetCompileUnitContainsAddress(so_addr);
     if (!cu_sp) {
-      if (resolved_flags | eSymbolContextVariable) {
+      if (resolved_flags & eSymbolContextVariable) {
         // TODO: Resolve variables
       }
       return 0;
