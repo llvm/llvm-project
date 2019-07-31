@@ -783,6 +783,17 @@ SDValue DPUTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
+bool
+DPUTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                  MachineFunction &MF,
+                                  bool IsVarArg,
+                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                  LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, RetCC_DPU);
+}
+
 SDValue
 DPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,

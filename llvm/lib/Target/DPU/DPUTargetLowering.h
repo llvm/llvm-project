@@ -34,6 +34,11 @@ public:
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool IsVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context) const override;
+
   // Lower return values
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -105,7 +110,8 @@ private:
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
                          int IntrinsicType) const;
 
-  SDValue LowerUnsupported(SDValue Op, SelectionDAG &DAG, StringRef Message) const;
+  SDValue LowerUnsupported(SDValue Op, SelectionDAG &DAG,
+                           StringRef Message) const;
 
   // Analysis and mute for 64 bits emulation.
   // Shifts: third parameter stands for Left (0), Right (1) or Arithmetic (2)
