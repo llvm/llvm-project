@@ -13,12 +13,9 @@ using namespace lldb_private;
 
 CompletionRequest::CompletionRequest(llvm::StringRef command_line,
                                      unsigned raw_cursor_pos,
-                                     int match_start_point,
-                                     int max_return_elements,
                                      CompletionResult &result)
     : m_command(command_line), m_raw_cursor_pos(raw_cursor_pos),
-      m_match_start_point(match_start_point),
-      m_max_return_elements(max_return_elements), m_result(result) {
+      m_result(result) {
 
   // We parse the argument up to the cursor, so the last argument in
   // parsed_line is the one containing the cursor, and the cursor is after the

@@ -68,18 +68,10 @@ public:
   ///     the cursor is at the start of the line. The completion starts from
   ///     this cursor position.
   ///
-  /// \param [in] match_start_point
-  /// \param [in] max_return_elements
-  ///     If there is a match that is expensive to compute, these are here to
-  ///     allow you to compute the completions in  batches.  Start the
-  ///     completion from match_start_point, and return match_return_elements
-  ///     elements.
-  ///
   /// \param [out] result
   ///     The CompletionResult that will be filled with the results after this
   ///     request has been handled.
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
-                    int match_start_point, int max_return_elements,
                     CompletionResult &result);
 
   llvm::StringRef GetRawLine() const { return m_command; }
@@ -97,10 +89,6 @@ public:
 
   void SetCursorCharPosition(int pos) { m_cursor_char_position = pos; }
   int GetCursorCharPosition() const { return m_cursor_char_position; }
-
-  int GetMatchStartPoint() const { return m_match_start_point; }
-
-  int GetMaxReturnElements() const { return m_max_return_elements; }
 
   bool GetWordComplete() { return m_word_complete; }
 
@@ -170,13 +158,6 @@ private:
   int m_cursor_index;
   /// The cursor position in the argument indexed by m_cursor_index.
   int m_cursor_char_position;
-  /// If there is a match that is expensive
-  /// to compute, these are here to allow you to compute the completions in
-  /// batches.  Start the completion from \amatch_start_point, and return
-  /// \amatch_return_elements elements.
-  // FIXME: These two values are not implemented.
-  int m_match_start_point;
-  int m_max_return_elements;
   /// \btrue if this is a complete option value (a space will be inserted
   /// after the completion.)  \bfalse otherwise.
   bool m_word_complete = false;

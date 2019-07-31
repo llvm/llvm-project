@@ -325,8 +325,7 @@ public:
   //
   // FIXME: Only max_return_elements == -1 is supported at present.
   int HandleCompletion(const char *current_line, const char *cursor,
-                       const char *last_char, int match_start_point,
-                       int max_return_elements, StringList &matches,
+                       const char *last_char, StringList &matches,
                        StringList &descriptions);
 
   // This version just returns matches, and doesn't compute the substring.  It

@@ -896,8 +896,6 @@ unsigned char Editline::TabCommand(int ch) {
 
   const int num_completions = m_completion_callback(
       line_info->buffer, line_info->cursor, line_info->lastchar,
-      0,  // Don't skip any matches (start at match zero)
-      -1, // Get all the matches
       completions, descriptions, m_completion_callback_baton);
 
   if (num_completions == 0)
