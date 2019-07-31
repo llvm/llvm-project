@@ -471,7 +471,11 @@ Searcher::CallbackReturn CommandCompletions::SymbolCompleter::SearchCallback(
     for (uint32_t i = 0; i < sc_list.GetSize(); i++) {
       if (sc_list.GetContextAtIndex(i, sc)) {
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
-        if (!func_name.IsEmpty())
+        // Ensure that the function name matches the regex. This is more than a
+        // sanity check. It is possible that the demangled function name does
+        // not start with the prefix, for example when it's in an anonymous
+        // namespace.
+        if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
           m_match_set.insert(func_name);
       }
     }
