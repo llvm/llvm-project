@@ -3,8 +3,6 @@ import("//llvm/version.gni")
 
 # This build file is just enough to get check-clang to pass, it's missing
 # several things from the CMake build:
-# - linking in clangTidyPlugin and clangIncludeFixerPlugin from
-#   clang-tools-extra (which doesn't have any GN build files yet)
 # - using libclang.exports
 # - a build target copying the Python bindings
 # - the GN linux build always builds without -fPIC (as if LLVM_ENABLE_PIC=OFF
@@ -39,8 +37,22 @@ target(libclang_target_type, "libclang") {
     deps += [ "//clang/lib/ARCMigrate" ]
   }
 
+  defines = []
+
+  # FIXME: Once the GN build has a way to select which bits to build,
+  # only include this dependency if clang-tools-extra is part of the build.
+  # FIXME: libclang depending on anything in clang-tools-extra seems like
+  # a layering violation.
+  if (true) {
+    defines += [ "CLANG_TOOL_EXTRA_BUILD" ]
+    deps += [
+      "//clang-tools-extra/clang-include-fixer/plugin",
+      "//clang-tools-extra/clang-tidy/plugin",
+    ]
+  }
+
   if (host_os == "win") {
-    defines = [ "_CINDEX_LIB_" ]
+    defines += [ "_CINDEX_LIB_" ]
   }
 
   sources = [
