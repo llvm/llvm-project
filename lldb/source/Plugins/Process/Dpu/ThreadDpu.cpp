@@ -46,7 +46,7 @@ bool ThreadDpu::GetStopReason(ThreadStopInfo &stop_info,
   description.clear();
   stop_info.details.signal.signo = 0;
   m_state = GetProcess().GetThreadState(m_thread_index, description,
-                                        stop_info.reason);
+                                        stop_info.reason, m_stepping);
 
   return true;
 }

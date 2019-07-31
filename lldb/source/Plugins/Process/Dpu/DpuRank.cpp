@@ -291,7 +291,8 @@ bool *Dpu::ThreadContextCF(int thread_index) {
 }
 
 lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
-                                    lldb::StopReason &stop_reason) {
+                                    lldb::StopReason &stop_reason, bool stepping) {
+  stop_reason = eStopReasonNone;
   if (m_context.bkp_fault && m_context.bkp_fault_thread_index == thread_index) {
     description = "breakpoint hit";
     stop_reason = eStopReasonBreakpoint;
@@ -304,15 +305,12 @@ lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
     description = "memory fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
-  } else if (m_context.scheduling[thread_index] != 0xff) {
-    description = "suspended";
+  } else if (m_context.scheduling[thread_index] != 0xff && stepping) {
+    description = "stepping";
     stop_reason = eStopReasonTrace;
-    return eStateRunning;
-  } else if (m_context.pcs[thread_index] != 0) {
+  } else if (m_context.pcs[thread_index] != 0 && stepping) {
     description = "stopped";
-    stop_reason = eStopReasonThreadExiting;
-    return eStateExited;
+    stop_reason = eStopReasonTrace;
   }
-  stop_reason = eStopReasonNone;
   return eStateStopped;
 }

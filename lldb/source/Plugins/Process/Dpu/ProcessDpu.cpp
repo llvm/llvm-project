@@ -168,19 +168,41 @@ bool ProcessDpu::SupportHardwareSingleStepping() const { return true; }
 
 Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  lldb::tid_t thread_id = GetID();
-  uint32_t thread_index = GetThreadByID(thread_id)->GetIndex();
+  lldb::StateType action_state = lldb::StateType::eStateInvalid;
+  uint32_t thread_id_if_stepping;
 
-  const ResumeAction *action =
-      resume_actions.GetActionForThread(thread_id, true);
-  if (action == NULL) {
-    return Status("No action to perform...");
+  for (const auto &thread : m_threads) {
+    lldb::tid_t tid = thread->GetID();
+    ThreadDpu *current_thread = GetThreadByID(tid);
+    const ResumeAction *action = resume_actions.GetActionForThread(tid, true);
+    if (action == NULL) {
+      current_thread->SetSteppingMode(false);
+      continue;
+    }
+    switch (action->state) {
+    case lldb::StateType::eStateRunning:
+      if (action_state != lldb::StateType::eStateRunning &&
+          action_state != lldb::StateType::eStateInvalid)
+        return Status("Uncoherent actions");
+      action_state = action->state;
+      current_thread->SetSteppingMode(false);
+      break;
+    case lldb::StateType::eStateStepping:
+      if (action_state != lldb::StateType::eStateInvalid)
+        return Status("Uncoherent actions");
+      action_state = action->state;
+      thread_id_if_stepping = current_thread->GetIndex();
+      current_thread->SetSteppingMode(true);
+      break;
+    default:
+      return Status("Unexpected action!");
+    }
   }
-  assert(action->tid == thread_id || action->tid == LLDB_INVALID_THREAD_ID);
-  switch (action->state) {
+
+  switch (action_state) {
   case lldb::StateType::eStateRunning:
     SetState(lldb::StateType::eStateRunning, true);
-    LLDB_LOG(log, "resuming thread {0} (pid {1})", thread_index, thread_id);
+    LLDB_LOG(log, "resuming threads");
     if (!m_dpu->ResumeThreads())
       return Status("CNI cannot resume");
     break;
@@ -188,12 +210,14 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
     unsigned int exit_status;
     lldb::StateType ret_state_type;
     SetState(lldb::StateType::eStateStepping, true);
-    LLDB_LOG(log, "stepping thread {0} (pid {1})", thread_index, thread_id);
-    ret_state_type = m_dpu->StepThread(thread_index, &exit_status);
+    LLDB_LOG(log, "stepping thread {0}", thread_id_if_stepping);
+    ret_state_type = m_dpu->StepThread(thread_id_if_stepping, &exit_status);
     if (ret_state_type == lldb::StateType::eStateExited)
       SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
     SetState(ret_state_type, true);
   } break;
+  case lldb::StateType::eStateInvalid:
+    return Status("Empty action list");
   default:
     return Status("Unknown resume action!");
   }
@@ -365,6 +389,8 @@ void ProcessDpu::GetThreadContext(int thread_index, uint32_t *&regs,
 
 lldb::StateType ProcessDpu::GetThreadState(int thread_index,
                                            std::string &description,
-                                           lldb::StopReason &stop_reason) {
-  return m_dpu->GetThreadState(thread_index, description, stop_reason);
+                                           lldb::StopReason &stop_reason,
+                                           bool stepping) {
+  return m_dpu->GetThreadState(thread_index, description, stop_reason,
+                               stepping);
 }

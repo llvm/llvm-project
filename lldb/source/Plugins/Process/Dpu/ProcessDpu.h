@@ -113,7 +113,7 @@ public:
                         bool *&zf, bool *&cf);
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
-                                 lldb::StopReason &stop_reason);
+                                 lldb::StopReason &stop_reason, bool stepping);
 
 private:
   ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,

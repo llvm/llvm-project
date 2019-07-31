@@ -50,6 +50,8 @@ public:
 
   int GetIndex() { return m_thread_index; }
 
+  void SetSteppingMode(bool on) { m_stepping = on; };
+
 private:
   // ---------------------------------------------------------------------
   // Interface for friend classes
@@ -66,6 +68,8 @@ private:
   int m_thread_index;
   std::unique_ptr<RegisterContextDpu> m_reg_context_up;
   lldb::StateType m_state;
+
+  bool m_stepping;
 };
 } // namespace process_dpu
 } // namespace lldb_private

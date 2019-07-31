@@ -87,7 +87,7 @@ public:
   bool *ThreadContextCF(int thread_index);
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
-                                 lldb::StopReason &stop_reason);
+                                 lldb::StopReason &stop_reason, bool stepping);
 
 private:
   DpuRank *m_rank;
