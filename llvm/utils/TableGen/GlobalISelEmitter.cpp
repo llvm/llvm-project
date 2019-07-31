@@ -249,6 +249,10 @@ static std::string explainPredicates(const TreePatternNode *N) {
       OS << ']';
     }
 
+    int64_t MinAlign = P.getMinAlignment();
+    if (MinAlign > 0)
+      Explanation += " MinAlign=" + utostr(MinAlign);
+
     if (P.isAtomicOrderingMonotonic())
       Explanation += " monotonic";
     if (P.isAtomicOrderingAcquire())
@@ -328,6 +332,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
       const ListInit *AddrSpaces = Predicate.getAddressSpaces();
       if (AddrSpaces && !AddrSpaces->empty())
+        continue;
+
+      if (Predicate.getMinAlignment() > 0)
         continue;
     }
 
@@ -1052,6 +1059,7 @@ public:
     IPM_MemoryLLTSize,
     IPM_MemoryVsLLTSize,
     IPM_MemoryAddressSpace,
+    IPM_MemoryAlignment,
     IPM_GenericPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
@@ -1846,6 +1854,40 @@ public:
       Table << MatchTable::Comment("AddrSpace") << MatchTable::IntValue(AS);
 
     Table << MatchTable::LineBreak;
+  }
+};
+
+class MemoryAlignmentPredicateMatcher : public InstructionPredicateMatcher {
+protected:
+  unsigned MMOIdx;
+  int MinAlign;
+
+public:
+  MemoryAlignmentPredicateMatcher(unsigned InsnVarID, unsigned MMOIdx,
+                                  int MinAlign)
+      : InstructionPredicateMatcher(IPM_MemoryAlignment, InsnVarID),
+        MMOIdx(MMOIdx), MinAlign(MinAlign) {
+    assert(MinAlign > 0);
+  }
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_MemoryAlignment;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    if (!InstructionPredicateMatcher::isIdentical(B))
+      return false;
+    auto *Other = cast<MemoryAlignmentPredicateMatcher>(&B);
+    return MMOIdx == Other->MMOIdx && MinAlign == Other->MinAlign;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckMemoryAlignment")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("MMO") << MatchTable::IntValue(MMOIdx)
+          << MatchTable::Comment("MinAlign") << MatchTable::IntValue(MinAlign)
+          << MatchTable::LineBreak;
   }
 };
 
@@ -3287,6 +3329,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
             0, ParsedAddrSpaces);
         }
       }
+
+      int64_t MinAlign = Predicate.getMinAlignment();
+      if (MinAlign > 0)
+        InsnMatcher.addPredicate<MemoryAlignmentPredicateMatcher>(0, MinAlign);
     }
 
     // G_LOAD is used for both non-extending and any-extending loads.

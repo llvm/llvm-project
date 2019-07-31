@@ -374,7 +374,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     }
   }
 
-  // Add IncludeFixer which can recorver diagnostics caused by missing includes
+  // Add IncludeFixer which can recover diagnostics caused by missing includes
   // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();

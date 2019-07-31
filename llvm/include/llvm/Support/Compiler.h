@@ -338,14 +338,6 @@
 # define LLVM_ASSUME_ALIGNED(p, a) (p)
 #endif
 
-/// \macro LLVM_ALIGNAS
-/// Used to specify a minimum alignment for a structure or variable.
-#if __GNUC__ && !__has_feature(cxx_alignas) && !LLVM_GNUC_PREREQ(4, 8, 1)
-# define LLVM_ALIGNAS(x) __attribute__((aligned(x)))
-#else
-# define LLVM_ALIGNAS(x) alignas(x)
-#endif
-
 /// \macro LLVM_PACKED
 /// Used to specify a packed structure.
 /// LLVM_PACKED(
@@ -376,8 +368,8 @@
 
 /// \macro LLVM_PTR_SIZE
 /// A constant integer equivalent to the value of sizeof(void*).
-/// Generally used in combination with LLVM_ALIGNAS or when doing computation in
-/// the preprocessor.
+/// Generally used in combination with alignas or when doing computation in the
+/// preprocessor.
 #ifdef __SIZEOF_POINTER__
 # define LLVM_PTR_SIZE __SIZEOF_POINTER__
 #elif defined(_WIN64)

@@ -963,8 +963,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, Register OldValRes,
-                                     Register Addr, Register Val,
+  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, const DstOp &OldValRes,
+                                     const SrcOp &Addr, const SrcOp &Val,
                                      MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_XCHG Addr, Val, MMO`.
@@ -1136,6 +1136,16 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAtomicRMWUmin(Register OldValRes, Register Addr,
                                          Register Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FADD Addr, Val, MMO`.
+  MachineInstrBuilder buildAtomicRMWFAdd(
+    const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+    MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FSUB Addr, Val, MMO`.
+  MachineInstrBuilder buildAtomicRMWFSub(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
 
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);

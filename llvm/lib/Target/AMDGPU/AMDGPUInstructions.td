@@ -307,13 +307,9 @@ class AddressSpaceList<list<int> AS> {
   list<int> AddrSpaces = AS;
 }
 
-class Aligned8Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
-  return cast<MemSDNode>(N)->getAlignment() % 8 == 0;
-}]>;
-
-class Aligned16Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
-  return cast<MemSDNode>(N)->getAlignment() >= 16;
-}]>;
+class Aligned<int Bytes> {
+  int MinAlignment = Bytes;
+}
 
 class LoadFrag <SDPatternOperator op> : PatFrag<(ops node:$ptr), (op node:$ptr)>;
 
@@ -481,21 +477,27 @@ def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
 def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
 def atomic_store_local : LocalStore <atomic_store>;
 
-def load_align8_local : Aligned8Bytes <
-  (ops node:$ptr), (load_local node:$ptr)
->;
 
-def load_align16_local : Aligned16Bytes <
-  (ops node:$ptr), (load_local node:$ptr)
->;
+def load_align8_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
+  let IsLoad = 1;
+  let MinAlignment = 8;
+}
 
-def store_align8_local : Aligned8Bytes <
-  (ops node:$val, node:$ptr), (store_local node:$val, node:$ptr)
->;
+def load_align16_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
+  let IsLoad = 1;
+  let MinAlignment = 16;
+}
 
-def store_align16_local : Aligned16Bytes <
-  (ops node:$val, node:$ptr), (store_local node:$val, node:$ptr)
->;
+def store_align8_local: PatFrag<(ops node:$val, node:$ptr),
+                                (store_local node:$val, node:$ptr)>, Aligned<8> {
+  let IsStore = 1;
+
+}
+def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
+                                (store_local node:$val, node:$ptr)>, Aligned<16> {
+  let IsStore = 1;
+}
+
 
 def atomic_store_flat  : FlatStore <atomic_store>;
 def truncstorei8_hi16_flat  : StoreHi16<truncstorei8>, FlatStoreAddress;

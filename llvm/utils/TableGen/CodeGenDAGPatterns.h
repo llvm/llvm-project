@@ -594,6 +594,7 @@ public:
   Record *getScalarMemoryVT() const;
 
   ListInit *getAddressSpaces() const;
+  int64_t getMinAlignment() const;
 
   // If true, indicates that GlobalISel-based C++ code was supplied.
   bool hasGISelPredicateCode() const;

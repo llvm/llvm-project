@@ -4058,6 +4058,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
+      DAG.addHeapAllocSite(Chain.getNode(),
+                           CLI.CS->getMetadata("heapallocsite"));
+    }
+
     return Ret;
   }
 
@@ -4068,6 +4073,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
+
+  // Save heapallocsite metadata.
+  if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
+    DAG.addHeapAllocSite(Chain.getNode(),
+                         CLI.CS->getMetadata("heapallocsite"));
+  }
 
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop;

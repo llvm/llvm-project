@@ -409,6 +409,30 @@ bool InstructionSelector::executeMatchTable(
         return false;
       break;
     }
+    case GIM_CheckMemoryAlignment: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t MMOIdx = MatchTable[CurrentIdx++];
+      unsigned MinAlign = MatchTable[CurrentIdx++];
+
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+        break;
+      }
+
+      MachineMemOperand *MMO
+        = *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckMemoryAlignment"
+                      << "(MIs[" << InsnID << "]->memoperands() + " << MMOIdx
+                      << ")->getAlignment() >= " << MinAlign << ")\n");
+      if (MMO->getAlignment() < MinAlign && handleReject() == RejectAndGiveUp)
+        return false;
+
+      break;
+    }
     case GIM_CheckMemorySizeEqualTo: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t MMOIdx = MatchTable[CurrentIdx++];

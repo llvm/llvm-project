@@ -137,7 +137,8 @@ public:
   size_t FindTypes(const std::vector<CompilerContext> &context, bool append,
                    TypeMap &types) override;
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override;
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   CompilerDeclContext
   FindNamespace(ConstString name,

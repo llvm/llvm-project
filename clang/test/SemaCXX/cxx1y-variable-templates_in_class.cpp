@@ -395,3 +395,32 @@ namespace dependent_static_var_template {
   }
   int &t = B::template n; // expected-error {{use of variable template 'n' requires template arguments}}
 }
+
+#ifndef PRECXX11
+namespace template_vars_in_template {
+template <int> struct TakesInt {};
+
+template <class T2>
+struct S {
+  template <class T1>
+  static constexpr int v = 42;
+
+  template <class T>
+  void mf() {
+    constexpr int val = v<T>;
+  }
+
+  void mf2() {
+    constexpr int val = v<char>;
+    TakesInt<val> ti;
+    (void)ti.x; // expected-error{{no member named 'x' in 'template_vars_in_template::TakesInt<42>'}}
+  }
+};
+
+void useit() {
+  S<int> x;
+  x.mf<double>();
+  x.mf2(); // expected-note{{in instantiation of member function 'template_vars_in_template::S<int>::mf2' requested here}}
+}
+}
+#endif
