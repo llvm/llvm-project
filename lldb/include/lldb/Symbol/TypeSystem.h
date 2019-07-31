@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
@@ -491,18 +492,15 @@ public:
   // callback to keep iterating, false to stop iterating.
   void ForEach(std::function<bool(TypeSystem *)> const &callback);
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language,
-                                       Module *module, bool can_create);
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language, Module *module,
+                           bool can_create);
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language,
-                                       Target *target, bool can_create);
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
+                           bool can_create);
 
 protected:
-  // This function does not take the map mutex, and should only be called from
-  // functions that do take the mutex.
-  void AddToMap(lldb::LanguageType language,
-                lldb::TypeSystemSP const &type_system_sp);
-
   typedef std::map<lldb::LanguageType, lldb::TypeSystemSP> collection;
   mutable std::mutex m_mutex; ///< A mutex to keep this object happy in
                               ///multi-threaded environments.
