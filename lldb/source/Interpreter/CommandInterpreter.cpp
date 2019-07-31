@@ -2664,32 +2664,14 @@ void CommandInterpreter::UpdateExecutionContext(
   }
 }
 
-size_t CommandInterpreter::GetProcessOutput() {
-  //  The process has stuff waiting for stderr; get it and write it out to the
-  //  appropriate place.
-  char stdio_buffer[1024];
-  size_t len;
-  size_t total_bytes = 0;
-  Status error;
+void CommandInterpreter::GetProcessOutput() {
   TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-  if (target_sp) {
-    ProcessSP process_sp(target_sp->GetProcessSP());
-    if (process_sp) {
-      while ((len = process_sp->GetSTDOUT(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetOutputFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-      while ((len = process_sp->GetSTDERR(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetErrorFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-    }
-  }
-  return total_bytes;
+  if (!target_sp)
+    return;
+
+  if (ProcessSP process_sp = target_sp->GetProcessSP())
+    m_debugger.FlushProcessOutput(*process_sp, /*flush_stdout*/ true,
+                                  /*flush_stderr*/ true);
 }
 
 void CommandInterpreter::StartHandlingCommand() {
