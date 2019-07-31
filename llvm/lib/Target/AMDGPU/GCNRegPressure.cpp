@@ -183,7 +183,8 @@ bool GCNRegPressure::less(const GCNSubtarget &ST,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void GCNRegPressure::print(raw_ostream &OS, const GCNSubtarget *ST) const {
-  OS << "VGPRs: " << getVGPRNum();
+  OS << "VGPRs: " << Value[VGPR32] << ' ';
+  OS << "AGPRs: " << Value[AGPR32];
   if (ST) OS << "(O" << ST->getOccupancyWithNumVGPRs(getVGPRNum()) << ')';
   OS << ", SGPRs: " << getSGPRNum();
   if (ST) OS << "(O" << ST->getOccupancyWithNumSGPRs(getSGPRNum()) << ')';

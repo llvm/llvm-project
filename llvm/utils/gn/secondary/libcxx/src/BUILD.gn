@@ -236,9 +236,9 @@ if (libcxx_enable_shared) {
       ]
       args = [
         "--input",
-        "$runtimes_dir/libc++.so.0",
+        rebase_path("$runtimes_dir/libc++.so.0", root_build_dir),
         "--output",
-        "$runtimes_dir/libc++.so",
+        rebase_path("$runtimes_dir/libc++.so", root_build_dir),
         "c++abi",
         "unwind",
       ]

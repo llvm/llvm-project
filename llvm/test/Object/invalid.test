@@ -606,3 +606,24 @@ FileHeader:
   Type:     ET_REL
   Machine:  EM_X86_64
   SHOffset: 0xffffffffffffffff
+
+## Check that llvm-objdump reports an error when it tries to dump a
+## symbol name and .strtab is empty.
+
+# RUN: yaml2obj %s --docnum=29 -o %t29
+# RUN: not llvm-objdump -syms %t29 2>&1 | FileCheck -DFILE=%t29 --check-prefix=STRTAB-EMPTY2 %s
+
+# STRTAB-EMPTY2: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is empty
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+    Content: ""
+Symbols:
+  - Name: foo

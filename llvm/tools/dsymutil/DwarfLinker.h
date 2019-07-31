@@ -56,8 +56,8 @@ using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 class DwarfLinker {
 public:
   DwarfLinker(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-              const LinkOptions &Options)
-      : OutFile(OutFile), BinHolder(BinHolder), Options(Options) {}
+              LinkOptions Options)
+      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -499,7 +499,7 @@ private:
   /// be uniqued and sorted and there are only few entries expected
   /// per compile unit, which is why this is a std::map.
   std::map<std::string, std::string> ParseableSwiftInterfaces;
-  
+
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
 };

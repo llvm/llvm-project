@@ -1813,15 +1813,15 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   return num_command_matches;
 }
 
-int CommandInterpreter::HandleCompletion(
-    const char *current_line, const char *cursor, const char *last_char,
-    int match_start_point, int max_return_elements, StringList &matches,
-    StringList &descriptions) {
+int CommandInterpreter::HandleCompletion(const char *current_line,
+                                         const char *cursor,
+                                         const char *last_char,
+                                         StringList &matches,
+                                         StringList &descriptions) {
 
   llvm::StringRef command_line(current_line, last_char - current_line);
   CompletionResult result;
-  CompletionRequest request(command_line, cursor - current_line,
-                            match_start_point, max_return_elements, result);
+  CompletionRequest request(command_line, cursor - current_line, result);
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
@@ -1837,9 +1837,6 @@ int CommandInterpreter::HandleCompletion(
         return 0;
     }
   }
-
-  // Only max_return_elements == -1 is supported at present:
-  lldbassert(max_return_elements == -1);
 
   int num_command_matches = HandleCompletionMatches(request);
   result.GetMatches(matches);
@@ -1857,8 +1854,7 @@ int CommandInterpreter::HandleCompletion(
     // element 0, otherwise put an empty string in element 0.
     std::string command_partial_str = request.GetCursorArgumentPrefix().str();
 
-    std::string common_prefix;
-    matches.LongestCommonPrefix(common_prefix);
+    std::string common_prefix = matches.LongestCommonPrefix();
     const size_t partial_name_len = command_partial_str.size();
     common_prefix.erase(0, partial_name_len);
 

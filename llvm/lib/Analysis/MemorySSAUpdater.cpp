@@ -480,29 +480,47 @@ void MemorySSAUpdater::removeDuplicatePhiEdgesBetween(const BasicBlock *From,
   }
 }
 
+static MemoryAccess *getNewDefiningAccessForClone(MemoryAccess *MA,
+                                                  const ValueToValueMapTy &VMap,
+                                                  PhiToDefMap &MPhiMap,
+                                                  bool CloneWasSimplified,
+                                                  MemorySSA *MSSA) {
+  MemoryAccess *InsnDefining = MA;
+  if (MemoryDef *DefMUD = dyn_cast<MemoryDef>(InsnDefining)) {
+    if (!MSSA->isLiveOnEntryDef(DefMUD)) {
+      Instruction *DefMUDI = DefMUD->getMemoryInst();
+      assert(DefMUDI && "Found MemoryUseOrDef with no Instruction.");
+      if (Instruction *NewDefMUDI =
+              cast_or_null<Instruction>(VMap.lookup(DefMUDI))) {
+        InsnDefining = MSSA->getMemoryAccess(NewDefMUDI);
+        if (!CloneWasSimplified)
+          assert(InsnDefining && "Defining instruction cannot be nullptr.");
+        else if (!InsnDefining || isa<MemoryUse>(InsnDefining)) {
+          // The clone was simplified, it's no longer a MemoryDef, look up.
+          auto DefIt = DefMUD->getDefsIterator();
+          // Since simplified clones only occur in single block cloning, a
+          // previous definition must exist, otherwise NewDefMUDI would not
+          // have been found in VMap.
+          assert(DefIt != MSSA->getBlockDefs(DefMUD->getBlock())->begin() &&
+                 "Previous def must exist");
+          InsnDefining = getNewDefiningAccessForClone(
+              &*(--DefIt), VMap, MPhiMap, CloneWasSimplified, MSSA);
+        }
+      }
+    }
+  } else {
+    MemoryPhi *DefPhi = cast<MemoryPhi>(InsnDefining);
+    if (MemoryAccess *NewDefPhi = MPhiMap.lookup(DefPhi))
+      InsnDefining = NewDefPhi;
+  }
+  assert(InsnDefining && "Defining instruction cannot be nullptr.");
+  return InsnDefining;
+}
+
 void MemorySSAUpdater::cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
                                         const ValueToValueMapTy &VMap,
                                         PhiToDefMap &MPhiMap,
                                         bool CloneWasSimplified) {
-  auto GetNewDefiningAccess = [&](MemoryAccess *MA) -> MemoryAccess * {
-    MemoryAccess *InsnDefining = MA;
-    if (MemoryUseOrDef *DefMUD = dyn_cast<MemoryUseOrDef>(InsnDefining)) {
-      if (!MSSA->isLiveOnEntryDef(DefMUD)) {
-        Instruction *DefMUDI = DefMUD->getMemoryInst();
-        assert(DefMUDI && "Found MemoryUseOrDef with no Instruction.");
-        if (Instruction *NewDefMUDI =
-                cast_or_null<Instruction>(VMap.lookup(DefMUDI)))
-          InsnDefining = MSSA->getMemoryAccess(NewDefMUDI);
-      }
-    } else {
-      MemoryPhi *DefPhi = cast<MemoryPhi>(InsnDefining);
-      if (MemoryAccess *NewDefPhi = MPhiMap.lookup(DefPhi))
-        InsnDefining = NewDefPhi;
-    }
-    assert(InsnDefining && "Defining instruction cannot be nullptr.");
-    return InsnDefining;
-  };
-
   const MemorySSA::AccessList *Acc = MSSA->getBlockAccesses(BB);
   if (!Acc)
     return;
@@ -519,9 +537,13 @@ void MemorySSAUpdater::cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
       if (Instruction *NewInsn =
               dyn_cast_or_null<Instruction>(VMap.lookup(Insn))) {
         MemoryAccess *NewUseOrDef = MSSA->createDefinedAccess(
-            NewInsn, GetNewDefiningAccess(MUD->getDefiningAccess()),
-            CloneWasSimplified ? nullptr : MUD);
-        MSSA->insertIntoListsForBlock(NewUseOrDef, NewBB, MemorySSA::End);
+            NewInsn,
+            getNewDefiningAccessForClone(MUD->getDefiningAccess(), VMap,
+                                         MPhiMap, CloneWasSimplified, MSSA),
+            /*Template=*/CloneWasSimplified ? nullptr : MUD,
+            /*CreationMustSucceed=*/CloneWasSimplified ? false : true);
+        if (NewUseOrDef)
+          MSSA->insertIntoListsForBlock(NewUseOrDef, NewBB, MemorySSA::End);
       }
     }
   }

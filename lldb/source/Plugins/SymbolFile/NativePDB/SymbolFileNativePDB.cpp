@@ -265,27 +265,27 @@ const char *SymbolFileNativePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol cross-platform file reader.";
 }
 
-SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFile *obj_file) {
-  return new SymbolFileNativePDB(obj_file);
+SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  return new SymbolFileNativePDB(std::move(objfile_sp));
 }
 
-SymbolFileNativePDB::SymbolFileNativePDB(ObjectFile *object_file)
-    : SymbolFile(object_file) {}
+SymbolFileNativePDB::SymbolFileNativePDB(ObjectFileSP objfile_sp)
+    : SymbolFile(std::move(objfile_sp)) {}
 
 SymbolFileNativePDB::~SymbolFileNativePDB() {}
 
 uint32_t SymbolFileNativePDB::CalculateAbilities() {
   uint32_t abilities = 0;
-  if (!m_obj_file)
+  if (!m_objfile_sp)
     return 0;
 
   if (!m_index) {
     // Lazily load and match the PDB file, but only do this once.
     std::unique_ptr<PDBFile> file_up =
-        loadMatchingPDBFile(m_obj_file->GetFileSpec().GetPath(), m_allocator);
+        loadMatchingPDBFile(m_objfile_sp->GetFileSpec().GetPath(), m_allocator);
 
     if (!file_up) {
-      auto module_sp = m_obj_file->GetModule();
+      auto module_sp = m_objfile_sp->GetModule();
       if (!module_sp)
         return 0;
       // See if any symbol file is specified through `--symfile` option.
@@ -318,11 +318,11 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
 }
 
 void SymbolFileNativePDB::InitializeObject() {
-  m_obj_load_address = m_obj_file->GetBaseAddress().GetFileAddress();
+  m_obj_load_address = m_objfile_sp->GetBaseAddress().GetFileAddress();
   m_index->SetLoadAddress(m_obj_load_address);
   m_index->ParseSectionContribs();
 
-  auto ts_or_err = m_obj_file->GetModule()->GetTypeSystemForLanguage(
+  auto ts_or_err = m_objfile_sp->GetModule()->GetTypeSystemForLanguage(
       lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
@@ -331,7 +331,7 @@ void SymbolFileNativePDB::InitializeObject() {
     ts_or_err->SetSymbolFile(this);
     auto *clang = llvm::cast_or_null<ClangASTContext>(&ts_or_err.get());
     lldbassert(clang);
-    m_ast = llvm::make_unique<PdbAstBuilder>(*m_obj_file, *m_index, *clang);
+    m_ast = llvm::make_unique<PdbAstBuilder>(*m_objfile_sp, *m_index, *clang);
   }
 }
 
@@ -436,7 +436,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
   FileSpec fs(source_file_name);
 
   CompUnitSP cu_sp =
-      std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, fs,
+      std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr, fs,
                                     toOpaqueUid(cci.m_id), lang, optimized);
 
   SetCompileUnitAtIndex(cci.m_id.modi, cu_sp);
@@ -1594,7 +1594,7 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
 llvm::Expected<TypeSystem &>
 SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   auto type_system_or_err =
-      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
+      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
   if (type_system_or_err) {
     type_system_or_err->SetSymbolFile(this);
   }

@@ -70,7 +70,7 @@ typedef lldb::ProcessSP (*ProcessCreateInstance)(
     const FileSpec *crash_file_path);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
-typedef SymbolFile *(*SymbolFileCreateInstance)(ObjectFile *obj_file);
+typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
 typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,
     lldb_private::Stream

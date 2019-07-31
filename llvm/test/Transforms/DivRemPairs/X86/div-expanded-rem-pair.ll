@@ -95,6 +95,49 @@ end:
   ret i8 %ret
 }
 
+; Be careful with RAUW/invalidation if this is a srem-of-srem.
+
+define i32 @srem_of_srem_unexpanded(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @srem_of_srem_unexpanded(
+; CHECK-NEXT:    [[T0:%.*]] = mul nsw i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sdiv i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = mul nsw i32 [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3_RECOMPOSED:%.*]] = srem i32 [[X]], [[T0]]
+; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[T3_RECOMPOSED]], [[Y]]
+; CHECK-NEXT:    [[T5:%.*]] = mul nsw i32 [[T4]], [[Y]]
+; CHECK-NEXT:    [[T6_RECOMPOSED:%.*]] = srem i32 [[T3_RECOMPOSED]], [[Y]]
+; CHECK-NEXT:    ret i32 [[T6_RECOMPOSED]]
+;
+  %t0 = mul nsw i32 %Z, %Y
+  %t1 = sdiv i32 %X, %t0
+  %t2 = mul nsw i32 %t0, %t1
+  %t3.recomposed = srem i32 %X, %t0
+  %t4 = sdiv i32 %t3.recomposed, %Y
+  %t5 = mul nsw i32 %t4, %Y
+  %t6.recomposed = srem i32 %t3.recomposed, %Y
+  ret i32 %t6.recomposed
+}
+define i32 @srem_of_srem_expanded(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @srem_of_srem_expanded(
+; CHECK-NEXT:    [[T0:%.*]] = mul nsw i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sdiv i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = mul nsw i32 [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = sub nsw i32 [[X]], [[T2]]
+; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[T3]], [[Y]]
+; CHECK-NEXT:    [[T5:%.*]] = mul nsw i32 [[T4]], [[Y]]
+; CHECK-NEXT:    [[T6:%.*]] = sub nsw i32 [[T3]], [[T5]]
+; CHECK-NEXT:    ret i32 [[T6]]
+;
+  %t0 = mul nsw i32 %Z, %Y
+  %t1 = sdiv i32 %X, %t0
+  %t2 = mul nsw i32 %t0, %t1
+  %t3 = sub nsw i32 %X, %t2
+  %t4 = sdiv i32 %t3, %Y
+  %t5 = mul nsw i32 %t4, %Y
+  %t6 = sub nsw i32 %t3, %t5
+  ret i32 %t6
+}
+
 ; If the target doesn't have a unified div/rem op for the type, keep decomposed rem
 
 define i128 @dont_hoist_urem(i128 %a, i128 %b) {

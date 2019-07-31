@@ -15,6 +15,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Remarks/BitstreamRemarkSerializer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkSerializer.h"
 
@@ -136,7 +137,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
     return make_error<RemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
-      remarks::createRemarkSerializer(*Format, RemarksFile->os());
+      remarks::createRemarkSerializer(*Format, remarks::SerializerMode::Separate, RemarksFile->os());
   if (Error E = RemarkSerializer.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 

@@ -434,6 +434,13 @@ static Expected<CurStreamTypeType> ReadSignature(BitstreamCursor &Stream) {
       return std::move(Err);
     if (Signature[2] == 'A' && Signature[3] == 'G')
       return ClangSerializedDiagnosticsBitstream;
+  } else if (Signature[0] == 'R' && Signature[1] == 'M') {
+    if (Error Err = tryRead(Signature[2], 8))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[3], 8))
+      return std::move(Err);
+    if (Signature[2] == 'R' && Signature[3] == 'K')
+      return LLVMBitstreamRemarks;
   } else {
     if (Error Err = tryRead(Signature[2], 4))
       return std::move(Err);
@@ -626,6 +633,9 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
     break;
   case ClangSerializedDiagnosticsBitstream:
     O.OS << "Clang Serialized Diagnostics\n";
+    break;
+  case LLVMBitstreamRemarks:
+    O.OS << "LLVM Remarks\n";
     break;
   }
   O.OS << "  # Toplevel Blocks: " << NumTopBlocks << "\n";

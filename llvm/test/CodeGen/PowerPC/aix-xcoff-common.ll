@@ -6,7 +6,6 @@
 
 @d = common local_unnamed_addr global double 0.000000e+00, align 8
 @f = common local_unnamed_addr global float 0.000000e+00, align 4
-@comm = common local_unnamed_addr global double 0.000000e+00, align 8
 
 @over_aligned = common local_unnamed_addr global double 0.000000e+00, align 32
 
@@ -19,6 +18,5 @@
 ; CHECK-NEXT: .comm   c,2,1
 ; CHECK-NEXT: .comm   d,8,3
 ; CHECK-NEXT: .comm   f,4,2
-; CHECK-NEXT: .comm   comm,8,3
 ; CHECK-NEXT: .comm   over_aligned,8,5
 ; CHECK-NEXT: .comm   array,32,0
