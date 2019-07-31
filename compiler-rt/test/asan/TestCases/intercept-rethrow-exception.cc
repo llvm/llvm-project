@@ -7,6 +7,8 @@
 // The current implementation of this functionality requires special
 // combination of libraries that are not used by default on NetBSD
 // XFAIL: netbsd
+// FIXME: Bug 42703
+// XFAIL: solaris
 
 #include <assert.h>
 #include <exception>

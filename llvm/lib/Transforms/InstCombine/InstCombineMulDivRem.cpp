@@ -1319,6 +1319,8 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
   if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
+    // This may increase instruction count, we don't enforce that Y is a
+    // constant.
     Constant *N1 = Constant::getAllOnesValue(Ty);
     Value *Add = Builder.CreateAdd(Op1, N1);
     return BinaryOperator::CreateAnd(Op0, Add);

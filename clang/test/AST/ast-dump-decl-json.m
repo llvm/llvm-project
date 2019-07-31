@@ -371,7 +371,8 @@ void f() {
 // CHECK-NEXT:    "name": "_cmd", 
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "SEL *", 
-// CHECK-NEXT:     "qualType": "SEL"
+// CHECK-NEXT:     "qualType": "SEL", 
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }, 
 // CHECK-NEXT:   {
@@ -672,7 +673,8 @@ void f() {
 // CHECK-NEXT:      "name": "_cmd", 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *", 
-// CHECK-NEXT:       "qualType": "SEL"
+// CHECK-NEXT:       "qualType": "SEL", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     {
@@ -818,7 +820,8 @@ void f() {
 // CHECK-NEXT:    "name": "T", 
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "id", 
-// CHECK-NEXT:     "qualType": "id"
+// CHECK-NEXT:     "qualType": "id", 
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -906,7 +909,8 @@ void f() {
 // CHECK-NEXT:      "name": "_cmd", 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *", 
-// CHECK-NEXT:       "qualType": "SEL"
+// CHECK-NEXT:       "qualType": "SEL", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     {

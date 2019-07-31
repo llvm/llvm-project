@@ -177,6 +177,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 
 SanitizerMask Solaris::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
+  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   // FIXME: Omit X86_64 until 64-bit support is figured out.
   if (IsX86) {
@@ -184,6 +185,8 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
   }
+  if (IsX86 || IsX86_64)
+    Res |= SanitizerKind::Function;
   Res |= SanitizerKind::Vptr;
   return Res;
 }

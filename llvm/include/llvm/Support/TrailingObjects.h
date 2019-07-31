@@ -87,11 +87,6 @@ protected:
   template <typename T> struct OverloadToken {};
 };
 
-/// This helper template works-around MSVC 2013's lack of useful
-/// alignas() support. The argument to alignas(), in MSVC, is
-/// required to be a literal integer. But, you *can* use template
-/// specialization to select between a bunch of different alignas()
-/// expressions...
 template <int Align>
 class TrailingObjectsAligner : public TrailingObjectsBase {};
 template <>

@@ -153,7 +153,7 @@ public:
 
   lldb::ByteOrder GetByteOrder() const;
 
-  lldb_private::TypeSystem *GetTypeSystem();
+  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem();
 
   const DWARFDebugAranges &GetFunctionAranges();
 

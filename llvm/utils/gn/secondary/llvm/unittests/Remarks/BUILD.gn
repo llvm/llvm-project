@@ -2,10 +2,13 @@ import("//llvm/utils/unittest/unittest.gni")
 
 unittest("RemarksTests") {
   deps = [
+    "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
   ]
   sources = [
+    "BitstreamRemarksFormatTest.cpp",
+    "BitstreamRemarksSerializerTest.cpp",
     "RemarksStrTabParsingTest.cpp",
     "YAMLRemarksParsingTest.cpp",
     "YAMLRemarksSerializerTest.cpp",

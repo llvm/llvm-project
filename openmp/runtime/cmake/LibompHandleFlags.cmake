@@ -74,18 +74,6 @@ function(libomp_get_c_and_cxxflags_common flags)
   set(${flags} ${flags_local} PARENT_SCOPE)
 endfunction()
 
-# C compiler flags
-function(libomp_get_cflags cflags)
-  set(cflags_local)
-  libomp_get_c_and_cxxflags_common(cflags_local)
-  # flags only for the C Compiler
-  libomp_append(cflags_local /TP LIBOMP_HAVE_TP_FLAG)
-  libomp_append(cflags_local "-x c++" LIBOMP_HAVE_X_CPP_FLAG)
-  set(cflags_local ${cflags_local} ${LIBOMP_CFLAGS})
-  libomp_setup_flags(cflags_local)
-  set(${cflags} ${cflags_local} PARENT_SCOPE)
-endfunction()
-
 # C++ compiler flags
 function(libomp_get_cxxflags cxxflags)
   set(cxxflags_local)

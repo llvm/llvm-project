@@ -211,16 +211,13 @@ public:
   TargetLoweringObjectFileXCOFF() = default;
   ~TargetLoweringObjectFileXCOFF() override = default;
 
-  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
-                                      const TargetMachine &TM) const override;
-
-  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
-                                    const TargetMachine &TM) const override;
+  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
 
   MCSection *getStaticCtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
@@ -230,6 +227,9 @@ public:
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
                                        const GlobalValue *RHS,
                                        const TargetMachine &TM) const override;
+
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

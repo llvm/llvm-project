@@ -598,6 +598,10 @@ def ext_implicit_lib_function_decl : ExtWarn<
 def note_include_header_or_declare : Note<
   "include the header <%0> or explicitly provide a declaration for '%1'">;
 def note_previous_builtin_declaration : Note<"%0 is a builtin with type %1">;
+def warn_implicit_decl_no_jmp_buf
+    : Warning<"declaration of built-in function '%0' requires the declaration"
+    " of the 'jmp_buf' type, commonly provided in the header <setjmp.h>.">,
+      InGroup<DiagGroup<"incomplete-setjmp-declaration">>;
 def warn_implicit_decl_requires_sysheader : Warning<
   "declaration of built-in function '%1' requires inclusion of the header <%0>">,
   InGroup<BuiltinRequiresHeader>;

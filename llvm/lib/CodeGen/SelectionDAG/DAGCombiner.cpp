@@ -111,6 +111,11 @@ static cl::opt<bool>
   MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
                     cl::desc("DAG combiner may split indexing from loads"));
 
+static cl::opt<bool>
+    EnableStoreMerging("combiner-store-merging", cl::Hidden, cl::init(true),
+                       cl::desc("DAG combiner enable merging multiple stores "
+                                "into a wider store"));
+
 static cl::opt<unsigned> TokenFactorInlineLimit(
     "combiner-tokenfactor-inline-limit", cl::Hidden, cl::init(2048),
     cl::desc("Limit the number of operands to inline for Token Factors"));
@@ -15521,7 +15526,7 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
 }
 
 bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOpt::None || !EnableStoreMerging)
     return false;
 
   EVT MemVT = St->getMemoryVT();

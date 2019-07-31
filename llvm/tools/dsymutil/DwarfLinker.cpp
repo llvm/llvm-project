@@ -2850,8 +2850,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
 } // namespace dsymutil
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-               const DebugMap &DM, const LinkOptions &Options) {
-  DwarfLinker Linker(OutFile, BinHolder, Options);
+               const DebugMap &DM, LinkOptions Options) {
+  DwarfLinker Linker(OutFile, BinHolder, std::move(Options));
   return Linker.link(DM);
 }
 

@@ -1003,6 +1003,12 @@ struct is_idiv_op {
   }
 };
 
+struct is_irem_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::SRem || Opcode == Instruction::URem;
+  }
+};
+
 /// Matches shift operations.
 template <typename LHS, typename RHS>
 inline BinOpPred_match<LHS, RHS, is_shift_op> m_Shift(const LHS &L,
@@ -1036,6 +1042,13 @@ template <typename LHS, typename RHS>
 inline BinOpPred_match<LHS, RHS, is_idiv_op> m_IDiv(const LHS &L,
                                                     const RHS &R) {
   return BinOpPred_match<LHS, RHS, is_idiv_op>(L, R);
+}
+
+/// Matches integer remainder operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_irem_op> m_IRem(const LHS &L,
+                                                    const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_irem_op>(L, R);
 }
 
 //===----------------------------------------------------------------------===//

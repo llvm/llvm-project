@@ -148,6 +148,13 @@ enum {
   /// - AddrSpaceN+1 ...
   GIM_CheckMemoryAddressSpace,
 
+  /// Check the minimum alignment of the memory access for the given machine
+  /// memory operand.
+  /// - InsnID - Instruction ID
+  /// - MMOIdx - MMO index
+  /// - MinAlign - Minimum acceptable alignment
+  GIM_CheckMemoryAlignment,
+
   /// Check the size of the memory access for the given machine memory operand
   /// against the size of an operand.
   /// - InsnID - Instruction ID

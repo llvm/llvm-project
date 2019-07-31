@@ -53,8 +53,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
 
-  Occupancy = getMaxWavesPerEU();
-  limitOccupancy(MF);
+  Occupancy = ST.computeOccupancy(MF, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
 
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {

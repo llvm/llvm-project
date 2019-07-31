@@ -435,7 +435,6 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
 int REPL::IOHandlerComplete(IOHandler &io_handler, const char *current_line,
                             const char *cursor, const char *last_char,
-                            int skip_first_n_matches, int max_matches,
                             StringList &matches, StringList &descriptions) {
   matches.Clear();
 
@@ -448,8 +447,7 @@ int REPL::IOHandlerComplete(IOHandler &io_handler, const char *current_line,
     // auto complete LLDB commands
     const char *lldb_current_line = line.substr(1).data();
     return debugger.GetCommandInterpreter().HandleCompletion(
-        lldb_current_line, cursor, last_char, skip_first_n_matches, max_matches,
-        matches, descriptions);
+        lldb_current_line, cursor, last_char, matches, descriptions);
   }
 
   // Strip spaces from the line and see if we had only spaces

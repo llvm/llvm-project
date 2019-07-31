@@ -1656,20 +1656,20 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("Custom section for Data not yet supported.");
 
   if (GV->hasComdat())
-    report_fatal_error("COMDAT not yet supported on AIX.");
+    report_fatal_error("COMDAT not yet supported by AIX.");
 
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
   if (!GVKind.isCommon())
-    report_fatal_error("Only common variables are supported on AIX.");
+    report_fatal_error("Only common variables are supported on AIX for now.");
 
   // Create the containing csect and switch to it.
-  MCSectionXCOFF *CSect = dyn_cast<MCSectionXCOFF>(
+  MCSectionXCOFF *CSect = cast<MCSectionXCOFF>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
   OutStreamer->SwitchSection(CSect);
 
   // Create the symbol and emit it.
-  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(getSymbol(GV));
-  auto DL = GV->getParent()->getDataLayout();
+  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(getSymbol(GV));
+  const DataLayout &DL = GV->getParent()->getDataLayout();
   unsigned Align =
       GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);
   uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());

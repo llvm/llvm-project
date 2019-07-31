@@ -56,6 +56,9 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "The YAML with string table format requires a parsed string table.");
+  case Format::Bitstream:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Parsing bitstream remarks is not supported.");
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -73,6 +76,9 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
                              "table. Use yaml-strtab instead.");
   case Format::YAMLStrTab:
     return llvm::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(StrTab));
+  case Format::Bitstream:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Parsing bitstream remarks is not supported.");
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -89,6 +95,9 @@ llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
   case Format::YAML:
   case Format::YAMLStrTab:
     return createYAMLParserFromMeta(Buf, std::move(StrTab));
+  case Format::Bitstream:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Parsing bitstream remarks is not supported.");
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");

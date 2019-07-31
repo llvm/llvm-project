@@ -5217,11 +5217,11 @@ DeclContext *Sema::FindInstantiatedContext(SourceLocation Loc, DeclContext* DC,
 /// template struct X<int>;
 /// \endcode
 ///
-/// In the instantiation of <tt>X<int>::getKind()</tt>, we need to map the
-/// \p EnumConstantDecl for \p KnownValue (which refers to
-/// <tt>X<T>::<Kind>::KnownValue</tt>) to its instantiation
-/// (<tt>X<int>::<Kind>::KnownValue</tt>). \p FindInstantiatedDecl performs
-/// this mapping from within the instantiation of <tt>X<int></tt>.
+/// In the instantiation of X<int>::getKind(), we need to map the \p
+/// EnumConstantDecl for \p KnownValue (which refers to
+/// X<T>::<Kind>::KnownValue) to its instantiation (X<int>::<Kind>::KnownValue).
+/// \p FindInstantiatedDecl performs this mapping from within the instantiation
+/// of X<int>.
 NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           bool FindingInstantiatedContext) {
@@ -5310,20 +5310,6 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
     CurrentInstantiationScope->InstantiatedLocal(D, Inst);
     return cast<LabelDecl>(Inst);
-  }
-
-  // For variable template specializations, update those that are still
-  // type-dependent.
-  if (VarTemplateSpecializationDecl *VarSpec =
-          dyn_cast<VarTemplateSpecializationDecl>(D)) {
-    bool InstantiationDependent = false;
-    const TemplateArgumentListInfo &VarTemplateArgs =
-        VarSpec->getTemplateArgsInfo();
-    if (TemplateSpecializationType::anyDependentTemplateArguments(
-            VarTemplateArgs, InstantiationDependent))
-      D = cast<NamedDecl>(
-          SubstDecl(D, VarSpec->getDeclContext(), TemplateArgs));
-    return D;
   }
 
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
@@ -5450,11 +5436,23 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // find it. Does that ever matter?
     if (auto Name = D->getDeclName()) {
       DeclarationNameInfo NameInfo(Name, D->getLocation());
-      Name = SubstDeclarationNameInfo(NameInfo, TemplateArgs).getName();
+      DeclarationNameInfo NewNameInfo =
+          SubstDeclarationNameInfo(NameInfo, TemplateArgs);
+      Name = NewNameInfo.getName();
       if (!Name)
         return nullptr;
       DeclContext::lookup_result Found = ParentDC->lookup(Name);
-      Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
+
+      if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
+        VarTemplateDecl *Templ = cast_or_null<VarTemplateDecl>(
+            findInstantiationOf(Context, VTSD->getSpecializedTemplate(),
+                                Found.begin(), Found.end()));
+        if (!Templ)
+          return nullptr;
+        Result = getVarTemplateSpecialization(
+            Templ, &VTSD->getTemplateArgsInfo(), NewNameInfo, SourceLocation());
+      } else
+        Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
     } else {
       // Since we don't have a name for the entity we're looking for,
       // our only option is to walk through all of the declarations to

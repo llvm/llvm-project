@@ -197,8 +197,6 @@ SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFile *obj_file) {
 }
 
 TypeList &SymbolFileDWARF::GetTypeList() {
-  // This method can be called without going through the symbol vendor so we
-  // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeList();
@@ -279,7 +277,7 @@ size_t SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
                                  TypeClass type_mask, TypeList &type_list)
 
 {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   TypeSet type_set;
 
   CompileUnit *comp_unit = nullptr;
@@ -366,17 +364,17 @@ UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
 }
 
-TypeSystem *SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
-  SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-  TypeSystem *type_system;
-  if (debug_map_symfile) {
-    type_system = debug_map_symfile->GetTypeSystemForLanguage(language);
-  } else {
-    type_system = m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
-    if (type_system)
-      type_system->SetSymbolFile(this);
+llvm::Expected<TypeSystem &>
+SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetTypeSystemForLanguage(language);
+
+  auto type_system_or_err =
+      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
+  if (type_system_or_err) {
+    type_system_or_err->SetSymbolFile(this);
   }
-  return type_system;
+  return type_system_or_err;
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -732,17 +730,21 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
 Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
                                          const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
-  if (die.IsValid()) {
-    TypeSystem *type_system =
-        GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  if (!die.IsValid())
+    return nullptr;
 
-    if (type_system) {
-      DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-      if (dwarf_ast)
-        return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
-    }
+  auto type_system_or_err =
+      GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Unable to parse function");
+    return nullptr;
   }
-  return nullptr;
+  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
+  if (!dwarf_ast)
+    return nullptr;
+
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
 }
 
 bool SymbolFileDWARF::FixupAddress(Address &addr) {
@@ -754,7 +756,7 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
   return true;
 }
 lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetLanguageType();
@@ -763,7 +765,7 @@ lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (!dwarf_cu)
     return 0;
@@ -783,7 +785,7 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (DWARFUnit *unit = GetDWARFCompileUnit(&comp_unit)) {
     const dw_offset_t stmt_list = unit->GetLineTableOffset();
     if (stmt_list != DW_INVALID_OFFSET) {
@@ -833,7 +835,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
 }
 
 bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetIsOptimized();
@@ -843,7 +845,7 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
 bool SymbolFileDWARF::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
     std::vector<SourceModule> &imported_modules) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (!dwarf_cu)
@@ -930,7 +932,7 @@ static void ParseDWARFLineTableCallback(dw_offset_t offset,
 }
 
 bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (comp_unit.GetLineTable() != nullptr)
     return true;
 
@@ -1013,7 +1015,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
 }
 
 bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu == nullptr)
@@ -1179,7 +1181,9 @@ bool SymbolFileDWARF::ClassOrStructIsVirtual(const DWARFDIE &parent_die) {
 }
 
 void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
-  TypeSystem *type_system = decl_ctx.GetTypeSystem();
+  auto *type_system = decl_ctx.GetTypeSystem();
+  if (!type_system)
+    return;
   DWARFASTParser *ast_parser = type_system->GetDWARFParser();
   std::vector<DWARFDIE> decl_ctx_die_list =
       ast_parser->GetDIEForDeclContext(decl_ctx);
@@ -1272,8 +1276,6 @@ SymbolFileDWARF::GetDeclContextForUID(lldb::user_id_t type_uid) {
 
 CompilerDeclContext
 SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
-  // This method can be called without going through the symbol vendor so we
-  // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
@@ -1284,8 +1286,6 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
 }
 
 Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
-  // This method can be called without going through the symbol vendor so we
-  // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
@@ -1685,6 +1685,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
 uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
                                                SymbolContextItem resolve_scope,
                                                SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
                      "SymbolFileDWARF::"
@@ -1828,6 +1829,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
                                                bool check_inlines,
                                                SymbolContextItem resolve_scope,
                                                SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const uint32_t prev_size = sc_list.GetSize();
   if (resolve_scope & eSymbolContextCompUnit) {
     for (uint32_t cu_idx = 0, num_cus = GetNumCompileUnits(); cu_idx < num_cus;
@@ -1952,9 +1954,16 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
   }
 
   TypeSystem *decl_ctx_type_system = decl_ctx->GetTypeSystem();
-  TypeSystem *type_system = GetTypeSystemForLanguage(
+  auto type_system_or_err = GetTypeSystemForLanguage(
       decl_ctx_type_system->GetMinimumLanguage(nullptr));
-  if (decl_ctx_type_system == type_system)
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err),
+                   "Unable to match namespace decl using TypeSystem");
+    return false;
+  }
+
+  if (decl_ctx_type_system == &type_system_or_err.get())
     return true; // The type systems match, return true
 
   // The namespace AST was valid, and it does not match...
@@ -1970,6 +1979,7 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
 uint32_t SymbolFileDWARF::FindGlobalVariables(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log)
@@ -2078,6 +2088,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
 uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
                                               uint32_t max_matches,
                                               VariableList &variables) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log) {
@@ -2205,6 +2216,7 @@ uint32_t SymbolFileDWARF::FindFunctions(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (name = '%s')",
                      name.AsCString());
@@ -2268,6 +2280,7 @@ uint32_t SymbolFileDWARF::FindFunctions(
 uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
                                         bool include_inlines, bool append,
                                         SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (regex = '%s')",
                      regex.GetText().str().c_str());
@@ -2341,6 +2354,7 @@ uint32_t SymbolFileDWARF::FindTypes(
     bool append, uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // If we aren't appending the results to this list, then clear the list
   if (!append)
     types.Clear();
@@ -2440,6 +2454,7 @@ uint32_t SymbolFileDWARF::FindTypes(
 
 size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
                                   bool append, TypeMap &types) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     types.Clear();
 
@@ -2486,6 +2501,7 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
 CompilerDeclContext
 SymbolFileDWARF::FindNamespace(ConstString name,
                                const CompilerDeclContext *parent_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log) {
@@ -2854,10 +2870,18 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
       // use this to ensure any matches we find are in a language that this
       // type system supports
       const LanguageType language = dwarf_decl_ctx.GetLanguage();
-      TypeSystem *type_system = (language == eLanguageTypeUnknown)
-                                    ? nullptr
-                                    : GetTypeSystemForLanguage(language);
-
+      TypeSystem *type_system = nullptr;
+      if (language != eLanguageTypeUnknown) {
+        auto type_system_or_err = GetTypeSystemForLanguage(language);
+        if (auto err = type_system_or_err.takeError()) {
+          LLDB_LOG_ERROR(
+              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+              std::move(err), "Cannot get TypeSystem for language {}",
+              Language::GetNameForLanguageType(language));
+        } else {
+          type_system = &type_system_or_err.get();
+        }
+      }
       if (num_matches) {
         for (size_t i = 0; i < num_matches; ++i) {
           const DIERef &die_ref = die_offsets[i];
@@ -2951,12 +2975,15 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  TypeSystem *type_system =
+  auto type_system_or_err =
       GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
-  if (!type_system)
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+                   std::move(err), "Unable to parse type");
     return {};
+  }
 
-  DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
+  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
   if (!dwarf_ast)
     return {};
 
@@ -3009,7 +3036,7 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc,
 }
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompileUnit *comp_unit = func.GetCompileUnit();
   lldbassert(comp_unit);
 
@@ -3029,7 +3056,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
 }
 
 size_t SymbolFileDWARF::ParseTypes(CompileUnit &comp_unit) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   size_t types_added = 0;
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu) {
@@ -3045,7 +3072,7 @@ size_t SymbolFileDWARF::ParseTypes(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
-  ASSERT_MODULE_LOCK(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (sc.comp_unit != nullptr) {
     DWARFDebugInfo *info = DebugInfo();
     if (info == nullptr)
@@ -3708,8 +3735,10 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
 }
 
 void SymbolFileDWARF::DumpClangAST(Stream &s) {
-  TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(ts);
+  auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  if (!ts_or_err)
+    return;
+  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(&ts_or_err.get());
   if (!clang)
     return;
   clang->Dump(s);

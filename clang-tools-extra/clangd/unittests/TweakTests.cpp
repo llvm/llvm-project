@@ -572,6 +572,17 @@ void f2();]]
 void /* entity.name.function.cpp */f1();
 void /* entity.name.function.cpp */f2();
 )cpp");
+
+   checkTransform(ID,
+  R"cpp(
+void f1();
+void f2() {^};
+)cpp",
+
+  R"cpp(
+void f1();
+void /* entity.name.function.cpp */f2() {};
+)cpp");
 }
 
 TEST(TweakTest, ExpandMacro) {
