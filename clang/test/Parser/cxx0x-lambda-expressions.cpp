@@ -126,6 +126,19 @@ void PR22122() {
 
 template void PR22122<int>();
 
+namespace PR42778 {
+struct A {
+  template <class F> A(F&&) {}
+};
+
+struct S {
+  void mf() { A{[*this]{}}; }
+#if __cplusplus < 201703L
+  // expected-warning@-2 {{C++17 extension}}
+#endif
+};
+}
+
 struct S {
   template <typename T>
   void m (T x =[0); // expected-error{{expected variable name or 'this' in lambda capture list}}

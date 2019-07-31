@@ -238,6 +238,8 @@ llvm::json::Object JSONNodeDumper::createQualType(QualType QT, bool Desugar) {
     SplitQualType DSQT = QT.getSplitDesugaredType();
     if (DSQT != SQT)
       Ret["desugaredQualType"] = QualType::getAsString(DSQT, PrintPolicy);
+    if (const auto *TT = QT->getAs<TypedefType>())
+      Ret["typeAliasDeclId"] = createPointerRepresentation(TT->getDecl());
   }
   return Ret;
 }

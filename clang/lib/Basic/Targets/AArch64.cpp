@@ -196,9 +196,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_NEON_FP", "0xE");
   }
 
-  if (FPU & SveMode)
-    Builder.defineMacro("__ARM_FEATURE_SVE", "1");
-
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 

@@ -401,18 +401,21 @@ TEST_F(LexerTest, DontOverallocateStringifyArgs) {
   auto MacroArgsDeleter = [&PP](MacroArgs *M) { M->destroy(*PP); };
   std::unique_ptr<MacroArgs, decltype(MacroArgsDeleter)> MA(
       MacroArgs::create(MI, ArgTokens, false, *PP), MacroArgsDeleter);
-  Token Result = MA->getStringifiedArgument(0, *PP, {}, {});
+  auto StringifyArg = [&](int ArgNo) {
+    return MA->StringifyArgument(MA->getUnexpArgument(ArgNo), *PP,
+                                 /*Charify=*/false, {}, {});
+  };
+  Token Result = StringifyArg(0);
   EXPECT_EQ(tok::string_literal, Result.getKind());
   EXPECT_STREQ("\"\\\"StrArg\\\"\"", Result.getLiteralData());
-  Result = MA->getStringifiedArgument(1, *PP, {}, {});
+  Result = StringifyArg(1);
   EXPECT_EQ(tok::string_literal, Result.getKind());
   EXPECT_STREQ("\"5\"", Result.getLiteralData());
-  Result = MA->getStringifiedArgument(2, *PP, {}, {});
+  Result = StringifyArg(2);
   EXPECT_EQ(tok::string_literal, Result.getKind());
   EXPECT_STREQ("\"'C'\"", Result.getLiteralData());
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(MA->getStringifiedArgument(3, *PP, {}, {}),
-               "Invalid argument number!");
+  EXPECT_DEATH(StringifyArg(3), "Invalid arg #");
 #endif
 }
 

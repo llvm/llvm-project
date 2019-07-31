@@ -48,10 +48,6 @@ class MacroArgs final
   /// stream.
   std::vector<std::vector<Token> > PreExpArgTokens;
 
-  /// StringifiedArgs - This contains arguments in 'stringified' form.  If the
-  /// stringified form of an argument has not yet been computed, this is empty.
-  std::vector<Token> StringifiedArgs;
-
   /// ArgCache - This is a linked list of MacroArgs objects that the
   /// Preprocessor owns which we use to avoid thrashing malloc/free.
   MacroArgs *ArgCache;
@@ -93,12 +89,6 @@ public:
   /// argument.
   const std::vector<Token> &
     getPreExpArgument(unsigned Arg, Preprocessor &PP);
-
-  /// getStringifiedArgument - Compute, cache, and return the specified argument
-  /// that has been 'stringified' as required by the # operator.
-  const Token &getStringifiedArgument(unsigned ArgNo, Preprocessor &PP,
-                                      SourceLocation ExpansionLocStart,
-                                      SourceLocation ExpansionLocEnd);
 
   /// getNumMacroArguments - Return the number of arguments the invoked macro
   /// expects.

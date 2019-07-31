@@ -8,6 +8,10 @@ long test_InterlockedAdd(long volatile *Addend, long Value) {
   return _InterlockedAdd(Addend, Value);
 }
 
+long test_InterlockedAdd_constant(long volatile *Addend) {
+  return _InterlockedAdd(Addend, -1);
+}
+
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd(i32* %Addend, i32 %Value) {{.*}} {
 // CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add i32* %1, i32 %2 seq_cst
 // CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2

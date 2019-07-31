@@ -383,18 +383,10 @@ void TokenLexer::ExpandFunctionArguments() {
       SourceLocation ExpansionLocEnd =
           getExpansionLocForMacroDefLoc(Tokens[I+1].getLocation());
 
-      Token Res;
-      if (CurTok.is(tok::hash))  // Stringify
-        Res = ActualArgs->getStringifiedArgument(ArgNo, PP,
-                                                 ExpansionLocStart,
-                                                 ExpansionLocEnd);
-      else {
-        // 'charify': don't bother caching these.
-        Res = MacroArgs::StringifyArgument(ActualArgs->getUnexpArgument(ArgNo),
-                                           PP, true,
-                                           ExpansionLocStart,
-                                           ExpansionLocEnd);
-      }
+      bool Charify = CurTok.is(tok::hashat);
+      const Token *UnexpArg = ActualArgs->getUnexpArgument(ArgNo);
+      Token Res = MacroArgs::StringifyArgument(
+          UnexpArg, PP, Charify, ExpansionLocStart, ExpansionLocEnd);
       Res.setFlag(Token::StringifiedInMacro);
 
       // The stringified/charified string leading space flag gets set to match
