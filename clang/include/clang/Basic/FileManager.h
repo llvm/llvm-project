@@ -64,8 +64,8 @@ class FileEntry {
   off_t Size;                 // File size in bytes.
   time_t ModTime;             // Modification time of file.
   const DirectoryEntry *Dir;  // Directory file lives in.
-  unsigned UID;               // A unique (small) ID for the file.
   llvm::sys::fs::UniqueID UniqueID;
+  unsigned UID;               // A unique (small) ID for the file.
   bool IsNamedPipe;
   bool IsValid;               // Is this \c FileEntry initialized and valid?
 
