@@ -527,6 +527,9 @@ public:
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
 
+  Optional<ParamLoadedValue>
+  describeLoadedValue(const MachineInstr &MI) const override;
+
 protected:
   /// Commutes the operands in the given instruction by changing the operands
   /// order and/or changing the instruction's opcode and/or the immediate value

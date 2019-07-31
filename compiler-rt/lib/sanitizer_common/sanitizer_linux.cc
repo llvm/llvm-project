@@ -779,7 +779,11 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
 #if SANITIZER_FREEBSD
 int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                           const void *newp, uptr newlen) {
-  return sysctlbyname(sname, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
+  static decltype(sysctlbyname) *real = nullptr;
+  if (!real)
+    real = (decltype(sysctlbyname) *)dlsym(RTLD_NEXT, "sysctlbyname");
+  CHECK(real);
+  return real(sname, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
 }
 #endif
 #endif

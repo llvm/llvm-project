@@ -205,6 +205,10 @@ void DwarfUnit::insertDIE(const DINode *Desc, DIE *D) {
   MDNodeToDieMap.insert(std::make_pair(Desc, D));
 }
 
+void DwarfUnit::insertDIE(DIE *D) {
+  MDNodeToDieMap.insert(std::make_pair(nullptr, D));
+}
+
 void DwarfUnit::addFlag(DIE &Die, dwarf::Attribute Attribute) {
   if (DD->getDwarfVersion() >= 4)
     Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_flag_present,

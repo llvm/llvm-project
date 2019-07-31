@@ -131,10 +131,6 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
-                                   // case it isn't the same as the module
-                                   // object file (debug symbols in a separate
-                                   // file)
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses
                                              // can add more of these if needed.
 

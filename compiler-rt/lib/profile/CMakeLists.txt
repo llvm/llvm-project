@@ -64,7 +64,8 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
   InstrProfilingRuntime.cc
-  InstrProfilingUtil.c)
+  InstrProfilingUtil.c
+  )
 
 set(PROFILE_HEADERS
   InstrProfData.inc
@@ -72,10 +73,13 @@ set(PROFILE_HEADERS
   InstrProfilingInternal.h
   InstrProfilingPort.h
   InstrProfilingUtil.h
-  WindowsMMap.h)
+  WindowsMMap.h
+  )
 
 if(WIN32)
-    list(APPEND PROFILE_SOURCES WindowsMMap.c)
+  list(APPEND PROFILE_SOURCES
+    WindowsMMap.c
+    )
 endif()
 
 if(FUCHSIA OR UNIX)

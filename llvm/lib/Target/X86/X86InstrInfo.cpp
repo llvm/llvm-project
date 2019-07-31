@@ -30,7 +30,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -7364,6 +7364,92 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath;
   default:
     return false;
+  }
+}
+
+Optional<ParamLoadedValue>
+X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+  const MachineOperand *Op = nullptr;
+  DIExpression *Expr = nullptr;
+
+  switch (MI.getOpcode()) {
+  case X86::LEA32r:
+  case X86::LEA64r:
+  case X86::LEA64_32r: {
+    // Operand 4 could be global address. For now we do not support
+    // such situation.
+    if (!MI.getOperand(4).isImm() || !MI.getOperand(2).isImm())
+      return None;
+
+    const MachineOperand &Op1 = MI.getOperand(1);
+    const MachineOperand &Op2 = MI.getOperand(3);
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    assert(Op2.isReg() &&
+           (Op2.getReg() == X86::NoRegister ||
+            TargetRegisterInfo::isPhysicalRegister(Op2.getReg())));
+
+    // Omit situations like:
+    // %rsi = lea %rsi, 4, ...
+    if ((Op1.isReg() && Op1.getReg() == MI.getOperand(0).getReg()) ||
+        Op2.getReg() == MI.getOperand(0).getReg())
+      return None;
+    else if ((Op1.isReg() && Op1.getReg() != X86::NoRegister &&
+              TRI->regsOverlap(Op1.getReg(), MI.getOperand(0).getReg())) ||
+             (Op2.getReg() != X86::NoRegister &&
+              TRI->regsOverlap(Op2.getReg(), MI.getOperand(0).getReg())))
+      return None;
+
+    int64_t Coef = MI.getOperand(2).getImm();
+    int64_t Offset = MI.getOperand(4).getImm();
+    SmallVector<uint64_t, 8> Ops;
+
+    if ((Op1.isReg() && Op1.getReg() != X86::NoRegister)) {
+      Op = &Op1;
+    } else if (Op1.isFI())
+      Op = &Op1;
+
+    if (Op && Op->isReg() && Op->getReg() == Op2.getReg() && Coef > 0) {
+      Ops.push_back(dwarf::DW_OP_constu);
+      Ops.push_back(Coef + 1);
+      Ops.push_back(dwarf::DW_OP_mul);
+    } else {
+      if (Op && Op2.getReg() != X86::NoRegister) {
+        int dwarfReg = TRI->getDwarfRegNum(Op2.getReg(), false);
+        if (dwarfReg < 0)
+          return None;
+        else if (dwarfReg < 32) {
+          Ops.push_back(dwarf::DW_OP_breg0 + dwarfReg);
+          Ops.push_back(0);
+        } else {
+          Ops.push_back(dwarf::DW_OP_bregx);
+          Ops.push_back(dwarfReg);
+          Ops.push_back(0);
+        }
+      } else if (!Op) {
+        assert(Op2.getReg() != X86::NoRegister);
+        Op = &Op2;
+      }
+
+      if (Coef > 1) {
+        assert(Op2.getReg() != X86::NoRegister);
+        Ops.push_back(dwarf::DW_OP_constu);
+        Ops.push_back(Coef);
+        Ops.push_back(dwarf::DW_OP_mul);
+      }
+
+      if (((Op1.isReg() && Op1.getReg() != X86::NoRegister) || Op1.isFI()) &&
+          Op2.getReg() != X86::NoRegister) {
+        Ops.push_back(dwarf::DW_OP_plus);
+      }
+    }
+
+    DIExpression::appendOffset(Ops, Offset);
+    Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), Ops);
+
+    return ParamLoadedValue(Op, Expr);;
+  }
+  default:
+    return TargetInstrInfo::describeLoadedValue(MI);
   }
 }
 

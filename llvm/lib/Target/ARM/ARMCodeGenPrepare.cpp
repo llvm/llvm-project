@@ -187,8 +187,7 @@ static bool GenerateSignBits(Value *V) {
 
   unsigned Opc = cast<Instruction>(V)->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
-         Opc == Instruction::SRem || Opc == Instruction::SExt ||
-         Opc == Instruction::SIToFP;
+         Opc == Instruction::SRem || Opc == Instruction::SExt;
 }
 
 static bool EqualTypeSize(Value *V) {
@@ -806,54 +805,48 @@ void IRPromoter::Mutate(Type *OrigTy,
 /// return value is zeroext. We don't allow opcodes that can introduce sign
 /// bits.
 bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
-  if (auto *I = dyn_cast<ICmpInst>(V)) {
-    // Now that we allow small types than TypeSize, only allow icmp of
-    // TypeSize because they will require a trunc to be legalised.
-    // TODO: Allow icmp of smaller types, and calculate at the end
-    // whether the transform would be beneficial.
-    if (isa<PointerType>(I->getOperand(0)->getType()))
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    switch (I->getOpcode()) {
+    default:
+      return isa<BinaryOperator>(I) && isSupportedType(I) &&
+             !GenerateSignBits(I);
+    case Instruction::GetElementPtr:
+    case Instruction::Store:
+    case Instruction::Br:
+    case Instruction::Switch:
       return true;
-    return EqualTypeSize(I->getOperand(0));
-  }
-
-  if (GenerateSignBits(V)) {
-    LLVM_DEBUG(dbgs() << "ARM CGP: No, instruction can generate sign bits.\n");
-    return false;
-  }
-
-  // Memory instructions
-  if (isa<StoreInst>(V) || isa<GetElementPtrInst>(V))
-    return true;
-
-  // Branches and targets.
-  if( isa<BranchInst>(V) || isa<SwitchInst>(V) || isa<BasicBlock>(V))
-    return true;
-
-  // Non-instruction values that we can handle.
-  if ((isa<Constant>(V) && !isa<ConstantExpr>(V)) || isa<Argument>(V))
+    case Instruction::PHI:
+    case Instruction::Select:
+    case Instruction::Ret:
+    case Instruction::Load:
+    case Instruction::Trunc:
+    case Instruction::BitCast:
+      return isSupportedType(I);
+    case Instruction::ZExt:
+      return isSupportedType(I->getOperand(0));
+    case Instruction::ICmp:
+      // Now that we allow small types than TypeSize, only allow icmp of
+      // TypeSize because they will require a trunc to be legalised.
+      // TODO: Allow icmp of smaller types, and calculate at the end
+      // whether the transform would be beneficial.
+      if (isa<PointerType>(I->getOperand(0)->getType()))
+        return true;
+      return EqualTypeSize(I->getOperand(0));
+    case Instruction::Call: {
+      // Special cases for calls as we need to check for zeroext
+      // TODO We should accept calls even if they don't have zeroext, as they
+      // can still be sinks.
+      auto *Call = cast<CallInst>(I);
+      return isSupportedType(Call) &&
+             Call->hasRetAttr(Attribute::AttrKind::ZExt);
+    }
+    }
+  } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
     return isSupportedType(V);
+  } else if (auto *Arg = dyn_cast<Argument>(V))
+    return isSupportedType(V) && !Arg->hasSExtAttr();
 
-  if (isa<PHINode>(V) || isa<SelectInst>(V) || isa<ReturnInst>(V) ||
-      isa<LoadInst>(V))
-    return isSupportedType(V);
-
-  if (auto *Cast = dyn_cast<CastInst>(V))
-    return isSupportedType(Cast) || isSupportedType(Cast->getOperand(0));
-
-  // Special cases for calls as we need to check for zeroext
-  // TODO We should accept calls even if they don't have zeroext, as they can
-  // still be sinks.
-  if (auto *Call = dyn_cast<CallInst>(V))
-    return isSupportedType(Call) &&
-           Call->hasRetAttr(Attribute::AttrKind::ZExt);
-
-  if (!isa<BinaryOperator>(V))
-    return false;
-
-  if (!isSupportedType(V))
-    return false;
-
-  return true;
+  return isa<BasicBlock>(V);
 }
 
 /// Check that the type of V would be promoted and that the original type is

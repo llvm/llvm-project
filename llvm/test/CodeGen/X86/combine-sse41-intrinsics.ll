@@ -127,8 +127,8 @@ define <16 x i8> @demandedelts_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> 
   ret <16 x i8> %5
 }
 
-define <2 x i64> @demandedbits_blendpd(i64 %a0, i64 %a2, <2 x double> %a3) {
-; CHECK-LABEL: demandedbits_blendpd:
+define <2 x i64> @demandedbits_blendvpd(i64 %a0, i64 %a2, <2 x double> %a3) {
+; CHECK-LABEL: demandedbits_blendvpd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq $1, %rax
@@ -151,6 +151,52 @@ define <2 x i64> @demandedbits_blendpd(i64 %a0, i64 %a2, <2 x double> %a3) {
   %8  = bitcast <2 x double> %7 to <2 x i64>
   %9  = lshr <2 x i64> %8, <i64 11, i64 11>
   ret <2 x i64> %9
+}
+
+define <16 x i8> @xor_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) {
+; CHECK-LABEL: xor_pblendvb:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm0
+; CHECK-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
+; CHECK-NEXT:    retq
+  %1 = xor <16 x i8> %a2, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %2 = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %1)
+  ret <16 x i8> %2
+}
+
+define <4 x float> @xor_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
+; CHECK-LABEL: xor_blendvps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm0
+; CHECK-NEXT:    blendvps %xmm0, %xmm1, %xmm3
+; CHECK-NEXT:    movaps %xmm3, %xmm0
+; CHECK-NEXT:    retq
+  %1 = bitcast <4 x float> %a2 to <4 x i32>
+  %2 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %3 = bitcast <4 x i32> %2 to <4 x float>
+  %4 = tail call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %3)
+  ret <4 x float> %4
+}
+
+define <2 x double> @xor_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2) {
+; CHECK-LABEL: xor_blendvpd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; CHECK-NEXT:    movapd %xmm3, %xmm0
+; CHECK-NEXT:    retq
+  %1 = bitcast <2 x double> %a2 to <4 x i32>
+  %2 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %3 = bitcast <4 x i32> %2 to <2 x double>
+  %4 = tail call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %3)
+  ret <2 x double> %4
 }
 
 declare <2 x double> @llvm.x86.sse41.blendpd(<2 x double>, <2 x double>, i32)

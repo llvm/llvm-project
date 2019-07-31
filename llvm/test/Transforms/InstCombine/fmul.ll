@@ -277,11 +277,11 @@ define float @neg_unary_neg_multi_use(float %x, float %y) {
   ret float %mul
 }
 
-; (-0.0 - X) * Y => -0.0 - (X * Y)
-define float @neg_sink(float %x, float %y) {
-; CHECK-LABEL: @neg_sink(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; (-0.0 - X) * Y
+define float @neg_mul(float %x, float %y) {
+; CHECK-LABEL: @neg_mul(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = fsub float -0.0, %x
@@ -289,10 +289,10 @@ define float @neg_sink(float %x, float %y) {
   ret float %mul
 }
 
-define float @unary_neg_sink(float %x, float %y) {
-; CHECK-LABEL: @unary_neg_sink(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+define float @unary_neg_mul(float %x, float %y) {
+; CHECK-LABEL: @unary_neg_mul(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %neg = fneg float %x
@@ -300,10 +300,10 @@ define float @unary_neg_sink(float %x, float %y) {
   ret float %mul
 }
 
-define <2 x float> @neg_sink_vec(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_sink_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+define <2 x float> @neg_mul_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_mul_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -311,11 +311,10 @@ define <2 x float> @neg_sink_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %mul
 }
 
-; FIXME: Should generate a unary FNeg.
-define <2 x float> @unary_neg_sink_vec(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @unary_neg_sink_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @unary_neg_mul_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fneg <2 x float> %x
@@ -323,10 +322,10 @@ define <2 x float> @unary_neg_sink_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %mul
 }
 
-define <2 x float> @neg_sink_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_sink_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+define <2 x float> @neg_mul_vec_undef(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_mul_vec_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float undef, float -0.0>, %x
@@ -334,11 +333,11 @@ define <2 x float> @neg_sink_vec_undef(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %mul
 }
 
-; (0.0 - X) * Y => 0.0 - (X * Y)
+; (0.0 - X) * Y
 define float @neg_sink_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[SUB1:%.*]] = fsub nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub1 = fsub nsz float 0.0, %x
@@ -346,8 +345,6 @@ define float @neg_sink_nsz(float %x, float %y) {
   ret float %mul
 }
 
-; "(-0.0 - X) * Y => -0.0 - (X * Y)" is disabled if expression "-0.0 - X"
-; has multiple uses.
 define float @neg_sink_multi_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
@@ -361,8 +358,8 @@ define float @neg_sink_multi_use(float %x, float %y) {
   ret float %mul2
 }
 
-define float @unary_neg_sink_multi_use(float %x, float %y) {
-; CHECK-LABEL: @unary_neg_sink_multi_use(
+define float @unary_neg_mul_multi_use(float %x, float %y) {
+; CHECK-LABEL: @unary_neg_mul_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]

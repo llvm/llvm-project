@@ -91,6 +91,12 @@ LANGBUILTIN(__sevl,  "v", "",   ALL_MS_LANGUAGES)
 // Misc
 BUILTIN(__builtin_sponentry, "v*", "c")
 
+// Transactional Memory Extension
+BUILTIN(__builtin_arm_tstart, "WUi", "nj")
+BUILTIN(__builtin_arm_tcommit, "v", "n")
+BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
+BUILTIN(__builtin_arm_ttest, "WUi", "nc")
+
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")

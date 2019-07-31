@@ -191,8 +191,8 @@ const char *SymbolFileDWARF::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader.";
 }
 
-SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFile *obj_file) {
-  return new SymbolFileDWARF(obj_file,
+SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
 
@@ -337,14 +337,14 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
   return DWARFDIE();
 }
 
-SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile,
+SymbolFileDWARF::SymbolFileDWARF(ObjectFileSP objfile_sp,
                                  SectionList *dwo_section_list)
-    : SymbolFile(objfile),
+    : SymbolFile(std::move(objfile_sp)),
       UserID(0x7fffffff00000000), // Used by SymbolFileDWARFDebugMap to
                                   // when this class parses .o files to
                                   // contain the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(nullptr),
-      m_context(objfile->GetModule()->GetSectionList(), dwo_section_list),
+      m_context(m_objfile_sp->GetModule()->GetSectionList(), dwo_section_list),
       m_data_debug_loc(), m_abbr(), m_info(), m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
       m_unique_ast_type_map() {}
@@ -370,7 +370,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
   auto type_system_or_err =
-      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
+      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
   if (type_system_or_err) {
     type_system_or_err->SetSymbolFile(this);
   }
@@ -420,9 +420,9 @@ bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
 
 uint32_t SymbolFileDWARF::CalculateAbilities() {
   uint32_t abilities = 0;
-  if (m_obj_file != nullptr) {
+  if (m_objfile_sp != nullptr) {
     const Section *section = nullptr;
-    const SectionList *section_list = m_obj_file->GetSectionList();
+    const SectionList *section_list = m_objfile_sp->GetSectionList();
     if (section_list == nullptr)
       return 0;
 
@@ -455,7 +455,8 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
           error.Printf("unsupported DW_FORM value%s:", invalid_forms.size() > 1 ? "s" : "");
           for (auto form : invalid_forms)
             error.Printf(" %#x", form);
-          m_obj_file->GetModule()->ReportWarning("%s", error.GetString().str().c_str());
+          m_objfile_sp->GetModule()->ReportWarning(
+              "%s", error.GetString().str().c_str());
           return 0;
         }
       }
@@ -467,10 +468,10 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
         debug_line_file_size = section->GetFileSize();
     } else {
       const char *symfile_dir_cstr =
-          m_obj_file->GetFileSpec().GetDirectory().GetCString();
+          m_objfile_sp->GetFileSpec().GetDirectory().GetCString();
       if (symfile_dir_cstr) {
         if (strcasestr(symfile_dir_cstr, ".dsym")) {
-          if (m_obj_file->GetType() == ObjectFile::eTypeDebugInfo) {
+          if (m_objfile_sp->GetType() == ObjectFile::eTypeDebugInfo) {
             // We have a dSYM file that didn't have a any debug info. If the
             // string table has a size of 1, then it was made from an
             // executable with no debug info, or from an executable that was
@@ -479,7 +480,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
                 section_list->FindSectionByType(eSectionTypeDWARFDebugStr, true)
                     .get();
             if (section && section->GetFileSize() == 1) {
-              m_obj_file->GetModule()->ReportWarning(
+              m_objfile_sp->GetModule()->ReportWarning(
                   "empty dSYM file detected, dSYM was created with an "
                   "executable with no debug info.");
             }
@@ -509,7 +510,7 @@ SymbolFileDWARF::GetCachedSectionData(lldb::SectionType sect_type,
 
 void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
                                       DWARFDataExtractor &data) {
-  ModuleSP module_sp(m_obj_file->GetModule());
+  ModuleSP module_sp(m_objfile_sp->GetModule());
   const SectionList *section_list = module_sp->GetSectionList();
   if (!section_list)
     return;
@@ -519,7 +520,7 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
     return;
 
   data.Clear();
-  m_obj_file->ReadSectionData(section_sp.get(), data);
+  m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
@@ -638,7 +639,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
       cu_sp = m_debug_map_symfile->GetCompileUnit(this);
       dwarf_cu.SetUserData(cu_sp.get());
     } else {
-      ModuleSP module_sp(m_obj_file->GetModule());
+      ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
         const DWARFDIE cu_die = dwarf_cu.DIE();
         if (cu_die) {
@@ -1598,7 +1599,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
               }
             }
             dwo_module_spec.GetArchitecture() =
-                m_obj_file->GetModule()->GetArchitecture();
+                m_objfile_sp->GetModule()->GetArchitecture();
 
             // When LLDB loads "external" modules it looks at the presence of
             // DW_AT_GNU_dwo_name. However, when the already created module
@@ -1612,8 +1613,8 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
             // printed. However, as one can notice in this case we don't
             // actually need to try to load the already loaded module
             // (corresponding to .dwo) so we simply skip it.
-            if (m_obj_file->GetFileSpec().GetFileNameExtension() == ".dwo" &&
-                llvm::StringRef(m_obj_file->GetFileSpec().GetPath())
+            if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
+                llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
                     .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
               continue;
             }
@@ -1842,7 +1843,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
       bool file_spec_matches_cu_file_spec =
           FileSpec::Equal(file_spec, *dc_cu, full_match);
       if (check_inlines || file_spec_matches_cu_file_spec) {
-        SymbolContext sc(m_obj_file->GetModule());
+        SymbolContext sc(m_objfile_sp->GetModule());
         sc.comp_unit = dc_cu;
         uint32_t file_idx = UINT32_MAX;
 
@@ -2013,7 +2014,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
   const size_t num_die_matches = die_offsets.size();
   if (num_die_matches) {
     SymbolContext sc;
-    sc.module_sp = m_obj_file->GetModule();
+    sc.module_sp = m_objfile_sp->GetModule();
     assert(sc.module_sp);
 
     // Loop invariant: Variables up to this index have been checked for context
@@ -2110,7 +2111,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   m_index->GetGlobalVariables(regex, die_offsets);
 
   SymbolContext sc;
-  sc.module_sp = m_obj_file->GetModule();
+  sc.module_sp = m_objfile_sp->GetModule();
   assert(sc.module_sp);
 
   const size_t num_matches = die_offsets.size();
@@ -2642,8 +2643,8 @@ SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
 Symbol *
 SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
   Symbol *objc_class_symbol = nullptr;
-  if (m_obj_file) {
-    Symtab *symtab = m_obj_file->GetSymtab();
+  if (m_objfile_sp) {
+    Symtab *symtab = m_objfile_sp->GetSymtab();
     if (symtab) {
       objc_class_symbol = symtab->FindFirstSymbolWithNameAndType(
           objc_class_name, eSymbolTypeObjCClass, Symtab::eDebugNo,
@@ -2734,7 +2735,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
               DEBUG_PRINTF("resolved 0x%8.8" PRIx64 " from %s to 0x%8.8" PRIx64
                            " (cu 0x%8.8" PRIx64 ")\n",
                            die.GetID(),
-                           m_obj_file->GetFileSpec().GetFilename().AsCString(
+                           m_objfile_sp->GetFileSpec().GetFilename().AsCString(
                                "<Unknown>"),
                            type_die.GetID(), type_cu->GetID());
 
@@ -3767,9 +3768,9 @@ SymbolFileDWARF::GetLocationListFormat() const {
 SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
     ModuleSpec module_spec;
-    module_spec.GetFileSpec() = m_obj_file->GetFileSpec();
+    module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
     module_spec.GetSymbolFileSpec() =
-        FileSpec(m_obj_file->GetFileSpec().GetPath() + ".dwp");
+        FileSpec(m_objfile_sp->GetFileSpec().GetPath() + ".dwp");
 
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =

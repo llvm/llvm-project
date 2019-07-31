@@ -10,6 +10,7 @@
 
 #include <string.h>
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -61,13 +62,9 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!module_sp)
     return nullptr;
 
-  ObjectFile *obj_file = module_sp->GetObjectFile();
+  ObjectFileELF *obj_file =
+      llvm::dyn_cast_or_null<ObjectFileELF>(module_sp->GetObjectFile());
   if (!obj_file)
-    return nullptr;
-
-  static ConstString obj_file_elf("elf");
-  ConstString obj_name = obj_file->GetPluginName();
-  if (obj_name != obj_file_elf)
     return nullptr;
 
   lldb_private::UUID uuid = obj_file->GetUUID();
