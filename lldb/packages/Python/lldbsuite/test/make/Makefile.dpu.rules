@@ -1,0 +1,55 @@
+#----------------------------------------------------------------------
+# Clients fill in the source files to build
+#----------------------------------------------------------------------
+# C_SOURCES := main.c
+# CXX_SOURCES :=
+# OBJC_SOURCES :=
+# OBJCXX_SOURCES :=
+# DYLIB_C_SOURCES :=
+# DYLIB_OBJC_SOURCES :=
+# DYLIB_CXX_SOURCES :=
+#
+# Specifying DYLIB_ONLY has the effect of building dylib only, skipping
+# the building of the a.out executable program.  For example,
+# DYLIB_ONLY := YES
+#
+# Also might be of interest:
+# FRAMEWORK_INCLUDES (Darwin only) :=
+# CFLAGS_EXTRAS :=
+# LD_EXTRAS :=
+# SPLIT_DEBUG_SYMBOLS := YES
+# CROSS_COMPILE :=
+#
+# And test/functionalities/archives/Makefile:
+# MAKE_DSYM := NO
+# ARCHIVE_NAME := libfoo.a
+# ARCHIVE_C_SOURCES := a.c b.c
+
+# Uncomment line below for debugging shell commands
+# SHELL = /bin/sh -x
+
+SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
+BUILDDIR := $(shell pwd)
+THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
+LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
+
+OBJECTS =
+EXE ?= a.out
+LDFLAGS =
+CFLAGS ?= -g -O0
+
+#----------------------------------------------------------------------
+# Check if we have any C source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(C_SOURCES))" ""
+	OBJECTS +=$(strip $(C_SOURCES:.c=.o))
+endif
+
+#----------------------------------------------------------------------
+# Compile the executable from all the objects.
+#----------------------------------------------------------------------
+$(EXE) : $(OBJECTS)
+	clang $(OBJECTS) $(LDFLAGS) -o "$(EXE)"
+
+%.o: %.c
+	clang $(CFLAGS) $< -c -o $@

@@ -1,6 +1,6 @@
 LEVEL = ../../../make
 
-C_SOURCES := main.c
+C_SOURCES := main.c bootstrap.c
 CFLAGS := -O2 -g
 
-include $(LEVEL)/Makefile.rules
+include $(LEVEL)/Makefile.dpu.rules
