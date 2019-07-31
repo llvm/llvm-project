@@ -1317,6 +1317,27 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   return ExtractValueInst::Create(Call, 1, "sadd.overflow");
 }
 
+/// If we have:
+///   icmp eq/ne (urem/srem %x, %y), 0
+/// iff %y is a power-of-two, we can replace this with a bit test:
+///   icmp eq/ne (and %x, (add %y, -1)), 0
+Instruction *InstCombiner::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
+  // This fold is only valid for equality predicates.
+  if (!I.isEquality())
+    return nullptr;
+  ICmpInst::Predicate Pred;
+  Value *X, *Y, *Zero;
+  if (!match(&I, m_ICmp(Pred, m_OneUse(m_IRem(m_Value(X), m_Value(Y))),
+                        m_CombineAnd(m_Zero(), m_Value(Zero)))))
+    return nullptr;
+  if (!isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, 0, &I))
+    return nullptr;
+  // This may increase instruction count, we don't enforce that Y is a constant.
+  Value *Mask = Builder.CreateAdd(Y, Constant::getAllOnesValue(Y->getType()));
+  Value *Masked = Builder.CreateAnd(X, Mask);
+  return ICmpInst::Create(Instruction::ICmp, Pred, Masked, Zero);
+}
+
 // Handle  icmp pred X, 0
 Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
@@ -1334,6 +1355,9 @@ Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }
+
+  if (Instruction *New = foldIRemByPowerOfTwoToBitTest(Cmp))
+    return New;
 
   // Given:
   //   icmp eq/ne (urem %x, %y), 0

@@ -1958,7 +1958,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_udot4:
     case Intrinsic::amdgcn_sdot8:
     case Intrinsic::amdgcn_udot8:
-    case Intrinsic::amdgcn_fdiv_fast:
     case Intrinsic::amdgcn_wwm:
     case Intrinsic::amdgcn_wqm:
       return getDefaultMappingVOP(MI);

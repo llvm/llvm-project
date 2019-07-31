@@ -25,7 +25,7 @@ class TestDbgInfoContentForwardList(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         self.expect("expr (size_t)std::distance(a.begin(), a.end())", substrs=['(size_t) $0 = 3'])
-        self.expect("expr (int)a.front()->a", substrs=['(int) $1 = 3'])
+        self.expect("expr (int)a.front().a", substrs=['(int) $1 = 3'])
 
         self.expect("expr (int)(a.begin()->a)", substrs=['(int) $2 = 3'])
 

@@ -136,6 +136,7 @@ lldb::LanguageType SymbolFileSymtab::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   size_t num_added = 0;
   // We must at least have a valid compile unit
   const Symtab *symtab = m_obj_file->GetSymtab();
@@ -246,6 +247,7 @@ bool SymbolFileSymtab::CompleteType(lldb_private::CompilerType &compiler_type) {
 uint32_t SymbolFileSymtab::ResolveSymbolContext(const Address &so_addr,
                                                 SymbolContextItem resolve_scope,
                                                 SymbolContext &sc) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (m_obj_file->GetSymtab() == nullptr)
     return 0;
 

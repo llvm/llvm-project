@@ -1687,13 +1687,15 @@ MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
 
 MemoryUseOrDef *MemorySSA::createDefinedAccess(Instruction *I,
                                                MemoryAccess *Definition,
-                                               const MemoryUseOrDef *Template) {
+                                               const MemoryUseOrDef *Template,
+                                               bool CreationMustSucceed) {
   assert(!isa<PHINode>(I) && "Cannot create a defined access for a PHI");
   MemoryUseOrDef *NewAccess = createNewAccess(I, AA, Template);
-  assert(
-      NewAccess != nullptr &&
-      "Tried to create a memory access for a non-memory touching instruction");
-  NewAccess->setDefiningAccess(Definition);
+  if (CreationMustSucceed)
+    assert(NewAccess != nullptr && "Tried to create a memory access for a "
+                                   "non-memory touching instruction");
+  if (NewAccess)
+    NewAccess->setDefiningAccess(Definition);
   return NewAccess;
 }
 

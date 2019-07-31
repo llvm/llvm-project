@@ -85,12 +85,14 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   return best_symfile_up.release();
 }
 
-TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
-  TypeSystem *type_system =
+llvm::Expected<TypeSystem &>
+SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
+  auto type_system_or_err =
       m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system)
-    type_system->SetSymbolFile(this);
-  return type_system;
+  if (type_system_or_err) {
+    type_system_or_err->SetSymbolFile(this);
+  }
+  return type_system_or_err;
 }
 
 uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
@@ -179,6 +181,7 @@ uint32_t SymbolFile::GetNumCompileUnits() {
 }
 
 CompUnitSP SymbolFile::GetCompileUnitAtIndex(uint32_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   uint32_t num = GetNumCompileUnits();
   if (idx >= num)
     return nullptr;

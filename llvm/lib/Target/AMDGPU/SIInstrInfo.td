@@ -329,10 +329,12 @@ def AMDGPUatomic_ld_glue : SDNode <"ISD::ATOMIC_LOAD", SDTAtomicLoad,
 
 def unindexedload_glue : PatFrag <(ops node:$ptr), (AMDGPUld_glue node:$ptr)> {
   let IsUnindexed = 1;
+  let IsLoad = 1;
 }
 
 def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsNonExtLoad = 1;
+  let IsLoad = 1;
 }
 
 def atomic_load_32_glue : PatFrag<(ops node:$ptr),
@@ -347,7 +349,7 @@ def atomic_load_64_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i64;
 }
 
-def extload_glue : PatFrag<(ops node:$ptr), (load_glue node:$ptr)> {
+def extload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsLoad = 1;
   let IsAnyExtLoad = 1;
 }
@@ -392,23 +394,31 @@ def sextloadi16_glue : PatFrag<(ops node:$ptr), (sextload_glue node:$ptr)> {
   let MemoryVT = i16;
 }
 
-def load_glue_align8 : Aligned8Bytes <
-  (ops node:$ptr), (load_glue node:$ptr)
->;
-def load_glue_align16 : Aligned16Bytes <
-  (ops node:$ptr), (load_glue node:$ptr)
->;
 
+let IsLoad = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
+def load_local_m0 : PatFrag<(ops node:$ptr), (load_glue node:$ptr)>;
 
-def load_local_m0 : LoadFrag<load_glue>, LocalAddress;
-def sextloadi8_local_m0 : LoadFrag<sextloadi8_glue>, LocalAddress;
-def sextloadi16_local_m0 : LoadFrag<sextloadi16_glue>, LocalAddress;
-def extloadi8_local_m0 : LoadFrag<extloadi8_glue>, LocalAddress;
-def zextloadi8_local_m0 : LoadFrag<zextloadi8_glue>, LocalAddress;
-def extloadi16_local_m0 : LoadFrag<extloadi16_glue>, LocalAddress;
-def zextloadi16_local_m0 : LoadFrag<zextloadi16_glue>, LocalAddress;
-def load_align8_local_m0 : LoadFrag <load_glue_align8>, LocalAddress;
-def load_align16_local_m0 : LoadFrag <load_glue_align16>, LocalAddress;
+let MemoryVT = i8 in {
+def extloadi8_local_m0 : PatFrag<(ops node:$ptr), (extloadi8_glue node:$ptr)>;
+def sextloadi8_local_m0 : PatFrag<(ops node:$ptr), (sextloadi8_glue node:$ptr)>;
+def zextloadi8_local_m0 : PatFrag<(ops node:$ptr), (zextloadi8_glue node:$ptr)>;
+}
+
+let MemoryVT = i16 in {
+def extloadi16_local_m0 : PatFrag<(ops node:$ptr), (extloadi16_glue node:$ptr)>;
+def sextloadi16_local_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)>;
+def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
+}
+
+def load_align8_local_m0 : LoadFrag <load_glue>, LocalAddress {
+  let MinAlignment = 8;
+}
+def load_align16_local_m0 : LoadFrag <load_glue>, LocalAddress {
+  let MinAlignment = 16;
+}
+
+} // End IsLoad = 1
+
 def atomic_load_32_local_m0 : LoadFrag<atomic_load_32_glue>, LocalAddress;
 def atomic_load_64_local_m0 : LoadFrag<atomic_load_64_glue>, LocalAddress;
 
@@ -455,13 +465,11 @@ def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i16;
 }
 
-def store_glue_align8 : Aligned8Bytes <
-  (ops node:$value, node:$ptr), (store_glue node:$value, node:$ptr)
->;
-
-def store_glue_align16 : Aligned16Bytes <
-  (ops node:$value, node:$ptr), (store_glue node:$value, node:$ptr)
->;
+let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
+def store_glue_align8 : PatFrag<(ops node:$val, node:$ptr),
+                                (store_glue node:$val, node:$ptr)>, Aligned<8>;
+def store_glue_align16 : PatFrag<(ops node:$val, node:$ptr),
+                                (store_glue node:$val, node:$ptr)>, Aligned<16>;
 
 def store_local_m0 : StoreFrag<store_glue>, LocalAddress;
 def truncstorei8_local_m0 : StoreFrag<truncstorei8_glue>, LocalAddress;
@@ -470,6 +478,7 @@ def atomic_store_local_m0 : StoreFrag<AMDGPUatomic_st_glue>, LocalAddress;
 
 def store_align8_local_m0 : StoreFrag<store_glue_align8>, LocalAddress;
 def store_align16_local_m0 : StoreFrag<store_glue_align16>, LocalAddress;
+}
 
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),

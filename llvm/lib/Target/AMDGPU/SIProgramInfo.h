@@ -51,6 +51,9 @@ struct SIProgramInfo {
     // Number of VGPRs that meets number of waves per execution unit request.
     uint32_t NumVGPRsForWavesPerEU = 0;
 
+    // Final occupancy.
+    uint32_t Occupancy = 0;
+
     // Whether there is recursion, dynamic allocas, indirect calls or some other
     // reason there may be statically unknown stack usage.
     bool DynamicCallStack = false;

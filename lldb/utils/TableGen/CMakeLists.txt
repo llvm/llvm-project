@@ -10,6 +10,7 @@ else()
     LLDBOptionDefEmitter.cpp
     LLDBPropertyDefEmitter.cpp
     LLDBTableGen.cpp
+    LLDBTableGenUtils.cpp
     )
   set_target_properties(lldb-tblgen PROPERTIES FOLDER "LLDB tablegenning")
 endif()

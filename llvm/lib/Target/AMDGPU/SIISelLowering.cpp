@@ -10464,6 +10464,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'a':
+      if (!Subtarget->hasMAIInsts())
+        break;
       switch (VT.getSizeInBits()) {
       default:
         return std::make_pair(0U, nullptr);

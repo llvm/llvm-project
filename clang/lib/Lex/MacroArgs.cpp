@@ -76,8 +76,6 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
 /// destroy - Destroy and deallocate the memory for this object.
 ///
 void MacroArgs::destroy(Preprocessor &PP) {
-  StringifiedArgs.clear();
-
   // Don't clear PreExpArgTokens, just clear the entries.  Clearing the entries
   // would deallocate the element vectors.
   for (unsigned i = 0, e = PreExpArgTokens.size(); i != e; ++i)
@@ -306,22 +304,4 @@ Token MacroArgs::StringifyArgument(const Token *ArgToks,
   PP.CreateString(Result, Tok,
                   ExpansionLocStart, ExpansionLocEnd);
   return Tok;
-}
-
-/// getStringifiedArgument - Compute, cache, and return the specified argument
-/// that has been 'stringified' as required by the # operator.
-const Token &MacroArgs::getStringifiedArgument(unsigned ArgNo,
-                                               Preprocessor &PP,
-                                               SourceLocation ExpansionLocStart,
-                                               SourceLocation ExpansionLocEnd) {
-  assert(ArgNo < getNumMacroArguments() && "Invalid argument number!");
-  if (StringifiedArgs.empty())
-    StringifiedArgs.resize(getNumMacroArguments(), {});
-
-  if (StringifiedArgs[ArgNo].isNot(tok::string_literal))
-    StringifiedArgs[ArgNo] = StringifyArgument(getUnexpArgument(ArgNo), PP,
-                                               /*Charify=*/false,
-                                               ExpansionLocStart,
-                                               ExpansionLocEnd);
-  return StringifiedArgs[ArgNo];
 }

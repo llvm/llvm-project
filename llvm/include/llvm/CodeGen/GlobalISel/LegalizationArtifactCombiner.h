@@ -47,8 +47,7 @@ public:
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
-    if (MI.getOpcode() != TargetOpcode::G_ANYEXT)
-      return false;
+    assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
 
     Builder.setInstr(MI);
     Register DstReg = MI.getOperand(0).getReg();
@@ -93,9 +92,7 @@ public:
 
   bool tryCombineZExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts) {
-
-    if (MI.getOpcode() != TargetOpcode::G_ZEXT)
-      return false;
+    assert(MI.getOpcode() == TargetOpcode::G_ZEXT);
 
     Builder.setInstr(MI);
     Register DstReg = MI.getOperand(0).getReg();
@@ -136,9 +133,7 @@ public:
 
   bool tryCombineSExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts) {
-
-    if (MI.getOpcode() != TargetOpcode::G_SEXT)
-      return false;
+    assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
     Builder.setInstr(MI);
     Register DstReg = MI.getOperand(0).getReg();
@@ -172,9 +167,8 @@ public:
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts) {
     unsigned Opcode = MI.getOpcode();
-    if (Opcode != TargetOpcode::G_ANYEXT && Opcode != TargetOpcode::G_ZEXT &&
-        Opcode != TargetOpcode::G_SEXT)
-      return false;
+    assert(Opcode == TargetOpcode::G_ANYEXT || Opcode == TargetOpcode::G_ZEXT ||
+           Opcode == TargetOpcode::G_SEXT);
 
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
@@ -234,9 +228,7 @@ public:
 
   bool tryCombineMerges(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
-
-    if (MI.getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
-      return false;
+    assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
     unsigned NumDefs = MI.getNumOperands() - 1;
     MachineInstr *SrcDef =

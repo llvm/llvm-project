@@ -125,7 +125,7 @@ public:
 private:
   // Identifying files in a way that persists from preamble build to subsequent
   // builds is surprisingly hard. FileID is unavailable in InclusionDirective(),
-  // and RealPathName and UniqueID are not preseved in the preamble.
+  // and RealPathName and UniqueID are not preserved in the preamble.
   // We use the FileEntry::Name, which is stable, interned into a "file index".
   // The paths we want to expose are the RealPathName, so store those too.
   std::vector<std::string> RealPathNames; // In file index order.

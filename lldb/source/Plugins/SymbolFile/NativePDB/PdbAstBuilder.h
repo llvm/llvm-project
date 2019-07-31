@@ -51,7 +51,7 @@ struct DeclStatus {
 class PdbAstBuilder {
 public:
   // Constructors and Destructors
-  PdbAstBuilder(ObjectFile &obj, PdbIndex &index);
+  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang);
 
   lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 

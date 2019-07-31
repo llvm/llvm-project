@@ -85,8 +85,7 @@ define <2 x double> @test10(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: lxvd2x 34, 0, 3
 
 ; CHECK-P9-LABEL: @test10
-; CHECK-P9: lxv 0, 0(3)
-; CHECK-P9: xxswapd 34, 0
+; CHECK-P9: lxvd2x 34, 0, 3
 }
 
 define <2 x double> @test11(<2 x double>* %p1, <2 x double>* %p2) {
@@ -257,8 +256,7 @@ define <2 x double> @test32(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: lxvd2x 34, 0, 4
 
 ; CHECK-P9-LABEL: @test32
-; CHECK-P9: lxv 0, 0(4)
-; CHECK-P9: xxswapd 34, 0
+; CHECK-P9: lxvd2x 34, 0, 4
 }
 
 define <2 x double> @test33(<2 x double>* %p1, <2 x double>* %p2) {

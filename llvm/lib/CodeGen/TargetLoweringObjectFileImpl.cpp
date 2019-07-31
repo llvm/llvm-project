@@ -1826,7 +1826,7 @@ MCSection *TargetLoweringObjectFileWasm::getStaticDtorSection(
 //===----------------------------------------------------------------------===//
 MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  llvm_unreachable("XCOFF explicit sections not yet implemented.");
+  report_fatal_error("XCOFF explicit sections not yet implemented.");
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
@@ -1851,7 +1851,7 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
 bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
     bool UsesLabelDifference, const Function &F) const {
-  llvm_unreachable("TLOF XCOFF not yet implemented.");
+  report_fatal_error("TLOF XCOFF not yet implemented.");
 }
 
 void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
@@ -1864,16 +1864,16 @@ void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  llvm_unreachable("XCOFF ctor section not yet implemented.");
+  report_fatal_error("XCOFF ctor section not yet implemented.");
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  llvm_unreachable("XCOFF dtor section not yet implemented.");
+  report_fatal_error("XCOFF dtor section not yet implemented.");
 }
 
 const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS,
     const TargetMachine &TM) const {
-  llvm_unreachable("XCOFF not yet implemented.");
+  report_fatal_error("XCOFF not yet implemented.");
 }

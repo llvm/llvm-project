@@ -110,7 +110,7 @@ class GoogleBenchmark(TestFormat):
                    )
 
         if exitCode:
-            return lit.Test.FAIL, out + err
+            return lit.Test.FAIL, ('exit code: %d\n' % exitCode) + out + err
 
         passing_test_line = testName
         if passing_test_line not in out:

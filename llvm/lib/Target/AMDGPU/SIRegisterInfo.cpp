@@ -220,6 +220,14 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, Reg);
   }
 
+  // Reserve all the rest AGPRs if there are no instructions to use it.
+  if (!ST.hasMAIInsts()) {
+    for (unsigned i = 0; i < MaxNumVGPRs; ++i) {
+      unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
+      reserveRegisterTuples(Reserved, Reg);
+    }
+  }
+
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();

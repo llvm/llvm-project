@@ -1291,8 +1291,8 @@ std::string NVPTXTargetLowering::getPrototype(
       O << ".param .b" << size << " _";
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else if (retTy->isAggregateType() || retTy->isVectorTy() || retTy->isIntegerTy(128)) {
-      auto &DL = CS.getCalledFunction()->getParent()->getDataLayout();
+    } else if (retTy->isAggregateType() || retTy->isVectorTy() ||
+               retTy->isIntegerTy(128)) {
       O << ".param .align " << retAlignment << " .b8 _["
         << DL.getTypeAllocSize(retTy) << "]";
     } else {

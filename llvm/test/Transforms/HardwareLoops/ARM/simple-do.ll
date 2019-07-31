@@ -1,7 +1,6 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | FileCheck %s
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=true %s -S -o - | FileCheck %s --check-prefix=DISABLED
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=-lob -hardware-loops %s -S -o - | FileCheck %s --check-prefix=DISABLED
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -disable-arm-loloops=false %s -o - | FileCheck %s --check-prefix=CHECK-LLC
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi %s -o - | FileCheck %s --check-prefix=CHECK-LLC
 
 ; DISABLED-NOT: llvm.{{.*}}.loop.iterations
 ; DISABLED-NOT: llvm.loop.decrement

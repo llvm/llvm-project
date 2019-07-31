@@ -1984,7 +1984,6 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   unsigned Opcode = 0;
   switch (I.getOperation()) {
   default:
-    llvm_unreachable("Unknown atomicrmw op");
     return false;
   case AtomicRMWInst::Xchg:
     Opcode = TargetOpcode::G_ATOMICRMW_XCHG;
@@ -2018,6 +2017,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   case AtomicRMWInst::UMin:
     Opcode = TargetOpcode::G_ATOMICRMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Opcode = TargetOpcode::G_ATOMICRMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Opcode = TargetOpcode::G_ATOMICRMW_FSUB;
     break;
   }
 

@@ -2090,9 +2090,14 @@ PowerPC constraints:
 * On ppc32/64 GOT/PIC only module-local calls (visibility = hidden or protected)
   are supported.
 
-On WebAssembly, tail calls are lowered to ``return_call`` and
-``return_call_indirect`` instructions whenever the 'tail-call' target attribute
-is enabled.
+WebAssembly constraints:
+
+* No variable argument lists are used
+
+* The 'tail-call' target attribute is enabled.
+
+* The caller and callee's return types must match. The caller cannot
+  be void unless the callee is, too.
 
 Example:
 

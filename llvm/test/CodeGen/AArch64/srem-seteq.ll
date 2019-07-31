@@ -204,32 +204,56 @@ define i32 @test_srem_odd_setne(i32 %X) nounwind {
   ret i32 %ret
 }
 
+; The fold is only valid for positive divisors, negative-ones should be negated.
+define i32 @test_srem_negative_odd(i32 %X) nounwind {
+; CHECK-LABEL: test_srem_negative_odd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1717986919
+; CHECK-NEXT:    smull x8, w0, w8
+; CHECK-NEXT:    lsr x9, x8, #63
+; CHECK-NEXT:    asr x8, x8, #33
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    add w8, w8, w8, lsl #2
+; CHECK-NEXT:    cmn w0, w8
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %srem = srem i32 %X, -5
+  %cmp = icmp ne i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+define i32 @test_srem_negative_even(i32 %X) nounwind {
+; CHECK-LABEL: test_srem_negative_even:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #56173
+; CHECK-NEXT:    movk w8, #28086, lsl #16
+; CHECK-NEXT:    smull x8, w0, w8
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    sub w8, w8, w0
+; CHECK-NEXT:    asr w9, w8, #3
+; CHECK-NEXT:    add w8, w9, w8, lsr #31
+; CHECK-NEXT:    mov w9, #-14
+; CHECK-NEXT:    msub w8, w8, w9, w0
+; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %srem = srem i32 %X, -14
+  %cmp = icmp ne i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
 ;------------------------------------------------------------------------------;
 ; Negative tests
 ;------------------------------------------------------------------------------;
 
-; The fold is invalid if divisor is 1.
+; We can lower remainder of division by one much better elsewhere.
 define i32 @test_srem_one(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_one:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 1
-  %cmp = icmp eq i32 %srem, 0
-  %ret = zext i1 %cmp to i32
-  ret i32 %ret
-}
-
-; We can lower remainder of division by all-ones much better elsewhere.
-define i32 @test_srem_allones(i32 %X) nounwind {
-; CHECK-LABEL: test_srem_allones:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    csel w8, w0, w0, lt
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    ret
-  %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
@@ -247,6 +271,39 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 16
+  %cmp = icmp eq i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+; The fold is only valid for positive divisors, and we can't negate INT_MIN.
+define i32 @test_srem_int_min(i32 %X) nounwind {
+; CHECK-LABEL: test_srem_int_min:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2147483647
+; CHECK-NEXT:    add w8, w0, w8
+; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    csel w8, w8, w0, lt
+; CHECK-NEXT:    and w8, w8, #0x80000000
+; CHECK-NEXT:    cmn w0, w8
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %srem = srem i32 %X, 2147483648
+  %cmp = icmp eq i32 %srem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+; We can lower remainder of division by all-ones much better elsewhere.
+define i32 @test_srem_allones(i32 %X) nounwind {
+; CHECK-LABEL: test_srem_allones:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    csel w8, w0, w0, lt
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret

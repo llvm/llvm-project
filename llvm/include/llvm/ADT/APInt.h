@@ -1467,6 +1467,13 @@ public:
       U.pVal[whichWord(BitPosition)] &= Mask;
   }
 
+  /// Set bottom loBits bits to 0.
+  void clearLowBits(unsigned loBits) {
+    assert(loBits <= BitWidth && "More bits than bitwidth");
+    APInt Keep = getHighBitsSet(BitWidth, BitWidth - loBits);
+    *this &= Keep;
+  }
+
   /// Set the sign bit to 0.
   void clearSignBit() {
     clearBit(BitWidth - 1);

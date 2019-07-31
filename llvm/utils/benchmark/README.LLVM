@@ -25,3 +25,5 @@ Changes:
   and hardcoded a null version
 * https://github.com/google/benchmark/commit/4abdfbb802d1b514703223f5f852ce4a507d32d2
   is applied on top of v1.4.1 to add RISC-V timer support.
+* https://github.com/google/benchmark/commit/8e48105d465c586068dd8e248fe75a8971c6ba3a
+  is applied on top of v1.4.1 to fix cross-build from linux to windows via MinGW.

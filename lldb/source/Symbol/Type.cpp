@@ -11,6 +11,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -486,47 +487,54 @@ bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
       }
     } else {
       // We have no encoding type, return void?
-      TypeSystem *type_system =
+      auto type_system_or_err =
           m_symbol_file->GetTypeSystemForLanguage(eLanguageTypeC);
-      CompilerType void_compiler_type =
-          type_system->GetBasicTypeFromAST(eBasicTypeVoid);
-      switch (m_encoding_uid_type) {
-      case eEncodingIsUID:
-        m_compiler_type = void_compiler_type;
-        break;
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(
+            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
+            std::move(err),
+            "Unable to construct void type from ClangASTContext");
+      } else {
+        CompilerType void_compiler_type =
+            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid);
+        switch (m_encoding_uid_type) {
+        case eEncodingIsUID:
+          m_compiler_type = void_compiler_type;
+          break;
 
-      case eEncodingIsConstUID:
-        m_compiler_type = void_compiler_type.AddConstModifier();
-        break;
+        case eEncodingIsConstUID:
+          m_compiler_type = void_compiler_type.AddConstModifier();
+          break;
 
-      case eEncodingIsRestrictUID:
-        m_compiler_type = void_compiler_type.AddRestrictModifier();
-        break;
+        case eEncodingIsRestrictUID:
+          m_compiler_type = void_compiler_type.AddRestrictModifier();
+          break;
 
-      case eEncodingIsVolatileUID:
-        m_compiler_type = void_compiler_type.AddVolatileModifier();
-        break;
+        case eEncodingIsVolatileUID:
+          m_compiler_type = void_compiler_type.AddVolatileModifier();
+          break;
 
-      case eEncodingIsTypedefUID:
-        m_compiler_type = void_compiler_type.CreateTypedef(
-            m_name.AsCString("__lldb_invalid_typedef_name"),
-            GetSymbolFile()->GetDeclContextContainingUID(GetID()));
-        break;
+        case eEncodingIsTypedefUID:
+          m_compiler_type = void_compiler_type.CreateTypedef(
+              m_name.AsCString("__lldb_invalid_typedef_name"),
+              GetSymbolFile()->GetDeclContextContainingUID(GetID()));
+          break;
 
-      case eEncodingIsPointerUID:
-        m_compiler_type = void_compiler_type.GetPointerType();
-        break;
+        case eEncodingIsPointerUID:
+          m_compiler_type = void_compiler_type.GetPointerType();
+          break;
 
-      case eEncodingIsLValueReferenceUID:
-        m_compiler_type = void_compiler_type.GetLValueReferenceType();
-        break;
+        case eEncodingIsLValueReferenceUID:
+          m_compiler_type = void_compiler_type.GetLValueReferenceType();
+          break;
 
-      case eEncodingIsRValueReferenceUID:
-        m_compiler_type = void_compiler_type.GetRValueReferenceType();
-        break;
+        case eEncodingIsRValueReferenceUID:
+          m_compiler_type = void_compiler_type.GetRValueReferenceType();
+          break;
 
-      default:
-        llvm_unreachable("Unhandled encoding_data_type.");
+        default:
+          llvm_unreachable("Unhandled encoding_data_type.");
+        }
       }
     }
 

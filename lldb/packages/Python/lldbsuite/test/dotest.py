@@ -148,9 +148,6 @@ Option 1:
 
 Writing logs into different files per test case::
 
-This option is particularly useful when multiple dotest instances are created
-by dosep.py
-
 $ ./dotest.py --channel "lldb all"
 
 $ ./dotest.py --channel "lldb all" --channel "gdb-remote packets"
@@ -360,17 +357,6 @@ def parseOptionsAndInitTestdirs():
         if any([x.startswith('-') for x in args.f]):
             usage(parser)
         configuration.filters.extend(args.f)
-        # Shut off multiprocessing mode when additional filters are specified.
-        # The rational is that the user is probably going after a very specific
-        # test and doesn't need a bunch of parallel test runners all looking for
-        # it in a frenzy.  Also, '-v' now spits out all test run output even
-        # on success, so the standard recipe for redoing a failing test (with -v
-        # and a -f to filter to the specific test) now causes all test scanning
-        # (in parallel) to print results for do-nothing runs in a very distracting
-        # manner.  If we really need filtered parallel runs in the future, consider
-        # adding a --no-output-on-success that prevents -v from setting
-        # output-on-success.
-        configuration.no_multiprocess_test_runner = True
 
     if args.l:
         configuration.skip_long_running_test = False
@@ -428,23 +414,8 @@ def parseOptionsAndInitTestdirs():
     if do_help:
         usage(parser)
 
-    if args.no_multiprocess:
-        configuration.no_multiprocess_test_runner = True
-
-    if args.inferior:
-        configuration.is_inferior_test_runner = True
-
-    if args.num_threads:
-        configuration.num_threads = args.num_threads
-
-    if args.test_subdir:
-        configuration.exclusive_test_subdir = args.test_subdir
-
-    if args.test_runner_name:
-        configuration.test_runner_name = args.test_runner_name
-
     # Capture test results-related args.
-    if args.curses and not args.inferior:
+    if args.curses:
         # Act as if the following args were set.
         args.results_formatter = "lldbsuite.test_event.formatter.curses.Curses"
         args.results_file = "stdout"
@@ -466,9 +437,8 @@ def parseOptionsAndInitTestdirs():
     if args.results_formatter_options:
         configuration.results_formatter_options = args.results_formatter_options
 
-    # Default to using the BasicResultsFormatter if no formatter is specified
-    # and we're not a test inferior.
-    if not args.inferior and configuration.results_formatter_name is None:
+    # Default to using the BasicResultsFormatter if no formatter is specified.
+    if configuration.results_formatter_name is None:
         configuration.results_formatter_name = (
             "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
 
@@ -506,12 +476,8 @@ def parseOptionsAndInitTestdirs():
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
-        # Shut off multiprocessing mode when test directories are specified.
-        configuration.no_multiprocess_test_runner = True
 
     lldbtest_config.codesign_identity = args.codesign_identity
-
-    #print("testdirs:", testdirs)
 
 
 def getXcodeOutputPaths(lldbRootDirectory):
@@ -554,17 +520,7 @@ def setupTestResults():
 
         # Send an initialize message to the formatter.
         initialize_event = EventBuilder.bare_event("initialize")
-        if isMultiprocessTestRunner():
-            if (configuration.test_runner_name is not None and
-                    configuration.test_runner_name == "serial"):
-                # Only one worker queue here.
-                worker_count = 1
-            else:
-                # Workers will be the number of threads specified.
-                worker_count = configuration.num_threads
-        else:
-            worker_count = 1
-        initialize_event["worker_count"] = worker_count
+        initialize_event["worker_count"] = 1
 
         formatter_spec.formatter.handle_event(initialize_event)
 
@@ -1038,15 +994,6 @@ def exitTestSuite(exitCode=None):
         sys.exit(exitCode)
 
 
-def isMultiprocessTestRunner():
-    # We're not multiprocess when we're either explicitly
-    # the inferior (as specified by the multiprocess test
-    # runner) OR we've been told to skip using the multiprocess
-    # test runner
-    return not (
-        configuration.is_inferior_test_runner or configuration.no_multiprocess_test_runner)
-
-
 def getVersionForSDK(sdk):
     sdk = str.lower(sdk)
     full_path = seven.get_command_output('xcrun -sdk %s --show-sdk-path' % sdk)
@@ -1176,7 +1123,6 @@ def run_suite():
     if sys.platform.startswith("darwin"):
         checkDsymForUUIDIsNotOn()
 
-    #
     # Start the actions by first parsing the options while setting up the test
     # directories, followed by setting up the search paths for lldb utilities;
     # then, we walk the directory trees and collect the tests into our test suite.
@@ -1185,20 +1131,6 @@ def run_suite():
 
     # Setup test results (test results formatter and output handling).
     setupTestResults()
-
-    # If we are running as the multiprocess test runner, kick off the
-    # multiprocess test runner here.
-    if isMultiprocessTestRunner():
-        from . import dosep
-        dosep.main(
-            configuration.num_threads,
-            configuration.test_runner_name,
-            configuration.results_formatter_object)
-        raise Exception("should never get here")
-    elif configuration.is_inferior_test_runner:
-        # Shut off Ctrl-C processing in inferiors.  The parallel
-        # test runner handles this more holistically.
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     setupSysPath()
 

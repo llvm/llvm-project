@@ -830,7 +830,8 @@ protected:
   void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
                              AccessList::iterator);
   MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *,
-                                      const MemoryUseOrDef *Template = nullptr);
+                                      const MemoryUseOrDef *Template = nullptr,
+                                      bool CreationMustSucceed = true);
 
 private:
   template <class AliasAnalysisType> class ClobberWalkerBase;

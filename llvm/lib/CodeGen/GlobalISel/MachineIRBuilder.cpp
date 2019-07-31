@@ -697,17 +697,19 @@ MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
+                                                const SrcOp &Op1,
+                                                Optional<unsigned> Flags) {
 
-  return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1});
+  return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildSelect(const DstOp &Res,
                                                   const SrcOp &Tst,
                                                   const SrcOp &Op0,
-                                                  const SrcOp &Op1) {
+                                                  const SrcOp &Op1,
+                                                  Optional<unsigned> Flags) {
 
-  return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1});
+  return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder
@@ -774,26 +776,28 @@ MachineIRBuilder::buildAtomicCmpXchg(Register OldValRes, Register Addr,
       .addMemOperand(&MMO);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(unsigned Opcode,
-                                                     Register OldValRes,
-                                                     Register Addr,
-                                                     Register Val,
-                                                     MachineMemOperand &MMO) {
+MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(
+  unsigned Opcode, const DstOp &OldValRes,
+  const SrcOp &Addr, const SrcOp &Val,
+  MachineMemOperand &MMO) {
+
 #ifndef NDEBUG
-  LLT OldValResTy = getMRI()->getType(OldValRes);
-  LLT AddrTy = getMRI()->getType(Addr);
-  LLT ValTy = getMRI()->getType(Val);
+  LLT OldValResTy = OldValRes.getLLTTy(*getMRI());
+  LLT AddrTy = Addr.getLLTTy(*getMRI());
+  LLT ValTy = Val.getLLTTy(*getMRI());
   assert(OldValResTy.isScalar() && "invalid operand type");
   assert(AddrTy.isPointer() && "invalid operand type");
   assert(ValTy.isValid() && "invalid operand type");
   assert(OldValResTy == ValTy && "type mismatch");
+  assert(MMO.isAtomic() && "not atomic mem operand");
 #endif
 
-  return buildInstr(Opcode)
-      .addDef(OldValRes)
-      .addUse(Addr)
-      .addUse(Val)
-      .addMemOperand(&MMO);
+  auto MIB = buildInstr(Opcode);
+  OldValRes.addDefToMIB(*getMRI(), MIB);
+  Addr.addSrcToMIB(MIB);
+  Val.addSrcToMIB(MIB);
+  MIB.addMemOperand(&MMO);
+  return MIB;
 }
 
 MachineInstrBuilder
@@ -861,6 +865,21 @@ MachineInstrBuilder
 MachineIRBuilder::buildAtomicRMWUmin(Register OldValRes, Register Addr,
                                      Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_UMIN, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFAdd(
+  const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+  MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FADD, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFSub(const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+                                     MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FSUB, OldValRes, Addr, Val,
                         MMO);
 }
 

@@ -38,10 +38,10 @@ namespace {
 #endif
 
 // Define some fixed alignment types to use in these tests.
-struct LLVM_ALIGNAS(1) A1 {};
-struct LLVM_ALIGNAS(2) A2 {};
-struct LLVM_ALIGNAS(4) A4 {};
-struct LLVM_ALIGNAS(8) A8 {};
+struct alignas(1) A1 {};
+struct alignas(2) A2 {};
+struct alignas(4) A4 {};
+struct alignas(8) A8 {};
 
 struct S1 {};
 struct S2 { char a; };

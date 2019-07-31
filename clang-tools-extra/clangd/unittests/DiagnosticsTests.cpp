@@ -907,12 +907,24 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
     int x = 5/0;)cpp");
   TestTU TU = TestTU::withCode(Main.code());
   TU.AdditionalFiles = {{"a.h", Header.code()}};
-  auto diags = TU.build().getDiagnostics();
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
                   Diag(Main.range(), "in included file: C++ requires "
                                      "a type specifier for all declarations"),
                   WithNote(Diag(Header.range(), "error occurred here")))));
+}
+
+TEST(IgnoreDiags, FromNonWrittenSources) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]]
+    void foo() {})cpp");
+  Annotations Header(R"cpp(
+    int x = 5/0;
+    int b = [[FOO]];)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.ExtraArgs = {"-DFOO=NOOO"};
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
 } // namespace
