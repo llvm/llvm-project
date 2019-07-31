@@ -100,10 +100,9 @@ void StringList::Join(const char *separator, Stream &strm) {
 
 void StringList::Clear() { m_strings.clear(); }
 
-void StringList::LongestCommonPrefix(std::string &common_prefix) {
-  common_prefix.clear();
+std::string StringList::LongestCommonPrefix() {
   if (m_strings.empty())
-    return;
+    return {};
 
   auto args = llvm::makeArrayRef(m_strings);
   llvm::StringRef prefix = args.front();
@@ -115,7 +114,7 @@ void StringList::LongestCommonPrefix(std::string &common_prefix) {
     }
     prefix = prefix.take_front(count);
   }
-  common_prefix = prefix;
+  return prefix.str();
 }
 
 void StringList::InsertStringAtIndex(size_t idx, const char *str) {

@@ -1857,8 +1857,7 @@ int CommandInterpreter::HandleCompletion(
     // element 0, otherwise put an empty string in element 0.
     std::string command_partial_str = request.GetCursorArgumentPrefix().str();
 
-    std::string common_prefix;
-    matches.LongestCommonPrefix(common_prefix);
+    std::string common_prefix = matches.LongestCommonPrefix();
     const size_t partial_name_len = command_partial_str.size();
     common_prefix.erase(0, partial_name_len);
 

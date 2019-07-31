@@ -243,8 +243,7 @@ int IOHandlerDelegate::IOHandlerComplete(
 
     size_t num_matches = request.GetNumberOfMatches();
     if (num_matches > 0) {
-      std::string common_prefix;
-      matches.LongestCommonPrefix(common_prefix);
+      std::string common_prefix = matches.LongestCommonPrefix();
       const size_t partial_name_len = request.GetCursorArgumentPrefix().size();
 
       // If we matched a unique single command, add a space... Only do this if
