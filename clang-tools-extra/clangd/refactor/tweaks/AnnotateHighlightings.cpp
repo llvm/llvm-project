@@ -33,18 +33,16 @@ public:
 REGISTER_TWEAK(AnnotateHighlightings)
 
 Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
-  // TUDecl is always the root ancestor.
-  const Decl *CommonDecl =
-      Inputs.ASTSelection.root().ASTNode.get<TranslationUnitDecl>();
+  const Decl *CommonDecl = nullptr;
   for (auto N = Inputs.ASTSelection.commonAncestor(); N && !CommonDecl;
        N = N->Parent)
     CommonDecl = N->ASTNode.get<Decl>();
 
   std::vector<HighlightingToken> HighlightingTokens;
-  if (llvm::isa<TranslationUnitDecl>(CommonDecl)) {
-    // We only annotate tokens in the main file, if CommonDecl is a TUDecl,
-    // we use the default traversal scope (which is the top level decls of the
-    // main file).
+  if (!CommonDecl) {
+    // Now we hit the TUDecl case where commonAncestor() returns null
+    // intendedly. We only annotate tokens in the main file, so use the default
+    // traversal scope (which is the top level decls of the main file).
     HighlightingTokens = getSemanticHighlightings(Inputs.AST);
   } else {
     // Store the existing scopes.
