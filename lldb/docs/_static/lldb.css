@@ -10,6 +10,14 @@ div.body {
   max-width: 90%;
 }
 
+div.note {
+  padding: 20px 20px 10px 20px;
+}
+
+div.note p.admonition-title {
+  font-size: 130%;
+}
+
 table.mapping {
   width: 100%;
 }

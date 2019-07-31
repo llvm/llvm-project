@@ -241,15 +241,19 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     return false;
   }
 
-  // Handle simple register locations.
-  if (!isMemoryLocation() && !HasComplexExpression) {
+  // Handle simple register locations. If we are supposed to emit
+  // a call site parameter expression and if that expression is just a register
+  // location, emit it with addBReg and offset 0, because we should emit a DWARF
+  // expression representing a value, rather than a location.
+  if (!isMemoryLocation() && !HasComplexExpression && (!isParameterValue() ||
+                                                       isEntryValue())) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
       addOpPiece(Reg.Size);
     }
 
-    if (isEntryValue() && DwarfVersion >= 4)
+    if (isEntryValue() && !isParameterValue() && DwarfVersion >= 4)
       emitOp(dwarf::DW_OP_stack_value);
 
     DwarfRegs.clear();
@@ -340,7 +344,17 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();
-    switch (Op->getOp()) {
+    uint64_t OpNum = Op->getOp();
+
+    if (OpNum >= dwarf::DW_OP_reg0 && OpNum <= dwarf::DW_OP_reg31) {
+      emitOp(OpNum);
+      continue;
+    } else if (OpNum >= dwarf::DW_OP_breg0 && OpNum <= dwarf::DW_OP_breg31) {
+      addBReg(OpNum - dwarf::DW_OP_breg0, Op->getArg(0));
+      continue;
+    }
+
+    switch (OpNum) {
     case dwarf::DW_OP_LLVM_fragment: {
       unsigned SizeInBits = Op->getArg(1);
       unsigned FragmentOffset = Op->getArg(0);
@@ -389,7 +403,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
-      emitOp(Op->getOp());
+      emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:
       assert(!isRegisterLocation());
@@ -458,12 +472,21 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_LLVM_tag_offset:
       TagOffset = Op->getArg(0);
       break;
+    case dwarf::DW_OP_regx:
+      emitOp(dwarf::DW_OP_regx);
+      emitUnsigned(Op->getArg(0));
+      break;
+    case dwarf::DW_OP_bregx:
+      emitOp(dwarf::DW_OP_bregx);
+      emitUnsigned(Op->getArg(0));
+      emitSigned(Op->getArg(1));
+      break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }
   }
 
-  if (isImplicitLocation())
+  if (isImplicitLocation() && !isParameterValue())
     // Turn this into an implicit location description.
     addStackValue();
 }

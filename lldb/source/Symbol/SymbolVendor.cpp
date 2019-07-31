@@ -68,10 +68,8 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (objfile_sp) {
-      m_objfile_sp = objfile_sp;
-      m_sym_file_up.reset(SymbolFile::FindPlugin(objfile_sp.get()));
-    }
+    if (objfile_sp)
+      m_sym_file_up.reset(SymbolFile::FindPlugin(objfile_sp));
   }
 }
 

@@ -733,3 +733,18 @@ def int_aarch64_settag_zero  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
 def int_aarch64_stgp  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
     [IntrWriteMem, IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
 }
+
+// Transactional Memory Extension (TME) Intrinsics
+let TargetPrefix = "aarch64" in {
+def int_aarch64_tstart  : GCCBuiltin<"__builtin_arm_tstart">,
+                         Intrinsic<[llvm_i64_ty]>;
+
+def int_aarch64_tcommit : GCCBuiltin<"__builtin_arm_tcommit">, Intrinsic<[]>;
+
+def int_aarch64_tcancel : GCCBuiltin<"__builtin_arm_tcancel">,
+                          Intrinsic<[], [llvm_i64_ty], [ImmArg<0>]>;
+
+def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
+                          Intrinsic<[llvm_i64_ty], [],
+                                    [IntrNoMem, IntrHasSideEffects]>;
+}

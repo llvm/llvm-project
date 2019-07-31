@@ -518,7 +518,7 @@ protected:
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
-  size_t GetProcessOutput();
+  void GetProcessOutput();
 
   void SetSynchronous(bool value);
 

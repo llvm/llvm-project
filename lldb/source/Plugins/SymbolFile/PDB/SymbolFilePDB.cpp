@@ -119,28 +119,28 @@ const char *SymbolFilePDB::GetPluginDescriptionStatic() {
 }
 
 lldb_private::SymbolFile *
-SymbolFilePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
-  return new SymbolFilePDB(obj_file);
+SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  return new SymbolFilePDB(std::move(objfile_sp));
 }
 
-SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
-    : SymbolFile(object_file), m_session_up(), m_global_scope_up() {}
+SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
+    : SymbolFile(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
 
 SymbolFilePDB::~SymbolFilePDB() {}
 
 uint32_t SymbolFilePDB::CalculateAbilities() {
   uint32_t abilities = 0;
-  if (!m_obj_file)
+  if (!m_objfile_sp)
     return 0;
 
   if (!m_session_up) {
     // Lazily load and match the PDB file, but only do this once.
-    std::string exePath = m_obj_file->GetFileSpec().GetPath();
+    std::string exePath = m_objfile_sp->GetFileSpec().GetPath();
     auto error = loadDataForEXE(PDB_ReaderType::DIA, llvm::StringRef(exePath),
                                 m_session_up);
     if (error) {
       llvm::consumeError(std::move(error));
-      auto module_sp = m_obj_file->GetModule();
+      auto module_sp = m_objfile_sp->GetModule();
       if (!module_sp)
         return 0;
       // See if any symbol file is specified through `--symfile` option.
@@ -183,7 +183,8 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 }
 
 void SymbolFilePDB::InitializeObject() {
-  lldb::addr_t obj_load_address = m_obj_file->GetBaseAddress().GetFileAddress();
+  lldb::addr_t obj_load_address =
+      m_objfile_sp->GetBaseAddress().GetFileAddress();
   lldbassert(obj_load_address && obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
   if (!m_global_scope_up)
@@ -1118,7 +1119,7 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
       break;
 
     SymbolContext sc;
-    sc.module_sp = m_obj_file->GetModule();
+    sc.module_sp = m_objfile_sp->GetModule();
     lldbassert(sc.module_sp.get());
 
     if (!name.GetStringRef().equals(
@@ -1164,7 +1165,7 @@ SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
     if (!regex.Execute(var_name))
       continue;
     SymbolContext sc;
-    sc.module_sp = m_obj_file->GetModule();
+    sc.module_sp = m_objfile_sp->GetModule();
     lldbassert(sc.module_sp.get());
 
     sc.comp_unit = ParseCompileUnitForUID(GetCompilandId(*pdb_data)).get();
@@ -1399,7 +1400,7 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   if (!results)
     return;
 
-  auto section_list = m_obj_file->GetSectionList();
+  auto section_list = m_objfile_sp->GetSectionList();
   if (!section_list)
     return;
 
@@ -1672,7 +1673,7 @@ size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
 llvm::Expected<lldb_private::TypeSystem &>
 SymbolFilePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   auto type_system_or_err =
-      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
+      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
   if (type_system_or_err) {
     type_system_or_err->SetSymbolFile(this);
   }
@@ -1773,7 +1774,7 @@ lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitForUID(uint32_t id,
   // Don't support optimized code for now, DebugInfoPDB does not return this
   // information.
   LazyBool optimized = eLazyBoolNo;
-  auto cu_sp = std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr,
+  auto cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
                                              path.c_str(), id, lang, optimized);
 
   if (!cu_sp)

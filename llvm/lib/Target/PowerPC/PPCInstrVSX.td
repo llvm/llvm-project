@@ -78,20 +78,11 @@ def SDTVecConv : SDTypeProfile<1, 2, [
 def SDTVabsd : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i32>
 ]>;
-def SDT_PPCld_vec_be : SDTypeProfile<1, 1, [
-  SDTCisVec<0>, SDTCisPtrTy<1>
-]>;
-def SDT_PPCst_vec_be : SDTypeProfile<0, 2, [
-  SDTCisVec<0>, SDTCisPtrTy<1>
-]>;
+
 
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxvd2x : SDNode<"PPCISD::STXVD2X", SDT_PPCstxvd2x,
-                        [SDNPHasChain, SDNPMayStore]>;
-def PPCld_vec_be  : SDNode<"PPCISD::LOAD_VEC_BE", SDT_PPCld_vec_be,
-                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def PPCst_vec_be : SDNode<"PPCISD::STORE_VEC_BE", SDT_PPCst_vec_be,
                         [SDNPHasChain, SDNPMayStore]>;
 def PPCxxswapd : SDNode<"PPCISD::XXSWAPD", SDT_PPCxxswapd, [SDNPHasChain]>;
 def PPCmfvsr : SDNode<"PPCISD::MFVSR", SDTUnaryOp, []>;
@@ -1097,19 +1088,6 @@ let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
             (STXVD2X $rS, xoaddr:$dst)>;
   def : Pat<(PPCstxvd2x v2f64:$rS, xoaddr:$dst), (STXVD2X $rS, xoaddr:$dst)>;
 }
-
-// Load vector big endian order
-let Predicates = [IsLittleEndian, HasVSX] in {
-  def : Pat<(v2f64 (PPCld_vec_be xoaddr:$src)), (LXVD2X xoaddr:$src)>;
-  def : Pat<(PPCst_vec_be v2f64:$rS, xoaddr:$dst), (STXVD2X $rS, xoaddr:$dst)>;
-  def : Pat<(v4f32 (PPCld_vec_be xoaddr:$src)), (LXVW4X xoaddr:$src)>;
-  def : Pat<(PPCst_vec_be v4f32:$rS, xoaddr:$dst), (STXVW4X $rS, xoaddr:$dst)>;
-  def : Pat<(v2i64 (PPCld_vec_be xoaddr:$src)), (LXVD2X xoaddr:$src)>;
-  def : Pat<(PPCst_vec_be v2i64:$rS, xoaddr:$dst), (STXVD2X $rS, xoaddr:$dst)>;
-  def : Pat<(v4i32 (PPCld_vec_be xoaddr:$src)), (LXVW4X xoaddr:$src)>;
-  def : Pat<(PPCst_vec_be v4i32:$rS, xoaddr:$dst), (STXVW4X $rS, xoaddr:$dst)>;
-}
-
 let Predicates = [IsBigEndian, HasVSX, HasOnlySwappingMemOps] in {
   def : Pat<(v2f64 (load xoaddr:$src)), (LXVD2X xoaddr:$src)>;
   def : Pat<(v2i64 (load xoaddr:$src)), (LXVD2X xoaddr:$src)>;
@@ -3046,16 +3024,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 4))>;
   def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 3)),
             (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 0))>;
-
-  def : Pat<(v8i16 (PPCld_vec_be xoaddr:$src)),
-            (COPY_TO_REGCLASS (LXVH8X xoaddr:$src), VRRC)>;
-  def : Pat<(PPCst_vec_be v8i16:$rS, xoaddr:$dst),
-            (STXVH8X (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$dst)>;
-
-  def : Pat<(v16i8 (PPCld_vec_be xoaddr:$src)),
-            (COPY_TO_REGCLASS (LXVB16X xoaddr:$src), VRRC)>;
-  def : Pat<(PPCst_vec_be v16i8:$rS, xoaddr:$dst),
-            (STXVB16X (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$dst)>;
   } // IsLittleEndian, HasP9Vector
 
   let Predicates = [IsBigEndian, HasP9Vector] in {

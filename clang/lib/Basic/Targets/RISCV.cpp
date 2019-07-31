@@ -19,23 +19,38 @@ using namespace clang::targets;
 
 ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
   static const char *const GCCRegNames[] = {
+      // Integer registers
       "x0",  "x1",  "x2",  "x3",  "x4",  "x5",  "x6",  "x7",
       "x8",  "x9",  "x10", "x11", "x12", "x13", "x14", "x15",
       "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23",
-      "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31"};
+      "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31",
+
+      // Floating point registers
+      "f0",  "f1",  "f2",  "f3",  "f4",  "f5",  "f6",  "f7",
+      "f8",  "f9",  "f10", "f11", "f12", "f13", "f14", "f15",
+      "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23",
+      "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"};
   return llvm::makeArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
   static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
-      {{"zero"}, "x0"}, {{"ra"}, "x1"},  {{"sp"}, "x2"},   {{"gp"}, "x3"},
-      {{"tp"}, "x4"},   {{"t0"}, "x5"},  {{"t1"}, "x6"},   {{"t2"}, "x7"},
-      {{"s0"}, "x8"},   {{"s1"}, "x9"},  {{"a0"}, "x10"},  {{"a1"}, "x11"},
-      {{"a2"}, "x12"},  {{"a3"}, "x13"}, {{"a4"}, "x14"},  {{"a5"}, "x15"},
-      {{"a6"}, "x16"},  {{"a7"}, "x17"}, {{"s2"}, "x18"},  {{"s3"}, "x19"},
-      {{"s4"}, "x20"},  {{"s5"}, "x21"}, {{"s6"}, "x22"},  {{"s7"}, "x23"},
-      {{"s8"}, "x24"},  {{"s9"}, "x25"}, {{"s10"}, "x26"}, {{"s11"}, "x27"},
-      {{"t3"}, "x28"},  {{"t4"}, "x29"}, {{"t5"}, "x30"},  {{"t6"}, "x31"}};
+      {{"zero"}, "x0"}, {{"ra"}, "x1"},   {{"sp"}, "x2"},    {{"gp"}, "x3"},
+      {{"tp"}, "x4"},   {{"t0"}, "x5"},   {{"t1"}, "x6"},    {{"t2"}, "x7"},
+      {{"s0"}, "x8"},   {{"s1"}, "x9"},   {{"a0"}, "x10"},   {{"a1"}, "x11"},
+      {{"a2"}, "x12"},  {{"a3"}, "x13"},  {{"a4"}, "x14"},   {{"a5"}, "x15"},
+      {{"a6"}, "x16"},  {{"a7"}, "x17"},  {{"s2"}, "x18"},   {{"s3"}, "x19"},
+      {{"s4"}, "x20"},  {{"s5"}, "x21"},  {{"s6"}, "x22"},   {{"s7"}, "x23"},
+      {{"s8"}, "x24"},  {{"s9"}, "x25"},  {{"s10"}, "x26"},  {{"s11"}, "x27"},
+      {{"t3"}, "x28"},  {{"t4"}, "x29"},  {{"t5"}, "x30"},   {{"t6"}, "x31"},
+      {{"ft0"}, "f0"},  {{"ft1"}, "f1"},  {{"ft2"}, "f2"},   {{"ft3"}, "f3"},
+      {{"ft4"}, "f4"},  {{"ft5"}, "f5"},  {{"ft6"}, "f6"},   {{"ft7"}, "f7"},
+      {{"fs0"}, "f8"},  {{"fs1"}, "f9"},  {{"fa0"}, "f10"},  {{"fa1"}, "f11"},
+      {{"fa2"}, "f12"}, {{"fa3"}, "f13"}, {{"fa4"}, "f14"},  {{"fa5"}, "f15"},
+      {{"fa6"}, "f16"}, {{"fa7"}, "f17"}, {{"fs2"}, "f18"},  {{"fs3"}, "f19"},
+      {{"fs4"}, "f20"}, {{"fs5"}, "f21"}, {{"fs6"}, "f22"},  {{"fs7"}, "f23"},
+      {{"fs8"}, "f24"}, {{"fs9"}, "f25"}, {{"fs10"}, "f26"}, {{"fs11"}, "f27"},
+      {{"ft8"}, "f28"}, {{"ft9"}, "f29"}, {{"ft10"}, "f30"}, {{"ft11"}, "f31"}};
   return llvm::makeArrayRef(GCCRegAliases);
 }
 
@@ -55,6 +70,10 @@ bool RISCVTargetInfo::validateAsmConstraint(
   case 'K':
     // A 5-bit unsigned immediate for CSR access instructions.
     Info.setRequiresImmediate(0, 31);
+    return true;
+  case 'f':
+    // A floating-point register.
+    Info.setAllowsRegister();
     return true;
   }
 }

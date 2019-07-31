@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
@@ -1118,6 +1119,36 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
   return (DefCycle != -1 && DefCycle <= 1);
+}
+
+Optional<ParamLoadedValue>
+TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+  const MachineFunction *MF = MI.getMF();
+  const MachineOperand *Op = nullptr;
+  DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});;
+  const MachineOperand *SrcRegOp, *DestRegOp;
+
+  if (isCopyInstr(MI, SrcRegOp, DestRegOp)) {
+    Op = SrcRegOp;
+    return ParamLoadedValue(Op, Expr);
+  } else if (MI.isMoveImmediate()) {
+    Op = &MI.getOperand(1);
+    return ParamLoadedValue(Op, Expr);
+  } else if (MI.hasOneMemOperand()) {
+    int64_t Offset;
+    const auto &TRI = MF->getSubtarget().getRegisterInfo();
+    const auto &TII = MF->getSubtarget().getInstrInfo();
+    const MachineOperand *BaseOp;
+
+    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+      return None;
+
+    Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter, Offset);
+    Op = BaseOp;
+    return ParamLoadedValue(Op, Expr);
+  }
+
+  return None;
 }
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the

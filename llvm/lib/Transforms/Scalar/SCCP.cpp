@@ -1465,7 +1465,24 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       }
 
       LatticeVal &LV = getValueState(&I);
-      if (!LV.isUnknown()) continue;
+      if (!LV.isUnknown())
+        continue;
+
+      // There are two reasons a call can have an undef result
+      // 1. It could be tracked.
+      // 2. It could be constant-foldable.
+      // Because of the way we solve return values, tracked calls must
+      // never be marked overdefined in ResolvedUndefsIn.
+      if (CallSite CS = CallSite(&I)) {
+        if (Function *F = CS.getCalledFunction())
+          if (TrackedRetVals.count(F))
+            continue;
+
+        // If the call is constant-foldable, we mark it overdefined because
+        // we do not know what return values are valid.
+        markOverdefined(&I);
+        return true;
+      }
 
       // extractvalue is safe; check here because the argument is a struct.
       if (isa<ExtractValueInst>(I))
@@ -1638,19 +1655,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       case Instruction::Call:
       case Instruction::Invoke:
       case Instruction::CallBr:
-        // There are two reasons a call can have an undef result
-        // 1. It could be tracked.
-        // 2. It could be constant-foldable.
-        // Because of the way we solve return values, tracked calls must
-        // never be marked overdefined in ResolvedUndefsIn.
-        if (Function *F = CallSite(&I).getCalledFunction())
-          if (TrackedRetVals.count(F))
-            break;
-
-        // If the call is constant-foldable, we mark it overdefined because
-        // we do not know what return values are valid.
-        markOverdefined(&I);
-        return true;
+        llvm_unreachable("Call-like instructions should have be handled early");
       default:
         // If we don't know what should happen here, conservatively mark it
         // overdefined.
@@ -1923,6 +1928,27 @@ static void findReturnsToZap(Function &F,
                       << " due to present musttail call of it\n");
     return;
   }
+
+  assert(
+      all_of(F.users(),
+             [&Solver](User *U) {
+               if (isa<Instruction>(U) &&
+                   !Solver.isBlockExecutable(cast<Instruction>(U)->getParent()))
+                 return true;
+               // Non-callsite uses are not impacted by zapping. Also, constant
+               // uses (like blockaddresses) could stuck around, without being
+               // used in the underlying IR, meaning we do not have lattice
+               // values for them.
+               if (!CallSite(U))
+                 return true;
+               if (U->getType()->isStructTy()) {
+                 return all_of(
+                     Solver.getStructLatticeValueFor(U),
+                     [](const LatticeVal &LV) { return !LV.isOverdefined(); });
+               }
+               return !Solver.getLatticeValueFor(U).isOverdefined();
+             }) &&
+      "We can only zap functions where all live users have a concrete value");
 
   for (BasicBlock &BB : F) {
     if (CallInst *CI = BB.getTerminatingMustTailCall()) {

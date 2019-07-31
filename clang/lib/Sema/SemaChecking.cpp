@@ -1932,6 +1932,7 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
   case AArch64::BI__builtin_arm_dmb:
   case AArch64::BI__builtin_arm_dsb:
   case AArch64::BI__builtin_arm_isb: l = 0; u = 15; break;
+  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);

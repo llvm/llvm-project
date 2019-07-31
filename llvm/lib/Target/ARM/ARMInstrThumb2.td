@@ -5235,7 +5235,7 @@ def t2LoopEnd :
 } // end isNotDuplicable
 
 class CS<string iname, bits<4> opcode, list<dag> pattern=[]>
-  : V8_1MI<(outs rGPR:$Rd), (ins GPRwithZR:$Rn, GPRwithZRnosp:$Rm, pred_noal:$fcond),
+  : V8_1MI<(outs rGPR:$Rd), (ins GPRwithZRnosp:$Rn, GPRwithZRnosp:$Rm, pred_noal:$fcond),
            AddrModeNone, NoItinerary, iname, "$Rd, $Rn, $Rm, $fcond", "", pattern> {
   bits<4> Rd;
   bits<4> Rm;

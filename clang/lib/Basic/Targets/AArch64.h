@@ -35,6 +35,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd;
   bool HasFP16FML;
   bool HasMTE;
+  bool HasTME;
 
   llvm::AArch64::ArchKind ArchKind;
 
