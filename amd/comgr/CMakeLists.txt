@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.2.0)
 
+include (GNUInstallDirs)
+
 # Build ROCM-Compiler-Support with ccache if the package is present.
 set(ROCM_COMPILER_SUPPORT_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(ROCM_COMPILER_SUPPORT_CCACHE_BUILD)
@@ -146,17 +148,17 @@ configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
 
 install(TARGETS amd_comgr
   EXPORT amd_comgr_export
-  DESTINATION lib)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
   "include/amd_comgr.h"
-  DESTINATION include)
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(FILES
   "README.md"
   "LICENSE.txt"
   "NOTICES.txt"
-  DESTINATION share/amd_comgr)
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/amd_comgr)
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
