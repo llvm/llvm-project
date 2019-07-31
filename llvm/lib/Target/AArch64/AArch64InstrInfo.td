@@ -116,7 +116,7 @@ def HasSVE2SM4       : Predicate<"Subtarget->hasSVE2SM4()">,
 def HasSVE2SHA3      : Predicate<"Subtarget->hasSVE2SHA3()">,
                                  AssemblerPredicate<"FeatureSVE2SHA3", "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->hasSVE2BitPerm()">,
-                                 AssemblerPredicate<"FeatureSVE2BitPerm", "bitperm">;
+                                 AssemblerPredicate<"FeatureSVE2BitPerm", "sve2-bitperm">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicate<"FeatureRCPC", "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
