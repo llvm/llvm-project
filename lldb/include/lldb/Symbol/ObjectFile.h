@@ -204,6 +204,10 @@ public:
       const char *path_with_object, lldb_private::FileSpec &archive_file,
       lldb_private::ConstString &archive_object, bool must_exist);
 
+  // LLVM RTTI support
+  static char ID;
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+
   /// Gets the address size in bytes for the current object file.
   ///
   /// \return

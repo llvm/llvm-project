@@ -174,8 +174,8 @@ void InstallAtExitHandler() {
 
 // ---------------------- TSD ---------------- {{{1
 
-#if SANITIZER_NETBSD || SANITIZER_FREEBSD
-// Thread Static Data cannot be used in early init on NetBSD and FreeBSD.
+#if SANITIZER_NETBSD
+// Thread Static Data cannot be used in early init on NetBSD.
 // Reuse the MSan TSD API for compatibility with existing code
 // with an alternative implementation.
 

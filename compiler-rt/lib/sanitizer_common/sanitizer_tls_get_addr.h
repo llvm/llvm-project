@@ -42,7 +42,7 @@ struct DTLS {
   uptr dtv_size;
   DTV *dtv;  // dtv_size elements, allocated by MmapOrDie.
 
-  // Auxiliary fields, don't access them outside sanitizer_tls_get_addr.cc
+  // Auxiliary fields, don't access them outside sanitizer_tls_get_addr.cpp
   uptr last_memalign_size;
   uptr last_memalign_ptr;
 };

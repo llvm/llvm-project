@@ -173,7 +173,7 @@ inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
 }
 
 /// \return the address of the next instruction.
-/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.cc`
+/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.cpp`
 ALWAYS_INLINE uintptr_t TracePC::GetNextInstructionPc(uintptr_t PC) {
 #if defined(__mips__)
   return PC + 8;

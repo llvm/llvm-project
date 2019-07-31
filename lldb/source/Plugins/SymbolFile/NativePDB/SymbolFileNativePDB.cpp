@@ -120,6 +120,8 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   }
   OwningBinary<Binary> binary = std::move(*expected_binary);
 
+  // TODO: Avoid opening the PE/COFF binary twice by reading this information
+  // directly from the lldb_private::ObjectFile.
   auto *obj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary.getBinary());
   if (!obj)
     return nullptr;
