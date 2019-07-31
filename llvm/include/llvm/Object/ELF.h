@@ -599,12 +599,10 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section) const {
     return V.takeError();
   ArrayRef<char> Data = *V;
   if (Data.empty())
-    // TODO: this error is untested.
-    return createError("empty string table");
+    return createError("SHT_STRTAB string table section " +
+                       getSecIndexForError(this, Section) + " is empty");
   if (Data.back() != '\0')
-    return createError(object::getELFSectionTypeName(getHeader()->e_machine,
-                                                     Section->sh_type) +
-                       " string table section " +
+    return createError("SHT_STRTAB string table section " +
                        getSecIndexForError(this, Section) +
                        " is non-null terminated");
   return StringRef(Data.begin(), Data.size());
