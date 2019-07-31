@@ -11,23 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBTableGenBackends.h"
+#include "LLDBTableGenUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <map>
 #include <vector>
 
 using namespace llvm;
 using namespace lldb_private;
-
-/// Groups all properties by their definition.
-static RecordsByName getPropertyList(std::vector<Record *> Properties) {
-  RecordsByName result;
-  for (Record *Property : Properties)
-    result[Property->getValueAsString("Definition").str()].push_back(Property);
-  return result;
-}
 
 static void emitPropertyEnum(Record *Property, raw_ostream &OS) {
   OS << "eProperty";
@@ -156,7 +148,7 @@ void lldb_private::EmitPropertyDefs(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");
-  for (auto &PropertyRecordPair : getPropertyList(Properties)) {
+  for (auto &PropertyRecordPair : getRecordsByName(Properties, "Definition")) {
     emityProperties(PropertyRecordPair.first, PropertyRecordPair.second, OS);
   }
 }
@@ -167,7 +159,7 @@ void lldb_private::EmitPropertyEnumDefs(RecordKeeper &Records,
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");
-  for (auto &PropertyRecordPair : getPropertyList(Properties)) {
+  for (auto &PropertyRecordPair : getRecordsByName(Properties, "Definition")) {
     emitPropertyEnum(PropertyRecordPair.first, PropertyRecordPair.second, OS);
   }
 }

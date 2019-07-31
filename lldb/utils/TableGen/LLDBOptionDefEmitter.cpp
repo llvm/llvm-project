@@ -12,23 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBTableGenBackends.h"
+#include "LLDBTableGenUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <map>
 #include <vector>
 
 using namespace llvm;
 using namespace lldb_private;
-
-/// Groups all records by their command.
-static RecordsByName getCommandList(std::vector<Record *> Options) {
-  RecordsByName result;
-  for (Record *Option : Options)
-    result[Option->getValueAsString("Command").str()].push_back(Option);
-  return result;
-}
 
 namespace {
 struct CommandOption {
@@ -187,7 +179,7 @@ void lldb_private::EmitOptionDefs(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Options for LLDB command line commands.", OS);
 
   std::vector<Record *> Options = Records.getAllDerivedDefinitions("Option");
-  for (auto &CommandRecordPair : getCommandList(Options)) {
+  for (auto &CommandRecordPair : getRecordsByName(Options, "Command")) {
     emitOptions(CommandRecordPair.first, CommandRecordPair.second, OS);
   }
 }
