@@ -1010,7 +1010,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     if (attrs.calling_convention == llvm::dwarf::DW_CC_pass_by_value) {
       clang::CXXRecordDecl *record_decl =
           m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
-      if (record_decl) {
+      if (record_decl && record_decl->getDefinition()) {
         record_decl->setHasTrivialSpecialMemberForCall();
       }
     }
