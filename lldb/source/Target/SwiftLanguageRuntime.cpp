@@ -2560,7 +2560,8 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
 const swift::reflection::TypeInfo *
 SwiftLanguageRuntime::GetTypeInfo(CompilerType type) {
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  ConstString mangled_name(type.GetMangledTypeName());
+  CompilerType can_type(swift_can_type);
+  ConstString mangled_name(can_type.GetMangledTypeName());
   StringRef mangled_no_prefix =
       swift::Demangle::dropSwiftManglingPrefix(mangled_name.GetStringRef());
   swift::Demangle::Demangler Dem;
