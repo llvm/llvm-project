@@ -179,10 +179,7 @@ ConstString SymbolFileBreakpad::GetPluginNameStatic() {
 }
 
 uint32_t SymbolFileBreakpad::CalculateAbilities() {
-  if (!m_objfile_sp)
-    return 0;
-  if (m_objfile_sp->GetPluginName() !=
-      ObjectFileBreakpad::GetPluginNameStatic())
+  if (!m_objfile_sp || !llvm::isa<ObjectFileBreakpad>(*m_objfile_sp))
     return 0;
 
   return CompileUnits | Functions | LineTables;

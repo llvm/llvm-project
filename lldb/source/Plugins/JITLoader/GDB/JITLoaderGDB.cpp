@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#include "llvm/Support/MathExtras.h"
-
+#include "JITLoaderGDB.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -26,8 +25,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "JITLoaderGDB.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 
@@ -326,20 +324,16 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
         module_sp->GetObjectFile()->GetSymtab();
 
         m_jit_objects.insert(std::make_pair(symbolfile_addr, module_sp));
-        if (module_sp->GetObjectFile()->GetPluginName() ==
-            ConstString("mach-o")) {
-          ObjectFile *image_object_file = module_sp->GetObjectFile();
-          if (image_object_file) {
-            const SectionList *section_list =
-                image_object_file->GetSectionList();
-            if (section_list) {
-              uint64_t vmaddrheuristic = 0;
-              uint64_t lower = (uint64_t)-1;
-              uint64_t upper = 0;
-              updateSectionLoadAddress(*section_list, target, symbolfile_addr,
-                                       symbolfile_size, vmaddrheuristic, lower,
-                                       upper);
-            }
+        if (auto image_object_file =
+                llvm::dyn_cast<ObjectFileMachO>(module_sp->GetObjectFile())) {
+          const SectionList *section_list = image_object_file->GetSectionList();
+          if (section_list) {
+            uint64_t vmaddrheuristic = 0;
+            uint64_t lower = (uint64_t)-1;
+            uint64_t upper = 0;
+            updateSectionLoadAddress(*section_list, target, symbolfile_addr,
+                                     symbolfile_size, vmaddrheuristic, lower,
+                                     upper);
           }
         } else {
           bool changed = false;

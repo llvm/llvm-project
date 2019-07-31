@@ -333,6 +333,8 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   return LLDB_INVALID_CPUTYPE;
 }
 
+char ObjectFileELF::ID;
+
 // Arbitrary constant used as UUID prefix for core files.
 const uint32_t ObjectFileELF::g_core_uuid_magic(0xE210C);
 

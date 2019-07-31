@@ -26,6 +26,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char ObjectFile::ID;
+
 ObjectFileSP
 ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
                        lldb::offset_t file_offset, lldb::offset_t file_size,
