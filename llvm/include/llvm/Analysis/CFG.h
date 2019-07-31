@@ -46,6 +46,8 @@ unsigned GetSuccessorNumber(const BasicBlock *BB, const BasicBlock *Succ);
 ///
 bool isCriticalEdge(const Instruction *TI, unsigned SuccNum,
                     bool AllowIdenticalEdges = false);
+bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
+                    bool AllowIdenticalEdges = false);
 
 /// Determine whether instruction 'To' is reachable from 'From', without passing
 /// through any blocks in ExclusionSet, returning true if uncertain.

@@ -160,15 +160,15 @@ define double @fmul_fneg2_commute(double %x, double %py, double %pz) {
   ret double %r
 }
 
-; Z + (-X / Y) --> Z - (X / Y)
+; Z + (-X / Y) - extra use means we can't transform to fsub without an extra instruction
 
 define float @fdiv_fneg1_extra_use(float %x, float %y, float %pz) {
 ; CHECK-LABEL: @fdiv_fneg1_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = frem float 4.200000e+01, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
-; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[Z]], [[DIV]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %z = frem float 42.0, %pz ; thwart complexity-based canonicalization
@@ -179,16 +179,16 @@ define float @fdiv_fneg1_extra_use(float %x, float %y, float %pz) {
   ret float %r
 }
 
-; Z + (Y / -X) --> Z - (Y / X)
+; Z + (Y / -X) - extra use means we can't transform to fsub without an extra instruction
 
 define float @fdiv_fneg2_extra_use(float %x, float %py, float %pz) {
 ; CHECK-LABEL: @fdiv_fneg2_extra_use(
 ; CHECK-NEXT:    [[Y:%.*]] = frem float -4.200000e+01, [[PY:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = frem float 4.200000e+01, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[Y]], [[NEG]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
-; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[Z]], [[DIV]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %y = frem float -42.0, %py ; thwart complexity-based canonicalization
@@ -200,15 +200,15 @@ define float @fdiv_fneg2_extra_use(float %x, float %py, float %pz) {
   ret float %r
 }
 
-; Z + (-X * Y) --> Z - (X * Y)
+; Z + (-X * Y) - extra use means we can't transform to fsub without an extra instruction
 
 define <2 x float> @fmul_fneg1_extra_use(<2 x float> %x, <2 x float> %y, <2 x float> %pz) {
 ; CHECK-LABEL: @fmul_fneg1_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = frem <2 x float> <float 4.200000e+01, float -1.000000e+00>, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[MUL]])
-; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[Z]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[Z]], [[MUL]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %z = frem <2 x float> <float 42.0, float -1.0>, %pz ; thwart complexity-based canonicalization
@@ -219,16 +219,16 @@ define <2 x float> @fmul_fneg1_extra_use(<2 x float> %x, <2 x float> %y, <2 x fl
   ret <2 x float> %r
 }
 
-; Z + (Y * -X) --> Z - (Y * X)
+; Z + (Y * -X) - extra use means we can't transform to fsub without an extra instruction
 
 define float @fmul_fneg2_extra_use(float %x, float %py, float %pz) {
 ; CHECK-LABEL: @fmul_fneg2_extra_use(
 ; CHECK-NEXT:    [[Y:%.*]] = frem float -4.200000e+01, [[PY:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = frem float 4.200000e+01, [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y]], [[NEG]]
 ; CHECK-NEXT:    call void @use(float [[MUL]])
-; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[Z]], [[MUL]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %y = frem float -42.0, %py ; thwart complexity-based canonicalization

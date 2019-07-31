@@ -614,12 +614,25 @@ define float @test18_reassoc(float %a, float %b, float %z) {
   ret float %f
 }
 
-; It is not safe to reassociate unary fneg without nnan.
+; fneg of fneg is an identity operation, so no FMF are needed to remove those instructions.
+
+define float @test18_unary_fneg_no_FMF(float %a, float %b, float %z) {
+; CHECK-LABEL: @test18_unary_fneg_no_FMF(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul float [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret float [[F]]
+;
+  %d = fmul float %z, 4.000000e+01
+  %c = fneg float %d
+  %e = fmul float %a, %c
+  %f = fneg float %e
+  ret float %f
+}
+
 define float @test18_reassoc_unary_fneg(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test18_reassoc_unary_fneg(
-; CHECK-NEXT:    [[C:%.*]] = fmul reassoc float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[E:%.*]] = fmul reassoc float [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fneg reassoc float [[E]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul reassoc float [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul reassoc float %z, 4.000000e+01

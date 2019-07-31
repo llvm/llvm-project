@@ -214,8 +214,7 @@ TEST(StringListTest, SplitIntoLinesEmpty) {
 
 TEST(StringListTest, LongestCommonPrefixEmpty) {
   StringList s;
-  std::string prefix = "this should be cleared";
-  s.LongestCommonPrefix(prefix);
+  std::string prefix = s.LongestCommonPrefix();
   EXPECT_EQ("", prefix);
 }
 
@@ -226,8 +225,7 @@ TEST(StringListTest, LongestCommonPrefix) {
   s.AppendString("foo");
   s.AppendString("foozar");
 
-  std::string prefix = "this should be cleared";
-  s.LongestCommonPrefix(prefix);
+  std::string prefix = s.LongestCommonPrefix();
   EXPECT_EQ("foo", prefix);
 }
 
@@ -235,8 +233,7 @@ TEST(StringListTest, LongestCommonPrefixSingleElement) {
   StringList s;
   s.AppendString("foo");
 
-  std::string prefix = "this should be cleared";
-  s.LongestCommonPrefix(prefix);
+  std::string prefix = s.LongestCommonPrefix();
   EXPECT_EQ("foo", prefix);
 }
 
@@ -245,8 +242,7 @@ TEST(StringListTest, LongestCommonPrefixDuplicateElement) {
   s.AppendString("foo");
   s.AppendString("foo");
 
-  std::string prefix = "this should be cleared";
-  s.LongestCommonPrefix(prefix);
+  std::string prefix = s.LongestCommonPrefix();
   EXPECT_EQ("foo", prefix);
 }
 
@@ -257,8 +253,7 @@ TEST(StringListTest, LongestCommonPrefixNoPrefix) {
   s.AppendString("2foo");
   s.AppendString("3foozar");
 
-  std::string prefix = "this should be cleared";
-  s.LongestCommonPrefix(prefix);
+  std::string prefix = s.LongestCommonPrefix();
   EXPECT_EQ("", prefix);
 }
 

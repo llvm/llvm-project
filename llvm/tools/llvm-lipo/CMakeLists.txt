@@ -14,3 +14,7 @@ add_llvm_tool(llvm-lipo
   DEPENDS
   LipoOptsTableGen
 )
+
+if(LLVM_INSTALL_CCTOOLS_SYMLINKS)
+  add_llvm_tool_symlink(lipo llvm-lipo)
+endif()

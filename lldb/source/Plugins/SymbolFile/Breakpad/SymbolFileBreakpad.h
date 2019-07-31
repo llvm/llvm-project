@@ -31,12 +31,13 @@ public:
     return "Breakpad debug symbol file reader.";
   }
 
-  static SymbolFile *CreateInstance(ObjectFile *obj_file) {
-    return new SymbolFileBreakpad(obj_file);
+  static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp) {
+    return new SymbolFileBreakpad(std::move(objfile_sp));
   }
 
   // Constructors and Destructors
-  SymbolFileBreakpad(ObjectFile *object_file) : SymbolFile(object_file) {}
+  SymbolFileBreakpad(lldb::ObjectFileSP objfile_sp)
+      : SymbolFile(std::move(objfile_sp)) {}
 
   ~SymbolFileBreakpad() override {}
 

@@ -1,4 +1,4 @@
-; RUN: opt -S -sccp < %s | FileCheck %s
+; RUN: opt -S -ipsccp < %s | FileCheck %s
 
 declare void @BB0_f()
 declare void @BB1_f()
@@ -74,3 +74,35 @@ BB1:
 }
 
 
+; CHECK-LABEL: define internal i32 @indbrtest5(
+; CHECK: ret i32 undef
+define internal i32 @indbrtest5(i1 %c) {
+entry:
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %branch.block
+
+
+bb2:
+  br label %branch.block
+
+branch.block:
+  %addr = phi i8* [blockaddress(@indbrtest5, %target1), %bb1], [blockaddress(@indbrtest5, %target2), %bb2]
+  indirectbr i8* %addr, [label %target1, label %target2]
+
+target1:
+  br label %target2
+
+target2:
+  ret i32 10
+}
+
+
+define i32 @indbrtest5_callee(i1 %c) {
+; CHECK-LABEL: define i32 @indbrtest5_callee(
+; CHECK-NEXT:    %r = call i32 @indbrtest5(i1 %c)
+; CHECK-NEXT:    ret i32 10
+  %r = call i32 @indbrtest5(i1 %c)
+  ret i32 %r
+}

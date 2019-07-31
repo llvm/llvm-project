@@ -345,9 +345,10 @@ protected:
 
   void HandleThreadEvent(const lldb::EventSP &event_sp);
 
-  size_t GetProcessSTDOUT(Process *process, Stream *stream);
-
-  size_t GetProcessSTDERR(Process *process, Stream *stream);
+  // Ensures two threads don't attempt to flush process output in parallel.
+  std::mutex m_output_flush_mutex;
+  void FlushProcessOutput(Process &process, bool flush_stdout,
+                          bool flush_stderr);
 
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;

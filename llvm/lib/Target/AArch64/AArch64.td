@@ -352,6 +352,9 @@ def FeatureETE : SubtargetFeature<"ete", "HasETE",
     "true", "Enable Embedded Trace Extension",
     [FeatureTRBE]>;
 
+def FeatureTME : SubtargetFeature<"tme", "HasTME",
+    "true", "Enable Transactional Memory Extension" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

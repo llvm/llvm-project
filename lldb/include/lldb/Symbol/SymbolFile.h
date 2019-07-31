@@ -50,11 +50,12 @@ public:
     kAllAbilities = ((1u << 7) - 1u)
   };
 
-  static SymbolFile *FindPlugin(ObjectFile *obj_file);
+  static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
-  SymbolFile(ObjectFile *obj_file)
-      : m_obj_file(obj_file), m_abilities(0), m_calculated_abilities(false) {}
+  SymbolFile(lldb::ObjectFileSP objfile_sp)
+      : m_objfile_sp(std::move(objfile_sp)), m_abilities(0),
+        m_calculated_abilities(false) {}
 
   ~SymbolFile() override {}
 
@@ -210,8 +211,8 @@ public:
     return CompilerDeclContext();
   }
 
-  ObjectFile *GetObjectFile() { return m_obj_file; }
-  const ObjectFile *GetObjectFile() const { return m_obj_file; }
+  ObjectFile *GetObjectFile() { return m_objfile_sp.get(); }
+  const ObjectFile *GetObjectFile() const { return m_objfile_sp.get(); }
   ObjectFile *GetMainObjectFile();
 
   virtual std::vector<CallEdge> ParseCallEdgesInFunction(UserID func_id) {
@@ -246,7 +247,10 @@ protected:
 
   void SetCompileUnitAtIndex(uint32_t idx, const lldb::CompUnitSP &cu_sp);
 
-  ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
+  lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
+                                   // case it isn't the same as the module
+                                   // object file (debug symbols in a separate
+                                   // file)
   llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
   Symtab *m_symtab = nullptr;

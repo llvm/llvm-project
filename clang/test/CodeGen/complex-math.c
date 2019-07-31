@@ -148,10 +148,11 @@ float _Complex div_float_rc(float a, float _Complex b) {
   // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast float [[CC]], [[DD]]
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float [[D]], %a
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fdiv fast float [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: [[DIV:%.*]] = fdiv fast float [[AD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fsub fast float -0.000000e+00, [[DIV]]
+  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast float -0.000000e+00, %a
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float  [[D]], [[NEGA]]
+  //
+  // AARCH64-FASTMATH: fdiv fast float [[AC]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast float [[AD]], [[CCpDD]]
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -325,10 +326,11 @@ double _Complex div_double_rc(double a, double _Complex b) {
   // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast double [[CC]], [[DD]]
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double [[D]], %a
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fdiv fast double [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: [[DIV:%.*]] = fdiv fast double [[AD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fsub fast double -0.000000e+00, [[DIV]]
+  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast double -0.000000e+00, %a
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double [[D]], [[NEGA]]
+  //
+  // AARCH64-FASTMATH: fdiv fast double [[AC]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast double [[AD]], [[CCpDD]]
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -520,10 +522,11 @@ long double _Complex div_long_double_rc(long double a, long double _Complex b) {
   // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast fp128 [[CC]], [[DD]]
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128 [[D]], %a
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fdiv fast fp128 [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: [[DIV:%.*]] = fdiv fast fp128 [[AD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fsub fast fp128 0xL00000000000000008000000000000000, [[DIV]]
+  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast fp128 0xL00000000000000008000000000000000, %a
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128 [[D]], [[NEGA]]
+  //
+  // AARCH64-FASTMATH: fdiv fast fp128 [[AC]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast fp128 [[AD]], [[CCpDD]]
   // AARCH64-FASTMATH: ret
   return a / b;
 }
