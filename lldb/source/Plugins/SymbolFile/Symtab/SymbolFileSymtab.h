@@ -18,7 +18,7 @@
 class SymbolFileSymtab : public lldb_private::SymbolFile {
 public:
   // Constructors and Destructors
-  SymbolFileSymtab(lldb_private::ObjectFile *obj_file);
+  SymbolFileSymtab(lldb::ObjectFileSP objfile_sp);
 
   ~SymbolFileSymtab() override;
 
@@ -32,7 +32,7 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
-  CreateInstance(lldb_private::ObjectFile *obj_file);
+  CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   uint32_t CalculateAbilities() override;
 

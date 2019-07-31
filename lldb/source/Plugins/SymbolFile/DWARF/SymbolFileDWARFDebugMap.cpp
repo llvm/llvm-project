@@ -239,13 +239,13 @@ const char *SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader (debug map).";
 }
 
-SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFile *obj_file) {
-  return new SymbolFileDWARFDebugMap(obj_file);
+SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
+  return new SymbolFileDWARFDebugMap(std::move(objfile_sp));
 }
 
-SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFile *ofile)
-    : SymbolFile(ofile), m_flags(), m_compile_unit_infos(), m_func_indexes(),
-      m_glob_indexes(),
+SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFileSP objfile_sp)
+    : SymbolFile(std::move(objfile_sp)), m_flags(), m_compile_unit_infos(),
+      m_func_indexes(), m_glob_indexes(),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() {}
@@ -260,12 +260,12 @@ void SymbolFileDWARFDebugMap::InitOSO() {
 
   // If the object file has been stripped, there is no sense in looking further
   // as all of the debug symbols for the debug map will not be available
-  if (m_obj_file->IsStripped())
+  if (m_objfile_sp->IsStripped())
     return;
 
   // Also make sure the file type is some sort of executable. Core files, debug
   // info files (dSYM), object files (.o files), and stub libraries all can
-  switch (m_obj_file->GetType()) {
+  switch (m_objfile_sp->GetType()) {
   case ObjectFile::eTypeInvalid:
   case ObjectFile::eTypeCoreFile:
   case ObjectFile::eTypeDebugInfo:
@@ -286,7 +286,7 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   // these files exist and also contain valid DWARF. If we get any of that then
   // we return the abilities of the first N_OSO's DWARF.
 
-  Symtab *symtab = m_obj_file->GetSymtab();
+  Symtab *symtab = m_objfile_sp->GetSymtab();
   if (symtab) {
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
 
@@ -352,7 +352,7 @@ void SymbolFileDWARFDebugMap::InitOSO() {
           // The sibling index can't be less that or equal to the current index
           // "i"
           if (sibling_idx == UINT32_MAX) {
-            m_obj_file->GetModule()->ReportError(
+            m_objfile_sp->GetModule()->ReportError(
                 "N_SO in symbol with UID %u has invalid sibling in debug map, "
                 "please file a bug and attach the binary listed in this error",
                 so_symbol->GetID());
@@ -368,22 +368,22 @@ void SymbolFileDWARFDebugMap::InitOSO() {
           }
         } else {
           if (oso_symbol == nullptr)
-            m_obj_file->GetModule()->ReportError(
+            m_objfile_sp->GetModule()->ReportError(
                 "N_OSO symbol[%u] can't be found, please file a bug and attach "
                 "the binary listed in this error",
                 oso_idx);
           else if (so_symbol == nullptr)
-            m_obj_file->GetModule()->ReportError(
+            m_objfile_sp->GetModule()->ReportError(
                 "N_SO not found for N_OSO symbol[%u], please file a bug and "
                 "attach the binary listed in this error",
                 oso_idx);
           else if (so_symbol->GetType() != eSymbolTypeSourceFile)
-            m_obj_file->GetModule()->ReportError(
+            m_objfile_sp->GetModule()->ReportError(
                 "N_SO has incorrect symbol type (%u) for N_OSO symbol[%u], "
                 "please file a bug and attach the binary listed in this error",
                 so_symbol->GetType(), oso_idx);
           else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
-            m_obj_file->GetModule()->ReportError(
+            m_objfile_sp->GetModule()->ReportError(
                 "N_OSO has incorrect symbol type (%u) for N_OSO symbol[%u], "
                 "please file a bug and attach the binary listed in this error",
                 oso_symbol->GetType(), oso_idx);
@@ -447,7 +447,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       // since .o files for "i386-apple-ios" will historically show up as "i386
       // -apple-macosx" due to the lack of a LC_VERSION_MIN_MACOSX or
       // LC_VERSION_MIN_IPHONEOS load command...
-      oso_arch.SetTriple(m_obj_file->GetModule()
+      oso_arch.SetTriple(m_objfile_sp->GetModule()
                              ->GetArchitecture()
                              .GetTriple()
                              .getArchName()
@@ -580,7 +580,7 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
         lldb::user_id_t cu_id = 0;
         m_compile_unit_infos[cu_idx].compile_unit_sp =
             std::make_shared<CompileUnit>(
-                m_obj_file->GetModule(), nullptr, so_file_spec, cu_id,
+                m_objfile_sp->GetModule(), nullptr, so_file_spec, cu_id,
                 eLanguageTypeUnknown, eLazyBoolCalculate);
 
         if (m_compile_unit_infos[cu_idx].compile_unit_sp) {
@@ -749,7 +749,7 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
                                               SymbolContext &sc) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   uint32_t resolved_flags = 0;
-  Symtab *symtab = m_obj_file->GetSymtab();
+  Symtab *symtab = m_objfile_sp->GetSymtab();
   if (symtab) {
     const addr_t exe_file_addr = exe_so_addr.GetFileAddress();
 
@@ -1026,7 +1026,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(
     uint32_t sc_idx = sc_list.GetSize();
     if (oso_dwarf->FindFunctions(name, parent_decl_ctx, name_type_mask,
                                  include_inlines, true, sc_list)) {
-      RemoveFunctionsWithModuleNotEqualTo(m_obj_file->GetModule(), sc_list,
+      RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);
     }
     return false;
@@ -1055,7 +1055,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
     uint32_t sc_idx = sc_list.GetSize();
 
     if (oso_dwarf->FindFunctions(regex, include_inlines, true, sc_list)) {
-      RemoveFunctionsWithModuleNotEqualTo(m_obj_file->GetModule(), sc_list,
+      RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);
     }
     return false;
@@ -1140,7 +1140,7 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
   // N_SO.
   SymbolFileDWARF *oso_dwarf = nullptr;
   TypeSP type_sp;
-  ObjectFile *module_objfile = m_obj_file->GetModule()->GetObjectFile();
+  ObjectFile *module_objfile = m_objfile_sp->GetModule()->GetObjectFile();
   if (module_objfile) {
     Symtab *symtab = module_objfile->GetSymtab();
     if (symtab) {

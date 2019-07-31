@@ -126,8 +126,8 @@ SymbolFileBreakpad::LineIterator::operator++() {
 
 llvm::iterator_range<SymbolFileBreakpad::LineIterator>
 SymbolFileBreakpad::lines(Record::Kind section_type) {
-  return llvm::make_range(LineIterator(*m_obj_file, section_type),
-                          LineIterator(*m_obj_file));
+  return llvm::make_range(LineIterator(*m_objfile_sp, section_type),
+                          LineIterator(*m_objfile_sp));
 }
 
 namespace {
@@ -179,9 +179,10 @@ ConstString SymbolFileBreakpad::GetPluginNameStatic() {
 }
 
 uint32_t SymbolFileBreakpad::CalculateAbilities() {
-  if (!m_obj_file)
+  if (!m_objfile_sp)
     return 0;
-  if (m_obj_file->GetPluginName() != ObjectFileBreakpad::GetPluginNameStatic())
+  if (m_objfile_sp->GetPluginName() !=
+      ObjectFileBreakpad::GetPluginNameStatic())
     return 0;
 
   return CompileUnits | Functions | LineTables;
@@ -204,7 +205,8 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
 
   // The FileSpec of the compile unit will be the file corresponding to the
   // first LINE record.
-  LineIterator It(*m_obj_file, Record::Func, data.bookmark), End(*m_obj_file);
+  LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
+      End(*m_objfile_sp);
   assert(Record::classify(*It) == Record::Func);
   ++It; // Skip FUNC record.
   if (It != End) {
@@ -213,7 +215,7 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
       spec = (*m_files)[record->FileNum];
   }
 
-  auto cu_sp = std::make_shared<CompileUnit>(m_obj_file->GetModule(),
+  auto cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(),
                                              /*user_data*/ nullptr, spec, index,
                                              eLanguageTypeUnknown,
                                              /*is_optimized*/ eLazyBoolNo);
@@ -329,7 +331,7 @@ SymbolFileBreakpad::FindTypes(const std::vector<CompilerContext> &context,
 
 void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
-  Module &module = *m_obj_file->GetModule();
+  Module &module = *m_objfile_sp->GetModule();
   addr_t base = GetBaseFileAddress();
   if (base == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "Unable to fetch the base address of object file. Skipping "
@@ -455,7 +457,7 @@ bool SymbolFileBreakpad::ParseUnwindRow(llvm::StringRef unwind_rules,
       return false;
     }
 
-    ArchSpec arch = m_obj_file->GetArchitecture();
+    ArchSpec arch = m_objfile_sp->GetArchitecture();
     StreamString dwarf(Stream::eBinary, arch.GetAddressByteSize(),
                        arch.GetByteOrder());
     ToDWARF(*rhs, dwarf);
@@ -491,7 +493,8 @@ SymbolFileBreakpad::GetUnwindPlan(const Address &address,
   if (base == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  LineIterator It(*m_obj_file, Record::StackCFI, entry->data), End(*m_obj_file);
+  LineIterator It(*m_objfile_sp, Record::StackCFI, entry->data),
+      End(*m_objfile_sp);
   llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
   assert(init_record.hasValue());
   assert(init_record->Size.hasValue());
@@ -503,7 +506,7 @@ SymbolFileBreakpad::GetUnwindPlan(const Address &address,
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
   plan_sp->SetPlanValidAddressRange(
       AddressRange(base + init_record->Address, *init_record->Size,
-                   m_obj_file->GetModule()->GetSectionList()));
+                   m_objfile_sp->GetModule()->GetSectionList()));
 
   auto row_sp = std::make_shared<UnwindPlan::Row>();
   row_sp->SetOffset(0);
@@ -527,7 +530,7 @@ SymbolFileBreakpad::GetUnwindPlan(const Address &address,
 }
 
 addr_t SymbolFileBreakpad::GetBaseFileAddress() {
-  return m_obj_file->GetModule()
+  return m_objfile_sp->GetModule()
       ->GetObjectFile()
       ->GetBaseAddress()
       .GetFileAddress();
@@ -570,8 +573,8 @@ void SymbolFileBreakpad::ParseCUData() {
 
   // We shall create one compile unit for each FUNC record. So, count the number
   // of FUNC records, and store them in m_cu_data, together with their ranges.
-  for (LineIterator It(*m_obj_file, Record::Func), End(*m_obj_file); It != End;
-       ++It) {
+  for (LineIterator It(*m_objfile_sp, Record::Func), End(*m_objfile_sp);
+       It != End; ++It) {
     if (auto record = FuncRecord::parse(*It)) {
       m_cu_data->Append(CompUnitMap::Entry(base + record->Address, record->Size,
                                            CompUnitData(It.GetBookmark())));
@@ -604,7 +607,8 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
     line_seq_up->Clear();
   };
 
-  LineIterator It(*m_obj_file, Record::Func, data.bookmark), End(*m_obj_file);
+  LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
+      End(*m_objfile_sp);
   assert(Record::classify(*It) == Record::Func);
   for (++It; It != End; ++It) {
     auto record = LineRecord::parse(*It);
@@ -641,7 +645,7 @@ void SymbolFileBreakpad::ParseUnwindData() {
                   "of object file.");
   }
 
-  for (LineIterator It(*m_obj_file, Record::StackCFI), End(*m_obj_file);
+  for (LineIterator It(*m_objfile_sp, Record::StackCFI), End(*m_objfile_sp);
        It != End; ++It) {
     if (auto record = StackCFIRecord::parse(*It)) {
       if (record->Size)

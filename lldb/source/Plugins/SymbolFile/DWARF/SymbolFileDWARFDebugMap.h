@@ -34,10 +34,10 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
-  CreateInstance(lldb_private::ObjectFile *obj_file);
+  CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
-  SymbolFileDWARFDebugMap(lldb_private::ObjectFile *ofile);
+  SymbolFileDWARFDebugMap(lldb::ObjectFileSP objfile_sp);
   ~SymbolFileDWARFDebugMap() override;
 
   uint32_t CalculateAbilities() override;

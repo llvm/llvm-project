@@ -71,7 +71,6 @@ protected:
 
   DWARFCompileUnit *ComputeCompileUnit();
 
-  lldb::ObjectFileSP m_obj_file_sp;
   DWARFCompileUnit &m_base_dwarf_cu;
   DWARFCompileUnit *m_cu = nullptr;
 };
