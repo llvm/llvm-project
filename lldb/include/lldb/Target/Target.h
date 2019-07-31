@@ -1063,8 +1063,8 @@ public:
 
   PathMappingList &GetImageSearchPathList();
 
-  TypeSystem *
-  GetScratchTypeSystemForLanguage(Status *error, lldb::LanguageType language,
+  llvm::Expected<TypeSystem &>
+  GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                   bool create_on_demand = true,
                                   const char *compiler_options = nullptr);
 

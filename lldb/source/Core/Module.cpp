@@ -355,13 +355,8 @@ void Module::SetUUID(const lldb_private::UUID &uuid) {
   }
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h for what this block does
-TypeSystem *Module::GetTypeSystemForLanguageImpl(LanguageType language)
-#else
-TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language)
-#endif
-{
+llvm::Expected<TypeSystem &>
+Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 
@@ -1607,9 +1602,13 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
-    if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-            m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
-                                                       false)))
+    auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return false;
+    }
+
+    if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
       swift_ast->SetTriple(new_arch.GetTriple());
     return true;
   }
@@ -1684,9 +1683,13 @@ llvm::VersionTuple Module::GetVersion() {
 }
 
 void Module::ClearModuleDependentCaches() {
-  if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-          m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
-                                                     false)))
+  auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
+
+  if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
     swift_ast->ClearModuleDependentCaches();
 }
 

@@ -528,10 +528,15 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   if (!symfile)
     return make_string_error("Module has no symbol file.");
 
-  auto clang_ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-      symfile->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus));
+  auto type_system_or_err =
+      symfile->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  if (!type_system_or_err)
+    return make_string_error("Can't retrieve ClangASTContext");
+
+  auto *clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
   if (!clang_ast_ctx)
-    return make_string_error("Can't retrieve Clang AST context.");
+    return make_string_error("Retrieved TypeSystem was not a ClangASTContext");
 
   auto ast_ctx = clang_ast_ctx->getASTContext();
   if (!ast_ctx)

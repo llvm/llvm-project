@@ -941,37 +941,33 @@ public:
       return;
     }
 
-    lldb::LanguageType lang =
-        (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift)
-            ? lldb::eLanguageTypeSwift
-            : lldb::eLanguageTypeObjC_plus_plus;
+    PersistentExpressionState *persistent_state = nullptr;
 
-    Status type_system_error;
-    TypeSystem *type_system;
-
-    if (lang == lldb::eLanguageTypeSwift)
-      // We already acquired the lock in the SwiftUserExpression.
-      type_system =
-          target_sp->GetScratchSwiftASTContext(type_system_error, *exe_scope)
-              .get();
-    else
-      type_system = target_sp->GetScratchTypeSystemForLanguage(
-        &type_system_error, m_type.GetMinimumLanguage());
-
-    if (!type_system) {
-      err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
-                                   "couldn't get the corresponding type "
-                                   "system: %s",
-                                   type_system_error.AsCString());
-      return;
+    if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+      Status status;
+      auto type_system =
+          target_sp->GetScratchSwiftASTContext(status, *exe_scope).get();
+      if (type_system == nullptr) {
+        err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
+                                     "couldn't get the corresponding type "
+                                     "system: %s", status.AsCString());
+        return;
+      }
+      persistent_state =
+          target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+    } else {
+      auto type_system_or_err =
+          target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());
+      if (auto error = type_system_or_err.takeError()) {
+        err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
+                                     "couldn't get the corresponding type "
+                                     "system: %s",
+                                     llvm::toString(std::move(error)).c_str());
+        return;
+      }
+      persistent_state = type_system_or_err->GetPersistentExpressionState();
     }
 
-    PersistentExpressionState *persistent_state;
-    if (lang == lldb::eLanguageTypeSwift)
-      persistent_state =
-        target_sp->GetSwiftPersistentExpressionState(*exe_scope);
-    else
-      persistent_state = type_system->GetPersistentExpressionState();
 
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: "
@@ -989,7 +985,7 @@ public:
     lldb::ProcessSP process_sp =
         map.GetBestExecutionContextScope()->CalculateProcess();
 
-    if (lang == lldb::eLanguageTypeSwift) {
+    if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
       SwiftLanguageRuntime *language_runtime =
           SwiftLanguageRuntime::Get(*process_sp);
       if (language_runtime && frame_sp)
