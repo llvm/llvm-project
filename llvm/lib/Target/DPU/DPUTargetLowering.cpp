@@ -189,17 +189,20 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::SHL_PARTS, MVT::i1, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i8, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i32, Custom);
+  setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
 
   setOperationAction(ISD::SRL_PARTS, MVT::i1, Expand);
   setOperationAction(ISD::SRL_PARTS, MVT::i8, Expand);
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
+  setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
 
   setOperationAction(ISD::SRA_PARTS, MVT::i1, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i8, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i32, Custom);
+  setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
 
   setOperationAction(ISD::BRCOND, MVT::i64, Expand);
 
@@ -783,12 +786,9 @@ SDValue DPUTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-bool
-DPUTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
-                                  MachineFunction &MF,
-                                  bool IsVarArg,
-                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  LLVMContext &Context) const {
+bool DPUTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_DPU);
