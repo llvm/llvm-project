@@ -125,10 +125,10 @@ checked out above, but now we will have two build-trees:
 * the main build-tree for LLDB in ``/path/to/lldb-build``
 * a provided build-tree for LLVM and Clang in ``/path/to/llvm-build``
 
-Run CMake with ``-B`` pointing to a new directory for the provided build-tree
-and the positional argument pointing to the ``llvm`` directory in the
-source-tree. Note that we leave out LLDB here and only include Clang.
-Then we build the ``ALL`` target with ninja:
+Run CMake with ``-B`` pointing to a new directory for the provided
+build-tree\ :sup:`1` and the positional argument pointing to the ``llvm``
+directory in the source-tree. Note that we leave out LLDB here and only include
+Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
@@ -151,6 +151,11 @@ case-sensitive!):
           [<more cmake options>] /path/to/llvm-project/lldb
   > ninja lldb
 
+.. note::
+
+   #. The ``-B`` argument was undocumented for a while and is only officially
+      supported since `CMake version 3.14
+      <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
 
 .. _CommonCMakeOptions:
 
@@ -320,6 +325,12 @@ Build LLDB standalone for development with Xcode:
           llvm-project/lldb
   > open lldb.xcodeproj
   > cmake --build /path/to/lldb-build --target check-lldb
+
+.. note::
+
+   The ``-B`` argument was undocumented for a while and is only officially
+   supported since `CMake version 3.14
+   <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
 
 
 Building The Documentation
