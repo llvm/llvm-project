@@ -75,11 +75,11 @@ static Expected<uint64_t> parseVersion(StringRef &Buf) {
   uint64_t Version =
       support::endian::read<uint64_t, support::little, support::unaligned>(
           Buf.data());
-  if (Version != remarks::Version)
+  if (Version != remarks::CurrentRemarkVersion)
     return createStringError(std::errc::illegal_byte_sequence,
                              "Mismatching remark version. Got %" PRId64
                              ", expected %" PRId64 ".",
-                             Version, remarks::Version);
+                             Version, remarks::CurrentRemarkVersion);
   Buf = Buf.drop_front(sizeof(uint64_t));
   return Version;
 }

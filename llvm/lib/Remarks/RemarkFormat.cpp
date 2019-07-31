@@ -19,7 +19,8 @@ using namespace llvm::remarks;
 Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
   auto Result = StringSwitch<Format>(FormatStr)
                     .Cases("", "yaml", Format::YAML)
-                    .Cases("", "yaml-strtab", Format::YAMLStrTab)
+                    .Case("yaml-strtab", Format::YAMLStrTab)
+                    .Case("bitstream", Format::Bitstream)
                     .Default(Format::Unknown);
 
   if (Result == Format::Unknown)

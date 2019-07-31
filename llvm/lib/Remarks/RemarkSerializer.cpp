@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Remarks/BitstreamRemarkSerializer.h"
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
 
 using namespace llvm;
@@ -27,6 +28,8 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
     return llvm::make_unique<YAMLRemarkSerializer>(OS, Mode);
   case Format::YAMLStrTab:
     return llvm::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode);
+  case Format::Bitstream:
+    return llvm::make_unique<BitstreamRemarkSerializer>(OS, Mode);
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }
@@ -45,6 +48,9 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
   case Format::YAMLStrTab:
     return llvm::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode,
                                                          std::move(StrTab));
+  case Format::Bitstream:
+    return llvm::make_unique<BitstreamRemarkSerializer>(OS, Mode,
+                                                        std::move(StrTab));
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }

@@ -191,7 +191,7 @@ static void emitMagic(raw_ostream &OS) {
 static void emitVersion(raw_ostream &OS) {
   // Emit the version number: little-endian uint64_t.
   std::array<char, 8> Version;
-  support::endian::write64le(Version.data(), remarks::Version);
+  support::endian::write64le(Version.data(), remarks::CurrentRemarkVersion);
   OS.write(Version.data(), Version.size());
 }
 
