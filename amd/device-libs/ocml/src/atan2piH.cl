@@ -12,7 +12,8 @@ extern CONSTATTR half MATH_PRIVATE(atanpired)(half);
 
 CONSTATTR BGEN(atan2pi)
 
-CONSTATTR half
+
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(atan2pi)(half y, half x)
 {
     half ax = BUILTIN_ABS_F16(x);

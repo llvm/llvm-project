@@ -50,7 +50,7 @@
 
 #define BUILTIN_CLASS_F32 __builtin_amdgcn_classf
 #define BUILTIN_CLASS_F64 __builtin_amdgcn_class
-#define BUILTIN_CLASS_F16 __llvm_amdgcn_class_f16
+#define BUILTIN_CLASS_F16 __builtin_amdgcn_classh
 
 #define BUILTIN_ISNAN_F32(x) __builtin_isnan(x)
 #define BUILTIN_ISNAN_F64(x) __builtin_isnan(x)
@@ -59,11 +59,11 @@
 // TODO: Use __builtin_isinf
 #define BUILTIN_ISINF_F32(x) __builtin_amdgcn_classf(x, CLASS_PINF|CLASS_NINF)
 #define BUILTIN_ISINF_F64(x) __builtin_amdgcn_class(x, CLASS_PINF|CLASS_NINF)
-#define BUILTIN_ISINF_F16(x) __llvm_amdgcn_class_f16(x, CLASS_PINF|CLASS_NINF)
+#define BUILTIN_ISINF_F16(x) __builtin_amdgcn_classh(x, CLASS_PINF|CLASS_NINF)
 
 #define BUILTIN_ISFINITE_F32(x) __builtin_amdgcn_classf(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
 #define BUILTIN_ISFINITE_F64(x) __builtin_amdgcn_class(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
-#define BUILTIN_ISFINITE_F16(x) __llvm_amdgcn_class_f16(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
+#define BUILTIN_ISFINITE_F16(x) __builtin_amdgcn_classh(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
 
 #define BUILTIN_COPYSIGN_F32 __builtin_copysignf
 #define BUILTIN_COPYSIGN_F64 __builtin_copysign
@@ -91,8 +91,8 @@
 })
 #define BUILTIN_FRACTION_F16(X) ({ \
     half _fract_x = X; \
-    half _fract_r = __llvm_amdgcn_fract_f16(_fract_x); \
-    _fract_r = __llvm_amdgcn_class_f16(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0h : _fract_r; \
+    half _fract_r = __builtin_amdgcn_fracth(_fract_x); \
+    _fract_r = __builtin_amdgcn_classh(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0h : _fract_r; \
     _fract_r; \
 })
 
@@ -131,11 +131,11 @@
 
 #define BUILTIN_RCP_F32 __builtin_amdgcn_rcpf
 #define BUILTIN_RCP_F64 __builtin_amdgcn_rcp
-#define BUILTIN_RCP_F16 __llvm_amdgcn_rcp_f16
+#define BUILTIN_RCP_F16 __builtin_amdgcn_rcph
 
 #define BUILTIN_RSQRT_F32 __builtin_amdgcn_rsqf
 #define BUILTIN_RSQRT_F64 __builtin_amdgcn_rsq
-#define BUILTIN_RSQRT_F16 __llvm_amdgcn_rsq_f16
+#define BUILTIN_RSQRT_F16 __builtin_amdgcn_rsqh
 
 #define BUILTIN_SIN_F32 __builtin_amdgcn_sinf
 
@@ -181,15 +181,15 @@
 
 #define BUILTIN_FLDEXP_F32 __builtin_amdgcn_ldexpf
 #define BUILTIN_FLDEXP_F64 __builtin_amdgcn_ldexp
-#define BUILTIN_FLDEXP_F16 __llvm_amdgcn_ldexp_f16
+#define BUILTIN_FLDEXP_F16 __builtin_amdgcn_ldexph
 
 #define BUILTIN_FREXP_EXP_F32 __builtin_amdgcn_frexp_expf
 #define BUILTIN_FREXP_EXP_F64 __builtin_amdgcn_frexp_exp
-#define BUILTIN_FREXP_EXP_F16 __llvm_amdgcn_frexp_exp_i16_f16
+#define BUILTIN_FREXP_EXP_F16 __builtin_amdgcn_frexp_exph
 
 #define BUILTIN_FREXP_MANT_F32 __builtin_amdgcn_frexp_mantf
 #define BUILTIN_FREXP_MANT_F64 __builtin_amdgcn_frexp_mant
-#define BUILTIN_FREXP_MANT_F16 __llvm_amdgcn_frexp_mant_f16
+#define BUILTIN_FREXP_MANT_F16 __builtin_amdgcn_frexp_manth
 
 #define BUILTIN_CMAX_F32 __builtin_fmaxf
 #define BUILTIN_CMAX_F64 __builtin_fmax
