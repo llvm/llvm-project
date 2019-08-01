@@ -163,7 +163,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   file = manager.getFile(FileName);
   ASSERT_TRUE(file);
 
-  dir = file->getDir();
+  dir = (*file)->getDir();
   ASSERT_TRUE(dir != NULL);
   EXPECT_EQ(DirName, dir->getName());
 #endif
