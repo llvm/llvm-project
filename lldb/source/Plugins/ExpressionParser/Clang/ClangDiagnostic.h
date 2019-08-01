@@ -42,6 +42,7 @@ public:
   }
 
   const FixItList &FixIts() const { return m_fixit_vec; }
+private:
   FixItList m_fixit_vec;
 };
 
