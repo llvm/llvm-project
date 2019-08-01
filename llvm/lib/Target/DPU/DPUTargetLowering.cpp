@@ -235,7 +235,6 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   // generated instructions to legalize the types (i.e. truncstore
   // and al.) and things become very complex for nothing
   // (see DAGTypeLegalizer::PromoteIntegerResult).
-  setOperationAction(ISD::LOAD, MVT::i64, Custom);
   setOperationAction(ISD::STORE, MVT::i64, Custom);
   setOperationAction(ISD::STORE, MVT::i1, Custom);
   setOperationAction(ISD::STORE, MVT::i8, Custom);
@@ -298,9 +297,6 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::STORE:
     return LowerStore(Op, DAG);
-
-  case ISD::LOAD:
-    return LowerLoad(Op, DAG);
 
   case ISD::SHL:
     return LowerShift(Op, DAG, 0);
@@ -1586,44 +1582,6 @@ static bool canBeEncodedOn16Bits(uint64_t value) {
   return (value <= 0x7FFFL) || (value >= 0xFFFFFFFFFFFF8000L);
 }
 
-SDValue DPUTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  LLVM_DEBUG({
-    dbgs() << "DPU/Lower - lowering load ";
-    Op.dump(&DAG);
-  });
-
-  LoadSDNode *LoadOp = cast<LoadSDNode>(Op);
-
-  if (LoadOp) {
-    unsigned AddressSpace = LoadOp->getAddressSpace();
-    MVT::SimpleValueType TargetType =
-        LoadOp->getMemoryVT().getSimpleVT().SimpleTy;
-
-    MachineMemOperand *MemOperand = LoadOp->getMemOperand();
-    if (!MemOperand) {
-      return Op;
-    }
-
-    if ((TargetType == MVT::i64) && (AddressSpace == DPUADDR_SPACE::WRAM) &&
-        ((MemOperand->getAlignment() % 8) == 0)) {
-      SDValue Chain = Op.getOperand(0);
-      SDValue SourceOperand = Op.getOperand(1);
-      SDValue DestinationOperand = Op.getOperand(2);
-
-      SDValue Ops[] = {Chain, SourceOperand, DestinationOperand};
-      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
-
-      return DAG.getNode(DPUISD::WRAM_LOAD_64_ALIGNED, dl, VTs, Ops);
-    } else {
-      return Op;
-    }
-
-  } else {
-    return Op;
-  }
-}
-
 SDValue DPUTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   LLVM_DEBUG({
@@ -2677,21 +2635,6 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
 }
 
 static MachineBasicBlock *
-EmitAlignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
-                                                    MachineBasicBlock *BB) {
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-
-  BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
-      .add(MI.getOperand(0))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2));
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *
 EmitLsl64RegisterWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB) {
   /*
       What we want to generate (with dc.h != rb in that example):
@@ -3544,8 +3487,6 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitAlignedStoreWramDoubleImmediateWithCustomInserter(MI, BB);
   case DPU::WRAM_LOAD_DOUBLErm:
     return EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MI, BB);
-  case DPU::WRAM_LOAD_DOUBLE_ALIGNEDrm:
-    return EmitAlignedLoadWramDoubleRegisterWithCustomInserter(MI, BB);
   case DPU::LSL64rr:
     return EmitLsl64RegisterWithCustomInserter(MI, BB);
   case DPU::LSL64ri:

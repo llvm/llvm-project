@@ -40,7 +40,6 @@ enum {
   AddJCCZero,
   SubJCCZero,
   Wrapper, // Global addresses, externals...
-  WRAM_LOAD_64_ALIGNED,
   WRAM_STORE_64_ALIGNED,
   WRAM_STORE_64,
   MRAM_STORE_64,

@@ -61,7 +61,6 @@ def WramStore64Imm   : SDNode<"DPUISD::WRAM_STORE_64_IMM", SDT_STORE_OP, [SDNPHa
 def WramStore64   : SDNode<"DPUISD::WRAM_STORE_64", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
 def WramStore64Aligned   : SDNode<"DPUISD::WRAM_STORE_64_ALIGNED", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
 def MramStore64   : SDNode<"DPUISD::MRAM_STORE_64", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramLoad64Aligned   : SDNode<"DPUISD::WRAM_LOAD_64_ALIGNED", SDT_LOAD_OP, [SDNPHasChain, SDNPMayLoad]>;
 
 // To promote special types of operands to registers (see the patterns below).
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
@@ -650,11 +649,6 @@ let usesCustomInserter = 1 in {
            (outs GP64_REG:$dc), (ins MEMri24:$addr),
            "",
            [(set i64:$dc, (wram_loadi64 ADDRESS_IN_STACK:$addr))]>;
-
-    def WRAM_LOAD_DOUBLE_ALIGNEDrm : PseudoDPUInstruction<
-           (outs GP64_REG:$dc), (ins MEMri24:$addr),
-           "",
-           [(set i64:$dc, (WramLoad64Aligned ADDRESS_IN_STACK:$addr))]>;
 }
 
 def mram_store : PatFrag<(ops node:$val, node:$ptr),

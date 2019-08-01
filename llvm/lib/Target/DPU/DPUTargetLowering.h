@@ -103,8 +103,6 @@ private:
 
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerMultiplication(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
