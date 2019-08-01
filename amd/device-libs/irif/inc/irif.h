@@ -167,13 +167,6 @@ extern uint __llvm_amdgcn_permlane16(uint, uint, uint, uint, bool, bool) __asm("
 // llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
 extern uint __llvm_amdgcn_permlanex16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlanex16");
 
-extern __attribute__((const)) ulong __llvm_amdgcn_mqsad_pk_u16_u8(ulong, uint, ulong) __asm("llvm.amdgcn.mqsad.pk.u16.u8");
-extern __attribute__((const)) ulong __llvm_amdgcn_qsad_pk_u16_u8(ulong, uint, ulong) __asm("llvm.amdgcn.qsad.pk.u16.u8");
-extern __attribute__((const)) uint __llvm_amdgcn_sad_u8(uint, uint, uint) __asm("llvm.amdgcn.sad.u8");
-extern __attribute__((const)) uint __llvm_amdgcn_sad_hi_u8(uint, uint, uint) __asm("llvm.amdgcn.sad.hi.u8");
-extern __attribute__((const)) uint __llvm_amdgcn_sad_u16(uint, uint, uint) __asm("llvm.amdgcn.sad.u16");
-extern __attribute__((const)) uint __llvm_amdgcn_msad_u8(uint, uint, uint) __asm("llvm.amdgcn.msad.u8");
-
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i64.i32");
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64.i64");
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_i64_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i64.f32");
