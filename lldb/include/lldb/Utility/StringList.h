@@ -69,7 +69,7 @@ public:
 
   void Clear();
 
-  void LongestCommonPrefix(std::string &common_prefix);
+  std::string LongestCommonPrefix();
 
   void InsertStringAtIndex(size_t idx, const std::string &str);
 

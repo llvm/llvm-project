@@ -99,7 +99,6 @@ typedef int (*FixIndentationCallbackType)(Editline *editline,
 
 typedef int (*CompleteCallbackType)(const char *current_line,
                                     const char *cursor, const char *last_char,
-                                    int skip_first_n_matches, int max_matches,
                                     StringList &matches,
                                     StringList &descriptions, void *baton);
 

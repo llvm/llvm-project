@@ -109,7 +109,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       Properties(OptionValuePropertiesSP(
           new OptionValueProperties(ConstString("interpreter")))),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
-      m_debugger(debugger), m_synchronous_execution(synchronous_execution),
+      m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
       m_command_io_handler_sp(), m_comment_char('#'),
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
@@ -118,6 +118,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
+  SetSynchronous(synchronous_execution);
   CheckInWithManager();
   m_collection_sp->Initialize(g_interpreter_properties);
 }
@@ -1819,15 +1820,15 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   return num_command_matches;
 }
 
-int CommandInterpreter::HandleCompletion(
-    const char *current_line, const char *cursor, const char *last_char,
-    int match_start_point, int max_return_elements, StringList &matches,
-    StringList &descriptions) {
+int CommandInterpreter::HandleCompletion(const char *current_line,
+                                         const char *cursor,
+                                         const char *last_char,
+                                         StringList &matches,
+                                         StringList &descriptions) {
 
   llvm::StringRef command_line(current_line, last_char - current_line);
   CompletionResult result;
-  CompletionRequest request(command_line, cursor - current_line,
-                            match_start_point, max_return_elements, result);
+  CompletionRequest request(command_line, cursor - current_line, result);
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
@@ -1843,9 +1844,6 @@ int CommandInterpreter::HandleCompletion(
         return 0;
     }
   }
-
-  // Only max_return_elements == -1 is supported at present:
-  lldbassert(max_return_elements == -1);
 
   int num_command_matches = HandleCompletionMatches(request);
   result.GetMatches(matches);
@@ -1863,8 +1861,7 @@ int CommandInterpreter::HandleCompletion(
     // element 0, otherwise put an empty string in element 0.
     std::string command_partial_str = request.GetCursorArgumentPrefix().str();
 
-    std::string common_prefix;
-    matches.LongestCommonPrefix(common_prefix);
+    std::string common_prefix = matches.LongestCommonPrefix();
     const size_t partial_name_len = command_partial_str.size();
     common_prefix.erase(0, partial_name_len);
 
@@ -2514,6 +2511,9 @@ void CommandInterpreter::HandleCommandsFromFile(
 bool CommandInterpreter::GetSynchronous() { return m_synchronous_execution; }
 
 void CommandInterpreter::SetSynchronous(bool value) {
+  // Asynchronous mode is not supported during reproducer replay.
+  if (repro::Reproducer::Instance().GetLoader())
+    return;
   m_synchronous_execution = value;
 }
 
@@ -2674,32 +2674,14 @@ void CommandInterpreter::UpdateExecutionContext(
   }
 }
 
-size_t CommandInterpreter::GetProcessOutput() {
-  //  The process has stuff waiting for stderr; get it and write it out to the
-  //  appropriate place.
-  char stdio_buffer[1024];
-  size_t len;
-  size_t total_bytes = 0;
-  Status error;
+void CommandInterpreter::GetProcessOutput() {
   TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-  if (target_sp) {
-    ProcessSP process_sp(target_sp->GetProcessSP());
-    if (process_sp) {
-      while ((len = process_sp->GetSTDOUT(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetOutputFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-      while ((len = process_sp->GetSTDERR(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetErrorFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-    }
-  }
-  return total_bytes;
+  if (!target_sp)
+    return;
+
+  if (ProcessSP process_sp = target_sp->GetProcessSP())
+    m_debugger.FlushProcessOutput(*process_sp, /*flush_stdout*/ true,
+                                  /*flush_stderr*/ true);
 }
 
 void CommandInterpreter::StartHandlingCommand() {

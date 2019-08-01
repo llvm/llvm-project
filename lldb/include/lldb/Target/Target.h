@@ -1068,6 +1068,8 @@ public:
                                   bool create_on_demand = true,
                                   const char *compiler_options = nullptr);
 
+  std::vector<TypeSystem *> GetScratchTypeSystems(bool create_on_demand = true);
+
   PersistentExpressionState *
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
 

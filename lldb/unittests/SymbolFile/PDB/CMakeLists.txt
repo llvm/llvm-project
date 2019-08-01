@@ -9,6 +9,7 @@ add_lldb_unittest(SymbolFilePDBTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbUtilityHelpers
+    LLVMTestingSupport
   LINK_COMPONENTS
     Support
     DebugInfoPDB
