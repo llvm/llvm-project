@@ -23,6 +23,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "div-rem-pairs"
@@ -32,24 +33,44 @@ STATISTIC(NumDecomposed, "Number of instructions decomposed");
 DEBUG_COUNTER(DRPCounter, "div-rem-pairs-transform",
               "Controls transformations in div-rem-pairs pass");
 
-/// Find matching pairs of integer div/rem ops (they have the same numerator,
-/// denominator, and signedness). If they exist in different basic blocks, bring
-/// them together by hoisting or replace the common division operation that is
-/// implicit in the remainder:
-/// X % Y <--> X - ((X / Y) * Y).
-///
-/// We can largely ignore the normal safety and cost constraints on speculation
-/// of these ops when we find a matching pair. This is because we are already
-/// guaranteed that any exceptions and most cost are already incurred by the
-/// first member of the pair.
-///
-/// Note: This transform could be an oddball enhancement to EarlyCSE, GVN, or
-/// SimplifyCFG, but it's split off on its own because it's different enough
-/// that it doesn't quite match the stated objectives of those passes.
-static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
-                           const DominatorTree &DT) {
-  bool Changed = false;
+/// A thin wrapper to store two values that we matched as div-rem pair.
+/// We want this extra indirection to avoid dealing with RAUW'ing the map keys.
+struct DivRemPairWorklistEntry {
+  /// The actual udiv/sdiv instruction. Source of truth.
+  AssertingVH<Instruction> DivInst;
 
+  /// The instruction that we have matched as a remainder instruction.
+  /// Should only be used as Value, don't introspect it.
+  AssertingVH<Instruction> RemInst;
+
+  DivRemPairWorklistEntry(Instruction *DivInst_, Instruction *RemInst_)
+      : DivInst(DivInst_), RemInst(RemInst_) {
+    assert((DivInst->getOpcode() == Instruction::UDiv ||
+            DivInst->getOpcode() == Instruction::SDiv) &&
+           "Not a division.");
+    assert(DivInst->getType() == RemInst->getType() && "Types should match.");
+    // We can't check anything else about remainder instruction,
+    // it's not strictly required to be a urem/srem.
+  }
+
+  /// The type for this pair, identical for both the div and rem.
+  Type *getType() const { return DivInst->getType(); }
+
+  /// Is this pair signed or unsigned?
+  bool isSigned() const { return DivInst->getOpcode() == Instruction::SDiv; }
+
+  /// In this pair, what are the divident and divisor?
+  Value *getDividend() const { return DivInst->getOperand(0); }
+  Value *getDivisor() const { return DivInst->getOperand(1); }
+};
+using DivRemWorklistTy = SmallVector<DivRemPairWorklistEntry, 4>;
+
+/// Find matching pairs of integer div/rem ops (they have the same numerator,
+/// denominator, and signedness). Place those pairs into a worklist for further
+/// processing. This indirection is needed because we have to use TrackingVH<>
+/// because we will be doing RAUW, and if one of the rem instructions we change
+/// happens to be an input to another div/rem in the maps, we'd have problems.
+static DivRemWorklistTy getWorklist(Function &F) {
   // Insert all divide and remainder instructions into maps keyed by their
   // operands and opcode (signed or unsigned).
   DenseMap<DivRemMapKey, Instruction *> DivMap;
@@ -69,6 +90,9 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
     }
   }
 
+  // We'll accumulate the matching pairs of div-rem instructions here.
+  DivRemWorklistTy Worklist;
+
   // We can iterate over either map because we are only looking for matched
   // pairs. Choose remainders for efficiency because they are usually even more
   // rare than division.
@@ -78,12 +102,45 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
     if (!DivInst)
       continue;
 
-    // We have a matching pair of div/rem instructions. If one dominates the
-    // other, hoist and/or replace one.
+    // We have a matching pair of div/rem instructions.
     NumPairs++;
     Instruction *RemInst = RemPair.second;
-    bool IsSigned = DivInst->getOpcode() == Instruction::SDiv;
-    bool HasDivRemOp = TTI.hasDivRemOp(DivInst->getType(), IsSigned);
+
+    // Place it in the worklist.
+    Worklist.emplace_back(DivInst, RemInst);
+  }
+
+  return Worklist;
+}
+
+/// Find matching pairs of integer div/rem ops (they have the same numerator,
+/// denominator, and signedness). If they exist in different basic blocks, bring
+/// them together by hoisting or replace the common division operation that is
+/// implicit in the remainder:
+/// X % Y <--> X - ((X / Y) * Y).
+///
+/// We can largely ignore the normal safety and cost constraints on speculation
+/// of these ops when we find a matching pair. This is because we are already
+/// guaranteed that any exceptions and most cost are already incurred by the
+/// first member of the pair.
+///
+/// Note: This transform could be an oddball enhancement to EarlyCSE, GVN, or
+/// SimplifyCFG, but it's split off on its own because it's different enough
+/// that it doesn't quite match the stated objectives of those passes.
+static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
+                           const DominatorTree &DT) {
+  bool Changed = false;
+
+  // Get the matching pairs of div-rem instructions. We want this extra
+  // indirection to avoid dealing with having to RAUW the keys of the maps.
+  DivRemWorklistTy Worklist = getWorklist(F);
+
+  // Process each entry in the worklist.
+  for (DivRemPairWorklistEntry &E : Worklist) {
+    bool HasDivRemOp = TTI.hasDivRemOp(E.getType(), E.isSigned());
+
+    auto &DivInst = E.DivInst;
+    auto &RemInst = E.RemInst;
 
     // If the target supports div+rem and the instructions are in the same block
     // already, there's nothing to do. The backend should handle this. If the
@@ -110,8 +167,8 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // The target does not have a single div/rem operation. Decompose the
       // remainder calculation as:
       // X % Y --> X - ((X / Y) * Y).
-      Value *X = RemInst->getOperand(0);
-      Value *Y = RemInst->getOperand(1);
+      Value *X = E.getDividend();
+      Value *Y = E.getDivisor();
       Instruction *Mul = BinaryOperator::CreateMul(DivInst, Y);
       Instruction *Sub = BinaryOperator::CreateSub(X, Mul);
 
@@ -152,8 +209,13 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 
       // Now kill the explicit remainder. We have replaced it with:
       // (sub X, (mul (div X, Y), Y)
-      RemInst->replaceAllUsesWith(Sub);
-      RemInst->eraseFromParent();
+      Sub->setName(RemInst->getName() + ".decomposed");
+      Instruction *OrigRemInst = RemInst;
+      // Update AssertingVH<> with new instruction so it doesn't assert.
+      RemInst = Sub;
+      // And replace the original instruction with the new one.
+      OrigRemInst->replaceAllUsesWith(Sub);
+      OrigRemInst->eraseFromParent();
       NumDecomposed++;
     }
     Changed = true;
@@ -188,7 +250,7 @@ struct DivRemPairsLegacyPass : public FunctionPass {
     return optimizeDivRem(F, TTI, DT);
   }
 };
-}
+} // namespace
 
 char DivRemPairsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(DivRemPairsLegacyPass, "div-rem-pairs",
