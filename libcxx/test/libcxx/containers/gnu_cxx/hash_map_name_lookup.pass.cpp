@@ -6,31 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // Prevent emission of the deprecated warning.
 #ifdef __clang__
 #pragma clang diagnostic ignored "-W#warnings"
 #endif
 
+// Poison the std:: names we might use inside __gnu_cxx to ensure they're
+// properly qualified.
+struct allocator;
+struct pair;
+struct equal_to;
+struct unique_ptr;
 #include <ext/hash_map>
-#include <cassert>
 
 #include "test_macros.h"
-#include "count_new.hpp"
 
-void test_default_does_not_allocate() {
-  DisableAllocationGuard g;
-  ((void)g);
-  {
-    __gnu_cxx::hash_map<int, int> h;
-    assert(h.bucket_count() == 0);
-  }
-  {
-    __gnu_cxx::hash_multimap<int, int> h;
-    assert(h.bucket_count() == 0);
-  }
+
+namespace __gnu_cxx {
+template class hash_map<int, int>;
 }
 
 int main(int, char**) {
-  test_default_does_not_allocate();
+  typedef __gnu_cxx::hash_map<int, int> Map;
+  Map m;
+  Map m2(m);
+  ((void)m2);
+
+  return 0;
 }
