@@ -236,7 +236,8 @@ private:
     for (const auto &Inc : Includes.MainFileIncludes) {
       const FileEntry *File = nullptr;
       if (Inc.Resolved != "")
-        File = SM.getFileManager().getFile(Inc.Resolved);
+        if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
+          File = *FE;
 
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
