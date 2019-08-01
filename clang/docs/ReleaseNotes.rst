@@ -102,6 +102,12 @@ Windows Support
   ``clang-cl /diagnostic:caret /c test.cc`` for example now produces
   ``clang: error: no such file or directory: '/diagnostic:caret'; did you mean '/diagnostics:caret'?``
 
+- The ``-print-search-dirs`` option now separates elements with semicolons,
+  as is the norm for path lists on Windows
+
+- Improved handling of dllexport in conjunction with explicit template
+  instantiations for MinGW, to allow building a shared libc++ for MinGW
+  without ``--export-all-symbols`` to override the dllexport attributes
 
 
 C Language Changes in Clang
