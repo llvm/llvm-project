@@ -62,7 +62,6 @@ define void @f() {
 ; CHECK:       cond.false.us:
 ; CHECK-NEXT:    br label [[COND_END_US]]
 ; CHECK:       cond.end.us:
-; CHECK-NEXT:    [[COND_US:%.*]] = phi i32 [ [[DIV]], [[COND_FALSE_US]] ], [ [[INDVARS_IV]], [[FOR_BODY3_US]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* @b, align 4
 ; CHECK-NEXT:    [[CMP91_US:%.*]] = icmp slt i32 [[TMP6]], 1
 ; CHECK-NEXT:    br i1 [[CMP91_US]], label [[FOR_INC_LR_PH_US:%.*]], label [[FOR_COND2_LOOPEXIT_US:%.*]]
@@ -79,10 +78,9 @@ define void @f() {
 ; CHECK-NEXT:    store i32 1, i32* @b, align 4
 ; CHECK-NEXT:    br label [[FOR_COND2_LOOPEXIT_US]]
 ; CHECK:       for.cond2.for.inc13_crit_edge.us-lcssa.us.us-lcssa:
-; CHECK-NEXT:    [[COND_LCSSA_PH_US_PH:%.*]] = phi i32 [ [[COND_US]], [[FOR_COND2_LOOPEXIT_US]] ]
 ; CHECK-NEXT:    br label [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US]]
 ; CHECK:       for.cond2.for.inc13_crit_edge.us-lcssa.us:
-; CHECK-NEXT:    [[COND_LCSSA_PH_US:%.*]] = phi i32 [ [[COND_LCSSA_PH_US_PH]], [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_US_LCSSA]] ], [ [[DIV]], [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_US_LCSSA_US]] ]
+; CHECK-NEXT:    [[COND_LCSSA_PH_US:%.*]] = phi i32 [ [[DIV]], [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_US_LCSSA]] ], [ [[DIV]], [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_US_LCSSA_US]] ]
 ; CHECK-NEXT:    br label [[FOR_COND2_FOR_INC13_CRIT_EDGE:%.*]]
 ; CHECK:       for.body3.lr.ph.split:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY3_LR_PH_SPLIT_SPLIT_US:%.*]], label [[FOR_BODY3_LR_PH_SPLIT_FOR_BODY3_LR_PH_SPLIT_SPLIT_CRIT_EDGE:%.*]]

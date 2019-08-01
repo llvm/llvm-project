@@ -502,7 +502,8 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                  CallingConv::ID CallConv,
                                  const MachineOperand &Callee,
                                  const ArgInfo &OrigRet,
-                                 ArrayRef<ArgInfo> OrigArgs) const {
+                                 ArrayRef<ArgInfo> OrigArgs,
+                                 const MDNode *KnownCallees) const {
 
   if (CallConv != CallingConv::C)
     return false;

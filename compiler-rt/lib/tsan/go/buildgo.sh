@@ -20,23 +20,23 @@ SRCS="
 	../rtl/tsan_stat.cc
 	../rtl/tsan_suppressions.cc
 	../rtl/tsan_sync.cc
-	../../sanitizer_common/sanitizer_allocator.cc
-	../../sanitizer_common/sanitizer_common.cc
-	../../sanitizer_common/sanitizer_common_libcdep.cc
-	../../sanitizer_common/sanitizer_deadlock_detector2.cc
-	../../sanitizer_common/sanitizer_file.cc
-	../../sanitizer_common/sanitizer_flag_parser.cc
-	../../sanitizer_common/sanitizer_flags.cc
-	../../sanitizer_common/sanitizer_libc.cc
-	../../sanitizer_common/sanitizer_persistent_allocator.cc
-	../../sanitizer_common/sanitizer_printf.cc
-	../../sanitizer_common/sanitizer_suppressions.cc
-	../../sanitizer_common/sanitizer_thread_registry.cc
-	../../sanitizer_common/sanitizer_stackdepot.cc
-	../../sanitizer_common/sanitizer_stacktrace.cc
-	../../sanitizer_common/sanitizer_symbolizer.cc
-	../../sanitizer_common/sanitizer_symbolizer_report.cc
-	../../sanitizer_common/sanitizer_termination.cc
+	../../sanitizer_common/sanitizer_allocator.cpp
+	../../sanitizer_common/sanitizer_common.cpp
+	../../sanitizer_common/sanitizer_common_libcdep.cpp
+	../../sanitizer_common/sanitizer_deadlock_detector2.cpp
+	../../sanitizer_common/sanitizer_file.cpp
+	../../sanitizer_common/sanitizer_flag_parser.cpp
+	../../sanitizer_common/sanitizer_flags.cpp
+	../../sanitizer_common/sanitizer_libc.cpp
+	../../sanitizer_common/sanitizer_persistent_allocator.cpp
+	../../sanitizer_common/sanitizer_printf.cpp
+	../../sanitizer_common/sanitizer_suppressions.cpp
+	../../sanitizer_common/sanitizer_thread_registry.cpp
+	../../sanitizer_common/sanitizer_stackdepot.cpp
+	../../sanitizer_common/sanitizer_stacktrace.cpp
+	../../sanitizer_common/sanitizer_symbolizer.cpp
+	../../sanitizer_common/sanitizer_symbolizer_report.cpp
+	../../sanitizer_common/sanitizer_termination.cpp
 "
 
 if [ "`uname -a | grep Linux`" != "" ]; then
@@ -45,14 +45,14 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cc
-		../../sanitizer_common/sanitizer_posix.cc
-		../../sanitizer_common/sanitizer_posix_libcdep.cc
-		../../sanitizer_common/sanitizer_procmaps_common.cc
-		../../sanitizer_common/sanitizer_procmaps_linux.cc
-		../../sanitizer_common/sanitizer_linux.cc
-		../../sanitizer_common/sanitizer_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cc
+		../../sanitizer_common/sanitizer_posix.cpp
+		../../sanitizer_common/sanitizer_posix_libcdep.cpp
+		../../sanitizer_common/sanitizer_procmaps_common.cpp
+		../../sanitizer_common/sanitizer_procmaps_linux.cpp
+		../../sanitizer_common/sanitizer_linux.cpp
+		../../sanitizer_common/sanitizer_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 		"
 	if [ "`uname -a | grep ppc64le`" != "" ]; then
 		SUFFIX="linux_ppc64le"
@@ -73,14 +73,14 @@ elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cc
-		../../sanitizer_common/sanitizer_posix.cc
-		../../sanitizer_common/sanitizer_posix_libcdep.cc
-		../../sanitizer_common/sanitizer_procmaps_bsd.cc
-		../../sanitizer_common/sanitizer_procmaps_common.cc
-		../../sanitizer_common/sanitizer_linux.cc
-		../../sanitizer_common/sanitizer_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cc
+		../../sanitizer_common/sanitizer_posix.cpp
+		../../sanitizer_common/sanitizer_posix_libcdep.cpp
+		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
+		../../sanitizer_common/sanitizer_procmaps_common.cpp
+		../../sanitizer_common/sanitizer_linux.cpp
+		../../sanitizer_common/sanitizer_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
 elif [ "`uname -a | grep NetBSD`" != "" ]; then
 	SUFFIX="netbsd_amd64"
@@ -90,15 +90,15 @@ elif [ "`uname -a | grep NetBSD`" != "" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cc
-		../../sanitizer_common/sanitizer_posix.cc
-		../../sanitizer_common/sanitizer_posix_libcdep.cc
-		../../sanitizer_common/sanitizer_procmaps_bsd.cc
-		../../sanitizer_common/sanitizer_procmaps_common.cc
-		../../sanitizer_common/sanitizer_linux.cc
-		../../sanitizer_common/sanitizer_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_netbsd.cc
-		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cc
+		../../sanitizer_common/sanitizer_posix.cpp
+		../../sanitizer_common/sanitizer_posix_libcdep.cpp
+		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
+		../../sanitizer_common/sanitizer_procmaps_common.cpp
+		../../sanitizer_common/sanitizer_linux.cpp
+		../../sanitizer_common/sanitizer_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_netbsd.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"
@@ -108,10 +108,10 @@ elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_mac.cc
-		../../sanitizer_common/sanitizer_mac.cc
-		../../sanitizer_common/sanitizer_posix.cc
-		../../sanitizer_common/sanitizer_posix_libcdep.cc
-		../../sanitizer_common/sanitizer_procmaps_mac.cc
+		../../sanitizer_common/sanitizer_mac.cpp
+		../../sanitizer_common/sanitizer_posix.cpp
+		../../sanitizer_common/sanitizer_posix_libcdep.cpp
+		../../sanitizer_common/sanitizer_procmaps_mac.cpp
 	"
 elif [ "`uname -a | grep MINGW`" != "" ]; then
 	SUFFIX="windows_amd64"
@@ -121,7 +121,7 @@ elif [ "`uname -a | grep MINGW`" != "" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_windows.cc
-		../../sanitizer_common/sanitizer_win.cc
+		../../sanitizer_common/sanitizer_win.cpp
 	"
 else
 	echo Unknown platform

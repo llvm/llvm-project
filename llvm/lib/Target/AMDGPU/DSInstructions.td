@@ -668,7 +668,7 @@ def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 
 class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i16:$offset)),
-  (inst $ptr, $value, offset:$offset, (i1 gds))
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))
 >;
 
 multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
@@ -745,40 +745,40 @@ defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
 } // End AddedComplexity = 100
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
-  (inst $ptr, $value, offset:$offset, (i1 gds))
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))
 >;
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0")>;
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local")>;
+                         !cast<PatFrag>(frag#"_local_"#vt.Size)>;
   }
 
-  def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0"), 1>;
+  def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size), 1>;
 }
 
 
 
 class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, $cmp, $swap, offset:$offset, (i1 gds))
+  (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))
 >;
 
 multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_local_m0")>;
+    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                          !cast<PatFrag>(frag#"_local")>;
+                          !cast<PatFrag>(frag#"_local_"#vt.Size)>;
   }
 
-  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0"), 1>;
+  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size), 1>;
 }
 
 

@@ -173,15 +173,30 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
     return;
   }
 
+  // If the mask is not v1i1, use scalar bit test operations. This generates
+  // better results on X86 at least.
+  Value *SclrMask;
+  if (VectorWidth != 1) {
+    Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
+    SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
+  }
+
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
     //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else, %else ]
-    //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
+    //  %mask_1 = and i16 %scalar_mask, i32 1 << Idx
+    //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %mask_1, label %cond.load, label %else
     //
-
-    Value *Predicate = Builder.CreateExtractElement(Mask, Idx);
+    Value *Predicate;
+    if (VectorWidth != 1) {
+      Value *Mask = Builder.getInt(APInt::getOneBitSet(VectorWidth, Idx));
+      Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
+                                       Builder.getIntN(VectorWidth, 0));
+    } else {
+      Predicate = Builder.CreateExtractElement(Mask, Idx);
+    }
 
     // Create "cond" block
     //
@@ -290,13 +305,29 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
     return;
   }
 
+  // If the mask is not v1i1, use scalar bit test operations. This generates
+  // better results on X86 at least.
+  Value *SclrMask;
+  if (VectorWidth != 1) {
+    Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
+    SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
+  }
+
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
+    //  %mask_1 = and i16 %scalar_mask, i32 1 << Idx
+    //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %mask_1, label %cond.store, label %else
     //
-    Value *Predicate = Builder.CreateExtractElement(Mask, Idx);
+    Value *Predicate;
+    if (VectorWidth != 1) {
+      Value *Mask = Builder.getInt(APInt::getOneBitSet(VectorWidth, Idx));
+      Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
+                                       Builder.getIntN(VectorWidth, 0));
+    } else {
+      Predicate = Builder.CreateExtractElement(Mask, Idx);
+    }
 
     // Create "cond" block
     //
@@ -392,15 +423,30 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     return;
   }
 
+  // If the mask is not v1i1, use scalar bit test operations. This generates
+  // better results on X86 at least.
+  Value *SclrMask;
+  if (VectorWidth != 1) {
+    Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
+    SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
+  }
+
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  %Mask1 = extractelement <16 x i1> %Mask, i32 1
+    //  %Mask1 = and i16 %scalar_mask, i32 1 << Idx
+    //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %Mask1, label %cond.load, label %else
     //
 
-    Value *Predicate =
-        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+    Value *Predicate;
+    if (VectorWidth != 1) {
+      Value *Mask = Builder.getInt(APInt::getOneBitSet(VectorWidth, Idx));
+      Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
+                                       Builder.getIntN(VectorWidth, 0));
+    } else {
+      Predicate = Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+    }
 
     // Create "cond" block
     //
@@ -499,14 +545,29 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
     return;
   }
 
+  // If the mask is not v1i1, use scalar bit test operations. This generates
+  // better results on X86 at least.
+  Value *SclrMask;
+  if (VectorWidth != 1) {
+    Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
+    SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
+  }
+
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  %Mask1 = extractelement <16 x i1> %Mask, i32 Idx
+    //  %Mask1 = and i16 %scalar_mask, i32 1 << Idx
+    //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %Mask1, label %cond.store, label %else
     //
-    Value *Predicate =
-        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+    Value *Predicate;
+    if (VectorWidth != 1) {
+      Value *Mask = Builder.getInt(APInt::getOneBitSet(VectorWidth, Idx));
+      Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
+                                       Builder.getIntN(VectorWidth, 0));
+    } else {
+      Predicate = Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+    }
 
     // Create "cond" block
     //

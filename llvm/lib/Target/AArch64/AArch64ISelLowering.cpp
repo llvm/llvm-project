@@ -4165,8 +4165,7 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
                                                   SelectionDAG &DAG) const {
   GlobalAddressSDNode *GN = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = GN->getGlobal();
-  unsigned char OpFlags =
-      Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
+  unsigned OpFlags = Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
 
   if (OpFlags != AArch64II::MO_NO_FLAG)
     assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&

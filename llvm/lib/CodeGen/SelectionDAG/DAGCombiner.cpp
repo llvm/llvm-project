@@ -120,6 +120,11 @@ static cl::opt<unsigned> TokenFactorInlineLimit(
     "combiner-tokenfactor-inline-limit", cl::Hidden, cl::init(2048),
     cl::desc("Limit the number of operands to inline for Token Factors"));
 
+static cl::opt<unsigned> StoreMergeDependenceLimit(
+    "combiner-store-merge-dependence-limit", cl::Hidden, cl::init(10),
+    cl::desc("Limit the number of times for the same StoreNode and RootNode "
+             "to bail out in store merging dependence check"));
+
 namespace {
 
   class DAGCombiner {
@@ -156,6 +161,14 @@ namespace {
     /// This is used to allow us to reliably add any operands of a DAG node
     /// which have not yet been combined to the worklist.
     SmallPtrSet<SDNode *, 32> CombinedNodes;
+
+    /// Map from candidate StoreNode to the pair of RootNode and count.
+    /// The count is used to track how many times we have seen the StoreNode
+    /// with the same RootNode bail out in dependence check. If we have seen
+    /// the bail out for the same pair many times over a limit, we won't
+    /// consider the StoreNode with the same RootNode as store merging
+    /// candidate again.
+    DenseMap<SDNode *, std::pair<SDNode *, unsigned>> StoreRootCountMap;
 
     // AA - Used for DAG load/store alias analysis.
     AliasAnalysis *AA;
@@ -241,6 +254,7 @@ namespace {
     void removeFromWorklist(SDNode *N) {
       CombinedNodes.erase(N);
       PruningList.remove(N);
+      StoreRootCountMap.erase(N);
 
       auto It = WorklistMap.find(N);
       if (It == WorklistMap.end())
@@ -825,7 +839,7 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
     });
   }
   case ISD::FADD:
-    if (!Options->UnsafeFPMath && !Flags.hasNoSignedZeros())
+    if (!Options->NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
       return 0;
 
     // After operation legalization, it might not be legal to create new FSUBs.
@@ -898,7 +912,7 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
     return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Ops);
   }
   case ISD::FADD:
-    assert(Options.UnsafeFPMath || Flags.hasNoSignedZeros());
+    assert(Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros());
 
     // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
     if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
@@ -12003,7 +12017,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // N0 + -0.0 --> N0 (also allowed with +0.0 and fast-math)
   ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1, true);
   if (N1C && N1C->isZero())
-    if (N1C->isNegative() || Options.UnsafeFPMath || Flags.hasNoSignedZeros())
+    if (N1C->isNegative() || Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())
       return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -12061,7 +12075,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // If 'unsafe math' or reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if ((Options.UnsafeFPMath ||
+  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
@@ -12180,7 +12194,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub A, 0) -> A
   if (N1CFP && N1CFP->isZero()) {
-    if (!N1CFP->isNegative() || Options.UnsafeFPMath ||
+    if (!N1CFP->isNegative() || Options.NoSignedZerosFPMath ||
         Flags.hasNoSignedZeros()) {
       return N0;
     }
@@ -12207,7 +12221,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if ((Options.UnsafeFPMath ||
+  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))
       && N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
@@ -15423,6 +15437,18 @@ void DAGCombiner::getStoreMergeCandidates(
     return (BasePtr.equalBaseIndex(Ptr, DAG, Offset));
   };
 
+  // Check if the pair of StoreNode and the RootNode already bail out many
+  // times which is over the limit in dependence check.
+  auto OverLimitInDependenceCheck = [&](SDNode *StoreNode,
+                                        SDNode *RootNode) -> bool {
+    auto RootCount = StoreRootCountMap.find(StoreNode);
+    if (RootCount != StoreRootCountMap.end() &&
+        RootCount->second.first == RootNode &&
+        RootCount->second.second > StoreMergeDependenceLimit)
+      return true;
+    return false;
+  };
+
   // We looking for a root node which is an ancestor to all mergable
   // stores. We search up through a load, to our root and then down
   // through all children. For instance we will find Store{1,2,3} if
@@ -15452,7 +15478,8 @@ void DAGCombiner::getStoreMergeCandidates(
             if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I2)) {
               BaseIndexOffset Ptr;
               int64_t PtrDiff;
-              if (CandidateMatch(OtherST, Ptr, PtrDiff))
+              if (CandidateMatch(OtherST, Ptr, PtrDiff) &&
+                  !OverLimitInDependenceCheck(OtherST, RootNode))
                 StoreNodes.push_back(MemOpLink(OtherST, PtrDiff));
             }
   } else
@@ -15462,7 +15489,8 @@ void DAGCombiner::getStoreMergeCandidates(
         if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I)) {
           BaseIndexOffset Ptr;
           int64_t PtrDiff;
-          if (CandidateMatch(OtherST, Ptr, PtrDiff))
+          if (CandidateMatch(OtherST, Ptr, PtrDiff) &&
+              !OverLimitInDependenceCheck(OtherST, RootNode))
             StoreNodes.push_back(MemOpLink(OtherST, PtrDiff));
         }
 }
@@ -15520,8 +15548,19 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   // Search through DAG. We can stop early if we find a store node.
   for (unsigned i = 0; i < NumStores; ++i)
     if (SDNode::hasPredecessorHelper(StoreNodes[i].MemNode, Visited, Worklist,
-                                     Max))
+                                     Max)) {
+      // If the searching bail out, record the StoreNode and RootNode in the
+      // StoreRootCountMap. If we have seen the pair many times over a limit,
+      // we won't add the StoreNode into StoreNodes set again.
+      if (Visited.size() >= Max) {
+        auto &RootCount = StoreRootCountMap[StoreNodes[i].MemNode];
+        if (RootCount.first == RootNode)
+          RootCount.second++;
+        else
+          RootCount = {RootNode, 1};
+      }
       return false;
+    }
   return true;
 }
 

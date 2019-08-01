@@ -909,10 +909,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       // Remember the source order of the inserted instruction.
       if (HasDbg)
         ProcessSourceNode(N, DAG, Emitter, VRBaseMap, Orders, Seen, NewInsn);
-
-      if (MDNode* MD = DAG->getHeapAllocSite(N))
-        MF.addCodeViewHeapAllocSite(NewInsn, MD);
-
       GluedNodes.pop_back();
     }
     auto NewInsn =
@@ -921,8 +917,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     if (HasDbg)
       ProcessSourceNode(SU->getNode(), DAG, Emitter, VRBaseMap, Orders, Seen,
                         NewInsn);
-    if (MDNode* MD = DAG->getHeapAllocSite(SU->getNode()))
-      MF.addCodeViewHeapAllocSite(NewInsn, MD);
   }
 
   // Insert all the dbg_values which have not already been inserted in source

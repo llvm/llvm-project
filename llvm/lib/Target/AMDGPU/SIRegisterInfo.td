@@ -352,7 +352,7 @@ def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TT
 
 // VGPR 32-bit registers
 // i16/f16 only on VI+
-def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, p2, p3, p5, p6], 32,
                             (add (sequence "VGPR%u", 0, 255))> {
   let AllocationPriority = 1;
   let Size = 32;
@@ -586,7 +586,7 @@ def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
 }
 
 // Register class for all vector registers (VGPRs + Interploation Registers)
-def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32, v4f16, v4i16], 32,
+def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4], 32,
                             (add VGPR_64)> {
   let Size = 64;
 

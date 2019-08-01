@@ -3,8 +3,10 @@
 
 define <2 x i64> @scalarize_v2i64(<2 x i64*> %p, <2 x i1> %mask, <2 x i64> %passthru) {
 ; CHECK-LABEL: @scalarize_v2i64(
-; CHECK-NEXT:    [[MASK0:%.*]] = extractelement <2 x i1> [[MASK:%.*]], i64 0
-; CHECK-NEXT:    br i1 [[MASK0]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.load:
 ; CHECK-NEXT:    [[PTR0:%.*]] = extractelement <2 x i64*> [[P:%.*]], i64 0
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[PTR0]], align 8
@@ -12,8 +14,9 @@ define <2 x i64> @scalarize_v2i64(<2 x i64*> %p, <2 x i1> %mask, <2 x i64> %pass
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <2 x i64> [ [[RES0]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[MASK1:%.*]] = extractelement <2 x i1> [[MASK]], i64 1
-; CHECK-NEXT:    br i1 [[MASK1]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i2 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.load1:
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x i64*> [[P]], i64 1
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[PTR1]], align 8

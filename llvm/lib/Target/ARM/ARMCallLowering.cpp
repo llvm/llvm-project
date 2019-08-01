@@ -502,7 +502,8 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 CallingConv::ID CallConv,
                                 const MachineOperand &Callee,
                                 const ArgInfo &OrigRet,
-                                ArrayRef<ArgInfo> OrigArgs) const {
+                                ArrayRef<ArgInfo> OrigArgs,
+                                const MDNode *KnownCallees) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const auto &TLI = *getTLI<ARMTargetLowering>();
   const auto &DL = MF.getDataLayout();

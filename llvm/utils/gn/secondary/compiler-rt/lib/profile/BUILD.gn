@@ -41,7 +41,7 @@ static_library("profile") {
     "InstrProfilingPlatformOther.c",
     "InstrProfilingPlatformWindows.c",
     "InstrProfilingPort.h",
-    "InstrProfilingRuntime.cc",
+    "InstrProfilingRuntime.cpp",
     "InstrProfilingUtil.c",
     "InstrProfilingUtil.h",
     "InstrProfilingValue.c",
