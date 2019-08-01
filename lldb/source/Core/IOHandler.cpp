@@ -233,7 +233,7 @@ int IOHandlerDelegate::IOHandlerComplete(
         matches, descriptions);
   case Completion::Expression: {
     CompletionResult result;
-    CompletionRequest request(current_line, current_line - cursor,
+    CompletionRequest request(current_line, cursor - current_line,
                               skip_first_n_matches, max_matches, result);
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
