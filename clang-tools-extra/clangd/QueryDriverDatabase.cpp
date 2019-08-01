@@ -59,7 +59,7 @@ namespace {
 std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
   std::vector<std::string> SystemIncludes;
   const char SIS[] = "#include <...> search starts here:";
-  constexpr char const *SIE = "End of search list.";
+  const char SIE[] = "End of search list.";
   llvm::SmallVector<llvm::StringRef, 8> Lines;
   Output.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
@@ -70,7 +70,9 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
     return {};
   }
   ++StartIt;
-  const auto EndIt = std::find(StartIt, Lines.end(), SIE);
+  const auto EndIt =
+      llvm::find_if(llvm::make_range(StartIt, Lines.end()),
+                    [SIE](llvm::StringRef Line) { return Line.trim() == SIE; });
   if (EndIt == Lines.end()) {
     elog("System include extraction: end marker missing: {0}", Output);
     return {};

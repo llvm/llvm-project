@@ -8,7 +8,7 @@
 # RUN: echo 'echo -e "#include <...> search starts here:\r" >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo %t.dir/my/dir2/ >&2' >> %t.dir/my_driver.sh
-# RUN: echo 'echo End of search list. >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'echo -e "End of search list.\r" >&2' >> %t.dir/my_driver.sh
 # RUN: chmod +x %t.dir/my_driver.sh
 
 # Create header files my/dir/a.h and my/dir2/b.h
