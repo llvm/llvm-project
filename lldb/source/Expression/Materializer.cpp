@@ -966,8 +966,7 @@ public:
                                     llvm::toString(std::move(error)).c_str());
         return;
       }
-      PersistentExpressionState *persistent_state =
-          type_system_or_err->GetPersistentExpressionState();
+      persistent_state = type_system_or_err->GetPersistentExpressionState();
     }
 
     if (!persistent_state) {

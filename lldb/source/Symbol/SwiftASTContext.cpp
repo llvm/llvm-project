@@ -1953,7 +1953,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     for (size_t mi = 0; mi != num_images; ++mi) {
       auto module_sp = target.GetImages().GetModuleAtIndex(mi);
       pool.async([=] {
-        module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+        auto val_or_err = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+        if (!val_or_err) {
+          llvm::consumeError(val_or_err.takeError());
+        }
       });
     }
     pool.wait();
