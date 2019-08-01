@@ -934,7 +934,7 @@ public:
     typedef _Allocator                               allocator_type;
     typedef allocator_traits<allocator_type>         __alloc_traits;
     typedef typename __alloc_traits::size_type       size_type;
-protected:
+
     typedef _Tp                                      value_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
@@ -1399,7 +1399,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     bool __invariants() const {return __base::__invariants();}
-private:
+
     typedef typename __base::__map_const_pointer __map_const_pointer;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1413,14 +1413,52 @@ private:
         return __base::__map_.size() == 0 ? 0 : __base::__map_.size() * __base::__block_size - 1;
     }
     _LIBCPP_INLINE_VISIBILITY
+    size_type __block_count() const
+    {
+        return __base::__map_.size();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
     size_type __front_spare() const
     {
         return __base::__start_;
     }
     _LIBCPP_INLINE_VISIBILITY
+    size_type __front_spare_blocks() const {
+      return __front_spare() / __base::__block_size;
+    }
+    _LIBCPP_INLINE_VISIBILITY
     size_type __back_spare() const
     {
         return __capacity() - (__base::__start_ + __base::size());
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    size_type __back_spare_blocks() const {
+      return __back_spare() / __base::__block_size;
+    }
+
+ private:
+    _LIBCPP_INLINE_VISIBILITY
+    bool __maybe_remove_front_spare(bool __keep_one = true) {
+      if (__front_spare_blocks() >= 2 || (!__keep_one && __front_spare_blocks())) {
+        __alloc_traits::deallocate(__base::__alloc(), __base::__map_.front(),
+                                   __base::__block_size);
+        __base::__map_.pop_front();
+        __base::__start_ -= __base::__block_size;
+        return true;
+      }
+      return false;
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool __maybe_remove_back_spare(bool __keep_one = true) {
+      if (__back_spare_blocks() >= 2 || (!__keep_one && __back_spare_blocks())) {
+        __alloc_traits::deallocate(__base::__alloc(), __base::__map_.back(),
+                                   __base::__block_size);
+        __base::__map_.pop_back();
+        return true;
+      }
+      return false;
     }
 
     template <class _InpIter>
@@ -1727,17 +1765,8 @@ deque<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
     }
     else
     {
-        if (__front_spare() >= __base::__block_size)
-        {
-            __alloc_traits::deallocate(__a, __base::__map_.front(), __base::__block_size);
-            __base::__map_.pop_front();
-            __base::__start_ -= __base::__block_size;
-        }
-        if (__back_spare() >= __base::__block_size)
-        {
-            __alloc_traits::deallocate(__a, __base::__map_.back(), __base::__block_size);
-            __base::__map_.pop_back();
-        }
+      __maybe_remove_front_spare(/*__keep_one=*/false);
+      __maybe_remove_back_spare(/*__keep_one=*/false);
     }
     __base::__map_.shrink_to_fit();
 }
@@ -2596,12 +2625,8 @@ deque<_Tp, _Allocator>::pop_front()
                                                     __base::__start_ / __base::__block_size) +
                                                     __base::__start_ % __base::__block_size));
     --__base::size();
-    if (++__base::__start_ >= 2 * __base::__block_size)
-    {
-        __alloc_traits::deallocate(__a, __base::__map_.front(), __base::__block_size);
-        __base::__map_.pop_front();
-        __base::__start_ -= __base::__block_size;
-    }
+    ++__base::__start_;
+    __maybe_remove_front_spare();
 }
 
 template <class _Tp, class _Allocator>
@@ -2615,11 +2640,7 @@ deque<_Tp, _Allocator>::pop_back()
                                                     __p / __base::__block_size) +
                                                     __p % __base::__block_size));
     --__base::size();
-    if (__back_spare() >= 2 * __base::__block_size)
-    {
-        __alloc_traits::deallocate(__a, __base::__map_.back(), __base::__block_size);
-        __base::__map_.pop_back();
-    }
+    __maybe_remove_back_spare();
 }
 
 // move assign [__f, __l) to [__r, __r + (__l-__f)).
@@ -2768,23 +2789,14 @@ deque<_Tp, _Allocator>::erase(const_iterator __f)
         __alloc_traits::destroy(__a, _VSTD::addressof(*__b));
         --__base::size();
         ++__base::__start_;
-        if (__front_spare() >= 2 * __base::__block_size)
-        {
-            __alloc_traits::deallocate(__a, __base::__map_.front(), __base::__block_size);
-            __base::__map_.pop_front();
-            __base::__start_ -= __base::__block_size;
-        }
+        __maybe_remove_front_spare();
     }
     else
     {   // erase from back
         iterator __i = _VSTD::move(_VSTD::next(__p), __base::end(), __p);
         __alloc_traits::destroy(__a, _VSTD::addressof(*__i));
         --__base::size();
-        if (__back_spare() >= 2 * __base::__block_size)
-        {
-            __alloc_traits::deallocate(__a, __base::__map_.back(), __base::__block_size);
-            __base::__map_.pop_back();
-        }
+        __maybe_remove_back_spare();
     }
     return __base::begin() + __pos;
 }
@@ -2807,11 +2819,7 @@ deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l)
                 __alloc_traits::destroy(__a, _VSTD::addressof(*__b));
             __base::size() -= __n;
             __base::__start_ += __n;
-            while (__front_spare() >= 2 * __base::__block_size)
-            {
-                __alloc_traits::deallocate(__a, __base::__map_.front(), __base::__block_size);
-                __base::__map_.pop_front();
-                __base::__start_ -= __base::__block_size;
+            while (__maybe_remove_front_spare()) {
             }
         }
         else
@@ -2820,10 +2828,7 @@ deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l)
             for (iterator __e = __base::end(); __i != __e; ++__i)
                 __alloc_traits::destroy(__a, _VSTD::addressof(*__i));
             __base::size() -= __n;
-            while (__back_spare() >= 2 * __base::__block_size)
-            {
-                __alloc_traits::deallocate(__a, __base::__map_.back(), __base::__block_size);
-                __base::__map_.pop_back();
+            while (__maybe_remove_back_spare()) {
             }
         }
     }
@@ -2844,10 +2849,7 @@ deque<_Tp, _Allocator>::__erase_to_end(const_iterator __f)
         for (iterator __p = __b + __pos; __p != __e; ++__p)
             __alloc_traits::destroy(__a, _VSTD::addressof(*__p));
         __base::size() -= __n;
-        while (__back_spare() >= 2 * __base::__block_size)
-        {
-            __alloc_traits::deallocate(__a, __base::__map_.back(), __base::__block_size);
-            __base::__map_.pop_back();
+        while (__maybe_remove_back_spare()) {
         }
     }
 }
