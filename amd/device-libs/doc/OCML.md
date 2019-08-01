@@ -38,19 +38,20 @@ The next section describes OCML controls and how to make them.
 
 ### Controls
 
-OCML supports a number of controls that are provided by linking in specifically named inline
-functions.  These functions are inlined at optimization time and result in specific paths
-taken with no control flow overhead.  These functions all have the form (in C)
+OCML supports a number of controls that are provided by linking in libraries defining
+specifically named constant variables.  These variables are known at optimization time
+and result in specific paths taken with no control flow overhead.  These variables all
+have the form (in C)
 
-    __attribute__((always_inline, const)) int
-    __oclc_control(void)
-    { return 1; } // or 0 to disable
+__constant const int __oclc_<name> = N;
 
-The currently supported control are
+
+The currently supported controls are
   * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced
   * `unsafe_math_opt` - lower accuracy results may be produced with higher performance
   * `daz_opt` - subnormal values consumed and produced may be flushed to zero
   * `correctly_rounded_sqrt32` - float square root must be correctly rounded
+  * `wavefrontsize64` - the wave front size is 64
   * `ISA_version` - an integer representation of the ISA version of the target device
 
 ### Versioning
