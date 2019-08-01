@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64) || defined(_M_AMD64)
+
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -534,3 +536,5 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   return ::SetThreadContext(
       wthread.GetHostThread().GetNativeThread().GetSystemHandle(), &m_context);
 }
+
+#endif // defined(__x86_64__) || defined(__amd64__) || defined(_M_X64) || defined(_M_AMD64)

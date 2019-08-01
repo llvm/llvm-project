@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__i386__) || defined(_M_IX86)
+
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -282,3 +284,5 @@ bool RegisterContextWindows_x86::ReadRegisterHelper(
   reg_value.SetUInt32(value);
   return true;
 }
+
+#endif // defined(__i386__) || defined(_M_IX86)
