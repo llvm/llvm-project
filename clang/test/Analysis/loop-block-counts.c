@@ -12,7 +12,7 @@ void loop() {
   for (int i = 0; i < 2; ++i)
     callee(&arr[i]);
   // FIXME: Should be UNKNOWN.
-  clang_analyzer_eval(arr[0] == arr[1]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(arr[0] == arr[1]); // expected-warning{{FALSE}}
 }
 
 void loopWithCall() {

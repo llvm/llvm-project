@@ -145,8 +145,8 @@ protected:
 
     // Add header's parent path to search path.
     StringRef SearchPath = llvm::sys::path::parent_path(HeaderPath);
-    const DirectoryEntry *DE = FileMgr.getDirectory(SearchPath);
-    DirectoryLookup DL(DE, SrcMgr::C_User, false);
+    auto DE = FileMgr.getDirectory(SearchPath);
+    DirectoryLookup DL(*DE, SrcMgr::C_User, false);
     HeaderInfo.AddSearchPath(DL, IsSystemHeader);
   }
 

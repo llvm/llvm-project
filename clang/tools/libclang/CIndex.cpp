@@ -4232,7 +4232,10 @@ CXFile clang_getFile(CXTranslationUnit TU, const char *file_name) {
   ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
 
   FileManager &FMgr = CXXUnit->getFileManager();
-  return const_cast<FileEntry *>(FMgr.getFile(file_name));
+  auto File = FMgr.getFile(file_name);
+  if (!File)
+    return nullptr;
+  return const_cast<FileEntry *>(*File);
 }
 
 const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
