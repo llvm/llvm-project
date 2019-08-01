@@ -23,16 +23,16 @@ SelectionTree makeSelectionTree(const StringRef MarkedCode, ParsedAST &AST) {
   Annotations Test(MarkedCode);
   switch (Test.points().size()) {
   case 1: // Point selection.
-    return SelectionTree(AST.getASTContext(),
+    return SelectionTree(AST.getASTContext(), AST.getTokens(),
                          cantFail(positionToOffset(Test.code(), Test.point())));
   case 2: // Range selection.
     return SelectionTree(
-        AST.getASTContext(),
+        AST.getASTContext(), AST.getTokens(),
         cantFail(positionToOffset(Test.code(), Test.points()[0])),
         cantFail(positionToOffset(Test.code(), Test.points()[1])));
   default:
     ADD_FAILURE() << "Expected 1-2 points for selection.\n" << MarkedCode;
-    return SelectionTree(AST.getASTContext(), 0u, 0u);
+    return SelectionTree(AST.getASTContext(), AST.getTokens(), 0u, 0u);
   }
 }
 
@@ -218,6 +218,9 @@ TEST(SelectionTest, CommonAncestor) {
       {"void foo() { [[foo^()]]; }", "CallExpr"},
       {"void foo() { [[foo^]] (); }", "DeclRefExpr"},
       {"int bar; void foo() [[{ foo (); }]]^", "CompoundStmt"},
+
+      // Ignores whitespace, comments, and semicolons in the selection.
+      {"void foo() { [[foo^()]]; /*comment*/^}", "CallExpr"},
 
       // Tricky case: FunctionTypeLoc in FunctionDecl has a hole in it.
       {"[[^void]] foo();", "BuiltinTypeLoc"},

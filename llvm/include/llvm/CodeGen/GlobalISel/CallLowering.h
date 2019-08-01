@@ -240,11 +240,12 @@ public:
   /// \return true if the lowering succeeded, false otherwise.
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                          const MachineOperand &Callee, const ArgInfo &OrigRet,
-                         ArrayRef<ArgInfo> OrigArgs,
-                         Register SwiftErrorVReg) const {
+                         ArrayRef<ArgInfo> OrigArgs, Register SwiftErrorVReg,
+                         const MDNode *KnownCallees = nullptr) const {
     if (!supportSwiftError()) {
       assert(SwiftErrorVReg == 0 && "trying to use unsupported swifterror");
-      return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs);
+      return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs,
+                       KnownCallees);
     }
     return false;
   }
@@ -253,7 +254,8 @@ public:
   /// do not support swifterror value promotion.
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                          const MachineOperand &Callee, const ArgInfo &OrigRet,
-                         ArrayRef<ArgInfo> OrigArgs) const {
+                         ArrayRef<ArgInfo> OrigArgs,
+                         const MDNode *KnownCallees = nullptr) const {
     return false;
   }
 

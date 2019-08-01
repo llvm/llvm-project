@@ -1074,7 +1074,7 @@ void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
 
   // Now reinsert it into the IR and do whatever fixups needed.
   if (auto *MD = dyn_cast<MemoryDef>(What))
-    insertDef(MD);
+    insertDef(MD, true);
   else
     insertUse(cast<MemoryUse>(What));
 

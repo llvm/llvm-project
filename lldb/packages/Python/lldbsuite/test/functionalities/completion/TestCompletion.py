@@ -297,3 +297,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('breakpoint set -n Fo',
                               'breakpoint set -n Foo::Bar(int,\\ int)',
                               turn_off_re_match=True)
+        # No completion for Qu because the candidate is
+        # (anonymous namespace)::Quux().
+        self.complete_from_to('breakpoint set -n Qu', '')

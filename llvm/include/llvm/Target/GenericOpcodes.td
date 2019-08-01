@@ -725,7 +725,11 @@ def G_INTRINSIC_ROUND : GenericInstruction {
 // Memory ops
 //------------------------------------------------------------------------------
 
-// Generic load. Expects a MachineMemOperand in addition to explicit operands.
+// Generic load. Expects a MachineMemOperand in addition to explicit
+// operands. If the result size is larger than the memory size, the
+// high bits are undefined. If the result is a vector type and larger
+// than the memory size, the high elements are undefined (i.e. this is
+// not a per-element, vector anyextload)
 def G_LOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$addr);

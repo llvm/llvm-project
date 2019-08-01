@@ -4,20 +4,23 @@
 define void @scalarize_v2i64(<2 x i64>* %p, <2 x i1> %mask, <2 x i64> %data) {
 ; CHECK-LABEL: @scalarize_v2i64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64>* [[P:%.*]] to i64*
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[MASK:%.*]], i64 0
-; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i2 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.store:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[DATA:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, i64* [[TMP1]], i32 0
-; CHECK-NEXT:    store i64 [[TMP3]], i64* [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[DATA:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, i64* [[TMP1]], i32 0
+; CHECK-NEXT:    store i64 [[TMP4]], i64* [[TMP5]], align 8
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[MASK]], i64 1
-; CHECK-NEXT:    br i1 [[TMP5]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i2 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.store1:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[DATA]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[TMP1]], i32 1
-; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, i64* [[TMP1]], i32 1
+; CHECK-NEXT:    store i64 [[TMP8]], i64* [[TMP9]], align 8
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void

@@ -30,11 +30,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 any_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_any_of(
+    return __pstl::__internal::__pattern_any_of(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 // [alg.all_of]
@@ -61,21 +60,20 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Function>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 for_each(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Function __f)
 {
-    using namespace __pstl;
-    __internal::__pattern_walk1(std::forward<_ExecutionPolicy>(__exec), __first, __last, __f,
-                                __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-                                __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    __pstl::__internal::__pattern_walk1(
+        std::forward<_ExecutionPolicy>(__exec), __first, __last, __f,
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Function>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 for_each_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __n, _Function __f)
 {
-    using namespace __pstl;
-    return __internal::__pattern_walk1_n(
+    return __pstl::__internal::__pattern_walk1_n(
         std::forward<_ExecutionPolicy>(__exec), __first, __n, __f,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 // [alg.find]
@@ -84,11 +82,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 find_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_find_if(
+    return __pstl::__internal::__pattern_find_if(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
@@ -112,11 +109,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 find_end(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __s_first,
          _ForwardIterator2 __s_last, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_find_end(
+    return __pstl::__internal::__pattern_find_end(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __s_first, __s_last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -134,11 +132,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 find_first_of(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last,
               _ForwardIterator2 __s_first, _ForwardIterator2 __s_last, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_find_first_of(
+    return __pstl::__internal::__pattern_find_first_of(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __s_first, __s_last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -156,22 +155,22 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 adjacent_find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
-    using namespace __pstl;
-    return __internal::__pattern_adjacent_find(
+    return __pstl::__internal::__pattern_adjacent_find(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, std::equal_to<_ValueType>(),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec), /*first_semantic*/ false);
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        /*first_semantic*/ false);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _BinaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 adjacent_find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_adjacent_find(
+    return __pstl::__internal::__pattern_adjacent_find(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec), /*first_semantic*/ false);
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        /*first_semantic*/ false);
 }
 
 // [alg.count]
@@ -185,12 +184,11 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy,
 count(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
-    using namespace __pstl;
-    return __internal::__pattern_count(
+    return __pstl::__internal::__pattern_count(
         std::forward<_ExecutionPolicy>(__exec), __first, __last,
         [&__value](const _ValueType& __x) { return __value == __x; },
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
@@ -198,11 +196,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy,
                                                  typename iterator_traits<_ForwardIterator>::difference_type>
 count_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_count(
+    return __pstl::__internal::__pattern_count(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 // [alg.search]
@@ -212,11 +209,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 search(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __s_first,
        _ForwardIterator2 __s_last, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_search(
+    return __pstl::__internal::__pattern_search(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __s_first, __s_last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -232,11 +230,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 search_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Size __count,
          const _Tp& __value, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_search_n(
+    return __pstl::__internal::__pattern_search_n(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __count, __value, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Tp>
@@ -254,32 +251,34 @@ template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterato
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
 copy(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result)
 {
-    using namespace __pstl;
     const auto __is_vector =
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec);
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec);
 
-    return __internal::__pattern_walk2_brick(
+    return __pstl::__internal::__pattern_walk2_brick(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __result,
         [__is_vector](_ForwardIterator1 __begin, _ForwardIterator1 __end, _ForwardIterator2 __res) {
-            return __internal::__brick_copy(__begin, __end, __res, __is_vector);
+            return __pstl::__internal::__brick_copy(__begin, __end, __res, __is_vector);
         },
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _Size, class _ForwardIterator2>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
 copy_n(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _Size __n, _ForwardIterator2 __result)
 {
-    using namespace __pstl;
     const auto __is_vector =
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec);
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec);
 
-    return __internal::__pattern_walk2_brick_n(
+    return __pstl::__internal::__pattern_walk2_brick_n(
         std::forward<_ExecutionPolicy>(__exec), __first, __n, __result,
         [__is_vector](_ForwardIterator1 __begin, _Size __sz, _ForwardIterator2 __res) {
-            return __internal::__brick_copy_n(__begin, __sz, __res, __is_vector);
+            return __pstl::__internal::__brick_copy_n(__begin, __sz, __res, __is_vector);
         },
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
@@ -287,11 +286,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 copy_if(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result,
         _Predicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_copy_if(
+    return __pstl::__internal::__pattern_copy_if(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 // [alg.swap]
@@ -301,17 +301,18 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 swap_ranges(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
             _ForwardIterator2 __first2)
 {
-    using namespace __pstl;
     typedef typename iterator_traits<_ForwardIterator1>::reference _ReferenceType1;
     typedef typename iterator_traits<_ForwardIterator2>::reference _ReferenceType2;
-    return __internal::__pattern_walk2(
+    return __pstl::__internal::__pattern_walk2(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2,
         [](_ReferenceType1 __x, _ReferenceType2 __y) {
             using std::swap;
             swap(__x, __y);
         },
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 // [alg.transform]
@@ -323,12 +324,13 @@ transform(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator
 {
     typedef typename iterator_traits<_ForwardIterator1>::reference _InputType;
     typedef typename iterator_traits<_ForwardIterator2>::reference _OutputType;
-    using namespace __pstl;
-    return __internal::__pattern_walk2(
+    return __pstl::__internal::__pattern_walk2(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __result,
         [__op](_InputType __x, _OutputType __y) mutable { __y = __op(__x); },
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator,
@@ -340,14 +342,13 @@ transform(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterato
     typedef typename iterator_traits<_ForwardIterator1>::reference _Input1Type;
     typedef typename iterator_traits<_ForwardIterator2>::reference _Input2Type;
     typedef typename iterator_traits<_ForwardIterator>::reference _OutputType;
-    using namespace __pstl;
-    return __internal::__pattern_walk3(
+    return __pstl::__internal::__pattern_walk3(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __result,
         [__op](_Input1Type x, _Input2Type y, _OutputType z) mutable { z = __op(x, y); },
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 // [alg.replace]
@@ -357,17 +358,17 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 replace_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred,
            const _Tp& __new_value)
 {
-    using namespace __pstl;
     typedef typename iterator_traits<_ForwardIterator>::reference _ElementType;
-    __internal::__pattern_walk1(std::forward<_ExecutionPolicy>(__exec), __first, __last,
-                                [&__pred, &__new_value](_ElementType __elem) {
-                                    if (__pred(__elem))
-                                    {
-                                        __elem = __new_value;
-                                    }
-                                },
-                                __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-                                __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    __pstl::__internal::__pattern_walk1(
+        std::forward<_ExecutionPolicy>(__exec), __first, __last,
+        [&__pred, &__new_value](_ElementType __elem) {
+            if (__pred(__elem))
+            {
+                __elem = __new_value;
+            }
+        },
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
@@ -386,12 +387,13 @@ replace_copy_if(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIt
 {
     typedef typename iterator_traits<_ForwardIterator1>::reference _InputType;
     typedef typename iterator_traits<_ForwardIterator2>::reference _OutputType;
-    using namespace __pstl;
-    return __internal::__pattern_walk2(
+    return __pstl::__internal::__pattern_walk2(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __result,
         [__pred, &__new_value](_InputType __x, _OutputType __y) mutable { __y = __pred(__x) ? __new_value : __x; },
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Tp>
@@ -409,10 +411,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 fill(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
-    using namespace __pstl;
-    __internal::__pattern_fill(std::forward<_ExecutionPolicy>(__exec), __first, __last, __value,
-                               __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-                               __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    __pstl::__internal::__pattern_fill(
+        std::forward<_ExecutionPolicy>(__exec), __first, __last, __value,
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Tp>
@@ -422,11 +424,10 @@ fill_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __count, const
     if (__count <= 0)
         return __first;
 
-    using namespace __pstl;
-    return __internal::__pattern_fill_n(
+    return __pstl::__internal::__pattern_fill_n(
         std::forward<_ExecutionPolicy>(__exec), __first, __count, __value,
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 // [alg.generate]
@@ -434,11 +435,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Generator>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 generate(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Generator __g)
 {
-    using namespace __pstl;
-    __internal::__pattern_generate(
+    __pstl::__internal::__pattern_generate(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __g,
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Generator>
@@ -448,11 +448,10 @@ generate_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __count, _
     if (__count <= 0)
         return __first;
 
-    using namespace __pstl;
-    return __internal::__pattern_generate_n(
+    return __pstl::__internal::__pattern_generate_n(
         std::forward<_ExecutionPolicy>(__exec), __first, __count, __g,
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 // [alg.remove]
@@ -478,11 +477,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _UnaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 remove_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_remove_if(
+    return __pstl::__internal::__pattern_remove_if(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
@@ -499,11 +497,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _BinaryPredicate
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 unique(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_unique(
+    return __pstl::__internal::__pattern_unique(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -518,11 +515,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 unique_copy(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result,
             _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_unique_copy(
+    return __pstl::__internal::__pattern_unique_copy(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -538,11 +536,10 @@ template <class _ExecutionPolicy, class _BidirectionalIterator>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 reverse(_ExecutionPolicy&& __exec, _BidirectionalIterator __first, _BidirectionalIterator __last)
 {
-    using namespace __pstl;
-    __internal::__pattern_reverse(
+    __pstl::__internal::__pattern_reverse(
         std::forward<_ExecutionPolicy>(__exec), __first, __last,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _BidirectionalIterator, class _ForwardIterator>
@@ -550,11 +547,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 reverse_copy(_ExecutionPolicy&& __exec, _BidirectionalIterator __first, _BidirectionalIterator __last,
              _ForwardIterator __d_first)
 {
-    using namespace __pstl;
-    return __internal::__pattern_reverse_copy(
+    return __pstl::__internal::__pattern_reverse_copy(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __d_first,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator, _ForwardIterator>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator, _ForwardIterator>(
+            __exec));
 }
 
 // [alg.rotate]
@@ -563,11 +561,10 @@ template <class _ExecutionPolicy, class _ForwardIterator>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 rotate(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last)
 {
-    using namespace __pstl;
-    return __internal::__pattern_rotate(
+    return __pstl::__internal::__pattern_rotate(
         std::forward<_ExecutionPolicy>(__exec), __first, __middle, __last,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -575,11 +572,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 rotate_copy(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __middle, _ForwardIterator1 __last,
             _ForwardIterator2 __result)
 {
-    using namespace __pstl;
-    return __internal::__pattern_rotate_copy(
+    return __pstl::__internal::__pattern_rotate_copy(
         std::forward<_ExecutionPolicy>(__exec), __first, __middle, __last, __result,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 // [alg.partitions]
@@ -588,22 +586,20 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _UnaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 is_partitioned(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_is_partitioned(
+    return __pstl::__internal::__pattern_is_partitioned(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _UnaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 partition(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_partition(
+    return __pstl::__internal::__pattern_partition(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _BidirectionalIterator, class _UnaryPredicate>
@@ -611,11 +607,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _Bidirectiona
 stable_partition(_ExecutionPolicy&& __exec, _BidirectionalIterator __first, _BidirectionalIterator __last,
                  _UnaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_stable_partition(
+    return __pstl::__internal::__pattern_stable_partition(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _ForwardIterator1, class _ForwardIterator2,
@@ -624,13 +619,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, std::pair<_Fo
 partition_copy(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last,
                _ForwardIterator1 __out_true, _ForwardIterator2 __out_false, _UnaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_partition_copy(
+    return __pstl::__internal::__pattern_partition_copy(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __out_true, __out_false, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator, _ForwardIterator1,
-                                                 _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator, _ForwardIterator1,
-                                                   _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator, _ForwardIterator1,
+                                                         _ForwardIterator2>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator, _ForwardIterator1,
+                                                           _ForwardIterator2>(__exec));
 }
 
 // [alg.sort]
@@ -640,11 +634,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::value_type _InputType;
-    using namespace __pstl;
-    return __internal::__pattern_sort(
+    return __pstl::__internal::__pattern_sort(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
         typename std::is_move_constructible<_InputType>::type());
 }
 
@@ -662,11 +655,10 @@ template <class _ExecutionPolicy, class _RandomAccessIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 stable_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_stable_sort(
+    return __pstl::__internal::__pattern_stable_sort(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator>
@@ -684,11 +676,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, std::pair<_Fo
 mismatch(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
          _ForwardIterator2 __last2, _BinaryPredicate __pred)
 {
-    using namespace __pstl;
-    return __internal::__pattern_mismatch(
+    return __pstl::__internal::__pattern_mismatch(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __pred,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
@@ -725,11 +718,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 equal(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _BinaryPredicate __p)
 {
-    using namespace __pstl;
-    return __internal::__pattern_equal(
+    return __pstl::__internal::__pattern_equal(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __p,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -744,11 +736,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 equal(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _ForwardIterator2 __last2, _BinaryPredicate __p)
 {
-    using namespace __pstl;
-    return __internal::__pattern_equal(
+    return __pstl::__internal::__pattern_equal(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __p,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -764,16 +755,17 @@ template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterato
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
 move(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __d_first)
 {
-    using namespace __pstl;
     const auto __is_vector =
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec);
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec);
 
-    return __internal::__pattern_walk2_brick(
+    return __pstl::__internal::__pattern_walk2_brick(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __d_first,
         [__is_vector](_ForwardIterator1 __begin, _ForwardIterator1 __end, _ForwardIterator2 __res) {
-            return __internal::__brick_move(__begin, __end, __res, __is_vector);
+            return __pstl::__internal::__brick_move(__begin, __end, __res, __is_vector);
         },
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 // [partial.sort]
@@ -783,11 +775,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 partial_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIterator __middle,
              _RandomAccessIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    __internal::__pattern_partial_sort(
+    __pstl::__internal::__pattern_partial_sort(
         std::forward<_ExecutionPolicy>(__exec), __first, __middle, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator>
@@ -806,11 +797,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _RandomAccess
 partial_sort_copy(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last,
                   _RandomAccessIterator __d_first, _RandomAccessIterator __d_last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_partial_sort_copy(
+    return __pstl::__internal::__pattern_partial_sort_copy(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __d_first, __d_last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator, _RandomAccessIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator, _RandomAccessIterator>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator, _RandomAccessIterator>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _RandomAccessIterator>
@@ -827,11 +819,11 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 is_sorted_until(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    const _ForwardIterator __res = __internal::__pattern_adjacent_find(
+    const _ForwardIterator __res = __pstl::__internal::__pattern_adjacent_find(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __pstl::__internal::__reorder_pred<_Compare>(__comp),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec), /*first_semantic*/ false);
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        /*first_semantic*/ false);
     return __res == __last ? __last : std::next(__res);
 }
 
@@ -847,11 +839,11 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 is_sorted(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_adjacent_find(
-               std::forward<_ExecutionPolicy>(__exec), __first, __last, __internal::__reorder_pred<_Compare>(__comp),
-               __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-               __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+    return __pstl::__internal::__pattern_adjacent_find(
+               std::forward<_ExecutionPolicy>(__exec), __first, __last,
+               __pstl::__internal::__reorder_pred<_Compare>(__comp),
+               __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+               __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
                /*or_semantic*/ true) == __last;
 }
 
@@ -870,13 +862,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 merge(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _ForwardIterator2 __last2, _ForwardIterator __d_first, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_merge(
+    return __pstl::__internal::__pattern_merge(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __d_first, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
@@ -893,11 +884,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __first, _BidirectionalIterator __middle,
               _BidirectionalIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    __internal::__pattern_inplace_merge(
+    __pstl::__internal::__pattern_inplace_merge(
         std::forward<_ExecutionPolicy>(__exec), __first, __middle, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _BidirectionalIterator>
@@ -916,11 +906,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 includes(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
          _ForwardIterator2 __last2, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_includes(
+    return __pstl::__internal::__pattern_includes(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -939,13 +930,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 set_union(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
           _ForwardIterator2 __last2, _ForwardIterator __result, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_set_union(
+    return __pstl::__internal::__pattern_set_union(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
@@ -965,13 +955,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
                  _ForwardIterator2 __first2, _ForwardIterator2 __last2, _ForwardIterator __result, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_set_intersection(
+    return __pstl::__internal::__pattern_set_intersection(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
@@ -991,13 +980,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 set_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
                _ForwardIterator2 __first2, _ForwardIterator2 __last2, _ForwardIterator __result, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_set_difference(
+    return __pstl::__internal::__pattern_set_difference(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
@@ -1018,13 +1006,12 @@ set_symmetric_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
                          _ForwardIterator2 __first2, _ForwardIterator2 __last2, _ForwardIterator __result,
                          _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_set_symmetric_difference(
+    return __pstl::__internal::__pattern_set_symmetric_difference(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                 _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
-                                                   _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                         _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2,
+                                                           _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
@@ -1041,11 +1028,10 @@ template <class _ExecutionPolicy, class _RandomAccessIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _RandomAccessIterator>
 is_heap_until(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_is_heap_until(
+    return __pstl::__internal::__pattern_is_heap_until(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator>
@@ -1077,11 +1063,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 min_element(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_min_element(
+    return __pstl::__internal::__pattern_min_element(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -1113,11 +1098,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, std::pair<_ForwardIterator, _ForwardIterator>>
 minmax_element(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_minmax_element(
+    return __pstl::__internal::__pattern_minmax_element(
         std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -1135,11 +1119,10 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 nth_element(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _RandomAccessIterator __nth,
             _RandomAccessIterator __last, _Compare __comp)
 {
-    using namespace __pstl;
-    __internal::__pattern_nth_element(
+    __pstl::__internal::__pattern_nth_element(
         std::forward<_ExecutionPolicy>(__exec), __first, __nth, __last, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _RandomAccessIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator>
@@ -1158,11 +1141,12 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
                         _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Compare __comp)
 {
-    using namespace __pstl;
-    return __internal::__pattern_lexicographical_compare(
+    return __pstl::__internal::__pattern_lexicographical_compare(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __comp,
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
+        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec),
+        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(
+            __exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>

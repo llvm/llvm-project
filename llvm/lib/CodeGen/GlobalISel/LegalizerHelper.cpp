@@ -2770,12 +2770,22 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   MIRBuilder.setInstr(MI);
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-  case TargetOpcode::G_IMPLICIT_DEF: {
+  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_LOAD: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
     Observer.changingInstr(MI);
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_STORE:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:

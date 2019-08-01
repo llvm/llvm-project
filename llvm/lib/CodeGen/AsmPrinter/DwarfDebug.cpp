@@ -580,6 +580,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   for (auto ArgReg : CallFwdRegsInfo->second) {
     bool InsertedReg = ForwardedRegWorklist.insert(ArgReg.Reg).second;
     assert(InsertedReg && "Single register used to forward two arguments?");
+    (void)InsertedReg;
   }
 
   // We erase, from the ForwardedRegWorklist, those forwarding registers for
