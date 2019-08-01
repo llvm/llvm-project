@@ -95,10 +95,10 @@ add_compiler_rt_object_libraries(RTHwasan_dynamic
   DEFS ${HWASAN_DEFINITIONS}
   DEPS ${HWASAN_DEPS})
 
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc "")
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
 add_compiler_rt_object_libraries(RTHwasan_dynamic_version_script_dummy
   ARCHS ${HWASAN_SUPPORTED_ARCH}
-  SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
+  SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
   DEFS ${HWASAN_DEFINITIONS}
   DEPS ${HWASAN_DEPS})
@@ -131,7 +131,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
     set(VERSION_SCRIPT_FLAG
          -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.hwasan-dynamic-${arch}.vers)
     set_property(SOURCE
-      ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
+      ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
       APPEND PROPERTY
       OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.hwasan-dynamic-${arch}.vers)
   else()

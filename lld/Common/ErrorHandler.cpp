@@ -153,13 +153,34 @@ void ErrorHandler::warn(const Twine &msg) {
   *errorOS << msg << "\n";
 }
 
+void ErrorHandler::printErrorMsg(const Twine &msg) {
+  newline(errorOS, msg);
+  printHeader("error: ", raw_ostream::RED, msg);
+  *errorOS << msg << "\n";
+}
+
+void ErrorHandler::printError(const Twine &msg) {
+  if (vsDiagnostics) {
+    static std::regex reDuplicateSymbol(
+        R"(^(duplicate symbol: .*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))");
+    std::string msgStr = msg.str();
+    std::smatch match;
+    if (std::regex_match(msgStr, match, reDuplicateSymbol)) {
+      printErrorMsg(match.str(1) + match.str(2));
+      printErrorMsg(match.str(1) + match.str(3));
+      return;
+    }
+  }
+  printErrorMsg(msg);
+}
+
 void ErrorHandler::error(const Twine &msg) {
   std::lock_guard<std::mutex> lock(mu);
 
   if (errorLimit == 0 || errorCount < errorLimit) {
-    newline(errorOS, msg);
-    printHeader("error: ", raw_ostream::RED, msg);
-    *errorOS << msg << "\n";
+    printError(msg);
   } else if (errorCount == errorLimit) {
     newline(errorOS, msg);
     printHeader("error: ", raw_ostream::RED, msg);

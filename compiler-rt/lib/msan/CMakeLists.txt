@@ -2,18 +2,19 @@ include_directories(..)
 
 # Runtime library sources and build flags.
 set(MSAN_RTL_SOURCES
-  msan.cc
-  msan_allocator.cc
-  msan_chained_origin_depot.cc
-  msan_interceptors.cc
-  msan_linux.cc
-  msan_report.cc
-  msan_thread.cc
-  msan_poisoning.cc
+  msan.cpp
+  msan_allocator.cpp
+  msan_chained_origin_depot.cpp
+  msan_interceptors.cpp
+  msan_linux.cpp
+  msan_report.cpp
+  msan_thread.cpp
+  msan_poisoning.cpp
   )
 
 set(MSAN_RTL_CXX_SOURCES
-  msan_new_delete.cc)
+  msan_new_delete.cpp
+  )
 
 set(MSAN_RTL_HEADERS
   msan.h

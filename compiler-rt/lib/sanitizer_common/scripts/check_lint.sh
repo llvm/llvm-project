@@ -81,35 +81,35 @@ run_lint ${ASAN_RTL_LINT_FILTER} ${INTERCEPTION}/*.cpp \
 
 # ASan
 ASAN_RTL=${COMPILER_RT}/lib/asan
-run_lint ${ASAN_RTL_LINT_FILTER} ${ASAN_RTL}/*.cc \
+run_lint ${ASAN_RTL_LINT_FILTER} ${ASAN_RTL}/*.cpp \
                                  ${ASAN_RTL}/*.h &
-run_lint ${ASAN_TEST_LINT_FILTER} ${ASAN_RTL}/tests/*.cc \
+run_lint ${ASAN_TEST_LINT_FILTER} ${ASAN_RTL}/tests/*.cpp \
                                   ${ASAN_RTL}/tests/*.h &
 run_lint ${ASAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/asan/*/*.cc &
 
 # TSan
 TSAN_RTL=${COMPILER_RT}/lib/tsan
-run_lint ${TSAN_RTL_LINT_FILTER} ${TSAN_RTL}/rtl/*.cc \
+run_lint ${TSAN_RTL_LINT_FILTER} ${TSAN_RTL}/rtl/*.cpp \
                                  ${TSAN_RTL}/rtl/*.h &
-run_lint ${TSAN_TEST_LINT_FILTER} ${TSAN_RTL}/tests/rtl/*.cc \
+run_lint ${TSAN_TEST_LINT_FILTER} ${TSAN_RTL}/tests/rtl/*.cpp \
                                   ${TSAN_RTL}/tests/rtl/*.h \
-                                  ${TSAN_RTL}/tests/unit/*.cc &
+                                  ${TSAN_RTL}/tests/unit/*.cpp &
 run_lint ${TSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/tsan/*.cc &
 
 # MSan
 MSAN_RTL=${COMPILER_RT}/lib/msan
-run_lint ${MSAN_RTL_LINT_FILTER} ${MSAN_RTL}/*.cc \
+run_lint ${MSAN_RTL_LINT_FILTER} ${MSAN_RTL}/*.cpp \
                                  ${MSAN_RTL}/*.h &
 
 # LSan
 LSAN_RTL=${COMPILER_RT}/lib/lsan
-run_lint ${LSAN_RTL_LINT_FILTER} ${LSAN_RTL}/*.cc \
+run_lint ${LSAN_RTL_LINT_FILTER} ${LSAN_RTL}/*.cpp \
                                  ${LSAN_RTL}/*.h &
 run_lint ${LSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/lsan/*/*.cc &
 
 # DFSan
 DFSAN_RTL=${COMPILER_RT}/lib/dfsan
-run_lint ${DFSAN_RTL_LINT_FILTER} ${DFSAN_RTL}/*.cc \
+run_lint ${DFSAN_RTL_LINT_FILTER} ${DFSAN_RTL}/*.cpp \
                                   ${DFSAN_RTL}/*.h &
 ${DFSAN_RTL}/scripts/check_custom_wrappers.sh >> $ERROR_LOG
 

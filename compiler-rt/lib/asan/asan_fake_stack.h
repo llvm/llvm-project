@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// ASan-private header for asan_fake_stack.cc, implements FakeStack.
+// ASan-private header for asan_fake_stack.cpp, implements FakeStack.
 //===----------------------------------------------------------------------===//
 
 #ifndef ASAN_FAKE_STACK_H

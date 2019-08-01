@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// ASan-private header for asan_allocator.cc.
+// ASan-private header for asan_allocator.cpp.
 //===----------------------------------------------------------------------===//
 
 #ifndef ASAN_ALLOCATOR_H

@@ -80,27 +80,31 @@ expected to work, with functionality improving rapidly.
 Get Involved
 ------------
 
-To check out the code, use:
+Check out the LLVM source-tree with git and find the sources in the `lldb`
+subdirectory:
 
-svn co http://llvm.org/svn/llvm-project/lldb/trunk lldb
+::
 
-Note that LLDB generally builds from top-of-trunk
+  > git clone https://github.com/llvm/llvm-project.git
 
-* On macOS with Xcode
-* On Linux and FreeBSD (with clang and libstdc++/libc++)
-* On NetBSD (with GCC and clang and libstdc++/libc++)
-* On Windows with VS 2012 or higher using CMake
+Note that LLDB generally builds from top-of-trunk using CMake and Ninja.
+Additionally it builds:
 
-See the LLDB Build Page for platform-specific build instructions.
+* on macOS with a :ref:`generated Xcode project <CMakeGeneratedXcodeProject>`
+* on Linux and FreeBSD with clang and libstdc++/libc++
+* on NetBSD with GCC/clang and libstdc++/libc++
+* on Windows with a generated project for VS 2017 or higher
+
+See the :doc:`LLDB Build Page <resources/build>` for build instructions.
 
 Discussions about LLDB should go to the `lldb-dev
 <http://lists.llvm.org/mailman/listinfo/lldb-dev>`__ mailing list. Commit
-messages for the lldb SVN module are automatically sent to the `lldb-commits
+messages are automatically sent to the `lldb-commits
 <http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list , and
 this is also the preferred mailing list for patch submissions.
 
-See the Projects page if you are looking for some interesting areas to
-contribute to lldb.
+See the :doc:`Projects page <status/projects>` if you are looking for some
+interesting areas to contribute to lldb.
 
 .. toctree::
    :hidden:

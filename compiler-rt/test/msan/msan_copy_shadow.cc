@@ -29,7 +29,7 @@ int main() {
   // CHECK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-2]]
   // CHECK: Uninitialized value was stored to memory at
   // CHECK-FULL-STACK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-8]]
-  // CHECK-SHORT-STACK:   {{in __msan_copy_shadow .*msan_interceptors.cc:}}
+  // CHECK-SHORT-STACK:   {{in __msan_copy_shadow .*msan_interceptors.cpp:}}
   // CHECK: Uninitialized value was created by a heap allocation
   // CHECK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-23]]
 }
