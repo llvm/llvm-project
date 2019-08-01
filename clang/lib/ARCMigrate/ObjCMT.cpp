@@ -2141,10 +2141,11 @@ private:
       StringRef Val = ValueString->getValue(ValueStorage);
 
       if (Key == "file") {
-        const FileEntry *FE = FileMgr.getFile(Val);
-        if (!FE)
+        auto FE = FileMgr.getFile(Val);
+        if (FE)
+          Entry.File = *FE;
+        else
           Ignore = true;
-        Entry.File = FE;
       } else if (Key == "offset") {
         if (Val.getAsInteger(10, Entry.Offset))
           Ignore = true;

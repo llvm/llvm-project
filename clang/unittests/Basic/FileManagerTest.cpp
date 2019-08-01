@@ -205,9 +205,9 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
   EXPECT_NE(*fileFoo, *fileBar);
 }
 
-// getFile() returns NULL if neither a real file nor a virtual file
+// getFile() returns an error if neither a real file nor a virtual file
 // exists at the given path.
-TEST_F(FileManagerTest, getFileReturnsNULLForNonexistentFile) {
+TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   // Inject a fake foo.cpp into the file system.
   auto statCache = llvm::make_unique<FakeStatCache>();
   statCache->InjectDirectory(".", 41);
@@ -219,6 +219,16 @@ TEST_F(FileManagerTest, getFileReturnsNULLForNonexistentFile) {
 
   auto file = manager.getFile("xyz.txt");
   ASSERT_FALSE(file);
+  ASSERT_EQ(file.getError(), std::errc::no_such_file_or_directory);
+
+  statCache->InjectDirectory("MyDirectory", 49);
+  auto readingDirAsFile = manager.getFile("MyDirectory");
+  ASSERT_FALSE(readingDirAsFile);
+  ASSERT_EQ(readingDirAsFile.getError(), std::errc::is_a_directory);
+
+  auto readingFileAsDir = manager.getDirectory("foo.cpp");
+  ASSERT_FALSE(readingFileAsDir);
+  ASSERT_EQ(readingFileAsDir.getError(), std::errc::not_a_directory);
 }
 
 // The following tests apply to Unix-like system only.
@@ -378,13 +388,13 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   Manager.setStatCache(std::move(statCache));
 
   // Check for real path.
-  const FileEntry *file = Manager.getFile("/tmp/test", /*OpenFile=*/false);
-  ASSERT_TRUE(file != nullptr);
-  ASSERT_TRUE(file->isValid());
+  auto file = Manager.getFile("/tmp/test", /*OpenFile=*/false);
+  ASSERT_TRUE(file);
+  ASSERT_TRUE((*file)->isValid());
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
-  EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
+  EXPECT_EQ((*file)->tryGetRealPathName(), ExpectedResult);
 }
 
 } // anonymous namespace

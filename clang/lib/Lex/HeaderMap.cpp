@@ -204,7 +204,9 @@ const FileEntry *HeaderMap::LookupFile(
   if (Dest.empty())
     return nullptr;
 
-  return FM.getFile(Dest);
+  if (auto File = FM.getFile(Dest))
+    return *File;
+  return nullptr;
 }
 
 StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
