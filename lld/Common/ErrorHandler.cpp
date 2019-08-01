@@ -87,7 +87,7 @@ void lld::checkError(Error e) {
 
 static std::string getLocation(std::string msg, std::string defaultMsg) {
   static std::vector<std::regex> Regexes{
-      std::regex(R"(^undefined symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
+      std::regex(R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
       std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
       std::regex(
           R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
@@ -95,8 +95,6 @@ static std::string getLocation(std::string msg, std::string defaultMsg) {
           R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+).*)"),
       std::regex(
           R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
-      std::regex(
-          R"(^undefined (internal|hidden|protected) symbol: .*\n>>> referenced by (\S+):(\d+)\n.*)"),
       std::regex(R"((\S+):(\d+): unclosed quote)"),
   };
 

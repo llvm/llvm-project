@@ -419,6 +419,11 @@ TEST(TweakTest, ExtractVariable) {
                  void f(int a) {
                    PLUS([[1+a]]);
                  })cpp",
+          /*FIXME: It should be extracted like this.
+           R"cpp(#define PLUS(x) x++
+                 void f(int a) {
+                   auto dummy = 1+a; int y = PLUS(dummy);
+                 })cpp"},*/
            R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    auto dummy = PLUS(1+a); dummy;
@@ -429,9 +434,9 @@ TEST(TweakTest, ExtractVariable) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-           /*FIXME: It should be extracted like this. SelectionTree needs to be
+          /*FIXME: It should be extracted like this. SelectionTree needs to be
             * fixed for macros.
-         R"cpp(#define LOOP(x) while (1) {a = x;}
+           R"cpp(#define LOOP(x) while (1) {a = x;}
                void f(int a) {
                  auto dummy = 3; if(1)
                   LOOP(5 + dummy)
