@@ -49,6 +49,9 @@ Non-comprehensive list of changes in this release
   ``EP_FullLinkTimeOptimizationLast`` are available for plugins to specialize
   the legacy pass manager full LTO pipeline.
 
+* **llvm-objcopy/llvm-strip** got support for COFF object files/executables,
+  supporting the most common copying/stripping options.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -127,7 +130,7 @@ Changes to the SystemZ Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
+* Fixed a bug in generating DWARF unwind information for 32 bit MinGW
 
 Changes to the AMDGPU Target
 -----------------------------
