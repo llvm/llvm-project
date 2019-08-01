@@ -71,10 +71,19 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (SemanticHighlighting)
       Highlightings = getSemanticHighlightings(AST);
 
+    // FIXME: We need a better way to send the maximum line number to the
+    // differ.
+    // The differ needs the information about the max number of lines
+    // to not send diffs that are outside the file.
+    const SourceManager &SM = AST.getSourceManager();
+    FileID MainFileID = SM.getMainFileID();
+    int NumLines = SM.getBufferData(MainFileID).count('\n') + 1;
+
     Publish([&]() {
       DiagConsumer.onDiagnosticsReady(Path, std::move(Diagnostics));
       if (SemanticHighlighting)
-        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings));
+        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings),
+                                          NumLines);
     });
   }
 

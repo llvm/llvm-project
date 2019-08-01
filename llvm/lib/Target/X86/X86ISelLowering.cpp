@@ -7572,7 +7572,10 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 // Recurse to find a LoadSDNode source and the accumulated ByteOffest.
 static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
   if (ISD::isNON_EXTLoad(Elt.getNode())) {
-    Ld = cast<LoadSDNode>(Elt);
+    auto *BaseLd = cast<LoadSDNode>(Elt);
+    if (BaseLd->getMemOperand()->getFlags() & MachineMemOperand::MOVolatile)
+      return false;
+    Ld = BaseLd;
     ByteOffset = 0;
     return true;
   }
@@ -34574,6 +34577,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                                KnownVec, TLO, Depth + 1))
         return true;
 
+      if (SDValue V = SimplifyMultipleUseDemandedBits(
+              Vec, DemandedVecBits, DemandedVecElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, V, Op.getOperand(1)));
+
       Known = KnownVec.zext(BitWidth, true);
       return false;
     }
@@ -34673,6 +34681,28 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
+
+SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    SelectionDAG &DAG, unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW: {
+    // If we don't demand the inserted element, return the base vector.
+    SDValue Vec = Op.getOperand(0);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    MVT VecVT = Vec.getSimpleValueType();
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements()) &&
+        !DemandedElts[CIdx->getZExtValue()])
+      return Vec;
+     break;
+  }
+  }
+
+  return TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
+      Op, DemandedBits, DemandedElts, DAG, Depth);
 }
 
 /// Check if a vector extract from a target-specific shuffle of a load can be
@@ -35877,15 +35907,26 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // TODO - Remove this once we can handle the implicit zero-extension of
-  // X86ISD::PEXTRW/X86ISD::PEXTRB in:
-  // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
-  // combineBasicSADPattern.
   if (IsPextr) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (TLI.SimplifyDemandedBits(
             SDValue(N, 0), APInt::getAllOnesValue(VT.getSizeInBits()), DCI))
       return SDValue(N, 0);
+
+    // PEXTR*(PINSR*(v, s, c), c) -> s (with implicit zext handling).
+    if ((InputVector.getOpcode() == X86ISD::PINSRB ||
+         InputVector.getOpcode() == X86ISD::PINSRW) &&
+        InputVector.getOperand(2) == EltIdx) {
+      assert(SrcVT == InputVector.getOperand(0).getValueType() &&
+             "Vector type mismatch");
+      SDValue Scl = InputVector.getOperand(1);
+      Scl = DAG.getNode(ISD::TRUNCATE, dl, SrcVT.getScalarType(), Scl);
+      return DAG.getZExtOrTrunc(Scl, dl, VT);
+    }
+
+    // TODO - Remove this once we can handle the implicit zero-extension of
+    // X86ISD::PEXTRW/X86ISD::PEXTRB in XFormVExtractWithShuffleIntoLoad,
+    // combineHorizontalPredicateResult and combineBasicSADPattern.
     return SDValue();
   }
 

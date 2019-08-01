@@ -2289,13 +2289,11 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   for (OutputSection *sec : outputSections) {
     off = setFileOffset(sec, off);
-    if (script->hasSectionsCommand)
-      continue;
 
     // If this is a last section of the last executable segment and that
     // segment is the last loadable segment, align the offset of the
     // following section to avoid loading non-segments parts of the file.
-    if (lastRX && lastRX->lastSec == sec)
+    if (config->zSeparateCode && lastRX && lastRX->lastSec == sec)
       off = alignTo(off, config->commonPageSize);
   }
 
@@ -2568,7 +2566,7 @@ static void fillTrap(uint8_t *i, uint8_t *end) {
 // We'll leave other pages in segments as-is because the rest will be
 // overwritten by output sections.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
-  if (script->hasSectionsCommand)
+  if (!config->zSeparateCode)
     return;
 
   for (Partition &part : partitions) {

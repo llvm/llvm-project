@@ -920,6 +920,10 @@ namespace llvm {
                                            TargetLoweringOpt &TLO,
                                            unsigned Depth) const override;
 
+    SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
+        SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+        SelectionDAG &DAG, unsigned Depth) const override;
+
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
     SDValue unwrapAddress(SDValue N) const override;

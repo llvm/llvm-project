@@ -29,9 +29,7 @@ makeHighlightingTokens(llvm::ArrayRef<Range> Ranges, HighlightingKind Kind) {
   return Tokens;
 }
 
-void checkHighlightings(llvm::StringRef Code) {
-  Annotations Test(Code);
-  auto AST = TestTU::withCode(Test.code()).build();
+std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
   static const std::map<HighlightingKind, std::string> KindToString{
       {HighlightingKind::Variable, "Variable"},
       {HighlightingKind::Function, "Function"},
@@ -48,10 +46,47 @@ void checkHighlightings(llvm::StringRef Code) {
         Test.ranges(KindString.second), KindString.first);
     ExpectedTokens.insert(ExpectedTokens.end(), Toks.begin(), Toks.end());
   }
+  llvm::sort(ExpectedTokens);
+  return ExpectedTokens;
+}
 
-  auto ActualTokens = getSemanticHighlightings(AST);
-  EXPECT_THAT(ActualTokens, testing::UnorderedElementsAreArray(ExpectedTokens))
-   << "Inputs is:\n" << Code;
+void checkHighlightings(llvm::StringRef Code) {
+  Annotations Test(Code);
+  auto AST = TestTU::withCode(Test.code()).build();
+  std::vector<HighlightingToken> ActualTokens = getSemanticHighlightings(AST);
+  EXPECT_THAT(ActualTokens, getExpectedTokens(Test));
+}
+
+// Any annotations in OldCode and NewCode are converted into their corresponding
+// HighlightingToken. The tokens are diffed against each other. Any lines where
+// the tokens should diff must be marked with a ^ somewhere on that line in
+// NewCode. If there are diffs that aren't marked with ^ the test fails. The
+// test also fails if there are lines marked with ^ that don't differ.
+void checkDiffedHighlights(llvm::StringRef OldCode, llvm::StringRef NewCode) {
+  Annotations OldTest(OldCode);
+  Annotations NewTest(NewCode);
+  std::vector<HighlightingToken> OldTokens = getExpectedTokens(OldTest);
+  std::vector<HighlightingToken> NewTokens = getExpectedTokens(NewTest);
+
+  llvm::DenseMap<int, std::vector<HighlightingToken>> ExpectedLines;
+  for (const Position &Point : NewTest.points()) {
+    ExpectedLines[Point.line]; // Default initialize to an empty line. Tokens
+                               // are inserted on these lines later.
+  }
+  std::vector<LineHighlightings> ExpectedLinePairHighlighting;
+  for (const HighlightingToken &Token : NewTokens) {
+    auto It = ExpectedLines.find(Token.R.start.line);
+    if (It != ExpectedLines.end())
+      It->second.push_back(Token);
+  }
+  for (auto &LineTokens : ExpectedLines)
+    ExpectedLinePairHighlighting.push_back(
+        {LineTokens.first, LineTokens.second});
+
+  std::vector<LineHighlightings> ActualDiffed =
+      diffHighlightings(NewTokens, OldTokens, NewCode.count('\n'));
+  EXPECT_THAT(ActualDiffed,
+              testing::UnorderedElementsAreArray(ExpectedLinePairHighlighting));
 }
 
 TEST(SemanticHighlighting, GetsCorrectTokens) {
@@ -226,8 +261,9 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
     std::atomic<int> Count = {0};
 
     void onDiagnosticsReady(PathRef, std::vector<Diag>) override {}
-    void onHighlightingsReady(
-        PathRef File, std::vector<HighlightingToken> Highlightings) override {
+    void onHighlightingsReady(PathRef File,
+                              std::vector<HighlightingToken> Highlightings,
+                              int NLines) override {
       ++Count;
     }
   };
@@ -252,19 +288,122 @@ TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
     return Pos;
   };
 
-  std::vector<HighlightingToken> Tokens{
-      {HighlightingKind::Variable,
-                        Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
-      {HighlightingKind::Function,
-                        Range{CreatePosition(3, 4), CreatePosition(3, 7)}},
-      {HighlightingKind::Variable,
-                        Range{CreatePosition(1, 1), CreatePosition(1, 5)}}};
+  std::vector<LineHighlightings> Tokens{
+      {3,
+       {{HighlightingKind::Variable,
+         Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
+        {HighlightingKind::Function,
+         Range{CreatePosition(3, 4), CreatePosition(3, 7)}}}},
+      {1,
+       {{HighlightingKind::Variable,
+         Range{CreatePosition(1, 1), CreatePosition(1, 5)}}}}};
   std::vector<SemanticHighlightingInformation> ActualResults =
       toSemanticHighlightingInformation(Tokens);
   std::vector<SemanticHighlightingInformation> ExpectedResults = {
-      {1, "AAAAAQAEAAA="},
-      {3, "AAAACAAEAAAAAAAEAAMAAQ=="}};
+      {3, "AAAACAAEAAAAAAAEAAMAAQ=="}, {1, "AAAAAQAEAAA="}};
   EXPECT_EQ(ActualResults, ExpectedResults);
+}
+
+TEST(SemanticHighlighting, HighlightingDiffer) {
+  struct {
+    llvm::StringRef OldCode;
+    llvm::StringRef NewCode;
+  } TestCases[]{{
+                    R"(
+        $Variable[[A]]
+        $Class[[B]]
+        $Function[[C]]
+      )",
+                    R"(
+        $Variable[[A]]
+        $Class[[D]]
+        $Function[[C]]
+      )"},
+                {
+                    R"(
+        $Class[[C]]
+        $Field[[F]]
+        $Variable[[V]]
+        $Class[[C]] $Variable[[V]] $Field[[F]]
+      )",
+                    R"(
+        $Class[[C]]
+        $Field[[F]]
+       ^$Function[[F]]
+        $Class[[C]] $Variable[[V]] $Field[[F]]
+      )"},
+                {
+                    R"(
+
+        $Class[[A]]
+        $Variable[[A]]
+      )",
+                    R"(
+
+       ^
+       ^$Class[[A]]
+       ^$Variable[[A]]
+      )"},
+                {
+                    R"(
+        $Class[[C]]
+        $Field[[F]]
+        $Variable[[V]]
+        $Class[[C]] $Variable[[V]] $Field[[F]]
+      )",
+                    R"(
+        $Class[[C]]
+       ^
+       ^
+        $Class[[C]] $Variable[[V]] $Field[[F]]
+      )"},
+                {
+                    R"(
+        $Class[[A]]
+        $Variable[[A]]
+        $Variable[[A]]
+      )",
+                    R"(
+        $Class[[A]]
+       ^$Variable[[AA]]
+        $Variable[[A]]
+      )"},
+                {
+                    R"(
+        $Class[[A]]
+        $Variable[[A]]
+        $Class[[A]]
+        $Variable[[A]]
+      )",
+                    R"(
+        $Class[[A]]
+        $Variable[[A]]
+      )"},
+                {
+                    R"(
+        $Class[[A]]
+        $Variable[[A]]
+      )",
+                    R"(
+        $Class[[A]]
+        $Variable[[A]]
+       ^$Class[[A]]
+       ^$Variable[[A]]
+      )"},
+                {
+                    R"(
+        $Variable[[A]]
+        $Variable[[A]]
+        $Variable[[A]]
+      )",
+                    R"(
+       ^$Class[[A]]
+       ^$Class[[A]]
+       ^$Class[[A]]
+      )"}};
+
+  for (const auto &Test : TestCases)
+    checkDiffedHighlights(Test.OldCode, Test.NewCode);
 }
 
 } // namespace

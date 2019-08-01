@@ -87,7 +87,7 @@ void lld::checkError(Error e) {
 
 static std::string getLocation(std::string msg, std::string defaultMsg) {
   static std::vector<std::regex> Regexes{
-      std::regex(R"(^undefined symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
+      std::regex(R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
       std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
       std::regex(
           R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
@@ -95,8 +95,6 @@ static std::string getLocation(std::string msg, std::string defaultMsg) {
           R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+).*)"),
       std::regex(
           R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
-      std::regex(
-          R"(^undefined (internal|hidden|protected) symbol: .*\n>>> referenced by (\S+):(\d+)\n.*)"),
       std::regex(R"((\S+):(\d+): unclosed quote)"),
   };
 
@@ -155,13 +153,34 @@ void ErrorHandler::warn(const Twine &msg) {
   *errorOS << msg << "\n";
 }
 
+void ErrorHandler::printErrorMsg(const Twine &msg) {
+  newline(errorOS, msg);
+  printHeader("error: ", raw_ostream::RED, msg);
+  *errorOS << msg << "\n";
+}
+
+void ErrorHandler::printError(const Twine &msg) {
+  if (vsDiagnostics) {
+    static std::regex reDuplicateSymbol(
+        R"(^(duplicate symbol: .*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))");
+    std::string msgStr = msg.str();
+    std::smatch match;
+    if (std::regex_match(msgStr, match, reDuplicateSymbol)) {
+      printErrorMsg(match.str(1) + match.str(2));
+      printErrorMsg(match.str(1) + match.str(3));
+      return;
+    }
+  }
+  printErrorMsg(msg);
+}
+
 void ErrorHandler::error(const Twine &msg) {
   std::lock_guard<std::mutex> lock(mu);
 
   if (errorLimit == 0 || errorCount < errorLimit) {
-    newline(errorOS, msg);
-    printHeader("error: ", raw_ostream::RED, msg);
-    *errorOS << msg << "\n";
+    printError(msg);
   } else if (errorCount == errorLimit) {
     newline(errorOS, msg);
     printHeader("error: ", raw_ostream::RED, msg);

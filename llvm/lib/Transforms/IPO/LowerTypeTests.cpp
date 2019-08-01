@@ -1685,16 +1685,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New, bool IsDefi
 }
 
 void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
-  auto UI = Old->use_begin(), E = Old->use_end();
-  for (; UI != E;) {
-    Use &U = *UI;
-    ++UI;
-
-    if (!isDirectCall(U))
-      continue;
-
-    U.set(New);
-  }
+  Old->replaceUsesWithIf(New, [](Use &U) { return isDirectCall(U); });
 }
 
 bool LowerTypeTestsModule::lower() {

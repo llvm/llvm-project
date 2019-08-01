@@ -98,6 +98,9 @@ inline bool isAnnotation(TokenKind K) {
   return false;
 }
 
+/// Return true if this is an annotation token representing a pragma.
+bool isPragmaAnnotation(TokenKind K);
+
 }  // end namespace tok
 }  // end namespace clang
 

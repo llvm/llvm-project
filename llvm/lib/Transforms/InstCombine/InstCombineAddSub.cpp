@@ -1690,13 +1690,9 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
         if (SPF == SPF_ABS || SPF == SPF_NABS) {
           // This is a negate of an ABS/NABS pattern. Just swap the operands
           // of the select.
-          SelectInst *SI = cast<SelectInst>(Op1);
-          Value *TrueVal = SI->getTrueValue();
-          Value *FalseVal = SI->getFalseValue();
-          SI->setTrueValue(FalseVal);
-          SI->setFalseValue(TrueVal);
+          cast<SelectInst>(Op1)->swapValues();
           // Don't swap prof metadata, we didn't change the branch behavior.
-          return replaceInstUsesWith(I, SI);
+          return replaceInstUsesWith(I, Op1);
         }
       }
     }

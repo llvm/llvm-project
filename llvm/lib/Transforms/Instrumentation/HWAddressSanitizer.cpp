@@ -1002,11 +1002,8 @@ bool HWAddressSanitizer::instrumentStack(
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
     Replacement->setName(Name + ".hwasan");
 
-    for (auto UI = AI->use_begin(), UE = AI->use_end(); UI != UE;) {
-      Use &U = *UI++;
-      if (U.getUser() != AILong)
-        U.set(Replacement);
-    }
+    AI->replaceUsesWithIf(Replacement,
+                          [AILong](Use &U) { return U.getUser() != AILong; });
 
     for (auto *DDI : AllocaDeclareMap.lookup(AI)) {
       DIExpression *OldExpr = DDI->getExpression();

@@ -267,17 +267,14 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   // before.
   // We now define that def's memorydefs and memoryphis
   if (DefBeforeSameBlock) {
-    for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end();
-         UI != UE;) {
-      Use &U = *UI++;
+    DefBefore->replaceUsesWithIf(MD, [MD](Use &U) {
       // Leave the MemoryUses alone.
       // Also make sure we skip ourselves to avoid self references.
-      if (isa<MemoryUse>(U.getUser()) || U.getUser() == MD)
-        continue;
+      User *Usr = U.getUser();
+      return !isa<MemoryUse>(Usr) && Usr != MD;
       // Defs are automatically unoptimized when the user is set to MD below,
       // because the isOptimized() call will fail to find the same ID.
-      U.set(MD);
-    }
+    });
   }
 
   // and that def is now our defining access.

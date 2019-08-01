@@ -1538,10 +1538,7 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
     }
     if (auto *SI = dyn_cast<SelectInst>(U)) {
       // Swap operands
-      Value *TrueValue = SI->getTrueValue();
-      Value *FalseValue = SI->getFalseValue();
-      SI->setTrueValue(FalseValue);
-      SI->setFalseValue(TrueValue);
+      SI->swapValues();
       SI->swapProfMetadata();
       if (Scope->TrueBiasedSelects.count(SI)) {
         assert(Scope->FalseBiasedSelects.count(SI) == 0 &&

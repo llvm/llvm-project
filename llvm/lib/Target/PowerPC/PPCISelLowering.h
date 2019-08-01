@@ -456,6 +456,11 @@ namespace llvm {
       /// an xxswapd.
       LXVD2X,
 
+      /// VSRC, CHAIN = LOAD_VEC_BE CHAIN, Ptr - Occurs only for little endian.
+      /// Maps directly to one of lxvd2x/lxvw4x/lxvh8x/lxvb16x depending on
+      /// the vector type to load vector in big-endian element order.
+      LOAD_VEC_BE,
+
       /// VSRC, CHAIN = LD_VSX_LH CHAIN, Ptr - This is a floating-point load of a
       /// v2f32 value into the lower half of a VSR register.
       LD_VSX_LH,
@@ -464,6 +469,11 @@ namespace llvm {
       /// Maps directly to an stxvd2x instruction that will be preceded by
       /// an xxswapd.
       STXVD2X,
+
+      /// CHAIN = STORE_VEC_BE CHAIN, VSRC, Ptr - Occurs only for little endian.
+      /// Maps directly to one of stxvd2x/stxvw4x/stxvh8x/stxvb16x depending on
+      /// the vector type to store vector in big-endian element order.
+      STORE_VEC_BE,
 
       /// Store scalar integers from VSR.
       ST_VSR_SCAL_INT,
@@ -1167,6 +1177,8 @@ namespace llvm {
     SDValue combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineABS(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineVSelect(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineVReverseMemOP(ShuffleVectorSDNode *SVN, LSBaseSDNode *LSBase,
+                                 DAGCombinerInfo &DCI) const;
 
     /// ConvertSETCCToSubtract - looks at SETCC that compares ints. It replaces
     /// SETCC with integer subtraction when (1) there is a legal way of doing it

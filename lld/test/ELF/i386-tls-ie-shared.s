@@ -1,10 +1,10 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-iele-i686-nopic.s -o %tso.o
-// RUN: ld.lld -shared %tso.o -o %tso
+// RUN: ld.lld -shared -soname=t.so %tso.o -o %tso
 // RUN: ld.lld --hash-style=sysv -shared %t.o %tso -o %t1
 // RUN: llvm-readobj -S -r -d %t1 | FileCheck --check-prefix=GOTRELSHARED %s
-// RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASMSHARED %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASMSHARED %s
 
 // GOTRELSHARED:     Section {
 // GOTRELSHARED:      Index: 8
@@ -47,22 +47,22 @@
 // (.got)[1] = 0x2064 = 8292
 // (.got)[2] = 0x2068 = 8296
 // (.got)[3] = 0x206C = 8300
-// DISASMSHARED-NEXT:  1000: {{.*}} movl  8288, %ecx
-// DISASMSHARED-NEXT:  1006: {{.*}} movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  1009: {{.*}} movl  8288, %eax
-// DISASMSHARED-NEXT:  100e: {{.*}} movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  1011: {{.*}} addl  8288, %ecx
-// DISASMSHARED-NEXT:  1017: {{.*}} movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  101a: {{.*}} movl  8292, %ecx
-// DISASMSHARED-NEXT:  1020: {{.*}} movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  1023: {{.*}} movl  8292, %eax
-// DISASMSHARED-NEXT:  1028: {{.*}} movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  102b: {{.*}} addl  8292, %ecx
-// DISASMSHARED-NEXT:  1031: {{.*}} movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  1034: {{.*}} movl  8296, %ecx
-// DISASMSHARED-NEXT:  103a: {{.*}} movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  103d: {{.*}} addl  8300, %ecx
-// DISASMSHARED-NEXT:  1043: {{.*}} movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  1000:       movl  8288, %ecx
+// DISASMSHARED-NEXT:  1006:       movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  1009:       movl  8288, %eax
+// DISASMSHARED-NEXT:  100e:       movl  %gs:(%eax), %eax
+// DISASMSHARED-NEXT:  1011:       addl  8288, %ecx
+// DISASMSHARED-NEXT:  1017:       movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  101a:       movl  8292, %ecx
+// DISASMSHARED-NEXT:  1020:       movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  1023:       movl  8292, %eax
+// DISASMSHARED-NEXT:  1028:       movl  %gs:(%eax), %eax
+// DISASMSHARED-NEXT:  102b:       addl  8292, %ecx
+// DISASMSHARED-NEXT:  1031:       movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  1034:       movl  8296, %ecx
+// DISASMSHARED-NEXT:  103a:       movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  103d:       addl  8300, %ecx
+// DISASMSHARED-NEXT:  1043:       movl  %gs:(%ecx), %eax
 
 .type tlslocal0,@object
 .section .tbss,"awT",@nobits

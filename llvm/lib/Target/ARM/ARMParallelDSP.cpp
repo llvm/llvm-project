@@ -70,6 +70,10 @@ namespace {
     bool HasTwoLoadInputs() const {
       return isa<LoadInst>(LHS) && isa<LoadInst>(RHS);
     }
+
+    LoadInst *getBaseLoad() const {
+      return cast<LoadInst>(LHS);
+    }
   };
 
   /// Represent a sequence of multiply-accumulate operations with the aim to
@@ -117,6 +121,8 @@ namespace {
 
     /// Return the add instruction which is the root of the reduction.
     Instruction *getRoot() { return Root; }
+
+    bool is64Bit() const { return Root->getType()->isIntegerTy(64); }
 
     /// Return the incoming value to be accumulated. This maybe null.
     Value *getAccumulator() { return Acc; }
@@ -594,16 +600,10 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
 
 void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
 
-  auto CreateSMLADCall = [&](SmallVectorImpl<LoadInst*> &VecLd0,
-                             SmallVectorImpl<LoadInst*> &VecLd1,
-                             Value *Acc, bool Exchange,
-                             Instruction *InsertAfter) {
+  auto CreateSMLAD = [&](LoadInst* WideLd0, LoadInst *WideLd1,
+                         Value *Acc, bool Exchange,
+                         Instruction *InsertAfter) {
     // Replace the reduction chain with an intrinsic call
-    IntegerType *Ty = IntegerType::get(M->getContext(), 32);
-    LoadInst *WideLd0 = WideLoads.count(VecLd0[0]) ?
-      WideLoads[VecLd0[0]]->getLoad() : CreateWideLoad(VecLd0, Ty);
-    LoadInst *WideLd1 = WideLoads.count(VecLd1[0]) ?
-      WideLoads[VecLd1[0]]->getLoad() : CreateWideLoad(VecLd1, Ty);
 
     Value* Args[] = { WideLd0, WideLd1, Acc };
     Function *SMLAD = nullptr;
@@ -628,17 +628,23 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
   if (!Acc)
     Acc = ConstantInt::get(IntegerType::get(M->getContext(), 32), 0);
 
+  IntegerType *Ty = IntegerType::get(M->getContext(), 32);
   LLVM_DEBUG(dbgs() << "Root: " << *InsertAfter << "\n"
              << "Acc: " << *Acc << "\n");
   for (auto &Pair : R.getMulPairs()) {
-    MulCandidate *PMul0 = Pair.first;
-    MulCandidate *PMul1 = Pair.second;
+    MulCandidate *LHSMul = Pair.first;
+    MulCandidate *RHSMul = Pair.second;
     LLVM_DEBUG(dbgs() << "Muls:\n"
-               << "- " << *PMul0->Root << "\n"
-               << "- " << *PMul1->Root << "\n");
+               << "- " << *LHSMul->Root << "\n"
+               << "- " << *RHSMul->Root << "\n");
+    LoadInst *BaseLHS = LHSMul->getBaseLoad();
+    LoadInst *BaseRHS = RHSMul->getBaseLoad();
+    LoadInst *WideLHS = WideLoads.count(BaseLHS) ?
+      WideLoads[BaseLHS]->getLoad() : CreateWideLoad(LHSMul->VecLd, Ty);
+    LoadInst *WideRHS = WideLoads.count(BaseRHS) ?
+      WideLoads[BaseRHS]->getLoad() : CreateWideLoad(RHSMul->VecLd, Ty);
 
-    Acc = CreateSMLADCall(PMul0->VecLd, PMul1->VecLd, Acc, PMul1->Exchange,
-                          InsertAfter);
+    Acc = CreateSMLAD(WideLHS, WideRHS, Acc, RHSMul->Exchange, InsertAfter);
     InsertAfter = cast<Instruction>(Acc);
   }
   R.UpdateRoot(cast<Instruction>(Acc));

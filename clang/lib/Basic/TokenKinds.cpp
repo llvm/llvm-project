@@ -45,3 +45,13 @@ const char *tok::getKeywordSpelling(TokenKind Kind) {
   }
   return nullptr;
 }
+
+bool tok::isPragmaAnnotation(TokenKind Kind) {
+  switch (Kind) {
+#define PRAGMA_ANNOTATION(X) case annot_ ## X: return true;
+#include "clang/Basic/TokenKinds.def"
+  default:
+    break;
+  }
+  return false;
+}

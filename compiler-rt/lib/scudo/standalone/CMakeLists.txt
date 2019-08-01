@@ -65,36 +65,40 @@ set(SCUDO_HEADERS
   tsd_shared.h
   vector.h
   wrappers_c_checks.h
-  wrappers_c.h)
+  wrappers_c.h
+  )
 
 set(SCUDO_SOURCES
-  checksum.cc
-  crc32_hw.cc
-  common.cc
-  flags.cc
-  flags_parser.cc
-  fuchsia.cc
-  linux.cc
-  report.cc
-  secondary.cc
-  string_utils.cc)
+  checksum.cpp
+  crc32_hw.cpp
+  common.cpp
+  flags.cpp
+  flags_parser.cpp
+  fuchsia.cpp
+  linux.cpp
+  report.cpp
+  secondary.cpp
+  string_utils.cpp
+  )
 
-# Enable the SSE 4.2 instruction set for crc32_hw.cc, if available.
+# Enable the SSE 4.2 instruction set for crc32_hw.cpp, if available.
 if (COMPILER_RT_HAS_MSSE4_2_FLAG)
-  set_source_files_properties(crc32_hw.cc PROPERTIES COMPILE_FLAGS -msse4.2)
+  set_source_files_properties(crc32_hw.cpp PROPERTIES COMPILE_FLAGS -msse4.2)
 endif()
 
-# Enable the AArch64 CRC32 feature for crc32_hw.cc, if available.
+# Enable the AArch64 CRC32 feature for crc32_hw.cpp, if available.
 # Note that it is enabled by default starting with armv8.1-a.
 if (COMPILER_RT_HAS_MCRC_FLAG)
-  set_source_files_properties(crc32_hw.cc PROPERTIES COMPILE_FLAGS -mcrc)
+  set_source_files_properties(crc32_hw.cpp PROPERTIES COMPILE_FLAGS -mcrc)
 endif()
 
 set(SCUDO_SOURCES_C_WRAPPERS
-  wrappers_c.cc)
+  wrappers_c.cpp
+  )
 
 set(SCUDO_SOURCES_CXX_WRAPPERS
-  wrappers_cpp.cc)
+  wrappers_cpp.cpp
+  )
 
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
   add_compiler_rt_object_libraries(RTScudoStandalone

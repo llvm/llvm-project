@@ -2567,6 +2567,7 @@ TEST(NoCompileCompletionTest, WithIndex) {
         void foo() {
         xx^
         }
+        }
       )cpp",
       Syms);
   EXPECT_THAT(Results.Completions,
@@ -2583,6 +2584,7 @@ TEST(NoCompileCompletionTest, WithIndex) {
         using namespace b;
         void foo() {
         xx^
+        }
         }
       )cpp",
       Syms, Opts);
@@ -2601,6 +2603,7 @@ TEST(NoCompileCompletionTest, WithIndex) {
         void foo() {
         b::xx^
         }
+        }
       )cpp",
       Syms, Opts);
   EXPECT_THAT(Results.Completions,
@@ -2613,6 +2616,7 @@ TEST(NoCompileCompletionTest, WithIndex) {
         using namespace b;
         void foo() {
         ::a::xx^
+        }
         }
       )cpp",
       Syms, Opts);

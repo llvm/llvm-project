@@ -3,7 +3,7 @@
 #include <memory.h>
 
 // A reproducer for a known issue.
-// See reference to double_race.cc in tsan_rtl_report.cc for an explanation.
+// See reference to double_race.cc in tsan_rtl_report.cpp for an explanation.
 
 char buf[16];
 volatile int nreport;

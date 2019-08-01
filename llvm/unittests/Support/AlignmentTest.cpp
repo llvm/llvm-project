@@ -29,7 +29,7 @@ TEST(AlignmentTest, MaybeAlignDefaultCTor) {
 }
 
 TEST(AlignmentTest, ValidCTors) {
-  for (size_t Value : getValidAlignments()) {
+  for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Align(Value).value(), Value);
     EXPECT_EQ((*MaybeAlign(Value)).value(), Value);
   }
@@ -45,7 +45,7 @@ TEST(AlignmentTest, CheckMaybeAlignHasValue) {
 }
 
 TEST(AlignmentTest, Division) {
-  for (size_t Value : getValidAlignments()) {
+  for (uint64_t Value : getValidAlignments()) {
     if (Value > 1) {
       EXPECT_EQ(Align(Value) / 2, Value / 2);
       EXPECT_EQ(MaybeAlign(Value) / 2, Value / 2);
@@ -89,7 +89,7 @@ TEST(AlignmentTest, AlignTo) {
 }
 
 TEST(AlignmentTest, Log2) {
-  for (size_t Value : getValidAlignments()) {
+  for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Log2(Align(Value)), Log2_64(Value));
     EXPECT_EQ(Log2(MaybeAlign(Value)), Log2_64(Value));
   }
@@ -122,7 +122,7 @@ TEST(AlignmentTest, MinAlign) {
 }
 
 TEST(AlignmentTest, Encode_Decode) {
-  for (size_t Value : getValidAlignments()) {
+  for (uint64_t Value : getValidAlignments()) {
     {
       Align Actual(Value);
       Align Expected = decodeMaybeAlign(encode(Actual)).getValue();
@@ -249,14 +249,14 @@ TEST(AlignmentDeathTest, Division) {
 
 TEST(AlignmentDeathTest, InvalidCTors) {
   EXPECT_DEATH((Align(0)), "Value must not be 0");
-  for (size_t Value : getNonPowerOfTwo()) {
+  for (uint64_t Value : getNonPowerOfTwo()) {
     EXPECT_DEATH((Align(Value)), "Alignment is not a power of 2");
     EXPECT_DEATH((MaybeAlign(Value)), "Alignment is not 0 or a power of 2");
   }
 }
 
 TEST(AlignmentDeathTest, ComparisonsWithZero) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     EXPECT_DEATH((void)(Align(Value) == 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) != 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) >= 0), ".* should be defined");
@@ -267,7 +267,7 @@ TEST(AlignmentDeathTest, ComparisonsWithZero) {
 }
 
 TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     // MaybeAlign is allowed to be == or != 0
     (void)(MaybeAlign(Value) == 0);
     (void)(MaybeAlign(Value) != 0);
@@ -279,7 +279,7 @@ TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
 }
 
 TEST(AlignmentDeathTest, CompareAlignToUndefMaybeAlign) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     EXPECT_DEATH((void)(Align(Value) == MaybeAlign(0)), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) != MaybeAlign(0)), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) >= MaybeAlign(0)), ".* should be defined");

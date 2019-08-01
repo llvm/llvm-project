@@ -165,9 +165,9 @@ private:
   static unsigned getNewOpcode(const CombineInfo &CI);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI);
   const TargetRegisterClass *getTargetRegisterClass(const CombineInfo &CI);
-  unsigned getOpcodeWidth(const MachineInstr &MI);
-  InstClassEnum getInstClass(unsigned Opc);
-  unsigned getRegs(unsigned Opc);
+  unsigned getOpcodeWidth(const MachineInstr &MI) const;
+  InstClassEnum getInstClass(unsigned Opc) const;
+  unsigned getRegs(unsigned Opc) const;
 
   bool findMatchingInst(CombineInfo &CI);
 
@@ -394,7 +394,7 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
   }
 }
 
-unsigned SILoadStoreOptimizer::getOpcodeWidth(const MachineInstr &MI) {
+unsigned SILoadStoreOptimizer::getOpcodeWidth(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
 
   if (TII->isMUBUF(MI)) {
@@ -413,7 +413,7 @@ unsigned SILoadStoreOptimizer::getOpcodeWidth(const MachineInstr &MI) {
   }
 }
 
-InstClassEnum SILoadStoreOptimizer::getInstClass(unsigned Opc) {
+InstClassEnum SILoadStoreOptimizer::getInstClass(unsigned Opc) const {
   if (TII->isMUBUF(Opc)) {
     const int baseOpcode = AMDGPU::getMUBUFBaseOpcode(Opc);
 
@@ -464,7 +464,7 @@ InstClassEnum SILoadStoreOptimizer::getInstClass(unsigned Opc) {
   }
 }
 
-unsigned SILoadStoreOptimizer::getRegs(unsigned Opc) {
+unsigned SILoadStoreOptimizer::getRegs(unsigned Opc) const {
   if (TII->isMUBUF(Opc)) {
     unsigned result = 0;
 

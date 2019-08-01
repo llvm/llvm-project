@@ -710,6 +710,12 @@ public:
     return Arguments + NumArgs;
   }
 
+  Argument* getArg(unsigned i) const {
+    assert (i < NumArgs && "getArg() out of range!");
+    CheckLazyArguments();
+    return Arguments + i;
+  }
+
   iterator_range<arg_iterator> args() {
     return make_range(arg_begin(), arg_end());
   }

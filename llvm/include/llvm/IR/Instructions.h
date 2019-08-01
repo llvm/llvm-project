@@ -1764,6 +1764,10 @@ public:
   void setTrueValue(Value *V) { Op<1>() = V; }
   void setFalseValue(Value *V) { Op<2>() = V; }
 
+  /// Swap the true and false values of the select instruction.
+  /// This doesn't swap prof metadata.
+  void swapValues() { Op<1>().swap(Op<2>()); }
+
   /// Return a string if the specified operands are invalid
   /// for a select operation, otherwise return null.
   static const char *areInvalidOperands(Value *Cond, Value *True, Value *False);

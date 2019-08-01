@@ -26,10 +26,10 @@ int main() {
   assert(__msan_test_shadow(b + 3, 1) == -1);
   __msan_check_mem_is_initialized(b, 4);
   // CHECK: use-of-uninitialized-value
-  // CHECK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-2]]
+  // CHECK:   {{in main.*msan_copy_shadow.cpp:}}[[@LINE-2]]
   // CHECK: Uninitialized value was stored to memory at
-  // CHECK-FULL-STACK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-8]]
-  // CHECK-SHORT-STACK:   {{in __msan_copy_shadow .*msan_interceptors.cc:}}
+  // CHECK-FULL-STACK:   {{in main.*msan_copy_shadow.cpp:}}[[@LINE-8]]
+  // CHECK-SHORT-STACK:   {{in __msan_copy_shadow .*msan_interceptors.cpp:}}
   // CHECK: Uninitialized value was created by a heap allocation
-  // CHECK:   {{in main.*msan_copy_shadow.cc:}}[[@LINE-23]]
+  // CHECK:   {{in main.*msan_copy_shadow.cpp:}}[[@LINE-23]]
 }

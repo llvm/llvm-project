@@ -1329,6 +1329,49 @@ define i32 @PR23757(i32 %x) {
   ret i32 %sel
 }
 
+define i32 @PR23757_swapped(i32 %x) {
+; CHECK-LABEL: @PR23757_swapped(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -2147483648
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 2147483647
+  %add = add nsw i32 %x, 1
+  %sel = select i1 %cmp, i32 %add, i32 -2147483648
+  ret i32 %sel
+}
+
+define i32 @PR23757_ne(i32 %x, i1* %p) {
+; CHECK-LABEL: @PR23757_ne(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    store i1 [[CMP]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -2147483648, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp ne i32 %x, 2147483647
+  store i1 %cmp, i1* %p ; thwart predicate canonicalization
+  %add = add nsw i32 %x, 1
+  %sel = select i1 %cmp, i32 -2147483648, i32 %add
+  ret i32 %sel
+}
+
+define i32 @PR23757_ne_swapped(i32 %x, i1* %p) {
+; CHECK-LABEL: @PR23757_ne_swapped(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    store i1 [[CMP]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -2147483648
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp ne i32 %x, 2147483647
+  store i1 %cmp, i1* %p ; thwart predicate canonicalization
+  %add = add nsw i32 %x, 1
+  %sel = select i1 %cmp, i32 %add, i32 -2147483648
+  ret i32 %sel
+}
+
 ; max(max(~a, -1), -1) --> ~min(a, 0)
 
 define i32 @PR27137(i32 %a) {

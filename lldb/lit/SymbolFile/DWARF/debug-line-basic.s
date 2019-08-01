@@ -1,7 +1,7 @@
 # REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld -z separate-code %t.o -o %t
 # RUN: %lldb %t -o "image dump line-table -v a.c" -o exit | FileCheck %s
 
 
