@@ -851,6 +851,15 @@ struct __declspec(dllexport) Baz {
 // Baz's operator=, causing instantiation of Foo<int> after which
 // ActOnFinishCXXNonNestedClass is called, and we would bite our own tail.
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc dereferenceable(1) %"struct.InClassInits::Baz"* @"??4Baz@InClassInits@@QAEAAU01@ABU01@@Z"
+
+// Trying to define the explicitly defaulted ctor must be delayed until the
+// in-class initializer for x has been processed.
+struct PR40006 {
+  __declspec(dllexport) PR40006() = default;
+  int x = 42;
+};
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.InClassInits::PR40006"* @"??0PR40006@InClassInits@@QAE@XZ"
+
 }
 
 // We had an issue where instantiating A would force emission of B's delayed

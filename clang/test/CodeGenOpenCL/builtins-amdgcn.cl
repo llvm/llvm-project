@@ -9,6 +9,7 @@ typedef unsigned short ushort;
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 typedef ushort __attribute__((ext_vector_type(2))) ushort2;
+typedef uint __attribute__((ext_vector_type(4))) uint4;
 
 // CHECK-LABEL: @test_div_scale_f64
 // CHECK: call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
@@ -652,6 +653,48 @@ kernel void test_cvt_pk_u16(global ushort2* out, uint src0, uint src1) {
 // CHECK: tail call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src0, i32 %src1, i32 %src2)
 kernel void test_cvt_pk_u8_f32(global uint* out, float src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_cvt_pk_u8_f32(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_sad_u8(
+// CHECK: tail call i32 @llvm.amdgcn.sad.u8(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_sad_u8(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_sad_u8(src0, src1, src2);
+}
+
+// CHECK-LABEL: test_msad_u8(
+// CHECK: call i32 @llvm.amdgcn.msad.u8(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_msad_u8(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_msad_u8(src0, src1, src2);
+}
+
+// CHECK-LABEL: test_sad_hi_u8(
+// CHECK: call i32 @llvm.amdgcn.sad.hi.u8(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_sad_hi_u8(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_sad_hi_u8(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_sad_u16(
+// CHECK: call i32 @llvm.amdgcn.sad.u16(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_sad_u16(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_sad_u16(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_qsad_pk_u16_u8(
+// CHECK: call i64 @llvm.amdgcn.qsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+kernel void test_qsad_pk_u16_u8(global ulong* out, ulong src0, uint src1, ulong src2) {
+  *out = __builtin_amdgcn_qsad_pk_u16_u8(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_mqsad_pk_u16_u8(
+// CHECK: call i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+kernel void test_mqsad_pk_u16_u8(global ulong* out, ulong src0, uint src1, ulong src2) {
+  *out = __builtin_amdgcn_mqsad_pk_u16_u8(src0, src1, src2);
+}
+
+// CHECK-LABEL: test_mqsad_u32_u8(
+// CHECK: call <4 x i32> @llvm.amdgcn.mqsad.u32.u8(i64 %src0, i32 %src1, <4 x i32> %src2)
+kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 src2) {
+  *out = __builtin_amdgcn_mqsad_u32_u8(src0, src1, src2);
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

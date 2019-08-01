@@ -1932,6 +1932,7 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
   case AArch64::BI__builtin_arm_dmb:
   case AArch64::BI__builtin_arm_dsb:
   case AArch64::BI__builtin_arm_isb: l = 0; u = 15; break;
+  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
@@ -10199,7 +10200,8 @@ static bool IsSameFloatAfterCast(const APValue &value,
           IsSameFloatAfterCast(value.getComplexFloatImag(), Src, Tgt));
 }
 
-static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC);
+static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
+                                       bool IsListInit = false);
 
 static bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
@@ -11160,9 +11162,10 @@ static bool isObjCSignedCharBool(Sema &S, QualType Ty) {
          S.getLangOpts().ObjC && S.NSAPIObj->isObjCBOOLType(Ty);
 }
 
-static void
-CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
-                        bool *ICContext = nullptr) {
+static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
+                                    SourceLocation CC,
+                                    bool *ICContext = nullptr,
+                                    bool IsListInit = false) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = S.Context.getCanonicalType(E->getType()).getTypePtr();
@@ -11404,6 +11407,54 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
     }
   }
 
+  // If we are casting an integer type to a floating point type without
+  // initialization-list syntax, we might lose accuracy if the floating
+  // point type has a narrower significand than the integer type.
+  if (SourceBT && TargetBT && SourceBT->isIntegerType() &&
+      TargetBT->isFloatingType() && !IsListInit) {
+    // Determine the number of precision bits in the source integer type.
+    IntRange SourceRange = GetExprRange(S.Context, E, S.isConstantEvaluated());
+    unsigned int SourcePrecision = SourceRange.Width;
+
+    // Determine the number of precision bits in the
+    // target floating point type.
+    unsigned int TargetPrecision = llvm::APFloatBase::semanticsPrecision(
+        S.Context.getFloatTypeSemantics(QualType(TargetBT, 0)));
+
+    if (SourcePrecision > 0 && TargetPrecision > 0 &&
+        SourcePrecision > TargetPrecision) {
+
+      llvm::APSInt SourceInt;
+      if (E->isIntegerConstantExpr(SourceInt, S.Context)) {
+        // If the source integer is a constant, convert it to the target
+        // floating point type. Issue a warning if the value changes
+        // during the whole conversion.
+        llvm::APFloat TargetFloatValue(
+            S.Context.getFloatTypeSemantics(QualType(TargetBT, 0)));
+        llvm::APFloat::opStatus ConversionStatus =
+            TargetFloatValue.convertFromAPInt(
+                SourceInt, SourceBT->isSignedInteger(),
+                llvm::APFloat::rmNearestTiesToEven);
+
+        if (ConversionStatus != llvm::APFloat::opOK) {
+          std::string PrettySourceValue = SourceInt.toString(10);
+          SmallString<32> PrettyTargetValue;
+          TargetFloatValue.toString(PrettyTargetValue, TargetPrecision);
+
+          S.DiagRuntimeBehavior(
+              E->getExprLoc(), E,
+              S.PDiag(diag::warn_impcast_integer_float_precision_constant)
+                  << PrettySourceValue << PrettyTargetValue << E->getType() << T
+                  << E->getSourceRange() << clang::SourceRange(CC));
+        }
+      } else {
+        // Otherwise, the implicit conversion may lose precision.
+        DiagnoseImpCast(S, E, T, CC,
+                        diag::warn_impcast_integer_float_precision);
+      }
+    }
+  }
+
   DiagnoseNullConversion(S, E, T, CC);
 
   S.DiscardMisalignedMemberAddress(Target, E);
@@ -11594,10 +11645,16 @@ static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
 /// AnalyzeImplicitConversions - Find and report any interesting
 /// implicit conversions in the given expression.  There are a couple
 /// of competing diagnostics here, -Wconversion and -Wsign-compare.
-static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
-                                       SourceLocation CC) {
+static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
+                                       bool IsListInit/*= false*/) {
   QualType T = OrigE->getType();
   Expr *E = OrigE->IgnoreParenImpCasts();
+
+  // Propagate whether we are in a C++ list initialization expression.
+  // If so, we do not issue warnings for implicit int-float conversion
+  // precision loss, because C++11 narrowing already handles it.
+  IsListInit =
+      IsListInit || (isa<InitListExpr>(OrigE) && S.getLangOpts().CPlusPlus);
 
   if (E->isTypeDependent() || E->isValueDependent())
     return;
@@ -11618,7 +11675,7 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
   // The non-canonical typecheck is just an optimization;
   // CheckImplicitConversion will filter out dead implicit conversions.
   if (E->getType() != T)
-    CheckImplicitConversion(S, E, T, CC);
+    CheckImplicitConversion(S, E, T, CC, nullptr, IsListInit);
 
   // Now continue drilling into this expression.
 
@@ -11628,7 +11685,7 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
     // FIXME: Use a more uniform representation for this.
     for (auto *SE : POE->semantics())
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
-        AnalyzeImplicitConversions(S, OVE->getSourceExpr(), CC);
+        AnalyzeImplicitConversions(S, OVE->getSourceExpr(), CC, IsListInit);
   }
 
   // Skip past explicit casts.
@@ -11636,7 +11693,7 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
     E = CE->getSubExpr()->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
-    return AnalyzeImplicitConversions(S, E, CC);
+    return AnalyzeImplicitConversions(S, E, CC, IsListInit);
   }
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
@@ -11675,7 +11732,7 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
-    AnalyzeImplicitConversions(S, ChildExpr, CC);
+    AnalyzeImplicitConversions(S, ChildExpr, CC, IsListInit);
   }
 
   if (BO && BO->isLogicalOp()) {

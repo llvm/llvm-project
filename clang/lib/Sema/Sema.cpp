@@ -967,6 +967,7 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   // All dllexport classes should have been processed already.
   assert(DelayedDllExportClasses.empty());
+  assert(DelayedDllExportMemberFunctions.empty());
 
   // Remove file scoped decls that turned out to be used.
   UnusedFileScopedDecls.erase(
