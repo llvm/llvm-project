@@ -821,11 +821,10 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
 
-def skipIfSanitized(func):
+def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB itself under ASAN."""
-    def is_sanitized():
-        if (('DYLD_INSERT_LIBRARIES' in os.environ) and
-                'libclang_rt.asan' in os.environ['DYLD_INSERT_LIBRARIES']):
+    def is_asan():
+        if ('ASAN_OPTIONS' in os.environ):
             return "ASAN unsupported"
         return None
-    return skipTestIfFn(is_sanitized)(func)
+    return skipTestIfFn(is_asan)(func)
