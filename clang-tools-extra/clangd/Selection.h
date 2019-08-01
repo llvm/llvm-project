@@ -35,6 +35,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SELECTION_H
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -56,8 +57,9 @@ class ParsedAST;
 //
 // SelectionTree tries to behave sensibly in the presence of macros, but does
 // not model any preprocessor concepts: the output is a subset of the AST.
-// Currently comments, directives etc are treated as part of the lexically
-// containing AST node, (though we may want to change this in future).
+//
+// Comments, directives and whitespace are completely ignored.
+// Semicolons are also ignored, as the AST generally does not model them well.
 //
 // The SelectionTree owns the Node structures, but the ASTNode attributes
 // point back into the AST it was constructed with.
@@ -66,11 +68,13 @@ public:
   // Creates a selection tree at the given byte offset in the main file.
   // This is approximately equivalent to a range of one character.
   // (Usually, the character to the right of Offset, sometimes to the left).
-  SelectionTree(ASTContext &AST, unsigned Offset);
+  SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
+                unsigned Offset);
   // Creates a selection tree for the given range in the main file.
   // The range includes bytes [Start, End).
   // If Start == End, uses the same heuristics as SelectionTree(AST, Start).
-  SelectionTree(ASTContext &AST, unsigned Start, unsigned End);
+  SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
+                unsigned Start, unsigned End);
 
   // Describes to what extent an AST node is covered by the selection.
   enum Selection {

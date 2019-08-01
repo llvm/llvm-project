@@ -70,13 +70,13 @@ run_lint ${SANITIZER_INCLUDES_LINT_FILTER} ${SANITIZER_INCLUDES}/*.h &
 
 # Sanitizer_common
 COMMON_RTL=${COMPILER_RT}/lib/sanitizer_common
-run_lint ${COMMON_RTL_INC_LINT_FILTER} ${COMMON_RTL}/*.cc \
+run_lint ${COMMON_RTL_INC_LINT_FILTER} ${COMMON_RTL}/*.cpp \
                                        ${COMMON_RTL}/*.h \
-                                       ${COMMON_RTL}/tests/*.cc &
+                                       ${COMMON_RTL}/tests/*.cpp &
 
 # Interception
 INTERCEPTION=${COMPILER_RT}/lib/interception
-run_lint ${ASAN_RTL_LINT_FILTER} ${INTERCEPTION}/*.cc \
+run_lint ${ASAN_RTL_LINT_FILTER} ${INTERCEPTION}/*.cpp \
                                  ${INTERCEPTION}/*.h &
 
 # ASan

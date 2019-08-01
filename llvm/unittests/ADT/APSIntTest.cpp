@@ -153,8 +153,8 @@ TEST(APSIntTest, FromString) {
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 
 TEST(APSIntTest, StringDeath) {
-  EXPECT_DEATH(APSInt(""), "Invalid string length");
-  EXPECT_DEATH(APSInt("1a"), "Invalid character in digit string");
+  EXPECT_DEATH((void)APSInt(""), "Invalid string length");
+  EXPECT_DEATH((void)APSInt("1a"), "Invalid character in digit string");
 }
 
 #endif

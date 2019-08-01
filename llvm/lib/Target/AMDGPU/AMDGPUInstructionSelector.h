@@ -90,7 +90,7 @@ private:
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
                        SmallVectorImpl<GEPInfo> &AddrInfo) const;
   bool selectSMRD(MachineInstr &I, ArrayRef<GEPInfo> AddrInfo) const;
-  bool selectG_LOAD(MachineInstr &I) const;
+  bool selectG_LOAD(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_STORE(MachineInstr &I) const;
   bool selectG_BRCOND(MachineInstr &I) const;
@@ -132,6 +132,13 @@ private:
   selectMUBUFScratchOffen(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffset(MachineOperand &Root) const;
+
+  bool isDSOffsetLegal(const MachineRegisterInfo &MRI,
+                       const MachineOperand &Base,
+                       int64_t Offset, unsigned OffsetBits) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectDS1Addr1Offset(MachineOperand &Root) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

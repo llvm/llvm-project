@@ -18,15 +18,14 @@ using namespace clang::driver::types;
 
 struct TypeInfo {
   const char *Name;
-  const char *Flags;
   const char *TempSuffix;
   ID PreprocessedType;
   const llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> Phases;
 };
 
 static const TypeInfo TypeInfos[] = {
-#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, FLAGS, ...) \
-  { NAME, FLAGS, TEMP_SUFFIX, TY_##PP_TYPE, { __VA_ARGS__ }, },
+#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, ...) \
+  { NAME, TEMP_SUFFIX, TY_##PP_TYPE, { __VA_ARGS__ }, },
 #include "clang/Driver/Types.def"
 #undef TYPE
 };
@@ -90,7 +89,15 @@ bool types::onlyPrecompileType(ID Id) {
 }
 
 bool types::canTypeBeUserSpecified(ID Id) {
-  return strchr(getInfo(Id).Flags, 'u');
+  static const clang::driver::types::ID kStaticLangageTypes[] = {
+      TY_CUDA_DEVICE,   TY_HIP_DEVICE,    TY_PP_CHeader,
+      TY_PP_ObjCHeader, TY_PP_CXXHeader,  TY_PP_ObjCXXHeader,
+      TY_PP_CXXModule,  TY_LTO_IR,        TY_LTO_BC,
+      TY_Plist,         TY_RewrittenObjC, TY_RewrittenLegacyObjC,
+      TY_Remap,         TY_PCH,           TY_Object,
+      TY_Image,         TY_dSYM,          TY_Dependencies,
+      TY_CUDA_FATBIN,   TY_HIP_FATBIN};
+  return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
 bool types::appendSuffixForType(ID Id) {

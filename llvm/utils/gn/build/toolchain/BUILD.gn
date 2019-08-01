@@ -166,6 +166,8 @@ unix_toolchain("unix") {
   }
 }
 
+# This template defines a toolchain that uses just-built clang and lld
+# as compiler and linker.
 template("stage2_unix_toolchain") {
   unix_toolchain(target_name) {
     forward_variables_from(invoker, "*")

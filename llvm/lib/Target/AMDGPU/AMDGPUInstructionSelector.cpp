@@ -1243,10 +1243,22 @@ bool AMDGPUInstructionSelector::hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const {
   return false;
 }
 
-bool AMDGPUInstructionSelector::selectG_LOAD(MachineInstr &I) const {
-  // TODO: Can/should we insert m0 initialization here for DS instructions and
-  // call the normal selector?
-  return false;
+bool AMDGPUInstructionSelector::selectG_LOAD(MachineInstr &I,
+                                             CodeGenCoverage &CoverageInfo) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  const LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
+  unsigned AS = PtrTy.getAddressSpace();
+  if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) &&
+      STI.ldsRequiresM0Init()) {
+    // If DS instructions require M0 initializtion, insert it before selecting.
+    BuildMI(*BB, &I, I.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+      .addImm(-1);
+  }
+
+  return selectImpl(I, CoverageInfo);
 }
 
 bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
@@ -1364,7 +1376,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
       return true;
     return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_LOAD:
-    return selectImpl(I, CoverageInfo);
+    return selectG_LOAD(I, CoverageInfo);
   case TargetOpcode::G_SELECT:
     return selectG_SELECT(I);
   case TargetOpcode::G_STORE:
@@ -1698,6 +1710,22 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
            }}};
 }
 
+bool AMDGPUInstructionSelector::isDSOffsetLegal(const MachineRegisterInfo &MRI,
+                                                const MachineOperand &Base,
+                                                int64_t Offset,
+                                                unsigned OffsetBits) const {
+  if ((OffsetBits == 16 && !isUInt<16>(Offset)) ||
+      (OffsetBits == 8 && !isUInt<8>(Offset)))
+    return false;
+
+  if (STI.hasUsableDSOffset() || STI.unsafeDSOffsetFoldingEnabled())
+    return true;
+
+  // On Southern Islands instruction with a negative base value and an offset
+  // don't seem to work.
+  return signBitIsZero(Base, MRI);
+}
+
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectMUBUFScratchOffset(
     MachineOperand &Root) const {
@@ -1725,4 +1753,50 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
       [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffsetReg); }, // soffset
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }      // offset
   }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
+  MachineInstr *MI = Root.getParent();
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+  const MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+  if (!RootDef) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
+      }};
+  }
+
+  int64_t ConstAddr = 0;
+  if (isBaseWithConstantOffset(Root, MRI)) {
+    const MachineOperand &LHS = RootDef->getOperand(1);
+    const MachineOperand &RHS = RootDef->getOperand(2);
+    const MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
+    const MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
+    if (LHSDef && RHSDef) {
+      int64_t PossibleOffset =
+        RHSDef->getOperand(1).getCImm()->getSExtValue();
+      if (isDSOffsetLegal(MRI, LHS, PossibleOffset, 16)) {
+        // (add n0, c0)
+        return {{
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(PossibleOffset); }
+          }};
+      }
+    }
+  } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
+
+
+
+  } else if (mi_match(Root.getReg(), MRI, m_ICst(ConstAddr))) {
+
+
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
+    }};
 }

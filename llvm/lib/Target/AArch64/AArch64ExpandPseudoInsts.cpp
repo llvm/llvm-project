@@ -539,6 +539,23 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
             .add(MI.getOperand(1));
 
+    if (MI.getOperand(1).getTargetFlags() & AArch64II::MO_TAGGED) {
+      // MO_TAGGED on the page indicates a tagged address. Set the tag now.
+      // We do so by creating a MOVK that sets bits 48-63 of the register to
+      // (global address + 0x100000000 - PC) >> 48. This assumes that we're in
+      // the small code model so we can assume a binary size of <= 4GB, which
+      // makes the untagged PC relative offset positive. The binary must also be
+      // loaded into address range [0, 2^48). Both of these properties need to
+      // be ensured at runtime when using tagged addresses.
+      auto Tag = MI.getOperand(1);
+      Tag.setTargetFlags(AArch64II::MO_PREL | AArch64II::MO_G3);
+      Tag.setOffset(0x100000000);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVKXi), DstReg)
+          .addReg(DstReg)
+          .add(Tag)
+          .addImm(48);
+    }
+
     MachineInstrBuilder MIB2 =
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDXri))
             .add(MI.getOperand(0))

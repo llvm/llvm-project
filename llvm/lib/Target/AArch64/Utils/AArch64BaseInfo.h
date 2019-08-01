@@ -627,6 +627,14 @@ namespace AArch64II {
     /// MO_S - Indicates that the bits of the symbol operand represented by
     /// MO_G0 etc are signed.
     MO_S = 0x100,
+
+    /// MO_PREL - Indicates that the bits of the symbol operand represented by
+    /// MO_G0 etc are PC relative.
+    MO_PREL = 0x200,
+
+    /// MO_TAGGED - With MO_PAGE, indicates that the page includes a memory tag
+    /// in bits 56-63.
+    MO_TAGGED = 0x400,
   };
 } // end namespace AArch64II
 

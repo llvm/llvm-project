@@ -146,28 +146,23 @@ define float @fadd_const_multiuse_fmf(float %x) {
   ret float %a3
 }
 
-; DAGCombiner transforms this into: (x + 59.0) + (x + 17.0).
-; The machine combiner transforms this into a chain of 3 dependent adds:
-; ((x + 59.0) + 17.0) + x
-
-define float @fadd_const_multiuse_attr(float %x) #0 {
+; DAGCombiner transforms this into: (x + 17.0) + (x + 59.0).
+define float @fadd_const_multiuse_attr(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       // %bb.0:
-; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
 ; CHECK-DAG:     mov  [[W17:w[0-9]+]], #1109917696
-; CHECK-NEXT:    fmov [[FP59:s[0-9]+]], [[W59]]
+; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
 ; CHECK-NEXT:    fmov [[FP17:s[0-9]+]], [[W17]]
-; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP59]]
-; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], [[FP17]], [[TMP1]]
-; CHECK-NEXT:    fadd s0, s0, [[TMP2]]
+; CHECK-NEXT:    fmov [[FP59:s[0-9]+]], [[W59]]
+; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP17]]
+; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], s0, [[FP59]]
+; CHECK-NEXT:    fadd s0, [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret
-  %a1 = fadd float %x, 42.0
-  %a2 = fadd float %a1, 17.0
-  %a3 = fadd float %a1, %a2
+  %a1 = fadd fast float %x, 42.0
+  %a2 = fadd fast float %a1, 17.0
+  %a3 = fadd fast float %a1, %a2
   ret float %a3
 }
-
-attributes #0 = { "unsafe-fp-math"="true" }
 
 declare void @use(double)
 

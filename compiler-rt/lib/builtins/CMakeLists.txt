@@ -431,25 +431,7 @@ if(MINGW)
     arm/aeabi_uidivmod.S
     arm/aeabi_uldivmod.S
     arm/chkstk.S
-    divmoddi4.c
-    divmodsi4.c
-    divdi3.c
-    divsi3.c
-    fixdfdi.c
-    fixsfdi.c
-    fixunsdfdi.c
-    fixunssfdi.c
-    floatdidf.c
-    floatdisf.c
-    floatundidf.c
-    floatundisf.c
     mingw_fixfloat.c
-    moddi3.c
-    udivmoddi4.c
-    udivmodsi4.c
-    udivsi3.c
-    umoddi3.c
-    emutls.c
   )
   filter_builtin_sources(arm_SOURCES EXCLUDE arm_SOURCES "${arm_SOURCES};${GENERIC_SOURCES}")
 elseif(NOT WIN32)

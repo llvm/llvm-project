@@ -92,15 +92,13 @@ define i32 @test_02(i32 %x) {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND4_PREHEADER]], label [[FOR_END9:%.*]]
 ; CHECK:       for.end9:
-; CHECK-NEXT:    [[INC11:%.*]] = add nuw nsw i32 0, [[X]]
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND1_PREHEADER]], label [[RETURN_LOOPEXIT3:%.*]]
 ; CHECK:       return.loopexit:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       return.loopexit3:
-; CHECK-NEXT:    [[INC11_LCSSA:%.*]] = phi i32 [ [[INC11]], [[FOR_END9]] ]
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       return:
-; CHECK-NEXT:    ret i32 [[INC11_LCSSA]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
   br label %for.cond1.preheader

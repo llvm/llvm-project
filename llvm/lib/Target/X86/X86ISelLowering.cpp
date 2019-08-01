@@ -4058,11 +4058,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
-    if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
-      DAG.addHeapAllocSite(Chain.getNode(),
-                           CLI.CS->getMetadata("heapallocsite"));
-    }
-
     return Ret;
   }
 
@@ -4073,12 +4068,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-
-  // Save heapallocsite metadata.
-  if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
-    DAG.addHeapAllocSite(Chain.getNode(),
-                         CLI.CS->getMetadata("heapallocsite"));
-  }
 
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop;
@@ -40177,6 +40166,41 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32, St->getValue());
     return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
                              MVT::v16i8, St->getMemOperand());
+  }
+
+  // Look for a truncating store to a less than 128 bit vector that has been
+  // truncated from an any_extend_inreg from a 128 bit vector with the same
+  // element size. We can use a 64/32/16-bit extractelement and store that.
+  // Disabling this when widening legalization is in effect since the trunc
+  // store would have been unlikely to be created in that case. Only doing this
+  // when truncstore is legal since it would otherwise be decomposed below and
+  // then combined away.
+  if (St->isTruncatingStore() && TLI.isTruncStoreLegal(VT, StVT) &&
+      StoredVal.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
+      StoredVal.getValueType().is128BitVector() &&
+      !ExperimentalVectorWideningLegalization) {
+    EVT OrigVT = StoredVal.getOperand(0).getValueType();
+    if (OrigVT.is128BitVector() &&
+        OrigVT.getVectorElementType() == StVT.getVectorElementType()) {
+      unsigned StoreSize = StVT.getSizeInBits();
+      assert((128 % StoreSize == 0) && "Unexpected store size!");
+      MVT IntVT = MVT::getIntegerVT(StoreSize);
+      MVT CastVT = MVT::getVectorVT(IntVT, 128 / StoreSize);
+      StoredVal = DAG.getBitcast(CastVT, StoredVal.getOperand(0));
+      // Use extract_store for the 64-bit case to support 32-bit targets.
+      if (IntVT == MVT::i64) {
+        SDVTList Tys = DAG.getVTList(MVT::Other);
+        SDValue Ops[] = {St->getChain(), StoredVal, St->getBasePtr()};
+        return DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys, Ops,
+                                       IntVT, St->getMemOperand());
+      }
+
+      // Otherwise just use an extract and store.
+      StoredVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, IntVT, StoredVal,
+                              DAG.getIntPtrConstant(0, dl));
+      return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                          St->getMemOperand());
+    }
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.

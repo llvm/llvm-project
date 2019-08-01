@@ -194,6 +194,7 @@ def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
                               [SDNPCommutative]>;
 def ARMsubc          : SDNode<"ARMISD::SUBC",  SDTBinaryArithWithFlags>;
+def ARMlsls          : SDNode<"ARMISD::LSLS",  SDTBinaryArithWithFlags>;
 def ARMadde          : SDNode<"ARMISD::ADDE",  SDTBinaryArithWithFlagsInOut>;
 def ARMsube          : SDNode<"ARMISD::SUBE",  SDTBinaryArithWithFlagsInOut>;
 

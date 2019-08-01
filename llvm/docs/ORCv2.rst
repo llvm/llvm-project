@@ -153,8 +153,8 @@ Design Overview
 ORC's JIT'd program model aims to emulate the linking and symbol resolution
 rules used by the static and dynamic linkers. This allows ORC to JIT
 arbitrary LLVM IR, including IR produced by an ordinary static compiler (e.g.
-clang) that uses constructs like symbol linkage and visibility, and weak and
-common symbol definitions.
+clang) that uses constructs like symbol linkage and visibility, and weak [4]_
+and common symbol definitions.
 
 To see how this works, imagine a program ``foo`` which links against a pair
 of dynamic libraries: ``libA`` and ``libB``. On the command line, building this
@@ -326,7 +326,7 @@ prefix in LLVM 8.0, and have deprecation warnings attached in LLVM 9.0. In LLVM
 10.0 ORCv1 will be removed entirely.
 
 Transitioning from ORCv1 to ORCv2 should be easy for most clients. Most of the
-ORCv1 layers and utilities have ORCv2 counterparts[2]_ that can be directly
+ORCv1 layers and utilities have ORCv2 counterparts [2]_ that can be directly
 substituted. However there are some design differences between ORCv1 and ORCv2
 to be aware of:
 
@@ -497,8 +497,8 @@ locking must be done explicitly:
     }
 
 Clients wishing to maximize possibilities for concurrent compilation will want
-to create every new ThreadSafeModule on a new ThreadSafeContext. For this reason
-a convenience constructor for ThreadSafeModule is provided that implicitly
+to create every new ThreadSafeModule on a new ThreadSafeContext [3]_. For this
+reason a convenience constructor for ThreadSafeModule is provided that implicitly
 constructs a new ThreadSafeContext value from a std::unique_ptr<LLVMContext>:
 
   .. code-block:: c++
@@ -622,11 +622,11 @@ TBD: Speculative compilation. Object Caches.
 
 .. [3] Sharing ThreadSafeModules in a concurrent compilation can be dangerous:
        if interdependent modules are loaded on the same context, but compiled
-       on different threads a deadlock may occur (with each compile waiting for
-       the other(s) to complete, and the other(s) unable to proceed because the
-       context is locked).
+       on different threads a deadlock may occur, with each compile waiting for
+       the other to complete, and the other unable to proceed because the
+       context is locked.
 
-.. [4] Mostly. Weak definitions are handled correctly within dylibs, but if
-       multiple dylibs provide a weak definition of a symbol each will end up
-       with its own definition (similar to how weak symbols in Windows DLLs
-       behave). This will be fixed in the future.
+.. [4] Weak definitions are currently handled correctly within dylibs, but if
+       multiple dylibs provide a weak definition of a symbol then each will end
+       up with its own definition (similar to how weak definitions are handled
+       in Windows DLLs). This will be fixed in the future.

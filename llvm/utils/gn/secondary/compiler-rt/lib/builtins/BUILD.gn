@@ -11,8 +11,15 @@ declare_args() {
 
 static_library("builtins") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.builtins$crt_current_target_suffix"
+  if (current_os == "mac") {
+    output_name = "clang_rt.osx"
+  } else {
+    output_name = "clang_rt.builtins$crt_current_target_suffix"
+  }
+
   complete_static_lib = true
+  configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+
   cflags = [
     "-fPIC",
     "-fno-builtin",
@@ -24,7 +31,6 @@ static_library("builtins") {
     cflags += [ "-fomit-frame-pointer" ]
   }
   cflags_c = [ "-std=c11" ]
-  configs -= [ "//llvm/utils/gn/build:thin_archive" ]
 
   sources = [
     "absvdi2.c",
@@ -201,7 +207,23 @@ static_library("builtins") {
       "powixf2.c",
     ]
   }
-  if (target_os == "x86") {
+  if (target_cpu == "x86") {
+    sources -= [
+      "ashldi3.c",
+      "ashrdi3.c",
+      "divdi3.c",
+      "floatdidf.c",
+      "floatdisf.c",
+      "floatdixf.c",
+      "floatundidf.c",
+      "floatundisf.c",
+      "floatundixf.c",
+      "lshrdi3.c",
+      "moddi3.c",
+      "muldi3.c",
+      "udivdi3.c",
+      "umoddi3.c",
+    ]
     sources += [
       "i386/ashldi3.S",
       "i386/ashrdi3.S",
@@ -225,6 +247,14 @@ static_library("builtins") {
       ]
     }
   } else if (target_cpu == "x64") {
+    sources -= [
+      "floatdidf.c",
+      "floatdisf.c",
+      "floatdixf.c",
+      "floatundidf.c",
+      "floatundisf.c",
+      "floatundixf.c",
+    ]
     sources += [
       "x86_64/floatdidf.c",
       "x86_64/floatdisf.c",
@@ -242,65 +272,61 @@ static_library("builtins") {
   }
 
   if (target_cpu == "arm") {
-    sources += [
-      "arm/bswapdi2.S",
-      "arm/bswapsi2.S",
-      "arm/clzdi2.S",
-      "arm/clzsi2.S",
-      "arm/comparesf2.S",
-      "arm/divmodsi4.S",
-      "arm/divsi3.S",
-      "arm/modsi3.S",
-      "arm/sync_fetch_and_add_4.S",
-      "arm/sync_fetch_and_add_8.S",
-      "arm/sync_fetch_and_and_4.S",
-      "arm/sync_fetch_and_and_8.S",
-      "arm/sync_fetch_and_max_4.S",
-      "arm/sync_fetch_and_max_8.S",
-      "arm/sync_fetch_and_min_4.S",
-      "arm/sync_fetch_and_min_8.S",
-      "arm/sync_fetch_and_nand_4.S",
-      "arm/sync_fetch_and_nand_8.S",
-      "arm/sync_fetch_and_or_4.S",
-      "arm/sync_fetch_and_or_8.S",
-      "arm/sync_fetch_and_sub_4.S",
-      "arm/sync_fetch_and_sub_8.S",
-      "arm/sync_fetch_and_umax_4.S",
-      "arm/sync_fetch_and_umax_8.S",
-      "arm/sync_fetch_and_umin_4.S",
-      "arm/sync_fetch_and_umin_8.S",
-      "arm/sync_fetch_and_xor_4.S",
-      "arm/sync_fetch_and_xor_8.S",
-      "arm/udivmodsi4.S",
-      "arm/udivsi3.S",
-      "arm/umodsi3.S",
-    ]
-    if (target_os == "mingw") {
+    if (target_os != "mingw") {
+      sources -= [
+        "bswapdi2.c",
+        "bswapsi2.c",
+        "clzdi2.c",
+        "clzsi2.c",
+        "comparesf2.c",
+        "divmodsi4.c",
+        "divsi3.c",
+        "modsi3.c",
+        "udivmodsi4.c",
+        "udivsi3.c",
+        "umodsi3.c",
+      ]
+      sources += [
+        "arm/bswapdi2.S",
+        "arm/bswapsi2.S",
+        "arm/clzdi2.S",
+        "arm/clzsi2.S",
+        "arm/comparesf2.S",
+        "arm/divmodsi4.S",
+        "arm/divsi3.S",
+        "arm/modsi3.S",
+        "arm/sync_fetch_and_add_4.S",
+        "arm/sync_fetch_and_add_8.S",
+        "arm/sync_fetch_and_and_4.S",
+        "arm/sync_fetch_and_and_8.S",
+        "arm/sync_fetch_and_max_4.S",
+        "arm/sync_fetch_and_max_8.S",
+        "arm/sync_fetch_and_min_4.S",
+        "arm/sync_fetch_and_min_8.S",
+        "arm/sync_fetch_and_nand_4.S",
+        "arm/sync_fetch_and_nand_8.S",
+        "arm/sync_fetch_and_or_4.S",
+        "arm/sync_fetch_and_or_8.S",
+        "arm/sync_fetch_and_sub_4.S",
+        "arm/sync_fetch_and_sub_8.S",
+        "arm/sync_fetch_and_umax_4.S",
+        "arm/sync_fetch_and_umax_8.S",
+        "arm/sync_fetch_and_umin_4.S",
+        "arm/sync_fetch_and_umin_8.S",
+        "arm/sync_fetch_and_xor_4.S",
+        "arm/sync_fetch_and_xor_8.S",
+        "arm/udivmodsi4.S",
+        "arm/udivsi3.S",
+        "arm/umodsi3.S",
+      ]
+    } else {
       sources += [
         "arm/aeabi_idivmod.S",
         "arm/aeabi_ldivmod.S",
         "arm/aeabi_uidivmod.S",
         "arm/aeabi_uldivmod.S",
         "arm/chkstk.S",
-        "divdi3.c",
-        "divmoddi4.c",
-        "divmodsi4.c",
-        "divsi3.c",
-        "emutls.c",
-        "fixdfdi.c",
-        "fixsfdi.c",
-        "fixunsdfdi.c",
-        "fixunssfdi.c",
-        "floatdidf.c",
-        "floatdisf.c",
-        "floatundidf.c",
-        "floatundisf.c",
         "mingw_fixfloat.c",
-        "moddi3.c",
-        "udivmoddi4.c",
-        "udivmodsi4.c",
-        "udivsi3.c",
-        "umoddi3.c",
       ]
     }
   }

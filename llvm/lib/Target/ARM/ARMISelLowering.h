@@ -103,6 +103,7 @@ class VectorType;
       ADDE,         // Add using carry
       SUBC,         // Sub with carry
       SUBE,         // Sub using carry
+      LSLS,         // Shift left producing carry
 
       VMOVRRD,      // double to two gprs.
       VMOVDRR,      // Two gprs to double.

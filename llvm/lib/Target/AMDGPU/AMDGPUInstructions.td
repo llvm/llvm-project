@@ -480,11 +480,13 @@ def atomic_store_local : LocalStore <atomic_store>;
 
 def load_align8_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
   let IsLoad = 1;
+  let IsNonExtLoad = 1;
   let MinAlignment = 8;
 }
 
 def load_align16_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
   let IsLoad = 1;
+  let IsNonExtLoad = 1;
   let MinAlignment = 16;
 }
 

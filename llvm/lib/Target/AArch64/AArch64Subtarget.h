@@ -191,6 +191,7 @@ protected:
   bool UseEL1ForTP = false;
   bool UseEL2ForTP = false;
   bool UseEL3ForTP = false;
+  bool AllowTaggedGlobals = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
   uint16_t CacheLineSize = 0;
@@ -452,11 +453,11 @@ public:
 
   /// ClassifyGlobalReference - Find the target operand flags that describe
   /// how a global value should be referenced for the current subtarget.
-  unsigned char ClassifyGlobalReference(const GlobalValue *GV,
-                                        const TargetMachine &TM) const;
+  unsigned ClassifyGlobalReference(const GlobalValue *GV,
+                                   const TargetMachine &TM) const;
 
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV,
-                                                const TargetMachine &TM) const;
+  unsigned classifyGlobalFunctionReference(const GlobalValue *GV,
+                                           const TargetMachine &TM) const;
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;

@@ -64,6 +64,18 @@ def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
 
+def gi_ds_1addr_1offset :
+    GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
+    GIComplexPatternEquiv<DS1Addr1Offset>;
+
+
+// Separate load nodes are defined to glue m0 initialization in
+// SelectionDAG. The GISel selector can just insert m0 initialization
+// directly before before selecting a glue-less load, so hide this
+// distinction.
+def : GINodeEquiv<G_LOAD, AMDGPUld_glue>;
+
+
 
 class GISelSop2Pat <
   SDPatternOperator node,

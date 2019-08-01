@@ -203,7 +203,7 @@ private:
 
   // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
   void materializeLargeCMVal(MachineInstr &I, const Value *V,
-                             unsigned char OpFlags) const;
+                             unsigned OpFlags) const;
 
   // Optimization methods.
   bool tryOptVectorShuffle(MachineInstr &I) const;
@@ -1060,7 +1060,7 @@ bool AArch64InstructionSelector::selectVaStartDarwin(
 }
 
 void AArch64InstructionSelector::materializeLargeCMVal(
-    MachineInstr &I, const Value *V, unsigned char OpFlags) const {
+    MachineInstr &I, const Value *V, unsigned OpFlags) const {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1668,7 +1668,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       // FIXME: we don't support TLS yet.
       return false;
     }
-    unsigned char OpFlags = STI.ClassifyGlobalReference(GV, TM);
+    unsigned OpFlags = STI.ClassifyGlobalReference(GV, TM);
     if (OpFlags & AArch64II::MO_GOT) {
       I.setDesc(TII.get(AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);

@@ -1,5 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-unsafe-fp-math -mattr=-vsx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck -check-prefix=CHECK-SAFE %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s
 
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -8,12 +7,8 @@ declare double @llvm.sqrt.f64(double)
 declare float @llvm.sqrt.f32(float)
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 
-define double @foo(double %a, double %b) nounwind {
-  %x = call double @llvm.sqrt.f64(double %b)
-  %r = fdiv double %a, %x
-  ret double %r
-
-; CHECK: @foo
+define double @foo_fmf(double %a, double %b) nounwind {
+; CHECK: @foo_fmf
 ; CHECK: frsqrte
 ; CHECK: fmul
 ; CHECK-NEXT: fmadd
@@ -25,34 +20,35 @@ define double @foo(double %a, double %b) nounwind {
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK: blr
-
-; CHECK-SAFE: @foo
-; CHECK-SAFE: fsqrt
-; CHECK-SAFE: fdiv
-; CHECK-SAFE: blr
+  %x = call fast double @llvm.sqrt.f64(double %b)
+  %r = fdiv fast double %a, %x
+  ret double %r
 }
 
-define double @no_estimate_refinement_f64(double %a, double %b) #0 {
+define double @foo_safe(double %a, double %b) nounwind {
+; CHECK: @foo_safe
+; CHECK: fsqrt
+; CHECK: fdiv
+; CHECK: blr
   %x = call double @llvm.sqrt.f64(double %b)
   %r = fdiv double %a, %x
   ret double %r
+}
 
+define double @no_estimate_refinement_f64(double %a, double %b) #0 {
 ; CHECK-LABEL: @no_estimate_refinement_f64
 ; CHECK: frsqrte
 ; CHECK-NOT: fmadd
 ; CHECK: fmul
 ; CHECK-NOT: fmadd
 ; CHECK: blr
+  %x = call fast double @llvm.sqrt.f64(double %b)
+  %r = fdiv fast double %a, %x
+  ret double %r
 }
 
-
-define double @foof(double %a, float %b) nounwind {
-  %x = call float @llvm.sqrt.f32(float %b)
-  %y = fpext float %x to double
-  %r = fdiv double %a, %y
-  ret double %r
-
-; CHECK: @foof
+define double @foof_fmf(double %a, float %b) nounwind {
+; CHECK: @foof_fmf
 ; CHECK-DAG: frsqrtes
 ; CHECK: fmuls
 ; CHECK-NEXT: fmadds
@@ -60,20 +56,25 @@ define double @foof(double %a, float %b) nounwind {
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @foof
-; CHECK-SAFE: fsqrts
-; CHECK-SAFE: fdiv
-; CHECK-SAFE: blr
+  %x = call fast float @llvm.sqrt.f32(float %b)
+  %y = fpext float %x to double
+  %r = fdiv fast double %a, %y
+  ret double %r
 }
 
-define float @food(float %a, double %b) nounwind {
-  %x = call double @llvm.sqrt.f64(double %b)
-  %y = fptrunc double %x to float
-  %r = fdiv float %a, %y
-  ret float %r
+define double @foof_safe(double %a, float %b) nounwind {
+; CHECK: @foof_safe
+; CHECK: fsqrts
+; CHECK: fdiv
+; CHECK: blr
+  %x = call float @llvm.sqrt.f32(float %b)
+  %y = fpext float %x to double
+  %r = fdiv double %a, %y
+  ret double %r
+}
 
-; CHECK: @foo
+define float @food_fmf(float %a, double %b) nounwind {
+; CHECK: @food_fmf
 ; CHECK-DAG: frsqrte
 ; CHECK: fmul
 ; CHECK-NEXT: fmadd
@@ -86,19 +87,25 @@ define float @food(float %a, double %b) nounwind {
 ; CHECK-NEXT: frsp
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @foo
-; CHECK-SAFE: fsqrt
-; CHECK-SAFE: fdivs
-; CHECK-SAFE: blr
+  %x = call fast double @llvm.sqrt.f64(double %b)
+  %y = fptrunc double %x to float
+  %r = fdiv fast float %a, %y
+  ret float %r
 }
 
-define float @goo(float %a, float %b) nounwind {
-  %x = call float @llvm.sqrt.f32(float %b)
-  %r = fdiv float %a, %x
+define float @food_safe(float %a, double %b) nounwind {
+; CHECK: @food_safe
+; CHECK: fsqrt
+; CHECK: fdivs
+; CHECK: blr
+  %x = call double @llvm.sqrt.f64(double %b)
+  %y = fptrunc double %x to float
+  %r = fdiv float %a, %y
   ret float %r
+}
 
-; CHECK: @goo
+define float @goo_fmf(float %a, float %b) nounwind {
+; CHECK: @goo_fmf
 ; CHECK-DAG: frsqrtes
 ; CHECK: fmuls
 ; CHECK-NEXT: fmadds
@@ -106,36 +113,37 @@ define float @goo(float %a, float %b) nounwind {
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @goo
-; CHECK-SAFE: fsqrts
-; CHECK-SAFE: fdivs
-; CHECK-SAFE: blr
+  %x = call fast float @llvm.sqrt.f32(float %b)
+  %r = fdiv fast float %a, %x
+  ret float %r
 }
 
-
-define float @no_estimate_refinement_f32(float %a, float %b) #0 {
+define float @goo_safe(float %a, float %b) nounwind {
+; CHECK: @goo_safe
+; CHECK: fsqrts
+; CHECK: fdivs
+; CHECK: blr
   %x = call float @llvm.sqrt.f32(float %b)
   %r = fdiv float %a, %x
   ret float %r
+}
 
+define float @no_estimate_refinement_f32(float %a, float %b) #0 {
 ; CHECK-LABEL: @no_estimate_refinement_f32
 ; CHECK: frsqrtes
 ; CHECK-NOT: fmadds
 ; CHECK: fmuls
 ; CHECK-NOT: fmadds
 ; CHECK: blr
+  %x = call fast float @llvm.sqrt.f32(float %b)
+  %r = fdiv fast float %a, %x
+  ret float %r
 }
 
 ; Recognize that this is rsqrt(a) * rcp(b) * c, 
 ; not 1 / ( 1 / sqrt(a)) * rcp(b) * c.
-define float @rsqrt_fmul(float %a, float %b, float %c) {
-  %x = call float @llvm.sqrt.f32(float %a)
-  %y = fmul float %x, %b 
-  %z = fdiv float %c, %y
-  ret float %z
-
-; CHECK: @rsqrt_fmul
+define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
+; CHECK: @rsqrt_fmul_fmf
 ; CHECK-DAG: frsqrtes
 ; CHECK-DAG: fres
 ; CHECK-DAG: fnmsubs
@@ -146,32 +154,45 @@ define float @rsqrt_fmul(float %a, float %b, float %c) {
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @rsqrt_fmul
-; CHECK-SAFE: fsqrts
-; CHECK-SAFE: fmuls
-; CHECK-SAFE: fdivs
-; CHECK-SAFE: blr
+  %x = call fast float @llvm.sqrt.f32(float %a)
+  %y = fmul fast float %x, %b 
+  %z = fdiv fast float %c, %y
+  ret float %z
 }
 
-define <4 x float> @hoo(<4 x float> %a, <4 x float> %b) nounwind {
+; Recognize that this is rsqrt(a) * rcp(b) * c, 
+; not 1 / ( 1 / sqrt(a)) * rcp(b) * c.
+define float @rsqrt_fmul_safe(float %a, float %b, float %c) {
+; CHECK: @rsqrt_fmul_safe
+; CHECK: fsqrts
+; CHECK: fmuls
+; CHECK: fdivs
+; CHECK: blr
+  %x = call float @llvm.sqrt.f32(float %a)
+  %y = fmul float %x, %b 
+  %z = fdiv float %c, %y
+  ret float %z
+}
+
+define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK: @hoo_fmf
+; CHECK: vrsqrtefp
+  %x = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %r = fdiv fast <4 x float> %a, %x
+  ret <4 x float> %r
+}
+
+define <4 x float> @hoo_safe(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK: @hoo_safe
+; CHECK-NOT: vrsqrtefp
+; CHECK: blr
   %x = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
   %r = fdiv <4 x float> %a, %x
   ret <4 x float> %r
-
-; CHECK: @hoo
-; CHECK: vrsqrtefp
-
-; CHECK-SAFE: @hoo
-; CHECK-SAFE-NOT: vrsqrtefp
-; CHECK-SAFE: blr
 }
 
-define double @foo2(double %a, double %b) nounwind {
-  %r = fdiv double %a, %b
-  ret double %r
-
-; CHECK: @foo2
+define double @foo2_fmf(double %a, double %b) nounwind {
+; CHECK: @foo2_fmf
 ; CHECK-DAG: fre
 ; CHECK-DAG: fnmsub
 ; CHECK: fmadd
@@ -179,45 +200,54 @@ define double @foo2(double %a, double %b) nounwind {
 ; CHECK-NEXT: fmadd
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @foo2
-; CHECK-SAFE: fdiv
-; CHECK-SAFE: blr
+  %r = fdiv fast double %a, %b
+  ret double %r
 }
 
-define float @goo2(float %a, float %b) nounwind {
-  %r = fdiv float %a, %b
-  ret float %r
+define double @foo2_safe(double %a, double %b) nounwind {
+; CHECK: @foo2_safe
+; CHECK: fdiv
+; CHECK: blr
+  %r = fdiv double %a, %b
+  ret double %r
+}
 
-; CHECK: @goo2
+define float @goo2_fmf(float %a, float %b) nounwind {
+; CHECK: @goo2_fmf
 ; CHECK-DAG: fres
 ; CHECK-DAG: fnmsubs
 ; CHECK: fmadds
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
-
-; CHECK-SAFE: @goo2
-; CHECK-SAFE: fdivs
-; CHECK-SAFE: blr
+  %r = fdiv fast float %a, %b
+  ret float %r
 }
 
-define <4 x float> @hoo2(<4 x float> %a, <4 x float> %b) nounwind {
+define float @goo2_safe(float %a, float %b) nounwind {
+; CHECK: @goo2_safe
+; CHECK: fdivs
+; CHECK: blr
+  %r = fdiv float %a, %b
+  ret float %r
+}
+
+define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK: @hoo2_fmf
+; CHECK: vrefp
+  %r = fdiv fast <4 x float> %a, %b
+  ret <4 x float> %r
+}
+
+define <4 x float> @hoo2_safe(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK: @hoo2_safe
+; CHECK-NOT: vrefp
+; CHECK: blr
   %r = fdiv <4 x float> %a, %b
   ret <4 x float> %r
-
-; CHECK: @hoo2
-; CHECK: vrefp
-
-; CHECK-SAFE: @hoo2
-; CHECK-SAFE-NOT: vrefp
-; CHECK-SAFE: blr
 }
 
-define double @foo3(double %a) nounwind {
-  %r = call double @llvm.sqrt.f64(double %a)
-  ret double %r
-
-; CHECK: @foo3
+define double @foo3_fmf(double %a) nounwind {
+; CHECK: @foo3_fmf
 ; CHECK: fcmpu
 ; CHECK-DAG: frsqrte
 ; CHECK: fmul
@@ -229,17 +259,20 @@ define double @foo3(double %a) nounwind {
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK: blr
-
-; CHECK-SAFE: @foo3
-; CHECK-SAFE: fsqrt
-; CHECK-SAFE: blr
+  %r = call fast double @llvm.sqrt.f64(double %a)
+  ret double %r
 }
 
-define float @goo3(float %a) nounwind {
-  %r = call float @llvm.sqrt.f32(float %a)
-  ret float %r
+define double @foo3_safe(double %a) nounwind {
+; CHECK: @foo3_safe
+; CHECK: fsqrt
+; CHECK: blr
+  %r = call double @llvm.sqrt.f64(double %a)
+  ret double %r
+}
 
-; CHECK: @goo3
+define float @goo3_fmf(float %a) nounwind {
+; CHECK: @goo3_fmf
 ; CHECK: fcmpu
 ; CHECK-DAG: frsqrtes
 ; CHECK: fmuls
@@ -247,24 +280,32 @@ define float @goo3(float %a) nounwind {
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK: blr
-
-; CHECK-SAFE: @goo3
-; CHECK-SAFE: fsqrts
-; CHECK-SAFE: blr
+  %r = call fast float @llvm.sqrt.f32(float %a)
+  ret float %r
 }
 
-define <4 x float> @hoo3(<4 x float> %a) nounwind {
-  %r = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
-  ret <4 x float> %r
+define float @goo3_safe(float %a) nounwind {
+; CHECK: @goo3_safe
+; CHECK: fsqrts
+; CHECK: blr
+  %r = call float @llvm.sqrt.f32(float %a)
+  ret float %r
+}
 
-; CHECK: @hoo3
+define <4 x float> @hoo3_fmf(<4 x float> %a) nounwind {
+; CHECK: @hoo3_fmf
 ; CHECK: vrsqrtefp
 ; CHECK-DAG: vcmpeqfp
+  %r = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  ret <4 x float> %r
+}
 
-; CHECK-SAFE: @hoo3
-; CHECK-SAFE-NOT: vrsqrtefp
-; CHECK-SAFE: blr
+define <4 x float> @hoo3_safe(<4 x float> %a) nounwind {
+; CHECK: @hoo3_safe
+; CHECK-NOT: vrsqrtefp
+; CHECK: blr
+  %r = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  ret <4 x float> %r
 }
 
 attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
-

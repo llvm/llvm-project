@@ -219,8 +219,11 @@ define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %
 ; GCN-SAFE-DAG: v_mad_f32 [[A:v[0-9]+]],
 ; GCN-SAFE-DAG: v_cmp_ngt_f32_e32 {{.*}}, [[A]]
 ; GCN-SAFE-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -[[A]]
-; GCN-NSZ-DAG: v_mac_f32_e32 [[C:v[0-9]+]],
-; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[C]]
+; GCN-NSZ-DAG: v_rcp_f32_e32 [[A:v[0-9]+]],
+; GCN-NSZ-DAG: v_mov_b32_e32 [[B:v[0-9]+]],
+; GCN-NSZ-DAG: v_mov_b32_e32 [[C:v[0-9]+]],
+; GCN-NSZ-DAG: v_mul_f32_e32 [[D:v[0-9]+]],
+; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[D]]
 
 define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
 .entry:

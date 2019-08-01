@@ -3266,6 +3266,14 @@ def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
 
+// Implicit int -> float conversion precision loss warnings.
+def warn_impcast_integer_float_precision : Warning<
+  "implicit conversion from %0 to %1 may lose precision">,
+  InGroup<ImplicitIntFloatConversion>, DefaultIgnore;
+def warn_impcast_integer_float_precision_constant : Warning<
+  "implicit conversion from %2 to %3 changes value from %0 to %1">,
+  InGroup<ImplicitIntFloatConversion>;
+
 def warn_impcast_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
   InGroup<FloatOverflowConversion>, DefaultIgnore;

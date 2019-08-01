@@ -42,13 +42,15 @@ public:
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs,
-                 Register SwiftErrorVReg) const override;
+                 ArrayRef<ArgInfo> OrigArgs, Register SwiftErrorVReg,
+                 const MDNode *KnownCallees = nullptr) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs) const override {
-    return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs, 0);
+                 ArrayRef<ArgInfo> OrigArgs,
+                 const MDNode *KnownCallees = nullptr) const override {
+    return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs, 0,
+                     KnownCallees);
   }
 
   bool supportSwiftError() const override { return true; }
