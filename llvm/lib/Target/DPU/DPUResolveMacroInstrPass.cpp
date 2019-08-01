@@ -368,10 +368,19 @@ static bool resolveMacroInstructionsInMBB(MachineBasicBlock *MBB,
     case DPU::Jcci: {
       unsigned int OpCode =
           findJumpOpcodeForCondition(MBBIter->getOperand(0).getImm(), true);
-      BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(OpCode))
-          .add(MBBIter->getOperand(1))
-          .add(MBBIter->getOperand(2))
-          .add(MBBIter->getOperand(MBBIter->getNumOperands() - 1));
+      const MachineInstrBuilder &MIB =
+          BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(OpCode));
+      MIB.add(MBBIter->getOperand(1)).add(MBBIter->getOperand(2));
+
+      for (unsigned int i = MBBIter->getNumOperands() - 1; i >= 3; --i) {
+        MachineOperand &Operand = MBBIter->getOperand(i);
+
+        if (Operand.isMBB()) {
+          MIB.add(Operand);
+          break;
+        }
+      }
+
       break;
     }
     case DPU::Jcc64:
