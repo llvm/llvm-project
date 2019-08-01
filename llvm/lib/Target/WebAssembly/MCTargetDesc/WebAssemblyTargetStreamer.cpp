@@ -60,39 +60,10 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {
 
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
-void WebAssemblyTargetAsmStreamer::emitSignature(
-    const wasm::WasmSignature *Sig) {
-  OS << "(";
-  emitParamList(Sig);
-  OS << ") -> (";
-  emitReturnList(Sig);
-  OS << ")";
-}
-
-void WebAssemblyTargetAsmStreamer::emitParamList(
-    const wasm::WasmSignature *Sig) {
-  auto &Params = Sig->Params;
-  for (auto &Ty : Params) {
-    if (&Ty != &Params[0])
-      OS << ", ";
-    OS << WebAssembly::typeToString(Ty);
-  }
-}
-
-void WebAssemblyTargetAsmStreamer::emitReturnList(
-    const wasm::WasmSignature *Sig) {
-  auto &Returns = Sig->Returns;
-  for (auto &Ty : Returns) {
-    if (&Ty != &Returns[0])
-      OS << ", ";
-    OS << WebAssembly::typeToString(Ty);
-  }
-}
-
 void WebAssemblyTargetAsmStreamer::emitFunctionType(const MCSymbolWasm *Sym) {
   assert(Sym->isFunction());
   OS << "\t.functype\t" << Sym->getName() << " ";
-  emitSignature(Sym->getSignature());
+  OS << WebAssembly::signatureToString(Sym->getSignature());
   OS << "\n";
 }
 
@@ -107,7 +78,7 @@ void WebAssemblyTargetAsmStreamer::emitGlobalType(const MCSymbolWasm *Sym) {
 void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
   assert(Sym->isEvent());
   OS << "\t.eventtype\t" << Sym->getName() << " ";
-  emitParamList(Sym->getSignature());
+  OS << WebAssembly::typeListToString(Sym->getSignature()->Params);
   OS << "\n";
 }
 

@@ -973,8 +973,7 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
   // If we are swapping the select operands, swap the metadata too.
   assert(Sel.getTrueValue() == RHS && Sel.getFalseValue() == LHS &&
          "Unexpected results from matchSelectPattern");
-  Sel.setTrueValue(LHS);
-  Sel.setFalseValue(RHS);
+  Sel.swapValues();
   Sel.swapProfMetadata();
   return &Sel;
 }
@@ -1056,8 +1055,7 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   }
 
   // We are swapping the select operands, so swap the metadata too.
-  Sel.setTrueValue(FVal);
-  Sel.setFalseValue(TVal);
+  Sel.swapValues();
   Sel.swapProfMetadata();
   return &Sel;
 }

@@ -33,6 +33,14 @@ TEST(FunctionTest, hasLazyArguments) {
   // The argument list should be populated at first access.
   (void)F->arg_begin();
   EXPECT_FALSE(F->hasLazyArguments());
+
+  // Checking that getArg gets the arguments from F1 in the correct order.
+  unsigned i = 0;
+  for (Argument &A : F->args()) {
+    EXPECT_EQ(&A, F->getArg(i));
+    ++i;
+  }
+  EXPECT_FALSE(F->hasLazyArguments());
 }
 
 TEST(FunctionTest, stealArgumentListFrom) {

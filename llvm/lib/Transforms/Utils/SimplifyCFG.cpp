@@ -4189,6 +4189,7 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
           Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
           EraseTerminatorAndDCECond(BI);
+          Changed = true;
         } else if (BI->getSuccessor(1) == BB) {
           Builder.CreateAssumption(Cond);
           Builder.CreateBr(BI->getSuccessor(0));

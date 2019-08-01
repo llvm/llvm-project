@@ -267,46 +267,41 @@ public:
   /// isStackSlot() first.
   ///
   static bool isStackSlot(unsigned Reg) {
-    return int(Reg) >= (1 << 30);
+    return Register::isStackSlot(Reg);
   }
 
   /// Compute the frame index from a register value representing a stack slot.
   static int stackSlot2Index(unsigned Reg) {
-    assert(isStackSlot(Reg) && "Not a stack slot");
-    return int(Reg - (1u << 30));
+    return Register::stackSlot2Index(Reg);
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
   static unsigned index2StackSlot(int FI) {
-    assert(FI >= 0 && "Cannot hold a negative frame index.");
-    return FI + (1u << 30);
+    return Register::index2StackSlot(FI);
   }
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static bool isPhysicalRegister(unsigned Reg) {
-    assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return int(Reg) > 0;
+    return Register::isPhysicalRegister(Reg);
   }
 
   /// Return true if the specified register number is in
   /// the virtual register namespace.
   static bool isVirtualRegister(unsigned Reg) {
-    assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return int(Reg) < 0;
+    return Register::isVirtualRegister(Reg);
   }
 
   /// Convert a virtual register number to a 0-based index.
   /// The first virtual register in a function will get the index 0.
   static unsigned virtReg2Index(unsigned Reg) {
-    assert(isVirtualRegister(Reg) && "Not a virtual register");
-    return Reg & ~(1u << 31);
+    return Register::virtReg2Index(Reg);
   }
 
   /// Convert a 0-based index to a virtual register number.
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static unsigned index2VirtReg(unsigned Index) {
-    return Index | (1u << 31);
+    return Register::index2VirtReg(Index);
   }
 
   /// Return the size in bits of a register from class RC.

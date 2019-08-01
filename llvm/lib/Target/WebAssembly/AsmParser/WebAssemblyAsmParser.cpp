@@ -492,6 +492,27 @@ public:
       CurrentState = EndFunction;
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
+    } else if (Name == "call_indirect" || Name == "return_call_indirect") {
+      // This has a special TYPEINDEX operand which in text we
+      // represent as a signature, such that we can re-build this signature,
+      // attach it to an anonymous symbol, which is what WasmObjectWriter
+      // expects to be able to recreate the actual unique-ified type indices.
+      auto Loc = Parser.getTok();
+      auto Signature = make_unique<wasm::WasmSignature>();
+      if (parseSignature(Signature.get()))
+        return true;
+      auto &Ctx = getStreamer().getContext();
+      // The "true" here will cause this to be a nameless symbol.
+      MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
+      auto *WasmSym = cast<MCSymbolWasm>(Sym);
+      WasmSym->setSignature(Signature.get());
+      addSignature(std::move(Signature));
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+      const MCExpr *Expr = MCSymbolRefExpr::create(
+          WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      Operands.push_back(make_unique<WebAssemblyOperand>(
+          WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
+          WebAssemblyOperand::SymOp{Expr}));
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -742,6 +763,7 @@ public:
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override {
     MCInst Inst;
+    Inst.setLoc(IDLoc);
     unsigned MatchResult =
         MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
     switch (MatchResult) {

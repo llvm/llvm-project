@@ -17,11 +17,6 @@
 #include <type_traits>
 #include <utility>
 
-#ifndef __has_feature
-#define LLVM_DEFINED_HAS_FEATURE
-#define __has_feature(x) 0
-#endif
-
 namespace llvm {
 
 
@@ -201,10 +196,6 @@ class is_trivially_copyable<T*> : public std::true_type {
 #define LLVM_IS_FINAL(Ty) std::is_final<Ty>()
 #elif __has_feature(is_final) || LLVM_GNUC_PREREQ(4, 7, 0)
 #define LLVM_IS_FINAL(Ty) __is_final(Ty)
-#endif
-
-#ifdef LLVM_DEFINED_HAS_FEATURE
-#undef __has_feature
 #endif
 
 #endif // LLVM_SUPPORT_TYPE_TRAITS_H

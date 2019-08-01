@@ -3096,12 +3096,13 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
   MachineBasicBlock *RemainderBB;
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineBasicBlock::iterator Prev = std::prev(MI.getIterator());
+  // Apparently kill flags are only valid if the def is in the same block?
+  if (MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0))
+    Src->setIsKill(false);
 
   std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, *BB, true);
 
   MachineBasicBlock::iterator I = LoopBB->end();
-  MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0);
 
   const unsigned EncodedReg = AMDGPU::Hwreg::encodeHwreg(
     AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
@@ -3110,19 +3111,6 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
   BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
     .addImm(0)
     .addImm(EncodedReg);
-
-  // This is a pain, but we're not allowed to have physical register live-ins
-  // yet. Insert a pair of copies if the VGPR0 hack is necessary.
-  if (Src && TargetRegisterInfo::isPhysicalRegister(Src->getReg())) {
-    unsigned Data0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*BB, std::next(Prev), DL, TII->get(AMDGPU::COPY), Data0)
-      .add(*Src);
-
-    BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::COPY), Src->getReg())
-      .addReg(Data0);
-
-    MRI.setSimpleHint(Data0, Src->getReg());
-  }
 
   bundleInstWithWaitcnt(MI);
 
@@ -6734,15 +6722,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isNullValue() ?
       AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
     return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
-  }
-  case Intrinsic::amdgcn_s_sendmsg:
-  case Intrinsic::amdgcn_s_sendmsghalt: {
-    unsigned NodeOp = (IntrinsicID == Intrinsic::amdgcn_s_sendmsg) ?
-      AMDGPUISD::SENDMSG : AMDGPUISD::SENDMSGHALT;
-    Chain = copyToM0(DAG, Chain, DL, Op.getOperand(3));
-    SDValue Glue = Chain.getValue(1);
-    return DAG.getNode(NodeOp, DL, MVT::Other, Chain,
-                       Op.getOperand(2), Glue);
   }
   case Intrinsic::amdgcn_init_exec: {
     return DAG.getNode(AMDGPUISD::INIT_EXEC, DL, MVT::Other, Chain,

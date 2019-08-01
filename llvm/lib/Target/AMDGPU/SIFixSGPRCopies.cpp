@@ -619,13 +619,29 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::WQM:
       case AMDGPU::SOFT_WQM:
       case AMDGPU::WWM: {
-        // If the destination register is a physical register there isn't really
-        // much we can do to fix this.
-        if (!TargetRegisterInfo::isVirtualRegister(MI.getOperand(0).getReg()))
-          continue;
+        Register DstReg = MI.getOperand(0).getReg();
 
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, MRI);
+
+        if (!TargetRegisterInfo::isVirtualRegister(DstReg)) {
+          // If the destination register is a physical register there isn't
+          // really much we can do to fix this.
+          // Some special instructions use M0 as an input. Some even only use
+          // the first lane. Insert a readfirstlane and hope for the best.
+          if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
+            Register TmpReg
+              = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+
+            BuildMI(MBB, MI, MI.getDebugLoc(),
+                    TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpReg)
+              .add(MI.getOperand(1));
+            MI.getOperand(1).setReg(TmpReg);
+          }
+
+          continue;
+        }
+
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
           unsigned SrcReg = MI.getOperand(1).getReg();
           if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {

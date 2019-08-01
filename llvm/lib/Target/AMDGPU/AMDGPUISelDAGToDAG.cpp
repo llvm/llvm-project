@@ -2189,22 +2189,7 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
     glueCopyToM0(N, SDValue(M0Base, 0));
   }
 
-  SDValue V0;
   SDValue Chain = N->getOperand(0);
-  SDValue Glue;
-  if (HasVSrc) {
-    SDValue VSrc0 = N->getOperand(2);
-
-    // The manual doesn't mention this, but it seems only v0 works.
-    V0 = CurDAG->getRegister(AMDGPU::VGPR0, MVT::i32);
-
-    SDValue CopyToV0 = CurDAG->getCopyToReg(
-      N->getOperand(0), SL, V0, VSrc0,
-      N->getOperand(N->getNumOperands() - 1));
-    Chain = CopyToV0;
-    Glue = CopyToV0.getValue(1);
-  }
-
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
   // TODO: Can this just be removed from the instruction?
@@ -2213,13 +2198,10 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   const unsigned Opc = gwsIntrinToOpcode(IntrID);
   SmallVector<SDValue, 5> Ops;
   if (HasVSrc)
-    Ops.push_back(V0);
+    Ops.push_back(N->getOperand(2));
   Ops.push_back(OffsetField);
   Ops.push_back(GDS);
   Ops.push_back(Chain);
-
-  if (HasVSrc)
-    Ops.push_back(Glue);
 
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});

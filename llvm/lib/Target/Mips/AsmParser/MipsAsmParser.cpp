@@ -3625,8 +3625,25 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu, TmpReg, TmpReg,
                    BaseReg, IDLoc, STI);
     TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, LoOffset, IDLoc, STI);
+    return;
+  }
+
+  assert(OffsetOp.isExpr() && "expected expression operand kind");
+  if (inPicMode()) {
+    // FIXME:
+    // a) Fix lw/sw $reg, symbol($reg) instruction expanding.
+    // b) If expression includes offset (sym + number), do not
+    //    encode the offset into a relocation. Take it in account
+    //    in the last load/store instruction.
+    // c) Check that immediates of R_MIPS_GOT16/R_MIPS_LO16 relocations
+    //    do not exceed 16-bit.
+    // d) Use R_MIPS_GOT_PAGE/R_MIPS_GOT_OFST relocations instead
+    //    of R_MIPS_GOT_DISP in appropriate cases to reduce number
+    //    of GOT entries.
+    expandLoadAddress(TmpReg, Mips::NoRegister, OffsetOp, !ABI.ArePtrs64bit(),
+                      IDLoc, Out, STI);
+    TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, 0, IDLoc, STI);
   } else {
-    assert(OffsetOp.isExpr() && "expected expression operand kind");
     const MCExpr *ExprOffset = OffsetOp.getExpr();
     MCOperand LoOperand = MCOperand::createExpr(
         MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));

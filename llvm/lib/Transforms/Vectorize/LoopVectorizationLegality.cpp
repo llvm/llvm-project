@@ -88,6 +88,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   case HK_FORCE:
     return (Val <= 1);
   case HK_ISVECTORIZED:
+  case HK_PREDICATE:
     return (Val == 0 || Val == 1);
   }
   return false;
@@ -99,7 +100,9 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
     : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_UNROLL),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
-      IsVectorized("isvectorized", 0, HK_ISVECTORIZED), TheLoop(L), ORE(ORE) {
+      IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
+      Predicate("vectorize.predicate.enable", 0, HK_PREDICATE), TheLoop(L),
+      ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -250,7 +253,7 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width, &Interleave, &Force, &IsVectorized};
+  Hint *Hints[] = {&Width, &Interleave, &Force, &IsVectorized, &Predicate};
   for (auto H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))

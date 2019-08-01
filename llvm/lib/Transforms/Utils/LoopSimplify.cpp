@@ -835,12 +835,19 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   ScalarEvolution *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
+  auto *MSSAAnalysis = AM.getCachedResult<MemorySSAAnalysis>(F);
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSAAnalysis) {
+    auto *MSSA = &MSSAAnalysis->getMSSA();
+    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+  }
+
 
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
-  // after simplifying the loops. MemorySSA is not preserved either.
+  // after simplifying the loops. MemorySSA is preserved if it exists.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
     Changed |=
-        simplifyLoop(*I, DT, LI, SE, AC, nullptr, /*PreserveLCSSA*/ false);
+        simplifyLoop(*I, DT, LI, SE, AC, MSSAU.get(), /*PreserveLCSSA*/ false);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -853,6 +860,8 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   PA.preserve<SCEVAA>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<DependenceAnalysis>();
+  if (MSSAAnalysis)
+    PA.preserve<MemorySSAAnalysis>();
   // BPI maps conditional terminators to probabilities, LoopSimplify can insert
   // blocks, but it does so only by splitting existing blocks and edges. This
   // results in the interesting property that all new terminators inserted are

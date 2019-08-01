@@ -435,26 +435,16 @@ define <4 x i64> @mul_v4i64_17(<4 x i64> %a0) nounwind {
 define <8 x i32> @mul_v8i32_17(<8 x i32> %a0) nounwind {
 ; X86-LABEL: mul_v8i32_17:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pslld $4, %xmm2
-; X86-NEXT:    paddd %xmm0, %xmm2
-; X86-NEXT:    movdqa %xmm1, %xmm3
-; X86-NEXT:    pslld $4, %xmm3
-; X86-NEXT:    paddd %xmm1, %xmm3
-; X86-NEXT:    movdqa %xmm2, %xmm0
-; X86-NEXT:    movdqa %xmm3, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [17,17,17,17]
+; X86-NEXT:    pmulld %xmm2, %xmm0
+; X86-NEXT:    pmulld %xmm2, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v8i32_17:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pslld $4, %xmm2
-; X64-NEXT:    paddd %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    pslld $4, %xmm3
-; X64-NEXT:    paddd %xmm1, %xmm3
-; X64-NEXT:    movdqa %xmm2, %xmm0
-; X64-NEXT:    movdqa %xmm3, %xmm1
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [17,17,17,17]
+; X64-NEXT:    pmulld %xmm2, %xmm0
+; X64-NEXT:    pmulld %xmm2, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v8i32_17:
@@ -484,26 +474,16 @@ define <8 x i32> @mul_v8i32_17(<8 x i32> %a0) nounwind {
 define <16 x i16> @mul_v16i16_17(<16 x i16> %a0) nounwind {
 ; X86-LABEL: mul_v16i16_17:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    psllw $4, %xmm2
-; X86-NEXT:    paddw %xmm0, %xmm2
-; X86-NEXT:    movdqa %xmm1, %xmm3
-; X86-NEXT:    psllw $4, %xmm3
-; X86-NEXT:    paddw %xmm1, %xmm3
-; X86-NEXT:    movdqa %xmm2, %xmm0
-; X86-NEXT:    movdqa %xmm3, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [17,17,17,17,17,17,17,17]
+; X86-NEXT:    pmullw %xmm2, %xmm0
+; X86-NEXT:    pmullw %xmm2, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v16i16_17:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    psllw $4, %xmm2
-; X64-NEXT:    paddw %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    psllw $4, %xmm3
-; X64-NEXT:    paddw %xmm1, %xmm3
-; X64-NEXT:    movdqa %xmm2, %xmm0
-; X64-NEXT:    movdqa %xmm3, %xmm1
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [17,17,17,17,17,17,17,17]
+; X64-NEXT:    pmullw %xmm2, %xmm0
+; X64-NEXT:    pmullw %xmm2, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i16_17:
@@ -797,32 +777,16 @@ define <4 x i64> @mul_v4i64_neg1025(<4 x i64> %a0) nounwind {
 define <8 x i32> @mul_v8i32_neg33(<8 x i32> %a0) nounwind {
 ; X86-LABEL: mul_v8i32_neg33:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    pslld $5, %xmm3
-; X86-NEXT:    paddd %xmm0, %xmm3
-; X86-NEXT:    pxor %xmm2, %xmm2
-; X86-NEXT:    pxor %xmm0, %xmm0
-; X86-NEXT:    psubd %xmm3, %xmm0
-; X86-NEXT:    movdqa %xmm1, %xmm3
-; X86-NEXT:    pslld $5, %xmm3
-; X86-NEXT:    paddd %xmm1, %xmm3
-; X86-NEXT:    psubd %xmm3, %xmm2
-; X86-NEXT:    movdqa %xmm2, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [4294967263,4294967263,4294967263,4294967263]
+; X86-NEXT:    pmulld %xmm2, %xmm0
+; X86-NEXT:    pmulld %xmm2, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v8i32_neg33:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm3
-; X64-NEXT:    pslld $5, %xmm3
-; X64-NEXT:    paddd %xmm0, %xmm3
-; X64-NEXT:    pxor %xmm2, %xmm2
-; X64-NEXT:    pxor %xmm0, %xmm0
-; X64-NEXT:    psubd %xmm3, %xmm0
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    pslld $5, %xmm3
-; X64-NEXT:    paddd %xmm1, %xmm3
-; X64-NEXT:    psubd %xmm3, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm1
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [4294967263,4294967263,4294967263,4294967263]
+; X64-NEXT:    pmulld %xmm2, %xmm0
+; X64-NEXT:    pmulld %xmm2, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v8i32_neg33:
@@ -855,32 +819,16 @@ define <8 x i32> @mul_v8i32_neg33(<8 x i32> %a0) nounwind {
 define <16 x i16> @mul_v16i16_neg9(<16 x i16> %a0) nounwind {
 ; X86-LABEL: mul_v16i16_neg9:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    psllw $3, %xmm3
-; X86-NEXT:    paddw %xmm0, %xmm3
-; X86-NEXT:    pxor %xmm2, %xmm2
-; X86-NEXT:    pxor %xmm0, %xmm0
-; X86-NEXT:    psubw %xmm3, %xmm0
-; X86-NEXT:    movdqa %xmm1, %xmm3
-; X86-NEXT:    psllw $3, %xmm3
-; X86-NEXT:    paddw %xmm1, %xmm3
-; X86-NEXT:    psubw %xmm3, %xmm2
-; X86-NEXT:    movdqa %xmm2, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [65527,65527,65527,65527,65527,65527,65527,65527]
+; X86-NEXT:    pmullw %xmm2, %xmm0
+; X86-NEXT:    pmullw %xmm2, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v16i16_neg9:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm3
-; X64-NEXT:    psllw $3, %xmm3
-; X64-NEXT:    paddw %xmm0, %xmm3
-; X64-NEXT:    pxor %xmm2, %xmm2
-; X64-NEXT:    pxor %xmm0, %xmm0
-; X64-NEXT:    psubw %xmm3, %xmm0
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    psllw $3, %xmm3
-; X64-NEXT:    paddw %xmm1, %xmm3
-; X64-NEXT:    psubw %xmm3, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm1
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [65527,65527,65527,65527,65527,65527,65527,65527]
+; X64-NEXT:    pmullw %xmm2, %xmm0
+; X64-NEXT:    pmullw %xmm2, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i16_neg9:

@@ -339,14 +339,13 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
                                         const APInt &PtrDelta,
                                         unsigned Depth) const {
   unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
-  unsigned PtrAS = PtrA->getType()->getPointerAddressSpace();
   APInt OffsetA(PtrBitWidth, 0);
   APInt OffsetB(PtrBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 
-  if (PtrA->getType()->getPointerAddressSpace() != PtrAS ||
-      PtrB->getType()->getPointerAddressSpace() != PtrAS)
+  if (DL.getTypeStoreSizeInBits(PtrA->getType()) != PtrBitWidth ||
+      DL.getTypeStoreSizeInBits(PtrB->getType()) != PtrBitWidth)
     return false;
 
   APInt OffsetDelta = OffsetB - OffsetA;
