@@ -541,6 +541,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                                     bool RunProfileGen, bool IsCS,
                                     std::string ProfileFile,
                                     std::string ProfileRemappingFile) {
+  assert(Level != O0 && "Not expecting O0 here!");
   // Generally running simplification passes and the inliner with an high
   // threshold results in smaller executables, but there may be cases where
   // the size grows, so let's be conservative here and skip this simplification
@@ -571,34 +572,62 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     CGPipeline.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
 
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPipeline)));
+
+    // Delete anything that is now dead to make sure that we don't instrument
+    // dead code. Instrumentation can end up keeping dead code around and
+    // dramatically increase code size.
+    MPM.addPass(GlobalDCEPass());
   }
 
-  // Delete anything that is now dead to make sure that we don't instrument
-  // dead code. Instrumentation can end up keeping dead code around and
-  // dramatically increase code size.
-  MPM.addPass(GlobalDCEPass());
-
-  if (RunProfileGen) {
-    MPM.addPass(PGOInstrumentationGen(IsCS));
-
-    FunctionPassManager FPM;
-    FPM.addPass(
-        createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-
-    // Add the profile lowering pass.
-    InstrProfOptions Options;
-    if (!ProfileFile.empty())
-      Options.InstrProfileOutput = ProfileFile;
-    Options.DoCounterPromotion = true;
-    Options.UseBFIInPromotion = IsCS;
-    MPM.addPass(InstrProfiling(Options, IsCS));
-  } else if (!ProfileFile.empty()) {
+  if (!RunProfileGen) {
+    assert(!ProfileFile.empty() && "Profile use expecting a profile file!");
     MPM.addPass(PGOInstrumentationUse(ProfileFile, ProfileRemappingFile, IsCS));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+    return;
   }
+
+  // Perform PGO instrumentation.
+  MPM.addPass(PGOInstrumentationGen(IsCS));
+
+  FunctionPassManager FPM;
+  FPM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  // Add the profile lowering pass.
+  InstrProfOptions Options;
+  if (!ProfileFile.empty())
+    Options.InstrProfileOutput = ProfileFile;
+  // Do counter promotion at Level greater than O0.
+  Options.DoCounterPromotion = true;
+  Options.UseBFIInPromotion = IsCS;
+  MPM.addPass(InstrProfiling(Options, IsCS));
+}
+
+void PassBuilder::addPGOInstrPassesForO0(ModulePassManager &MPM,
+                                         bool DebugLogging, bool RunProfileGen,
+                                         bool IsCS, std::string ProfileFile,
+                                         std::string ProfileRemappingFile) {
+  if (!RunProfileGen) {
+    assert(!ProfileFile.empty() && "Profile use expecting a profile file!");
+    MPM.addPass(PGOInstrumentationUse(ProfileFile, ProfileRemappingFile, IsCS));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+    return;
+  }
+
+  // Perform PGO instrumentation.
+  MPM.addPass(PGOInstrumentationGen(IsCS));
+  // Add the profile lowering pass.
+  InstrProfOptions Options;
+  if (!ProfileFile.empty())
+    Options.InstrProfileOutput = ProfileFile;
+  // Do not do counter promotion at O0.
+  Options.DoCounterPromotion = false;
+  Options.UseBFIInPromotion = IsCS;
+  MPM.addPass(InstrProfiling(Options, IsCS));
 }
 
 static InlineParams
@@ -1801,9 +1830,19 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
                               .Case("O3", O3)
                               .Case("Os", Os)
                               .Case("Oz", Oz);
-    if (L == O0)
-      // At O0 we do nothing at all!
+    if (L == O0) {
+      // Add instrumentation PGO passes -- at O0 we can still do PGO.
+      if (PGOOpt && Matches[1] != "thinlto" &&
+          (PGOOpt->Action == PGOOptions::IRInstr ||
+           PGOOpt->Action == PGOOptions::IRUse))
+        addPGOInstrPassesForO0(
+            MPM, DebugLogging,
+            /* RunProfileGen */ (PGOOpt->Action == PGOOptions::IRInstr),
+            /* IsCS */ false, PGOOpt->ProfileFile,
+            PGOOpt->ProfileRemappingFile);
+      // Do nothing else at all!
       return Error::success();
+    }
 
     if (Matches[1] == "default") {
       MPM.addPass(buildPerModuleDefaultPipeline(L, DebugLogging));
