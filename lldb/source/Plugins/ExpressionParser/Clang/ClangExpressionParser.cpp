@@ -908,10 +908,13 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       if (file.Write(expr_text, bytes_written).Success()) {
         if (bytes_written == expr_text_len) {
           file.Close();
-          source_mgr.setMainFileID(source_mgr.createFileID(
-              m_compiler->getFileManager().getFile(result_path),
-              SourceLocation(), SrcMgr::C_User));
-          created_main_file = true;
+          if (auto fileEntry =
+                  m_compiler->getFileManager().getFile(result_path)) {
+            source_mgr.setMainFileID(source_mgr.createFileID(
+                *fileEntry,
+                SourceLocation(), SrcMgr::C_User));
+            created_main_file = true;
+          }
         }
       }
     }
