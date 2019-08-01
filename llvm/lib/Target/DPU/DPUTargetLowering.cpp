@@ -374,6 +374,8 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "DPUISD::SubJCCZero";
   case DPUISD::Wrapper:
     return "DPUISD::Wrapper";
+  case DPUISD::WRAM_STORE_64_ALIGNED:
+    return "DPUISD::WRAM_STORE_64_ALIGNED";
   case DPUISD::WRAM_STORE_64:
     return "DPUISD::WRAM_STORE_64";
   case DPUISD::MRAM_STORE_64:
