@@ -212,6 +212,7 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   auto statCache = llvm::make_unique<FakeStatCache>();
   statCache->InjectDirectory(".", 41);
   statCache->InjectFile("foo.cpp", 42);
+  statCache->InjectDirectory("MyDirectory", 49);
   manager.setStatCache(std::move(statCache));
 
   // Create a virtual bar.cpp file.
@@ -221,7 +222,6 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   ASSERT_FALSE(file);
   ASSERT_EQ(file.getError(), std::errc::no_such_file_or_directory);
 
-  statCache->InjectDirectory("MyDirectory", 49);
   auto readingDirAsFile = manager.getFile("MyDirectory");
   ASSERT_FALSE(readingDirAsFile);
   ASSERT_EQ(readingDirAsFile.getError(), std::errc::is_a_directory);
