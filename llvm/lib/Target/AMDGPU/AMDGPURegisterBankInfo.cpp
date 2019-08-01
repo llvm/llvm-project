@@ -2229,6 +2229,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_MIN:
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
+  case AMDGPU::G_ATOMICRMW_FADD:
   case AMDGPU::G_ATOMIC_CMPXCHG: {
     return getDefaultMappingAllVGPR(MI);
   }

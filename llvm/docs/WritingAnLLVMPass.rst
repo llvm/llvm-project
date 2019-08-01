@@ -538,9 +538,9 @@ compiled.
 The ``LoopPass`` class
 ----------------------
 
-All ``LoopPass`` execute on each loop in the function independent of all of the
-other loops in the function.  ``LoopPass`` processes loops in loop nest order
-such that outer most loop is processed last.
+All ``LoopPass`` execute on each :ref:`loop <loop-terminology>` in the function
+independent of all of the other loops in the function.  ``LoopPass`` processes
+loops in loop nest order such that outer most loop is processed last.
 
 ``LoopPass`` subclasses are allowed to update loop nest using ``LPPassManager``
 interface.  Implementing a loop pass is usually straightforward.

@@ -678,12 +678,15 @@ def logical_imm64_not : Operand<i64> {
   let ParserMatchClass = LogicalImm64NotOperand;
 }
 
-// imm0_65535 predicate - True if the immediate is in the range [0,65535].
-def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
+// iXX_imm0_65535 predicates - True if the immediate is in the range [0,65535].
+let ParserMatchClass = AsmImmRange<0, 65535>, PrintMethod = "printImmHex" in {
+def i32_imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
-}]> {
-  let ParserMatchClass = AsmImmRange<0, 65535>;
-  let PrintMethod = "printImmHex";
+}]>;
+
+def i64_imm0_65535 : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 65536;
+}]>;
 }
 
 // imm0_255 predicate - True if the immediate is in the range [0,255].
@@ -1044,6 +1047,45 @@ class RtSystemI<bit L, dag oops, dag iops, string asm, string operands>
       Sched<[WriteSys]> {
   bits<5> Rt;
   let Inst{4-0} = Rt;
+}
+
+// System instructions for transactional memory extension
+class TMBaseSystemI<bit L, bits<4> CRm, bits<3> op2, dag oops, dag iops,
+                    string asm, string operands, list<dag> pattern>
+    : BaseSystemI<L, oops, iops, asm, operands, pattern>,
+      Sched<[WriteSys]> {
+  let Inst{20-12} = 0b000110011;
+  let Inst{11-8} = CRm;
+  let Inst{7-5} = op2;
+  let DecoderMethod = "";
+
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+// System instructions for transactional memory - single input operand
+class TMSystemI<bits<4> CRm, string asm, list<dag> pattern>
+    : TMBaseSystemI<0b1, CRm, 0b011,
+                    (outs GPR64:$Rt), (ins), asm, "\t$Rt", pattern> {
+  bits<5> Rt;
+  let Inst{4-0} = Rt;
+}
+
+// System instructions for transactional memory - no operand
+class TMSystemINoOperand<bits<4> CRm, string asm, list<dag> pattern>
+    : TMBaseSystemI<0b0, CRm, 0b011, (outs), (ins), asm, "", pattern> {
+  let Inst{4-0} = 0b11111;
+}
+
+// System instructions for exit from transactions
+class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
+    : I<(outs), (ins i64_imm0_65535:$imm), asm, "\t$imm", "", pattern>,
+      Sched<[WriteSys]> {
+  bits<16> imm;
+  let Inst{31-24} = 0b11010100;
+  let Inst{23-21} = op1;
+  let Inst{20-5}  = imm;
+  let Inst{4-0}   = 0b00000;
 }
 
 // Hint instructions that take both a CRm and a 3-bit immediate.
@@ -4050,7 +4092,7 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
-    : I<(outs), (ins imm0_65535:$imm), asm, "\t$imm", "", []>,
+    : I<(outs), (ins i32_imm0_65535:$imm), asm, "\t$imm", "", []>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;

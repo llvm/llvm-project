@@ -406,7 +406,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
                                     ArrayRef<ArgInfo> OrigArgs,
-                                    Register SwiftErrorVReg) const {
+                                    Register SwiftErrorVReg,
+                                    const MDNode *KnownCallees) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();

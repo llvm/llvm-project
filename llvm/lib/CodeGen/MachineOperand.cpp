@@ -169,7 +169,7 @@ void MachineOperand::ChangeToFPImmediate(const ConstantFP *FPImm) {
 }
 
 void MachineOperand::ChangeToES(const char *SymName,
-                                unsigned char TargetFlags) {
+                                unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an external symbol");
 
@@ -182,7 +182,7 @@ void MachineOperand::ChangeToES(const char *SymName,
 }
 
 void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
-                                unsigned char TargetFlags) {
+                                unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a global address");
 
@@ -215,7 +215,7 @@ void MachineOperand::ChangeToFrameIndex(int Idx) {
 }
 
 void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
-                                         unsigned char TargetFlags) {
+                                         unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a FrameIndex");
 

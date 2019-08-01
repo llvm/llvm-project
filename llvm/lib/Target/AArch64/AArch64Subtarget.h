@@ -137,6 +137,7 @@ protected:
   bool HasBTI = false;
   bool HasRandGen = false;
   bool HasMTE = false;
+  bool HasTME = false;
 
   // Arm SVE2 extensions
   bool HasSVE2AES = false;
@@ -190,6 +191,7 @@ protected:
   bool UseEL1ForTP = false;
   bool UseEL2ForTP = false;
   bool UseEL3ForTP = false;
+  bool AllowTaggedGlobals = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
   uint16_t CacheLineSize = 0;
@@ -387,6 +389,7 @@ public:
   bool hasBTI() const { return HasBTI; }
   bool hasRandGen() const { return HasRandGen; }
   bool hasMTE() const { return HasMTE; }
+  bool hasTME() const { return HasTME; }
   // Arm SVE2 extensions
   bool hasSVE2AES() const { return HasSVE2AES; }
   bool hasSVE2SM4() const { return HasSVE2SM4; }
@@ -450,11 +453,11 @@ public:
 
   /// ClassifyGlobalReference - Find the target operand flags that describe
   /// how a global value should be referenced for the current subtarget.
-  unsigned char ClassifyGlobalReference(const GlobalValue *GV,
-                                        const TargetMachine &TM) const;
+  unsigned ClassifyGlobalReference(const GlobalValue *GV,
+                                   const TargetMachine &TM) const;
 
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV,
-                                                const TargetMachine &TM) const;
+  unsigned classifyGlobalFunctionReference(const GlobalValue *GV,
+                                           const TargetMachine &TM) const;
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;

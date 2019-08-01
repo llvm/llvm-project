@@ -535,6 +535,11 @@ public:
     return false;
   }
 
+  /// This is a wrapper around getCallPreservedMask().
+  /// Return true if the register is preserved after the call.
+  virtual bool isCalleeSavedPhysReg(unsigned PhysReg,
+                                    const MachineFunction &MF) const;
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).

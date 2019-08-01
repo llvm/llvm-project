@@ -793,6 +793,7 @@ protected:
   friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
+  void verifyPrevDefInPhis(Function &F) const;
   void verifyDefUses(Function &F) const;
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;

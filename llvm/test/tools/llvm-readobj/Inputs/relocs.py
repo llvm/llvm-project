@@ -710,8 +710,8 @@ class Relocs_Elf_AArch64(Enum):
   R_AARCH64_GLOB_DAT                    = 0x401
   R_AARCH64_JUMP_SLOT                   = 0x402
   R_AARCH64_RELATIVE                    = 0x403
-  R_AARCH64_TLS_DTPREL64                = 0x404
-  R_AARCH64_TLS_DTPMOD64                = 0x405
+  R_AARCH64_TLS_DTPMOD64                = 0x404
+  R_AARCH64_TLS_DTPREL64                = 0x405
   R_AARCH64_TLS_TPREL64                 = 0x406
   R_AARCH64_TLSDESC                     = 0x407
   R_AARCH64_IRELATIVE                   = 0x408

@@ -4058,11 +4058,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
-    if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
-      DAG.addHeapAllocSite(Chain.getNode(),
-                           CLI.CS->getMetadata("heapallocsite"));
-    }
-
     return Ret;
   }
 
@@ -4073,12 +4068,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-
-  // Save heapallocsite metadata.
-  if (CLI.CS && CLI.CS->getMetadata("heapallocsite")) {
-    DAG.addHeapAllocSite(Chain.getNode(),
-                         CLI.CS->getMetadata("heapallocsite"));
-  }
 
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop;
@@ -5538,6 +5527,7 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
     if (VT.getSizeInBits() == (SubVT.getSizeInBits() * 2) &&
         Idx == (VT.getVectorNumElements() / 2) &&
         Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(1).getValueType() == SubVT &&
         isNullConstant(Src.getOperand(2))) {
       Ops.push_back(Src.getOperand(1));
       Ops.push_back(Sub);
@@ -5796,6 +5786,34 @@ static SDValue getExtendInVec(unsigned Opcode, const SDLoc &DL, EVT VT,
     Opcode = getOpcode_EXTEND_VECTOR_INREG(Opcode);
 
   return DAG.getNode(Opcode, DL, VT, In);
+}
+
+// Match (xor X, -1) -> X.
+// Match extract_subvector(xor X, -1) -> extract_subvector(X).
+// Match concat_vectors(xor X, -1, xor Y, -1) -> concat_vectors(X, Y).
+static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  V = peekThroughBitcasts(V);
+  if (V.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
+    return V.getOperand(0);
+  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
+    if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
+      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), V.getValueType(),
+                         Not, V.getOperand(1));
+    }
+  }
+  SmallVector<SDValue, 2> CatOps;
+  if (collectConcatOps(V.getNode(), CatOps)) {
+    for (SDValue &CatOp : CatOps) {
+      SDValue NotCat = IsNOT(CatOp, DAG);
+      if (!NotCat) return SDValue();
+      CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
+    }
+    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), V.getValueType(), CatOps);
+  }
+  return SDValue();
 }
 
 /// Returns a vector_shuffle node for an unpackl operation.
@@ -38228,34 +38246,6 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Match (xor X, -1) -> X.
-// Match extract_subvector(xor X, -1) -> extract_subvector(X).
-// Match concat_vectors(xor X, -1, xor Y, -1) -> concat_vectors(X, Y).
-static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
-  V = peekThroughBitcasts(V);
-  if (V.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
-    return V.getOperand(0);
-  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
-    if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
-      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), V.getValueType(),
-                         Not, V.getOperand(1));
-    }
-  }
-  SmallVector<SDValue, 2> CatOps;
-  if (collectConcatOps(V.getNode(), CatOps)) {
-    for (SDValue &CatOp : CatOps) {
-      SDValue NotCat = IsNOT(CatOp, DAG);
-      if (!NotCat) return SDValue();
-      CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
-    }
-    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), V.getValueType(), CatOps);
-  }
-  return SDValue();
-}
-
 /// Try to fold: (and (xor X, -1), Y) -> (andnp X, Y).
 static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::AND);
@@ -40176,6 +40166,41 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32, St->getValue());
     return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
                              MVT::v16i8, St->getMemOperand());
+  }
+
+  // Look for a truncating store to a less than 128 bit vector that has been
+  // truncated from an any_extend_inreg from a 128 bit vector with the same
+  // element size. We can use a 64/32/16-bit extractelement and store that.
+  // Disabling this when widening legalization is in effect since the trunc
+  // store would have been unlikely to be created in that case. Only doing this
+  // when truncstore is legal since it would otherwise be decomposed below and
+  // then combined away.
+  if (St->isTruncatingStore() && TLI.isTruncStoreLegal(VT, StVT) &&
+      StoredVal.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
+      StoredVal.getValueType().is128BitVector() &&
+      !ExperimentalVectorWideningLegalization) {
+    EVT OrigVT = StoredVal.getOperand(0).getValueType();
+    if (OrigVT.is128BitVector() &&
+        OrigVT.getVectorElementType() == StVT.getVectorElementType()) {
+      unsigned StoreSize = StVT.getSizeInBits();
+      assert((128 % StoreSize == 0) && "Unexpected store size!");
+      MVT IntVT = MVT::getIntegerVT(StoreSize);
+      MVT CastVT = MVT::getVectorVT(IntVT, 128 / StoreSize);
+      StoredVal = DAG.getBitcast(CastVT, StoredVal.getOperand(0));
+      // Use extract_store for the 64-bit case to support 32-bit targets.
+      if (IntVT == MVT::i64) {
+        SDVTList Tys = DAG.getVTList(MVT::Other);
+        SDValue Ops[] = {St->getChain(), StoredVal, St->getBasePtr()};
+        return DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys, Ops,
+                                       IntVT, St->getMemOperand());
+      }
+
+      // Otherwise just use an extract and store.
+      StoredVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, IntVT, StoredVal,
+                              DAG.getIntPtrConstant(0, dl));
+      return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                          St->getMemOperand());
+    }
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.
@@ -43978,6 +44003,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
       OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2 &&
       isNullConstant(Vec.getOperand(2)) && !Vec.getOperand(0).isUndef() &&
+      Vec.getOperand(1).getValueSizeInBits() == SubVecVT.getSizeInBits() &&
       Vec.hasOneUse()) {
     Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
                       Vec.getOperand(1), Vec.getOperand(2));

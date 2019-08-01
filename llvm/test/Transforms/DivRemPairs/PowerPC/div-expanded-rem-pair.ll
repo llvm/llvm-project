@@ -103,21 +103,21 @@ define i32 @srem_of_srem_unexpanded(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-NEXT:    [[T1:%.*]] = sdiv i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = mul nsw i32 [[T0]], [[T1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[T1]], [[T0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[T3_DECOMPOSED:%.*]] = sub i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[T3_DECOMPOSED]], [[Y]]
 ; CHECK-NEXT:    [[T5:%.*]] = mul nsw i32 [[T4]], [[Y]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[T4]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[T4]], [[Y]]
+; CHECK-NEXT:    [[T6_DECOMPOSED:%.*]] = sub i32 [[T3_DECOMPOSED]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[T6_DECOMPOSED]]
 ;
   %t0 = mul nsw i32 %Z, %Y
   %t1 = sdiv i32 %X, %t0
   %t2 = mul nsw i32 %t0, %t1
-  %t3.recomposed = srem i32 %X, %t0
-  %t4 = sdiv i32 %t3.recomposed, %Y
+  %t3 = srem i32 %X, %t0
+  %t4 = sdiv i32 %t3, %Y
   %t5 = mul nsw i32 %t4, %Y
-  %t6.recomposed = srem i32 %t3.recomposed, %Y
-  ret i32 %t6.recomposed
+  %t6 = srem i32 %t3, %Y
+  ret i32 %t6
 }
 define i32 @srem_of_srem_expanded(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @srem_of_srem_expanded(

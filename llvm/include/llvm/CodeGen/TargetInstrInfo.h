@@ -60,6 +60,8 @@ class TargetSubtargetInfo;
 
 template <class T> class SmallVectorImpl;
 
+using ParamLoadedValue = std::pair<const MachineOperand*, DIExpression*>;
+
 //---------------------------------------------------------------------------
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
@@ -1690,6 +1692,11 @@ public:
   virtual bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const {
     return false;
   }
+
+  /// Produce the expression describing the \p MI loading a value into
+  /// the parameter's forwarding register.
+  virtual Optional<ParamLoadedValue>
+  describeLoadedValue(const MachineInstr &MI) const;
 
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

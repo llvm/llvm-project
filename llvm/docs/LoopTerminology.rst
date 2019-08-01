@@ -1,3 +1,4 @@
+.. _loop-terminology:
 ===========================================
 LLVM Loop Terminology (and Canonical Forms)
 ===========================================
@@ -12,17 +13,24 @@ Loops are a core concept in any optimizer.  This page spells out some
 of the common terminology used within LLVM code to describe loop
 structures.
 
-First, let's start with the basics.  In LLVM, a Loop is a cycle within
-the control flow graph (CFG) where there exists one block (the loop
-header block) which dominates all other blocks within the cycle.
+First, let's start with the basics. In LLVM, a Loop is a maximal set of basic
+blocks that form a strongly connected component (SCC) in the Control
+Flow Graph (CFG) where there exists a dedicated entry/header block that
+dominates all other blocks within the loop. Thus, without leaving the
+loop, one can reach every block in the loop from the header block and
+the header block from every block in the loop.
 
 Note that there are some important implications of this definition:
 
-* Not all cycles are loops.  There exist cycles that do not meet the
+* Not all SCCs are loops.  There exist SCCs that do not meet the
   dominance requirement and such are not considered loops.  
 
-* Loops can contain non-loop cycles and non-loop cycles may contain
+* Loops can contain non-loop SCCs and non-loop SCCs may contain
   loops.  Loops may also contain sub-loops.
+
+* A header block is uniquely associated with one loop.  There can be
+  multiple SCC within that loop, but the strongly connected component
+  (SCC) formed from their union must always be unique.
 
 * Given the use of dominance in the definition, all loops are
   statically reachable from the entry of the function.  
@@ -51,9 +59,9 @@ of the other.
 
 Exiting Block - A basic block contained within a given loop which has
 at least one successor outside of the loop and one successor inside the
-loop.  (The latter is required for the block to be contained within the
-cycle which makes up the loop.)  That is, it has a successor which is
-an Exit Block.  
+loop.  (The latter is a consequence of the block being contained within
+an SCC which is part of the loop.)  That is, it has a successor which
+is an Exit Block.  
 
 Exit Block - A basic block outside of the associated loop which has a
 predecessor inside the loop.  That is, it has a predecessor which is

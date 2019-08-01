@@ -16,9 +16,7 @@ define void @store_i64(i64 %val, i64* %ptr)  {
 ; MIPS32-LABEL: store_i64:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    sw $4, 0($6)
-; MIPS32-NEXT:    ori $1, $zero, 4
-; MIPS32-NEXT:    addu $1, $6, $1
-; MIPS32-NEXT:    sw $5, 0($1)
+; MIPS32-NEXT:    sw $5, 4($6)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

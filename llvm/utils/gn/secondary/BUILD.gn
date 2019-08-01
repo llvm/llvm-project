@@ -10,9 +10,11 @@ group("default") {
     "//lld/test",
     "//llvm/test",
   ]
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//compiler-rt" ]
+  }
   if (current_os == "linux") {
     deps += [
-      "//compiler-rt",
       "//libcxx",
       "//libcxxabi",
       "//libunwind",

@@ -1117,6 +1117,24 @@ csinv   lr, r2, r2, mi
 # CHECK-NOLOB: csel r0, r0, r1, eq @ encoding: [0x50,0xea,0x01,0x80]
 csel r0, r0, r1, eq
 
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14
+csel sp, r0, r1, eq
+
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14 or zr
+csel r0, sp, r1, eq
+
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14 or zr
+csinc r0, sp, r1, eq
+
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14 or zr
+csinv r0, sp, r1, eq
+
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14 or zr
+csneg r0, sp, r1, eq
+
+// ERROR: :[[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [r0, r12] or r14 or zr
+csel r0, r0, sp, eq
+
 // ERROR: :[[@LINE+2]]:{{[0-9]+}}: error: instructions in IT block must be predicable
 it eq
 csel r0, r0, r1, eq

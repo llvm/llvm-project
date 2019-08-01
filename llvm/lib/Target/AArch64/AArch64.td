@@ -352,6 +352,14 @@ def FeatureETE : SubtargetFeature<"ete", "HasETE",
     "true", "Enable Embedded Trace Extension",
     [FeatureTRBE]>;
 
+def FeatureTME : SubtargetFeature<"tme", "HasTME",
+    "true", "Enable Transactional Memory Extension" >;
+
+def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
+    "AllowTaggedGlobals",
+    "true", "Use an instruction sequence for taking the address of a global "
+    "that allows a memory tag in the upper address bits">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

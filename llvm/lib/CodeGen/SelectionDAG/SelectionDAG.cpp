@@ -859,9 +859,8 @@ bool SelectionDAG::RemoveNodeFromCSEMaps(SDNode *N) {
     break;
   case ISD::TargetExternalSymbol: {
     ExternalSymbolSDNode *ESN = cast<ExternalSymbolSDNode>(N);
-    Erased = TargetExternalSymbols.erase(
-               std::pair<std::string,unsigned char>(ESN->getSymbol(),
-                                                    ESN->getTargetFlags()));
+    Erased = TargetExternalSymbols.erase(std::pair<std::string, unsigned>(
+        ESN->getSymbol(), ESN->getTargetFlags()));
     break;
   }
   case ISD::MCSymbol: {
@@ -1353,7 +1352,7 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getGlobalAddress(const GlobalValue *GV, const SDLoc &DL,
                                        EVT VT, int64_t Offset, bool isTargetGA,
-                                       unsigned char TargetFlags) {
+                                       unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTargetGA) &&
          "Cannot set target flags on target-independent globals");
 
@@ -1400,7 +1399,7 @@ SDValue SelectionDAG::getFrameIndex(int FI, EVT VT, bool isTarget) {
 }
 
 SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
-                                   unsigned char TargetFlags) {
+                                   unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent jump tables");
   unsigned Opc = isTarget ? ISD::TargetJumpTable : ISD::JumpTable;
@@ -1421,7 +1420,7 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
 SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
                                       unsigned Alignment, int Offset,
                                       bool isTarget,
-                                      unsigned char TargetFlags) {
+                                      unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent globals");
   if (Alignment == 0)
@@ -1449,7 +1448,7 @@ SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
 SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
                                       unsigned Alignment, int Offset,
                                       bool isTarget,
-                                      unsigned char TargetFlags) {
+                                      unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent globals");
   if (Alignment == 0)
@@ -1473,7 +1472,7 @@ SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
 }
 
 SDValue SelectionDAG::getTargetIndex(int Index, EVT VT, int64_t Offset,
-                                     unsigned char TargetFlags) {
+                                     unsigned TargetFlags) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::TargetIndex, getVTList(VT), None);
   ID.AddInteger(Index);
@@ -1535,10 +1534,9 @@ SDValue SelectionDAG::getMCSymbol(MCSymbol *Sym, EVT VT) {
 }
 
 SDValue SelectionDAG::getTargetExternalSymbol(const char *Sym, EVT VT,
-                                              unsigned char TargetFlags) {
+                                              unsigned TargetFlags) {
   SDNode *&N =
-    TargetExternalSymbols[std::pair<std::string,unsigned char>(Sym,
-                                                               TargetFlags)];
+      TargetExternalSymbols[std::pair<std::string, unsigned>(Sym, TargetFlags)];
   if (N) return SDValue(N, 0);
   N = newSDNode<ExternalSymbolSDNode>(true, Sym, TargetFlags, VT);
   InsertNode(N);
@@ -1802,9 +1800,8 @@ SDValue SelectionDAG::getLabelNode(unsigned Opcode, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getBlockAddress(const BlockAddress *BA, EVT VT,
-                                      int64_t Offset,
-                                      bool isTarget,
-                                      unsigned char TargetFlags) {
+                                      int64_t Offset, bool isTarget,
+                                      unsigned TargetFlags) {
   unsigned Opc = isTarget ? ISD::TargetBlockAddress : ISD::BlockAddress;
 
   FoldingSetNodeID ID;
@@ -3093,12 +3090,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
         // If the first operand is non-negative or has all low bits zero, then
         // the upper bits are all zero.
-        if (Known2.Zero[BitWidth-1] || ((Known2.Zero & LowBits) == LowBits))
+        if (Known2.isNonNegative() || LowBits.isSubsetOf(Known2.Zero))
           Known.Zero |= ~LowBits;
 
         // If the first operand is negative and not all low bits are zero, then
         // the upper bits are all one.
-        if (Known2.One[BitWidth-1] && ((Known2.One & LowBits) != 0))
+        if (Known2.isNegative() && LowBits.intersects(Known2.One))
           Known.One |= ~LowBits;
         assert((Known.Zero & Known.One) == 0&&"Bits known to be one AND zero?");
       }
@@ -4633,7 +4630,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getUNDEF(VT);
 
     // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0
-    if ((getTarget().Options.UnsafeFPMath || Flags.hasNoSignedZeros()) &&
+    if ((getTarget().Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
         OpOpcode == ISD::FSUB)
       return getNode(ISD::FSUB, DL, VT, Operand.getOperand(1),
                      Operand.getOperand(0), Flags);
@@ -8800,7 +8797,7 @@ HandleSDNode::~HandleSDNode() {
 GlobalAddressSDNode::GlobalAddressSDNode(unsigned Opc, unsigned Order,
                                          const DebugLoc &DL,
                                          const GlobalValue *GA, EVT VT,
-                                         int64_t o, unsigned char TF)
+                                         int64_t o, unsigned TF)
     : SDNode(Opc, Order, DL, getSDVTList(VT)), Offset(o), TargetFlags(TF) {
   TheGlobal = GA;
 }

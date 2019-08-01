@@ -4,25 +4,15 @@
 
 ; Test with more than four live mask pairs
 
-define void @test(<16 x i32> %a0, <16 x i32> %b0,
-                  <16 x i32> %a1, <16 x i32> %b1,
-                  <16 x i32> %a2, <16 x i32> %b2,
-                  <16 x i32> %a3, <16 x i32> %b3,
-                  <16 x i32> %a4, <16 x i32> %b4,
-                 i16* nocapture %m0, i16* nocapture %m1) {
+define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1, <16 x i32> %a2, <16 x i32> %b2, <16 x i32> %a3, <16 x i32> %b3, <16 x i32> %a4, <16 x i32> %b4, i16* nocapture %m0, i16* nocapture %m1) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
 ; X86-NEXT:    movl 456(%ebp), %esi
 ; X86-NEXT:    vmovaps 328(%ebp), %zmm3
 ; X86-NEXT:    vmovaps 200(%ebp), %zmm4
@@ -62,20 +52,24 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0,
 ; X86-NEXT:    kmovw %k2, %edi
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    kmovw %k1, %ecx
+; X86-NEXT:    addl %edi, %ecx
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    addl %edx, %ecx
+; X86-NEXT:    movw %cx, (%esi)
+; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbp, -16
 ; X64-NEXT:    movq %rsp, %rbp
-; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    pushq %r14
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    andq $-64, %rsp
 ; X64-NEXT:    subq $64, %rsp
-; X64-NEXT:    .cfi_offset %rbx, -32
-; X64-NEXT:    .cfi_offset %r14, -24
 ; X64-NEXT:    movq %rdi, %r14
 ; X64-NEXT:    vmovaps 16(%rbp), %zmm8
 ; X64-NEXT:    vp2intersectd %zmm1, %zmm0, %k0
@@ -111,6 +105,17 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0,
 ; X64-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1
 ; X64-NEXT:    kmovw %k0, %edi
 ; X64-NEXT:    kmovw %k1, %ebx
+; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    addl %ecx, %edx
+; X64-NEXT:    leal (%rbx,%rsi), %ecx
+; X64-NEXT:    addl %eax, %ecx
+; X64-NEXT:    addl %edx, %ecx
+; X64-NEXT:    movw %cx, (%r14)
+; X64-NEXT:    leaq -16(%rbp), %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r14
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    retq
 entry:
   %0 = call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %a0, <16 x i32> %b0)
   %1 = call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %a1, <16 x i32> %b1)

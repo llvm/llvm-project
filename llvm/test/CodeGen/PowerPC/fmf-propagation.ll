@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1                        | FileCheck %s --check-prefix=FMFDEBUG
 ; RUN: llc < %s -mtriple=powerpc64le                                                           | FileCheck %s --check-prefix=FMF
 ; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
-; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -enable-no-nans-fp-math                                    | FileCheck %s --check-prefix=GLOBAL
+; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math | FileCheck %s --check-prefix=GLOBAL
 
 ; Test FP transforms using instruction/node-level fast-math-flags.
 ; We're also checking debug output to verify that FMF is propagated to the newly created nodes.

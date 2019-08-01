@@ -22,36 +22,20 @@ std::vector<uint64_t> getValidAlignments() {
   return Out;
 }
 
-// We use a subset of valid alignments for DEATH_TESTs as they are particularly
-// slow.
-std::vector<uint64_t> getValidAlignmentsForDeathTest() {
-  return {1, 1ULL << 31, 1ULL << 63};
-}
+TEST(AlignmentTest, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
 
-std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
-
-TEST(Alignment, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
-
-TEST(Alignment, MaybeAlignDefaultCTor) {
+TEST(AlignmentTest, MaybeAlignDefaultCTor) {
   EXPECT_FALSE(MaybeAlign().hasValue());
 }
 
-TEST(Alignment, ValidCTors) {
-  for (size_t Value : getValidAlignments()) {
+TEST(AlignmentTest, ValidCTors) {
+  for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Align(Value).value(), Value);
     EXPECT_EQ((*MaybeAlign(Value)).value(), Value);
   }
 }
 
-TEST(Alignment, InvalidCTors) {
-  EXPECT_DEATH((Align(0)), "Value must not be 0");
-  for (size_t Value : getNonPowerOfTwo()) {
-    EXPECT_DEATH((Align(Value)), "Alignment is not a power of 2");
-    EXPECT_DEATH((MaybeAlign(Value)), "Alignment is not 0 or a power of 2");
-  }
-}
-
-TEST(Alignment, CheckMaybeAlignHasValue) {
+TEST(AlignmentTest, CheckMaybeAlignHasValue) {
   EXPECT_TRUE(MaybeAlign(1));
   EXPECT_TRUE(MaybeAlign(1).hasValue());
   EXPECT_FALSE(MaybeAlign(0));
@@ -60,27 +44,17 @@ TEST(Alignment, CheckMaybeAlignHasValue) {
   EXPECT_FALSE(MaybeAlign().hasValue());
 }
 
-TEST(Alignment, CantConvertUnsetMaybe) {
-  EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
-}
-
-TEST(Alignment, Division) {
-  for (size_t Value : getValidAlignments()) {
-    if (Value == 1) {
-      EXPECT_DEATH(Align(Value) / 2, "Can't halve byte alignment");
-      EXPECT_DEATH(MaybeAlign(Value) / 2, "Can't halve byte alignment");
-    } else {
+TEST(AlignmentTest, Division) {
+  for (uint64_t Value : getValidAlignments()) {
+    if (Value > 1) {
       EXPECT_EQ(Align(Value) / 2, Value / 2);
       EXPECT_EQ(MaybeAlign(Value) / 2, Value / 2);
     }
   }
   EXPECT_EQ(MaybeAlign(0) / 2, MaybeAlign(0));
-
-  EXPECT_DEATH(Align(8) / 0, "Divisor must be positive and a power of 2");
-  EXPECT_DEATH(Align(8) / 3, "Divisor must be positive and a power of 2");
 }
 
-TEST(Alignment, AlignTo) {
+TEST(AlignmentTest, AlignTo) {
   struct {
     uint64_t alignment;
     uint64_t offset;
@@ -114,15 +88,14 @@ TEST(Alignment, AlignTo) {
   }
 }
 
-TEST(Alignment, Log2) {
-  for (size_t Value : getValidAlignments()) {
+TEST(AlignmentTest, Log2) {
+  for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Log2(Align(Value)), Log2_64(Value));
     EXPECT_EQ(Log2(MaybeAlign(Value)), Log2_64(Value));
   }
-  EXPECT_DEATH(Log2(MaybeAlign(0)), ".* should be defined");
 }
 
-TEST(Alignment, MinAlign) {
+TEST(AlignmentTest, MinAlign) {
   struct {
     uint64_t A;
     uint64_t B;
@@ -148,8 +121,8 @@ TEST(Alignment, MinAlign) {
   }
 }
 
-TEST(Alignment, Encode_Decode) {
-  for (size_t Value : getValidAlignments()) {
+TEST(AlignmentTest, Encode_Decode) {
+  for (uint64_t Value : getValidAlignments()) {
     {
       Align Actual(Value);
       Align Expected = decodeMaybeAlign(encode(Actual)).getValue();
@@ -166,7 +139,7 @@ TEST(Alignment, Encode_Decode) {
   EXPECT_EQ(Expected, Actual);
 }
 
-TEST(Alignment, isAligned) {
+TEST(AlignmentTest, isAligned) {
   struct {
     uint64_t alignment;
     uint64_t offset;
@@ -187,8 +160,8 @@ TEST(Alignment, isAligned) {
   }
 }
 
-TEST(Alignment, AlignComparisons) {
-  std::vector<size_t> ValidAlignments = getValidAlignments();
+TEST(AlignmentTest, AlignComparisons) {
+  std::vector<uint64_t> ValidAlignments = getValidAlignments();
   std::sort(ValidAlignments.begin(), ValidAlignments.end());
   for (size_t I = 1; I < ValidAlignments.size(); ++I) {
     assert(I >= 1);
@@ -240,15 +213,50 @@ TEST(Alignment, AlignComparisons) {
   }
 }
 
-TEST(Alignment, AssumeAligned) {
+TEST(AlignmentTest, AssumeAligned) {
   EXPECT_EQ(assumeAligned(0), Align(1));
   EXPECT_EQ(assumeAligned(0), Align());
   EXPECT_EQ(assumeAligned(1), Align(1));
   EXPECT_EQ(assumeAligned(1), Align());
 }
 
-TEST(Alignment, ComparisonsWithZero) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+// Death tests reply on assert which is disabled in release mode.
+#ifndef NDEBUG
+
+// We use a subset of valid alignments for DEATH_TESTs as they are particularly
+// slow.
+std::vector<uint64_t> getValidAlignmentsForDeathTest() {
+  return {1, 1ULL << 31, 1ULL << 63};
+}
+
+std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
+
+TEST(AlignmentDeathTest, Log2) {
+  EXPECT_DEATH(Log2(MaybeAlign(0)), ".* should be defined");
+}
+
+TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
+  EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
+}
+
+TEST(AlignmentDeathTest, Division) {
+  EXPECT_DEATH(Align(1) / 2, "Can't halve byte alignment");
+  EXPECT_DEATH(MaybeAlign(1) / 2, "Can't halve byte alignment");
+
+  EXPECT_DEATH(Align(8) / 0, "Divisor must be positive and a power of 2");
+  EXPECT_DEATH(Align(8) / 3, "Divisor must be positive and a power of 2");
+}
+
+TEST(AlignmentDeathTest, InvalidCTors) {
+  EXPECT_DEATH((Align(0)), "Value must not be 0");
+  for (uint64_t Value : getNonPowerOfTwo()) {
+    EXPECT_DEATH((Align(Value)), "Alignment is not a power of 2");
+    EXPECT_DEATH((MaybeAlign(Value)), "Alignment is not 0 or a power of 2");
+  }
+}
+
+TEST(AlignmentDeathTest, ComparisonsWithZero) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     EXPECT_DEATH((void)(Align(Value) == 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) != 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) >= 0), ".* should be defined");
@@ -258,8 +266,8 @@ TEST(Alignment, ComparisonsWithZero) {
   }
 }
 
-TEST(Alignment, CompareMaybeAlignToZero) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     // MaybeAlign is allowed to be == or != 0
     (void)(MaybeAlign(Value) == 0);
     (void)(MaybeAlign(Value) != 0);
@@ -270,8 +278,8 @@ TEST(Alignment, CompareMaybeAlignToZero) {
   }
 }
 
-TEST(Alignment, CompareAlignToUndefMaybeAlign) {
-  for (size_t Value : getValidAlignmentsForDeathTest()) {
+TEST(AlignmentDeathTest, CompareAlignToUndefMaybeAlign) {
+  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
     EXPECT_DEATH((void)(Align(Value) == MaybeAlign(0)), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) != MaybeAlign(0)), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) >= MaybeAlign(0)), ".* should be defined");
@@ -280,5 +288,7 @@ TEST(Alignment, CompareAlignToUndefMaybeAlign) {
     EXPECT_DEATH((void)(Align(Value) < MaybeAlign(0)), ".* should be defined");
   }
 }
+
+#endif // NDEBUG
 
 } // end anonymous namespace

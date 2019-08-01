@@ -318,10 +318,31 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     if (NewOpc == I.getOpcode())
       return false;
 
+    MachineOperand BaseAddr = I.getOperand(1);
+    int64_t SignedOffset = 0;
+    // Try to fold load/store + G_GEP + G_CONSTANT
+    // %SignedOffset:(s32) = G_CONSTANT i32 16_bit_signed_immediate
+    // %Addr:(p0) = G_GEP %BaseAddr, %SignedOffset
+    // %LoadResult/%StoreSrc = load/store %Addr(p0)
+    // into:
+    // %LoadResult/%StoreSrc = NewOpc %BaseAddr(p0), 16_bit_signed_immediate
+
+    MachineInstr *Addr = MRI.getVRegDef(I.getOperand(1).getReg());
+    if (Addr->getOpcode() == G_GEP) {
+      MachineInstr *Offset = MRI.getVRegDef(Addr->getOperand(2).getReg());
+      if (Offset->getOpcode() == G_CONSTANT) {
+        APInt OffsetValue = Offset->getOperand(1).getCImm()->getValue();
+        if (OffsetValue.isSignedIntN(16)) {
+          BaseAddr = Addr->getOperand(1);
+          SignedOffset = OffsetValue.getSExtValue();
+        }
+      }
+    }
+
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
              .add(I.getOperand(0))
-             .add(I.getOperand(1))
-             .addImm(0)
+             .add(BaseAddr)
+             .addImm(SignedOffset)
              .addMemOperand(*I.memoperands_begin());
     break;
   }
