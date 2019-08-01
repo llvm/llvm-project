@@ -258,14 +258,15 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
 std::error_code ModularizeUtilities::loadModuleMap(
     llvm::StringRef InputPath) {
   // Get file entry for module.modulemap file.
-  const FileEntry *ModuleMapEntry =
+  auto ModuleMapEntryOrErr =
     SourceMgr->getFileManager().getFile(InputPath);
 
   // return error if not found.
-  if (!ModuleMapEntry) {
+  if (!ModuleMapEntryOrErr) {
     llvm::errs() << "error: File \"" << InputPath << "\" not found.\n";
-    return std::error_code(1, std::generic_category());
+    return ModuleMapEntryOrErr.getError();
   }
+  const FileEntry *ModuleMapEntry = *ModuleMapEntryOrErr;
 
   // Because the module map parser uses a ForwardingDiagnosticConsumer,
   // which doesn't forward the BeginSourceFile call, we do it explicitly here.
@@ -276,8 +277,12 @@ std::error_code ModularizeUtilities::loadModuleMap(
   StringRef DirName(Dir->getName());
   if (llvm::sys::path::filename(DirName) == "Modules") {
     DirName = llvm::sys::path::parent_path(DirName);
-    if (DirName.endswith(".framework"))
-      Dir = FileMgr->getDirectory(DirName);
+    if (DirName.endswith(".framework")) {
+      if (auto DirEntry = FileMgr->getDirectory(DirName))
+        Dir = *DirEntry;
+      else
+        Dir = nullptr;
+    }
     // FIXME: This assert can fail if there's a race between the above check
     // and the removal of the directory.
     assert(Dir && "parent must exist");

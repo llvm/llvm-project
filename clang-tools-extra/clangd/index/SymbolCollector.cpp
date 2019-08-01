@@ -56,9 +56,10 @@ const NamedDecl &getTemplateOrThis(const NamedDecl &ND) {
 std::string toURI(const SourceManager &SM, llvm::StringRef Path,
                   const SymbolCollector::Options &Opts) {
   llvm::SmallString<128> AbsolutePath(Path);
-  if (auto CanonPath =
-          getCanonicalPath(SM.getFileManager().getFile(Path), SM)) {
-    AbsolutePath = *CanonPath;
+  if (auto File = SM.getFileManager().getFile(Path)) {
+    if (auto CanonPath = getCanonicalPath(*File, SM)) {
+      AbsolutePath = *CanonPath;
+    }
   }
   // We don't perform is_absolute check in an else branch because makeAbsolute
   // might return a relative path on some InMemoryFileSystems.

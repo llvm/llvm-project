@@ -236,8 +236,11 @@ private:
     if (FilePath.empty())
       return SourceLocation();
 
-    const FileEntry *File = SourceMgr.getFileManager().getFile(FilePath);
-    FileID ID = SourceMgr.getOrCreateFileID(File, SrcMgr::C_User);
+    auto File = SourceMgr.getFileManager().getFile(FilePath);
+    if (!File)
+      return SourceLocation();
+
+    FileID ID = SourceMgr.getOrCreateFileID(*File, SrcMgr::C_User);
     return SourceMgr.getLocForStartOfFile(ID).getLocWithOffset(Offset);
   }
 

@@ -151,13 +151,13 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   auto AddToGroup = [&](const tooling::Replacement &R, bool FromDiag) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized.
-    if (const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath())) {
+    if (auto Entry = SM.getFileManager().getFile(R.getFilePath())) {
       if (FromDiag) {
-        auto &Replaces = DiagReplacements[Entry];
+        auto &Replaces = DiagReplacements[*Entry];
         if (!Replaces.insert(R).second)
           return;
       }
-      GroupedReplacements[Entry].push_back(R);
+      GroupedReplacements[*Entry].push_back(R);
     } else if (Warned.insert(R.getFilePath()).second) {
       errs() << "Described file '" << R.getFilePath()
              << "' doesn't exist. Ignoring...\n";
