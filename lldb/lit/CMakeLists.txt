@@ -52,6 +52,7 @@ list(APPEND LLDB_TEST_DEPS
   lldb-test
   lli
   llvm-config
+  llvm-dwarfdump
   llvm-mc
   llvm-objcopy
   llvm-readobj
