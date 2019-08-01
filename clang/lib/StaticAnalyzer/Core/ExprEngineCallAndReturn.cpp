@@ -451,9 +451,8 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
   const StackFrameContext *CalleeSFC =
-    CalleeADC->getStackFrame(ParentOfCallee, CallE,
-                             currBldrCtx->getBlock(),
-                             currStmtIdx);
+      CalleeADC->getStackFrame(ParentOfCallee, CallE, currBldrCtx->getBlock(),
+                               currBldrCtx->blockCount(), currStmtIdx);
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 
