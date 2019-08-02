@@ -111,7 +111,7 @@ void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
 /// Return the color which correponds to the coverage percentage of a
 /// certain metric.
 template <typename T>
-raw_ostream::Color determineCoveragePercentageColor(const T &Info) {
+raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
   if (Info.isFullyCovered())
     return raw_ostream::GREEN;
   return Info.getPercentCovered() >= 80.0 ? raw_ostream::YELLOW

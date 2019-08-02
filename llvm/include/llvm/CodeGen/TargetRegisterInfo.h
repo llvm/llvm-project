@@ -447,6 +447,14 @@ public:
     llvm_unreachable("target does not provide no preserved mask");
   }
 
+  /// Return a list of all of the registers which are clobbered "inside" a call
+  /// to the given function. For example, these might be needed for PLT
+  /// sequences of long-branch veneers.
+  virtual ArrayRef<MCPhysReg>
+  getIntraCallClobberedRegs(const MachineFunction *MF) const {
+    return {};
+  }
+
   /// Return true if all bits that are set in mask \p mask0 are also set in
   /// \p mask1.
   bool regmaskSubsetEqual(const uint32_t *mask0, const uint32_t *mask1) const;

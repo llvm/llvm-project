@@ -227,11 +227,3 @@ define void @nonpow2_vector_add_fewerelements() {
   store i64 %ex, i64* undef
   ret void
 }
-
-%swift_error = type {i64, i8}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments due to swiftself: void (%swift_error**)* (in function: swiftself_param)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swiftself_param
-define void @swiftself_param(%swift_error** swiftself %error_ptr_ref) {
-  ret void
-}

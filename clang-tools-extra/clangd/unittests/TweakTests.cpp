@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "SourceCode.h"
 #include "TestTU.h"
+#include "TweakTesting.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LLVM.h"
@@ -24,11 +25,16 @@
 
 using llvm::Failed;
 using llvm::Succeeded;
+using ::testing::AllOf;
+using ::testing::HasSubstr;
+using ::testing::StartsWith;
 
 namespace clang {
 namespace clangd {
 namespace {
 
+// FIXME(sammccall): migrate the rest of the tests to use TweakTesting.h and
+// remove these helpers.
 std::string markRange(llvm::StringRef Code, Range R) {
   size_t Begin = llvm::cantFail(positionToOffset(Code, R.start));
   size_t End = llvm::cantFail(positionToOffset(Code, R.end));
@@ -114,13 +120,6 @@ llvm::Expected<std::string> applyEdit(StringRef ID, llvm::StringRef Input) {
   return applyAllReplacements(Code.code(), *Effect->ApplyEdit);
 }
 
-std::string getMessage(StringRef ID, llvm::StringRef Input) {
-  auto Effect = apply(ID, Input);
-  if (!Effect)
-    return "error: " + llvm::toString(Effect.takeError());
-  return Effect->ShowMessage.getValueOr("no message produced!");
-}
-
 void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
                     std::string Output) {
   auto Result = applyEdit(ID, Input);
@@ -128,148 +127,72 @@ void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
   EXPECT_EQ(Output, std::string(*Result)) << Input;
 }
 
-/// Check if apply returns an error and that the @ErrorMessage is contained
-/// in that error
-void checkApplyContainsError(llvm::StringRef ID, llvm::StringRef Input,
-                             const std::string& ErrorMessage) {
-  auto Result = apply(ID, Input);
-  ASSERT_FALSE(Result) << "expected error message:\n   " << ErrorMessage <<
-                       "\non input:" << Input;
-  EXPECT_THAT(llvm::toString(Result.takeError()),
-              testing::HasSubstr(ErrorMessage))
-      << Input;
-}
-
-TEST(TweakTest, SwapIfBranches) {
-  llvm::StringLiteral ID = "SwapIfBranches";
-
-  checkAvailable(ID, R"cpp(
-    void test() {
-      ^i^f^^(^t^r^u^e^) { return 100; } ^e^l^s^e^ { continue; }
-    }
-  )cpp");
-
-  checkNotAvailable(ID, R"cpp(
-    void test() {
-      if (true) {^return ^100;^ } else { ^continue^;^ }
-    }
-  )cpp");
-
-  llvm::StringLiteral Input = R"cpp(
-    void test() {
-      ^if (true) { return 100; } else { continue; }
-    }
-  )cpp";
-  llvm::StringLiteral Output = R"cpp(
-    void test() {
-      if (true) { continue; } else { return 100; }
-    }
-  )cpp";
-  checkTransform(ID, Input, Output);
-
-  Input = R"cpp(
-    void test() {
-      ^if () { return 100; } else { continue; }
-    }
-  )cpp";
-  Output = R"cpp(
-    void test() {
-      if () { continue; } else { return 100; }
-    }
-  )cpp";
-  checkTransform(ID, Input, Output);
-
-  // Available in subexpressions of the condition.
-  checkAvailable(ID, R"cpp(
-    void test() {
-      if(2 + [[2]] + 2) { return 2 + 2 + 2; } else { continue; }
-    }
-  )cpp");
+TWEAK_TEST(SwapIfBranches);
+TEST_F(SwapIfBranchesTest, Test) {
+  Context = Function;
+  EXPECT_EQ(apply("^if (true) {return 100;} else {continue;}"),
+            "if (true) {continue;} else {return 100;}");
+  EXPECT_EQ(apply("^if () {return 100;} else {continue;}"),
+            "if () {continue;} else {return 100;}") << "broken condition";
+  EXPECT_AVAILABLE("^i^f^^(^t^r^u^e^) { return 100; } ^e^l^s^e^ { continue; }");
+  EXPECT_UNAVAILABLE("if (true) {^return ^100;^ } else { ^continue^;^ }");
+  // Available in subexpressions of the condition;
+  EXPECT_THAT("if(2 + [[2]] + 2) { return 2 + 2 + 2; } else {continue;}",
+              isAvailable());
   // But not as part of the branches.
-  checkNotAvailable(ID, R"cpp(
-    void test() {
-      if(2 + 2 + 2) { return 2 + [[2]] + 2; } else { continue; }
-    }
-  )cpp");
+  EXPECT_THAT("if(2 + 2 + 2) { return 2 + [[2]] + 2; } else { continue; }",
+              Not(isAvailable()));
   // Range covers the "else" token, so available.
-  checkAvailable(ID, R"cpp(
-    void test() {
-      if(2 + 2 + 2) { return 2 + [[2 + 2; } else { continue;]] }
-    }
-  )cpp");
+  EXPECT_THAT("if(2 + 2 + 2) { return 2 + [[2 + 2; } else {continue;]]}",
+              isAvailable());
   // Not available in compound statements in condition.
-  checkNotAvailable(ID, R"cpp(
-    void test() {
-      if([]{return [[true]];}()) { return 2 + 2 + 2; } else { continue; }
-    }
-  )cpp");
+  EXPECT_THAT(
+      "if([]{return [[true]];}()) { return 2 + 2 + 2; } else { continue; }",
+      Not(isAvailable()));
   // Not available if both sides aren't braced.
-  checkNotAvailable(ID, R"cpp(
-    void test() {
-      ^if (1) return; else { return; }
-    }
-  )cpp");
+  EXPECT_THAT("^if (1) return; else { return; }", Not(isAvailable()));
   // Only one if statement is supported!
-  checkNotAvailable(ID, R"cpp(
-    [[if(1){}else{}if(2){}else{}]]
-  )cpp");
+  EXPECT_THAT("[[if(1){}else{}if(2){}else{}]]", Not(isAvailable()));
 }
 
-TEST(TweakTest, RawStringLiteral) {
-  llvm::StringLiteral ID = "RawStringLiteral";
+TWEAK_TEST(RawStringLiteral);
+TEST_F(RawStringLiteralTest, Test) {
+  Context = Expression;
+  EXPECT_AVAILABLE(R"cpp(^"^f^o^o^\^n^")cpp");
+  EXPECT_AVAILABLE(R"cpp(R"(multi )" ^"token " "str\ning")cpp");
+  EXPECT_UNAVAILABLE(R"cpp(^"f^o^o^o")cpp"); // no chars need escaping
+  EXPECT_UNAVAILABLE(R"cpp(R"(multi )" ^"token " u8"str\ning")cpp"); // nonascii
+  EXPECT_UNAVAILABLE(R"cpp(^R^"^(^multi )" "token " "str\ning")cpp"); // raw
+  EXPECT_UNAVAILABLE(R"cpp(^"token\n" __FILE__)cpp"); // chunk is macro
+  EXPECT_UNAVAILABLE(R"cpp(^"a\r\n";)cpp"); // forbidden escape char
 
-  checkAvailable(ID, R"cpp(
-    const char *A = ^"^f^o^o^\^n^";
-    const char *B = R"(multi )" ^"token " "str\ning";
-  )cpp");
-
-  checkNotAvailable(ID, R"cpp(
-    const char *A = ^"f^o^o^o^"; // no chars need escaping
-    const char *B = R"(multi )" ^"token " u8"str\ning"; // not all ascii
-    const char *C = ^R^"^(^multi )" "token " "str\ning"; // chunk is raw
-    const char *D = ^"token\n" __FILE__; // chunk is macro expansion
-    const char *E = ^"a\r\n"; // contains forbidden escape character
-  )cpp");
-
-  const char *Input = R"cpp(
-    const char *X = R"(multi
-token)" "\nst^ring\n" "literal";
-    }
-  )cpp";
-  const char *Output = R"cpp(
-    const char *X = R"(multi
+  const char *Input = R"cpp(R"(multi
+token)" "\nst^ring\n" "literal")cpp";
+  const char *Output = R"cpp(R"(multi
 token
 string
-literal)";
-    }
-  )cpp";
-  checkTransform(ID, Input, Output);
+literal)")cpp";
+  EXPECT_EQ(apply(Input), Output);
 }
 
-TEST(TweakTest, DumpAST) {
-  llvm::StringLiteral ID = "DumpAST";
-
-  checkAvailable(ID, "^int f^oo() { re^turn 2 ^+ 2; }");
-  checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
-
-  const char *Input = "int x = 2 ^+ 2;";
-  auto Result = getMessage(ID, Input);
-  EXPECT_THAT(Result, ::testing::HasSubstr("BinaryOperator"));
-  EXPECT_THAT(Result, ::testing::HasSubstr("'+'"));
-  EXPECT_THAT(Result, ::testing::HasSubstr("|-IntegerLiteral"));
-  EXPECT_THAT(Result,
-              ::testing::HasSubstr("<col:9> 'int' 2\n`-IntegerLiteral"));
-  EXPECT_THAT(Result, ::testing::HasSubstr("<col:13> 'int' 2"));
+TWEAK_TEST(DumpAST);
+TEST_F(DumpASTTest, Test) {
+  EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");
+  EXPECT_UNAVAILABLE("/*c^omment*/ int foo() return 2 ^ + 2; }");
+  EXPECT_THAT(apply("int x = 2 ^+ 2;"),
+              AllOf(StartsWith("message:"), HasSubstr("BinaryOperator"),
+                    HasSubstr("'+'"), HasSubstr("|-IntegerLiteral"),
+                    HasSubstr("<col:9> 'int' 2\n`-IntegerLiteral"),
+                    HasSubstr("<col:13> 'int' 2")));
 }
 
-TEST(TweakTest, ShowSelectionTree) {
-  llvm::StringLiteral ID = "ShowSelectionTree";
+TWEAK_TEST(ShowSelectionTree);
+TEST_F(ShowSelectionTreeTest, Test) {
+  EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");
+  EXPECT_AVAILABLE("/*c^omment*/ int foo() return 2 ^ + 2; }");
 
-  checkAvailable(ID, "^int f^oo() { re^turn 2 ^+ 2; }");
-  checkAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
-
-  const char *Input = "int fcall(int); int x = fca[[ll(2 +]]2);";
-  const char *Output = R"( TranslationUnitDecl 
+  const char *Output = R"(message:
+ TranslationUnitDecl 
    VarDecl int x = fcall(2 + 2)
     .CallExpr fcall(2 + 2)
        ImplicitCastExpr fcall
@@ -277,22 +200,22 @@ TEST(TweakTest, ShowSelectionTree) {
       .BinaryOperator 2 + 2
         *IntegerLiteral 2
 )";
-  EXPECT_EQ(Output, getMessage(ID, Input));
+  EXPECT_EQ(apply("int fcall(int); int x = fca[[ll(2 +]]2);"), Output);
 }
 
-TEST(TweakTest, DumpRecordLayout) {
-  llvm::StringLiteral ID = "DumpRecordLayout";
-  checkAvailable(ID, "^s^truct ^X ^{ int x; ^};");
-  checkNotAvailable(ID, "struct X { int ^a; };");
-  checkNotAvailable(ID, "struct ^X;");
-  checkNotAvailable(ID, "template <typename T> struct ^X { T t; };");
-  checkNotAvailable(ID, "enum ^X {};");
+TWEAK_TEST(DumpRecordLayout);
+TEST_F(DumpRecordLayoutTest, Test) {
+  EXPECT_AVAILABLE("^s^truct ^X ^{ int x; ^};");
+  EXPECT_THAT("struct X { int ^a; };", Not(isAvailable()));
+  EXPECT_THAT("struct ^X;", Not(isAvailable()));
+  EXPECT_THAT("template <typename T> struct ^X { T t; };", Not(isAvailable()));
+  EXPECT_THAT("enum ^X {};", Not(isAvailable()));
 
-  const char *Input = "struct ^X { int x; int y; }";
-  EXPECT_THAT(getMessage(ID, Input), ::testing::HasSubstr("0 |   int x"));
+  EXPECT_THAT(apply("struct ^X { int x; int y; }"),
+              AllOf(StartsWith("message:"), HasSubstr("0 |   int x")));
 }
 
-TEST(TweakTest, ExtractVariable) {
+TEST(TweaksTest, ExtractVariable) {
   llvm::StringLiteral ID = "ExtractVariable";
   checkAvailable(ID, R"cpp(
     int xyz(int a = 1) {
@@ -560,7 +483,7 @@ TEST(TweakTest, ExtractVariable) {
   }
 }
 
-TEST(TweakTest, AnnotateHighlightings) {
+TEST(TweaksTest, AnnotateHighlightings) {
   llvm::StringLiteral ID = "AnnotateHighlightings";
   checkAvailable(ID, "^vo^id^ ^f(^) {^}^"); // available everywhere.
   checkAvailable(ID, "[[int a; int b;]]");
@@ -590,245 +513,87 @@ void /* entity.name.function.cpp */f2() {};
 )cpp");
 }
 
-TEST(TweakTest, ExpandMacro) {
-  llvm::StringLiteral ID = "ExpandMacro";
+TWEAK_TEST(ExpandMacro);
+TEST_F(ExpandMacroTest, Test) {
+  Header = R"cpp(
+    #define FOO 1 2 3
+    #define FUNC(X) X+X+X
+    #define EMPTY
+    #define EMPTY_FN(X)
+  )cpp";
 
   // Available on macro names, not available anywhere else.
-  checkAvailable(ID, R"cpp(
-#define FOO 1 2 3
-#define FUNC(X) X+X+X
-^F^O^O^ BAR ^F^O^O^
-^F^U^N^C^(1)
-)cpp");
-  checkNotAvailable(ID, R"cpp(
-^#^d^efine^ ^FO^O 1 ^2 ^3^
-FOO ^B^A^R^ FOO ^
-FUNC(^1^)^
-)cpp");
+  EXPECT_AVAILABLE("^F^O^O^ BAR ^F^O^O^");
+  EXPECT_AVAILABLE("^F^U^N^C^(1)");
+  EXPECT_UNAVAILABLE("^#^d^efine^ ^XY^Z 1 ^2 ^3^");
+  EXPECT_UNAVAILABLE("FOO ^B^A^R^ FOO ^");
+  EXPECT_UNAVAILABLE("FUNC(^1^)^");
 
   // Works as expected on object-like macros.
-  checkTransform(ID, R"cpp(
-#define FOO 1 2 3
-^FOO BAR FOO
-)cpp",
-                 R"cpp(
-#define FOO 1 2 3
-1 2 3 BAR FOO
-)cpp");
-  checkTransform(ID, R"cpp(
-#define FOO 1 2 3
-FOO BAR ^FOO
-)cpp",
-                 R"cpp(
-#define FOO 1 2 3
-FOO BAR 1 2 3
-)cpp");
-
+  EXPECT_EQ(apply("^FOO BAR FOO"), "1 2 3 BAR FOO");
+  EXPECT_EQ(apply("FOO BAR ^FOO"), "FOO BAR 1 2 3");
   // And function-like macros.
-  checkTransform(ID, R"cpp(
-#define FUNC(X) X+X+X
-F^UNC(2)
-)cpp",
-                 R"cpp(
-#define FUNC(X) X+X+X
-2 + 2 + 2
-)cpp");
+  EXPECT_EQ(apply("F^UNC(2)"), "2 + 2 + 2");
 
   // Works on empty macros.
-  checkTransform(ID, R"cpp(
-#define EMPTY
-int a ^EMPTY;
-  )cpp",
-                 R"cpp(
-#define EMPTY
-int a ;
-  )cpp");
-  checkTransform(ID, R"cpp(
-#define EMPTY_FN(X)
-int a ^EMPTY_FN(1 2 3);
-  )cpp",
-                 R"cpp(
-#define EMPTY_FN(X)
-int a ;
-  )cpp");
-  checkTransform(ID, R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123 ^EMPTY EMPTY_FN(1);
-  )cpp",
-                 R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123  EMPTY_FN(1);
-  )cpp");
-  checkTransform(ID, R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123 ^EMPTY_FN(1) EMPTY;
-  )cpp",
-                 R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123  EMPTY;
-  )cpp");
-  checkTransform(ID, R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123 EMPTY_FN(1) ^EMPTY;
-  )cpp",
-                 R"cpp(
-#define EMPTY
-#define EMPTY_FN(X)
-int a = 123 EMPTY_FN(1) ;
-  )cpp");
+  EXPECT_EQ(apply("int a ^EMPTY;"), "int a ;");
+  EXPECT_EQ(apply("int a ^EMPTY_FN(1 2 3);"), "int a ;");
+  EXPECT_EQ(apply("int a = 123 ^EMPTY EMPTY_FN(1);"),
+            "int a = 123  EMPTY_FN(1);");
+  EXPECT_EQ(apply("int a = 123 ^EMPTY_FN(1) EMPTY;"), "int a = 123  EMPTY;");
+  EXPECT_EQ(apply("int a = 123 EMPTY_FN(1) ^EMPTY;"),
+            "int a = 123 EMPTY_FN(1) ;");
 }
 
-TEST(TweakTest, ExpandAutoType) {
-  llvm::StringLiteral ID = "ExpandAutoType";
-
-  checkAvailable(ID, R"cpp(
-    ^a^u^t^o^ i = 0;
-  )cpp");
-
-  checkNotAvailable(ID, R"cpp(
-    auto ^i^ ^=^ ^0^;^
-  )cpp");
-
-  llvm::StringLiteral Input = R"cpp(
-    [[auto]] i = 0;
+TWEAK_TEST(ExpandAutoType);
+TEST_F(ExpandAutoTypeTest, Test) {
+  Header = R"cpp(
+    namespace ns {
+      struct Class {
+        struct Nested {};
+      }
+      void Func();
+    }
+    inline namespace inl_ns {
+      namespace {
+        struct Visible {};
+      }
+    }
   )cpp";
-  llvm::StringLiteral Output = R"cpp(
-    int i = 0;
-  )cpp";
-  checkTransform(ID, Input, Output);
+
+  EXPECT_AVAILABLE("^a^u^t^o^ i = 0;");
+  EXPECT_UNAVAILABLE("auto ^i^ ^=^ ^0^;^");
 
   // check primitive type
-  Input = R"cpp(
-    au^to i = 0;
-  )cpp";
-  Output = R"cpp(
-    int i = 0;
-  )cpp";
-  checkTransform(ID, Input, Output);
-
+  EXPECT_EQ(apply("[[auto]] i = 0;"), "int i = 0;");
+  EXPECT_EQ(apply("au^to i = 0;"), "int i = 0;");
   // check classes and namespaces
-  Input = R"cpp(
-    namespace testns {
-      class TestClass {
-        class SubClass {};
-      };
-    }
-    ^auto C = testns::TestClass::SubClass();
-  )cpp";
-  Output = R"cpp(
-    namespace testns {
-      class TestClass {
-        class SubClass {};
-      };
-    }
-    testns::TestClass::SubClass C = testns::TestClass::SubClass();
-  )cpp";
-  checkTransform(ID, Input, Output);
-
+  EXPECT_EQ(apply("^auto C = ns::Class::Nested();"),
+            "ns::Class::Nested C = ns::Class::Nested();");
   // check that namespaces are shortened
-  Input = R"cpp(
-    namespace testns {
-    class TestClass {
-    };
-    void func() { ^auto C = TestClass(); }
-    }
-  )cpp";
-  Output = R"cpp(
-    namespace testns {
-    class TestClass {
-    };
-    void func() { TestClass C = TestClass(); }
-    }
-  )cpp";
-  checkTransform(ID, Input, Output);
-
+  EXPECT_EQ(apply("namespace ns { void f() { ^auto C = Class(); } }"),
+            "namespace ns { void f() { Class C = Class(); } }");
   // unknown types in a template should not be replaced
-  Input = R"cpp(
-    template <typename T> void x() {
-        ^auto y =  T::z();
-        }
-  )cpp";
-  checkApplyContainsError(ID, Input, "Could not deduce type for 'auto' type");
-
+  EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
+              StartsWith("fail: Could not deduce type for 'auto' type"));
   // undefined functions should not be replaced
-  Input = R"cpp(
-    a^uto x = doesnt_exist();
-  )cpp";
-  checkApplyContainsError(ID, Input, "Could not deduce type for 'auto' type");
-
+  EXPECT_THAT(apply("au^to x = doesnt_exist();"),
+              StartsWith("fail: Could not deduce type for 'auto' type"));
   // function pointers should not be replaced
-  Input = R"cpp(
-    int foo();
-    au^to x = &foo;
-  )cpp";
-  checkApplyContainsError(ID, Input,
-      "Could not expand type of function pointer");
-
+  EXPECT_THAT(apply("au^to x = &ns::Func;"),
+              StartsWith("fail: Could not expand type of function pointer"));
   // lambda types are not replaced
-  Input = R"cpp(
-    au^to x = []{};
-  )cpp";
-  checkApplyContainsError(ID, Input,
-      "Could not expand type of lambda expression");
-
+  EXPECT_THAT(apply("au^to x = []{};"),
+              StartsWith("fail: Could not expand type of lambda expression"));
   // inline namespaces
-  Input = R"cpp(
-    inline namespace x {
-      namespace { struct S; }
-    }
-    au^to y = S();
-  )cpp";
-  Output = R"cpp(
-    inline namespace x {
-      namespace { struct S; }
-    }
-    S y = S();
-  )cpp";
-
+  EXPECT_EQ(apply("au^to x = inl_ns::Visible();"),
+              "Visible x = inl_ns::Visible();");
   // local class
-  Input = R"cpp(
-  namespace x {
-    void y() {
-      struct S{};
-      a^uto z = S();
-  }}
-  )cpp";
-  Output = R"cpp(
-  namespace x {
-    void y() {
-      struct S{};
-      S z = S();
-  }}
-  )cpp";
-  checkTransform(ID, Input, Output);
-
+  EXPECT_EQ(apply("namespace x { void y() { struct S{}; ^auto z = S(); } }"),
+            "namespace x { void y() { struct S{}; S z = S(); } }");
   // replace array types
-  Input = R"cpp(
-    au^to x = "test";
-  )cpp";
-  Output = R"cpp(
-    const char * x = "test";
-  )cpp";
-  checkTransform(ID, Input, Output);
-
-  Input = R"cpp(
-  namespace {
-  class Foo {};
-  }
-  au^to f = Foo();
-  )cpp";
-  Output = R"cpp(
-  namespace {
-  class Foo {};
-  }
-  Foo f = Foo();
-  )cpp";
-  checkTransform(ID, Input, Output);
+  EXPECT_EQ(apply(R"cpp(au^to x = "test")cpp"),
+            R"cpp(const char * x = "test")cpp");
 }
 
 } // namespace

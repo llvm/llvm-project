@@ -9,8 +9,8 @@
 
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
-// PROFILE-GEN: @__profc_main = private global [2 x i64] zeroinitializer, section "__llvm_prf_cnts", align 8
-// PROFILE-GEN: @__profd_main = private global
+// PROFILE-GEN: @__profc_main = {{(private|internal)}} global [2 x i64] zeroinitializer, section
+// PROFILE-GEN: @__profd_main =
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fno-experimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s

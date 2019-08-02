@@ -16,8 +16,6 @@ from __future__ import division, print_function
 import unittest2
 import gdbremote_testcase
 import lldbgdbserverutils
-import platform
-import signal
 from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

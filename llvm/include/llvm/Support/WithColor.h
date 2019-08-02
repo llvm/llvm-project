@@ -53,7 +53,8 @@ public:
   /// @param BG If true, change the background, default: change foreground
   /// @param DisableColors Whether to ignore color changes regardless of -color
   /// and support in OS
-  WithColor(raw_ostream &OS, raw_ostream::Color Color = raw_ostream::SAVEDCOLOR,
+  WithColor(raw_ostream &OS,
+            raw_ostream::Colors Color = raw_ostream::SAVEDCOLOR,
             bool Bold = false, bool BG = false, bool DisableColors = false)
       : OS(OS), DisableColors(DisableColors) {
     changeColor(Color, Bold, BG);
@@ -101,7 +102,7 @@ public:
   /// change only the bold attribute, and keep colors untouched
   /// @param Bold Bold/brighter text, default false
   /// @param BG If true, change the background, default: change foreground
-  WithColor &changeColor(raw_ostream::Color Color, bool Bold = false,
+  WithColor &changeColor(raw_ostream::Colors Color, bool Bold = false,
                          bool BG = false);
 
   /// Reset the colors to terminal defaults. Call this when you are done

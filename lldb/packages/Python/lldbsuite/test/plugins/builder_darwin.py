@@ -1,6 +1,5 @@
 
 from __future__ import print_function
-import os
 import lldbsuite.test.lldbtest as lldbtest
 
 from builder_base import *

@@ -178,7 +178,8 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling) {
+    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling,
+    Optional<bool> UserAllowProfileBasedPeeling) {
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -258,6 +259,8 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.UpperBound = *UserUpperBound;
   if (UserAllowPeeling.hasValue())
     UP.AllowPeeling = *UserAllowPeeling;
+  if (UserAllowProfileBasedPeeling.hasValue())
+    UP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
 
   return UP;
 }
@@ -977,13 +980,13 @@ bool llvm::computeUnrollCount(
 static LoopUnrollResult tryToUnrollLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC,
-    OptimizationRemarkEmitter &ORE,
-    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-    bool PreserveLCSSA, int OptLevel,
+    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+    ProfileSummaryInfo *PSI, bool PreserveLCSSA, int OptLevel,
     bool OnlyWhenForced, bool ForgetAllSCEV, Optional<unsigned> ProvidedCount,
     Optional<unsigned> ProvidedThreshold, Optional<bool> ProvidedAllowPartial,
     Optional<bool> ProvidedRuntime, Optional<bool> ProvidedUpperBound,
-    Optional<bool> ProvidedAllowPeeling) {
+    Optional<bool> ProvidedAllowPeeling,
+    Optional<bool> ProvidedAllowProfileBasedPeeling) {
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
                     << L->getHeader()->getName() << "\n");
@@ -1008,7 +1011,7 @@ static LoopUnrollResult tryToUnrollLoop(
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, SE, TTI, BFI, PSI, OptLevel, ProvidedThreshold, ProvidedCount,
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
-      ProvidedAllowPeeling);
+      ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling);
 
   // Exit early if unrolling is disabled. For OptForSize, we pick the loop size
   // as threshold later on.
@@ -1170,18 +1173,21 @@ public:
   Optional<bool> ProvidedRuntime;
   Optional<bool> ProvidedUpperBound;
   Optional<bool> ProvidedAllowPeeling;
+  Optional<bool> ProvidedAllowProfileBasedPeeling;
 
   LoopUnroll(int OptLevel = 2, bool OnlyWhenForced = false,
              bool ForgetAllSCEV = false, Optional<unsigned> Threshold = None,
              Optional<unsigned> Count = None,
              Optional<bool> AllowPartial = None, Optional<bool> Runtime = None,
              Optional<bool> UpperBound = None,
-             Optional<bool> AllowPeeling = None)
+             Optional<bool> AllowPeeling = None,
+             Optional<bool> AllowProfileBasedPeeling = None)
       : LoopPass(ID), OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
         ForgetAllSCEV(ForgetAllSCEV), ProvidedCount(std::move(Count)),
         ProvidedThreshold(Threshold), ProvidedAllowPartial(AllowPartial),
         ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound),
-        ProvidedAllowPeeling(AllowPeeling) {
+        ProvidedAllowPeeling(AllowPeeling),
+        ProvidedAllowProfileBasedPeeling(AllowProfileBasedPeeling) {
     initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1204,10 +1210,10 @@ public:
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     LoopUnrollResult Result = tryToUnrollLoop(
-        L, DT, LI, SE, TTI, AC, ORE, nullptr, nullptr,
-        PreserveLCSSA, OptLevel, OnlyWhenForced,
-        ForgetAllSCEV, ProvidedCount, ProvidedThreshold, ProvidedAllowPartial,
-        ProvidedRuntime, ProvidedUpperBound, ProvidedAllowPeeling);
+        L, DT, LI, SE, TTI, AC, ORE, nullptr, nullptr, PreserveLCSSA, OptLevel,
+        OnlyWhenForced, ForgetAllSCEV, ProvidedCount, ProvidedThreshold,
+        ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
+        ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1284,14 +1290,15 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
 
   std::string LoopName = L.getName();
 
-  bool Changed =
-      tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
-                      /*BFI*/ nullptr, /*PSI*/ nullptr,
-                      /*PreserveLCSSA*/ true, OptLevel, OnlyWhenForced,
-                      ForgetSCEV, /*Count*/ None,
-                      /*Threshold*/ None, /*AllowPartial*/ false,
-                      /*Runtime*/ false, /*UpperBound*/ false,
-                      /*AllowPeeling*/ false) != LoopUnrollResult::Unmodified;
+  bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
+                                 /*BFI*/ nullptr, /*PSI*/ nullptr,
+                                 /*PreserveLCSSA*/ true, OptLevel,
+                                 OnlyWhenForced, ForgetSCEV, /*Count*/ None,
+                                 /*Threshold*/ None, /*AllowPartial*/ false,
+                                 /*Runtime*/ false, /*UpperBound*/ false,
+                                 /*AllowPeeling*/ false,
+                                 /*AllowProfileBasedPeeling*/ false) !=
+                 LoopUnrollResult::Unmodified;
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1431,7 +1438,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, UnrollOpts.OnlyWhenForced,
         UnrollOpts.ForgetSCEV, /*Count*/ None,
         /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,
-        UnrollOpts.AllowUpperBound, LocalAllowPeeling);
+        UnrollOpts.AllowUpperBound, LocalAllowPeeling,
+        UnrollOpts.AllowProfileBasedPeeling);
     Changed |= Result != LoopUnrollResult::Unmodified;
 
     // The parent must not be damaged by unrolling!

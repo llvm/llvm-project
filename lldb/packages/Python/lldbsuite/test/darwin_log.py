@@ -6,7 +6,6 @@ Base class for DarwinLog tests.
 from __future__ import print_function
 
 import json
-import os
 import platform
 import re
 import sys

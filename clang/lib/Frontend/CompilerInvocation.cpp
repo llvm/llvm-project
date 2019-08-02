@@ -1491,10 +1491,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                    OPT_fno_diagnostics_show_option, DefaultShowOpt);
 
   llvm::sys::Process::UseANSIEscapeCodes(Args.hasArg(OPT_fansi_escape_codes));
-  if (Opts.ShowColors) {
-    llvm::outs().enable_colors();
-    llvm::errs().enable_colors();
-  }
 
   // Default behavior is to not to show note include stacks.
   Opts.ShowNoteIncludeStack = false;

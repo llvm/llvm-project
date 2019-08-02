@@ -132,7 +132,8 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling);
+    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling,
+    Optional<bool> UserAllowProfileBasedPeeling);
 
 unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
                              bool &NotDuplicatable, bool &Convergent,

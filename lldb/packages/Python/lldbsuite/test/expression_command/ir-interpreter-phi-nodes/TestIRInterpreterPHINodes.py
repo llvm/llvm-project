@@ -2,8 +2,6 @@
 Test PHI nodes work in the IR interpreter.
 """
 
-import os
-import os.path
 
 import lldb
 from lldbsuite.test.lldbtest import *

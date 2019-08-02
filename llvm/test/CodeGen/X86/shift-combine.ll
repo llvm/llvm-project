@@ -184,7 +184,7 @@ define i64 @ashr_add_shl_i8(i64 %r) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    shll $24, %edx
-; X32-NEXT:    addl $16777216, %edx # imm = 0x1000000
+; X32-NEXT:    addl $33554432, %edx # imm = 0x2000000
 ; X32-NEXT:    movl %edx, %eax
 ; X32-NEXT:    sarl $24, %eax
 ; X32-NEXT:    sarl $31, %edx
@@ -193,12 +193,12 @@ define i64 @ashr_add_shl_i8(i64 %r) nounwind {
 ; X64-LABEL: ashr_add_shl_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shlq $56, %rdi
-; X64-NEXT:    movabsq $72057594037927936, %rax # imm = 0x100000000000000
+; X64-NEXT:    movabsq $144115188075855872, %rax # imm = 0x200000000000000
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    sarq $56, %rax
 ; X64-NEXT:    retq
   %conv = shl i64 %r, 56
-  %sext = add i64 %conv, 72057594037927936
+  %sext = add i64 %conv, 144115188075855872
   %conv1 = ashr i64 %sext, 56
   ret i64 %conv1
 }
@@ -312,4 +312,86 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) nounwind {
   %sext = add i64 %conv, 4294967296
   %conv1 = ashr i64 %sext, 8
   ret i64 %conv1
+}
+
+define i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
+; X32-LABEL: ashr_add_shl_i32_i8_extra_use1:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shll $24, %eax
+; X32-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X32-NEXT:    movl %eax, (%ecx)
+; X32-NEXT:    sarl $24, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: ashr_add_shl_i32_i8_extra_use1:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $24, %eax
+; X64-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    sarl $24, %eax
+; X64-NEXT:    retq
+  %conv = shl i32 %r, 24
+  %sext = add i32 %conv, 33554432
+  store i32 %sext, i32* %p
+  %conv1 = ashr i32 %sext, 24
+  ret i32 %conv1
+}
+
+define i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
+; X32-LABEL: ashr_add_shl_i32_i8_extra_use2:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shll $24, %eax
+; X32-NEXT:    movl %eax, (%ecx)
+; X32-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X32-NEXT:    sarl $24, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: ashr_add_shl_i32_i8_extra_use2:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $24, %edi
+; X64-NEXT:    movl %edi, (%rsi)
+; X64-NEXT:    leal 33554432(%rdi), %eax
+; X64-NEXT:    sarl $24, %eax
+; X64-NEXT:    retq
+  %conv = shl i32 %r, 24
+  store i32 %conv, i32* %p
+  %sext = add i32 %conv, 33554432
+  %conv1 = ashr i32 %sext, 24
+  ret i32 %conv1
+}
+
+define i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2) nounwind {
+; X32-LABEL: ashr_add_shl_i32_i8_extra_use3:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shll $24, %eax
+; X32-NEXT:    movl %eax, (%edx)
+; X32-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X32-NEXT:    movl %eax, (%ecx)
+; X32-NEXT:    sarl $24, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: ashr_add_shl_i32_i8_extra_use3:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $24, %eax
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    sarl $24, %eax
+; X64-NEXT:    retq
+  %conv = shl i32 %r, 24
+  store i32 %conv, i32* %p1
+  %sext = add i32 %conv, 33554432
+  store i32 %sext, i32* %p2
+  %conv1 = ashr i32 %sext, 24
+  ret i32 %conv1
 }

@@ -41,7 +41,8 @@ Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
 Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*TSM.getModule()))
+  if (auto Err =
+          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
     return Err;
 
   return CompileLayer->add(JD, std::move(TSM), ES->allocateVModule());
@@ -166,10 +167,14 @@ Error LLLazyJITBuilderState::prepareForConstruction() {
 Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*TSM.getModule()))
-    return Err;
+  if (auto Err = TSM.withModuleDo([&](Module &M) -> Error {
+        if (auto Err = applyDataLayout(M))
+          return Err;
 
-  recordCtorDtors(*TSM.getModule());
+        recordCtorDtors(M);
+        return Error::success();
+      }))
+    return Err;
 
   return CODLayer->add(JD, std::move(TSM), ES->allocateVModule());
 }

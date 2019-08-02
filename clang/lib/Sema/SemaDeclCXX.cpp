@@ -11543,7 +11543,13 @@ void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
     std::swap(DelayedDllExportMemberFunctions, WorkList);
     for (CXXMethodDecl *M : WorkList) {
       DefineImplicitSpecialMember(*this, M, M->getLocation());
-      ActOnFinishInlineFunctionDef(M);
+
+      // Pass the method to the consumer to get emitted. This is not necessary
+      // for explicit instantiation definitions, as they will get emitted
+      // anyway.
+      if (M->getParent()->getTemplateSpecializationKind() !=
+          TSK_ExplicitInstantiationDefinition)
+        ActOnFinishInlineFunctionDef(M);
     }
   }
 }

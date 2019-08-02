@@ -138,11 +138,12 @@ struct MarkerStyle {
   /// The starting char (before tildes) for marking the line.
   char Lead;
   /// What color to use for this annotation.
-  raw_ostream::Color Color;
+  raw_ostream::Colors Color;
   /// A note to follow the marker, or empty string if none.
   std::string Note;
   MarkerStyle() {}
-  MarkerStyle(char Lead, raw_ostream::Color Color, const std::string &Note = "")
+  MarkerStyle(char Lead, raw_ostream::Colors Color,
+              const std::string &Note = "")
       : Lead(Lead), Color(Color), Note(Note) {}
 };
 

@@ -293,9 +293,9 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (Latch != Exit || SubLoopLatch != SubLoopExit)
     return LoopUnrollResult::Unmodified;
 
-  TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
-      L, SE, TTI, nullptr, nullptr, OptLevel,
-      None, None, None, None, None, None);
+  TargetTransformInfo::UnrollingPreferences UP =
+      gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, OptLevel, None,
+                                 None, None, None, None, None, None);
   if (AllowUnrollAndJam.getNumOccurrences() > 0)
     UP.UnrollAndJam = AllowUnrollAndJam;
   if (UnrollAndJamThreshold.getNumOccurrences() > 0)

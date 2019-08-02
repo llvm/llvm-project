@@ -23,16 +23,23 @@
 
 using namespace clang;
 
-static const raw_ostream::Color noteColor = raw_ostream::BLACK;
-static const raw_ostream::Color remarkColor = raw_ostream::BLUE;
-static const raw_ostream::Color fixitColor = raw_ostream::GREEN;
-static const raw_ostream::Color caretColor = raw_ostream::GREEN;
-static const raw_ostream::Color warningColor = raw_ostream::MAGENTA;
-static const raw_ostream::Color templateColor = raw_ostream::CYAN;
-static const raw_ostream::Color errorColor = raw_ostream::RED;
-static const raw_ostream::Color fatalColor = raw_ostream::RED;
+static const enum raw_ostream::Colors noteColor =
+  raw_ostream::BLACK;
+static const enum raw_ostream::Colors remarkColor =
+  raw_ostream::BLUE;
+static const enum raw_ostream::Colors fixitColor =
+  raw_ostream::GREEN;
+static const enum raw_ostream::Colors caretColor =
+  raw_ostream::GREEN;
+static const enum raw_ostream::Colors warningColor =
+  raw_ostream::MAGENTA;
+static const enum raw_ostream::Colors templateColor =
+  raw_ostream::CYAN;
+static const enum raw_ostream::Colors errorColor = raw_ostream::RED;
+static const enum raw_ostream::Colors fatalColor = raw_ostream::RED;
 // Used for changing only the bold attribute.
-static const raw_ostream::Color savedColor = raw_ostream::SAVEDCOLOR;
+static const enum raw_ostream::Colors savedColor =
+  raw_ostream::SAVEDCOLOR;
 
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,

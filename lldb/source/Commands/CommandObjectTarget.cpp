@@ -2259,8 +2259,8 @@ protected:
         if (m_interpreter.WasInterrupted())
           break;
         Module *m = target->GetImages().GetModulePointerAtIndex(image_idx);
-        SymbolFile *sf = m->GetSymbolVendor()->GetSymbolFile();
-        sf->DumpClangAST(result.GetOutputStream());
+        if (SymbolFile *sf = m->GetSymbolFile())
+          sf->DumpClangAST(result.GetOutputStream());
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
@@ -2285,8 +2285,8 @@ protected:
         if (m_interpreter.WasInterrupted())
           break;
         Module *m = module_list.GetModulePointerAtIndex(i);
-        SymbolFile *sf = m->GetSymbolVendor()->GetSymbolFile();
-        sf->DumpClangAST(result.GetOutputStream());
+        if (SymbolFile *sf = m->GetSymbolFile())
+          sf->DumpClangAST(result.GetOutputStream());
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -3272,9 +3272,9 @@ protected:
 
       case 's':
       case 'S': {
-        const SymbolVendor *symbol_vendor = module->GetSymbolVendor();
-        if (symbol_vendor) {
-          const FileSpec symfile_spec = symbol_vendor->GetMainFileSpec();
+        if (const SymbolFile *symbol_file = module->GetSymbolFile()) {
+          const FileSpec symfile_spec =
+              symbol_file->GetObjectFile()->GetFileSpec();
           if (format_char == 'S') {
             // Dump symbol file only if different from module file
             if (!symfile_spec || symfile_spec == module->GetFileSpec()) {
@@ -4207,48 +4207,44 @@ protected:
         // decides to create it!
         module_sp->SetSymbolFileFileSpec(symbol_fspec);
 
-        SymbolVendor *symbol_vendor =
-            module_sp->GetSymbolVendor(true, &result.GetErrorStream());
-        if (symbol_vendor) {
-          SymbolFile *symbol_file = symbol_vendor->GetSymbolFile();
+        SymbolFile *symbol_file =
+            module_sp->GetSymbolFile(true, &result.GetErrorStream());
+        if (symbol_file) {
+          ObjectFile *object_file = symbol_file->GetObjectFile();
 
-          if (symbol_file) {
-            ObjectFile *object_file = symbol_file->GetObjectFile();
+          if (object_file && object_file->GetFileSpec() == symbol_fspec) {
+            // Provide feedback that the symfile has been successfully added.
+            const FileSpec &module_fs = module_sp->GetFileSpec();
+            result.AppendMessageWithFormat(
+                "symbol file '%s' has been added to '%s'\n", symfile_path,
+                module_fs.GetPath().c_str());
 
-            if (object_file && object_file->GetFileSpec() == symbol_fspec) {
-              // Provide feedback that the symfile has been successfully added.
-              const FileSpec &module_fs = module_sp->GetFileSpec();
-              result.AppendMessageWithFormat(
-                  "symbol file '%s' has been added to '%s'\n", symfile_path,
-                  module_fs.GetPath().c_str());
+            // Let clients know something changed in the module if it is
+            // currently loaded
+            ModuleList module_list;
+            module_list.Append(module_sp);
+            target->SymbolsDidLoad(module_list);
 
-              // Let clients know something changed in the module if it is
-              // currently loaded
-              ModuleList module_list;
-              module_list.Append(module_sp);
-              target->SymbolsDidLoad(module_list);
+            // Make sure we load any scripting resources that may be embedded
+            // in the debug info files in case the platform supports that.
+            Status error;
+            StreamString feedback_stream;
+            module_sp->LoadScriptingResourceInTarget(target, error,
+                                                     &feedback_stream);
+            if (error.Fail() && error.AsCString())
+              result.AppendWarningWithFormat(
+                  "unable to load scripting data for module %s - error "
+                  "reported was %s",
+                  module_sp->GetFileSpec()
+                      .GetFileNameStrippingExtension()
+                      .GetCString(),
+                  error.AsCString());
+            else if (feedback_stream.GetSize())
+              result.AppendWarningWithFormat("%s", feedback_stream.GetData());
 
-              // Make sure we load any scripting resources that may be embedded
-              // in the debug info files in case the platform supports that.
-              Status error;
-              StreamString feedback_stream;
-              module_sp->LoadScriptingResourceInTarget(target, error,
-                                                       &feedback_stream);
-              if (error.Fail() && error.AsCString())
-                result.AppendWarningWithFormat(
-                    "unable to load scripting data for module %s - error "
-                    "reported was %s",
-                    module_sp->GetFileSpec()
-                        .GetFileNameStrippingExtension()
-                        .GetCString(),
-                    error.AsCString());
-              else if (feedback_stream.GetSize())
-                result.AppendWarningWithFormat("%s", feedback_stream.GetData());
-
-              flush = true;
-              result.SetStatus(eReturnStatusSuccessFinishResult);
-              return true;
-            }
+            flush = true;
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+            return true;
           }
         }
         // Clear the symbol file spec if anything went wrong

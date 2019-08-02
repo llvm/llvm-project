@@ -47,7 +47,7 @@ inline raw_ostream &operator<<(const ColoredRawOstream &OS, T &&Value) {
 /// Change the color of the output stream if the `IsColorUsed` flag
 /// is true. Returns an object that resets the color when destroyed.
 inline ColoredRawOstream colored_ostream(raw_ostream &OS,
-                                         raw_ostream::Color Color,
+                                         raw_ostream::Colors Color,
                                          bool IsColorUsed = true,
                                          bool Bold = false, bool BG = false) {
   if (IsColorUsed)

@@ -5,9 +5,6 @@ Test that breakpoints set on a bad address say they are bad.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *

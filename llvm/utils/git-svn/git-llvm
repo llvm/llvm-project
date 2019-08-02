@@ -319,16 +319,20 @@ def get_all_parent_dirs(name):
 
 
 def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
-    files = git('diff-tree', '--no-commit-id', '--name-only', '-r',
-                rev).split('\n')
-    if not files:
+    def split_status(x):
+        x = x.split('\t')
+        return x[1], x[0]
+    files_status = [split_status(x) for x in
+                    git('diff-tree', '--no-commit-id', '--name-status',
+                        '--no-renames', '-r', rev).split('\n')]
+    if not files_status:
         raise RuntimeError('Empty diff for rev %s?' % rev)
 
     # Split files by subrepo
     subrepo_files = collections.defaultdict(list)
-    for f in files:
+    for f, st in files_status:
         subrepo, remainder = split_subrepo(f, git_to_svn_mapping)
-        subrepo_files[subrepo].append(remainder)
+        subrepo_files[subrepo].append((remainder, st))
 
     status = svn(svn_repo, 'status', '--no-ignore')
     if status:
@@ -336,9 +340,9 @@ def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
             "not empty:\n%s" % (rev, svn_repo, status))
 
     svn_dirs_to_update = set()
-    for sr, files in iteritems(subrepo_files):
+    for sr, files_status in iteritems(subrepo_files):
         svn_sr_path = git_to_svn_mapping[sr]
-        for f in files:
+        for f, _ in files_status:
             svn_dirs_to_update.add(
                 os.path.dirname(os.path.join(svn_sr_path, f)))
 
@@ -358,15 +362,17 @@ def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
     # SVN update only in the affected directories.
     svn(svn_repo, 'update', '--depth=files', *sorted_dirs_to_update)
 
-    for sr, files in iteritems(subrepo_files):
+    for sr, files_status in iteritems(subrepo_files):
         svn_sr_path = os.path.join(svn_repo, git_to_svn_mapping[sr])
         if os.name == 'nt':
-            fix_eol_style_native(rev, svn_sr_path, files)
+            fix_eol_style_native(rev, svn_sr_path,
+                                 [f for f, _ in files_status])
+
         # We use text=False (and pass '--binary') so that we can get an exact
         # diff that can be passed as-is to 'git apply' without any line ending,
         # encoding, or other mangling.
         diff = git('show', '--binary', rev, '--',
-                   *(os.path.join(sr, f) for f in files),
+                   *(os.path.join(sr, f) for f, _ in files_status),
                    strip=False, text=False)
         # git is the only thing that can handle its own patches...
         if sr == '':
@@ -381,13 +387,34 @@ def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
                    "first?")
             sys.exit(2)
 
+        # Handle removed files and directories. We need to be careful not to
+        # remove directories just because they _look_ empty in the svn tree, as
+        # we might be missing sibling directories in the working copy. So, only
+        # remove parent directories if they're empty on both the git and svn
+        # sides.
+        maybe_dirs_to_remove = set()
+        for f, st in files_status:
+            if st == 'D':
+                maybe_dirs_to_remove.update(get_all_parent_dirs(f))
+                svn(svn_sr_path, 'remove', f)
+            elif not (st == 'A' or st == 'M' or st == 'T'):
+                # Add is handled below, and nothing needs to be done for Modify.
+                # (FIXME: Type-change between symlink and file might need some
+                # special handling, but let's ignore that for now.)
+                die("Unexpected git status for %r: %r" % (f, st))
+
+        maybe_dirs_to_remove = sorted(maybe_dirs_to_remove, key=len)
+        for f in maybe_dirs_to_remove:
+            if(not os.path.exists(os.path.join(svn_sr_path, f)) and
+               git('ls-tree', '-d', rev, os.path.join(sr, f)) == ''):
+                svn(svn_sr_path, 'remove', f)
+
     status_lines = svn(svn_repo, 'status', '--no-ignore').split('\n')
 
-    for l in (l for l in status_lines if (l.startswith('?') or
-                                          l.startswith('I'))):
-        svn(svn_repo, 'add', '--no-ignore', l[1:].strip())
-    for l in (l for l in status_lines if l.startswith('!')):
-        svn(svn_repo, 'remove', l[1:].strip())
+    for l in status_lines:
+        f = l[1:].strip()
+        if l.startswith('?') or l.startswith('I'):
+            svn(svn_repo, 'add', '--no-ignore', f)
 
     # Now we're ready to commit.
     commit_msg = git('show', '--pretty=%B', '--quiet', rev)

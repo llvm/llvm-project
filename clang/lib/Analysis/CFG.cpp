@@ -5509,7 +5509,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
   if (print_edges) {
     // Print the predecessors of this block.
     if (!B.pred_empty()) {
-      const raw_ostream::Color Color = raw_ostream::BLUE;
+      const raw_ostream::Colors Color = raw_ostream::BLUE;
       if (ShowColors)
         OS.changeColor(Color);
       OS << "   Preds " ;
@@ -5546,7 +5546,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
 
     // Print the successors of this block.
     if (!B.succ_empty()) {
-      const raw_ostream::Color Color = raw_ostream::MAGENTA;
+      const raw_ostream::Colors Color = raw_ostream::MAGENTA;
       if (ShowColors)
         OS.changeColor(Color);
       OS << "   Succs ";

@@ -5642,10 +5642,10 @@ def note_logical_instead_of_bitwise_remove_constant : Note<
   "remove constant to silence this warning">;
 
 def warn_bitwise_op_in_bitwise_op : Warning<
-  "'%0' within '%1'">, InGroup<BitwiseOpParentheses>;
+  "'%0' within '%1'">, InGroup<BitwiseOpParentheses>, DefaultIgnore;
 
 def warn_logical_and_in_logical_or : Warning<
-  "'&&' within '||'">, InGroup<LogicalOpParentheses>;
+  "'&&' within '||'">, InGroup<LogicalOpParentheses>, DefaultIgnore;
 
 def warn_overloaded_shift_in_comparison :Warning<
   "overloaded operator %select{>>|<<}0 has higher precedence than "

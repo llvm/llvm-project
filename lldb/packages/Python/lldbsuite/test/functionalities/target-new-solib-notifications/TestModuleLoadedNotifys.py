@@ -6,9 +6,6 @@ they should be delivered in batches instead of one-by-one.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

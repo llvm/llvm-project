@@ -1793,6 +1793,16 @@ TEST(Hover, All) {
           "int\n"
           "]",
       },
+      {
+          R"cpp(// Should not crash when evaluating the initializer.
+            struct Test {};
+            void test() { Test && te^st = {}; }
+          )cpp",
+          "text[Declared in]code[test]\n"
+          "codeblock(cpp) [\n"
+          "struct Test &&test = {}\n"
+          "]",
+      },
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.

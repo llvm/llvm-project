@@ -405,6 +405,7 @@ struct FormalArgHandler : public IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };

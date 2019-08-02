@@ -43,29 +43,25 @@ DisableParallelDSP("disable-arm-parallel-dsp", cl::Hidden, cl::init(false),
                    cl::desc("Disable the ARM Parallel DSP pass"));
 
 namespace {
-  struct OpChain;
   struct MulCandidate;
   class Reduction;
 
-  using MulCandList     = SmallVector<std::unique_ptr<MulCandidate>, 8>;
-  using ReductionList   = SmallVector<Reduction, 8>;
-  using ValueList       = SmallVector<Value*, 8>;
-  using MemInstList     = SmallVector<LoadInst*, 8>;
-  using PMACPair        = std::pair<MulCandidate*,MulCandidate*>;
-  using PMACPairList    = SmallVector<PMACPair, 8>;
+  using MulCandList = SmallVector<std::unique_ptr<MulCandidate>, 8>;
+  using MemInstList = SmallVectorImpl<LoadInst*>;
+  using MulPairList = SmallVector<std::pair<MulCandidate*, MulCandidate*>, 8>;
 
   // 'MulCandidate' holds the multiplication instructions that are candidates
   // for parallel execution.
   struct MulCandidate {
     Instruction   *Root;
-    MemInstList   VecLd;    // Container for loads to widen.
     Value*        LHS;
     Value*        RHS;
     bool          Exchange = false;
     bool          ReadOnly = true;
+    SmallVector<LoadInst*, 2> VecLd;    // Container for loads to widen.
 
-    MulCandidate(Instruction *I, ValueList &lhs, ValueList &rhs) :
-      Root(I), LHS(lhs.front()), RHS(rhs.front()) { }
+    MulCandidate(Instruction *I, Value *lhs, Value *rhs) :
+      Root(I), LHS(lhs), RHS(rhs) { }
 
     bool HasTwoLoadInputs() const {
       return isa<LoadInst>(LHS) && isa<LoadInst>(RHS);
@@ -82,7 +78,7 @@ namespace {
     Instruction     *Root = nullptr;
     Value           *Acc = nullptr;
     MulCandList     Muls;
-    PMACPairList        MulPairs;
+    MulPairList        MulPairs;
     SmallPtrSet<Instruction*, 4> Adds;
 
   public:
@@ -95,7 +91,7 @@ namespace {
 
     /// Record a MulCandidate, rooted at a Mul instruction, that is a part of
     /// this reduction.
-    void InsertMul(Instruction *I, ValueList &LHS, ValueList &RHS) {
+    void InsertMul(Instruction *I, Value *LHS, Value *RHS) {
       Muls.push_back(make_unique<MulCandidate>(I, LHS, RHS));
     }
 
@@ -136,7 +132,7 @@ namespace {
 
     /// Return the MulCandidate, rooted at mul instructions, that have been
     /// paired for parallel execution.
-    PMACPairList &getMulPairs() { return MulPairs; }
+    MulPairList &getMulPairs() { return MulPairs; }
 
     /// To finalise, replace the uses of the root with the intrinsic call.
     void UpdateRoot(Instruction *SMLAD) {
@@ -171,13 +167,12 @@ namespace {
     std::map<LoadInst*, std::unique_ptr<WidenedLoad>> WideLoads;
 
     template<unsigned>
-    bool IsNarrowSequence(Value *V, ValueList &VL);
+    bool IsNarrowSequence(Value *V, Value *&Src);
 
     bool RecordMemoryOps(BasicBlock *BB);
     void InsertParallelMACs(Reduction &Reduction);
     bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, MemInstList &VecMem);
-    LoadInst* CreateWideLoad(SmallVectorImpl<LoadInst*> &Loads,
-                             IntegerType *LoadTy);
+    LoadInst* CreateWideLoad(MemInstList &Loads, IntegerType *LoadTy);
     bool CreateParallelPairs(Reduction &R);
 
     /// Try to match and generate: SMLAD, SMLADX - Signed Multiply Accumulate
@@ -283,7 +278,7 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
 // TODO: we currently only collect i16, and will support i8 later, so that's
 // why we check that types are equal to MaxBitWidth, and not <= MaxBitWidth.
 template<unsigned MaxBitWidth>
-bool ARMParallelDSP::IsNarrowSequence(Value *V, ValueList &VL) {
+bool ARMParallelDSP::IsNarrowSequence(Value *V, Value *&Src) {
   if (auto *SExt = dyn_cast<SExtInst>(V)) {
     if (SExt->getSrcTy()->getIntegerBitWidth() != MaxBitWidth)
       return false;
@@ -293,8 +288,7 @@ bool ARMParallelDSP::IsNarrowSequence(Value *V, ValueList &VL) {
       if (!LoadPairs.count(Ld) && !OffsetLoads.count(Ld))
         return false;
 
-      VL.push_back(Ld);
-      VL.push_back(SExt);
+      Src = Ld;
       return true;
     }
   }
@@ -351,7 +345,6 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
       InstSet &WritesBefore = RAWDeps[Dominated];
 
       for (auto Before : WritesBefore) {
-
         // We can't move the second load backward, past a write, to merge
         // with the first load.
         if (DT->dominates(Dominator, Before))
@@ -461,8 +454,8 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
       Value *MulOp0 = I->getOperand(0);
       Value *MulOp1 = I->getOperand(1);
       if (isa<SExtInst>(MulOp0) && isa<SExtInst>(MulOp1)) {
-        ValueList LHS;
-        ValueList RHS;
+        Value *LHS = nullptr;
+        Value *RHS = nullptr;
         if (IsNarrowSequence<16>(MulOp0, LHS) &&
             IsNarrowSequence<16>(MulOp1, RHS)) {
           R.InsertMul(I, LHS, RHS);
@@ -650,7 +643,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
   R.UpdateRoot(cast<Instruction>(Acc));
 }
 
-LoadInst* ARMParallelDSP::CreateWideLoad(SmallVectorImpl<LoadInst*> &Loads,
+LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
                                          IntegerType *LoadTy) {
   assert(Loads.size() == 2 && "currently only support widening two loads");
 

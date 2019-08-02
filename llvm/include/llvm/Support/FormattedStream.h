@@ -121,8 +121,8 @@ public:
     return *this;
   }
 
-  raw_ostream &changeColor(Color C, bool Bold, bool BG) override {
-    TheStream->changeColor(C, Bold, BG);
+  raw_ostream &changeColor(enum Colors Color, bool Bold, bool BG) override {
+    TheStream->changeColor(Color, Bold, BG);
     return *this;
   }
 

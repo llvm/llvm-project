@@ -9,8 +9,6 @@ targets.
 from __future__ import print_function
 
 import lldb
-import os
-import re
 
 from lldbsuite.test import decorators
 from lldbsuite.test import lldbtest

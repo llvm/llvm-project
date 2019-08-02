@@ -8,9 +8,6 @@ CU's.  Assert that that is true.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
