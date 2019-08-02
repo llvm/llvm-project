@@ -8,7 +8,6 @@ from __future__ import print_function
 
 
 import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -72,7 +71,6 @@ class HelpCommandTestCase(TestBase):
             # Just fallthrough...
             import traceback
             traceback.print_exc()
-            pass
 
         # Use None to signify that we are not able to grok the version number.
         return None

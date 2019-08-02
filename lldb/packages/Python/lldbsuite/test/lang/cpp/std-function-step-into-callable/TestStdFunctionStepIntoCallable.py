@@ -6,7 +6,6 @@ from __future__ import print_function
 
 
 import lldb
-import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

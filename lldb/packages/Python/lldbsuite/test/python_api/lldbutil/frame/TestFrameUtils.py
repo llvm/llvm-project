@@ -5,7 +5,6 @@ Test utility functions for the frame object.
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

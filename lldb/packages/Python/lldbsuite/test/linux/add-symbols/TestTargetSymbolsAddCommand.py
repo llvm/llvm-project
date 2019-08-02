@@ -1,8 +1,5 @@
 """ Testing explicit symbol loading via target symbols add. """
-import os
-import time
 import lldb
-import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

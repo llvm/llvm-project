@@ -85,6 +85,27 @@ void lld::checkError(Error e) {
                   [&](ErrorInfoBase &eib) { error(eib.message()); });
 }
 
+// This is for --vs-diagnostics.
+//
+// Normally, lld's error message starts with argv[0]. Therefore, it usually
+// looks like this:
+//
+//   ld.lld: error: ...
+//
+// This error message style is unfortunately unfriendly to Visual Studio
+// IDE. VS interprets the first word of the first line as an error location
+// and make it clickable, thus "ld.lld" in the above message would become a
+// clickable text. When you click it, VS opens "ld.lld" executable file with
+// a binary editor.
+//
+// As a workaround, we print out an error location instead of "ld.lld" if
+// lld is running in VS diagnostics mode. As a result, error message will
+// look like this:
+//
+//   src/foo.c(35): error: ...
+//
+// This function returns an error location string. An error location is
+// extracted from an error message using regexps.
 static std::string getLocation(std::string msg, std::string defaultMsg) {
   static std::vector<std::regex> Regexes{
       std::regex(R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),

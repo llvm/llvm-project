@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 #import unittest2
-import os.path
 from time import sleep
 
 import lldb

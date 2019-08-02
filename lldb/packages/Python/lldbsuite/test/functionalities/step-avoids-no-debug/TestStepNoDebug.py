@@ -5,9 +5,6 @@ Test thread step-in, step-over and step-out work with the "Avoid no debug" optio
 from __future__ import print_function
 
 
-import os
-import re
-import sys
 
 import lldb
 from lldbsuite.test.decorators import *

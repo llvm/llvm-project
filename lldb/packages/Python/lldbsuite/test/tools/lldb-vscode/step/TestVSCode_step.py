@@ -10,7 +10,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
-import os
 
 
 class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):

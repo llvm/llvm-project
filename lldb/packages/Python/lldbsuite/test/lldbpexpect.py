@@ -6,7 +6,6 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 # System modules
-import os
 import sys
 
 # Third-party modules

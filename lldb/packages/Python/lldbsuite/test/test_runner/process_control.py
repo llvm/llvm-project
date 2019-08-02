@@ -503,7 +503,6 @@ class ProcessDriver(object):
         Do not attempt to reap the process (i.e. use wait()) in this method.
         That will interfere with the kill mechanism and return code processing.
         """
-        pass
 
     def write(self, content):
         # pylint: disable=no-self-use
