@@ -5,10 +5,6 @@ Test the Intel(R) MPX bound violation signal.
 from __future__ import print_function
 
 
-import os
-import sys
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

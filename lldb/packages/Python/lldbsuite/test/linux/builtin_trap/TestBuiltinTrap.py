@@ -6,7 +6,6 @@ Test lldb ability to unwind a stack with a function containing a call to the
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

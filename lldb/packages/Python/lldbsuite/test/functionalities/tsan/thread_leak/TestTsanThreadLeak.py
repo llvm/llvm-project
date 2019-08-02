@@ -2,13 +2,10 @@
 Tests ThreadSanitizer's support to detect a leaked thread.
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
-import json
 
 
 class TsanThreadLeakTestCase(TestBase):

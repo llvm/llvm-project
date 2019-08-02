@@ -5,9 +5,6 @@ Use lldb Python SBtarget.WatchAddress() API to create a watchpoint for write of 
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

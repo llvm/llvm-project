@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 
-import sys
 
 import gdbremote_testcase
 import lldbgdbserverutils

@@ -1,6 +1,5 @@
 from __future__ import print_function
 import lldb
-import sys
 
 
 def some_command_here(debugger, command, result, d):

@@ -3,12 +3,8 @@
 from __future__ import print_function
 
 
-from distutils.version import StrictVersion
 import unittest2
-import os
-import time
 import lldb
-import platform
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

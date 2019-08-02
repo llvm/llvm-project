@@ -2,8 +2,6 @@
 Tests that TSan and LLDB have correct thread numbers.
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

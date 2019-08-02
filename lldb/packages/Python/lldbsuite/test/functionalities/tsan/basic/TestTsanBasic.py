@@ -2,8 +2,6 @@
 Tests basic ThreadSanitizer support (detecting a data race).
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
