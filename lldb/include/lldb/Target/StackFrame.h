@@ -108,17 +108,19 @@ public:
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx, lldb::addr_t cfa,
              bool cfa_is_valid, lldb::addr_t pc, Kind frame_kind,
+             bool behaves_like_zeroth_frame, const SymbolContext *sc_ptr);
+
+  StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
+             lldb::user_id_t concrete_frame_idx,
+             const lldb::RegisterContextSP &reg_context_sp, lldb::addr_t cfa,
+             lldb::addr_t pc, bool behaves_like_zeroth_frame,
              const SymbolContext *sc_ptr);
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
              const lldb::RegisterContextSP &reg_context_sp, lldb::addr_t cfa,
-             lldb::addr_t pc, const SymbolContext *sc_ptr);
-
-  StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
-             lldb::user_id_t concrete_frame_idx,
-             const lldb::RegisterContextSP &reg_context_sp, lldb::addr_t cfa,
-             const Address &pc, const SymbolContext *sc_ptr);
+             const Address &pc, bool behaves_like_zeroth_frame,
+             const SymbolContext *sc_ptr);
 
   ~StackFrame() override;
 
@@ -367,6 +369,12 @@ public:
   /// may have limited support for inspecting variables.
   bool IsArtificial() const;
 
+  /// Query whether this frame behaves like the zeroth frame, in the sense
+  /// that its pc value might not immediately follow a call (and thus might
+  /// be the first address of its function).  True for actual frame zero as
+  /// well as any other frame with the same trait.
+  bool BehavesLikeZerothFrame() const;
+
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
   ///
@@ -511,6 +519,7 @@ private:
   bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
                        // LLDB_INVALID_ADDRESS
   Kind m_stack_frame_kind;
+  bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
   ValueObjectList m_variable_list_value_objects; // Value objects for each
                                                  // variable in

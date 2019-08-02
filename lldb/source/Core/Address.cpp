@@ -261,6 +261,24 @@ bool Address::ResolveAddressUsingFileSections(addr_t file_addr,
   return false; // Failed to resolve this address to a section offset value
 }
 
+/// if "addr_range_ptr" is not NULL, then fill in with the address range of the function.
+bool Address::ResolveFunctionScope(SymbolContext &sym_ctx,
+                                   AddressRange *addr_range_ptr) {
+  constexpr SymbolContextItem resolve_scope =
+    eSymbolContextFunction | eSymbolContextSymbol;
+
+  if (!(CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope)) {
+    if (addr_range_ptr)
+      addr_range_ptr->Clear();
+   return false;
+  }
+
+  if (!addr_range_ptr)
+    return true;
+
+  return sym_ctx.GetAddressRange(resolve_scope, 0, false, *addr_range_ptr);
+}
+
 ModuleSP Address::GetModule() const {
   lldb::ModuleSP module_sp;
   SectionSP section_sp(GetSection());

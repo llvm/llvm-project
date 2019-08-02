@@ -390,7 +390,8 @@ bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {
   return true;
 }
 
-bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc) {
+bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc,
+                                       bool &behaves_like_zeroth_frame) {
   if (m_frames.size() == 0) {
     if (!AddFirstFrame())
       return false;
@@ -405,6 +406,24 @@ bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc) {
   if (idx < m_frames.size()) {
     cfa = m_frames[idx]->cfa;
     pc = m_frames[idx]->start_pc;
+    if (idx == 0) {
+      // Frame zero always behaves like it.
+      behaves_like_zeroth_frame = true;
+    } else if (m_frames[idx - 1]->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
+      // This could be an asynchronous signal, thus the
+      // pc might point to the interrupted instruction rather
+      // than a post-call instruction
+      behaves_like_zeroth_frame = true;
+    } else if (m_frames[idx]->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
+      // This frame may result from signal processing installing
+      // a pointer to the first byte of a signal-return trampoline
+      // in the return address slot of the frame below, so this
+      // too behaves like the zeroth frame (i.e. the pc might not
+      // be pointing just past a call in it)
+      behaves_like_zeroth_frame = true;
+    } else {
+      behaves_like_zeroth_frame = false;
+    }
     return true;
   }
   return false;

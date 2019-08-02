@@ -120,6 +120,10 @@ private:
   bool IsTrapHandlerSymbol(lldb_private::Process *process,
                            const lldb_private::SymbolContext &m_sym_ctx) const;
 
+  /// Check if the given unwind plan indicates a signal trap handler, and
+  /// update frame type and symbol context if so.
+  void PropagateTrapHandlerFlagFromUnwindPlan(lldb::UnwindPlanSP unwind_plan);
+
   // Provide a location for where THIS function saved the CALLER's register
   // value
   // Or a frame "below" this one saved it, i.e. a function called by this one,

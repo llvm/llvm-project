@@ -397,11 +397,13 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
     bool cfa_is_valid = false;
     addr_t pc =
         callee->GetAddressRange().GetBaseAddress().GetLoadAddress(&target);
+    constexpr bool behaves_like_zeroth_frame = false;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
-        cfa_is_valid, pc, StackFrame::Kind::Artificial, &sc);
+        cfa_is_valid, pc, StackFrame::Kind::Artificial,
+        behaves_like_zeroth_frame, &sc);
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0}", callee->GetDisplayName());
   }
@@ -451,6 +453,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
     uint32_t idx = m_concrete_frames_fetched++;
     lldb::addr_t pc = LLDB_INVALID_ADDRESS;
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
+    bool behaves_like_zeroth_frame = (idx == 0);
     if (idx == 0) {
       // We might have already created frame zero, only create it if we need
       // to.
@@ -458,8 +461,9 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
         if (reg_ctx_sp) {
-          const bool success =
-              unwinder && unwinder->GetFrameInfoAtIndex(idx, cfa, pc);
+          const bool success = unwinder &&
+                               unwinder->GetFrameInfoAtIndex(
+                                   idx, cfa, pc, behaves_like_zeroth_frame);
           // There shouldn't be any way not to get the frame info for frame
           // 0. But if the unwinder can't make one, lets make one by hand
           // with the SP as the CFA and see if that gets any further.
@@ -470,7 +474,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
 
           unwind_frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
-              cfa, pc, nullptr);
+              cfa, pc, behaves_like_zeroth_frame, nullptr);
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
@@ -478,8 +482,9 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
       }
     } else {
-      const bool success =
-          unwinder && unwinder->GetFrameInfoAtIndex(idx, cfa, pc);
+      const bool success = unwinder &&
+                           unwinder->GetFrameInfoAtIndex(
+                               idx, cfa, pc, behaves_like_zeroth_frame);
       if (!success) {
         // We've gotten to the end of the stack.
         SetAllFramesFetched();
@@ -488,7 +493,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
       const bool cfa_is_valid = true;
       unwind_frame_sp = std::make_shared<StackFrame>(
           m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
-          pc, StackFrame::Kind::Regular, nullptr);
+          pc, StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
       // Create synthetic tail call frames between the previous frame and the
       // newly-found frame. The new frame's index may change after this call,
@@ -530,10 +535,11 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
       while (unwind_sc.GetParentOfInlinedScope(
           curr_frame_address, next_frame_sc, next_frame_address)) {
         next_frame_sc.line_entry.ApplyFileMappings(target_sp);
-        StackFrameSP frame_sp(
-            new StackFrame(m_thread.shared_from_this(), m_frames.size(), idx,
-                           unwind_frame_sp->GetRegisterContextSP(), cfa,
-                           next_frame_address, &next_frame_sc));
+        behaves_like_zeroth_frame = false;
+        StackFrameSP frame_sp(new StackFrame(
+            m_thread.shared_from_this(), m_frames.size(), idx,
+            unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
+            behaves_like_zeroth_frame, &next_frame_sc));
 
         m_frames.push_back(frame_sp);
         unwind_sc = next_frame_sc;
@@ -664,11 +670,13 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
       Unwind *unwinder = m_thread.GetUnwinder();
       if (unwinder) {
         addr_t pc, cfa;
-        if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc)) {
+        bool behaves_like_zeroth_frame = (idx == 0);
+        if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc,
+                                          behaves_like_zeroth_frame)) {
           const bool cfa_is_valid = true;
           frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-              StackFrame::Kind::Regular, nullptr);
+              StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
           Function *function =
               frame_sp->GetSymbolContext(eSymbolContextFunction).function;
