@@ -40,7 +40,7 @@ void llvm::calculateSpillWeightsAndHints(LiveIntervals &LIS,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   VirtRegAuxInfo VRAI(MF, LIS, VRM, MLI, MBFI, norm);
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
     VRAI.calculateSpillWeightAndHint(LIS.getInterval(Reg));
@@ -65,7 +65,7 @@ static unsigned copyHint(const MachineInstr *mi, unsigned reg,
   if (!hreg)
     return 0;
 
-  if (TargetRegisterInfo::isVirtualRegister(hreg))
+  if (Register::isVirtualRegister(hreg))
     return sub == hsub ? hreg : 0;
 
   const TargetRegisterClass *rc = mri.getRegClass(reg);
@@ -112,7 +112,7 @@ static bool isRematerializable(const LiveInterval &LI,
 
         // If the original (pre-splitting) registers match this
         // copy came from a split.
-        if (!TargetRegisterInfo::isVirtualRegister(Reg) ||
+        if (!Register::isVirtualRegister(Reg) ||
             VRM->getOriginal(Reg) != Original)
           return false;
 
@@ -251,8 +251,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     //
     // FIXME: we probably shouldn't use floats at all.
     volatile float hweight = Hint[hint] += weight;
-    if (TargetRegisterInfo::isVirtualRegister(hint) || mri.isAllocatable(hint))
-      CopyHints.insert(CopyHint(hint, hweight, tri.isPhysicalRegister(hint)));
+    if (Register::isVirtualRegister(hint) || mri.isAllocatable(hint))
+      CopyHints.insert(
+          CopyHint(hint, hweight, Register::isPhysicalRegister(hint)));
   }
 
   Hint.clear();

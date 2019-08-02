@@ -532,7 +532,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.add(Callee);
   if (!IsDirect) {
     auto CalleeReg = Callee.getReg();
-    if (CalleeReg && !TRI->isPhysicalRegister(CalleeReg)) {
+    if (CalleeReg && !Register::isPhysicalRegister(CalleeReg)) {
       unsigned CalleeIdx = IsThumb ? 2 : 0;
       MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),

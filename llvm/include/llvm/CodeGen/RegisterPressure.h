@@ -273,15 +273,15 @@ private:
   unsigned NumRegUnits;
 
   unsigned getSparseIndexFromReg(unsigned Reg) const {
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
-      return TargetRegisterInfo::virtReg2Index(Reg) + NumRegUnits;
+    if (Register::isVirtualRegister(Reg))
+      return Register::virtReg2Index(Reg) + NumRegUnits;
     assert(Reg < NumRegUnits);
     return Reg;
   }
 
   unsigned getRegFromSparseIndex(unsigned SparseIndex) const {
     if (SparseIndex >= NumRegUnits)
-      return TargetRegisterInfo::index2VirtReg(SparseIndex-NumRegUnits);
+      return Register::index2VirtReg(SparseIndex-NumRegUnits);
     return SparseIndex;
   }
 

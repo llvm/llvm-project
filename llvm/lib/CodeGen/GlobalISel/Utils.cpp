@@ -45,8 +45,7 @@ unsigned llvm::constrainOperandRegClass(
     unsigned OpIdx) {
   unsigned Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(TargetRegisterInfo::isVirtualRegister(Reg) &&
-         "PhysReg not implemented");
+  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
 
   unsigned ConstrainedReg = constrainRegToClass(MRI, TII, RBI, Reg, RegClass);
   // If we created a new virtual register because the class is not compatible
@@ -75,8 +74,7 @@ unsigned llvm::constrainOperandRegClass(
     const MachineOperand &RegMO, unsigned OpIdx) {
   unsigned Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(TargetRegisterInfo::isVirtualRegister(Reg) &&
-         "PhysReg not implemented");
+  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
 
   const TargetRegisterClass *RegClass = TII.getRegClass(II, OpIdx, &TRI, MF);
   // Some of the target independent instructions, like COPY, may not impose any
@@ -132,7 +130,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
 
     unsigned Reg = MO.getReg();
     // Physical registers don't need to be constrained.
-    if (TRI.isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg))
       continue;
 
     // Register operands with a value of 0 (e.g. predicate operands) don't need
@@ -171,8 +169,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
       continue;
 
     unsigned Reg = MO.getReg();
-    if (TargetRegisterInfo::isPhysicalRegister(Reg) ||
-        !MRI.use_nodbg_empty(Reg))
+    if (Register::isPhysicalRegister(Reg) || !MRI.use_nodbg_empty(Reg))
       return false;
   }
   return true;
@@ -235,7 +232,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
       break;
     case TargetOpcode::COPY:
       VReg = MI->getOperand(1).getReg();
-      if (TargetRegisterInfo::isPhysicalRegister(VReg))
+      if (Register::isPhysicalRegister(VReg))
         return None;
       break;
     case TargetOpcode::G_INTTOPTR:

@@ -137,7 +137,7 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
-  if (MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+  if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
     DefInstr = MRI->getUniqueVRegDef(MO.getReg());
   // PHI's have no depth etc.
   if (DefInstr && DefInstr->isPHI())
@@ -168,7 +168,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
     unsigned IDepth = 0;
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
-      if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
+      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
         continue;
       if (!MO.isUse())
         continue;
@@ -223,7 +223,7 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
 
   for (const MachineOperand &MO : NewRoot->operands()) {
     // Check for virtual register operand.
-    if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
+    if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
       continue;
     if (!MO.isDef())
       continue;

@@ -268,14 +268,14 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::expandToSubRegs(
     return SRs;
   }
 
-  if (TargetRegisterInfo::isPhysicalRegister(R.Reg)) {
+  if (Register::isPhysicalRegister(R.Reg)) {
     MCSubRegIterator I(R.Reg, &TRI);
     if (!I.isValid())
       SRs.insert({R.Reg, 0});
     for (; I.isValid(); ++I)
       SRs.insert({*I, 0});
   } else {
-    assert(TargetRegisterInfo::isVirtualRegister(R.Reg));
+    assert(Register::isVirtualRegister(R.Reg));
     auto &RC = *MRI.getRegClass(R.Reg);
     unsigned PReg = *RC.begin();
     MCSubRegIndexIterator I(PReg, &TRI);
@@ -321,7 +321,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
-      if (TargetRegisterInfo::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
+      if (Register::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
         continue;
       bool IsKill = Op.isKill();
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
@@ -338,7 +338,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (TargetRegisterInfo::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
+        if (Register::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
           continue;
         if (Op.isDead())
           Clobbers.insert(S);
@@ -374,7 +374,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for defs.
     for (RegisterRef S : Defs) {
       // Defs should already be expanded into subregs.
-      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+      assert(!Register::isPhysicalRegister(S.Reg) ||
              !MCSubRegIterator(S.Reg, &TRI, false).isValid());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);
@@ -383,7 +383,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for clobbers.
     for (RegisterRef S : Clobbers) {
       // Clobbers should already be expanded into subregs.
-      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+      assert(!Register::isPhysicalRegister(S.Reg) ||
              !MCSubRegIterator(S.Reg, &TRI, false).isValid());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);
@@ -482,7 +482,7 @@ HexagonBlockRanges::RegToRangeMap HexagonBlockRanges::computeDeadMap(
     }
   }
   for (auto &P : LiveMap)
-    if (TargetRegisterInfo::isVirtualRegister(P.first.Reg))
+    if (Register::isVirtualRegister(P.first.Reg))
       addDeadRanges(P.first);
 
   LLVM_DEBUG(dbgs() << __func__ << ": dead map\n"

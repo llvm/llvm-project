@@ -147,7 +147,7 @@ private:
   static const unsigned MaxDepth = 3;
 
   bool isConsecutiveAccess(Value *A, Value *B);
-  bool areConsecutivePointers(Value *PtrA, Value *PtrB, const APInt &PtrDelta,
+  bool areConsecutivePointers(Value *PtrA, Value *PtrB, APInt PtrDelta,
                               unsigned Depth = 0) const;
   bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta,
                                    unsigned Depth) const;
@@ -336,17 +336,28 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 }
 
 bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
-                                        const APInt &PtrDelta,
-                                        unsigned Depth) const {
+                                        APInt PtrDelta, unsigned Depth) const {
   unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
   APInt OffsetA(PtrBitWidth, 0);
   APInt OffsetB(PtrBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 
-  if (DL.getTypeStoreSizeInBits(PtrA->getType()) != PtrBitWidth ||
-      DL.getTypeStoreSizeInBits(PtrB->getType()) != PtrBitWidth)
+  unsigned NewPtrBitWidth = DL.getTypeStoreSizeInBits(PtrA->getType());
+
+  if (NewPtrBitWidth != DL.getTypeStoreSizeInBits(PtrB->getType()))
     return false;
+
+  // In case if we have to shrink the pointer
+  // stripAndAccumulateInBoundsConstantOffsets should properly handle a
+  // possible overflow and the value should fit into a smallest data type
+  // used in the cast/gep chain.
+  assert(OffsetA.getMinSignedBits() <= NewPtrBitWidth &&
+         OffsetB.getMinSignedBits() <= NewPtrBitWidth);
+
+  OffsetA = OffsetA.sextOrTrunc(NewPtrBitWidth);
+  OffsetB = OffsetB.sextOrTrunc(NewPtrBitWidth);
+  PtrDelta = PtrDelta.sextOrTrunc(NewPtrBitWidth);
 
   APInt OffsetDelta = OffsetB - OffsetA;
 

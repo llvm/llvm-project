@@ -75,7 +75,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
   unsigned Reg = MI->getOperand(0).getReg();
 
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
     for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
@@ -101,7 +101,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!MO.isReg())
         continue;
       unsigned UserReg = MO.getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(UserReg) ||
+      if (!Register::isPhysicalRegister(UserReg) ||
           !TRI->regsOverlap(Reg, UserReg))
         continue;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.

@@ -135,7 +135,7 @@ bool A15SDOptimizer::usesRegClass(MachineOperand &MO,
     return false;
   unsigned Reg = MO.getReg();
 
-  if (TargetRegisterInfo::isVirtualRegister(Reg))
+  if (Register::isVirtualRegister(Reg))
     return MRI->getRegClass(Reg)->hasSuperClassEq(TRC);
   else
     return TRC->contains(Reg);
@@ -151,7 +151,7 @@ unsigned A15SDOptimizer::getDPRLaneFromSPR(unsigned SReg) {
 // Get the subreg type that is most likely to be coalesced
 // for an SPR register that will be used in VDUP32d pseudo.
 unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
-  if (!TRI->isVirtualRegister(SReg))
+  if (!Register::isVirtualRegister(SReg))
     return getDPRLaneFromSPR(SReg);
 
   MachineInstr *MI = MRI->getVRegDef(SReg);
@@ -166,7 +166,7 @@ unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
     SReg = MI->getOperand(1).getReg();
   }
 
-  if (TargetRegisterInfo::isVirtualRegister(SReg)) {
+  if (Register::isVirtualRegister(SReg)) {
     if (MO->getSubReg() == ARM::ssub_1) return ARM::ssub_1;
     return ARM::ssub_0;
   }
@@ -192,7 +192,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
       if ((!MO.isReg()) || (!MO.isUse()))
         continue;
       unsigned Reg = MO.getReg();
-      if (!TRI->isVirtualRegister(Reg))
+      if (!Register::isVirtualRegister(Reg))
         continue;
       MachineOperand *Op = MI->findRegisterDefOperand(Reg);
 
@@ -214,7 +214,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
         if ((!MODef.isReg()) || (!MODef.isDef()))
           continue;
         unsigned DefReg = MODef.getReg();
-        if (!TRI->isVirtualRegister(DefReg)) {
+        if (!Register::isVirtualRegister(DefReg)) {
           IsDead = false;
           break;
         }
@@ -248,7 +248,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
     unsigned DPRReg = MI->getOperand(1).getReg();
     unsigned SPRReg = MI->getOperand(2).getReg();
 
-    if (TRI->isVirtualRegister(DPRReg) && TRI->isVirtualRegister(SPRReg)) {
+    if (Register::isVirtualRegister(DPRReg) && Register::isVirtualRegister(SPRReg)) {
       MachineInstr *DPRMI = MRI->getVRegDef(MI->getOperand(1).getReg());
       MachineInstr *SPRMI = MRI->getVRegDef(MI->getOperand(2).getReg());
 
@@ -298,7 +298,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
       ++NumTotal;
       unsigned OpReg = MI->getOperand(I).getReg();
 
-      if (!TRI->isVirtualRegister(OpReg))
+      if (!Register::isVirtualRegister(OpReg))
         break;
 
       MachineInstr *Def = MRI->getVRegDef(OpReg);
@@ -342,7 +342,7 @@ bool A15SDOptimizer::hasPartialWrite(MachineInstr *MI) {
 MachineInstr *A15SDOptimizer::elideCopies(MachineInstr *MI) {
   if (!MI->isFullCopy())
     return MI;
-  if (!TRI->isVirtualRegister(MI->getOperand(1).getReg()))
+  if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
     return nullptr;
   MachineInstr *Def = MRI->getVRegDef(MI->getOperand(1).getReg());
   if (!Def)
@@ -370,7 +370,7 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
      if (MI->isPHI()) {
        for (unsigned I = 1, E = MI->getNumOperands(); I != E; I += 2) {
          unsigned Reg = MI->getOperand(I).getReg();
-         if (!TRI->isVirtualRegister(Reg)) {
+         if (!Register::isVirtualRegister(Reg)) {
            continue;
          }
          MachineInstr *NewMI = MRI->getVRegDef(Reg);
@@ -379,7 +379,7 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
          Front.push_back(NewMI);
        }
      } else if (MI->isFullCopy()) {
-       if (!TRI->isVirtualRegister(MI->getOperand(1).getReg()))
+       if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
          continue;
        MachineInstr *NewMI = MRI->getVRegDef(MI->getOperand(1).getReg());
        if (!NewMI)
@@ -602,7 +602,7 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
     // we can end up with multiple defs of this DPR.
 
     SmallVector<MachineInstr *, 8> DefSrcs;
-    if (!TRI->isVirtualRegister(*I))
+    if (!Register::isVirtualRegister(*I))
       continue;
     MachineInstr *Def = MRI->getVRegDef(*I);
     if (!Def)

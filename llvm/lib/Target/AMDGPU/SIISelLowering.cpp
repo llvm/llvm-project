@@ -10093,7 +10093,7 @@ SDNode *SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
     // Insert a copy to a VReg_1 virtual register so LowerI1Copies doesn't have
     // to try understanding copies to physical registers.
     if (SrcVal.getValueType() == MVT::i1 &&
-        TargetRegisterInfo::isPhysicalRegister(DestReg->getReg())) {
+        Register::isPhysicalRegister(DestReg->getReg())) {
       SDLoc SL(Node);
       MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
       SDValue VReg = DAG.getRegister(
@@ -10246,7 +10246,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MachineOperand &Op = MI.getOperand(I);
         if ((OpInfo[I].RegClass != llvm::AMDGPU::AV_64RegClassID &&
              OpInfo[I].RegClass != llvm::AMDGPU::AV_32RegClassID) ||
-            !TargetRegisterInfo::isVirtualRegister(Op.getReg()) ||
+            !Register::isVirtualRegister(Op.getReg()) ||
             !TRI->isAGPR(MRI, Op.getReg()))
           continue;
         auto *Src = MRI.getUniqueVRegDef(Op.getReg());
@@ -10674,7 +10674,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
       const MachineRegisterInfo &MRI = MF->getRegInfo();
       const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
       unsigned Reg = R->getReg();
-      if (TRI.isPhysicalRegister(Reg))
+      if (Register::isPhysicalRegister(Reg))
         return !TRI.isSGPRReg(MRI, Reg);
 
       if (MRI.isLiveIn(Reg)) {

@@ -84,7 +84,7 @@ MipsInstructionSelector::MipsInstructionSelector(
 bool MipsInstructionSelector::selectCopy(MachineInstr &I,
                                          MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
-  if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+  if (Register::isPhysicalRegister(DstReg))
     return true;
 
   const RegisterBank *RegBank = RBI.getRegBank(DstReg, MRI, TRI);
@@ -289,7 +289,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
 
     const TargetRegisterClass *DefRC = nullptr;
-    if (TargetRegisterInfo::isPhysicalRegister(DestReg))
+    if (Register::isPhysicalRegister(DestReg))
       DefRC = TRI.getRegClass(DestReg);
     else
       DefRC = getRegClassForTypeOnBank(OpSize,

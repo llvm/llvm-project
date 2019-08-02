@@ -393,7 +393,6 @@
 ; ASM: .section	.debug$T,"dr"
 ; ASM: .p2align	2
 ; ASM: .long	4                       # Debug section magic
-; ASM: # ArgList (0x1000)
 ; ASM: .short	0x6                     # Record length
 ; ASM: .short	0x1201                  # Record kind: LF_ARGLIST
 ; ASM: .long	0x0                     # NumArgs
@@ -403,14 +402,13 @@
 ; ASM: #   Arguments [
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # Procedure (0x1001)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1008                  # Record kind: LF_PROCEDURE
-; ASM: .long	0x3                     # ReturnType: void
-; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .long	0x3                     # ReturnType
+; ASM: .byte	0x0                     # CallingConvention
 ; ASM: .byte	0x0                     # FunctionOptions
 ; ASM: .short	0x0                     # NumParameters
-; ASM: .long	0x1000                  # ArgListType: ()
+; ASM: .long	0x1000                  # ArgListType
 ; ASM: # Procedure (0x1001) {
 ; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
 ; ASM: #   ReturnType: void (0x3)
@@ -420,11 +418,10 @@
 ; ASM: #   NumParameters: 0
 ; ASM: #   ArgListType: () (0x1000)
 ; ASM: # }
-; ASM: # FuncId (0x1002)
 ; ASM: .short	0x16                    # Record length
 ; ASM: .short	0x1601                  # Record kind: LF_FUNC_ID
 ; ASM: .long	0x0                     # ParentScope
-; ASM: .long	0x1001                  # FunctionType: void ()
+; ASM: .long	0x1001                  # FunctionType
 ; ASM: .asciz	"UseTypes"              # Name
 ; ASM: .byte	243
 ; ASM: .byte	242
@@ -435,11 +432,10 @@
 ; ASM: #   FunctionType: void () (0x1001)
 ; ASM: #   Name: UseTypes
 ; ASM: # }
-; ASM: # Struct (0x1003)
 ; ASM: .short	0x2a                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x280                   # Properties ( ForwardReference (0x80) | HasUniqueName (0x200) )
+; ASM: .short	0x280                   # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
@@ -462,11 +458,10 @@
 ; ASM: #   Name: Struct
 ; ASM: #   LinkageName: .?AUStruct@@
 ; ASM: # }
-; ASM: # Modifier (0x1004)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1001                  # Record kind: LF_MODIFIER
-; ASM: .long	0x74                    # ModifiedType: int
-; ASM: .short	0x1                     # Modifiers ( Const (0x1) )
+; ASM: .long	0x74                    # ModifiedType
+; ASM: .short	0x1                     # Modifiers
 ; ASM: .byte	242
 ; ASM: .byte	241
 ; ASM: # Modifier (0x1004) {
@@ -476,36 +471,35 @@
 ; ASM: #     Const (0x1)
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # FieldList (0x1005)
 ; ASM: .short	0x3e                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"s1"                    # Name
 ; ASM: .byte	243
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x4                     # FieldOffset
 ; ASM: .asciz	"s2"                    # Name
 ; ASM: .byte	243
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x8                     # FieldOffset
 ; ASM: .asciz	"s3"                    # Name
 ; ASM: .byte	243
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: .short	0x150e                  # Member kind: StaticDataMember ( LF_STMEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x1004                  # Type: const int
+; ASM: .short	0x150e                  # Member kind: LF_STMEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x1004                  # Type
 ; ASM: .asciz	"sdm"                   # Name
 ; ASM: # FieldList (0x1005) {
 ; ASM: #   TypeLeafKind: LF_FIELDLIST (0x1203)
@@ -537,12 +531,11 @@
 ; ASM: #     Name: sdm
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Struct (0x1006)
 ; ASM: .short	0x2a                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x4                     # MemberCount
-; ASM: .short	0x200                   # Properties ( HasUniqueName (0x200) )
-; ASM: .long	0x1005                  # FieldList: <field list>
+; ASM: .short	0x200                   # Properties
+; ASM: .long	0x1005                  # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
 ; ASM: .short	0xc                     # SizeOf
@@ -563,7 +556,6 @@
 ; ASM: #   Name: Struct
 ; ASM: #   LinkageName: .?AUStruct@@
 ; ASM: # }
-; ASM: # StringId (0x1007)
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -573,11 +565,10 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: D:\src\llvm\build\t.cpp
 ; ASM: # }
-; ASM: # UdtSourceLine (0x1008)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x1006                  # UDT: Struct
-; ASM: .long	0x1007                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x1006                  # UDT
+; ASM: .long	0x1007                  # SourceFile
 ; ASM: .long	0x1                     # LineNumber
 ; ASM: # UdtSourceLine (0x1008) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -585,11 +576,10 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x1007)
 ; ASM: #   LineNumber: 1
 ; ASM: # }
-; ASM: # Union (0x1009)
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1506                  # Record kind: LF_UNION
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x280                   # Properties ( ForwardReference (0x80) | HasUniqueName (0x200) )
+; ASM: .short	0x280                   # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .short	0x0                     # SizeOf
 ; ASM: .asciz	"Union"                 # Name
@@ -606,17 +596,16 @@
 ; ASM: #   Name: Union
 ; ASM: #   LinkageName: .?ATUnion@@
 ; ASM: # }
-; ASM: # FieldList (0x100A)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"a"                     # Name
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x40                    # Type: float
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x40                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"b"                     # Name
 ; ASM: # FieldList (0x100A) {
@@ -636,12 +625,11 @@
 ; ASM: #     Name: b
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Union (0x100B)
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1506                  # Record kind: LF_UNION
 ; ASM: .short	0x2                     # MemberCount
-; ASM: .short	0x600                   # Properties ( HasUniqueName (0x200) | Sealed (0x400) )
-; ASM: .long	0x100a                  # FieldList: <field list>
+; ASM: .short	0x600                   # Properties
+; ASM: .long	0x100a                  # FieldList
 ; ASM: .short	0x4                     # SizeOf
 ; ASM: .asciz	"Union"                 # Name
 ; ASM: .asciz	".?ATUnion@@"           # LinkageName
@@ -657,11 +645,10 @@
 ; ASM: #   Name: Union
 ; ASM: #   LinkageName: .?ATUnion@@
 ; ASM: # }
-; ASM: # UdtSourceLine (0x100C)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x100b                  # UDT: Union
-; ASM: .long	0x1007                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x100b                  # UDT
+; ASM: .long	0x1007                  # SourceFile
 ; ASM: .long	0x7                     # LineNumber
 ; ASM: # UdtSourceLine (0x100C) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -669,11 +656,10 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x1007)
 ; ASM: #   LineNumber: 7
 ; ASM: # }
-; ASM: # Class (0x100D)
 ; ASM: .short	0x26                    # Record length
 ; ASM: .short	0x1504                  # Record kind: LF_CLASS
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x280                   # Properties ( ForwardReference (0x80) | HasUniqueName (0x200) )
+; ASM: .short	0x280                   # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
@@ -694,25 +680,24 @@
 ; ASM: #   Name: Class
 ; ASM: #   LinkageName: .?AVClass@@
 ; ASM: # }
-; ASM: # FieldList (0x100E)
 ; ASM: .short	0x32                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"pub"                   # Name
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x1                     # Attrs: Private
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x1                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x4                     # FieldOffset
 ; ASM: .asciz	"priv"                  # Name
 ; ASM: .byte	241
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x2                     # Attrs: Protected
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x2                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x8                     # FieldOffset
 ; ASM: .asciz	"prot"                  # Name
 ; ASM: .byte	241
@@ -740,12 +725,11 @@
 ; ASM: #     Name: prot
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Class (0x100F)
 ; ASM: .short	0x26                    # Record length
 ; ASM: .short	0x1504                  # Record kind: LF_CLASS
 ; ASM: .short	0x3                     # MemberCount
-; ASM: .short	0x200                   # Properties ( HasUniqueName (0x200) )
-; ASM: .long	0x100e                  # FieldList: <field list>
+; ASM: .short	0x200                   # Properties
+; ASM: .long	0x100e                  # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
 ; ASM: .short	0xc                     # SizeOf
@@ -764,11 +748,10 @@
 ; ASM: #   Name: Class
 ; ASM: #   LinkageName: .?AVClass@@
 ; ASM: # }
-; ASM: # UdtSourceLine (0x1010)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x100f                  # UDT: Class
-; ASM: .long	0x1007                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x100f                  # UDT
+; ASM: .long	0x1007                  # SourceFile
 ; ASM: .long	0xb                     # LineNumber
 ; ASM: # UdtSourceLine (0x1010) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -776,11 +759,10 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x1007)
 ; ASM: #   LineNumber: 11
 ; ASM: # }
-; ASM: # Struct (0x1011)
 ; ASM: .short	0x36                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x280                   # Properties ( ForwardReference (0x80) | HasUniqueName (0x200) )
+; ASM: .short	0x280                   # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
@@ -803,11 +785,10 @@
 ; ASM: #   Name: DerivedClass
 ; ASM: #   LinkageName: .?AUDerivedClass@@
 ; ASM: # }
-; ASM: # Pointer (0x1012)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1004                  # PointeeType: const int
-; ASM: .long	0x1000c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8 ]
+; ASM: .long	0x1004                  # PointeeType
+; ASM: .long	0x1000c                 # Attributes
 ; ASM: # Pointer (0x1012) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: const int (0x1004)
@@ -822,7 +803,6 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # VFTableShape (0x1013)
 ; ASM: .short	0x6                     # Record length
 ; ASM: .short	0xa                     # Record kind: LF_VTSHAPE
 ; ASM: .short	0x1                     # VFEntryCount
@@ -832,11 +812,10 @@
 ; ASM: #   TypeLeafKind: LF_VTSHAPE (0xA)
 ; ASM: #   VFEntryCount: 1
 ; ASM: # }
-; ASM: # Pointer (0x1014)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1013                  # PointeeType: <vftable 1 methods>
-; ASM: .long	0x1000c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8 ]
+; ASM: .long	0x1013                  # PointeeType
+; ASM: .long	0x1000c                 # Attributes
 ; ASM: # Pointer (0x1014) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: <vftable 1 methods> (0x1013)
@@ -851,27 +830,26 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # FieldList (0x1015)
 ; ASM: .short	0x32                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x1400                  # Member kind: BaseClass ( LF_BCLASS )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x1003                  # BaseType: Struct
+; ASM: .short	0x1400                  # Member kind: LF_BCLASS
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x1003                  # BaseType
 ; ASM: .short	0x0                     # BaseOffset
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: .short	0x1401                  # Member kind: VirtualBaseClass ( LF_VBCLASS )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x100d                  # BaseType: Class
-; ASM: .long	0x1012                  # VBPtrType: const int*
+; ASM: .short	0x1401                  # Member kind: LF_VBCLASS
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x100d                  # BaseType
+; ASM: .long	0x1012                  # VBPtrType
 ; ASM: .short	0x0                     # VBPtrOffset
 ; ASM: .short	0x1                     # VBTableIndex
-; ASM: .short	0x1409                  # Member kind: VFPtr ( LF_VFUNCTAB )
+; ASM: .short	0x1409                  # Member kind: LF_VFUNCTAB
 ; ASM: .short	0x0                     # Padding
-; ASM: .long	0x1014                  # Type: <vftable 1 methods>*
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .long	0x1014                  # Type
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x18                    # FieldOffset
 ; ASM: .asciz	"d"                     # Name
 ; ASM: # FieldList (0x1015) {
@@ -902,12 +880,11 @@
 ; ASM: #     Name: d
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Struct (0x1016)
 ; ASM: .short	0x36                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x4                     # MemberCount
-; ASM: .short	0x200                   # Properties ( HasUniqueName (0x200) )
-; ASM: .long	0x1015                  # FieldList: <field list>
+; ASM: .short	0x200                   # Properties
+; ASM: .long	0x1015                  # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
 ; ASM: .short	0x30                    # SizeOf
@@ -928,11 +905,10 @@
 ; ASM: #   Name: DerivedClass
 ; ASM: #   LinkageName: .?AUDerivedClass@@
 ; ASM: # }
-; ASM: # UdtSourceLine (0x1017)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x1016                  # UDT: DerivedClass
-; ASM: .long	0x1007                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x1016                  # UDT
+; ASM: .long	0x1007                  # SourceFile
 ; ASM: .long	0x14                    # LineNumber
 ; ASM: # UdtSourceLine (0x1017) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -940,11 +916,10 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x1007)
 ; ASM: #   LineNumber: 20
 ; ASM: # }
-; ASM: # Struct (0x1018)
 ; ASM: .short	0x36                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x288                   # Properties ( ForwardReference (0x80) | HasUniqueName (0x200) | Nested (0x8) )
+; ASM: .short	0x288                   # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
@@ -967,12 +942,11 @@
 ; ASM: #   Name: Class::Nested
 ; ASM: #   LinkageName: .?AUNested@Class@@
 ; ASM: # }
-; ASM: # FieldList (0x1019)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"n"                     # Name
 ; ASM: # FieldList (0x1019) {
@@ -985,12 +959,11 @@
 ; ASM: #     Name: n
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Struct (0x101A)
 ; ASM: .short	0x36                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x1                     # MemberCount
-; ASM: .short	0x208                   # Properties ( HasUniqueName (0x200) | Nested (0x8) )
-; ASM: .long	0x1019                  # FieldList: <field list>
+; ASM: .short	0x208                   # Properties
+; ASM: .long	0x1019                  # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
 ; ASM: .short	0x4                     # SizeOf
@@ -1011,11 +984,10 @@
 ; ASM: #   Name: Class::Nested
 ; ASM: #   LinkageName: .?AUNested@Class@@
 ; ASM: # }
-; ASM: # UdtSourceLine (0x101B)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x101a                  # UDT: Class::Nested
-; ASM: .long	0x1007                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x101a                  # UDT
+; ASM: .long	0x1007                  # SourceFile
 ; ASM: .long	0x17                    # LineNumber
 ; ASM: # UdtSourceLine (0x101B) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -1023,11 +995,10 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x1007)
 ; ASM: #   LineNumber: 23
 ; ASM: # }
-; ASM: # Pointer (0x101C)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1011                  # PointeeType: DerivedClass
-; ASM: .long	0x1040c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8, isConst ]
+; ASM: .long	0x1011                  # PointeeType
+; ASM: .long	0x1040c                 # Attributes
 ; ASM: # Pointer (0x101C) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: DerivedClass (0x1011)
@@ -1042,16 +1013,15 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # MemberFunction (0x101D)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1009                  # Record kind: LF_MFUNCTION
-; ASM: .long	0x3                     # ReturnType: void
-; ASM: .long	0x1011                  # ClassType: DerivedClass
-; ASM: .long	0x101c                  # ThisType: DerivedClass* const
-; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .long	0x3                     # ReturnType
+; ASM: .long	0x1011                  # ClassType
+; ASM: .long	0x101c                  # ThisType
+; ASM: .byte	0x0                     # CallingConvention
 ; ASM: .byte	0x0                     # FunctionOptions
 ; ASM: .short	0x0                     # NumParameters
-; ASM: .long	0x1000                  # ArgListType: ()
+; ASM: .long	0x1000                  # ArgListType
 ; ASM: .long	0x0                     # ThisAdjustment
 ; ASM: # MemberFunction (0x101D) {
 ; ASM: #   TypeLeafKind: LF_MFUNCTION (0x1009)
@@ -1065,11 +1035,10 @@
 ; ASM: #   ArgListType: () (0x1000)
 ; ASM: #   ThisAdjustment: 0
 ; ASM: # }
-; ASM: # MemberFuncId (0x101E)
 ; ASM: .short	0x26                    # Record length
 ; ASM: .short	0x1602                  # Record kind: LF_MFUNC_ID
-; ASM: .long	0x1011                  # ClassType: DerivedClass
-; ASM: .long	0x101d                  # FunctionType: void DerivedClass::()
+; ASM: .long	0x1011                  # ClassType
+; ASM: .long	0x101d                  # FunctionType
 ; ASM: .asciz	"DerivedClass::DerivedClass" # Name
 ; ASM: .byte	241
 ; ASM: # MemberFuncId (0x101E) {
@@ -1078,11 +1047,10 @@
 ; ASM: #   FunctionType: void DerivedClass::() (0x101D)
 ; ASM: #   Name: DerivedClass::DerivedClass
 ; ASM: # }
-; ASM: # Pointer (0x101F)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1011                  # PointeeType: DerivedClass
-; ASM: .long	0x1000c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8 ]
+; ASM: .long	0x1011                  # PointeeType
+; ASM: .long	0x1000c                 # Attributes
 ; ASM: # Pointer (0x101F) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: DerivedClass (0x1011)
@@ -1097,7 +1065,6 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # StringId (0x1020)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -1109,7 +1076,6 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: D:\src\llvm\build
 ; ASM: # }
-; ASM: # StringId (0x1021)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -1121,13 +1087,12 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: t.cpp
 ; ASM: # }
-; ASM: # BuildInfo (0x1022)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1603                  # Record kind: LF_BUILDINFO
 ; ASM: .short	0x5                     # NumArgs
-; ASM: .long	0x1020                  # Argument: D:\src\llvm\build
+; ASM: .long	0x1020                  # Argument
 ; ASM: .long	0x0                     # Argument
-; ASM: .long	0x1021                  # Argument: t.cpp
+; ASM: .long	0x1021                  # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .byte	242

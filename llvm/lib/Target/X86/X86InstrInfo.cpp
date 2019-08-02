@@ -465,7 +465,7 @@ unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
 static bool regIsPICBase(unsigned BaseReg, const MachineRegisterInfo &MRI) {
   // Don't waste compile time scanning use-def chains of physregs.
-  if (!TargetRegisterInfo::isVirtualRegister(BaseReg))
+  if (!Register::isVirtualRegister(BaseReg))
     return false;
   bool isPICBase = false;
   for (MachineRegisterInfo::def_instr_iterator I = MRI.def_instr_begin(BaseReg),
@@ -684,7 +684,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     isKill = Src.isKill();
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
-    if (TargetRegisterInfo::isVirtualRegister(NewSrc) &&
+    if (Register::isVirtualRegister(NewSrc) &&
         !MF.getRegInfo().constrainRegClass(NewSrc, RC))
       return false;
 
@@ -693,7 +693,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
   // This is for an LEA64_32r and incoming registers are 32-bit. One way or
   // another we need to add 64-bit registers to the final MI.
-  if (TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+  if (Register::isPhysicalRegister(SrcReg)) {
     ImplicitOp = Src;
     ImplicitOp.setImplicit();
 
@@ -888,7 +888,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     if (!isTruncatedShiftCountForLEA(ShAmt)) return nullptr;
 
     // LEA can't handle RSP.
-    if (TargetRegisterInfo::isVirtualRegister(Src.getReg()) &&
+    if (Register::isVirtualRegister(Src.getReg()) &&
         !MF.getRegInfo().constrainRegClass(Src.getReg(),
                                            &X86::GR64_NOSPRegClass))
       return nullptr;
@@ -4252,7 +4252,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   // If MI is marked as reading Reg, the partial register update is wanted.
   const MachineOperand &MO = MI.getOperand(0);
   unsigned Reg = MO.getReg();
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     if (MO.readsReg() || MI.readsVirtualRegister(Reg))
       return 0;
   } else {
@@ -4456,7 +4456,7 @@ X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned &OpNum,
   OpNum = 1;
 
   const MachineOperand &MO = MI.getOperand(OpNum);
-  if (MO.isUndef() && TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+  if (MO.isUndef() && Register::isPhysicalRegister(MO.getReg())) {
     return UndefRegClearance;
   }
   return 0;
@@ -4539,7 +4539,7 @@ static void updateOperandRegConstraints(MachineFunction &MF,
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TRI.isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
 
     auto *NewRC = MRI.constrainRegClass(
@@ -4822,7 +4822,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // value and zero-extend the top bits. Change the destination register
       // to a 32-bit one.
       unsigned DstReg = NewMI->getOperand(0).getReg();
-      if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+      if (Register::isPhysicalRegister(DstReg))
         NewMI->getOperand(0).setReg(RI.getSubReg(DstReg, X86::sub_32bit));
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
@@ -7384,9 +7384,8 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
     const MachineOperand &Op1 = MI.getOperand(1);
     const MachineOperand &Op2 = MI.getOperand(3);
     const TargetRegisterInfo *TRI = &getRegisterInfo();
-    assert(Op2.isReg() &&
-           (Op2.getReg() == X86::NoRegister ||
-            TargetRegisterInfo::isPhysicalRegister(Op2.getReg())));
+    assert(Op2.isReg() && (Op2.getReg() == X86::NoRegister ||
+                           Register::isPhysicalRegister(Op2.getReg())));
 
     // Omit situations like:
     // %rsi = lea %rsi, 4, ...

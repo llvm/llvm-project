@@ -266,20 +266,19 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
 
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  if ((TargetRegisterInfo::isVirtualRegister(CmpReg) &&
-       MRI.use_nodbg_empty(CmpReg)) ||
+  if ((Register::isVirtualRegister(CmpReg) && MRI.use_nodbg_empty(CmpReg)) ||
       (CmpReg == CondReg &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
-                      return MI.readsRegister(CondReg, TRI); }))) {
+                      return MI.readsRegister(CondReg, TRI);
+                    }))) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
 
     LIS->RemoveMachineInstrFromMaps(*Cmp);
     Cmp->eraseFromParent();
 
     // Try to remove v_cndmask_b32.
-    if (TargetRegisterInfo::isVirtualRegister(SelReg) &&
-        MRI.use_nodbg_empty(SelReg)) {
+    if (Register::isVirtualRegister(SelReg) && MRI.use_nodbg_empty(SelReg)) {
       LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
       LIS->RemoveMachineInstrFromMaps(*Sel);
@@ -434,7 +433,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
   if (Changed) {
     for (auto Reg : RecalcRegs) {
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         LIS->removeInterval(Reg);
         if (!MRI.reg_empty(Reg))
           LIS->createAndComputeVirtRegInterval(Reg);

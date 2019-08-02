@@ -148,7 +148,7 @@ static bool hasVectorOperands(const MachineInstr &MI,
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     if (!MI.getOperand(i).isReg() ||
-        !TargetRegisterInfo::isVirtualRegister(MI.getOperand(i).getReg()))
+        !Register::isVirtualRegister(MI.getOperand(i).getReg()))
       continue;
 
     if (TRI->hasVectorRegisters(MRI.getRegClass(MI.getOperand(i).getReg())))
@@ -164,18 +164,16 @@ getCopyRegClasses(const MachineInstr &Copy,
   unsigned DstReg = Copy.getOperand(0).getReg();
   unsigned SrcReg = Copy.getOperand(1).getReg();
 
-  const TargetRegisterClass *SrcRC =
-    TargetRegisterInfo::isVirtualRegister(SrcReg) ?
-    MRI.getRegClass(SrcReg) :
-    TRI.getPhysRegClass(SrcReg);
+  const TargetRegisterClass *SrcRC = Register::isVirtualRegister(SrcReg)
+                                         ? MRI.getRegClass(SrcReg)
+                                         : TRI.getPhysRegClass(SrcReg);
 
   // We don't really care about the subregister here.
   // SrcRC = TRI.getSubRegClass(SrcRC, Copy.getOperand(1).getSubReg());
 
-  const TargetRegisterClass *DstRC =
-    TargetRegisterInfo::isVirtualRegister(DstReg) ?
-    MRI.getRegClass(DstReg) :
-    TRI.getPhysRegClass(DstReg);
+  const TargetRegisterClass *DstRC = Register::isVirtualRegister(DstReg)
+                                         ? MRI.getRegClass(DstReg)
+                                         : TRI.getPhysRegClass(DstReg);
 
   return std::make_pair(SrcRC, DstRC);
 }
@@ -201,8 +199,8 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
   auto &Src = MI.getOperand(1);
   unsigned DstReg = MI.getOperand(0).getReg();
   unsigned SrcReg = Src.getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(SrcReg) ||
-      !TargetRegisterInfo::isVirtualRegister(DstReg))
+  if (!Register::isVirtualRegister(SrcReg) ||
+      !Register::isVirtualRegister(DstReg))
     return false;
 
   for (const auto &MO : MRI.reg_nodbg_operands(DstReg)) {
@@ -250,7 +248,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
     return false;
 
   // It is illegal to have vreg inputs to a physreg defining reg_sequence.
-  if (TargetRegisterInfo::isPhysicalRegister(CopyUse.getOperand(0).getReg()))
+  if (Register::isPhysicalRegister(CopyUse.getOperand(0).getReg()))
     return false;
 
   const TargetRegisterClass *SrcRC, *DstRC;
@@ -624,7 +622,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, MRI);
 
-        if (!TargetRegisterInfo::isVirtualRegister(DstReg)) {
+        if (!Register::isVirtualRegister(DstReg)) {
           // If the destination register is a physical register there isn't
           // really much we can do to fix this.
           // Some special instructions use M0 as an input. Some even only use
@@ -644,7 +642,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
           unsigned SrcReg = MI.getOperand(1).getReg();
-          if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+          if (!Register::isVirtualRegister(SrcReg)) {
             TII->moveToVALU(MI, MDT);
             break;
           }

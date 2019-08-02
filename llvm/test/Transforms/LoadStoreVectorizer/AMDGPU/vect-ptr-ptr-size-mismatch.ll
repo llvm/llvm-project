@@ -54,4 +54,43 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @ext_ptr
+; CHECK  load <2 x i32>
+define void @ext_ptr(i32 addrspace(5)* %p) {
+entry:
+  %gep1 = getelementptr inbounds i32, i32 addrspace(5)* %p, i64 0
+  %gep2 = getelementptr inbounds i32, i32 addrspace(5)* %p, i64 1
+  %a.ascast = addrspacecast i32 addrspace(5)* %gep1 to i32*
+  %b.ascast = addrspacecast i32 addrspace(5)* %gep2 to i32*
+  %tmp1 = load i32, i32* %a.ascast, align 8
+  %tmp2 = load i32, i32* %b.ascast, align 8
+  unreachable
+}
+
+; CHECK-LABEL: @shrink_ptr
+; CHECK  load <2 x i32>
+define void @shrink_ptr(i32* %p) {
+entry:
+  %gep1 = getelementptr inbounds i32, i32* %p, i64 0
+  %gep2 = getelementptr inbounds i32, i32* %p, i64 1
+  %a.ascast = addrspacecast i32* %gep1 to i32 addrspace(5)*
+  %b.ascast = addrspacecast i32* %gep2 to i32 addrspace(5)*
+  %tmp1 = load i32, i32 addrspace(5)* %a.ascast, align 8
+  %tmp2 = load i32, i32 addrspace(5)* %b.ascast, align 8
+  unreachable
+}
+
+; CHECK-LABEL: @ext_ptr_wrap
+; CHECK: load <2 x i8>
+define void @ext_ptr_wrap(i8 addrspace(5)* %p) {
+entry:
+  %gep1 = getelementptr inbounds i8, i8 addrspace(5)* %p, i64 0
+  %gep2 = getelementptr inbounds i8, i8 addrspace(5)* %p, i64 4294967295
+  %a.ascast = addrspacecast i8 addrspace(5)* %gep1 to i8*
+  %b.ascast = addrspacecast i8 addrspace(5)* %gep2 to i8*
+  %tmp1 = load i8, i8* %a.ascast, align 1
+  %tmp2 = load i8, i8* %b.ascast, align 1
+  unreachable
+}
+
 !0 = !{}

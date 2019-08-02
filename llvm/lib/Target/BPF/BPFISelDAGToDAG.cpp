@@ -493,7 +493,7 @@ bool BPFDAGToDAGISel::fillConstantStruct(const DataLayout &DL,
 
 void BPFDAGToDAGISel::PreprocessCopyToReg(SDNode *Node) {
   const RegisterSDNode *RegN = dyn_cast<RegisterSDNode>(Node->getOperand(1));
-  if (!RegN || !TargetRegisterInfo::isVirtualRegister(RegN->getReg()))
+  if (!RegN || !Register::isVirtualRegister(RegN->getReg()))
     return;
 
   const LoadSDNode *LD = dyn_cast<LoadSDNode>(Node->getOperand(2));
@@ -517,8 +517,7 @@ void BPFDAGToDAGISel::PreprocessCopyToReg(SDNode *Node) {
   }
 
   LLVM_DEBUG(dbgs() << "Find Load Value to VReg "
-                    << TargetRegisterInfo::virtReg2Index(RegN->getReg())
-                    << '\n');
+                    << Register::virtReg2Index(RegN->getReg()) << '\n');
   load_to_vreg_[RegN->getReg()] = mem_load_op;
 }
 
@@ -576,7 +575,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 
   const RegisterSDNode *RegN =
       dyn_cast<RegisterSDNode>(BaseV.getNode()->getOperand(1));
-  if (!RegN || !TargetRegisterInfo::isVirtualRegister(RegN->getReg()))
+  if (!RegN || !Register::isVirtualRegister(RegN->getReg()))
     return;
   unsigned AndOpReg = RegN->getReg();
   LLVM_DEBUG(dbgs() << "Examine " << printReg(AndOpReg) << '\n');
@@ -593,7 +592,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
       if (!MOP.isReg() || !MOP.isDef())
         continue;
       unsigned Reg = MOP.getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg) && Reg == AndOpReg) {
+      if (Register::isVirtualRegister(Reg) && Reg == AndOpReg) {
         MII = &MI;
         break;
       }
@@ -618,7 +617,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
         if (MOP.isDef())
           continue;
         PrevReg = MOP.getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(PrevReg))
+        if (!Register::isVirtualRegister(PrevReg))
           return;
         if (!checkLoadDef(PrevReg, match_load_op))
           return;

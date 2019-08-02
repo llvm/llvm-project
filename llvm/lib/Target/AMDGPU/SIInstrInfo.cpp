@@ -460,7 +460,7 @@ bool SIInstrInfo::shouldClusterMemOps(const MachineOperand &BaseOp1,
 
   const unsigned Reg = FirstDst->getReg();
 
-  const TargetRegisterClass *DstRC = TargetRegisterInfo::isVirtualRegister(Reg)
+  const TargetRegisterClass *DstRC = Register::isVirtualRegister(Reg)
                                          ? MRI.getRegClass(Reg)
                                          : RI.getPhysRegClass(Reg);
 
@@ -1052,7 +1052,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
     // The SGPR spill/restore instructions only work on number sgprs, so we need
     // to make sure we are using the correct register class.
-    if (TargetRegisterInfo::isVirtualRegister(SrcReg) && SpillSize == 4) {
+    if (Register::isVirtualRegister(SrcReg) && SpillSize == 4) {
       MachineRegisterInfo &MRI = MF->getRegInfo();
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0RegClass);
     }
@@ -1182,7 +1182,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     // FIXME: Maybe this should not include a memoperand because it will be
     // lowered to non-memory instructions.
     const MCInstrDesc &OpDesc = get(getSGPRSpillRestoreOpcode(SpillSize));
-    if (TargetRegisterInfo::isVirtualRegister(DestReg) && SpillSize == 4) {
+    if (Register::isVirtualRegister(DestReg) && SpillSize == 4) {
       MachineRegisterInfo &MRI = MF->getRegInfo();
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0RegClass);
     }
@@ -2374,12 +2374,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           MRI->hasOneUse(Src0->getReg())) {
           Src0->ChangeToImmediate(Def->getOperand(1).getImm());
           Src0Inlined = true;
-        } else if ((RI.isPhysicalRegister(Src0->getReg()) &&
-            (ST.getConstantBusLimit(Opc) <= 1 &&
-             RI.isSGPRClass(RI.getPhysRegClass(Src0->getReg())))) ||
-            (RI.isVirtualRegister(Src0->getReg()) &&
-            (ST.getConstantBusLimit(Opc) <= 1 &&
-             RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
+        } else if ((Register::isPhysicalRegister(Src0->getReg()) &&
+                    (ST.getConstantBusLimit(Opc) <= 1 &&
+                     RI.isSGPRClass(RI.getPhysRegClass(Src0->getReg())))) ||
+                   (Register::isVirtualRegister(Src0->getReg()) &&
+                    (ST.getConstantBusLimit(Opc) <= 1 &&
+                     RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
           return false;
           // VGPR is okay as Src0 - fallthrough
       }
@@ -2392,10 +2392,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
             MRI->hasOneUse(Src1->getReg()) &&
             commuteInstruction(UseMI)) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-        } else if ((RI.isPhysicalRegister(Src1->getReg()) &&
-            RI.isSGPRClass(RI.getPhysRegClass(Src1->getReg()))) ||
-            (RI.isVirtualRegister(Src1->getReg()) &&
-            RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
+        } else if ((Register::isPhysicalRegister(Src1->getReg()) &&
+                    RI.isSGPRClass(RI.getPhysRegClass(Src1->getReg()))) ||
+                   (Register::isVirtualRegister(Src1->getReg()) &&
+                    RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
           return false;
           // VGPR is okay as Src1 - fallthrough
       }
@@ -3043,7 +3043,7 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
   if (!MO.isUse())
     return false;
 
-  if (TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+  if (Register::isVirtualRegister(MO.getReg()))
     return RI.isSGPRClass(MRI.getRegClass(MO.getReg()));
 
   // Null is free
@@ -3111,7 +3111,7 @@ static bool shouldReadExec(const MachineInstr &MI) {
 static bool isSubRegOf(const SIRegisterInfo &TRI,
                        const MachineOperand &SuperVec,
                        const MachineOperand &SubReg) {
-  if (TargetRegisterInfo::isPhysicalRegister(SubReg.getReg()))
+  if (Register::isPhysicalRegister(SubReg.getReg()))
     return TRI.isSubRegister(SuperVec.getReg(), SubReg.getReg());
 
   return SubReg.getSubReg() != AMDGPU::NoSubRegister &&
@@ -3152,7 +3152,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         continue;
 
       unsigned Reg = Op.getReg();
-      if (!TargetRegisterInfo::isVirtualRegister(Reg) && !RC->contains(Reg)) {
+      if (!Register::isVirtualRegister(Reg) && !RC->contains(Reg)) {
         ErrInfo = "inlineasm operand has incorrect register class.";
         return false;
       }
@@ -3217,8 +3217,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (RegClass != -1) {
       unsigned Reg = MI.getOperand(i).getReg();
-      if (Reg == AMDGPU::NoRegister ||
-          TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Reg == AMDGPU::NoRegister || Register::isVirtualRegister(Reg))
         continue;
 
       const TargetRegisterClass *RC = RI.getRegClass(RegClass);
@@ -3311,7 +3310,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo =
             "Dst register should be tied to implicit use of preserved register";
         return false;
-      } else if (TargetRegisterInfo::isPhysicalRegister(TiedMO.getReg()) &&
+      } else if (Register::isPhysicalRegister(TiedMO.getReg()) &&
                  Dst.getReg() != TiedMO.getReg()) {
         ErrInfo = "Dst register should use same physical register as preserved";
         return false;
@@ -3718,7 +3717,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
       Desc.OpInfo[OpNo].RegClass == -1) {
     unsigned Reg = MI.getOperand(OpNo).getReg();
 
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
+    if (Register::isVirtualRegister(Reg))
       return MRI.getRegClass(Reg);
     return RI.getPhysRegClass(Reg);
   }
@@ -3823,10 +3822,9 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
     return false;
 
   unsigned Reg = MO.getReg();
-  const TargetRegisterClass *RC =
-    TargetRegisterInfo::isVirtualRegister(Reg) ?
-    MRI.getRegClass(Reg) :
-    RI.getPhysRegClass(Reg);
+  const TargetRegisterClass *RC = Register::isVirtualRegister(Reg)
+                                      ? MRI.getRegClass(Reg)
+                                      : RI.getPhysRegClass(Reg);
 
   const SIRegisterInfo *TRI =
       static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
@@ -4438,7 +4436,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
     const TargetRegisterClass *RC = nullptr, *SRC = nullptr, *VRC = nullptr;
     for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
       if (!MI.getOperand(i).isReg() ||
-          !TargetRegisterInfo::isVirtualRegister(MI.getOperand(i).getReg()))
+          !Register::isVirtualRegister(MI.getOperand(i).getReg()))
         continue;
       const TargetRegisterClass *OpRC =
           MRI.getRegClass(MI.getOperand(i).getReg());
@@ -4466,7 +4464,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
     // Update all the operands so they have the same type.
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
       MachineOperand &Op = MI.getOperand(I);
-      if (!Op.isReg() || !TargetRegisterInfo::isVirtualRegister(Op.getReg()))
+      if (!Op.isReg() || !Register::isVirtualRegister(Op.getReg()))
         continue;
 
       // MI is a PHI instruction.
@@ -4491,7 +4489,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // subregister index types e.g. sub0_sub1 + sub2 + sub3
       for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
         MachineOperand &Op = MI.getOperand(I);
-        if (!Op.isReg() || !TargetRegisterInfo::isVirtualRegister(Op.getReg()))
+        if (!Op.isReg() || !Register::isVirtualRegister(Op.getReg()))
           continue;
 
         const TargetRegisterClass *OpRC = MRI.getRegClass(Op.getReg());
@@ -4942,7 +4940,7 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     unsigned NewDstReg = AMDGPU::NoRegister;
     if (HasDst) {
       unsigned DstReg = Inst.getOperand(0).getReg();
-      if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+      if (Register::isPhysicalRegister(DstReg))
         continue;
 
       // Update the destination register class.
@@ -4951,7 +4949,7 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
         continue;
 
       if (Inst.isCopy() &&
-          TargetRegisterInfo::isVirtualRegister(Inst.getOperand(1).getReg()) &&
+          Register::isVirtualRegister(Inst.getOperand(1).getReg()) &&
           NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
@@ -6264,7 +6262,7 @@ static bool followSubRegDef(MachineInstr &MI,
 MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
                                      MachineRegisterInfo &MRI) {
   assert(MRI.isSSA());
-  if (!TargetRegisterInfo::isVirtualRegister(P.Reg))
+  if (!Register::isVirtualRegister(P.Reg))
     return nullptr;
 
   auto RSR = P;
@@ -6275,8 +6273,7 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
     case AMDGPU::COPY:
     case AMDGPU::V_MOV_B32_e32: {
       auto &Op1 = MI->getOperand(1);
-      if (Op1.isReg() &&
-        TargetRegisterInfo::isVirtualRegister(Op1.getReg())) {
+      if (Op1.isReg() && Register::isVirtualRegister(Op1.getReg())) {
         if (Op1.isUndef())
           return nullptr;
         RSR = getRegSubRegPair(Op1);

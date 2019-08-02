@@ -33,9 +33,6 @@ public:
   virtual void EmitIntValue(uint64_t Value, unsigned Size) = 0;
   virtual void EmitBinaryData(StringRef Data) = 0;
   virtual void AddComment(const Twine &T) = 0;
-  virtual void AddRawComment(const Twine &T) = 0;
-  virtual bool isVerboseAsm() = 0;
-  virtual StringRef getTypeName(TypeIndex TI) = 0;
   virtual ~CodeViewRecordStreamer() = default;
 };
 
@@ -209,11 +206,6 @@ public:
     return 0;
   }
 
-  void emitRawComment(const Twine &T) {
-    if (isStreaming())
-      Streamer->AddRawComment(T);
-  }
-
 private:
   void emitEncodedSignedInteger(const int64_t &Value,
                                 const Twine &Comment = "");
@@ -233,7 +225,7 @@ private:
   }
 
   void emitComment(const Twine &Comment) {
-    if (isStreaming() && Streamer->isVerboseAsm()) {
+    if (isStreaming()) {
       Twine TComment(Comment);
       if (!TComment.isTriviallyEmpty())
         Streamer->AddComment(TComment);

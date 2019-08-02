@@ -87,11 +87,20 @@ public:
   /// Return true if the specified register is included in this register class.
   /// This does not include virtual registers.
   bool contains(unsigned Reg) const {
+    /// FIXME: Historically this function has returned false when given vregs
+    ///        but it should probably only receive physical registers
+    if (!Register::isPhysicalRegister(Reg))
+      return false;
     return MC->contains(Reg);
   }
 
   /// Return true if both registers are in this class.
   bool contains(unsigned Reg1, unsigned Reg2) const {
+    /// FIXME: Historically this function has returned false when given a vregs
+    ///        but it should probably only receive physical registers
+    if (!Register::isPhysicalRegister(Reg1) ||
+        !Register::isPhysicalRegister(Reg2))
+      return false;
     return MC->contains(Reg1, Reg2);
   }
 
@@ -258,52 +267,6 @@ public:
   // Further sentinels can be allocated from the small negative integers.
   // DenseMapInfo<unsigned> uses -1u and -2u.
 
-  /// isStackSlot - Sometimes it is useful the be able to store a non-negative
-  /// frame index in a variable that normally holds a register. isStackSlot()
-  /// returns true if Reg is in the range used for stack slots.
-  ///
-  /// Note that isVirtualRegister() and isPhysicalRegister() cannot handle stack
-  /// slots, so if a variable may contains a stack slot, always check
-  /// isStackSlot() first.
-  ///
-  static bool isStackSlot(unsigned Reg) {
-    return Register::isStackSlot(Reg);
-  }
-
-  /// Compute the frame index from a register value representing a stack slot.
-  static int stackSlot2Index(unsigned Reg) {
-    return Register::stackSlot2Index(Reg);
-  }
-
-  /// Convert a non-negative frame index to a stack slot register value.
-  static unsigned index2StackSlot(int FI) {
-    return Register::index2StackSlot(FI);
-  }
-
-  /// Return true if the specified register number is in
-  /// the physical register namespace.
-  static bool isPhysicalRegister(unsigned Reg) {
-    return Register::isPhysicalRegister(Reg);
-  }
-
-  /// Return true if the specified register number is in
-  /// the virtual register namespace.
-  static bool isVirtualRegister(unsigned Reg) {
-    return Register::isVirtualRegister(Reg);
-  }
-
-  /// Convert a virtual register number to a 0-based index.
-  /// The first virtual register in a function will get the index 0.
-  static unsigned virtReg2Index(unsigned Reg) {
-    return Register::virtReg2Index(Reg);
-  }
-
-  /// Convert a 0-based index to a virtual register number.
-  /// This is the inverse operation of VirtReg2IndexFunctor below.
-  static unsigned index2VirtReg(unsigned Index) {
-    return Register::index2VirtReg(Index);
-  }
-
   /// Return the size in bits of a register from class RC.
   unsigned getRegSizeInBits(const TargetRegisterClass &RC) const {
     return getRegClassInfo(RC).RegSize;
@@ -416,7 +379,7 @@ public:
   /// The registers may be virtual registers.
   bool regsOverlap(unsigned regA, unsigned regB) const {
     if (regA == regB) return true;
-    if (isVirtualRegister(regA) || isVirtualRegister(regB))
+    if (Register::isVirtualRegister(regA) || Register::isVirtualRegister(regB))
       return false;
 
     // Regunits are numerically ordered. Find a common unit.
@@ -1156,7 +1119,7 @@ public:
 struct VirtReg2IndexFunctor {
   using argument_type = unsigned;
   unsigned operator()(unsigned Reg) const {
-    return TargetRegisterInfo::virtReg2Index(Reg);
+    return Register::virtReg2Index(Reg);
   }
 };
 

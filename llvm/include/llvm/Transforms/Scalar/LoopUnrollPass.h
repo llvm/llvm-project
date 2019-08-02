@@ -62,6 +62,7 @@ struct LoopUnrollOptions {
   Optional<bool> AllowPeeling;
   Optional<bool> AllowRuntime;
   Optional<bool> AllowUpperBound;
+  Optional<bool> AllowProfileBasedPeeling;
   int OptLevel;
 
   /// If false, use a cost model to determine whether unrolling of a loop is
@@ -108,6 +109,12 @@ struct LoopUnrollOptions {
   // Sets "optimization level" tuning parameter for loop unrolling.
   LoopUnrollOptions &setOptLevel(int O) {
     OptLevel = O;
+    return *this;
+  }
+
+  // Enables or disables loop peeling basing on profile.
+  LoopUnrollOptions &setProfileBasedPeeling(int O) {
+    AllowProfileBasedPeeling = O;
     return *this;
   }
 };

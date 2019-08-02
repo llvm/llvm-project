@@ -459,8 +459,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       unsigned Def = MI->getOperand(0).getReg();
       unsigned Src = MI->getOperand(1).getReg();
 
-      assert(!TargetRegisterInfo::isVirtualRegister(Def) &&
-             !TargetRegisterInfo::isVirtualRegister(Src) &&
+      assert(!Register::isVirtualRegister(Def) &&
+             !Register::isVirtualRegister(Src) &&
              "MachineCopyPropagation should be run after register allocation!");
 
       // The two copies cancel out and the source of the first copy
@@ -552,7 +552,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (!Reg)
         continue;
 
-      assert(!TargetRegisterInfo::isVirtualRegister(Reg) &&
+      assert(!Register::isVirtualRegister(Reg) &&
              "MachineCopyPropagation should be run after register allocation!");
 
       if (MO.isDef() && !MO.isEarlyClobber()) {

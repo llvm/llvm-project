@@ -249,8 +249,7 @@ static void addDefsUsesToList(const MachineInstr &MI,
     if (Op.isReg()) {
       if (Op.isDef())
         RegDefs.insert(Op.getReg());
-      else if (Op.readsReg() &&
-               TargetRegisterInfo::isPhysicalRegister(Op.getReg()))
+      else if (Op.readsReg() && Register::isPhysicalRegister(Op.getReg()))
         PhysRegUses.insert(Op.getReg());
     }
   }
@@ -282,7 +281,7 @@ static bool addToListsIfDependent(MachineInstr &MI, DenseSet<unsigned> &RegDefs,
     if (Use.isReg() &&
         ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
          (Use.isDef() && RegDefs.count(Use.getReg())) ||
-         (Use.isDef() && TargetRegisterInfo::isPhysicalRegister(Use.getReg()) &&
+         (Use.isDef() && Register::isPhysicalRegister(Use.getReg()) &&
           PhysRegUses.count(Use.getReg())))) {
       Insts.push_back(&MI);
       addDefsUsesToList(MI, RegDefs, PhysRegUses);
@@ -548,7 +547,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     // We only ever merge operations with the same base address register, so
     // don't bother scanning forward if there are no other uses.
     if (AddrReg[i]->isReg() &&
-        (TargetRegisterInfo::isPhysicalRegister(AddrReg[i]->getReg()) ||
+        (Register::isPhysicalRegister(AddrReg[i]->getReg()) ||
          MRI->hasOneNonDBGUse(AddrReg[i]->getReg())))
       return false;
   }

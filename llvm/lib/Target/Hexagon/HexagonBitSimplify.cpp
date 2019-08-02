@@ -147,11 +147,11 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return TargetRegisterInfo::virtReg2Index(v);
+      return Register::virtReg2Index(v);
     }
 
     static inline unsigned x2v(unsigned x) {
-      return TargetRegisterInfo::index2VirtReg(x);
+      return Register::index2VirtReg(x);
     }
   };
 
@@ -291,7 +291,7 @@ void HexagonBitSimplify::getInstrDefs(const MachineInstr &MI,
     if (!Op.isReg() || !Op.isDef())
       continue;
     unsigned R = Op.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(R))
+    if (!Register::isVirtualRegister(R))
       continue;
     Defs.insert(R);
   }
@@ -303,7 +303,7 @@ void HexagonBitSimplify::getInstrUses(const MachineInstr &MI,
     if (!Op.isReg() || !Op.isUse())
       continue;
     unsigned R = Op.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(R))
+    if (!Register::isVirtualRegister(R))
       continue;
     Uses.insert(R);
   }
@@ -353,8 +353,7 @@ bool HexagonBitSimplify::getConst(const BitTracker::RegisterCell &RC,
 
 bool HexagonBitSimplify::replaceReg(unsigned OldR, unsigned NewR,
       MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
-      !TargetRegisterInfo::isVirtualRegister(NewR))
+  if (!Register::isVirtualRegister(OldR) || !Register::isVirtualRegister(NewR))
     return false;
   auto Begin = MRI.use_begin(OldR), End = MRI.use_end();
   decltype(End) NextI;
@@ -367,8 +366,7 @@ bool HexagonBitSimplify::replaceReg(unsigned OldR, unsigned NewR,
 
 bool HexagonBitSimplify::replaceRegWithSub(unsigned OldR, unsigned NewR,
       unsigned NewSR, MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
-      !TargetRegisterInfo::isVirtualRegister(NewR))
+  if (!Register::isVirtualRegister(OldR) || !Register::isVirtualRegister(NewR))
     return false;
   if (hasTiedUse(OldR, MRI, NewSR))
     return false;
@@ -384,8 +382,7 @@ bool HexagonBitSimplify::replaceRegWithSub(unsigned OldR, unsigned NewR,
 
 bool HexagonBitSimplify::replaceSubWithSub(unsigned OldR, unsigned OldSR,
       unsigned NewR, unsigned NewSR, MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
-      !TargetRegisterInfo::isVirtualRegister(NewR))
+  if (!Register::isVirtualRegister(OldR) || !Register::isVirtualRegister(NewR))
     return false;
   if (OldSR != NewSR && hasTiedUse(OldR, MRI, NewSR))
     return false;
@@ -896,7 +893,7 @@ bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
 // register class.
 const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
       const BitTracker::RegisterRef &RR, MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(RR.Reg))
+  if (!Register::isVirtualRegister(RR.Reg))
     return nullptr;
   auto *RC = MRI.getRegClass(RR.Reg);
   if (RR.Sub == 0)
@@ -927,8 +924,8 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
 // with a 32-bit register.
 bool HexagonBitSimplify::isTransparentCopy(const BitTracker::RegisterRef &RD,
       const BitTracker::RegisterRef &RS, MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(RD.Reg) ||
-      !TargetRegisterInfo::isVirtualRegister(RS.Reg))
+  if (!Register::isVirtualRegister(RD.Reg) ||
+      !Register::isVirtualRegister(RS.Reg))
     return false;
   // Return false if one (or both) classes are nullptr.
   auto *DRC = getFinalVRegClass(RD, MRI);
@@ -1019,7 +1016,7 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
       if (!Op.isReg() || !Op.isDef())
         continue;
       unsigned R = Op.getReg();
-      if (!TargetRegisterInfo::isVirtualRegister(R) || !isDead(R)) {
+      if (!Register::isVirtualRegister(R) || !isDead(R)) {
         AllDead = false;
         break;
       }
@@ -1221,7 +1218,7 @@ bool RedundantInstrElimination::computeUsedBits(unsigned Reg, BitVector &Bits) {
       MachineInstr &UseI = *I->getParent();
       if (UseI.isPHI() || UseI.isCopy()) {
         unsigned DefR = UseI.getOperand(0).getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(DefR))
+        if (!Register::isVirtualRegister(DefR))
           return false;
         Pending.push_back(DefR);
       } else {
@@ -1470,7 +1467,7 @@ bool ConstGeneration::processBlock(MachineBasicBlock &B, const RegisterSet&) {
     if (Defs.count() != 1)
       continue;
     unsigned DR = Defs.find_first();
-    if (!TargetRegisterInfo::isVirtualRegister(DR))
+    if (!Register::isVirtualRegister(DR))
       continue;
     uint64_t U;
     const BitTracker::RegisterCell &DRC = BT.lookup(DR);
@@ -1819,7 +1816,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
   if (Reg == 0 || Reg == SelfR)    // Don't match "self".
     return false;
-  if (!TargetRegisterInfo::isVirtualRegister(Reg))
+  if (!Register::isVirtualRegister(Reg))
     return false;
   if (!BT.has(Reg))
     return false;
@@ -3162,7 +3159,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     if (Defs.count() != 1)
       continue;
     unsigned DefR = Defs.find_first();
-    if (!TargetRegisterInfo::isVirtualRegister(DefR))
+    if (!Register::isVirtualRegister(DefR))
       continue;
     if (!isBitShuffle(&*I, DefR))
       continue;

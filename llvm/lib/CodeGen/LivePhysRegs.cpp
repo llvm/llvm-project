@@ -47,7 +47,7 @@ void LivePhysRegs::removeDefs(const MachineInstr &MI) {
       if (!O->isDef() || O->isDebug())
         continue;
       unsigned Reg = O->getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (!Register::isPhysicalRegister(Reg))
         continue;
       removeReg(Reg);
     } else if (O->isRegMask())
@@ -61,7 +61,7 @@ void LivePhysRegs::addUses(const MachineInstr &MI) {
     if (!O->isReg() || !O->readsReg() || O->isDebug())
       continue;
     unsigned Reg = O->getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (!Register::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
   }
@@ -87,7 +87,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg() && !O->isDebug()) {
       unsigned Reg = O->getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (!Register::isPhysicalRegister(Reg))
         continue;
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to
@@ -295,7 +295,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       unsigned Reg = MO->getReg();
       if (Reg == 0)
         continue;
-      assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+      assert(Register::isPhysicalRegister(Reg));
 
       bool IsNotLive = LiveRegs.available(MRI, Reg);
       MO->setIsDead(IsNotLive);
@@ -312,7 +312,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       unsigned Reg = MO->getReg();
       if (Reg == 0)
         continue;
-      assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+      assert(Register::isPhysicalRegister(Reg));
 
       bool IsNotLive = LiveRegs.available(MRI, Reg);
       MO->setIsKill(IsNotLive);

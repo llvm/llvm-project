@@ -372,7 +372,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     unsigned SrcSubReg = MPhi->getOperand(i*2+1).getSubReg();
     bool SrcUndef = MPhi->getOperand(i*2+1).isUndef() ||
       isImplicitlyDefined(SrcReg, *MRI);
-    assert(TargetRegisterInfo::isVirtualRegister(SrcReg) &&
+    assert(Register::isVirtualRegister(SrcReg) &&
            "Machine PHI Operands must all be virtual registers!");
 
     // Get the MachineBasicBlock equivalent of the BasicBlock that is the source

@@ -503,7 +503,7 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
        SmallVectorImpl<MachineOperand> &Src) const {
   MachineOperand &Op = MI.getOperand(OpNo);
-  if (!Op.isReg() || !TargetRegisterInfo::isVirtualRegister(Op.getReg())) {
+  if (!Op.isReg() || !Register::isVirtualRegister(Op.getReg())) {
     Src.push_back(Op);
     return;
   }
@@ -523,8 +523,7 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
 
   for (const auto &SrcOp : Def->explicit_operands())
     if (SrcOp.isReg() && SrcOp.isUse() &&
-        (TargetRegisterInfo::isVirtualRegister(SrcOp.getReg()) ||
-        SrcOp.getReg() == Exec))
+        (Register::isVirtualRegister(SrcOp.getReg()) || SrcOp.getReg() == Exec))
       Src.push_back(SrcOp);
 }
 

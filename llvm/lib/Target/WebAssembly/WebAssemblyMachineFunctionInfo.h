@@ -96,13 +96,13 @@ public:
 
   void stackifyVReg(unsigned VReg) {
     assert(MF.getRegInfo().getUniqueVRegDef(VReg));
-    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    auto I = Register::virtReg2Index(VReg);
     if (I >= VRegStackified.size())
       VRegStackified.resize(I + 1);
     VRegStackified.set(I);
   }
   bool isVRegStackified(unsigned VReg) const {
-    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    auto I = Register::virtReg2Index(VReg);
     if (I >= VRegStackified.size())
       return false;
     return VRegStackified.test(I);
@@ -111,12 +111,12 @@ public:
   void initWARegs();
   void setWAReg(unsigned VReg, unsigned WAReg) {
     assert(WAReg != UnusedReg);
-    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    auto I = Register::virtReg2Index(VReg);
     assert(I < WARegs.size());
     WARegs[I] = WAReg;
   }
   unsigned getWAReg(unsigned VReg) const {
-    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    auto I = Register::virtReg2Index(VReg);
     assert(I < WARegs.size());
     return WARegs[I];
   }

@@ -350,13 +350,12 @@
 ; ASM: .section	.debug$T,"dr"
 ; ASM: .p2align	2
 ; ASM: .long	4                       # Debug section magic
-; ASM: # ArgList (0x1000)
 ; ASM: .short	0x12                    # Record length
 ; ASM: .short	0x1201                  # Record kind: LF_ARGLIST
 ; ASM: .long	0x3                     # NumArgs
-; ASM: .long	0x40                    # Argument: float
-; ASM: .long	0x41                    # Argument: double
-; ASM: .long	0x13                    # Argument: __int64
+; ASM: .long	0x40                    # Argument
+; ASM: .long	0x41                    # Argument
+; ASM: .long	0x13                    # Argument
 ; ASM: # ArgList (0x1000) {
 ; ASM: #   TypeLeafKind: LF_ARGLIST (0x1201)
 ; ASM: #   NumArgs: 3
@@ -366,14 +365,13 @@
 ; ASM: #     ArgType: __int64 (0x13)
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # Procedure (0x1001)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1008                  # Record kind: LF_PROCEDURE
-; ASM: .long	0x3                     # ReturnType: void
-; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .long	0x3                     # ReturnType
+; ASM: .byte	0x0                     # CallingConvention
 ; ASM: .byte	0x0                     # FunctionOptions
 ; ASM: .short	0x3                     # NumParameters
-; ASM: .long	0x1000                  # ArgListType: (float, double, __int64)
+; ASM: .long	0x1000                  # ArgListType
 ; ASM: # Procedure (0x1001) {
 ; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
 ; ASM: #   ReturnType: void (0x3)
@@ -383,11 +381,10 @@
 ; ASM: #   NumParameters: 3
 ; ASM: #   ArgListType: (float, double, __int64) (0x1000)
 ; ASM: # }
-; ASM: # FuncId (0x1002)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1601                  # Record kind: LF_FUNC_ID
 ; ASM: .long	0x0                     # ParentScope
-; ASM: .long	0x1001                  # FunctionType: void (float, double, __int64)
+; ASM: .long	0x1001                  # FunctionType
 ; ASM: .asciz	"f"                     # Name
 ; ASM: .byte	242
 ; ASM: .byte	241
@@ -397,11 +394,10 @@
 ; ASM: #   FunctionType: void (float, double, __int64) (0x1001)
 ; ASM: #   Name: f
 ; ASM: # }
-; ASM: # Modifier (0x1003)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1001                  # Record kind: LF_MODIFIER
-; ASM: .long	0x74                    # ModifiedType: int
-; ASM: .short	0x1                     # Modifiers ( Const (0x1) )
+; ASM: .long	0x74                    # ModifiedType
+; ASM: .short	0x1                     # Modifiers
 ; ASM: .byte	242
 ; ASM: .byte	241
 ; ASM: # Modifier (0x1003) {
@@ -411,11 +407,10 @@
 ; ASM: #     Const (0x1)
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # Pointer (0x1004)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1003                  # PointeeType: const int
-; ASM: .long	0x1000c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8 ]
+; ASM: .long	0x1003                  # PointeeType
+; ASM: .long	0x1000c                 # Attributes
 ; ASM: # Pointer (0x1004) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: const int (0x1003)
@@ -430,11 +425,10 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # Struct (0x1005)
 ; ASM: .short	0x16                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x0                     # MemberCount
-; ASM: .short	0x80                    # Properties ( ForwardReference (0x80) )
+; ASM: .short	0x80                    # Properties
 ; ASM: .long	0x0                     # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
@@ -452,13 +446,12 @@
 ; ASM: #   SizeOf: 0
 ; ASM: #   Name: A
 ; ASM: # }
-; ASM: # Pointer (0x1006)
 ; ASM: .short	0x12                    # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x74                    # PointeeType: int
-; ASM: .long	0x804c                  # Attrs: [ Type: Near64, Mode: PointerToDataMember, SizeOf: 4 ]
-; ASM: .long	0x1005                  # ClassType: A
-; ASM: .short	0x4                     # Representation: GeneralData
+; ASM: .long	0x74                    # PointeeType
+; ASM: .long	0x804c                  # Attributes
+; ASM: .long	0x1005                  # ClassType
+; ASM: .short	0x4                     # Representation
 ; ASM: .byte	242
 ; ASM: .byte	241
 ; ASM: # Pointer (0x1006) {
@@ -477,11 +470,10 @@
 ; ASM: #   ClassType: A (0x1005)
 ; ASM: #   Representation: GeneralData (0x4)
 ; ASM: # }
-; ASM: # Pointer (0x1007)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1005                  # PointeeType: A
-; ASM: .long	0x1040c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8, isConst ]
+; ASM: .long	0x1005                  # PointeeType
+; ASM: .long	0x1040c                 # Attributes
 ; ASM: # Pointer (0x1007) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: A (0x1005)
@@ -496,7 +488,6 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # ArgList (0x1008)
 ; ASM: .short	0x6                     # Record length
 ; ASM: .short	0x1201                  # Record kind: LF_ARGLIST
 ; ASM: .long	0x0                     # NumArgs
@@ -506,16 +497,15 @@
 ; ASM: #   Arguments [
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # MemberFunction (0x1009)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1009                  # Record kind: LF_MFUNCTION
-; ASM: .long	0x3                     # ReturnType: void
-; ASM: .long	0x1005                  # ClassType: A
-; ASM: .long	0x1007                  # ThisType: A* const
-; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .long	0x3                     # ReturnType
+; ASM: .long	0x1005                  # ClassType
+; ASM: .long	0x1007                  # ThisType
+; ASM: .byte	0x0                     # CallingConvention
 ; ASM: .byte	0x0                     # FunctionOptions
 ; ASM: .short	0x0                     # NumParameters
-; ASM: .long	0x1008                  # ArgListType: ()
+; ASM: .long	0x1008                  # ArgListType
 ; ASM: .long	0x0                     # ThisAdjustment
 ; ASM: # MemberFunction (0x1009) {
 ; ASM: #   TypeLeafKind: LF_MFUNCTION (0x1009)
@@ -529,17 +519,16 @@
 ; ASM: #   ArgListType: () (0x1008)
 ; ASM: #   ThisAdjustment: 0
 ; ASM: # }
-; ASM: # FieldList (0x100A)
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .short	0x150d                  # Member kind: DataMember ( LF_MEMBER )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x74                    # Type: int
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
 ; ASM: .short	0x0                     # FieldOffset
 ; ASM: .asciz	"a"                     # Name
-; ASM: .short	0x1511                  # Member kind: OneMethod ( LF_ONEMETHOD )
-; ASM: .short	0x3                     # Attrs: Public
-; ASM: .long	0x1009                  # Type: void A::()
+; ASM: .short	0x1511                  # Member kind: LF_ONEMETHOD
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x1009                  # Type
 ; ASM: .asciz	"A::f"                  # Name
 ; ASM: .byte	243
 ; ASM: .byte	242
@@ -560,12 +549,11 @@
 ; ASM: #     Name: A::f
 ; ASM: #   }
 ; ASM: # }
-; ASM: # Struct (0x100B)
 ; ASM: .short	0x16                    # Record length
 ; ASM: .short	0x1505                  # Record kind: LF_STRUCTURE
 ; ASM: .short	0x2                     # MemberCount
 ; ASM: .short	0x0                     # Properties
-; ASM: .long	0x100a                  # FieldList: <field list>
+; ASM: .long	0x100a                  # FieldList
 ; ASM: .long	0x0                     # DerivedFrom
 ; ASM: .long	0x0                     # VShape
 ; ASM: .short	0x4                     # SizeOf
@@ -581,7 +569,6 @@
 ; ASM: #   SizeOf: 4
 ; ASM: #   Name: A
 ; ASM: # }
-; ASM: # StringId (0x100C)
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -591,11 +578,10 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: D:\src\llvm\build\t.cpp
 ; ASM: # }
-; ASM: # UdtSourceLine (0x100D)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1606                  # Record kind: LF_UDT_SRC_LINE
-; ASM: .long	0x100b                  # UDT: A
-; ASM: .long	0x100c                  # SourceFile: D:\src\llvm\build\t.cpp
+; ASM: .long	0x100b                  # UDT
+; ASM: .long	0x100c                  # SourceFile
 ; ASM: .long	0x1                     # LineNumber
 ; ASM: # UdtSourceLine (0x100D) {
 ; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
@@ -603,13 +589,12 @@
 ; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x100C)
 ; ASM: #   LineNumber: 1
 ; ASM: # }
-; ASM: # Pointer (0x100E)
 ; ASM: .short	0x12                    # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x1009                  # PointeeType: void A::()
-; ASM: .long	0x1006c                 # Attrs: [ Type: Near64, Mode: PointerToMemberFunction, SizeOf: 8 ]
-; ASM: .long	0x1005                  # ClassType: A
-; ASM: .short	0x8                     # Representation: GeneralFunction
+; ASM: .long	0x1009                  # PointeeType
+; ASM: .long	0x1006c                 # Attributes
+; ASM: .long	0x1005                  # ClassType
+; ASM: .short	0x8                     # Representation
 ; ASM: .byte	242
 ; ASM: .byte	241
 ; ASM: # Pointer (0x100E) {
@@ -628,11 +613,10 @@
 ; ASM: #   ClassType: A (0x1005)
 ; ASM: #   Representation: GeneralFunction (0x8)
 ; ASM: # }
-; ASM: # Modifier (0x100F)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1001                  # Record kind: LF_MODIFIER
-; ASM: .long	0x3                     # ModifiedType: void
-; ASM: .short	0x1                     # Modifiers ( Const (0x1) )
+; ASM: .long	0x3                     # ModifiedType
+; ASM: .short	0x1                     # Modifiers
 ; ASM: .byte	242
 ; ASM: .byte	241
 ; ASM: # Modifier (0x100F) {
@@ -642,11 +626,10 @@
 ; ASM: #     Const (0x1)
 ; ASM: #   ]
 ; ASM: # }
-; ASM: # Pointer (0x1010)
 ; ASM: .short	0xa                     # Record length
 ; ASM: .short	0x1002                  # Record kind: LF_POINTER
-; ASM: .long	0x100f                  # PointeeType: const void
-; ASM: .long	0x1000c                 # Attrs: [ Type: Near64, Mode: Pointer, SizeOf: 8 ]
+; ASM: .long	0x100f                  # PointeeType
+; ASM: .long	0x1000c                 # Attributes
 ; ASM: # Pointer (0x1010) {
 ; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
 ; ASM: #   PointeeType: const void (0x100F)
@@ -661,14 +644,13 @@
 ; ASM: #   IsThisPtr&&: 0
 ; ASM: #   SizeOf: 8
 ; ASM: # }
-; ASM: # Procedure (0x1011)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1008                  # Record kind: LF_PROCEDURE
-; ASM: .long	0x3                     # ReturnType: void
-; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .long	0x3                     # ReturnType
+; ASM: .byte	0x0                     # CallingConvention
 ; ASM: .byte	0x0                     # FunctionOptions
 ; ASM: .short	0x0                     # NumParameters
-; ASM: .long	0x1008                  # ArgListType: ()
+; ASM: .long	0x1008                  # ArgListType
 ; ASM: # Procedure (0x1011) {
 ; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
 ; ASM: #   ReturnType: void (0x3)
@@ -678,11 +660,10 @@
 ; ASM: #   NumParameters: 0
 ; ASM: #   ArgListType: () (0x1008)
 ; ASM: # }
-; ASM: # FuncId (0x1012)
 ; ASM: .short	0x16                    # Record length
 ; ASM: .short	0x1601                  # Record kind: LF_FUNC_ID
 ; ASM: .long	0x0                     # ParentScope
-; ASM: .long	0x1011                  # FunctionType: void ()
+; ASM: .long	0x1011                  # FunctionType
 ; ASM: .asciz	"CharTypes"             # Name
 ; ASM: .byte	242
 ; ASM: .byte	241
@@ -692,7 +673,6 @@
 ; ASM: #   FunctionType: void () (0x1011)
 ; ASM: #   Name: CharTypes
 ; ASM: # }
-; ASM: # StringId (0x1013)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -704,7 +684,6 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: D:\src\llvm\build
 ; ASM: # }
-; ASM: # StringId (0x1014)
 ; ASM: .short	0xe                     # Record length
 ; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
 ; ASM: .long	0x0                     # Id
@@ -716,13 +695,12 @@
 ; ASM: #   Id: 0x0
 ; ASM: #   StringData: t.cpp
 ; ASM: # }
-; ASM: # BuildInfo (0x1015)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1603                  # Record kind: LF_BUILDINFO
 ; ASM: .short	0x5                     # NumArgs
-; ASM: .long	0x1013                  # Argument: D:\src\llvm\build
+; ASM: .long	0x1013                  # Argument
 ; ASM: .long	0x0                     # Argument
-; ASM: .long	0x1014                  # Argument: t.cpp
+; ASM: .long	0x1014                  # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .byte	242

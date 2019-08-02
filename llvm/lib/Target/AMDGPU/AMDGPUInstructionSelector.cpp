@@ -62,7 +62,7 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
 static bool isSCC(Register Reg, const MachineRegisterInfo &MRI) {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return Reg == AMDGPU::SCC;
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
@@ -83,7 +83,7 @@ static bool isSCC(Register Reg, const MachineRegisterInfo &MRI) {
 
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return Reg == TRI.getVCC();
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
@@ -157,7 +157,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   }
 
   for (const MachineOperand &MO : I.operands()) {
-    if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
+    if (Register::isPhysicalRegister(MO.getReg()))
       continue;
 
     const TargetRegisterClass *RC =
@@ -550,7 +550,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   for (const MachineOperand &MO : Ins->operands()) {
     if (!MO.isReg())
       continue;
-    if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
+    if (Register::isPhysicalRegister(MO.getReg()))
       continue;
 
     const TargetRegisterClass *RC =
