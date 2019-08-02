@@ -197,7 +197,7 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
     ++NumPublicFrameworkAPINotes;
   else
     ++NumPrivateFrameworkAPINotes;
-  return HeaderDir;
+  return *HeaderDir;
 }
 
 static void checkPrivateAPINotesName(DiagnosticsEngine &diags,
@@ -438,7 +438,7 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
     if (ParentPath.empty()) {
       Dir = nullptr;
     } else {
-      auto DirEntry = FileMgr.getDirectory(ParentPath)
+      auto DirEntry = FileMgr.getDirectory(ParentPath);
       Dir = DirEntry ? *DirEntry : nullptr;
     }
   } while (Dir);
