@@ -33,6 +33,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2399,6 +2400,13 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   Token Tok;
   LexUnexpandedToken(Tok);
 
+  // Ensure we consume the rest of the macro body if errors occur.
+  auto _ = llvm::make_scope_exit([&]() {
+    // The flag indicates if we are still waiting for 'eod'.
+    if (CurLexer->ParsingPreprocessorDirective)
+      DiscardUntilEndOfDirective();
+  });
+
   // Used to un-poison and then re-poison identifiers of the __VA_ARGS__ ilk
   // within their appropriate context.
   VariadicMacroScopeGuard VariadicMacroScopeGuard(*this);
@@ -2420,12 +2428,8 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   } else if (Tok.is(tok::l_paren)) {
     // This is a function-like macro definition.  Read the argument list.
     MI->setIsFunctionLike();
-    if (ReadMacroParameterList(MI, LastTok)) {
-      // Throw away the rest of the line.
-      if (CurPPLexer->ParsingPreprocessorDirective)
-        DiscardUntilEndOfDirective();
+    if (ReadMacroParameterList(MI, LastTok))
       return nullptr;
-    }
 
     // If this is a definition of an ISO C/C++ variadic function-like macro (not
     // using the GNU named varargs extension) inform our variadic scope guard
