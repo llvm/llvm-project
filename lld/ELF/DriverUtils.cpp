@@ -58,17 +58,16 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
-
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    errorHandler().errorOS->enable_colors();
+    errorHandler().colorDiagnostics = true;
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    errorHandler().errorOS->disable_colors();
+    errorHandler().colorDiagnostics = false;
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      errorHandler().errorOS->enable_colors();
+      errorHandler().colorDiagnostics = true;
     else if (s == "never")
-      errorHandler().errorOS->disable_colors();
+      errorHandler().colorDiagnostics = false;
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }

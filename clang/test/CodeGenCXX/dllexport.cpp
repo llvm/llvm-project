@@ -860,6 +860,13 @@ struct PR40006 {
 };
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.InClassInits::PR40006"* @"??0PR40006@InClassInits@@QAE@XZ"
 
+// PR42857: Clang would try to emit the non-trivial explicitly defaulted
+// dllexport ctor twice when doing an explicit instantiation definition.
+struct Qux { Qux(); };
+template <typename T> struct PR42857 { __declspec(dllexport) PR42857() = default; Qux q; };
+template struct PR42857<int>;
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.InClassInits::PR42857"* @"??0?$PR42857@H@InClassInits@@QAE@XZ"
+
 }
 
 // We had an issue where instantiating A would force emission of B's delayed

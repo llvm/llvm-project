@@ -106,42 +106,54 @@ void lld::checkError(Error e) {
 //
 // This function returns an error location string. An error location is
 // extracted from an error message using regexps.
-std::string ErrorHandler::getLocation(const Twine &msg) {
-  if (!vsDiagnostics)
-    return logName;
-
-  static std::regex regexes[] = {
-      std::regex(
-          R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
+static std::string getLocation(std::string msg, std::string defaultMsg) {
+  static std::vector<std::regex> Regexes{
+      std::regex(R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+)\n.*)"),
       std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
       std::regex(
           R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
-      std::regex(R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+).*)"),
-      std::regex(R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
+      std::regex(
+          R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+).*)"),
+      std::regex(
+          R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
       std::regex(R"((\S+):(\d+): unclosed quote)"),
   };
 
-  std::string str = msg.str();
+  std::smatch Match;
+  for (std::regex &Re : Regexes) {
+    if (std::regex_search(msg, Match, Re)) {
+      return Match.size() > 2 ? Match.str(1) + "(" + Match.str(2) + ")"
+                              : Match.str(1);
+    }
+  }
+  return defaultMsg;
+}
 
-  for (std::regex &re : regexes) {
-    std::smatch m;
-    if (!std::regex_search(str, m, re))
-      continue;
-    assert(m.size() == 2 || m.size() == 3);
+void ErrorHandler::printHeader(StringRef s, raw_ostream::Colors c,
+                               const Twine &msg) {
 
-    if (m.size() == 2)
-      return m.str(1);
-    return m.str(1) + "(" + m.str(2) + ")";
+  if (vsDiagnostics) {
+    // A Visual Studio-style error message starts with an error location.
+    // If a location cannot be extracted then we default to LogName.
+    *errorOS << getLocation(msg.str(), logName) << ": ";
+  } else {
+    *errorOS << logName << ": ";
   }
 
-  return logName;
+  if (colorDiagnostics) {
+    errorOS->changeColor(c, true);
+    *errorOS << s;
+    errorOS->resetColor();
+  } else {
+    *errorOS << s;
+  }
 }
 
 void ErrorHandler::log(const Twine &msg) {
-  if (!verbose)
-    return;
-  std::lock_guard<std::mutex> lock(mu);
-  *errorOS << logName << ": " << msg << "\n";
+  if (verbose) {
+    std::lock_guard<std::mutex> lock(mu);
+    *errorOS << logName << ": " << msg << "\n";
+  }
 }
 
 void ErrorHandler::message(const Twine &msg) {
@@ -158,37 +170,42 @@ void ErrorHandler::warn(const Twine &msg) {
 
   std::lock_guard<std::mutex> lock(mu);
   newline(errorOS, msg);
-  *errorOS << getLocation(msg) << ": " << Color::MAGENTA
-           << "warning: " << Color::RESET << msg << "\n";
+  printHeader("warning: ", raw_ostream::MAGENTA, msg);
+  *errorOS << msg << "\n";
 }
 
-void ErrorHandler::error(const Twine &msg) {
-  // If Microsoft Visual Studio-style error message mode is enabled,
-  // this particular error is printed out as two errors.
-  if (vsDiagnostics) {
-    static std::regex re(R"(^(duplicate symbol: .*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))");
-    std::string str = msg.str();
-    std::smatch m;
+void ErrorHandler::printErrorMsg(const Twine &msg) {
+  newline(errorOS, msg);
+  printHeader("error: ", raw_ostream::RED, msg);
+  *errorOS << msg << "\n";
+}
 
-    if (std::regex_match(str, m, re)) {
-      error(m.str(1) + m.str(2));
-      error(m.str(1) + m.str(3));
+void ErrorHandler::printError(const Twine &msg) {
+  if (vsDiagnostics) {
+    static std::regex reDuplicateSymbol(
+        R"(^(duplicate symbol: .*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))"
+        R"((\n>>> defined at \S+:\d+\n>>>.*))");
+    std::string msgStr = msg.str();
+    std::smatch match;
+    if (std::regex_match(msgStr, match, reDuplicateSymbol)) {
+      printErrorMsg(match.str(1) + match.str(2));
+      printErrorMsg(match.str(1) + match.str(3));
       return;
     }
   }
+  printErrorMsg(msg);
+}
 
+void ErrorHandler::error(const Twine &msg) {
   std::lock_guard<std::mutex> lock(mu);
 
   if (errorLimit == 0 || errorCount < errorLimit) {
-    newline(errorOS, msg);
-    *errorOS << getLocation(msg) << ": " << Color::RED
-             << "error: " << Color::RESET << msg << "\n";
+    printError(msg);
   } else if (errorCount == errorLimit) {
     newline(errorOS, msg);
-    *errorOS << getLocation(msg) << ": " << Color::RED
-             << "error: " << Color::RESET << errorLimitExceededMsg << "\n";
+    printHeader("error: ", raw_ostream::RED, msg);
+    *errorOS << errorLimitExceededMsg << "\n";
     if (exitEarly)
       exitLld(1);
   }
