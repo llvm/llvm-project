@@ -148,13 +148,13 @@ OCKL_MANGLE_U32(min3)(uint a, uint b, uint c)
 CATTR uint
 OCKL_MANGLE_U32(msad)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_msad_u8(a, b, c);
+    return __builtin_amdgcn_msad_u8(a, b, c);
 }
 
 CATTR ulong
 OCKL_MANGLE_U64(mqsad)(ulong a, uint b, ulong c)
 {
-    return __llvm_amdgcn_mqsad_pk_u16_u8(a, b, c);
+    return __builtin_amdgcn_mqsad_pk_u16_u8(a, b, c);
 }
 
 CATTR uint
@@ -169,13 +169,13 @@ OCKL_MANGLE_U32(pack)(float4 a)
 CATTR ulong
 OCKL_MANGLE_U64(qsad)(ulong a, uint b, ulong c)
 {
-    return __llvm_amdgcn_qsad_pk_u16_u8(a, b, c);
+    return __builtin_amdgcn_qsad_pk_u16_u8(a, b, c);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(sad)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_sad_u8(a, b, c);
+    return __builtin_amdgcn_sad_u8(a, b, c);
 }
 
 CATTR uint
@@ -188,13 +188,13 @@ OCKL_MANGLE_U32(sadd)(uint a, uint b, uint c)
 CATTR uint
 OCKL_MANGLE_U32(sadhi)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_sad_hi_u8(a, b, c);
+    return __builtin_amdgcn_sad_hi_u8(a, b, c);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(sadw)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_sad_u16(a, b, c);
+    return __builtin_amdgcn_sad_u16(a, b, c);
 }
 
 CATTR float
