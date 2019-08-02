@@ -10,7 +10,6 @@ o test_modify_source_file_while_debugging:
 """
 
 from __future__ import print_function
-import re
 
 import lldb
 from lldbsuite.test.decorators import *

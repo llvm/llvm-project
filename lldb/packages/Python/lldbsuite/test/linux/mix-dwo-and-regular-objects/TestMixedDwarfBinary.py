@@ -1,7 +1,5 @@
 """ Testing debugging of a binary with "mixed" dwarf (with/without fission). """
-import os
 import lldb
-import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

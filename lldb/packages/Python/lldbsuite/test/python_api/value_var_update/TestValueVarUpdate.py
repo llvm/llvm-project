@@ -3,11 +3,7 @@
 from __future__ import print_function
 
 
-import os
-import sys
-import time
 import lldb
-import time
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

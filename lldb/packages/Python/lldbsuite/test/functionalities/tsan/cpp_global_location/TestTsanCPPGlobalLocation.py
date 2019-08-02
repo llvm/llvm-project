@@ -2,8 +2,6 @@
 Tests that TSan correctly reports the filename and line number of a racy global C++ variable.
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

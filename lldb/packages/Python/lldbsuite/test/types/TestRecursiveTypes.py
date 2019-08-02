@@ -7,7 +7,6 @@ from __future__ import print_function
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
-import sys
 from lldbsuite.test.lldbtest import *
 
 

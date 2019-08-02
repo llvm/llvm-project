@@ -3,7 +3,6 @@ Test that target var can resolve complex DWARF expressions.
 """
 
 import lldb
-import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

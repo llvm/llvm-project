@@ -1,6 +1,5 @@
 import os
 import os.path
-import subprocess
 import threading
 import socket
 import lldb

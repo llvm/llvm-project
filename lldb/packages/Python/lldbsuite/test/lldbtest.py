@@ -36,12 +36,10 @@ from __future__ import print_function
 
 # System modules
 import abc
-import collections
 from distutils.version import LooseVersion
 from functools import wraps
 import gc
 import glob
-import inspect
 import io
 import os.path
 import re
@@ -976,7 +974,6 @@ class Base(unittest2.TestCase):
                     # unexpected error
                     raise
                 # child is already terminated
-                pass
             finally:
                 # Give it one final blow to make sure the child is terminated.
                 self.child.close()

@@ -6,8 +6,6 @@ on any of the bytes, half-word, or word. This is only for ARM/AArch64 targets.
 
 from __future__ import print_function
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

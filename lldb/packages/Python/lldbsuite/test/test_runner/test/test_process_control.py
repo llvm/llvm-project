@@ -16,7 +16,6 @@ from __future__ import print_function
 # System imports.
 import os
 import os.path
-import platform
 import unittest
 import sys
 import threading

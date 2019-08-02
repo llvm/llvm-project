@@ -12,8 +12,6 @@ from __future__ import print_function
 
 # System modules
 import os
-import platform
-import subprocess
 
 
 # Third-party modules

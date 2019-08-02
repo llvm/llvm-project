@@ -8,11 +8,9 @@ from __future__ import division, print_function
 import errno
 import os
 import os.path
-import platform
 import random
 import re
 import select
-import signal
 import socket
 import subprocess
 import sys

@@ -2,7 +2,6 @@
 Test that the SBWatchpoint::SetEnable API works.
 """
 
-import os
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

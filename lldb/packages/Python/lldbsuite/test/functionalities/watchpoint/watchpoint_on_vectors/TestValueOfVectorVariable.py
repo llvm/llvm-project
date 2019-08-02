@@ -5,8 +5,6 @@ Test displayed value of a vector variable while doing watchpoint operations
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

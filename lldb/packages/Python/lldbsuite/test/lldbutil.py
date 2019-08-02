@@ -8,12 +8,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 # System modules
-import collections
 import errno
 import os
 import re
 import sys
-import time
 
 # Third-party modules
 from six import StringIO as SixStringIO

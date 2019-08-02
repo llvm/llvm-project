@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 
-import sys
 
 import unittest2
 import gdbremote_testcase

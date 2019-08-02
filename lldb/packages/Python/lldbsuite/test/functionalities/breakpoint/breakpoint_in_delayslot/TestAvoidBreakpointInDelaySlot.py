@@ -4,8 +4,6 @@ Test specific to MIPS
 
 from __future__ import print_function
 
-import os
-import time
 import re
 import unittest2
 import lldb
