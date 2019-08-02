@@ -76,6 +76,8 @@ def ADD_VAStart: PseudoDPUInstruction<
                     "",
                     [(set i32:$rc, (DPUAddVAStart i32:$ra))]>;
 
+def : Pat<(trap), (FAULTi 7)>;
+
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 

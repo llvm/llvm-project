@@ -87,6 +87,8 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
+  setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
