@@ -3749,10 +3749,8 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   if (m_debug_map_symfile == nullptr && !m_debug_map_module_wp.expired()) {
     lldb::ModuleSP module_sp(m_debug_map_module_wp.lock());
     if (module_sp) {
-      SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-      if (sym_vendor)
-        m_debug_map_symfile =
-            (SymbolFileDWARFDebugMap *)sym_vendor->GetSymbolFile();
+      m_debug_map_symfile =
+          (SymbolFileDWARFDebugMap *)module_sp->GetSymbolFile();
     }
   }
   return m_debug_map_symfile;

@@ -182,11 +182,7 @@ ArmUnwindInfo *UnwindTable::GetArmUnwindInfo() {
   return m_arm_unwind_up.get();
 }
 
-SymbolFile *UnwindTable::GetSymbolFile() {
-  if (SymbolVendor *vendor = m_module.GetSymbolVendor())
-    return vendor->GetSymbolFile();
-  return nullptr;
-}
+SymbolFile *UnwindTable::GetSymbolFile() { return m_module.GetSymbolFile(); }
 
 ArchSpec UnwindTable::GetArchitecture() { return m_module.GetArchitecture(); }
 

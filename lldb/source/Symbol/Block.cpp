@@ -464,8 +464,7 @@ uint32_t Block::AppendVariables(bool can_create, bool get_parent_variables,
 
 SymbolFile *Block::GetSymbolFile() {
   if (ModuleSP module_sp = CalculateSymbolContextModule())
-    if (SymbolVendor *sym_vendor = module_sp->GetSymbolVendor())
-      return sym_vendor->GetSymbolFile();
+    return module_sp->GetSymbolFile();
   return nullptr;
 }
 

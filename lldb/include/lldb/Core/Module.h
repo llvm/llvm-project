@@ -653,6 +653,9 @@ public:
   GetSymbolVendor(bool can_create = true,
                   lldb_private::Stream *feedback_strm = nullptr);
 
+  SymbolFile *GetSymbolFile(bool can_create = true,
+                            Stream *feedback_strm = nullptr);
+
   /// Get a reference to the UUID value contained in this object.
   ///
   /// If the executable image file doesn't not have a UUID value built into
