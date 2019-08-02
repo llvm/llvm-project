@@ -43,14 +43,6 @@ public:
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, unsigned Align, bool isVolatile,
                                   MachinePointerInfo DstPtrInfo) const override;
-
-private:
-  // The different functions behave exactly the same way, implemented by this
-  // generic function.
-  SDValue EmitTargetCodeForIntrinsicCall(const char *IntrinsicFunctionName,
-                                         SelectionDAG &DAG, SDLoc dl,
-                                         SDValue Chain, SDValue Op1,
-                                         SDValue Op2, SDValue Op3) const;
 };
 
 #endif
