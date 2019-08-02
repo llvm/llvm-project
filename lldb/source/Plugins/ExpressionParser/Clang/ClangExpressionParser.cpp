@@ -954,7 +954,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       auto file = m_compiler->getFileManager().getFile(temp_source_path);
       if (file) {
         source_mgr.setMainFileID(
-            source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
+            source_mgr.createFileID(*file, SourceLocation(), SrcMgr::C_User));
         created_main_file = true;
       }
     }
