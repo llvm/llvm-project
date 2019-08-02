@@ -290,7 +290,7 @@ DEBUG_INFO_FLAG ?= -g
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
 SWIFTFLAGS ?= $(DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
 
-STATIC_STDLIB = 
+STATIC_STDLIB =
 ifneq (,$(findstring arm,$(ARCH)))
 	STATIC_STDLIB = -static-stdlib
 endif
@@ -670,7 +670,7 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 ifeq "$(OS)" "Darwin"
 $(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(STATIC_STDLIB) $(LD_EXTRAS) \
+	$(SWIFTC) -toolchain-stdlib-rpath $(STATIC_STDLIB) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -756,8 +756,9 @@ ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
+	 -toolchain-stdlib-rpath \
 	 -Xlinker -dylib \
-         -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	 -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
 	 $(LD_EXTRAS)
 else
