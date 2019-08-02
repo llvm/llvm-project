@@ -185,6 +185,8 @@ void SymbolTable::loadMinGWAutomaticImports() {
       continue;
     if (!sym->isUsedInRegularObj)
       continue;
+    if (undef->getWeakAlias())
+      continue;
 
     StringRef name = undef->getName();
 

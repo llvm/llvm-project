@@ -43,9 +43,8 @@ uint32_t UnwindMacOSXFrameBackchain::DoGetFrameCount() {
   return m_cursors.size();
 }
 
-bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(uint32_t idx,
-                                                       addr_t &cfa,
-                                                       addr_t &pc) {
+bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(
+    uint32_t idx, addr_t &cfa, addr_t &pc, bool &behaves_like_zeroth_frame) {
   const uint32_t frame_count = GetFrameCount();
   if (idx < frame_count) {
     if (m_cursors[idx].pc == LLDB_INVALID_ADDRESS)
@@ -55,6 +54,7 @@ bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(uint32_t idx,
 
     pc = m_cursors[idx].pc;
     cfa = m_cursors[idx].fp;
+    behaves_like_zeroth_frame = (idx == 0);
 
     return true;
   }

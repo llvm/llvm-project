@@ -21,6 +21,9 @@ class LibCxxFunctionTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
+    # Temporarily skipping for everywhere b/c we are disabling the std::function formatter
+    # due to performance issues but plan on turning it back on once they are addressed.
+    @skipIf
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::function as defined by libc++ is correctly printed by LLDB"""
