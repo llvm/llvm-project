@@ -10,8 +10,9 @@ all: libfooey.dylib three
 include $(LEVEL)/Makefile.rules
 
 libfooey.dylib: one.swift two.swift
-	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone $^ -emit-library -module-name fooey -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
-ifneq "$(CODESIGN)" ""#
+	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone $^ -emit-library -module-name fooey -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ \
+	  -toolchain-stdlib-rpath
+ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 
