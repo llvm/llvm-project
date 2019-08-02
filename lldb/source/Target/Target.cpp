@@ -3231,33 +3231,51 @@ void Target::StopHook::GetDescription(Stream *s,
   s->SetIndentLevel(indent_level);
 }
 
-// class TargetProperties
-
-// clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
-    {eNoDynamicValues, "no-dynamic-values",
-     "Don't calculate the dynamic type of values"},
-    {eDynamicCanRunTarget, "run-target", "Calculate the dynamic type of values "
-                                         "even if you have to run the target."},
-    {eDynamicDontRunTarget, "no-run-target",
-     "Calculate the dynamic type of values, but don't run the target."} };
+    {
+        eNoDynamicValues,
+        "no-dynamic-values",
+        "Don't calculate the dynamic type of values",
+    },
+    {
+        eDynamicCanRunTarget,
+        "run-target",
+        "Calculate the dynamic type of values "
+        "even if you have to run the target.",
+    },
+    {
+        eDynamicDontRunTarget,
+        "no-run-target",
+        "Calculate the dynamic type of values, but don't run the target.",
+    },
+};
 
 OptionEnumValues lldb_private::GetDynamicValueTypes() {
   return OptionEnumValues(g_dynamic_value_types);
 }
 
 static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
-    {eInlineBreakpointsNever, "never", "Never look for inline breakpoint "
-                                       "locations (fastest). This setting "
-                                       "should only be used if you know that "
-                                       "no inlining occurs in your programs."},
-    {eInlineBreakpointsHeaders, "headers",
-     "Only check for inline breakpoint locations when setting breakpoints in "
-     "header files, but not when setting breakpoint in implementation source "
-     "files (default)."},
-    {eInlineBreakpointsAlways, "always",
-     "Always look for inline breakpoint locations when setting file and line "
-     "breakpoints (slower but most accurate)."} };
+    {
+        eInlineBreakpointsNever,
+        "never",
+        "Never look for inline breakpoint locations (fastest). This setting "
+        "should only be used if you know that no inlining occurs in your"
+        "programs.",
+    },
+    {
+        eInlineBreakpointsHeaders,
+        "headers",
+        "Only check for inline breakpoint locations when setting breakpoints "
+        "in header files, but not when setting breakpoint in implementation "
+        "source files (default).",
+    },
+    {
+        eInlineBreakpointsAlways,
+        "always",
+        "Always look for inline breakpoint locations when setting file and "
+        "line breakpoints (slower but most accurate).",
+    },
+};
 
 enum x86DisassemblyFlavor {
   eX86DisFlavorDefault,
@@ -3266,41 +3284,92 @@ enum x86DisassemblyFlavor {
 };
 
 static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
-    {eX86DisFlavorDefault, "default", "Disassembler default (currently att)."},
-    {eX86DisFlavorIntel, "intel", "Intel disassembler flavor."},
-    {eX86DisFlavorATT, "att", "AT&T disassembler flavor."} };
+    {
+        eX86DisFlavorDefault,
+        "default",
+        "Disassembler default (currently att).",
+    },
+    {
+        eX86DisFlavorIntel,
+        "intel",
+        "Intel disassembler flavor.",
+    },
+    {
+        eX86DisFlavorATT,
+        "att",
+        "AT&T disassembler flavor.",
+    },
+};
 
 static constexpr OptionEnumValueElement g_hex_immediate_style_values[] = {
-    {Disassembler::eHexStyleC, "c", "C-style (0xffff)."},
-    {Disassembler::eHexStyleAsm, "asm", "Asm-style (0ffffh)."} };
+    {
+        Disassembler::eHexStyleC,
+        "c",
+        "C-style (0xffff).",
+    },
+    {
+        Disassembler::eHexStyleAsm,
+        "asm",
+        "Asm-style (0ffffh).",
+    },
+};
 
 static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
-    {eLoadScriptFromSymFileTrue, "true",
-     "Load debug scripts inside symbol files"},
-    {eLoadScriptFromSymFileFalse, "false",
-     "Do not load debug scripts inside symbol files."},
-    {eLoadScriptFromSymFileWarn, "warn",
-     "Warn about debug scripts inside symbol files but do not load them."} };
+    {
+        eLoadScriptFromSymFileTrue,
+        "true",
+        "Load debug scripts inside symbol files",
+    },
+    {
+        eLoadScriptFromSymFileFalse,
+        "false",
+        "Do not load debug scripts inside symbol files.",
+    },
+    {
+        eLoadScriptFromSymFileWarn,
+        "warn",
+        "Warn about debug scripts inside symbol files but do not load them.",
+    },
+};
 
-static constexpr
-OptionEnumValueElement g_load_current_working_dir_lldbinit_values[] = {
-    {eLoadCWDlldbinitTrue, "true",
-     "Load .lldbinit files from current directory"},
-    {eLoadCWDlldbinitFalse, "false",
-     "Do not load .lldbinit files from current directory"},
-    {eLoadCWDlldbinitWarn, "warn",
-     "Warn about loading .lldbinit files from current directory"} };
+static constexpr OptionEnumValueElement g_load_cwd_lldbinit_values[] = {
+    {
+        eLoadCWDlldbinitTrue,
+        "true",
+        "Load .lldbinit files from current directory",
+    },
+    {
+        eLoadCWDlldbinitFalse,
+        "false",
+        "Do not load .lldbinit files from current directory",
+    },
+    {
+        eLoadCWDlldbinitWarn,
+        "warn",
+        "Warn about loading .lldbinit files from current directory",
+    },
+};
 
 static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
-    {eMemoryModuleLoadLevelMinimal, "minimal",
-     "Load minimal information when loading modules from memory. Currently "
-     "this setting loads sections only."},
-    {eMemoryModuleLoadLevelPartial, "partial",
-     "Load partial information when loading modules from memory. Currently "
-     "this setting loads sections and function bounds."},
-    {eMemoryModuleLoadLevelComplete, "complete",
-     "Load complete information when loading modules from memory. Currently "
-     "this setting loads sections and all symbols."} };
+    {
+        eMemoryModuleLoadLevelMinimal,
+        "minimal",
+        "Load minimal information when loading modules from memory. Currently "
+        "this setting loads sections only.",
+    },
+    {
+        eMemoryModuleLoadLevelPartial,
+        "partial",
+        "Load partial information when loading modules from memory. Currently "
+        "this setting loads sections and function bounds.",
+    },
+    {
+        eMemoryModuleLoadLevelComplete,
+        "complete",
+        "Load complete information when loading modules from memory. Currently "
+        "this setting loads sections and all symbols.",
+    },
+};
 
 #define LLDB_PROPERTIES_target
 #include "TargetProperties.inc"

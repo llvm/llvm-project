@@ -1486,12 +1486,22 @@ protected:
 
 // CommandObjectCommandsScriptAdd
 static constexpr OptionEnumValueElement g_script_synchro_type[] = {
-  {eScriptedCommandSynchronicitySynchronous, "synchronous",
-   "Run synchronous"},
-  {eScriptedCommandSynchronicityAsynchronous, "asynchronous",
-   "Run asynchronous"},
-  {eScriptedCommandSynchronicityCurrentValue, "current",
-   "Do not alter current setting"} };
+    {
+        eScriptedCommandSynchronicitySynchronous,
+        "synchronous",
+        "Run synchronous",
+    },
+    {
+        eScriptedCommandSynchronicityAsynchronous,
+        "asynchronous",
+        "Run asynchronous",
+    },
+    {
+        eScriptedCommandSynchronicityCurrentValue,
+        "current",
+        "Do not alter current setting",
+    },
+};
 
 static constexpr OptionEnumValues ScriptSynchroType() {
   return OptionEnumValues(g_script_synchro_type);
