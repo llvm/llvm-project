@@ -870,8 +870,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
       continue;
 
     // Load this module file.
-    if (llvm::Error Err = Builder.loadModuleFile(*ModuleFile))
-      return Err;
+    if (Builder.loadModuleFile(*ModuleFile))
+      return EC_IOError;
   }
 
   // The output buffer, into which the global index will be written.
