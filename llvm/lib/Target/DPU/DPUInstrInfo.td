@@ -368,14 +368,6 @@ def BSWAP64: PseudoDPUInstruction<
                   [(set i64:$dc, (bswap i64:$da))]>;
 }
 
-let usesCustomInserter = 1, isAsCheapAsAMove = 0, Defs = [RADD, R17, D18] in {
-def MULrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (mul i32:$ra, i32:$rb))]
-                  >;
-}
-
 let isAsCheapAsAMove = 0, usesCustomInserter = 1 in {
 def Mul16UUrr: PseudoDPUInstruction<
                    (outs GP_REG:$rc), (ins GP_REG:$ra, GP_REG:$rb),
@@ -396,9 +388,14 @@ def Mul16SSrr: PseudoDPUInstruction<
                    >;
 }
 
-// Declaring divisions as isCall avoids hoisting instruction in the LICM
+// isCall avoids hoisting instruction in the LICM
 // (see MachineInstr::isSafeToMove)
 let isCall = 1, usesCustomInserter = 1, isAsCheapAsAMove = 0, Defs = [RADD, R17, D18] in {
+def MULrr: PseudoDPUInstruction<
+                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
+                  "",
+                  [(set i32:$rc, (mul i32:$ra, i32:$rb))]
+                  >;
 def UDIVrr: PseudoDPUInstruction<
                   (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
                   "",

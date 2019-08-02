@@ -52,37 +52,44 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   const DPUInstrInfo &TII =
       *static_cast<const DPUInstrInfo *>(STI.getInstrInfo());
   DebugLoc DL;
-  unsigned CFIIndex;
+  unsigned CFIIndex, StackSize;
 
-  // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
-  // for debug purpose. Not at the beginning because we do not have a frame
-  // pointer (pointing at the beginning of the stack) but only a stack pointer
-  // (pointing at the end of the stack)
-  unsigned int StackSize =
-      alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
+  if (!MFI.hasCalls()) {
+    StackSize = 0;
+  } else {
+    // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
+    // for debug purpose. Not at the beginning because we do not have a frame
+    // pointer (pointing at the beginning of the stack) but only a stack pointer
+    // (pointing at the end of the stack)
+    StackSize =
+        alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
+  }
   MFI.setStackSize(StackSize);
 
   CFIIndex =
       MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, StackSize));
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-      nullptr, MRI->getDwarfRegNum(DPU::RADD, true), -STACK_SIZE_FOR_D22));
-  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex)
-      .setMIFlag(MachineInstr::FrameSetup);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-      nullptr, MRI->getDwarfRegNum(DPU::STKP, true), 4 - STACK_SIZE_FOR_D22));
-  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex)
-      .setMIFlag(MachineInstr::FrameSetup);
 
-  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::STKP)
-      .addImm(StackSize - STACK_SIZE_FOR_D22)
-      .addReg(DPU::RDFUN);
-  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::STKP)
-      .addReg(DPU::STKP)
-      .addImm(StackSize);
+  if (MFI.hasCalls()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, MRI->getDwarfRegNum(DPU::RADD, true), -STACK_SIZE_FOR_D22));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, MRI->getDwarfRegNum(DPU::STKP, true), 4 - STACK_SIZE_FOR_D22));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::STKP)
+        .addImm(StackSize - STACK_SIZE_FOR_D22)
+        .addReg(DPU::RDFUN);
+    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::STKP)
+        .addReg(DPU::STKP)
+        .addImm(StackSize);
+  }
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   if (!CSI.empty()) {
@@ -115,6 +122,9 @@ void DPUFrameLowering::emitEpilogue(MachineFunction &MF,
   const DPUInstrInfo &DPUII =
       *static_cast<const DPUInstrInfo *>(MF.getSubtarget().getInstrInfo());
   DebugLoc DL = MBBI->getDebugLoc();
+
+  if (!MF.getFrameInfo().hasCalls())
+    return;
 
   BuildMI(MBB, MBBI, DL, DPUII.get(DPU::LDrri), DPU::RDFUN)
       .addReg(DPU::STKP)
