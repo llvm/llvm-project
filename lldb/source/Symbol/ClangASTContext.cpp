@@ -2227,7 +2227,7 @@ CompilerType ClangASTContext::CreateFunctionType(
 
 ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
     clang::DeclContext *decl_ctx, const char *name,
-    const CompilerType &param_type, int storage) {
+    const CompilerType &param_type, int storage, bool add_decl) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
   auto *decl =
@@ -2235,7 +2235,9 @@ ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
                           name && name[0] ? &ast->Idents.get(name) : nullptr,
                           ClangUtil::GetQualType(param_type), nullptr,
                           (clang::StorageClass)storage, nullptr);
-  decl_ctx->addDecl(decl);
+  if (add_decl)
+    decl_ctx->addDecl(decl);
+
   return decl;
 }
 
