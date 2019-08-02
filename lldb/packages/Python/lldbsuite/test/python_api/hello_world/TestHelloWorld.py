@@ -108,7 +108,7 @@ class HelloWorldTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
-    @skipIfSanitized # FIXME: Hangs indefinitely.
+    @skipIfAsan # FIXME: Hangs indefinitely.
     @expectedFailureNetBSD
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""

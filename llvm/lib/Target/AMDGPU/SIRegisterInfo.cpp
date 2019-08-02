@@ -1361,7 +1361,7 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
 // FIXME: This is very slow. It might be worth creating a map from physreg to
 // register class.
 const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
-  assert(!TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(!Register::isVirtualRegister(Reg));
 
   static const TargetRegisterClass *const BaseClasses[] = {
     &AMDGPU::VGPR_32RegClass,
@@ -1796,7 +1796,7 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
 const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   unsigned Reg) const {
-  if (TargetRegisterInfo::isVirtualRegister(Reg))
+  if (Register::isVirtualRegister(Reg))
     return  MRI.getRegClass(Reg);
 
   return getPhysRegClass(Reg);
@@ -1968,7 +1968,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(unsigned Reg, unsigned SubReg,
   SlotIndex UseIdx = LIS->getInstructionIndex(Use);
   SlotIndex DefIdx;
 
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     if (!LIS->hasInterval(Reg))
       return nullptr;
     LiveInterval &LI = LIS->getInterval(Reg);

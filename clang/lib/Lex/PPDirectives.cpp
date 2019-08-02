@@ -716,7 +716,7 @@ const FileEntry *Preprocessor::LookupFile(
         BuildSystemModule = getCurrentModule()->IsSystem;
       } else if ((FileEnt =
                     SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())))
-        Includers.push_back(std::make_pair(FileEnt, FileMgr.getDirectory(".")));
+        Includers.push_back(std::make_pair(FileEnt, *FileMgr.getDirectory(".")));
     } else {
       Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
     }
@@ -1765,9 +1765,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       // Give the clients a chance to recover.
       SmallString<128> RecoveryPath;
       if (Callbacks->FileNotFound(Filename, RecoveryPath)) {
-        if (const DirectoryEntry *DE = FileMgr.getDirectory(RecoveryPath)) {
+        if (auto DE = FileMgr.getDirectory(RecoveryPath)) {
           // Add the recovery path to the list of search paths.
-          DirectoryLookup DL(DE, SrcMgr::C_User, false);
+          DirectoryLookup DL(*DE, SrcMgr::C_User, false);
           HeaderInfo.AddSearchPath(DL, isAngled);
 
           // Try the lookup again, skipping the cache.

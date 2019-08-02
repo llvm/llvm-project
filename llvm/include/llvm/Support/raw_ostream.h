@@ -72,7 +72,7 @@ private:
 
 public:
   // color order matches ANSI escape sequence, don't change
-  enum Colors {
+  enum class Color {
     BLACK = 0,
     RED,
     GREEN,
@@ -81,8 +81,20 @@ public:
     MAGENTA,
     CYAN,
     WHITE,
-    SAVEDCOLOR
+    SAVEDCOLOR,
+    RESET,
   };
+
+  static const Color BLACK = Color::BLACK;
+  static const Color RED = Color::RED;
+  static const Color GREEN = Color::GREEN;
+  static const Color YELLOW = Color::YELLOW;
+  static const Color BLUE = Color::BLUE;
+  static const Color MAGENTA = Color::MAGENTA;
+  static const Color CYAN = Color::CYAN;
+  static const Color WHITE = Color::WHITE;
+  static const Color SAVEDCOLOR = Color::SAVEDCOLOR;
+  static const Color RESET = Color::RESET;
 
   explicit raw_ostream(bool unbuffered = false)
       : BufferMode(unbuffered ? Unbuffered : InternalBuffer) {
@@ -214,6 +226,9 @@ public:
   /// Output \p N in hexadecimal, without any prefix or padding.
   raw_ostream &write_hex(unsigned long long N);
 
+  // Change the foreground color of text.
+  raw_ostream &operator<<(Color C);
+
   /// Output a formatted UUID with dash separators.
   using uuid_t = uint8_t[16];
   raw_ostream &write_uuid(const uuid_t UUID);
@@ -248,15 +263,14 @@ public:
 
   /// Changes the foreground color of text that will be output from this point
   /// forward.
-  /// @param Color ANSI color to use, the special SAVEDCOLOR can be used to
+  /// @param C ANSI color to use, the special SAVEDCOLOR can be used to
   /// change only the bold attribute, and keep colors untouched
   /// @param Bold bold/brighter text, default false
   /// @param BG if true change the background, default: change foreground
   /// @returns itself so it can be used within << invocations
-  virtual raw_ostream &changeColor(enum Colors Color,
-                                   bool Bold = false,
+  virtual raw_ostream &changeColor(Color C, bool Bold = false,
                                    bool BG = false) {
-    (void)Color;
+    (void)C;
     (void)Bold;
     (void)BG;
     return *this;
@@ -276,6 +290,11 @@ public:
 
   /// This function determines if this stream is displayed and supports colors.
   virtual bool has_colors() const { return is_displayed(); }
+
+  // Enable or disable colors. Once disable_colors() is called,
+  // changeColor() has no effect until enable_colors() is called.
+  virtual void enable_colors() {}
+  virtual void disable_colors() {}
 
   //===--------------------------------------------------------------------===//
   // Subclass Interface
@@ -368,6 +387,8 @@ class raw_fd_ostream : public raw_pwrite_stream {
 
   bool SupportsSeeking;
 
+  bool ColorEnabled;
+
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
   /// terminal emulators are TTYs, but they are not consoles.
@@ -432,8 +453,8 @@ public:
   /// to the offset specified from the beginning of the file.
   uint64_t seek(uint64_t off);
 
-  raw_ostream &changeColor(enum Colors colors, bool bold=false,
-                           bool bg=false) override;
+  raw_ostream &changeColor(Color C, bool bold = false,
+                           bool bg = false) override;
   raw_ostream &resetColor() override;
 
   raw_ostream &reverseColor() override;
@@ -441,6 +462,10 @@ public:
   bool is_displayed() const override;
 
   bool has_colors() const override;
+
+  void enable_colors() override { ColorEnabled = true; }
+
+  void disable_colors() override { ColorEnabled = false; }
 
   std::error_code error() const { return EC; }
 

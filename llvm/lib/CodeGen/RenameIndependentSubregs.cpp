@@ -390,7 +390,7 @@ bool RenameIndependentSubregs::runOnMachineFunction(MachineFunction &MF) {
   // there can't be any further splitting.
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned Reg = Register::index2VirtReg(I);
     if (!LIS->hasInterval(Reg))
       continue;
     LiveInterval &LI = LIS->getInterval(Reg);

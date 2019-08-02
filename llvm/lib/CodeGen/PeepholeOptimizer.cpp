@@ -418,7 +418,7 @@ namespace {
                  const MachineRegisterInfo &MRI,
                  const TargetInstrInfo *TII = nullptr)
         : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg)) {
+      if (!Register::isPhysicalRegister(Reg)) {
         Def = MRI.getVRegDef(Reg);
         DefIdx = MRI.def_begin(Reg).getOperandNo();
       }
@@ -460,8 +460,8 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
   if (!TII->isCoalescableExtInstr(MI, SrcReg, DstReg, SubIdx))
     return false;
 
-  if (TargetRegisterInfo::isPhysicalRegister(DstReg) ||
-      TargetRegisterInfo::isPhysicalRegister(SrcReg))
+  if (Register::isPhysicalRegister(DstReg) ||
+      Register::isPhysicalRegister(SrcReg))
     return false;
 
   if (MRI->hasOneNonDBGUse(SrcReg))
@@ -609,8 +609,8 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   unsigned SrcReg, SrcReg2;
   int CmpMask, CmpValue;
   if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
-      TargetRegisterInfo::isPhysicalRegister(SrcReg) ||
-      (SrcReg2 != 0 && TargetRegisterInfo::isPhysicalRegister(SrcReg2)))
+      Register::isPhysicalRegister(SrcReg) ||
+      (SrcReg2 != 0 && Register::isPhysicalRegister(SrcReg2)))
     return false;
 
   // Attempt to optimize the comparison instruction.
@@ -663,7 +663,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   unsigned Reg = RegSubReg.Reg;
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return false;
   const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
 
@@ -675,7 +675,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (TargetRegisterInfo::isPhysicalRegister(CurSrcPair.Reg))
+    if (Register::isPhysicalRegister(CurSrcPair.Reg))
       return false;
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
@@ -723,7 +723,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (TargetRegisterInfo::isPhysicalRegister(CurSrcPair.Reg))
+      if (Register::isPhysicalRegister(CurSrcPair.Reg))
         return false;
 
       // Keep following the chain if the value isn't any better yet.
@@ -1170,7 +1170,7 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
          "Coalescer can understand multiple defs?!");
   const MachineOperand &MODef = MI.getOperand(0);
   // Do not rewrite physical definitions.
-  if (TargetRegisterInfo::isPhysicalRegister(MODef.getReg()))
+  if (Register::isPhysicalRegister(MODef.getReg()))
     return false;
 
   bool Changed = false;
@@ -1221,7 +1221,7 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
 MachineInstr &
 PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
                                  RegSubRegPair Def, RewriteMapTy &RewriteMap) {
-  assert(!TargetRegisterInfo::isPhysicalRegister(Def.Reg) &&
+  assert(!Register::isPhysicalRegister(Def.Reg) &&
          "We do not rewrite physical registers");
 
   // Find the new source to use in the COPY rewrite.
@@ -1280,7 +1280,7 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   while (CpyRewriter.getNextRewritableSource(Src, Def)) {
     // If a physical register is here, this is probably for a good reason.
     // Do not rewrite that.
-    if (TargetRegisterInfo::isPhysicalRegister(Def.Reg))
+    if (Register::isPhysicalRegister(Def.Reg))
       return false;
 
     // If we do not know how to rewrite this definition, there is no point
@@ -1319,8 +1319,7 @@ bool PeepholeOptimizer::isLoadFoldable(
   // To reduce compilation time, we check MRI->hasOneNonDBGUser when inserting
   // loads. It should be checked when processing uses of the load, since
   // uses can be removed during peephole.
-  if (!MI.getOperand(0).getSubReg() &&
-      TargetRegisterInfo::isVirtualRegister(Reg) &&
+  if (!MI.getOperand(0).getSubReg() && Register::isVirtualRegister(Reg) &&
       MRI->hasOneNonDBGUser(Reg)) {
     FoldAsLoadDefCandidates.insert(Reg);
     return true;
@@ -1337,7 +1336,7 @@ bool PeepholeOptimizer::isMoveImmediate(
   if (MCID.getNumDefs() != 1)
     return false;
   unsigned Reg = MI.getOperand(0).getReg();
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     ImmDefMIs.insert(std::make_pair(Reg, &MI));
     ImmDefRegs.insert(Reg);
     return true;
@@ -1360,7 +1359,7 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr &MI,
     if (MO.isImplicit() && MO.isDead())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
     if (ImmDefRegs.count(Reg) == 0)
       continue;
@@ -1394,11 +1393,11 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI,
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
   unsigned SrcReg = MI.getOperand(1).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+  if (!Register::isVirtualRegister(SrcReg))
     return false;
 
   unsigned DstReg = MI.getOperand(0).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(DstReg))
+  if (!Register::isVirtualRegister(DstReg))
     return false;
 
   if (CopySrcRegs.insert(SrcReg).second) {
@@ -1433,8 +1432,7 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI,
 }
 
 bool PeepholeOptimizer::isNAPhysCopy(unsigned Reg) {
-  return TargetRegisterInfo::isPhysicalRegister(Reg) &&
-         !MRI->isAllocatable(Reg);
+  return Register::isPhysicalRegister(Reg) && !MRI->isAllocatable(Reg);
 }
 
 bool PeepholeOptimizer::foldRedundantNAPhysCopy(
@@ -1446,7 +1444,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
 
   unsigned DstReg = MI.getOperand(0).getReg();
   unsigned SrcReg = MI.getOperand(1).getReg();
-  if (isNAPhysCopy(SrcReg) && TargetRegisterInfo::isVirtualRegister(DstReg)) {
+  if (isNAPhysCopy(SrcReg) && Register::isVirtualRegister(DstReg)) {
     // %vreg = COPY %physreg
     // Avoid using a datastructure which can track multiple live non-allocatable
     // phys->virt copies since LLVM doesn't seem to do this.
@@ -1454,7 +1452,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
     return false;
   }
 
-  if (!(TargetRegisterInfo::isVirtualRegister(SrcReg) && isNAPhysCopy(DstReg)))
+  if (!(Register::isVirtualRegister(SrcReg) && isNAPhysCopy(DstReg)))
     return false;
 
   // %physreg = COPY %vreg
@@ -1489,7 +1487,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
 static bool isVirtualRegisterOperand(MachineOperand &MO) {
   if (!MO.isReg())
     return false;
-  return TargetRegisterInfo::isVirtualRegister(MO.getReg());
+  return Register::isVirtualRegister(MO.getReg());
 }
 
 bool PeepholeOptimizer::findTargetRecurrence(
@@ -2087,7 +2085,7 @@ ValueTrackerResult ValueTracker::getNextSource() {
 
     // If we can still move up in the use-def chain, move to the next
     // definition.
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg) && OneRegSrc) {
+    if (!Register::isPhysicalRegister(Reg) && OneRegSrc) {
       MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
       if (DI != MRI.def_end()) {
         Def = DI->getParent();

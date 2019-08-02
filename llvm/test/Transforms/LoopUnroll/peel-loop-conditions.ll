@@ -643,3 +643,4 @@ for.inc:
 for.end:
   ret void
 }
+; CHECK-NOT: llvm.loop.unroll.disable

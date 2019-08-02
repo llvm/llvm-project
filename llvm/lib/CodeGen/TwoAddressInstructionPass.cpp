@@ -418,8 +418,8 @@ static bool isCopyToReg(MachineInstr &MI, const TargetInstrInfo *TII,
   } else
     return false;
 
-  IsSrcPhys = TargetRegisterInfo::isPhysicalRegister(SrcReg);
-  IsDstPhys = TargetRegisterInfo::isPhysicalRegister(DstReg);
+  IsSrcPhys = Register::isPhysicalRegister(SrcReg);
+  IsDstPhys = Register::isPhysicalRegister(DstReg);
   return true;
 }
 
@@ -427,8 +427,7 @@ static bool isCopyToReg(MachineInstr &MI, const TargetInstrInfo *TII,
 /// given instruction, is killed by the given instruction.
 static bool isPlainlyKilled(MachineInstr *MI, unsigned Reg,
                             LiveIntervals *LIS) {
-  if (LIS && TargetRegisterInfo::isVirtualRegister(Reg) &&
-      !LIS->isNotInMIMap(*MI)) {
+  if (LIS && Register::isVirtualRegister(Reg) && !LIS->isNotInMIMap(*MI)) {
     // FIXME: Sometimes tryInstructionTransform() will add instructions and
     // test whether they can be folded before keeping them. In this case it
     // sets a kill before recursively calling tryInstructionTransform() again.
@@ -475,12 +474,12 @@ static bool isKilled(MachineInstr &MI, unsigned Reg,
   MachineInstr *DefMI = &MI;
   while (true) {
     // All uses of physical registers are likely to be kills.
-    if (TargetRegisterInfo::isPhysicalRegister(Reg) &&
+    if (Register::isPhysicalRegister(Reg) &&
         (allowFalsePositives || MRI->hasOneUse(Reg)))
       return true;
     if (!isPlainlyKilled(DefMI, Reg, LIS))
       return false;
-    if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg))
       return true;
     MachineRegisterInfo::def_iterator Begin = MRI->def_begin(Reg);
     // If there are multiple defs, we can't do a simple analysis, so just
@@ -536,7 +535,7 @@ MachineInstr *findOnlyInterestingUse(unsigned Reg, MachineBasicBlock *MBB,
   }
   IsDstPhys = false;
   if (isTwoAddrUse(UseMI, Reg, DstReg)) {
-    IsDstPhys = TargetRegisterInfo::isPhysicalRegister(DstReg);
+    IsDstPhys = Register::isPhysicalRegister(DstReg);
     return &UseMI;
   }
   return nullptr;
@@ -546,13 +545,13 @@ MachineInstr *findOnlyInterestingUse(unsigned Reg, MachineBasicBlock *MBB,
 /// to.
 static unsigned
 getMappedReg(unsigned Reg, DenseMap<unsigned, unsigned> &RegMap) {
-  while (TargetRegisterInfo::isVirtualRegister(Reg))  {
+  while (Register::isVirtualRegister(Reg)) {
     DenseMap<unsigned, unsigned>::iterator SI = RegMap.find(Reg);
     if (SI == RegMap.end())
       return 0;
     Reg = SI->second;
   }
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return Reg;
   return 0;
 }
@@ -1105,7 +1104,7 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
       Uses.insert(MOReg);
       if (isKill && MOReg != Reg)
         Kills.insert(MOReg);
-    } else if (TargetRegisterInfo::isPhysicalRegister(MOReg)) {
+    } else if (Register::isPhysicalRegister(MOReg)) {
       Defs.insert(MOReg);
       if (!MO.isDead())
         LiveDefs.insert(MOReg);
@@ -1154,8 +1153,7 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
       unsigned MOReg = OtherDefs[i];
       if (Uses.count(MOReg))
         return false;
-      if (TargetRegisterInfo::isPhysicalRegister(MOReg) &&
-          LiveDefs.count(MOReg))
+      if (Register::isPhysicalRegister(MOReg) && LiveDefs.count(MOReg))
         return false;
       // Physical register def is seen.
       Defs.erase(MOReg);
@@ -1279,11 +1277,11 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
   unsigned regA = MI.getOperand(DstIdx).getReg();
   unsigned regB = MI.getOperand(SrcIdx).getReg();
 
-  assert(TargetRegisterInfo::isVirtualRegister(regB) &&
+  assert(Register::isVirtualRegister(regB) &&
          "cannot make instruction into two-address form");
   bool regBKilled = isKilled(MI, regB, MRI, TII, LIS, true);
 
-  if (TargetRegisterInfo::isVirtualRegister(regA))
+  if (Register::isVirtualRegister(regA))
     scanUses(regA);
 
   bool Commuted = tryInstructionCommute(&MI, DstIdx, SrcIdx, regBKilled, Dist);
@@ -1399,8 +1397,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
           if (LV) {
             for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
               MachineOperand &MO = MI.getOperand(i);
-              if (MO.isReg() &&
-                  TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+              if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
                 if (MO.isUse()) {
                   if (MO.isKill()) {
                     if (NewMIs[0]->killsRegister(MO.getReg()))
@@ -1485,7 +1482,7 @@ collectTiedOperands(MachineInstr *MI, TiedOperandMap &TiedOperands) {
     // Deal with undef uses immediately - simply rewrite the src operand.
     if (SrcMO.isUndef() && !DstMO.getSubReg()) {
       // Constrain the DstReg register class if required.
-      if (TargetRegisterInfo::isVirtualRegister(DstReg))
+      if (Register::isVirtualRegister(DstReg))
         if (const TargetRegisterClass *RC = TII->getRegClass(MCID, SrcIdx,
                                                              TRI, *MF))
           MRI->constrainRegClass(DstReg, RC);
@@ -1538,7 +1535,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     }
     LastCopiedReg = RegA;
 
-    assert(TargetRegisterInfo::isVirtualRegister(RegB) &&
+    assert(Register::isVirtualRegister(RegB) &&
            "cannot make instruction into two-address form");
 
 #ifndef NDEBUG
@@ -1559,14 +1556,13 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     MIB.addReg(RegB, 0, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
-      if (TargetRegisterInfo::isVirtualRegister(RegA)) {
+      if (Register::isVirtualRegister(RegA)) {
         assert(TRI->getMatchingSuperRegClass(RC, MRI->getRegClass(RegA),
                                              SubRegB) &&
                "tied subregister must be a truncation");
         // The superreg class will not be used to constrain the subreg class.
         RC = nullptr;
-      }
-      else {
+      } else {
         assert(TRI->getMatchingSuperReg(RegA, SubRegB, MRI->getRegClass(RegB))
                && "tied subregister must be a truncation");
       }
@@ -1581,7 +1577,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     if (LIS) {
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
 
-      if (TargetRegisterInfo::isVirtualRegister(RegA)) {
+      if (Register::isVirtualRegister(RegA)) {
         LiveInterval &LI = LIS->getInterval(RegA);
         VNInfo *VNI = LI.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
         SlotIndex endIdx =
@@ -1601,8 +1597,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     }
 
     // Make sure regA is a legal regclass for the SrcIdx operand.
-    if (TargetRegisterInfo::isVirtualRegister(RegA) &&
-        TargetRegisterInfo::isVirtualRegister(RegB))
+    if (Register::isVirtualRegister(RegA) && Register::isVirtualRegister(RegB))
       MRI->constrainRegClass(RegA, RC);
     MO.setReg(RegA);
     // The getMatchingSuper asserts guarantee that the register class projected
@@ -1804,8 +1799,7 @@ void TwoAddressInstructionPass::
 eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned DstReg = MI.getOperand(0).getReg();
-  if (MI.getOperand(0).getSubReg() ||
-      TargetRegisterInfo::isPhysicalRegister(DstReg) ||
+  if (MI.getOperand(0).getSubReg() || Register::isPhysicalRegister(DstReg) ||
       !(MI.getNumOperands() & 1)) {
     LLVM_DEBUG(dbgs() << "Illegal REG_SEQUENCE instruction:" << MI);
     llvm_unreachable(nullptr);
@@ -1855,7 +1849,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     DefEmitted = true;
 
     // Update LiveVariables' kill info.
-    if (LV && isKill && !TargetRegisterInfo::isPhysicalRegister(SrcReg))
+    if (LV && isKill && !Register::isPhysicalRegister(SrcReg))
       LV->replaceKillInstruction(SrcReg, MI, *CopyMI);
 
     LLVM_DEBUG(dbgs() << "Inserted: " << *CopyMI);

@@ -103,8 +103,8 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
     LastCycle = std::max(LastCycle, CurrentCycle);
 }
 
-static raw_ostream::Colors chooseColor(unsigned CumulativeCycles,
-                                       unsigned Executions, int BufferSize) {
+static raw_ostream::Color chooseColor(unsigned CumulativeCycles,
+                                      unsigned Executions, int BufferSize) {
   if (CumulativeCycles && BufferSize < 0)
     return raw_ostream::MAGENTA;
   unsigned Size = static_cast<unsigned>(BufferSize);
@@ -120,7 +120,7 @@ static void tryChangeColor(raw_ostream &OS, unsigned Cycles,
   if (!OS.has_colors())
     return;
 
-  raw_ostream::Colors Color = chooseColor(Cycles, Executions, BufferSize);
+  raw_ostream::Color Color = chooseColor(Cycles, Executions, BufferSize);
   if (Color == raw_ostream::SAVEDCOLOR) {
     OS.resetColor();
     return;

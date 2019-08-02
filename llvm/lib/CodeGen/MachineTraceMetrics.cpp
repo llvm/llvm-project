@@ -634,7 +634,7 @@ struct DataDep {
   /// Create a DataDep from an SSA form virtual register.
   DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
     : UseOp(UseOp) {
-    assert(TargetRegisterInfo::isVirtualRegister(VirtReg));
+    assert(Register::isVirtualRegister(VirtReg));
     MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
     assert(!DefI.atEnd() && "Register has no defs");
     DefMI = DefI->getParent();
@@ -663,7 +663,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    if (Register::isPhysicalRegister(Reg)) {
       HasPhysRegs = true;
       continue;
     }
@@ -709,7 +709,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (!Register::isPhysicalRegister(Reg))
       continue;
     // Track live defs and kills for updating RegUnits.
     if (MO.isDef()) {
@@ -765,7 +765,7 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   assert(TBI.HasValidInstrHeights && "Missing height info");
   unsigned MaxLen = 0;
   for (const LiveInReg &LIR : TBI.LiveIns) {
-    if (!TargetRegisterInfo::isVirtualRegister(LIR.Reg))
+    if (!Register::isVirtualRegister(LIR.Reg))
       continue;
     const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);
     // Ignore dependencies outside the current trace.
@@ -903,7 +903,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (!Register::isPhysicalRegister(Reg))
       continue;
     if (MO.readsReg())
       ReadOps.push_back(MI.getOperandNo(MOI));
@@ -979,7 +979,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
            ArrayRef<const MachineBasicBlock*> Trace) {
   assert(!Trace.empty() && "Trace should contain at least one block");
   unsigned Reg = DefMI->getOperand(DefOp).getReg();
-  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(Register::isVirtualRegister(Reg));
   const MachineBasicBlock *DefMBB = DefMI->getParent();
 
   // Reg is live-in to all blocks in Trace that follow DefMBB.
@@ -1026,7 +1026,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
   if (MBB) {
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     for (LiveInReg &LI : TBI.LiveIns) {
-      if (TargetRegisterInfo::isVirtualRegister(LI.Reg)) {
+      if (Register::isVirtualRegister(LI.Reg)) {
         // For virtual registers, the def latency is included.
         unsigned &Height = Heights[MTM.MRI->getVRegDef(LI.Reg)];
         if (Height < LI.Height)

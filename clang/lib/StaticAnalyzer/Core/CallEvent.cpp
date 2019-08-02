@@ -191,7 +191,8 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
   return ADC;
 }
 
-const StackFrameContext *CallEvent::getCalleeStackFrame() const {
+const StackFrameContext *
+CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   AnalysisDeclContext *ADC = getCalleeAnalysisDeclContext();
   if (!ADC)
     return nullptr;
@@ -217,11 +218,12 @@ const StackFrameContext *CallEvent::getCalleeStackFrame() const {
         break;
   assert(Idx < Sz);
 
-  return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, Idx);
+  return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, BlockCount, Idx);
 }
 
-const VarRegion *CallEvent::getParameterLocation(unsigned Index) const {
-  const StackFrameContext *SFC = getCalleeStackFrame();
+const VarRegion *CallEvent::getParameterLocation(unsigned Index,
+                                                 unsigned BlockCount) const {
+  const StackFrameContext *SFC = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
   if (!SFC)
     return nullptr;
@@ -322,7 +324,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     if (getKind() != CE_CXXAllocator)
       if (isArgumentConstructedDirectly(Idx))
         if (auto AdjIdx = getAdjustedParameterIndex(Idx))
-          if (const VarRegion *VR = getParameterLocation(*AdjIdx))
+          if (const VarRegion *VR = getParameterLocation(*AdjIdx, BlockCount))
             ValuesToInvalidate.push_back(loc::MemRegionVal(VR));
   }
 

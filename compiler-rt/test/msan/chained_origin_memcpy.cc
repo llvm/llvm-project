@@ -46,17 +46,17 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
-// CHECK: {{#0 .* in main .*chained_origin_memcpy.cpp:}}[[@LINE-4]]
+// CHECK: {{#0 .* in main .*chained_origin_memcpy.cc:}}[[@LINE-4]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK-FULL-STACK: {{#1 .* in fn_h.*chained_origin_memcpy.cpp:}}[[@LINE-15]]
+// CHECK-FULL-STACK: {{#1 .* in fn_h.*chained_origin_memcpy.cc:}}[[@LINE-15]]
 // CHECK-SHORT-STACK: {{#0 .* in __msan_memcpy.*msan_interceptors.cpp:}}
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cpp:}}[[@LINE-29]]
-// CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memcpy.cpp:}}[[@LINE-25]]
-// CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cpp:}}[[@LINE-31]]
+// CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cc:}}[[@LINE-29]]
+// CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memcpy.cc:}}[[@LINE-25]]
+// CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cc:}}[[@LINE-31]]
 
 // CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame of function 'main'
 // CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame of function 'main'
-// CHECK: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-22]]
+// CHECK: {{#0 .* in main.*chained_origin_memcpy.cc:}}[[@LINE-22]]

@@ -23,23 +23,16 @@
 
 using namespace clang;
 
-static const enum raw_ostream::Colors noteColor =
-  raw_ostream::BLACK;
-static const enum raw_ostream::Colors remarkColor =
-  raw_ostream::BLUE;
-static const enum raw_ostream::Colors fixitColor =
-  raw_ostream::GREEN;
-static const enum raw_ostream::Colors caretColor =
-  raw_ostream::GREEN;
-static const enum raw_ostream::Colors warningColor =
-  raw_ostream::MAGENTA;
-static const enum raw_ostream::Colors templateColor =
-  raw_ostream::CYAN;
-static const enum raw_ostream::Colors errorColor = raw_ostream::RED;
-static const enum raw_ostream::Colors fatalColor = raw_ostream::RED;
+static const raw_ostream::Color noteColor = raw_ostream::BLACK;
+static const raw_ostream::Color remarkColor = raw_ostream::BLUE;
+static const raw_ostream::Color fixitColor = raw_ostream::GREEN;
+static const raw_ostream::Color caretColor = raw_ostream::GREEN;
+static const raw_ostream::Color warningColor = raw_ostream::MAGENTA;
+static const raw_ostream::Color templateColor = raw_ostream::CYAN;
+static const raw_ostream::Color errorColor = raw_ostream::RED;
+static const raw_ostream::Color fatalColor = raw_ostream::RED;
 // Used for changing only the bold attribute.
-static const enum raw_ostream::Colors savedColor =
-  raw_ostream::SAVEDCOLOR;
+static const raw_ostream::Color savedColor = raw_ostream::SAVEDCOLOR;
 
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
@@ -762,7 +755,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
   SmallVector<char, 128> AbsoluteFilename;
   if (DiagOpts->AbsolutePath) {
-    const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
+    auto Dir = SM.getFileManager().getDirectory(
         llvm::sys::path::parent_path(Filename));
     if (Dir) {
       // We want to print a simplified absolute path, i. e. without "dots".
@@ -780,12 +773,12 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      SmallString<4096> DirName = Dir->getName();
+      SmallString<4096> DirName = (*Dir)->getName();
       llvm::sys::fs::make_absolute(DirName);
       llvm::sys::path::native(DirName);
       llvm::sys::path::remove_dots(DirName, /* remove_dot_dot */ true);
 #else
-      StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+      StringRef DirName = SM.getFileManager().getCanonicalName(*Dir);
 #endif
       llvm::sys::path::append(AbsoluteFilename, DirName,
                               llvm::sys::path::filename(Filename));

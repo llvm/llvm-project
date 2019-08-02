@@ -326,7 +326,7 @@ X86CallFrameOptimization::classifyInstruction(
     if (!MO.isReg())
       continue;
     unsigned int Reg = MO.getReg();
-    if (!RegInfo.isPhysicalRegister(Reg))
+    if (!Register::isPhysicalRegister(Reg))
       continue;
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
       return Exit;
@@ -444,7 +444,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       if (!MO.isReg())
         continue;
       unsigned int Reg = MO.getReg();
-      if (RegInfo.isPhysicalRegister(Reg))
+      if (Register::isPhysicalRegister(Reg))
         UsedRegs.insert(Reg);
     }
   }
@@ -598,7 +598,7 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   // movl    %eax, (%esp)
   // call
   // Get rid of those with prejudice.
-  if (!TargetRegisterInfo::isVirtualRegister(Reg))
+  if (!Register::isVirtualRegister(Reg))
     return nullptr;
 
   // Make sure this is the only use of Reg.

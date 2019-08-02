@@ -73,7 +73,7 @@ void RegAllocBase::seedLiveRegs() {
   NamedRegionTimer T("seed", "Seed Live Regs", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     enqueue(&LIS->getInterval(Reg));
@@ -154,7 +154,7 @@ void RegAllocBase::allocatePhysRegs() {
         continue;
       }
       LLVM_DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
-      assert(TargetRegisterInfo::isVirtualRegister(SplitVirtReg->reg) &&
+      assert(Register::isVirtualRegister(SplitVirtReg->reg) &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);
       ++NumNewQueued;

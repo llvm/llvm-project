@@ -363,8 +363,9 @@ public:
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
     if (!PPOpts.ImplicitPCHInclude.empty()) {
-      DataConsumer->importedPCH(
-                        CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude));
+      auto File = CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude);
+      if (File)
+        DataConsumer->importedPCH(*File);
     }
 
     DataConsumer->setASTContext(CI.getASTContext());
@@ -677,9 +678,10 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   if (Unit->getOriginalSourceFileName().empty())
     DataConsumer.enteredMainFile(nullptr);
+  else if (auto MainFile = FileMgr.getFile(Unit->getOriginalSourceFileName()))
+    DataConsumer.enteredMainFile(*MainFile);
   else
-    DataConsumer.enteredMainFile(
-        FileMgr.getFile(Unit->getOriginalSourceFileName()));
+    DataConsumer.enteredMainFile(nullptr);
 
   DataConsumer.setASTContext(Unit->getASTContext());
   DataConsumer.startedTranslationUnit();

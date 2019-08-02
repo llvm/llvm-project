@@ -107,8 +107,9 @@ void ThumbRegisterInfo::emitLoadConstPool(
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (STI.isThumb1Only()) {
-    assert((isARMLowRegister(DestReg) || isVirtualRegister(DestReg)) &&
-           "Thumb1 does not have ldr to high register");
+    assert(
+        (isARMLowRegister(DestReg) || Register::isVirtualRegister(DestReg)) &&
+        "Thumb1 does not have ldr to high register");
     return emitThumb1LoadConstPool(MBB, MBBI, dl, DestReg, SubIdx, Val, Pred,
                                    PredReg, MIFlags);
   }
@@ -141,7 +142,7 @@ static void emitThumbRegPlusImmInReg(
   unsigned LdReg = DestReg;
   if (DestReg == ARM::SP)
     assert(BaseReg == ARM::SP && "Unexpected!");
-  if (!isARMLowRegister(DestReg) && !MRI.isVirtualRegister(DestReg))
+  if (!isARMLowRegister(DestReg) && !Register::isVirtualRegister(DestReg))
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {

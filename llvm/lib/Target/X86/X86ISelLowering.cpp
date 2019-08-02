@@ -4190,7 +4190,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(VR))
+    if (!Register::isVirtualRegister(VR))
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -4869,15 +4869,25 @@ bool X86TargetLowering::convertSelectOfConstantsToMath(EVT VT) const {
   return true;
 }
 
-bool X86TargetLowering::decomposeMulByConstant(EVT VT, SDValue C) const {
+bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                               SDValue C) const {
   // TODO: We handle scalars using custom code, but generic combining could make
   // that unnecessary.
   APInt MulC;
   if (!ISD::isConstantSplatVector(C.getNode(), MulC))
     return false;
 
+  // Find the type this will be legalized too. Otherwise we might prematurely
+  // convert this to shl+add/sub and then still have to type legalize those ops.
+  // Another choice would be to defer the decision for illegal types until 
+  // after type legalization. But constant splat vectors of i64 can't make it
+  // through type legalization on 32-bit targets so we would need to special
+  // case vXi64.
+  while (getTypeAction(Context, VT) != TypeLegal)
+    VT = getTypeToTransformTo(Context, VT);
+
   // If vector multiply is legal, assume that's faster than shl + add/sub.
-  // TODO: Multiply is a complex op with higher latency and lower througput in
+  // TODO: Multiply is a complex op with higher latency and lower throughput in
   //       most implementations, so this check could be loosened based on type
   //       and/or a CPU attribute.
   if (isOperationLegal(ISD::MUL, VT))

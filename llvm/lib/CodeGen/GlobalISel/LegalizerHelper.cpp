@@ -961,7 +961,7 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
 
       auto ZextInput = MIRBuilder.buildZExt(WideTy, SrcReg);
 
-      Register NextResult = I + 1 == NumOps && WideSize == DstSize ? DstReg :
+      Register NextResult = I + 1 == NumOps && WideTy == DstTy ? DstReg :
         MRI.createGenericVirtualRegister(WideTy);
 
       auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Offset);
@@ -972,6 +972,8 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
 
     if (WideSize > DstSize)
       MIRBuilder.buildTrunc(DstReg, ResultReg);
+    else if (DstTy.isPointer())
+      MIRBuilder.buildIntToPtr(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;
@@ -1876,6 +1878,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case G_FMINNUM:
   case G_FMAXNUM:
     return lowerFMinNumMaxNum(MI);
+  case G_UNMERGE_VALUES:
+    return lowerUnmergeValues(MI);
   }
 }
 
@@ -3497,4 +3501,37 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
   MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
+  const unsigned NumDst = MI.getNumOperands() - 1;
+  const Register SrcReg = MI.getOperand(NumDst).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  Register Dst0Reg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst0Reg);
+
+
+  // Expand scalarizing unmerge as bitcast to integer and shift.
+  if (!DstTy.isVector() && SrcTy.isVector() &&
+      SrcTy.getElementType() == DstTy) {
+    LLT IntTy = LLT::scalar(SrcTy.getSizeInBits());
+    Register Cast = MIRBuilder.buildBitcast(IntTy, SrcReg).getReg(0);
+
+    MIRBuilder.buildTrunc(Dst0Reg, Cast);
+
+    const unsigned DstSize = DstTy.getSizeInBits();
+    unsigned Offset = DstSize;
+    for (unsigned I = 1; I != NumDst; ++I, Offset += DstSize) {
+      auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
+      auto Shift = MIRBuilder.buildLShr(IntTy, Cast, ShiftAmt);
+      MIRBuilder.buildTrunc(MI.getOperand(I), Shift);
+    }
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
 }

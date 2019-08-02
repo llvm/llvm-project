@@ -290,7 +290,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
   // Print the virtual register definitions.
   for (unsigned I = 0, E = RegInfo.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned Reg = Register::index2VirtReg(I);
     yaml::VirtualRegisterDefinition VReg;
     VReg.ID = I;
     if (RegInfo.getVRegName(Reg) != "")

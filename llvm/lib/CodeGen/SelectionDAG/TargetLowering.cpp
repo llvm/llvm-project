@@ -676,6 +676,16 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(0);
     break;
   }
+  case ISD::INSERT_VECTOR_ELT: {
+    // If we don't demand the inserted element, return the base vector.
+    SDValue Vec = Op.getOperand(0);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    MVT VecVT = Vec.getSimpleValueType();
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements()) &&
+        !DemandedElts[CIdx->getZExtValue()])
+      return Vec;
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 

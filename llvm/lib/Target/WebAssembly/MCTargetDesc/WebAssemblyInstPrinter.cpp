@@ -15,6 +15,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -232,7 +233,16 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     }
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
-    Op.getExpr()->print(O, &MAI);
+    // call_indirect instructions have a TYPEINDEX operand that we print
+    // as a signature here, such that the assembler can recover this
+    // information.
+    auto SRE = static_cast<const MCSymbolRefExpr *>(Op.getExpr());
+    if (SRE->getKind() == MCSymbolRefExpr::VK_WASM_TYPEINDEX) {
+      auto &Sym = static_cast<const MCSymbolWasm &>(SRE->getSymbol());
+      O << WebAssembly::signatureToString(Sym.getSignature());
+    } else {
+      Op.getExpr()->print(O, &MAI);
+    }
   }
 }
 
@@ -266,7 +276,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
 
 // We have various enums representing a subset of these types, use this
 // function to convert any of them to text.
-const char *llvm::WebAssembly::anyTypeToString(unsigned Ty) {
+const char *WebAssembly::anyTypeToString(unsigned Ty) {
   switch (Ty) {
   case wasm::WASM_TYPE_I32:
     return "i32";
@@ -291,6 +301,24 @@ const char *llvm::WebAssembly::anyTypeToString(unsigned Ty) {
   }
 }
 
-const char *llvm::WebAssembly::typeToString(wasm::ValType Ty) {
+const char *WebAssembly::typeToString(wasm::ValType Ty) {
   return anyTypeToString(static_cast<unsigned>(Ty));
+}
+
+std::string WebAssembly::typeListToString(ArrayRef<wasm::ValType> List) {
+  std::string S;
+  for (auto &Ty : List) {
+    if (&Ty != &List[0]) S += ", ";
+    S += WebAssembly::typeToString(Ty);
+  }
+  return S;
+}
+
+std::string WebAssembly::signatureToString(const wasm::WasmSignature *Sig) {
+  std::string S("(");
+  S += typeListToString(Sig->Params);
+  S += ") -> (";
+  S += typeListToString(Sig->Returns);
+  S += ")";
+  return S;
 }

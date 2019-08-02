@@ -833,7 +833,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!TargetRegisterInfo::isVirtualRegister(Regs[Part+i]) ||
+      if (!Register::isVirtualRegister(Regs[Part + i]) ||
           !RegisterVT.isInteger())
         continue;
 
@@ -948,8 +948,7 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   unsigned Flag = InlineAsm::getFlagWord(Code, Regs.size());
   if (HasMatching)
     Flag = InlineAsm::getFlagWordForMatchingOp(Flag, MatchingIdx);
-  else if (!Regs.empty() &&
-           TargetRegisterInfo::isVirtualRegister(Regs.front())) {
+  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -9288,7 +9287,7 @@ SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!TargetRegisterInfo::isPhysicalRegister(Reg) && "Is a physreg");
+  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
@@ -9782,7 +9781,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // Update the SwiftErrorVRegDefMap.
     if (Res.getOpcode() == ISD::CopyFromReg && isSwiftErrorArg) {
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Register::isVirtualRegister(Reg))
         SwiftError->setCurrentVReg(FuncInfo->MBB, SwiftError->getFunctionArg(),
                                    Reg);
     }
@@ -9794,7 +9793,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // FIXME: This isn't very clean... it would be nice to make this more
       // general.
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         FuncInfo->ValueMap[&Arg] = Reg;
         continue;
       }

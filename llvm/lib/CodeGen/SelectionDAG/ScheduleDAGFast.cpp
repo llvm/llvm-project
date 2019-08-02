@@ -498,7 +498,7 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (TargetRegisterInfo::isPhysicalRegister(Reg))
+            if (Register::isPhysicalRegister(Reg))
               CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
           }
         } else

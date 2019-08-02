@@ -310,8 +310,10 @@ BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
 const StackFrameContext *
 AnalysisDeclContext::getStackFrame(LocationContext const *Parent, const Stmt *S,
-                               const CFGBlock *Blk, unsigned Idx) {
-  return getLocationContextManager().getStackFrame(this, Parent, S, Blk, Idx);
+                                   const CFGBlock *Blk, unsigned BlockCount,
+                                   unsigned Idx) {
+  return getLocationContextManager().getStackFrame(this, Parent, S, Blk,
+                                                   BlockCount, Idx);
 }
 
 const BlockInvocationContext *
@@ -359,7 +361,8 @@ void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
 }
 
 void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAnalysisDeclContext(), getParent(), CallSite, Block, Index);
+  Profile(ID, getAnalysisDeclContext(), getParent(), CallSite, Block,
+          BlockCount, Index);
 }
 
 void ScopeContext::Profile(llvm::FoldingSetNodeID &ID) {
@@ -392,18 +395,16 @@ LocationContextManager::getLocationContext(AnalysisDeclContext *ctx,
   return L;
 }
 
-const StackFrameContext*
-LocationContextManager::getStackFrame(AnalysisDeclContext *ctx,
-                                      const LocationContext *parent,
-                                      const Stmt *s,
-                                      const CFGBlock *blk, unsigned idx) {
+const StackFrameContext *LocationContextManager::getStackFrame(
+    AnalysisDeclContext *ctx, const LocationContext *parent, const Stmt *s,
+    const CFGBlock *blk, unsigned blockCount, unsigned idx) {
   llvm::FoldingSetNodeID ID;
-  StackFrameContext::Profile(ID, ctx, parent, s, blk, idx);
+  StackFrameContext::Profile(ID, ctx, parent, s, blk, blockCount, idx);
   void *InsertPos;
   auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(ctx, parent, s, blk, idx, ++NewID);
+    L = new StackFrameContext(ctx, parent, s, blk, blockCount, idx, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;

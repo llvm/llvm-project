@@ -62,7 +62,6 @@ LinkerDriver *driver;
 bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &diag) {
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorOS = &diag;
-  errorHandler().colorDiagnostics = diag.has_colors();
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now"
       " (use /errorlimit:0 to see all errors)";
@@ -184,8 +183,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     if (wholeArchive) {
       std::unique_ptr<Archive> file =
           CHECK(Archive::create(mbref), filename + ": failed to parse archive");
+      Archive *archive = file.get();
+      make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
-      for (MemoryBufferRef m : getArchiveMembers(file.get()))
+      for (MemoryBufferRef m : getArchiveMembers(archive))
         addArchiveBuffer(m, "<whole-archive>", filename, 0);
       return;
     }

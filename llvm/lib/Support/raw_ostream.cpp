@@ -65,6 +65,17 @@
 
 using namespace llvm;
 
+const raw_ostream::Color raw_ostream::BLACK;
+const raw_ostream::Color raw_ostream::RED;
+const raw_ostream::Color raw_ostream::GREEN;
+const raw_ostream::Color raw_ostream::YELLOW;
+const raw_ostream::Color raw_ostream::BLUE;
+const raw_ostream::Color raw_ostream::MAGENTA;
+const raw_ostream::Color raw_ostream::CYAN;
+const raw_ostream::Color raw_ostream::WHITE;
+const raw_ostream::Color raw_ostream::SAVEDCOLOR;
+const raw_ostream::Color raw_ostream::RESET;
+
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
   // in their destructors.
@@ -130,6 +141,14 @@ raw_ostream &raw_ostream::operator<<(long long N) {
 
 raw_ostream &raw_ostream::write_hex(unsigned long long N) {
   llvm::write_hex(*this, N, HexPrintStyle::Lower);
+  return *this;
+}
+
+raw_ostream &raw_ostream::operator<<(Color C) {
+  if (C == Color::RESET)
+    resetColor();
+  else
+    changeColor(C);
   return *this;
 }
 
@@ -552,8 +571,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
-    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose) {
-  if (FD < 0 ) {
+    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose),
+      ColorEnabled(sys::Process::FileDescriptorHasColors(fd)) {
+  if (FD < 0) {
     ShouldClose = false;
     return;
   }
@@ -782,13 +802,16 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
 #endif
 }
 
-raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
-                                         bool bg) {
+raw_ostream &raw_fd_ostream::changeColor(Color color, bool bold, bool bg) {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode =
-    (colors == SAVEDCOLOR) ? sys::Process::OutputBold(bg)
-    : sys::Process::OutputColor(colors, bold, bg);
+      (color == Color::SAVEDCOLOR)
+          ? sys::Process::OutputBold(bg)
+          : sys::Process::OutputColor(static_cast<char>(color), bold, bg);
   if (colorcode) {
     size_t len = strlen(colorcode);
     write(colorcode, len);
@@ -799,6 +822,9 @@ raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
 }
 
 raw_ostream &raw_fd_ostream::resetColor() {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode = sys::Process::ResetColor();
@@ -812,6 +838,9 @@ raw_ostream &raw_fd_ostream::resetColor() {
 }
 
 raw_ostream &raw_fd_ostream::reverseColor() {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode = sys::Process::OutputReverse();

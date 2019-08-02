@@ -608,14 +608,15 @@ public:
     llvm::raw_fd_ostream OutStream(FD, true);
     OutStream << Content;
     OutStream.close();
-    const FileEntry *File = Context.Files.getFile(Path);
-    assert(File != nullptr);
+    auto File = Context.Files.getFile(Path);
+    assert(File);
 
     StringRef Found =
         TemporaryFiles.insert(std::make_pair(Name, Path.str())).first->second;
     assert(Found == Path);
     (void)Found;
-    return Context.Sources.createFileID(File, SourceLocation(), SrcMgr::C_User);
+    return Context.Sources.createFileID(*File, SourceLocation(),
+                                        SrcMgr::C_User);
   }
 
   std::string getFileContentFromDisk(llvm::StringRef Name) {

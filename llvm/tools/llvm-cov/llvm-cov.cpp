@@ -83,13 +83,10 @@ int main(int argc, const char **argv) {
     }
   }
 
-  if (argc > 1) {
-    if (sys::Process::StandardErrHasColors())
-      errs().changeColor(raw_ostream::RED);
-    errs() << "Unrecognized command: " << argv[1] << ".\n\n";
-    if (sys::Process::StandardErrHasColors())
-      errs().resetColor();
-  }
+  if (argc > 1)
+    errs() << raw_ostream::RED << "Unrecognized command: " << argv[1] << ".\n\n"
+           << raw_ostream::RESET;
+
   helpMain(argc, argv);
   return 1;
 }

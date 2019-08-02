@@ -326,7 +326,7 @@ void SymbolTable::reportUnresolvable() {
     auto *undef = dyn_cast<Undefined>(sym);
     if (!undef)
       continue;
-    if (Defined *d = undef->getWeakAlias())
+    if (undef->getWeakAlias())
       continue;
     StringRef name = undef->getName();
     if (name.startswith("__imp_")) {

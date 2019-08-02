@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -97,7 +98,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     unsigned MachineReg, unsigned MaxSize) {
-  if (!TRI.isPhysicalRegister(MachineReg)) {
+  if (!llvm::Register::isPhysicalRegister(MachineReg)) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back({-1, 0, nullptr});
       return true;

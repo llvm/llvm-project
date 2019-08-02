@@ -22,6 +22,8 @@ WithColor::WithColor(raw_ostream &OS, HighlightColor Color, bool DisableColors)
     : OS(OS), DisableColors(DisableColors) {
   // Detect color from terminal type unless the user passed the --color option.
   if (colorsEnabled()) {
+    OS.enable_colors();
+
     switch (Color) {
     case HighlightColor::Address:
       OS.changeColor(raw_ostream::YELLOW);
@@ -104,10 +106,9 @@ bool WithColor::colorsEnabled() {
   return UseColor == cl::BOU_TRUE;
 }
 
-WithColor &WithColor::changeColor(raw_ostream::Colors Color, bool Bold,
-                                  bool BG) {
+WithColor &WithColor::changeColor(raw_ostream::Color C, bool Bold, bool BG) {
   if (colorsEnabled())
-    OS.changeColor(Color, Bold, BG);
+    OS.changeColor(C, Bold, BG);
   return *this;
 }
 

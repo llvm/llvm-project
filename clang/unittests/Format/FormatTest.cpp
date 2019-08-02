@@ -11086,6 +11086,9 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                "{\n"
                "  int x;\n"
                "};\n"
+               "union C\n"
+               "{\n"
+               "};\n"
                "} // namespace a",
                AllmanBraceStyle);
 

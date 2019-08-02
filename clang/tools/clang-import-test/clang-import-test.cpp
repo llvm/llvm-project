@@ -286,12 +286,12 @@ CIAndOrigins BuildIndirect(CIAndOrigins &CI) {
 llvm::Error ParseSource(const std::string &Path, CompilerInstance &CI,
                         ASTConsumer &Consumer) {
   SourceManager &SM = CI.getSourceManager();
-  const FileEntry *FE = CI.getFileManager().getFile(Path);
+  auto FE = CI.getFileManager().getFile(Path);
   if (!FE) {
     return llvm::make_error<llvm::StringError>(
         llvm::Twine("Couldn't open ", Path), std::error_code());
   }
-  SM.setMainFileID(SM.createFileID(FE, SourceLocation(), SrcMgr::C_User));
+  SM.setMainFileID(SM.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
   ParseAST(CI.getPreprocessor(), &Consumer, CI.getASTContext());
   return llvm::Error::success();
 }

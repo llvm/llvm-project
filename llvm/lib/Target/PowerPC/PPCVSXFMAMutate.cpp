@@ -127,7 +127,7 @@ protected:
           continue;
 
         unsigned AddendSrcReg = AddendMI->getOperand(1).getReg();
-        if (TargetRegisterInfo::isVirtualRegister(AddendSrcReg)) {
+        if (Register::isVirtualRegister(AddendSrcReg)) {
           if (MRI.getRegClass(AddendMI->getOperand(0).getReg()) !=
               MRI.getRegClass(AddendSrcReg))
             continue;
@@ -208,7 +208,7 @@ protected:
         // legality checks above, the live range for the addend source register
         // could be extended), but it seems likely that such a trivial copy can
         // be coalesced away later, and thus is not worth the effort.
-        if (TargetRegisterInfo::isVirtualRegister(AddendSrcReg) &&
+        if (Register::isVirtualRegister(AddendSrcReg) &&
             !LIS->getInterval(AddendSrcReg).liveAt(FMAIdx))
           continue;
 
@@ -314,7 +314,7 @@ protected:
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
         // is necessary only if it is a physical register.
-        if (!TargetRegisterInfo::isVirtualRegister(AddendSrcReg))
+        if (!Register::isVirtualRegister(AddendSrcReg))
           for (MCRegUnitIterator Units(AddendSrcReg, TRI); Units.isValid();
                ++Units) {
             unsigned Unit = *Units;

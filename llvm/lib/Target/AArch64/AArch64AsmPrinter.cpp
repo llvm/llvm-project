@@ -486,7 +486,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     llvm_unreachable("<unknown operand type>");
   case MachineOperand::MO_Register: {
     unsigned Reg = MO.getReg();
-    assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+    assert(Register::isPhysicalRegister(Reg));
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
     O << AArch64InstPrinter::getRegisterName(Reg);
     break;

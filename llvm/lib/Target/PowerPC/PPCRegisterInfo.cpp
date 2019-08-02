@@ -391,7 +391,7 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
 
 bool PPCRegisterInfo::isCallerPreservedPhysReg(unsigned PhysReg,
                                                const MachineFunction &MF) const {
-  assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
+  assert(Register::isPhysicalRegister(PhysReg));
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!TM.isPPC64())

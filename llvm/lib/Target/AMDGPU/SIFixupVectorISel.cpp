@@ -91,8 +91,7 @@ static bool findSRegBaseAndIndex(MachineOperand *Op,
   Worklist.push_back(Op);
   while (!Worklist.empty()) {
     MachineOperand *WOp = Worklist.pop_back_val();
-    if (!WOp->isReg() ||
-        !TargetRegisterInfo::isVirtualRegister(WOp->getReg()))
+    if (!WOp->isReg() || !Register::isVirtualRegister(WOp->getReg()))
       continue;
     MachineInstr *DefInst = MRI.getUniqueVRegDef(WOp->getReg());
     switch (DefInst->getOpcode()) {

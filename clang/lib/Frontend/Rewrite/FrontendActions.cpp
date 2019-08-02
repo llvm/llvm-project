@@ -211,16 +211,16 @@ public:
 
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    auto *File = CI.getFileManager().getFile(Filename);
+    auto File = CI.getFileManager().getFile(Filename);
     assert(File && "missing file for loaded module?");
 
     // Only rewrite each module file once.
-    if (!Rewritten.insert(File).second)
+    if (!Rewritten.insert(*File).second)
       return;
 
     serialization::ModuleFile *MF =
-        CI.getModuleManager()->getModuleManager().lookup(File);
-    assert(File && "missing module file for loaded module?");
+        CI.getModuleManager()->getModuleManager().lookup(*File);
+    assert(MF && "missing module file for loaded module?");
 
     // Not interested in PCH / preambles.
     if (!MF->isModule())

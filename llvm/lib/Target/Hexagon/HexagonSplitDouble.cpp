@@ -211,7 +211,7 @@ bool HexagonSplitDoubleRegs::isFixedInstr(const MachineInstr *MI) const {
     if (!Op.isReg())
       continue;
     unsigned R = Op.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(R))
+    if (!Register::isVirtualRegister(R))
       return true;
   }
   return false;
@@ -224,14 +224,14 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   unsigned NumRegs = MRI->getNumVirtRegs();
   BitVector DoubleRegs(NumRegs);
   for (unsigned i = 0; i < NumRegs; ++i) {
-    unsigned R = TargetRegisterInfo::index2VirtReg(i);
+    unsigned R = Register::index2VirtReg(i);
     if (MRI->getRegClass(R) == DoubleRC)
       DoubleRegs.set(i);
   }
 
   BitVector FixedRegs(NumRegs);
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
-    unsigned R = TargetRegisterInfo::index2VirtReg(x);
+    unsigned R = Register::index2VirtReg(x);
     MachineInstr *DefI = MRI->getVRegDef(R);
     // In some cases a register may exist, but never be defined or used.
     // It should never appear anywhere, but mark it as "fixed", just to be
@@ -244,7 +244,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
     if (FixedRegs[x])
       continue;
-    unsigned R = TargetRegisterInfo::index2VirtReg(x);
+    unsigned R = Register::index2VirtReg(x);
     LLVM_DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
     for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
@@ -259,13 +259,13 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         if (&MO == &Op || !MO.isReg() || MO.getSubReg())
           continue;
         unsigned T = MO.getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(T)) {
+        if (!Register::isVirtualRegister(T)) {
           FixedRegs.set(x);
           continue;
         }
         if (MRI->getRegClass(T) != DoubleRC)
           continue;
-        unsigned u = TargetRegisterInfo::virtReg2Index(T);
+        unsigned u = Register::virtReg2Index(T);
         if (FixedRegs[u])
           continue;
         LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));
@@ -281,7 +281,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
   unsigned NextP = 1;
   USet Visited;
   for (int x = DoubleRegs.find_first(); x >= 0; x = DoubleRegs.find_next(x)) {
-    unsigned R = TargetRegisterInfo::index2VirtReg(x);
+    unsigned R = Register::index2VirtReg(x);
     if (Visited.count(R))
       continue;
     // Create a new partition for R.
@@ -400,7 +400,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
 }
 
 int32_t HexagonSplitDoubleRegs::profit(unsigned Reg) const {
-  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(Register::isVirtualRegister(Reg));
 
   const MachineInstr *DefI = MRI->getVRegDef(Reg);
   switch (DefI->getOpcode()) {
@@ -605,7 +605,7 @@ void HexagonSplitDoubleRegs::createHalfInstr(unsigned Opc, MachineInstr *MI,
     // For register operands, set the subregister.
     unsigned R = Op.getReg();
     unsigned SR = Op.getSubReg();
-    bool isVirtReg = TargetRegisterInfo::isVirtualRegister(R);
+    bool isVirtReg = Register::isVirtualRegister(R);
     bool isKill = Op.isKill();
     if (isVirtReg && MRI->getRegClass(R) == DoubleRC) {
       isKill = false;
@@ -1105,7 +1105,7 @@ void HexagonSplitDoubleRegs::collapseRegPairs(MachineInstr *MI,
     if (!Op.isReg() || !Op.isUse())
       continue;
     unsigned R = Op.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(R))
+    if (!Register::isVirtualRegister(R))
       continue;
     if (MRI->getRegClass(R) != DoubleRC || Op.getSubReg())
       continue;

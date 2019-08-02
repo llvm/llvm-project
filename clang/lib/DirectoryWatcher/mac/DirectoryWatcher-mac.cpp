@@ -25,6 +25,24 @@ static void stopFSEventStream(FSEventStreamRef);
 
 namespace {
 
+/// This implementation is based on FSEvents API which implementation is
+/// aggressively coallescing events. This can manifest as duplicate events.
+///
+/// For example this scenario has been observed:
+///
+/// create foo/bar
+/// sleep 5 s
+/// create DirectoryWatcherMac for dir foo
+/// receive notification: bar EventKind::Modified
+/// sleep 5 s
+/// modify foo/bar
+/// receive notification: bar EventKind::Modified
+/// receive notification: bar EventKind::Modified
+/// sleep 5 s
+/// delete foo/bar
+/// receive notification: bar EventKind::Modified
+/// receive notification: bar EventKind::Modified
+/// receive notification: bar EventKind::Removed
 class DirectoryWatcherMac : public clang::DirectoryWatcher {
 public:
   DirectoryWatcherMac(

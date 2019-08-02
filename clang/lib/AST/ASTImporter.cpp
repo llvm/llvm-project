@@ -8442,13 +8442,13 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
         // disk again
         // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
         // than mmap the files several times.
-        const FileEntry *Entry =
+        auto Entry =
             ToFileManager.getFile(Cache->OrigEntry->getName());
         // FIXME: The filename may be a virtual name that does probably not
         // point to a valid file and we get no Entry here. In this case try with
         // the memory buffer below.
         if (Entry)
-          ToID = ToSM.createFileID(Entry, *ToIncludeLoc,
+          ToID = ToSM.createFileID(*Entry, *ToIncludeLoc,
                                    FromSLoc.getFile().getFileCharacteristic());
       }
     }

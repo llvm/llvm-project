@@ -98,7 +98,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
         break;
       }
-      if (TRI.isPhysicalRegister(MO.getReg())) {
+      if (Register::isPhysicalRegister(MO.getReg())) {
         DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                         dbgs() << CurrentIdx << ": Is a physical register\n");
         if (handleReject() == RejectAndGiveUp)

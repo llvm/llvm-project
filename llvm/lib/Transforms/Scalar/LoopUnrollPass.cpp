@@ -202,6 +202,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.UpperBound = false;
   UP.AllowPeeling = true;
   UP.UnrollAndJam = false;
+  UP.PeelProfiledIterations = true;
   UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Override with any target specific settings
@@ -1139,7 +1140,7 @@ static LoopUnrollResult tryToUnrollLoop(
   // If the loop was peeled, we already "used up" the profile information
   // we had, so we don't want to unroll or peel again.
   if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
-      (IsCountSetExplicitly || UP.PeelCount))
+      (IsCountSetExplicitly || (UP.PeelProfiledIterations && UP.PeelCount)))
     L->setLoopAlreadyUnrolled();
 
   return UnrollResult;

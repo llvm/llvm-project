@@ -20,10 +20,10 @@
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { i8* bitcast (i32* @bbb to i8*),
 // CHECK-DAG: @ccc = external global i32,
 // CHECK-DAG: @ddd ={{ dso_local | }}global i32 0,
-// CHECK-DAG: @hhh_decl_tgt_ref_ptr = common global i32* null
-// CHECK-DAG: @ggg_decl_tgt_ref_ptr = common global i32* null
-// CHECK-DAG: @fff_decl_tgt_ref_ptr = common global i32* null
-// CHECK-DAG: @eee_decl_tgt_ref_ptr = common global i32* null
+// CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak global i32* null
+// CHECK-DAG: @ggg_decl_tgt_ref_ptr = weak global i32* null
+// CHECK-DAG: @fff_decl_tgt_ref_ptr = weak global i32* null
+// CHECK-DAG: @eee_decl_tgt_ref_ptr = weak global i32* null
 // CHECK-DAG: @{{.*}}maini1{{.*}}aaa = internal global i64 23,
 // CHECK-DAG: @b ={{ dso_local | }}global i32 15,
 // CHECK-DAG: @d ={{ dso_local | }}global i32 0,
@@ -32,7 +32,7 @@
 // CHECK-DAG: [[STAT:@.+stat]] = internal global %struct.S zeroinitializer,
 // CHECK-DAG: [[STAT_REF:@.+]] = internal constant %struct.S* [[STAT]]
 // CHECK-DAG: @out_decl_target ={{ dso_local | }}global i32 0,
-// CHECK-DAG: @llvm.used = appending global [6 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+80]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+81]]_ctor to i8*),
+// CHECK-DAG: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+80]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+81]]_ctor to i8*)],
 // CHECK-DAG: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (%struct.S** [[STAT_REF]] to i8*)],
 
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()

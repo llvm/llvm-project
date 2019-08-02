@@ -46,7 +46,7 @@ struct CoverageViewOptions {
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,
-                                    raw_ostream::Colors Color) const {
+                                    raw_ostream::Color Color) const {
     return llvm::colored_ostream(OS, Color, Colors);
   }
 

@@ -1105,7 +1105,8 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
-    bool decomposeMulByConstant(EVT VT, SDValue C) const override;
+    bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                SDValue C) const override;
 
     bool shouldUseStrictFP_TO_INT(EVT FpVT, EVT IntVT,
                                   bool IsSigned) const override;

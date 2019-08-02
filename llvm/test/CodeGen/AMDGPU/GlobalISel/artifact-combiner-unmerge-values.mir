@@ -266,9 +266,16 @@ body:             |
     ; CHECK-LABEL: name: test_unmerge_values_s16_of_concat_vectors_v2s16_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s16>)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY1]](<2 x s16>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s16), implicit [[UV1]](s16), implicit [[UV2]](s16), implicit [[UV3]](s16)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16), implicit [[TRUNC2]](s16), implicit [[TRUNC3]](s16)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
     %2:_(<4 x s16>) = G_CONCAT_VECTORS %0, %1

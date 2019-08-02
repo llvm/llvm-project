@@ -373,7 +373,7 @@ static bool unsupportedBinOp(const MachineInstr &I,
     // so, this will need to be taught about that, and we'll need to get the
     // bank out of the minimal class for the register.
     // Either way, this needs to be documented (and possibly verified).
-    if (!TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+    if (!Register::isVirtualRegister(MO.getReg())) {
       LLVM_DEBUG(dbgs() << "Generic inst has physical register operand\n");
       return true;
     }
@@ -518,7 +518,7 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
       (DstSize == SrcSize ||
        // Copies are a mean to setup initial types, the number of
        // bits may not exactly match.
-       (TargetRegisterInfo::isPhysicalRegister(SrcReg) && DstSize <= SrcSize) ||
+       (Register::isPhysicalRegister(SrcReg) && DstSize <= SrcSize) ||
        // Copies are a mean to copy bits around, as long as we are
        // on the same register class, that's fine. Otherwise, that
        // means we need some SUBREG_TO_REG or AND & co.
@@ -555,7 +555,7 @@ static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
 
   // It's possible that the destination register won't be constrained. Make
   // sure that happens.
-  if (!TargetRegisterInfo::isPhysicalRegister(I.getOperand(0).getReg()))
+  if (!Register::isPhysicalRegister(I.getOperand(0).getReg()))
     RBI.constrainGenericRegister(I.getOperand(0).getReg(), *To, MRI);
 
   return true;
@@ -623,11 +623,10 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   // result.
   auto CheckCopy = [&]() {
     // If we have a bitcast or something, we can't have physical registers.
-    assert(
-        (I.isCopy() ||
-         (!TargetRegisterInfo::isPhysicalRegister(I.getOperand(0).getReg()) &&
-          !TargetRegisterInfo::isPhysicalRegister(I.getOperand(1).getReg()))) &&
-        "No phys reg on generic operator!");
+    assert((I.isCopy() ||
+            (!Register::isPhysicalRegister(I.getOperand(0).getReg()) &&
+             !Register::isPhysicalRegister(I.getOperand(1).getReg()))) &&
+           "No phys reg on generic operator!");
     assert(KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI));
     (void)KnownValid;
     return true;
@@ -690,7 +689,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     // If the destination is a physical register, then there's nothing to
     // change, so we're done.
-    if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+    if (Register::isPhysicalRegister(DstReg))
       return CheckCopy();
   }
 
@@ -3355,7 +3354,7 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
 
     // Can't see past copies from physregs.
     if (Opc == TargetOpcode::COPY &&
-        TargetRegisterInfo::isPhysicalRegister(CondDef->getOperand(1).getReg()))
+        Register::isPhysicalRegister(CondDef->getOperand(1).getReg()))
       return false;
 
     CondDef = MRI.getVRegDef(CondDef->getOperand(1).getReg());

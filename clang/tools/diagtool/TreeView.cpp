@@ -20,29 +20,16 @@ DEF_DIAGTOOL("tree", "Show warning flags in a tree view", TreeView)
 using namespace clang;
 using namespace diagtool;
 
-static bool hasColors(const llvm::raw_ostream &out) {
-  if (&out != &llvm::errs() && &out != &llvm::outs())
-    return false;
-  return llvm::errs().is_displayed() && llvm::outs().is_displayed();
-}
-
 class TreePrinter {
+  using Color = llvm::raw_ostream::Color;
+
 public:
   llvm::raw_ostream &out;
-  const bool ShowColors;
   bool Internal;
 
-  TreePrinter(llvm::raw_ostream &out)
-      : out(out), ShowColors(hasColors(out)), Internal(false) {}
-
-  void setColor(llvm::raw_ostream::Colors Color) {
-    if (ShowColors)
-      out << llvm::sys::Process::OutputColor(Color, false, false);
-  }
-
-  void resetColor() {
-    if (ShowColors)
-      out << llvm::sys::Process::ResetColor();
+  TreePrinter(llvm::raw_ostream &out) : out(out), Internal(false) {
+    if (&out != &llvm::errs() && &out != &llvm::outs())
+      out.disable_colors();
   }
 
   static bool isIgnored(unsigned DiagID) {
@@ -70,12 +57,11 @@ public:
     out.indent(Indent * 2);
 
     if (enabledByDefault(Group))
-      setColor(llvm::raw_ostream::GREEN);
+      out << Color::GREEN;
     else
-      setColor(llvm::raw_ostream::YELLOW);
+      out << Color::YELLOW;
 
-    out << "-W" << Group.getName() << "\n";
-    resetColor();
+    out << "-W" << Group.getName() << "\n" << Color::RESET;
 
     ++Indent;
     for (const GroupRecord &GR : Group.subgroups()) {
@@ -84,12 +70,10 @@ public:
 
     if (Internal) {
       for (const DiagnosticRecord &DR : Group.diagnostics()) {
-        if (ShowColors && !isIgnored(DR.DiagID))
-          setColor(llvm::raw_ostream::GREEN);
+        if (!isIgnored(DR.DiagID))
+          out << Color::GREEN;
         out.indent(Indent * 2);
-        out << DR.getName();
-        resetColor();
-        out << "\n";
+        out << DR.getName() << Color::RESET << "\n";
       }
     }
   }
@@ -135,13 +119,9 @@ public:
   }
 
   void showKey() {
-    if (ShowColors) {
-      out << '\n';
-      setColor(llvm::raw_ostream::GREEN);
-      out << "GREEN";
-      resetColor();
-      out << " = enabled by default\n\n";
-    }
+    out << '\n'
+        << Color::GREEN << "GREEN" << Color::RESET
+        << " = enabled by default\n\n";
   }
 };
 

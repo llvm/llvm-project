@@ -27,7 +27,7 @@ enum ASTDumpOutputFormat {
 // Do not use bold yellow for any text.  It is hard to read on white screens.
 
 struct TerminalColor {
-  llvm::raw_ostream::Colors Color;
+  llvm::raw_ostream::Color Color;
   bool Bold;
 };
 

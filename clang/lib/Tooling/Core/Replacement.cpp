@@ -67,11 +67,11 @@ bool Replacement::isApplicable() const {
 
 bool Replacement::apply(Rewriter &Rewrite) const {
   SourceManager &SM = Rewrite.getSourceMgr();
-  const FileEntry *Entry = SM.getFileManager().getFile(FilePath);
+  auto Entry = SM.getFileManager().getFile(FilePath);
   if (!Entry)
     return false;
 
-  FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
+  FileID ID = SM.getOrCreateFileID(*Entry, SrcMgr::C_User);
   const SourceLocation Start =
     SM.getLocForStartOfFile(ID).
     getLocWithOffset(ReplacementRange.getOffset());
@@ -591,7 +591,8 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   Rewriter Rewrite(SourceMgr, LangOptions());
   InMemoryFileSystem->addFile(
       "<stdin>", 0, llvm::MemoryBuffer::getMemBuffer(Code, "<stdin>"));
-  FileID ID = SourceMgr.createFileID(Files.getFile("<stdin>"), SourceLocation(),
+  FileID ID = SourceMgr.createFileID(*Files.getFile("<stdin>"),
+                                     SourceLocation(),
                                      clang::SrcMgr::C_User);
   for (auto I = Replaces.rbegin(), E = Replaces.rend(); I != E; ++I) {
     Replacement Replace("<stdin>", I->getOffset(), I->getLength(),
@@ -613,10 +614,10 @@ std::map<std::string, Replacements> groupReplacementsByFile(
   std::map<std::string, Replacements> Result;
   llvm::SmallPtrSet<const FileEntry *, 16> ProcessedFileEntries;
   for (const auto &Entry : FileToReplaces) {
-    const FileEntry *FE = FileMgr.getFile(Entry.first);
+    auto FE = FileMgr.getFile(Entry.first);
     if (!FE)
       llvm::errs() << "File path " << Entry.first << " is invalid.\n";
-    else if (ProcessedFileEntries.insert(FE).second)
+    else if (ProcessedFileEntries.insert(*FE).second)
       Result[Entry.first] = std::move(Entry.second);
   }
   return Result;

@@ -87,7 +87,6 @@ public:
   StringRef errorLimitExceededMsg = "too many errors emitted, stopping now";
   StringRef logName = "lld";
   llvm::raw_ostream *errorOS = &llvm::errs();
-  bool colorDiagnostics = llvm::errs().has_colors();
   bool exitEarly = true;
   bool fatalWarnings = false;
   bool verbose = false;
@@ -102,9 +101,9 @@ public:
   std::unique_ptr<llvm::FileOutputBuffer> outputBuffer;
 
 private:
-  void printHeader(StringRef s, raw_ostream::Colors c, const Twine &msg);
-  void printErrorMsg(const Twine &msg);
-  void printError(const Twine &msg);
+  using Color = raw_ostream::Color;
+
+  std::string getLocation(const Twine &msg);
 };
 
 /// Returns the default error handler.

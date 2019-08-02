@@ -372,8 +372,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       report_fatal_error("Use not jointly dominated by defs.");
     }
 
-    if (TargetRegisterInfo::isPhysicalRegister(PhysReg) &&
-        !MBB->isLiveIn(PhysReg)) {
+    if (Register::isPhysicalRegister(PhysReg) && !MBB->isLiveIn(PhysReg)) {
       MBB->getParent()->verify();
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       errs() << "The register " << printReg(PhysReg, TRI)

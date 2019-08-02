@@ -122,7 +122,7 @@ namespace {
     // Add Reg and any sub-registers to RV
     void addRegWithSubRegs(RegVector &RV, unsigned Reg) {
       RV.push_back(Reg);
-      if (TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (Register::isPhysicalRegister(Reg))
         for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
           RV.push_back(*SubRegs);
     }
@@ -159,7 +159,7 @@ namespace {
       // Add register to vregsPassed if it belongs there. Return true if
       // anything changed.
       bool addPassed(unsigned Reg) {
-        if (!TargetRegisterInfo::isVirtualRegister(Reg))
+        if (!Register::isVirtualRegister(Reg))
           return false;
         if (regsKilled.count(Reg) || regsLiveOut.count(Reg))
           return false;
@@ -178,7 +178,7 @@ namespace {
       // Add register to vregsRequired if it belongs there. Return true if
       // anything changed.
       bool addRequired(unsigned Reg) {
-        if (!TargetRegisterInfo::isVirtualRegister(Reg))
+        if (!Register::isVirtualRegister(Reg))
           return false;
         if (regsLiveOut.count(Reg))
           return false;
@@ -552,7 +552,7 @@ void MachineVerifier::report_context_vreg(unsigned VReg) const {
 }
 
 void MachineVerifier::report_context_vreg_regunit(unsigned VRegOrUnit) const {
-  if (TargetRegisterInfo::isVirtualRegister(VRegOrUnit)) {
+  if (Register::isVirtualRegister(VRegOrUnit)) {
     report_context_vreg(VRegOrUnit);
   } else {
     errs() << "- regunit:     " << printRegUnit(VRegOrUnit, TRI) << '\n';
@@ -797,7 +797,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   regsLive.clear();
   if (MRI->tracksLiveness()) {
     for (const auto &LI : MBB->liveins()) {
-      if (!TargetRegisterInfo::isPhysicalRegister(LI.PhysReg)) {
+      if (!Register::isPhysicalRegister(LI.PhysReg)) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
@@ -957,7 +957,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   // Generic opcodes must not have physical register operands.
   for (unsigned I = 0; I < MI->getNumOperands(); ++I) {
     const MachineOperand *MO = &MI->getOperand(I);
-    if (MO->isReg() && TargetRegisterInfo::isPhysicalRegister(MO->getReg()))
+    if (MO->isReg() && Register::isPhysicalRegister(MO->getReg()))
       report("Generic instruction cannot have physical register", MO, I);
   }
 
@@ -1525,11 +1525,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Operand should be tied", MO, MONum);
       else if (unsigned(TiedTo) != MI->findTiedOperandIdx(MONum))
         report("Tied def doesn't match MCInstrDesc", MO, MONum);
-      else if (TargetRegisterInfo::isPhysicalRegister(MO->getReg())) {
+      else if (Register::isPhysicalRegister(MO->getReg())) {
         const MachineOperand &MOTied = MI->getOperand(TiedTo);
         if (!MOTied.isReg())
           report("Tied counterpart must be a register", &MOTied, TiedTo);
-        else if (TargetRegisterInfo::isPhysicalRegister(MOTied.getReg()) &&
+        else if (Register::isPhysicalRegister(MOTied.getReg()) &&
                  MO->getReg() != MOTied.getReg())
           report("Tied physical registers must match.", &MOTied, TiedTo);
       }
@@ -1581,7 +1581,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     // Check register classes.
     unsigned SubIdx = MO->getSubReg();
 
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    if (Register::isPhysicalRegister(Reg)) {
       if (SubIdx) {
         report("Illegal subregister index for physical register", MO, MONum);
         return;
@@ -1817,7 +1817,7 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
   if (MO->isDead()) {
     LiveQueryResult LRQ = LR.Query(DefIdx);
     if (!LRQ.isDeadDef()) {
-      assert(TargetRegisterInfo::isVirtualRegister(VRegOrUnit) &&
+      assert(Register::isVirtualRegister(VRegOrUnit) &&
              "Expecting a virtual register.");
       // A dead subreg def only tells us that the specific subreg is dead. There
       // could be other non-dead defs of other subregs, or we could have other
@@ -1845,8 +1845,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsKilled, Reg);
 
     // Check that LiveVars knows this kill.
-    if (LiveVars && TargetRegisterInfo::isVirtualRegister(Reg) &&
-        MO->isKill()) {
+    if (LiveVars && Register::isVirtualRegister(Reg) && MO->isKill()) {
       LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
       if (!is_contained(VI.Kills, MI))
         report("Kill missing from LiveVariables", MO, MONum);
@@ -1856,7 +1855,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {
       SlotIndex UseIdx = LiveInts->getInstructionIndex(*MI);
       // Check the cached regunit intervals.
-      if (TargetRegisterInfo::isPhysicalRegister(Reg) && !isReserved(Reg)) {
+      if (Register::isPhysicalRegister(Reg) && !isReserved(Reg)) {
         for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
           if (MRI->isReservedRegUnit(*Units))
             continue;
@@ -1865,7 +1864,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         }
       }
 
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         if (LiveInts->hasInterval(Reg)) {
           // This is a virtual register interval.
           const LiveInterval &LI = LiveInts->getInterval(Reg);
@@ -1900,7 +1899,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
     // Use of a dead register.
     if (!regsLive.count(Reg)) {
-      if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+      if (Register::isPhysicalRegister(Reg)) {
         // Reserved registers may be used even when 'dead'.
         bool Bad = !isReserved(Reg);
         // We are fine if just any subregister has a defined value.
@@ -1922,7 +1921,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!MOP.isReg() || !MOP.isImplicit())
               continue;
 
-            if (!TargetRegisterInfo::isPhysicalRegister(MOP.getReg()))
+            if (!Register::isPhysicalRegister(MOP.getReg()))
               continue;
 
             for (MCSubRegIterator SubRegs(MOP.getReg(), TRI); SubRegs.isValid();
@@ -1960,7 +1959,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDefined, Reg);
 
     // Verify SSA form.
-    if (MRI->isSSA() && TargetRegisterInfo::isVirtualRegister(Reg) &&
+    if (MRI->isSSA() && Register::isVirtualRegister(Reg) &&
         std::next(MRI->def_begin(Reg)) != MRI->def_end())
       report("Multiple virtual register defs in SSA form", MO, MONum);
 
@@ -1969,7 +1968,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       SlotIndex DefIdx = LiveInts->getInstructionIndex(*MI);
       DefIdx = DefIdx.getRegSlot(MO->isEarlyClobber());
 
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         if (LiveInts->hasInterval(Reg)) {
           const LiveInterval &LI = LiveInts->getInterval(Reg);
           checkLivenessAtDef(MO, MONum, DefIdx, LI, Reg);
@@ -2007,7 +2006,7 @@ void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
   while (!regMasks.empty()) {
     const uint32_t *Mask = regMasks.pop_back_val();
     for (RegSet::iterator I = regsLive.begin(), E = regsLive.end(); I != E; ++I)
-      if (TargetRegisterInfo::isPhysicalRegister(*I) &&
+      if (Register::isPhysicalRegister(*I) &&
           MachineOperand::clobbersPhysReg(Mask, *I))
         regsDead.push_back(*I);
   }
@@ -2120,7 +2119,7 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
         MODef.isEarlyClobber() || MODef.isDebug())
       report("Unexpected flag on PHI operand", &MODef, 0);
     unsigned DefReg = MODef.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(DefReg))
+    if (!Register::isVirtualRegister(DefReg))
       report("Expected first PHI operand to be a virtual register", &MODef, 0);
 
     for (unsigned I = 1, E = Phi.getNumOperands(); I != E; I += 2) {
@@ -2212,7 +2211,7 @@ void MachineVerifier::visitMachineFunctionAfter() {
 void MachineVerifier::verifyLiveVariables() {
   assert(LiveVars && "Don't call verifyLiveVariables without LiveVars");
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
     for (const auto &MBB : *MF) {
       BBInfo &MInfo = MBBInfoMap[&MBB];
@@ -2238,7 +2237,7 @@ void MachineVerifier::verifyLiveVariables() {
 void MachineVerifier::verifyLiveIntervals() {
   assert(LiveInts && "Don't call verifyLiveIntervals without LiveInts");
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
 
     // Spilling and splitting may leave unused registers around. Skip them.
     if (MRI->reg_nodbg_empty(Reg))
@@ -2315,11 +2314,11 @@ void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
     for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
       if (!MOI->isReg() || !MOI->isDef())
         continue;
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         if (MOI->getReg() != Reg)
           continue;
       } else {
-        if (!TargetRegisterInfo::isPhysicalRegister(MOI->getReg()) ||
+        if (!Register::isPhysicalRegister(MOI->getReg()) ||
             !TRI->hasRegUnit(MOI->getReg(), Reg))
           continue;
       }
@@ -2402,7 +2401,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     return;
 
   // RegUnit intervals are allowed dead phis.
-  if (!TargetRegisterInfo::isVirtualRegister(Reg) && VNI->isPHIDef() &&
+  if (!Register::isVirtualRegister(Reg) && VNI->isPHIDef() &&
       S.start == VNI->def && S.end == VNI->def.getDeadSlot())
     return;
 
@@ -2446,7 +2445,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
 
   // The following checks only apply to virtual registers. Physreg liveness
   // is too weird to check.
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     // A live segment can end with either a redefinition, a kill flag on a
     // use, or a dead flag on a def.
     bool hasRead = false;
@@ -2519,8 +2518,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
   while (true) {
     assert(LiveInts->isLiveInToMBB(LR, &*MFI));
     // We don't know how to track physregs into a landing pad.
-    if (!TargetRegisterInfo::isVirtualRegister(Reg) &&
-        MFI->isEHPad()) {
+    if (!Register::isVirtualRegister(Reg) && MFI->isEHPad()) {
       if (&*MFI == EndMBB)
         break;
       ++MFI;
@@ -2580,7 +2578,7 @@ void MachineVerifier::verifyLiveRange(const LiveRange &LR, unsigned Reg,
 
 void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
   unsigned Reg = LI.reg;
-  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(Register::isVirtualRegister(Reg));
   verifyLiveRange(LI, Reg);
 
   LaneBitmask Mask;

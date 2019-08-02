@@ -11,7 +11,7 @@
 // permitted to use language features which require a C++ ABI library.
 //
 // Most of the implementation lives in an ABI-specific source file
-// (ubsan_type_hash_{itanium,win}.cc).
+// (ubsan_type_hash_{itanium,win}.cpp).
 //
 //===----------------------------------------------------------------------===//
 

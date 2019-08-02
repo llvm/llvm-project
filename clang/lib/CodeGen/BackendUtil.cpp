@@ -1117,6 +1117,16 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // code generation.
       MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/false));
 
+      // At -O0, we can still do PGO. Add all the requested passes for
+      // instrumentation PGO, if requested.
+      if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
+                     PGOOpt->Action == PGOOptions::IRUse))
+        PB.addPGOInstrPassesForO0(
+            MPM, CodeGenOpts.DebugPassManager,
+            /* RunProfileGen */ (PGOOpt->Action == PGOOptions::IRInstr),
+            /* IsCS */ false, PGOOpt->ProfileFile,
+            PGOOpt->ProfileRemappingFile);
+
       // At -O0 we directly run necessary sanitizer passes.
       if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
         MPM.addPass(createModuleToFunctionPassAdaptor(BoundsCheckingPass()));
