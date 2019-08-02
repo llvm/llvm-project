@@ -10,7 +10,7 @@
 
 UGEN(sin)
 
-half
+REQUIRES_16BIT_INSTS half
 MATH_MANGLE(sin)(half x)
 {
     struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F16(x));

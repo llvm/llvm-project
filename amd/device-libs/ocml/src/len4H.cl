@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(len4)(half x, half y, half z, half w)
 {
     float fx = (float)x;

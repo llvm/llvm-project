@@ -8,11 +8,11 @@
 #include "mathH.h"
 
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(native_rcp)(half x)
 {
     // FIXME: Should use IR fdiv with arcp set.
-    return __llvm_amdgcn_rcp_f16(x);
+    return __builtin_amdgcn_rcph(x);
 }
 
 CONSTATTR half
@@ -21,10 +21,10 @@ MATH_MANGLE(native_sqrt)(half x)
     return __llvm_sqrt_f16(x);
 }
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(native_rsqrt)(half x)
 {
-    return __llvm_amdgcn_rsq_f16(x);
+    return __builtin_amdgcn_rsqh(x);
 }
 
 CONSTATTR half

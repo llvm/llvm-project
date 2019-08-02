@@ -138,19 +138,6 @@ extern uint __llvm_cmpxchg_a3_x_x_wg_i32(__local uint *, uint, uint);
 extern ulong __llvm_cmpxchg_a3_x_x_wg_i64(__local ulong *, ulong, ulong);
 
 // AMDGPU intrinsics
-extern __attribute__((const)) bool __llvm_amdgcn_class_f16(half, int) __asm("llvm.amdgcn.class.f16");
-
-extern __attribute__((const)) half __llvm_amdgcn_fract_f16(half) __asm("llvm.amdgcn.fract.f16");
-extern __attribute__((const)) half __llvm_amdgcn_rcp_f16(half) __asm("llvm.amdgcn.rcp.f16");
-extern __attribute__((const)) half __llvm_amdgcn_rsq_f16(half) __asm("llvm.amdgcn.rsq.f16");
-extern __attribute__((const)) half __llvm_amdgcn_ldexp_f16(half, int) __asm("llvm.amdgcn.ldexp.f16");
-
-
-extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llvm.amdgcn.frexp.mant.f16");
-extern __attribute__((const)) short __llvm_amdgcn_frexp_exp_i16_f16(half) __asm("llvm.amdgcn.frexp.exp.i16.f16");
-
-extern __attribute__((const)) half __llvm_amdgcn_fmed3_f16(half, half, half) __asm("llvm.amdgcn.fmed3.f16");
-
 extern __attribute__((const)) uint __llvm_amdgcn_wavefrontsize(void) __asm("llvm.amdgcn.wavefrontsize");
 
 // llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>

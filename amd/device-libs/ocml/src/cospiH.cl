@@ -10,7 +10,7 @@
 
 UGEN(cospi)
 
-half
+REQUIRES_16BIT_INSTS half
 MATH_MANGLE(cospi)(half x)
 {
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));

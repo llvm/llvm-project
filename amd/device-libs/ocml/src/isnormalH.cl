@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR short2
+REQUIRES_16BIT_INSTS CONSTATTR short2
 MATH_MANGLE2(isnormal)(half2 x)
 {
     return (short2)
@@ -15,7 +15,7 @@ MATH_MANGLE2(isnormal)(half2 x)
          BUILTIN_CLASS_F16(x.hi, CLASS_PNOR|CLASS_NNOR) ? (short)-1 : (short)0);
 }
 
-CONSTATTR int
+REQUIRES_16BIT_INSTS CONSTATTR int
 MATH_MANGLE(isnormal)(half x)
 {
     return BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_NNOR);

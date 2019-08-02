@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(asinh)
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(asinh)(half hx)
 {
     half ret;

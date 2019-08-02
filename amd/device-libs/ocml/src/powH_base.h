@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(half x, half y)
 #elif defined(COMPILING_POWN)

@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(rcbrt)
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(rcbrt)(half x)
 {
     half ret = (half)BUILTIN_EXP2_F32(-0x1.555556p-2f * BUILTIN_LOG2_F32((float)BUILTIN_ABS_F16(x)));

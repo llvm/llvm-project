@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(rhypot)
 
-CONSTATTR half
+REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(rhypot)(half x, half y)
 {
     float fx = (float)x;
