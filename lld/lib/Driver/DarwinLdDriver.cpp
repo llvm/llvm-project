@@ -1151,7 +1151,6 @@ bool link(llvm::ArrayRef<const char *> args, bool CanExitEarly,
       "'-error-limit 0' to see all errors)";
   errorHandler().errorOS = &Error;
   errorHandler().exitEarly = CanExitEarly;
-  errorHandler().colorDiagnostics = Error.has_colors();
 
   MachOLinkingContext ctx;
   if (!parse(args, ctx))

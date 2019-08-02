@@ -28,35 +28,38 @@ NOINLINE void oob_test(int size, int off) {
   free_aaa(p);
 }
 
+static std::string GetLeftOOBMessage(int off) {
+  char str[100];
+  sprintf(str, "is located.*%d byte.*to the left", off);
+  return str;
+}
+
+static std::string GetRightOOBMessage(int off) {
+  char str[100];
+  // FIXME: Fix PR42868 and remove SEGV match.
+  sprintf(str, "(is located.*%d byte.*to the right|SEGV)", off);
+  return str;
+}
+
 template<typename T>
 void OOBTest() {
-  char expected_str[100];
   for (int size = sizeof(T); size < 20; size += 5) {
-    for (int i = -5; i < 0; i++) {
-      const char *str =
-          "is located.*%d byte.*to the left";
-      sprintf(expected_str, str, abs(i));
-      EXPECT_DEATH(oob_test<T>(size, i), expected_str);
-    }
+    for (int i = -5; i < 0; i++)
+      EXPECT_DEATH(oob_test<T>(size, i), GetLeftOOBMessage(-i));
 
     for (int i = 0; i < (int)(size - sizeof(T) + 1); i++)
       oob_test<T>(size, i);
 
     for (int i = size - sizeof(T) + 1; i <= (int)(size + 2 * sizeof(T)); i++) {
-      const char *str =
-          "is located.*%d byte.*to the right";
-      int off = i >= size ? (i - size) : 0;
       // we don't catch unaligned partially OOB accesses.
       if (i % sizeof(T)) continue;
-      sprintf(expected_str, str, off);
-      EXPECT_DEATH(oob_test<T>(size, i), expected_str);
+      int off = i >= size ? (i - size) : 0;
+      EXPECT_DEATH(oob_test<T>(size, i), GetRightOOBMessage(off));
     }
   }
 
-  EXPECT_DEATH(oob_test<T>(kLargeMalloc, -1),
-          "is located.*1 byte.*to the left");
-  EXPECT_DEATH(oob_test<T>(kLargeMalloc, kLargeMalloc),
-          "is located.*0 byte.*to the right");
+  EXPECT_DEATH(oob_test<T>(kLargeMalloc, -1), GetLeftOOBMessage(1));
+  EXPECT_DEATH(oob_test<T>(kLargeMalloc, kLargeMalloc), GetRightOOBMessage(0));
 }
 
 // TODO(glider): the following tests are EXTREMELY slow on Darwin:
@@ -87,12 +90,8 @@ TEST(AddressSanitizer, OOBRightTest) {
           asan_write_sized_aligned(addr, access_size);
         } else {
           int outside_bytes = offset > alloc_size ? (offset - alloc_size) : 0;
-          const char *str =
-              "is located.%d *byte.*to the right";
-          char expected_str[100];
-          sprintf(expected_str, str, outside_bytes);
           EXPECT_DEATH(asan_write_sized_aligned(addr, access_size),
-                       expected_str);
+                       GetRightOOBMessage(outside_bytes));
         }
         free(p);
       }
@@ -105,7 +104,7 @@ TEST(AddressSanitizer, LargeOOBRightTest) {
   for (size_t i = 16; i <= 256; i *= 2) {
     size_t size = large_power_of_two - i;
     char *p = Ident(new char[size]);
-    EXPECT_DEATH(p[size] = 0, "is located 0 bytes to the right");
+    EXPECT_DEATH(p[size] = 0, GetRightOOBMessage(0));
     delete [] p;
   }
 }

@@ -94,7 +94,7 @@ run_lint ${TSAN_RTL_LINT_FILTER} ${TSAN_RTL}/rtl/*.cpp \
 run_lint ${TSAN_TEST_LINT_FILTER} ${TSAN_RTL}/tests/rtl/*.cpp \
                                   ${TSAN_RTL}/tests/rtl/*.h \
                                   ${TSAN_RTL}/tests/unit/*.cpp &
-run_lint ${TSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/tsan/*.cc &
+run_lint ${TSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/tsan/*.cpp &
 
 # MSan
 MSAN_RTL=${COMPILER_RT}/lib/msan

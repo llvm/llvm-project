@@ -62,7 +62,6 @@ LinkerDriver *driver;
 bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &diag) {
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorOS = &diag;
-  errorHandler().colorDiagnostics = diag.has_colors();
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now"
       " (use /errorlimit:0 to see all errors)";

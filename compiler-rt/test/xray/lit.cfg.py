@@ -51,7 +51,7 @@ config.substitutions.append(
         % (libdl_flag, config.compiler_rt_libdir, config.target_suffix)))
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['FreeBSD', 'Linux', 'NetBSD', 'OpenBSD']:
   config.unsupported = True
