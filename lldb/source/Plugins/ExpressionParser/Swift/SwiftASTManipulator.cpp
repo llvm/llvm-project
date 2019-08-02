@@ -1332,8 +1332,11 @@ bool SwiftASTManipulator::FixCaptures() {
          impl.getWriteImpl() != swift::WriteImplKind::Immutable))
       continue;
 
-    swift::FuncDecl *getter_decl = variable.m_decl->getGetter();
-    swift::FuncDecl *setter_decl = variable.m_decl->getSetter();
+    // FIXME: What about _read and _modify?
+    swift::FuncDecl *getter_decl = variable.m_decl->getAccessor(
+        swift::AccessorKind::Get);
+    swift::FuncDecl *setter_decl = variable.m_decl->getAccessor(
+        swift::AccessorKind::Set);
 
     swift::DeclContext *decl_context = variable.m_decl->getDeclContext();
 
