@@ -15,6 +15,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -57,6 +58,8 @@ public:
   void GetFunction(Function **fct, lldb::addr_t pc);
 
   bool PCIsInstructionReturn(lldb::addr_t pc);
+
+  bool GetUnwindPlanSP(Function *fct, lldb::UnwindPlanSP &unwind_plan_sp);
 
 private:
   bool LookForRegisterLocation(const RegisterInfo *reg_info, lldb::addr_t &addr);

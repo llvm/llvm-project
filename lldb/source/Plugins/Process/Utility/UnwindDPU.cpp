@@ -67,10 +67,9 @@ uint32_t UnwindDPU::DoGetFrameCount() {
 
   // If we are in the 2 first instruction of the function, or in the return
   // instruction of the function, the information to get the next frame are not
-  // the same as usual. r22 is already the good one (previous frame does not
-  // have the good value for r22, but it's normal as its frame is not yet set,
-  // let's just add 1 to it so that we are sure that it will be seen as the
-  // youngest one when comparing StackID). pc is in r23.
+  // the same as usual.
+  // r22 is already the good one.
+  // pc is in r23.
   Function *fct = NULL;
   lldb::addr_t start_addr = 0;
   prev_frame->reg_ctx_sp->GetFunction(&fct, first_pc_addr);
@@ -79,7 +78,27 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   }
   if (((first_pc_addr >= start_addr) && (first_pc_addr < (start_addr + 16))) ||
       prev_frame->reg_ctx_sp->PCIsInstructionReturn(first_pc_addr)) {
-    prev_frame->cfa++;
+
+    // Check if we have the stack size save in the cfi information.
+    // If we have it, use it to set the cfa in order to have it set to the right
+    // value from the beginning so that comparison between frame always give the
+    // expected answer.
+    // If we don't have it, or it is 0, add 1 to the stack in order to
+    // differenciate it from the previous frame (StackID comparison).
+    UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
+    int32_t cfa_offset = 1;
+    if (fct != NULL &&
+        prev_frame->reg_ctx_sp->GetUnwindPlanSP(fct, unwind_plan_sp)) {
+      if (!unwind_plan_sp->IsValidRowIndex(0)) {
+        prev_frame->cfa++;
+      } else {
+        UnwindPlan::RowSP row = unwind_plan_sp->GetRowAtIndex(0);
+        int32_t new_cfa_offset = row->GetCFAValue().GetOffset();
+        if (new_cfa_offset != 0)
+          cfa_offset = -new_cfa_offset;
+      }
+    }
+    prev_frame->cfa += cfa_offset;
     RegisterValue reg_r23;
     reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
     SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()));

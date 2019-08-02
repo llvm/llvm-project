@@ -120,6 +120,21 @@ bool RegisterContextDPU::PCInPrologue(lldb::addr_t start_addr,
   return m_pc >= start_addr && m_pc < end_addr;
 }
 
+bool RegisterContextDPU::GetUnwindPlanSP(Function *fct,
+                                         lldb::UnwindPlanSP &unwind_plan_sp) {
+  Address pc_addr = fct->GetAddressRange().GetBaseAddress();
+  ModuleSP module_sp(pc_addr.GetModule());
+  DWARFCallFrameInfo *debug_frame =
+      module_sp->GetObjectFile()->GetUnwindTable().GetDebugFrameInfo();
+
+  if (debug_frame) {
+    debug_frame->GetUnwindPlan(pc_addr, *unwind_plan_sp);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 bool RegisterContextDPU::LookForRegisterLocation(const RegisterInfo *reg_info,
                                                  lldb::addr_t &addr) {
   Function *fct = NULL;
@@ -128,18 +143,10 @@ bool RegisterContextDPU::LookForRegisterLocation(const RegisterInfo *reg_info,
     return false;
   }
 
-  Address pc_addr = fct->GetAddressRange().GetBaseAddress();
-  ModuleSP module_sp(pc_addr.GetModule());
-  DWARFCallFrameInfo *debug_frame =
-      module_sp->GetObjectFile()->GetUnwindTable().GetDebugFrameInfo();
-
-  if (debug_frame) {
+  UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
+  if (GetUnwindPlanSP(fct, unwind_plan_sp)) {
     uint32_t row_id = 0;
-    UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
-
     addr = LLDB_INVALID_ADDRESS;
-
-    debug_frame->GetUnwindPlan(pc_addr, *unwind_plan_sp);
     while (unwind_plan_sp->IsValidRowIndex(row_id)) {
       uint32_t nb_callee_saved_regs = 0;
       UnwindPlan::RowSP row = unwind_plan_sp->GetRowAtIndex(row_id++);
@@ -155,7 +162,9 @@ bool RegisterContextDPU::LookForRegisterLocation(const RegisterInfo *reg_info,
         }
       }
       if (addr != LLDB_INVALID_ADDRESS &&
-          !PCInPrologue(pc_addr.GetFileAddress(), nb_callee_saved_regs) &&
+          !PCInPrologue(
+              fct->GetAddressRange().GetBaseAddress().GetFileAddress(),
+              nb_callee_saved_regs) &&
           !PCIsInstructionReturn(m_pc))
         return true;
     }
