@@ -18,7 +18,7 @@ asm_main:
 
         # install tramp as return address
         # (similar to signal return trampolines on some platforms)
-        leaq    tramp, %rax
+        leaq    tramp(%rip), %rax
         pushq   %rax
         jmp     bar # call, with return address pointing to tramp
 
