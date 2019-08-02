@@ -52,6 +52,7 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   const DPUInstrInfo &TII =
       *static_cast<const DPUInstrInfo *>(STI.getInstrInfo());
   DebugLoc DL;
+  unsigned CFIIndex;
 
   // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
   // for debug purpose. Not at the beginning because we do not have a frame
@@ -61,7 +62,11 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
       alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
   MFI.setStackSize(StackSize);
 
-  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+  CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, StackSize));
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex);
+  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
       nullptr, MRI->getDwarfRegNum(DPU::RADD, true), -STACK_SIZE_FOR_D22));
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex)
