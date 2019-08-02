@@ -408,7 +408,8 @@ public:
   clang::ParmVarDecl *CreateParameterDeclaration(clang::DeclContext *decl_ctx,
                                                  const char *name,
                                                  const CompilerType &param_type,
-                                                 int storage);
+                                                 int storage,
+                                                 bool add_decl=false);
 
   void SetFunctionParameters(clang::FunctionDecl *function_decl,
                              clang::ParmVarDecl **params, unsigned num_params);

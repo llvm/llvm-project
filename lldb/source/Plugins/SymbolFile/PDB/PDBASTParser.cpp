@@ -940,7 +940,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
 
           clang::ParmVarDecl *param = m_ast.CreateParameterDeclaration(
               decl, nullptr, arg_type->GetForwardCompilerType(),
-              clang::SC_None);
+              clang::SC_None, true);
           if (param)
             params.push_back(param);
         }
