@@ -685,8 +685,6 @@ TEST_F(CoreAPIsStandardTest, FailResolution) {
       SymbolFlagsMap({{Foo, JITSymbolFlags::Exported | JITSymbolFlags::Weak},
                       {Bar, JITSymbolFlags::Exported | JITSymbolFlags::Weak}}),
       [&](MaterializationResponsibility R) {
-        dbgs() << "Before failMat:\n";
-        ES.dump(dbgs());
         R.failMaterialization();
       });
 

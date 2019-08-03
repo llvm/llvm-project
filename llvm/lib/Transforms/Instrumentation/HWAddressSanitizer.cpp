@@ -218,7 +218,6 @@ public:
 
 private:
   LLVMContext *C;
-  std::string CurModuleUniqueId;
   Triple TargetTriple;
   FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
   FunctionCallee HWAsanHandleVfork;
@@ -342,7 +341,6 @@ void HWAddressSanitizer::initializeModule(Module &M) {
   Mapping.init(TargetTriple);
 
   C = &(M.getContext());
-  CurModuleUniqueId = getUniqueModuleId(&M);
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
   Int8PtrTy = IRB.getInt8PtrTy();

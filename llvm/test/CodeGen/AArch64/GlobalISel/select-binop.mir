@@ -10,6 +10,13 @@
   define void @add_imm_s32_gpr() { ret void }
   define void @add_imm_s64_gpr() { ret void }
 
+  define void @add_neg_s32_gpr() { ret void }
+  define void @add_neg_s64_gpr() { ret void }
+  define void @add_neg_invalid_immed_s32() { ret void }
+  define void @add_neg_invalid_immed_s64() { ret void }
+  define void @add_imm_0_s32() { ret void }
+  define void @add_imm_0_s64() { ret void }
+
   define void @add_imm_s32_gpr_bb() { ret void }
 
   define void @sub_s32_gpr() { ret void }
@@ -156,6 +163,154 @@ body:             |
     ; CHECK: $x0 = COPY [[ADDXri]]
     %0(s64) = COPY $x0
     %1(s64) = G_CONSTANT i64 1
+    %2(s64) = G_ADD %0, %1
+    $x0 = COPY %2(s64)
+...
+
+---
+name:            add_neg_s32_gpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $w1, $w2
+    ; We should be able to turn the ADD into a SUB.
+    ; CHECK-LABEL: name: add_neg_s32_gpr
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w1
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+    ; CHECK: $w2 = COPY [[SUBSWri]]
+    %0(s32) = COPY $w1
+    %1(s32) = G_CONSTANT i32 -1
+    %2(s32) = G_ADD %0, %1
+    $w2 = COPY %2(s32)
+...
+
+---
+name:            add_neg_s64_gpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; We should be able to turn the ADD into a SUB.
+    ; CHECK-LABEL: name: add_neg_s64_gpr
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY]], 1, 0, implicit-def $nzcv
+    ; CHECK: $x0 = COPY [[SUBSXri]]
+    %0(s64) = COPY $x0
+    %1(s64) = G_CONSTANT i64 -1
+    %2(s64) = G_ADD %0, %1
+    $x0 = COPY %2(s64)
+...
+
+---
+name:            add_neg_invalid_immed_s32
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; We can't select this if the value is out of range.
+    ; CHECK-LABEL: name: add_neg_invalid_immed_s32
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -5000
+    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[MOVi64imm]]
+    ; CHECK: $x0 = COPY [[ADDXrr]]
+    %0(s64) = COPY $x0
+    %1(s64) = G_CONSTANT i64 -5000
+    %2(s64) = G_ADD %0, %1
+    $x0 = COPY %2(s64)
+...
+
+---
+name:            add_neg_invalid_immed_s64
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; We can't select this if the value is out of range.
+    ; CHECK-LABEL: name: add_neg_invalid_immed_s64
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -5000
+    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[MOVi64imm]]
+    ; CHECK: $x0 = COPY [[ADDXrr]]
+    %0(s64) = COPY $x0
+    %1(s64) = G_CONSTANT i64 -5000
+    %2(s64) = G_ADD %0, %1
+    $x0 = COPY %2(s64)
+...
+
+---
+name:            add_imm_0_s32
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; We shouldn't get a SUB here, because "cmp wN, $0" and "cmp wN, #0" have
+    ; opposite effects on the C flag.
+    ; CHECK-LABEL: name: add_imm_0_s32
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 0, 0
+    ; CHECK: $x0 = COPY [[ADDXri]]
+    %0(s64) = COPY $x0
+    %1(s64) = G_CONSTANT i64 0
+    %2(s64) = G_ADD %0, %1
+    $x0 = COPY %2(s64)
+...
+
+---
+name:            add_imm_0_s64
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; We shouldn't get a SUB here, because "cmp xN, $0" and "cmp xN, #0" have
+    ; opposite effects on the C flag.
+    ; CHECK-LABEL: name: add_imm_0_s64
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 0, 0
+    ; CHECK: $x0 = COPY [[ADDXri]]
+    %0(s64) = COPY $x0
+    %1(s64) = G_CONSTANT i64 0
     %2(s64) = G_ADD %0, %1
     $x0 = COPY %2(s64)
 ...

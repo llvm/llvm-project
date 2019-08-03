@@ -632,6 +632,8 @@ public:
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
 
+  void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
+
   /// Returns the list of type identifiers used by this function in
   /// llvm.type.test intrinsics other than by an llvm.assume intrinsic,
   /// represented as GUIDs.
@@ -1291,6 +1293,12 @@ public:
       if (It->second.first == TypeId)
         return &It->second.second;
     return nullptr;
+  }
+
+  TypeIdSummary *getTypeIdSummary(StringRef TypeId) {
+    return const_cast<TypeIdSummary *>(
+        static_cast<const ModuleSummaryIndex *>(this)->getTypeIdSummary(
+            TypeId));
   }
 
   const std::map<std::string, TypeIdCompatibleVtableInfo> &

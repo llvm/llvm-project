@@ -45,9 +45,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
-    // We don't currently support swiftself args.
-    if (OrigArg.Flags.isSwiftSelf())
-      return false;
     OrigArgs.push_back(OrigArg);
     ++i;
   }

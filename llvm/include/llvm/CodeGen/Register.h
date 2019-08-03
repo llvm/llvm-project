@@ -21,6 +21,7 @@ class Register {
 
 public:
   Register(unsigned Val = 0): Reg(Val) {}
+  Register(MCRegister Val): Reg(Val) {}
 
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
@@ -105,8 +106,28 @@ public:
     return Reg;
   }
 
+  operator MCRegister() const {
+    return MCRegister(Reg);
+  }
+
   bool isValid() const {
     return Reg != 0;
+  }
+};
+
+// Provide DenseMapInfo for Register
+template<> struct DenseMapInfo<Register> {
+  static inline unsigned getEmptyKey() {
+    return DenseMapInfo<unsigned>::getEmptyKey();
+  }
+  static inline unsigned getTombstoneKey() {
+    return DenseMapInfo<unsigned>::getTombstoneKey();
+  }
+  static unsigned getHashValue(const Register &Val) {
+    return DenseMapInfo<unsigned>::getHashValue(Val);
+  }
+  static bool isEqual(const Register &LHS, const Register &RHS) {
+    return DenseMapInfo<unsigned>::isEqual(LHS, RHS);
   }
 };
 

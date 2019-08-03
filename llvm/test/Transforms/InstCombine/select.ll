@@ -1318,10 +1318,8 @@ define i32 @test_select_select1(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 
 define i32 @PR23757(i32 %x) {
 ; CHECK-LABEL: @PR23757(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -2147483648, i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %cmp = icmp eq i32 %x, 2147483647
   %add = add nsw i32 %x, 1
@@ -1331,10 +1329,7 @@ define i32 @PR23757(i32 %x) {
 
 define i32 @PR23757_swapped(i32 %x) {
 ; CHECK-LABEL: @PR23757_swapped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -2147483648
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 -2147483648
 ;
   %cmp = icmp eq i32 %x, 2147483647
   %add = add nsw i32 %x, 1
@@ -1346,9 +1341,7 @@ define i32 @PR23757_ne(i32 %x, i1* %p) {
 ; CHECK-LABEL: @PR23757_ne(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    store i1 [[CMP]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -2147483648, i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 -2147483648
 ;
   %cmp = icmp ne i32 %x, 2147483647
   store i1 %cmp, i1* %p ; thwart predicate canonicalization
@@ -1361,9 +1354,8 @@ define i32 @PR23757_ne_swapped(i32 %x, i1* %p) {
 ; CHECK-LABEL: @PR23757_ne_swapped(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    store i1 [[CMP]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -2147483648
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %cmp = icmp ne i32 %x, 2147483647
   store i1 %cmp, i1* %p ; thwart predicate canonicalization

@@ -1,22 +1,27 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-dwo %t
-# RUN: llvm-readobj --symbols -S --elf-section-groups %t | FileCheck %s --implicit-check-not=debug_
+# RUN: llvm-readobj --symbols -S --elf-section-groups %t | FileCheck %s
 
 ## `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of 
 ## the symbol table, the indices of the symbols and the indices of the sections
 ## which go after the removed ones will change. Consequently, the fields 
 ## Link, Info and the content of .group need to be updated.
 
+# CHECK-NOT: .debug_
+
 # CHECK:      Groups {
-# CHECK:       Name: .group (1)
-# CHECK-NEXT:  Index: 1{{$}}
-# CHECK-NEXT:  Link: 6
-# CHECK-NEXT:  Info: 2
-# CHECK-NEXT:  Type: COMDAT (0x1)
-# CHECK-NEXT:  Signature: group1
-# CHECK-NEXT:  Section(s) in group [
-# CHECK-NEXT:    .text.group1 (3)
-# CHECK-NEXT:  ]
+# CHECK-NEXT:  Group {
+# CHECK-NEXT:   Name: .group (1)
+# CHECK-NEXT:   Index: 1{{$}}
+# CHECK-NEXT:   Link: 6
+# CHECK-NEXT:   Info: 2
+# CHECK-NEXT:   Type: COMDAT (0x1)
+# CHECK-NEXT:   Signature: group1
+# CHECK-NEXT:   Section(s) in group [
+# CHECK-NEXT:     .text.group1 (3)
+# CHECK-NEXT:   ]
+
+# CHECK-NOT: .debug_
 
 # CHECK:      Name: .group (1)
 # CHECK-NEXT: Index: 2{{$}}
@@ -28,6 +33,8 @@
 # CHECK-NEXT:   .text.group2 (4)
 # CHECK-NEXT:   .rela.text.group2 (5)
 # CHECK-NEXT: ]
+
+# CHECK-NOT: .debug_
 
 --- !ELF
 FileHeader:

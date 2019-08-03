@@ -73,15 +73,7 @@ static Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
 #if !defined(_MSC_VER)
   return llvm::make_error<PDBError>(pdb_error_code::dia_failed_loading);
 #else
-  const wchar_t *msdia_dll = nullptr;
-#if _MSC_VER >= 1900 && _MSC_VER < 2000
-  msdia_dll = L"msdia140.dll"; // VS2015
-#elif _MSC_VER >= 1800
-  msdia_dll = L"msdia120.dll"; // VS2013
-#else
-#error "Unknown Visual Studio version."
-#endif
-
+  const wchar_t *msdia_dll = L"msdia140.dll";
   HRESULT HR;
   if (FAILED(HR = NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
                                 reinterpret_cast<LPVOID *>(&DiaDataSource))))

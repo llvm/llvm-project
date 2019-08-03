@@ -118,6 +118,8 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions() {
   MCAsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer CC(Regions);
   Lexer.setCommentConsumer(&CC);
+  // Enable support for MASM literal numbers (example: 05h, 101b).
+  Lexer.setLexMasmIntegers(true);
 
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));

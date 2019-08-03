@@ -88,6 +88,7 @@
 #ifndef LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 #define LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -583,10 +584,12 @@ public:
                       SmallVectorImpl<WeakTrackingVH> &CallHandles) {
       assert(CallHandles.empty() && "Must start with a clear set of handles.");
 
-      SmallVector<CallCount, 4> CallCounts;
+      SmallDenseMap<Function *, CallCount> CallCounts;
+      CallCount CountLocal = {0, 0};
       for (LazyCallGraph::Node &N : C) {
-        CallCounts.push_back({0, 0});
-        CallCount &Count = CallCounts.back();
+        CallCount &Count =
+            CallCounts.insert(std::make_pair(&N.getFunction(), CountLocal))
+                .first->second;
         for (Instruction &I : instructions(N.getFunction()))
           if (auto CS = CallSite(&I)) {
             if (CS.getCalledFunction()) {
@@ -626,8 +629,6 @@ public:
       // Check that we didn't miss any update scenario.
       assert(!UR.InvalidatedSCCs.count(C) && "Processing an invalid SCC!");
       assert(C->begin() != C->end() && "Cannot have an empty SCC!");
-      assert((int)CallCounts.size() == C->size() &&
-             "Cannot have changed the size of the SCC!");
 
       // Check whether any of the handles were devirtualized.
       auto IsDevirtualizedHandle = [&](WeakTrackingVH &CallH) {
@@ -642,7 +643,7 @@ public:
         if (!F)
           return false;
 
-        LLVM_DEBUG(dbgs() << "Found devirutalized call from "
+        LLVM_DEBUG(dbgs() << "Found devirtualized call from "
                           << CS.getParent()->getParent()->getName() << " to "
                           << F->getName() << "\n");
 
@@ -664,12 +665,20 @@ public:
       // manner of transformations such as DCE and other things, but seems to
       // work well in practice.
       if (!Devirt)
-        for (int i = 0, Size = C->size(); i < Size; ++i)
-          if (CallCounts[i].Indirect > NewCallCounts[i].Indirect &&
-              CallCounts[i].Direct < NewCallCounts[i].Direct) {
-            Devirt = true;
-            break;
+        // Iterate over the keys in NewCallCounts, if Function also exists in
+        // CallCounts, make the check below.
+        for (auto &Pair : NewCallCounts) {
+          auto &CallCountNew = Pair.second;
+          auto CountIt = CallCounts.find(Pair.first);
+          if (CountIt != CallCounts.end()) {
+            const auto &CallCountOld = CountIt->second;
+            if (CallCountOld.Indirect > CallCountNew.Indirect &&
+                CallCountOld.Direct < CallCountNew.Direct) {
+              Devirt = true;
+              break;
+            }
           }
+        }
 
       if (!Devirt) {
         PA.intersect(std::move(PassPA));

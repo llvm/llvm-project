@@ -968,6 +968,13 @@ public:
                                    const MachineRegisterInfo &MRI) const {
     return nullptr;
   }
+
+  /// Returns the physical register number of sub-register "Index"
+  /// for physical register RegNo. Return zero if the sub-register does not
+  /// exist.
+  inline Register getSubReg(MCRegister Reg, unsigned Idx) const {
+    return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
+  }
 };
 
 //===----------------------------------------------------------------------===//

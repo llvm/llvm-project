@@ -1060,11 +1060,69 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   return &Sel;
 }
 
+static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *ReplaceOp,
+                                     const SimplifyQuery &Q) {
+  // If this is a binary operator, try to simplify it with the replaced op
+  // because we know Op and ReplaceOp are equivalant.
+  // For example: V = X + 1, Op = X, ReplaceOp = 42
+  // Simplifies as: add(42, 1) --> 43
+  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+    if (BO->getOperand(0) == Op)
+      return SimplifyBinOp(BO->getOpcode(), ReplaceOp, BO->getOperand(1), Q);
+    if (BO->getOperand(1) == Op)
+      return SimplifyBinOp(BO->getOpcode(), BO->getOperand(0), ReplaceOp, Q);
+  }
+
+  return nullptr;
+}
+
+/// If we have a select with an equality comparison, then we know the value in
+/// one of the arms of the select. See if substituting this value into an arm
+/// and simplifying the result yields the same value as the other arm.
+///
+/// To make this transform safe, we must drop poison-generating flags
+/// (nsw, etc) if we simplified to a binop because the select may be guarding
+/// that poison from propagating. If the existing binop already had no
+/// poison-generating flags, then this transform can be done by instsimplify.
+///
+/// Consider:
+///   %cmp = icmp eq i32 %x, 2147483647
+///   %add = add nsw i32 %x, 1
+///   %sel = select i1 %cmp, i32 -2147483648, i32 %add
+///
+/// We can't replace %sel with %add unless we strip away the flags.
+static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
+                                         const SimplifyQuery &Q) {
+  if (!Cmp.isEquality())
+    return nullptr;
+
+  // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
+  Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
+  if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  // Try each equivalence substitution possibility.
+  // We have an 'EQ' comparison, so the select's false value will propagate.
+  // Example:
+  // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
+  // (X == 42) ? (X + 1) : 43 --> (X == 42) ? (42 + 1) : 43 --> 43
+  Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
+  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q) == TrueVal ||
+      simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q) == TrueVal ||
+      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q) == FalseVal ||
+      simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q) == FalseVal) {
+    if (auto *FalseInst = dyn_cast<Instruction>(FalseVal))
+      FalseInst->dropPoisonGeneratingFlags();
+    return FalseVal;
+  }
+  return nullptr;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
-  Value *TrueVal = SI.getTrueValue();
-  Value *FalseVal = SI.getFalseValue();
+  if (Value *V = foldSelectValueEquivalence(SI, *ICI, SQ))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, Builder))
     return NewSel;
@@ -1078,6 +1136,8 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
