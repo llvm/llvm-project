@@ -14,4 +14,4 @@ unwind:
 declare void @g()
 declare i32 @__CxxFrameHandler3(...)
 
-; CHECK: define internal i32 @"__ehhandler$f"(i8*, i8*, i8*, i8*){{ .+}} comdat($f) {
+; CHECK: define internal i32 @"__ehhandler$f"(i8* %0, i8* %1, i8* %2, i8* %3){{ .+}} comdat($f) {

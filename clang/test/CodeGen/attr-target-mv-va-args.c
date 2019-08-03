@@ -37,7 +37,7 @@ int bar() {
 // WINDOWS: call i32 (i32, ...) @foo.resolver(i32 1, i32 97, double
 // WINDOWS: call i32 (i32, ...) @foo.resolver(i32 2, double 2.2{{[0-9Ee+]+}}, i8* getelementptr inbounds
 
-// WINDOWS: define dso_local i32 @foo.resolver(i32, ...) comdat
+// WINDOWS: define dso_local i32 @foo.resolver(i32 %0, ...) comdat
 // WINDOWS: musttail call i32 (i32, ...) @foo.arch_sandybridge
 // WINDOWS: musttail call i32 (i32, ...) @foo.arch_ivybridge
 // WINDOWS: musttail call i32 (i32, ...) @foo.sse4.2

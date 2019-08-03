@@ -19,7 +19,7 @@ int foo(A a, ...) {
   return sum;
 }
 
-// CHECK-LABEL: define dso_local i32 @"?foo@@YAHUA@@ZZ"(<{ %struct.A }>* inalloca, ...)
+// CHECK-LABEL: define dso_local i32 @"?foo@@YAHUA@@ZZ"(<{ %struct.A }>* inalloca %0, ...)
 
 int main() {
   return foo(A(3), 1, 2, 3);

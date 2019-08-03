@@ -862,7 +862,7 @@ bool RegAllocFast::setPhysReg(MachineInstr &MI, MachineOperand &MO,
   }
 
   // Handle subregister index.
-  MO.setReg(PhysReg ? TRI->getSubReg(PhysReg, MO.getSubReg()) : 0);
+  MO.setReg(PhysReg ? TRI->getSubReg(PhysReg, MO.getSubReg()) : Register());
   MO.setIsRenamable(true);
   MO.setSubReg(0);
 

@@ -48,10 +48,11 @@ void llvm::calculateSpillWeightsAndHints(LiveIntervals &LIS,
 }
 
 // Return the preferred allocation register for reg, given a COPY instruction.
-static unsigned copyHint(const MachineInstr *mi, unsigned reg,
+static Register copyHint(const MachineInstr *mi, unsigned reg,
                          const TargetRegisterInfo &tri,
                          const MachineRegisterInfo &mri) {
-  unsigned sub, hreg, hsub;
+  unsigned sub, hsub;
+  Register hreg;
   if (mi->getOperand(0).getReg() == reg) {
     sub = mi->getOperand(0).getSubReg();
     hreg = mi->getOperand(1).getReg();
@@ -66,10 +67,10 @@ static unsigned copyHint(const MachineInstr *mi, unsigned reg,
     return 0;
 
   if (Register::isVirtualRegister(hreg))
-    return sub == hsub ? hreg : 0;
+    return sub == hsub ? hreg : Register();
 
   const TargetRegisterClass *rc = mri.getRegClass(reg);
-  unsigned CopiedPReg = (hsub ? tri.getSubReg(hreg, hsub) : hreg);
+  Register CopiedPReg = (hsub ? tri.getSubReg(hreg, hsub) : hreg);
   if (rc->contains(CopiedPReg))
     return CopiedPReg;
 

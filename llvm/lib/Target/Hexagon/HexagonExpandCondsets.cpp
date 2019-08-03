@@ -579,7 +579,7 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
   using namespace Hexagon;
 
   if (SO.isReg()) {
-    unsigned PhysR;
+    Register PhysR;
     RegisterRef RS = SO;
     if (Register::isVirtualRegister(RS.Reg)) {
       const TargetRegisterClass *VC = MRI->getRegClass(RS.Reg);

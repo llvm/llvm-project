@@ -9,11 +9,14 @@
 
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
-// CHECK-NEXT:   Section (4) .rel.plt {
-// CHECK-NEXT:     0x40300C R_386_JUMP_SLOT bar2
-// CHECK-NEXT:     0x403010 R_386_JUMP_SLOT zed2
+// CHECK-NEXT:   Section (4) .rel.dyn {
 // CHECK-NEXT:     0x403014 R_386_IRELATIVE
 // CHECK-NEXT:     0x403018 R_386_IRELATIVE
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Section (5) .rel.plt {
+// CHECK-NEXT:     0x40300C R_386_JUMP_SLOT bar2
+// CHECK-NEXT:     0x403010 R_386_JUMP_SLOT zed2
+// CHECK-NEXT:   }
 
 // Check that IRELATIVE .got.plt entries point to ifunc resolver and not
 // back to the plt entry + 6.
@@ -21,9 +24,10 @@
 // GOTPLT:       403000 00204000 00000000 00000000 36104000
 // GOTPLT-NEXT:  403010 46104000 00104000 01104000
 
-// Check that the PLTRELSZ tag includes the IRELATIVE relocations
+// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
 // CHECK: DynamicSection [
-// CHECK:  0x00000002 PLTRELSZ             32 (bytes)
+// CHECK:  0x00000012 RELSZ                16 (bytes)
+// CHECK:  0x00000002 PLTRELSZ             16 (bytes)
 
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:

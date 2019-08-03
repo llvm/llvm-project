@@ -90,12 +90,6 @@
   INLINE_DEF_FLOAT_SYMBOL(tanf, 1)
   INLINE_DEF_FLOAT_SYMBOL(tanhf, 1)
 
-  // These were added in VS 2013.
-#if (1800 <= _MSC_VER && _MSC_VER < 1900)
-  INLINE_DEF_FLOAT_SYMBOL(copysignf, 2)
-  INLINE_DEF_FLOAT_SYMBOL(fminf, 2)
-  INLINE_DEF_FLOAT_SYMBOL(fmaxf, 2)
-#endif
 #undef INLINE_DEF_FLOAT_SYMBOL
 #endif
 

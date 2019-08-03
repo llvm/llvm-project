@@ -235,11 +235,12 @@ def quote_windows_command(seq):
 
     return ''.join(result)
 
-# cmd is export or env
-def updateEnv(env, cmd):
+# args are from 'export' or 'env' command.
+# Returns copy of args without those commands or their arguments.
+def updateEnv(env, args):
     arg_idx = 1
     unset_next_env_var = False
-    for arg_idx, arg in enumerate(cmd.args[1:]):
+    for arg_idx, arg in enumerate(args[1:]):
         # Support for the -u flag (unsetting) for env command
         # e.g., env -u FOO -u BAR will remove both FOO and BAR
         # from the environment.
@@ -258,7 +259,7 @@ def updateEnv(env, cmd):
         if eq == '':
             break
         env.env[key] = val
-    cmd.args = cmd.args[arg_idx+1:]
+    return args[arg_idx+1:]
 
 def executeBuiltinEcho(cmd, shenv):
     """Interpret a redirected echo command"""
@@ -825,7 +826,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             raise ValueError("'export' cannot be part of a pipeline")
         if len(cmd.commands[0].args) != 2:
             raise ValueError("'export' supports only one argument")
-        updateEnv(shenv, cmd.commands[0])
+        updateEnv(shenv, cmd.commands[0].args)
         return 0
 
     if cmd.commands[0].args[0] == 'mkdir':
@@ -872,12 +873,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     for i,j in enumerate(cmd.commands):
         # Reference the global environment by default.
         cmd_shenv = shenv
+        args = list(j.args)
         if j.args[0] == 'env':
             # Create a copy of the global environment and modify it for this one
             # command. There might be multiple envs in a pipeline:
             #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
             cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
-            updateEnv(cmd_shenv, j)
+            args = updateEnv(cmd_shenv, j.args)
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)
@@ -899,7 +901,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 stderrTempFiles.append((i, stderr))
 
         # Resolve the executable path ourselves.
-        args = list(j.args)
         executable = None
         is_builtin_cmd = args[0] in builtin_commands;
         if not is_builtin_cmd:
@@ -911,7 +912,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if not executable:
                 executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
             if not executable:
-                raise InternalShellError(j, '%r: command not found' % j.args[0])
+                raise InternalShellError(j, '%r: command not found' % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:

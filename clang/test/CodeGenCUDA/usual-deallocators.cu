@@ -97,37 +97,37 @@ __host__ __device__ void tests_hd(void *t) {
 
 // Make sure we've picked deallocator for the correct side of compilation.
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN4H1D1dlEPv(i8*)
+// COMMON-LABEL: define  linkonce_odr void @_ZN4H1D1dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
 // HOST:   call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN4H1D2dlEPvj(i8*, i32)
+// DEVICE-LABEL: define  linkonce_odr void @_ZN4H1D2dlEPvj(i8* %0, i32 %1)
 // DEVICE: call void @dev_fn()
-// HOST-LABEL: define linkonce_odr void @_ZN4H1D2dlEPv(i8*)
+// HOST-LABEL: define linkonce_odr void @_ZN4H1D2dlEPv(i8* %0)
 // HOST: call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN4H2D1dlEPv(i8*)
+// DEVICE-LABEL: define  linkonce_odr void @_ZN4H2D1dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
-// HOST-LABEL:  define linkonce_odr void @_ZN4H2D1dlEPvj(i8*, i32)
+// HOST-LABEL:  define linkonce_odr void @_ZN4H2D1dlEPvj(i8* %0, i32 %1)
 // HOST: call void @host_fn()
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN4H2D2dlEPvj(i8*, i32)
-// DEVICE: call void @dev_fn()
-// HOST: call void @host_fn()
-
-// COMMON-LABEL: define  linkonce_odr void @_ZN6H1D1D2dlEPv(i8*)
+// COMMON-LABEL: define  linkonce_odr void @_ZN4H2D2dlEPvj(i8* %0, i32 %1)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN6H1H2D1dlEPv(i8*)
+// COMMON-LABEL: define  linkonce_odr void @_ZN6H1D1D2dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN6H1H2D2dlEPvj(i8*, i32)
+// COMMON-LABEL: define  linkonce_odr void @_ZN6H1H2D1dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
-// HOST-LABEL: define linkonce_odr void @_ZN6H1H2D2dlEPv(i8*)
 // HOST: call void @host_fn()
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(i8*)
+// DEVICE-LABEL: define  linkonce_odr void @_ZN6H1H2D2dlEPvj(i8* %0, i32 %1)
+// DEVICE: call void @dev_fn()
+// HOST-LABEL: define linkonce_odr void @_ZN6H1H2D2dlEPv(i8* %0)
+// HOST: call void @host_fn()
+
+// COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()

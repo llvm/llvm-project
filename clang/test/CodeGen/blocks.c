@@ -33,7 +33,7 @@ void (^test1)(void) = ^(void) {
   ^ { i = 1; }();
 };
 
-// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_4_20r(i8*, i8*) unnamed_addr
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_4_20r(i8* %0, i8* %1) unnamed_addr
 // CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
 // CHECK-NEXT: %[[_ADDR1:.*]] = alloca i8*, align 4
 // CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
@@ -49,7 +49,7 @@ void (^test1)(void) = ^(void) {
 // CHECK-NEXT: call void @_Block_object_assign(i8* %[[V6]], i8* %[[BLOCKCOPY_SRC]], i32 8)
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(i8*) unnamed_addr
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(i8* %0) unnamed_addr
 // CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
 // CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
 // CHECK-NEXT: %[[V1:.*]] = load i8*, i8** %[[_ADDR]], align 4

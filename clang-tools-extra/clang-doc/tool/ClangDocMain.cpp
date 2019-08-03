@@ -48,6 +48,11 @@ using namespace clang;
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
 
+static llvm::cl::opt<bool> IgnoreMappingFailures(
+    "ignore-map-errors",
+    llvm::cl::desc("Continue if files are not mapped correctly."),
+    llvm::cl::init(true), llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<std::string>
     OutDirectory("output",
                  llvm::cl::desc("Directory for outputting generated files."),
@@ -229,8 +234,14 @@ int main(int argc, const char **argv) {
   auto Err =
       Exec->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
+    if (IgnoreMappingFailures)
+      llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
+                      "these files and continue:\n"
+                   << toString(std::move(Err)) << "\n";
+    else {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
   }
 
   // Collect values into output by key.

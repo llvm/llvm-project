@@ -2080,8 +2080,9 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
             ExtraCSSpill = true;
         }
       }
-      if (!ExtraCSSpill && RS) {
+      if (!ExtraCSSpill) {
         // Reserve a slot closest to SP or frame pointer.
+        assert(RS && "Register scavenging not provided");
         LLVM_DEBUG(dbgs() << "Reserving emergency spill slot\n");
         const TargetRegisterClass &RC = ARM::GPRRegClass;
         unsigned Size = TRI->getSpillSize(RC);

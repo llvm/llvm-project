@@ -5,14 +5,14 @@
 ; The test checks that LLVM does not silently misread attributes of
 ; older bitcode files.
 
-define void @f1(i8 zeroext)
-; CHECK: define void @f1(i8 zeroext)
+define void @f1(i8 zeroext %0)
+; CHECK: define void @f1(i8 zeroext %0)
 {
         ret void;
 }
 
-define void @f2(i8 signext)
-; CHECK: define void @f2(i8 signext)
+define void @f2(i8 signext %0)
+; CHECK: define void @f2(i8 signext %0)
 {
         ret void;
 }
@@ -23,14 +23,14 @@ define void @f3() noreturn
         ret void;
 }
 
-define void @f4(i8 inreg)
-; CHECK: define void @f4(i8 inreg)
+define void @f4(i8 inreg %0)
+; CHECK: define void @f4(i8 inreg %0)
 {
         ret void;
 }
 
-define void @f5(i8* sret)
-; CHECK: define void @f5(i8* sret)
+define void @f5(i8* sret %0)
+; CHECK: define void @f5(i8* sret %0)
 {
         ret void;
 }
@@ -41,20 +41,20 @@ define void @f6() nounwind
         ret void;
 }
 
-define void @f7(i8* noalias)
-; CHECK: define void @f7(i8* noalias)
+define void @f7(i8* noalias %0)
+; CHECK: define void @f7(i8* noalias %0)
 {
         ret void;
 }
 
-define void @f8(i8* byval)
-; CHECK: define void @f8(i8* byval(i8))
+define void @f8(i8* byval %0)
+; CHECK: define void @f8(i8* byval(i8) %0)
 {
         ret void;
 }
 
-define void @f9(i8* nest)
-; CHECK: define void @f9(i8* nest)
+define void @f9(i8* nest %0)
+; CHECK: define void @f9(i8* nest %0)
 {
         ret void;
 }
@@ -101,14 +101,14 @@ define void @f16() sspreq
         ret void;
 }
 
-define void @f17(i8 align 4)
-; CHECK: define void @f17(i8 align 4)
+define void @f17(i8 align 4 %0)
+; CHECK: define void @f17(i8 align 4 %0)
 {
         ret void;
 }
 
-define void @f18(i8* nocapture)
-; CHECK: define void @f18(i8* nocapture)
+define void @f18(i8* nocapture %0)
+; CHECK: define void @f18(i8* nocapture %0)
 {
         ret void;
 }

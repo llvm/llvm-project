@@ -3553,6 +3553,10 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
   if (Arg->hasName()) {
     Out << ' ';
     PrintLLVMName(Out, Arg);
+  } else {
+    int Slot = Machine.getLocalSlot(Arg);
+    assert(Slot != -1 && "expect argument in function here");
+    Out << " %" << Slot;
   }
 }
 

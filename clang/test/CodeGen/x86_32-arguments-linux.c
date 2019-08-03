@@ -3,12 +3,12 @@
 
 // CHECK-LABEL: define void @f56(
 // CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
-// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4,
-// CHECK: <1 x double> %a4, %struct.s56_2* byval(%struct.s56_2) align 4,
-// CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 4,
-// CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 4,
-// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4,
-// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4)
+// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4 %0,
+// CHECK: <1 x double> %a4, %struct.s56_2* byval(%struct.s56_2) align 4 %1,
+// CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 4 %2,
+// CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 4 %3,
+// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4 %4,
+// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4 %5)
 
 // CHECK: call void (i32, ...) @f56_0(i32 1,
 // CHECK: i32 %{{.*}}, %struct.s56_0* byval(%struct.s56_0) align 4 %{{[^ ]*}},

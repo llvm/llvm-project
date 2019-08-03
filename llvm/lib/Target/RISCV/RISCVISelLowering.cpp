@@ -2407,6 +2407,10 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       break;
     case 'f':
       return C_RegisterClass;
+    case 'I':
+    case 'J':
+    case 'K':
+      return C_Immediate;
     }
   }
   return TargetLowering::getConstraintType(Constraint);

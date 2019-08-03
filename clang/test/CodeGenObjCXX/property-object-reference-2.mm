@@ -29,7 +29,7 @@ struct TCPPObject
   @synthesize MyProperty1 = _cppObject1;
 @end
 
-// CHECK-LABEL: define internal void @__copy_helper_atomic_property_(%struct.TCPPObject*, %struct.TCPPObject*) #
+// CHECK-LABEL: define internal void @__copy_helper_atomic_property_(%struct.TCPPObject* %0, %struct.TCPPObject* %1) #
 // CHECK: [[TWO:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR:%.*]], align 8
 // CHECK: [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR1:%.*]], align 8
 // CHECK: [[CALL:%.*]] = call i32 @_Z7DEFAULTv()
@@ -43,7 +43,7 @@ struct TCPPObject
 // CHECK: call void @objc_copyCppObjectAtomic(i8* [[THREE]], i8* [[TWO]], i8* bitcast (void (%struct.TCPPObject*, %struct.TCPPObject*)* @__copy_helper_atomic_property_ to i8*))
 // CHECK: ret void
 
-// CHECK-LABEL: define internal void @__assign_helper_atomic_property_(%struct.TCPPObject*, %struct.TCPPObject*) #
+// CHECK-LABEL: define internal void @__assign_helper_atomic_property_(%struct.TCPPObject* %0, %struct.TCPPObject* %1) #
 // CHECK: [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR1:%.*]], align 8
 // CHECK: [[TWO:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR:%.*]], align 8
 // CHECK: [[CALL:%.*]] = call dereferenceable({{[0-9]+}}) %struct.TCPPObject* @_ZN10TCPPObjectaSERKS_(%struct.TCPPObject* [[TWO]], %struct.TCPPObject* dereferenceable({{[0-9]+}}) [[THREE]])

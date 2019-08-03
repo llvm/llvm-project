@@ -83,8 +83,9 @@ TEST(AlignmentTest, AlignTo) {
     // Test MaybeAlign
     EXPECT_EQ(alignTo(T.offset, A), T.rounded);
     // Test Align
-    if (A)
+    if (A) {
       EXPECT_EQ(alignTo(T.offset, A.getValue()), T.rounded);
+    }
   }
 }
 
@@ -112,12 +113,15 @@ TEST(AlignmentTest, MinAlign) {
   for (const auto &T : kTests) {
     EXPECT_EQ(commonAlignment(MaybeAlign(T.A), MaybeAlign(T.B)), T.MinAlign);
     EXPECT_EQ(MinAlign(T.A, T.B), T.MinAlign);
-    if (T.A)
+    if (T.A) {
       EXPECT_EQ(commonAlignment(Align(T.A), MaybeAlign(T.B)), T.MinAlign);
-    if (T.B)
+    }
+    if (T.B) {
       EXPECT_EQ(commonAlignment(MaybeAlign(T.A), Align(T.B)), T.MinAlign);
-    if (T.A && T.B)
+    }
+    if (T.A && T.B) {
       EXPECT_EQ(commonAlignment(Align(T.A), Align(T.B)), T.MinAlign);
+    }
   }
 }
 
@@ -155,8 +159,9 @@ TEST(AlignmentTest, isAligned) {
     // Test MaybeAlign
     EXPECT_EQ(isAligned(A, T.offset), T.isAligned);
     // Test Align
-    if (A)
+    if (A) {
       EXPECT_EQ(isAligned(A.getValue(), T.offset), T.isAligned);
+    }
   }
 }
 

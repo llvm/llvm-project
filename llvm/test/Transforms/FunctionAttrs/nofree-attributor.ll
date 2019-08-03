@@ -29,11 +29,11 @@ define void @only_return() #0 {
 ; }
 
 ; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define void @only_free(i8* nocapture) local_unnamed_addr
+; FNATTR-NEXT: define void @only_free(i8* nocapture %0) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR-NEXT: define void @only_free(i8* nocapture) local_unnamed_addr #1
-define void @only_free(i8* nocapture) local_unnamed_addr #0 {
+; ATTRIBUTOR-NEXT: define void @only_free(i8* nocapture %0) local_unnamed_addr #1
+define void @only_free(i8* nocapture %0) local_unnamed_addr #0 {
     tail call void @free(i8* %0) #1
     ret void
 }
@@ -51,22 +51,22 @@ define void @only_free(i8* nocapture) local_unnamed_addr #0 {
 
 
 ; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define void @free_in_scc1(i8* nocapture) local_unnamed_addr
+; FNATTR-NEXT: define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR-NEXT :define void @free_in_scc1(i8* nocapture) local_unnamed_addr
-define void @free_in_scc1(i8* nocapture) local_unnamed_addr #0 {
+; ATTRIBUTOR-NEXT :define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr
+define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr #0 {
   tail call void @free_in_scc2(i8* %0) #1
   ret void
 }
 
 
 ; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define void @free_in_scc2(i8* nocapture) local_unnamed_addr
+; FNATTR-NEXT: define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR: define void @free_in_scc2(i8* nocapture) local_unnamed_addr
-define void @free_in_scc2(i8* nocapture) local_unnamed_addr #0 {
+; ATTRIBUTOR: define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr
+define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr #0 {
   tail call void @free_in_scc1(i8* %0)
   tail call void @free(i8* %0) #1
   ret void
@@ -109,11 +109,11 @@ define void @mutual_recursion2() #0 {
 ; }
 
 ; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define void @_Z9delete_opPc(i8*) local_unnamed_addr
+; FNATTR-NEXT: define void @_Z9delete_opPc(i8* %0) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR-NEXT: define void @_Z9delete_opPc(i8*) local_unnamed_addr #1
-define void @_Z9delete_opPc(i8*) local_unnamed_addr #0 {
+; ATTRIBUTOR-NEXT: define void @_Z9delete_opPc(i8* %0) local_unnamed_addr #1
+define void @_Z9delete_opPc(i8* %0) local_unnamed_addr #0 {
   %2 = icmp eq i8* %0, null
   br i1 %2, label %4, label %3
 
@@ -129,11 +129,11 @@ define void @_Z9delete_opPc(i8*) local_unnamed_addr #0 {
 ; TEST 6 (negative case)
 ; Call realloc
 ; FNATTR: Function Attrs: noinline nounwind uwtable
-; FNATTR-NEXT: define noalias i8* @call_realloc(i8* nocapture, i64) local_unnamed_addr
+; FNATTR-NEXT: define noalias i8* @call_realloc(i8* nocapture %0, i64 %1) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
 ; ATTRIBUTOR-NOT: nofree
-; ATTRIBUTOR-NEXT: define noalias i8* @call_realloc(i8* nocapture, i64) local_unnamed_addr
-define noalias i8* @call_realloc(i8* nocapture, i64) local_unnamed_addr #0 {
+; ATTRIBUTOR-NEXT: define noalias i8* @call_realloc(i8* nocapture %0, i64 %1) local_unnamed_addr
+define noalias i8* @call_realloc(i8* nocapture %0, i64 %1) local_unnamed_addr #0 {
     %ret = tail call i8* @realloc(i8* %0, i64 %1) #2
     ret i8* %ret
 }
@@ -196,7 +196,7 @@ define void @call_both() #0 {
 ; TEST 10 (positive case)
 ; Call intrinsic function
 ; FNATTRS: Function Attrs: noinline readnone speculatable
-; FNATTRS-NEXT: declare float @llvm.floor.f32(float)
+; FNATTRS-NEXT: declare float @llvm.floor.f32(float %0)
 ; ATTRIBUTOR: Function Attrs: nounwind readnone speculatable
 ; ATTRIBUTOR-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)

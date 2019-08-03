@@ -2484,7 +2484,7 @@ public:
   }
 
   Value *CreatePreserveArrayAccessIndex(Value *Base, unsigned Dimension,
-                                        unsigned LastIndex) {
+                                        unsigned LastIndex, MDNode *DbgInfo) {
     assert(isa<PointerType>(Base->getType()) &&
            "Invalid Base ptr type for preserve.array.access.index.");
     auto *BaseType = Base->getType();
@@ -2506,6 +2506,8 @@ public:
     Value *DimV = getInt32(Dimension);
     CallInst *Fn =
         CreateCall(FnPreserveArrayAccessIndex, {Base, DimV, LastIndexV});
+    if (DbgInfo)
+      Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
 
     return Fn;
   }
@@ -2523,7 +2525,8 @@ public:
     Value *DIIndex = getInt32(FieldIndex);
     CallInst *Fn =
         CreateCall(FnPreserveUnionAccessIndex, {Base, DIIndex});
-    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+    if (DbgInfo)
+      Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
 
     return Fn;
   }
@@ -2546,7 +2549,8 @@ public:
     Value *DIIndex = getInt32(FieldIndex);
     CallInst *Fn = CreateCall(FnPreserveStructAccessIndex,
                               {Base, GEPIndex, DIIndex});
-    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+    if (DbgInfo)
+      Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
 
     return Fn;
   }

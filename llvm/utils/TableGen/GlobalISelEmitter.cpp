@@ -3347,11 +3347,19 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       continue;
     }
 
-    if (Predicate.isStore() && Predicate.isTruncStore()) {
-      // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
-      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-      continue;
+    if (Predicate.isStore()) {
+      if (Predicate.isTruncStore()) {
+        // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
+        InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+            0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+        continue;
+      }
+      if (Predicate.isNonTruncStore()) {
+        // We need to check the sizes match here otherwise we could incorrectly
+        // match truncating stores with non-truncating ones.
+        InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+            0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      }
     }
 
     // No check required. We already did it by swapping the opcode.

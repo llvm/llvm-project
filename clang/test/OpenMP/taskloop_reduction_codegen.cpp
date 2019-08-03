@@ -153,16 +153,16 @@ sum = 0.0;
 
 // CHECK:    ret i32
 
-// CHECK: define internal void @[[RED_INIT1]](i8*)
+// CHECK: define internal void @[[RED_INIT1]](i8* %0)
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB1]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB1]](i8* %0, i8* %1)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT2]](i8*)
+// CHECK: define internal void @[[RED_INIT2]](i8* %0)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: [[ORIG_PTR_ADDR:%.+]] = call i8* @__kmpc_threadprivate_cached(
 // CHECK: [[ORIG_PTR_REF:%.+]] = bitcast i8* [[ORIG_PTR_ADDR]] to i8**
@@ -170,37 +170,37 @@ sum = 0.0;
 // CHECK: call void [[OMP_INIT1:@.+]](
 // CHECK: ret void
 
-// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias %0, %struct.S* noalias %1)
 // CHECK: fadd float %
 
-// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias %0, %struct.S* noalias %1)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
-// CHECK: define internal void @[[RED_FINI2]](i8*)
+// CHECK: define internal void @[[RED_FINI2]](i8* %0)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void @
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB2]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB2]](i8* %0, i8* %1)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT3]](i8*)
+// CHECK: define internal void @[[RED_INIT3]](i8* %0)
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB3]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB3]](i8* %0, i8* %1)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT4]](i8*)
+// CHECK: define internal void @[[RED_INIT4]](i8* %0)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB4]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB4]](i8* %0, i8* %1)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %

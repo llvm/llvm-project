@@ -11,49 +11,49 @@ struct Foo {
 
 int gi = 0;
 
-// CHECK-LABEL: define i32 @ObjectSize0(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @ObjectSize0(i8* %{{.*}}, i64 %0)
 int ObjectSize0(void *const p PS(0)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 0);
 }
 
-// CHECK-LABEL: define i32 @DynamicObjectSize0(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @DynamicObjectSize0(i8* %{{.*}}, i64 %0)
 int DynamicObjectSize0(void *const p PDS(0)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_dynamic_object_size(p, 0);
 }
 
-// CHECK-LABEL: define i32 @ObjectSize1(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @ObjectSize1(i8* %{{.*}}, i64 %0)
 int ObjectSize1(void *const p PS(1)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 1);
 }
 
-// CHECK-LABEL: define i32 @DynamicObjectSize1(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @DynamicObjectSize1(i8* %{{.*}}, i64 %0)
 int DynamicObjectSize1(void *const p PDS(1)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_dynamic_object_size(p, 1);
 }
 
-// CHECK-LABEL: define i32 @ObjectSize2(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @ObjectSize2(i8* %{{.*}}, i64 %0)
 int ObjectSize2(void *const p PS(2)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 2);
 }
 
-// CHECK-LABEL: define i32 @DynamicObjectSize2(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @DynamicObjectSize2(i8* %{{.*}}, i64 %0)
 int DynamicObjectSize2(void *const p PDS(2)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 2);
 }
 
-// CHECK-LABEL: define i32 @ObjectSize3(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @ObjectSize3(i8* %{{.*}}, i64 %0)
 int ObjectSize3(void *const p PS(3)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 3);
 }
 
-// CHECK-LABEL: define i32 @DynamicObjectSize3(i8* %{{.*}}, i64)
+// CHECK-LABEL: define i32 @DynamicObjectSize3(i8* %{{.*}}, i64 %0)
 int DynamicObjectSize3(void *const p PDS(3)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 3);

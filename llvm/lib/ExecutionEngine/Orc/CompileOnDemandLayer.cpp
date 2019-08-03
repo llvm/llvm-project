@@ -118,6 +118,9 @@ void CompileOnDemandLayer::setPartitionFunction(PartitionFunction Partition) {
   this->Partition = std::move(Partition);
 }
 
+void CompileOnDemandLayer::setImplMap(ImplSymbolMap *Imp) {
+  this->AliaseeImpls = Imp;
+}
 void CompileOnDemandLayer::emit(MaterializationResponsibility R,
                                 ThreadSafeModule TSM) {
   assert(TSM && "Null module");
@@ -161,7 +164,7 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
 
   R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables), true));
   R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
-                          std::move(Callables)));
+                          std::move(Callables), AliaseeImpls));
 }
 
 CompileOnDemandLayer::PerDylibResources &

@@ -26,6 +26,7 @@
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Speculation.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
@@ -91,6 +92,8 @@ public:
   /// Sets the partition function.
   void setPartitionFunction(PartitionFunction Partition);
 
+  /// Sets the ImplSymbolMap
+  void setImplMap(ImplSymbolMap *Imp);
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
@@ -128,6 +131,7 @@ private:
   PerDylibResourcesMap DylibResources;
   PartitionFunction Partition = compileRequested;
   SymbolLinkagePromoter PromoteSymbols;
+  ImplSymbolMap *AliaseeImpls = nullptr;
 };
 
 /// Compile-on-demand layer.

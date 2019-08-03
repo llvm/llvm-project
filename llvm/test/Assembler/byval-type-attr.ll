@@ -1,12 +1,12 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 
-; CHECK: define void @foo(i32* byval(i32) align 4)
-define void @foo(i32* byval(i32) align 4) {
+; CHECK: define void @foo(i32* byval(i32) align 4 %0)
+define void @foo(i32* byval(i32) align 4 %0) {
   ret void
 }
 
-; CHECK: define void @bar({ i32*, i8 }* byval({ i32*, i8 }) align 4)
-define void @bar({i32*, i8}* byval({i32*, i8}) align 4) {
+; CHECK: define void @bar({ i32*, i8 }* byval({ i32*, i8 }) align 4 %0)
+define void @bar({i32*, i8}* byval({i32*, i8}) align 4 %0) {
   ret void
 }
 

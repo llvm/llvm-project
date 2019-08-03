@@ -716,7 +716,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
   for (unsigned i = 0, e = NumSubRegs; i != e; ++i, Offset += EltSize) {
     unsigned SubReg = NumSubRegs == 1 ?
-      ValueReg : getSubReg(ValueReg, getSubRegFromChannel(i));
+      Register(ValueReg) : getSubReg(ValueReg, getSubRegFromChannel(i));
 
     unsigned SOffsetRegState = 0;
     unsigned SrcDstRegState = getDefRegState(!IsStore);
@@ -806,7 +806,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   const GCNSubtarget &ST =  MF->getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
-  unsigned SuperReg = MI->getOperand(0).getReg();
+  Register SuperReg = MI->getOperand(0).getReg();
   bool IsKill = MI->getOperand(0).isKill();
   const DebugLoc &DL = MI->getDebugLoc();
 
@@ -988,7 +988,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   const SIInstrInfo *TII = ST.getInstrInfo();
   const DebugLoc &DL = MI->getDebugLoc();
 
-  unsigned SuperReg = MI->getOperand(0).getReg();
+  Register SuperReg = MI->getOperand(0).getReg();
   bool SpillToSMEM = spillSGPRToSMEM();
   if (SpillToSMEM && OnlyToVGPR)
     return false;

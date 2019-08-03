@@ -64,12 +64,18 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
   auto GetMemMgr = []() { return llvm::make_unique<SectionMemoryManager>(); };
-  return llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
+  auto ObjLinkingLayer =
+      llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
+
+  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
+    ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+
+  return ObjLinkingLayer;
 }
 
 Expected<IRCompileLayer::CompileFunction>

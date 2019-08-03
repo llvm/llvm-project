@@ -44,6 +44,11 @@ def inst_c : Instruction {
   let InOperandList = (ins GPR32:$src0, GPR32:$src1);
 }
 
+def inst_d : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins GPR32:$src0, GPR32:$src1);
+}
+
 // SDAG: case 2: {
 // SDAG-NEXT: // Predicate_pat_frag_b
 // SDAG-NEXT: SDNode *N = Node;
@@ -115,8 +120,18 @@ def : Pat <
   (inst_c GPR32:$src0, GPR32:$src1)
 >;
 
-// Test truncstore with specific MemoryVT
+// Test non-truncstore has a size equal to LLT check.
 // GISEL: GIM_Try, /*On fail goto*//*Label 3*/ {{[0-9]+}}, // Rule ID 3 //
+// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_STORE,
+// GISEL-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+def : Pat <
+  (store GPR32:$src0, GPR32:$src1),
+  (inst_d GPR32:$src0, GPR32:$src1)
+>;
+
+// Test truncstore with specific MemoryVT
+// GISEL: GIM_Try, /*On fail goto*//*Label 4*/ {{[0-9]+}}, // Rule ID 4 //
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_STORE,
 // GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
