@@ -2274,7 +2274,9 @@ __decay_copy(_Tp&& __t)
 }
 
 template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
-struct __member_pointer_traits_imp;
+struct __member_pointer_traits_imp
+{
+};
 
 template <class _Rp, class _Class, class ..._Param>
 struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...), true, false>
