@@ -28,7 +28,7 @@
 # SEC: .got.plt PROGBITS 0000000000220000 020000 000008 00 WA 0 0 8
 
 # RELOC:      Relocations [
-# RELOC-NEXT:   Section {{.*}} .rela.plt {
+# RELOC-NEXT:   Section {{.*}} .rela.dyn {
 # RELOC-NEXT:     0x220000 R_AARCH64_IRELATIVE - 0x210000
 # RELOC-NEXT:   }
 # RELOC-NEXT: ]

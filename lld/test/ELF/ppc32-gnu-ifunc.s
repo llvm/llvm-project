@@ -5,11 +5,11 @@
 # RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=SEC,SYM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RELOC:      .rela.plt {
+# RELOC:      .rela.dyn {
 # RELOC-NEXT:   0x10020000 R_PPC_IRELATIVE - 0x10010000
 # RELOC-NEXT: }
 
-# SEC: .rela.plt RELA 100000d4 0000d4 00000c
+# SEC: .rela.dyn RELA 100000d4 0000d4 00000c
 # SYM: 10010000 0 FUNC GLOBAL DEFAULT {{.*}} func
 
 # CHECK:      func_resolver:

@@ -269,10 +269,11 @@ void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, kmp_info_t *thr, int gtid,
 }
 
 void __ompt_lw_taskteam_link(ompt_lw_taskteam_t *lwt, kmp_info_t *thr,
-                             int on_heap) {
+                             int on_heap, bool always) {
   ompt_lw_taskteam_t *link_lwt = lwt;
-  if (thr->th.th_team->t.t_serialized >
-      1) { // we already have a team, so link the new team and swap values
+  if (always ||
+      thr->th.th_team->t.t_serialized >
+          1) { // we already have a team, so link the new team and swap values
     if (on_heap) { // the lw_taskteam cannot stay on stack, allocate it on heap
       link_lwt =
           (ompt_lw_taskteam_t *)__kmp_allocate(sizeof(ompt_lw_taskteam_t));

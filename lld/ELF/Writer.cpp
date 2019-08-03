@@ -355,6 +355,8 @@ template <class ELFT> static void createSyntheticSections() {
       add(sec);
   }
 
+  StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
+
   for (Partition &part : partitions) {
     auto add = [&](InputSectionBase *sec) {
       sec->partition = part.getNumber();
@@ -378,13 +380,11 @@ template <class ELFT> static void createSyntheticSections() {
     part.dynStrTab = make<StringTableSection>(".dynstr", true);
     part.dynSymTab = make<SymbolTableSection<ELFT>>(*part.dynStrTab);
     part.dynamic = make<DynamicSection<ELFT>>();
-    if (config->androidPackDynRelocs) {
-      part.relaDyn = make<AndroidPackedRelocationSection<ELFT>>(
-          config->isRela ? ".rela.dyn" : ".rel.dyn");
-    } else {
-      part.relaDyn = make<RelocationSection<ELFT>>(
-          config->isRela ? ".rela.dyn" : ".rel.dyn", config->zCombreloc);
-    }
+    if (config->androidPackDynRelocs)
+      part.relaDyn = make<AndroidPackedRelocationSection<ELFT>>(relaDynName);
+    else
+      part.relaDyn =
+          make<RelocationSection<ELFT>>(relaDynName, config->zCombreloc);
 
     if (needsInterpSection())
       add(createInterpSection());
@@ -504,16 +504,14 @@ template <class ELFT> static void createSyntheticSections() {
       config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false);
   add(in.relaPlt);
 
-  // The relaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
-  // that the IRelative relocations are processed last by the dynamic loader.
-  // We cannot place the iplt section in .rel.dyn when Android relocation
-  // packing is enabled because that would cause a section type mismatch.
-  // However, because the Android dynamic loader reads .rel.plt after .rel.dyn,
-  // we can get the desired behaviour by placing the iplt section in .rel.plt.
+  // The relaIplt immediately follows .rel[a].dyn to ensure that the IRelative
+  // relocations are processed last by the dynamic loader. We cannot place the
+  // iplt section in .rel.dyn when Android relocation packing is enabled because
+  // that would cause a section type mismatch. However, because the Android
+  // dynamic loader reads .rel.plt after .rel.dyn, we can get the desired
+  // behaviour by placing the iplt section in .rel.plt.
   in.relaIplt = make<RelocationSection<ELFT>>(
-      (config->emachine == EM_ARM && !config->androidPackDynRelocs)
-          ? ".rel.dyn"
-          : in.relaPlt->name,
+      config->androidPackDynRelocs ? in.relaPlt->name : relaDynName,
       /*sort=*/false);
   add(in.relaIplt);
 
@@ -1070,7 +1068,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ElfSym::globalOffsetTable->section = gotSection;
   }
 
-  // .rela_iplt_{start,end} mark the start and the end of .rela.plt section.
+  // .rela_iplt_{start,end} mark the start and the end of in.relaIplt.
   if (ElfSym::relaIpltStart && in.relaIplt->isNeeded()) {
     ElfSym::relaIpltStart->section = in.relaIplt;
     ElfSym::relaIpltEnd->section = in.relaIplt;
