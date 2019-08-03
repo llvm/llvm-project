@@ -228,6 +228,8 @@ public:
 
   void CacheModule(swift::ModuleDecl *module);
 
+  Module *GetModule() const { return m_module; }
+
   // Call this after the search paths are set up, it will find the module given
   // by module, load the module into the AST context, and also load any
   // "LinkLibraries" that the module requires.
@@ -313,6 +315,7 @@ public:
   CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
+  swift::DWARFImporter *GetDWARFImporter();
 
   // ***********************************************************
   //  these calls create non-nominal types which are given in
@@ -765,6 +768,9 @@ public:
                                 lldb::StackFrameWP &stack_frame_wp,
                                 swift::SourceFile *source_file, Status &error);
 
+  /// Import a Clang declaration into Swift.
+  swift::ValueDecl *importDecl(clang::Decl *clangDecl);
+  
 protected:
   /// This map uses the string value of ConstStrings as the key, and the TypeBase
   /// * as the value. Since the ConstString strings are uniqued, we can use
@@ -836,6 +842,7 @@ protected:
   /// Only if this AST belongs to a target, and an expression has been
   /// evaluated will the target's process pointer be filled in
   lldb_private::Process *m_process = nullptr;
+  Module *m_module = nullptr;
   std::string m_platform_sdk_path;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;

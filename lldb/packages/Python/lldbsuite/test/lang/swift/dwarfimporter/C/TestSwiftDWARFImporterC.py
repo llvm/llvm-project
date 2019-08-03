@@ -44,21 +44,26 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
         self.build()
-        log = self.getBuildArtifact("types.log")
-        self.runCmd('log enable lldb types -f "%s"' % log)
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")
+        if self.getDebugInfo() == 'dsym':
+            # Swiftified type.
+            type_name = '__ObjC.Point'
+        else:
+            # Clang type, because -gmodules breadcrumb following isn't implented yet.
+            type_name = 'Point'
+
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
-                                typename="Point", num_children=2)
+                                typename=type_name, num_children=2)
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
         self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
         self.expect("fr v swiftStructCMember",
-                    substrs=["swift struct c member"])
+                    substrs=["x = 3", "y = 4", "swift struct c member"])
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()

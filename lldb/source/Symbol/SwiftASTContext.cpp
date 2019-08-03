@@ -99,6 +99,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SourceModule.h"
@@ -117,6 +118,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 
 #define VALID_OR_RETURN(value)                                                 \
@@ -1706,6 +1708,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   // This is a module AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = false;
+  swift_ast_sp->m_module = &module;
   swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
@@ -3128,6 +3131,82 @@ private:
   unsigned m_num_errors = 0;
   bool m_colorize;
 };
+
+/// Implements a swift::DWARFImporterDelegate to look up Clang types in DWARF.
+///
+/// During compile time, ClangImporter-imported Clang modules are compiled with
+/// -gmodules, which emits a DWARF rendition of all types defined in the module
+/// into the .pcm file. On Darwin, these types can be collected by
+/// dsymutil. This delegate allows DWARFImporter to ask LLDB to look up a Clang
+/// type by name, synthesize a Clang AST from it. DWARFImporter then hands this
+/// Clang AST to ClangImporter to import the type into Swift.
+class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
+  SwiftASTContext &m_swift_ast_ctx;
+public:
+  SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
+      : m_swift_ast_ctx(swift_ast_ctx) {}
+
+  void lookupValue(StringRef name,
+                   llvm::Optional<swift::Demangle::Node::Kind> kind,
+                   llvm::SmallVectorImpl<clang::Decl *> &results) override {
+    std::vector<CompilerContext> decl_context;
+    ConstString name_cs(name);
+    decl_context.push_back({CompilerContextKind::Structure, name_cs});
+    auto *dwarf_importer = m_swift_ast_ctx.GetDWARFImporter();
+    if (!dwarf_importer)
+      return;
+    Module *module = m_swift_ast_ctx.GetModule();
+    if (!module)
+      return;
+
+    TypeList clang_types;
+    const bool exact_match = true;
+    const uint32_t max_matches = UINT32_MAX;
+    llvm::DenseSet<SymbolFile *> searched_symbol_files;
+    // FIXME: Filter by kind.
+    if (!module->FindTypes(name_cs, exact_match, max_matches,
+                           searched_symbol_files, clang_types))
+      return;
+
+    SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
+    if (!sym_file)
+      return;
+    auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
+        sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC));
+    if (!clang_ctx)
+      return;
+    clang::FileSystemOptions file_system_options;
+    clang::FileManager file_manager(file_system_options);
+
+    for (unsigned i = 0; i < clang_types.GetSize(); ++i)
+      if (TypeSP clang_type_sp = clang_types.GetTypeAtIndex(i)) {
+        // Realize the full type.
+        CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
+        // Import the type into the DWARFImporter's context.
+        clang::ASTContext &to_ctx = dwarf_importer->getClangASTContext();
+        auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
+            compiler_type.GetTypeSystem());
+        if (!type_system)
+          continue;
+        clang::ASTContext *from_ctx = type_system->getASTContext();
+        if (!from_ctx)
+          continue;
+        clang::ASTImporter importer(to_ctx, file_manager, *from_ctx,
+                                    file_manager, false);
+        clang::QualType clang_type(
+            importer.Import(ClangUtil::GetQualType(compiler_type)));
+
+        // FIXME: Support more than structs.
+        auto *clang_record_type = clang_type->getAsStructureType();
+        if (!clang_record_type)
+          continue;
+        clang::Decl *clang_decl = clang_record_type->getDecl();
+        if (!clang_decl)
+          continue;
+        results.push_back(clang_decl);
+      }
+  }
+};
 } // namespace lldb_private
 
 swift::ASTContext *SwiftASTContext::GetASTContext() {
@@ -3273,10 +3352,12 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     auto props = ModuleList::GetGlobalModuleListProperties();
     if (props.GetUseDWARFImporter()) {
       auto dwarf_importer_ap = swift::DWARFImporter::create(
-          *m_ast_context_ap, clang_importer_options);
+          *m_ast_context_ap, clang_importer_options,
+          llvm::make_unique<SwiftDWARFImporterDelegate>(*this));
       if (dwarf_importer_ap) {
         m_dwarf_importer = dwarf_importer_ap.get();
-        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap));
+        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
+                                          /*isClang=*/true, /*isDWARF=*/true);
       }
     }
   }
@@ -3289,6 +3370,13 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   VALID_OR_RETURN(nullptr);
   return m_ast_context_ap.get();
 }
+
+swift::ValueDecl *SwiftASTContext::importDecl(clang::Decl *clangDecl) {
+  if (m_dwarf_importer)
+    return m_dwarf_importer->importDecl(clangDecl);
+  return nullptr;
+}
+
 
 swift::MemoryBufferSerializedModuleLoader *
 SwiftASTContext::GetMemoryBufferModuleLoader() {
@@ -3303,6 +3391,13 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clang_importer;
+}
+
+swift::DWARFImporter *SwiftASTContext::GetDWARFImporter() {
+  VALID_OR_RETURN(nullptr);
+
+  GetASTContext();
+  return m_dwarf_importer;
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
