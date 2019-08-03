@@ -7,8 +7,8 @@ import * as vscodelc from 'vscode-languageclient';
  * @param defaultValue default value to return if option is not set
  */
 function getConfig<T>(option: string, defaultValue?: any): T {
-    const config = vscode.workspace.getConfiguration('clangd');
-    return config.get<T>(option, defaultValue);
+  const config = vscode.workspace.getConfiguration('clangd');
+  return config.get<T>(option, defaultValue);
 }
 
 namespace SwitchSourceHeaderRequest {
@@ -18,35 +18,33 @@ export const type =
 }
 
 class FileStatus {
-    private statuses = new Map<string, any>();
-    private readonly statusBarItem =
-        vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+  private statuses = new Map<string, any>();
+  private readonly statusBarItem =
+      vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
 
-    onFileUpdated(fileStatus: any) {
-        const filePath = vscode.Uri.parse(fileStatus.uri);
-        this.statuses.set(filePath.fsPath, fileStatus);
-        this.updateStatus();
-    }
+  onFileUpdated(fileStatus: any) {
+    const filePath = vscode.Uri.parse(fileStatus.uri);
+    this.statuses.set(filePath.fsPath, fileStatus);
+    this.updateStatus();
+  }
 
-    updateStatus() {
-        const path = vscode.window.activeTextEditor.document.fileName;
-        const status = this.statuses.get(path);
-        if (!status) {
-          this.statusBarItem.hide();
-          return;
-        }
-        this.statusBarItem.text = `clangd: ` + status.state;
-        this.statusBarItem.show();
+  updateStatus() {
+    const path = vscode.window.activeTextEditor.document.fileName;
+    const status = this.statuses.get(path);
+    if (!status) {
+      this.statusBarItem.hide();
+      return;
     }
+    this.statusBarItem.text = `clangd: ` + status.state;
+    this.statusBarItem.show();
+  }
 
-    clear() {
-        this.statuses.clear();
-        this.statusBarItem.hide();
-    }
+  clear() {
+    this.statuses.clear();
+    this.statusBarItem.hide();
+  }
 
-    dispose() {
-        this.statusBarItem.dispose();
-    }
+  dispose() { this.statusBarItem.dispose(); }
 }
 
 /**
@@ -54,27 +52,27 @@ class FileStatus {
  *  your extension is activated the very first time the command is executed
  */
 export function activate(context: vscode.ExtensionContext) {
-    const syncFileEvents = getConfig<boolean>('syncFileEvents', true);
+  const syncFileEvents = getConfig<boolean>('syncFileEvents', true);
 
-    const clangd: vscodelc.Executable = {
-        command: getConfig<string>('path'),
-        args: getConfig<string[]>('arguments')
-    };
-    const traceFile = getConfig<string>('trace');
-    if (!!traceFile) {
-        const trace = { CLANGD_TRACE: traceFile };
-        clangd.options = { env: { ...process.env, ...trace } };
-    }
-    const serverOptions: vscodelc.ServerOptions = clangd;
+  const clangd: vscodelc.Executable = {
+    command : getConfig<string>('path'),
+    args : getConfig<string[]>('arguments')
+  };
+  const traceFile = getConfig<string>('trace');
+  if (!!traceFile) {
+    const trace = {CLANGD_TRACE : traceFile};
+    clangd.options = {env : {...process.env, ...trace}};
+  }
+  const serverOptions: vscodelc.ServerOptions = clangd;
 
-    // Note that CUDA ('.cu') files are special. When opening files of all other
-    // extensions, VSCode would load clangd automatically. This is achieved by
-    // having a corresponding 'onLanguage:...' activation event in package.json.
-    // However, VSCode does not have CUDA as a supported language yet, so we
-    // cannot add a corresponding activationEvent for CUDA files and clangd will
-    // *not* load itself automatically on '.cu' files.
-    const cudaFilePattern: string = '**/*.{' +['cu'].join()+ '}';
-    const clientOptions: vscodelc.LanguageClientOptions = {
+  // Note that CUDA ('.cu') files are special. When opening files of all other
+  // extensions, VSCode would load clangd automatically. This is achieved by
+  // having a corresponding 'onLanguage:...' activation event in package.json.
+  // However, VSCode does not have CUDA as a supported language yet, so we
+  // cannot add a corresponding activationEvent for CUDA files and clangd will
+  // *not* load itself automatically on '.cu' files.
+  const cudaFilePattern: string = '**/*.{' + [ 'cu' ].join() + '}';
+  const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for c-family and cuda files.
         documentSelector: [
             { scheme: 'file', language: 'c' },
@@ -91,45 +89,44 @@ export function activate(context: vscode.ExtensionContext) {
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
-    const clangdClient = new vscodelc.LanguageClient('Clang Language Server',serverOptions, clientOptions);
-    console.log('Clang Language Server is now active!');
-    context.subscriptions.push(clangdClient.start());
-    context.subscriptions.push(vscode.commands.registerCommand(
-        'clangd-vscode.switchheadersource', async () => {
-            const uri =
-                vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
-            if (!uri) {
-                return;
-            }
-            const docIdentifier =
-                vscodelc.TextDocumentIdentifier.create(uri.toString());
-            const sourceUri = await clangdClient.sendRequest(
-                SwitchSourceHeaderRequest.type, docIdentifier);
-            if (!sourceUri) {
-                return;
-            }
-            const doc = await vscode.workspace.openTextDocument(
-                vscode.Uri.parse(sourceUri));
-            vscode.window.showTextDocument(doc);
-        }));
-    const status = new FileStatus();
-    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
-        status.updateStatus();
-    }));
-    clangdClient.onDidChangeState(
-        ({ newState }) => {
-            if (newState == vscodelc.State.Running) {
-                // clangd starts or restarts after crash.
-                clangdClient.onNotification(
-                    'textDocument/clangd.fileStatus',
-                    (fileStatus) => { status.onFileUpdated(fileStatus); });
-            } else if (newState == vscodelc.State.Stopped) {
-                // Clear all cached statuses when clangd crashes.
-                status.clear();
-            }
-        })
-    // An empty place holder for the activate command, otherwise we'll get an
-    // "command is not registered" error.
-    context.subscriptions.push(vscode.commands.registerCommand(
-            'clangd-vscode.activate', async () => {}));
+  const clangdClient = new vscodelc.LanguageClient(
+      'Clang Language Server', serverOptions, clientOptions);
+  console.log('Clang Language Server is now active!');
+  context.subscriptions.push(clangdClient.start());
+  context.subscriptions.push(vscode.commands.registerCommand(
+      'clangd-vscode.switchheadersource', async () => {
+        const uri =
+            vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
+        if (!uri) {
+          return;
+        }
+        const docIdentifier =
+            vscodelc.TextDocumentIdentifier.create(uri.toString());
+        const sourceUri = await clangdClient.sendRequest(
+            SwitchSourceHeaderRequest.type, docIdentifier);
+        if (!sourceUri) {
+          return;
+        }
+        const doc = await vscode.workspace.openTextDocument(
+            vscode.Uri.parse(sourceUri));
+        vscode.window.showTextDocument(doc);
+      }));
+  const status = new FileStatus();
+  context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(
+      () => { status.updateStatus(); }));
+  clangdClient.onDidChangeState(({newState}) => {
+    if (newState == vscodelc.State.Running) {
+      // clangd starts or restarts after crash.
+      clangdClient.onNotification(
+          'textDocument/clangd.fileStatus',
+          (fileStatus) => { status.onFileUpdated(fileStatus); });
+    } else if (newState == vscodelc.State.Stopped) {
+      // Clear all cached statuses when clangd crashes.
+      status.clear();
+    }
+  })
+  // An empty place holder for the activate command, otherwise we'll get an
+  // "command is not registered" error.
+  context.subscriptions.push(vscode.commands.registerCommand(
+      'clangd-vscode.activate', async () => {}));
 }

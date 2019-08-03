@@ -28,6 +28,7 @@ std::pair<llvm::StringRef, llvm::StringRef> wrapping(Context Ctx) {
     case TweakTest::Expression:
       return {"auto expressionWrapper(){return\n", "\n;}"};
   }
+  llvm_unreachable("Unknown TweakTest::CodeContext enum");
 }
 
 std::string wrap(Context Ctx, llvm::StringRef Inner) {

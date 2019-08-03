@@ -52,7 +52,7 @@ The improvements are...
 Improvements to clang-doc
 -------------------------
 
-The improvements are...
+- :doc:`clang-doc <clang-doc>` now generates documentation in HTML format.
 
 Improvements to clang-query
 ---------------------------
