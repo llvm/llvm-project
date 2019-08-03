@@ -1486,13 +1486,6 @@ JITDylib::MaterializingInfo::takeQueriesMeeting(SymbolState RequiredState) {
   return Result;
 }
 
-JITDylib::AsynchronousSymbolQueryList
-JITDylib::MaterializingInfo::takeAllQueries() {
-  AsynchronousSymbolQueryList Result;
-  std::swap(Result, PendingQueries);
-  return Result;
-}
-
 JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
     : ES(ES), JITDylibName(std::move(Name)) {
   SearchOrder.push_back({this, true});

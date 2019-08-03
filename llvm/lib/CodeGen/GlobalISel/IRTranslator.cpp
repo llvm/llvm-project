@@ -2284,18 +2284,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     }
   }
 
-  // We don't currently support translating swifterror or swiftself functions.
-  for (auto &Arg : F.args()) {
-    if (Arg.hasSwiftSelfAttr()) {
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 F.getSubprogram(), &F.getEntryBlock());
-      R << "unable to lower arguments due to swiftself: "
-        << ore::NV("Prototype", F.getType());
-      reportTranslationError(*MF, *TPC, *ORE, R);
-      return false;
-    }
-  }
-
   if (!CLI->lowerFormalArguments(*EntryBuilder.get(), F, VRegArgs)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());

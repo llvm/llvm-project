@@ -400,7 +400,7 @@ struct ST {
 //CHECK:     call void @__tgt_register_requires(i64 1)
 //CHECK:     ret void
 
-//CHECK:     define internal void @[[UNREGFN:.+]](i8*)
+//CHECK:     define internal void @[[UNREGFN:.+]](i8* %0)
 //CHECK-SAME: comdat($[[REGFN]]) {
 //CHECK:     call i32 @__tgt_unregister_lib([[DSCTY]]* [[DESC]])
 //CHECK:     ret void

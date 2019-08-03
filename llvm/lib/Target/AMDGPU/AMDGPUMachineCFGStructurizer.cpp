@@ -694,7 +694,7 @@ void LinearizedRegion::storeLiveOutReg(MachineBasicBlock *MBB, unsigned Reg,
                                        const MachineRegisterInfo *MRI,
                                        const TargetRegisterInfo *TRI,
                                        PHILinearize &PHIInfo) {
-  if (TRI->isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     LLVM_DEBUG(dbgs() << "Considering Register: " << printReg(Reg, TRI)
                       << "\n");
     // If this is a source register to a PHI we are chaining, it
@@ -734,7 +734,7 @@ void LinearizedRegion::storeLiveOutRegRegion(RegionMRT *Region, unsigned Reg,
                                              const MachineRegisterInfo *MRI,
                                              const TargetRegisterInfo *TRI,
                                              PHILinearize &PHIInfo) {
-  if (TRI->isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     LLVM_DEBUG(dbgs() << "Considering Register: " << printReg(Reg, TRI)
                       << "\n");
     for (auto &UI : MRI->use_operands(Reg)) {
@@ -949,7 +949,7 @@ void LinearizedRegion::replaceRegister(unsigned Register, unsigned NewRegister,
                          (IncludeLoopPHI && IsLoopPHI);
     if (ShouldReplace) {
 
-      if (TargetRegisterInfo::isPhysicalRegister(NewRegister)) {
+      if (Register::isPhysicalRegister(NewRegister)) {
         LLVM_DEBUG(dbgs() << "Trying to substitute physical register: "
                           << printReg(NewRegister, MRI->getTargetRegisterInfo())
                           << "\n");
@@ -1016,13 +1016,15 @@ bool LinearizedRegion::hasNoDef(unsigned Reg, MachineRegisterInfo *MRI) {
 // before are no longer register kills.
 void LinearizedRegion::removeFalseRegisterKills(MachineRegisterInfo *MRI) {
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  (void)TRI; // It's used by LLVM_DEBUG.
+
   for (auto MBBI : MBBs) {
     MachineBasicBlock *MBB = MBBI;
     for (auto &II : *MBB) {
       for (auto &RI : II.uses()) {
         if (RI.isReg()) {
           unsigned Reg = RI.getReg();
-          if (TRI->isVirtualRegister(Reg)) {
+          if (Register::isVirtualRegister(Reg)) {
             if (hasNoDef(Reg, MRI))
               continue;
             if (!MRI->hasOneDef(Reg)) {
@@ -2230,7 +2232,7 @@ void AMDGPUMachineCFGStructurizer::replaceRegisterWith(unsigned Register,
        I != E;) {
     MachineOperand &O = *I;
     ++I;
-    if (TargetRegisterInfo::isPhysicalRegister(NewRegister)) {
+    if (Register::isPhysicalRegister(NewRegister)) {
       LLVM_DEBUG(dbgs() << "Trying to substitute physical register: "
                         << printReg(NewRegister, MRI->getTargetRegisterInfo())
                         << "\n");

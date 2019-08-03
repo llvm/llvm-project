@@ -76,17 +76,17 @@ $vf4 = comdat largest
 ; CHECK: declare void @vf1(i8*)
 declare void @vf1(i8*)
 
-; CHECK: define void @vf2(i8*)
+; CHECK: define void @vf2(i8* %0)
 define void @vf2(i8*) {
   ret void
 }
 
-; CHECK: define hidden void @"vf3$merged"(i8*) {
+; CHECK: define hidden void @"vf3$merged"(i8* %0) {
 define internal void @vf3(i8*) {
   ret void
 }
 
-; CHECK: define hidden void @"vf4$merged"(i8*) comdat {
+; CHECK: define hidden void @"vf4$merged"(i8* %0) comdat {
 define internal void @vf4(i8*) comdat {
   ret void
 }

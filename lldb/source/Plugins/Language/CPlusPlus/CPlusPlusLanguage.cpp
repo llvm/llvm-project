@@ -566,12 +566,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       ConstString("^(std::__[[:alnum:]]+::)weak_ptr<.+>(( )?&)?$"),
       stl_synth_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::LibcxxFunctionSummaryProvider,
-      "libc++ std::function summary provider",
-      ConstString("^std::__[[:alnum:]]+::function<.+>$"), stl_summary_flags,
-      true);
-
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
   AddCXXSummary(cpp_category_sp,

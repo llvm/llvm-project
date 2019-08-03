@@ -371,7 +371,7 @@ void PPCDAGToDAGISel::InsertVRSaveCode(MachineFunction &Fn) {
   // by the scheduler.  Detect them now.
   bool HasVectorVReg = false;
   for (unsigned i = 0, e = RegInfo->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (RegInfo->getRegClass(Reg) == &PPC::VRRCRegClass) {
       HasVectorVReg = true;
       break;

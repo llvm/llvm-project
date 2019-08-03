@@ -558,7 +558,7 @@ void RegAllocPBQP::findVRegIntervalsToAlloc(const MachineFunction &MF,
 
   // Iterate over all live ranges.
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned Reg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
     VRegsToAlloc.insert(Reg);

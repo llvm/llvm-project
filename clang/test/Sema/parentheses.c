@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -Wparentheses -fsyntax-only -verify %s
 // RUN: %clang_cc1 -Wparentheses -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
@@ -44,58 +45,6 @@ void bitwise_rel(unsigned i) {
   // Eager logical op
   (void)(i == 1 | i == 2 | i == 3);
   (void)(i != 1 & i != 2 & i != 3);
-
-  (void)(i & i | i); // expected-warning {{'&' within '|'}} \
-                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:10}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:")"
-
-  (void)(i | i & i); // expected-warning {{'&' within '|'}} \
-                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
-
-  (void)(i ^ i | i); // expected-warning {{'^' within '|'}} \
-                     // expected-note {{place parentheses around the '^' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:10}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:")"
-
-  (void)(i | i ^ i); // expected-warning {{'^' within '|'}} \
-                     // expected-note {{place parentheses around the '^' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
-
-  (void)(i & i ^ i); // expected-warning {{'&' within '^'}} \
-                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:10}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:")"
-
-  (void)(i ^ i & i); // expected-warning {{'&' within '^'}} \
-                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
-
-  (void)(i ||
-             i && i); // expected-warning {{'&&' within '||'}} \
-                      // expected-note {{place parentheses around the '&&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:")"
-
-  (void)(i || i && "w00t"); // no warning.
-  (void)("w00t" && i || i); // no warning.
-
-  (void)(i || i && "w00t" || i); // expected-warning {{'&&' within '||'}} \
-                                 // expected-note {{place parentheses around the '&&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:")"
-
-  (void)(i || "w00t" && i || i); // expected-warning {{'&&' within '||'}} \
-                                 // expected-note {{place parentheses around the '&&' expression to silence this warning}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:")"
-
-  (void)(i && i || 0); // no warning.
-  (void)(0 || i && i); // no warning.
 }
 
 _Bool someConditionFunc();

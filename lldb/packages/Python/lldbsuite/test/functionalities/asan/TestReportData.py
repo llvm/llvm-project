@@ -5,8 +5,6 @@ Test the AddressSanitizer runtime support for report breakpoint and data extract
 from __future__ import print_function
 
 
-import os
-import time
 import json
 import lldb
 from lldbsuite.test.decorators import *

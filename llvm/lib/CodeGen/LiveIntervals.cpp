@@ -108,7 +108,7 @@ LiveIntervals::~LiveIntervals() {
 void LiveIntervals::releaseMemory() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    delete VirtRegIntervals[TargetRegisterInfo::index2VirtReg(i)];
+    delete VirtRegIntervals[Register::index2VirtReg(i)];
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
@@ -161,7 +161,7 @@ void LiveIntervals::print(raw_ostream &OS, const Module* ) const {
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (hasInterval(Reg))
       OS << getInterval(Reg) << '\n';
   }
@@ -186,7 +186,7 @@ LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
 #endif
 
 LiveInterval* LiveIntervals::createInterval(unsigned reg) {
-  float Weight = TargetRegisterInfo::isPhysicalRegister(reg) ? huge_valf : 0.0F;
+  float Weight = Register::isPhysicalRegister(reg) ? huge_valf : 0.0F;
   return new LiveInterval(reg, Weight);
 }
 
@@ -201,7 +201,7 @@ void LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
 
 void LiveIntervals::computeVirtRegs() {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     createAndComputeVirtRegInterval(Reg);
@@ -441,8 +441,8 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
                                  SmallVectorImpl<MachineInstr*> *dead) {
   LLVM_DEBUG(dbgs() << "Shrink: " << *li << '\n');
-  assert(TargetRegisterInfo::isVirtualRegister(li->reg)
-         && "Can only shrink virtual registers");
+  assert(Register::isVirtualRegister(li->reg) &&
+         "Can only shrink virtual registers");
 
   // Shrink subregister live ranges.
   bool NeedsCleanup = false;
@@ -541,8 +541,8 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
 
 void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg) {
   LLVM_DEBUG(dbgs() << "Shrink: " << SR << '\n');
-  assert(TargetRegisterInfo::isVirtualRegister(Reg)
-         && "Can only shrink virtual registers");
+  assert(Register::isVirtualRegister(Reg) &&
+         "Can only shrink virtual registers");
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
@@ -688,7 +688,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
                         LiveRange::const_iterator>, 4> SRs;
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     const LiveInterval &LI = getInterval(Reg);
@@ -989,7 +989,7 @@ public:
       unsigned Reg = MO.getReg();
       if (!Reg)
         continue;
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         LiveInterval &LI = LIS.getInterval(Reg);
         if (LI.hasSubRanges()) {
           unsigned SubReg = MO.getSubReg();
@@ -1023,7 +1023,7 @@ private:
       return;
     LLVM_DEBUG({
       dbgs() << "     ";
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         dbgs() << printReg(Reg);
         if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
@@ -1384,7 +1384,7 @@ private:
   // Return the last use of reg between NewIdx and OldIdx.
   SlotIndex findLastUseBefore(SlotIndex Before, unsigned Reg,
                               LaneBitmask LaneMask) {
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (Register::isVirtualRegister(Reg)) {
       SlotIndex LastUse = Before;
       for (MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
         if (MO.isUndef())
@@ -1429,7 +1429,7 @@ private:
       // Check if MII uses Reg.
       for (MIBundleOperands MO(*MII); MO.isValid(); ++MO)
         if (MO->isReg() && !MO->isUndef() &&
-            TargetRegisterInfo::isPhysicalRegister(MO->getReg()) &&
+            Register::isPhysicalRegister(MO->getReg()) &&
             TRI.hasRegUnit(MO->getReg(), Reg))
           return Idx.getRegSlot();
     }
@@ -1585,8 +1585,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
     for (MachineInstr::const_mop_iterator MOI = MI.operands_begin(),
                                           MOE = MI.operands_end();
          MOI != MOE; ++MOI) {
-      if (MOI->isReg() &&
-          TargetRegisterInfo::isVirtualRegister(MOI->getReg()) &&
+      if (MOI->isReg() && Register::isVirtualRegister(MOI->getReg()) &&
           !hasInterval(MOI->getReg())) {
         createAndComputeVirtRegInterval(MOI->getReg());
       }
@@ -1594,7 +1593,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   }
 
   for (unsigned Reg : OrigRegs) {
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
 
     LiveInterval &LI = getInterval(Reg);

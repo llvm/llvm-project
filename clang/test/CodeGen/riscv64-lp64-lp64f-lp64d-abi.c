@@ -173,7 +173,7 @@ struct large f_agg_large_ret(int32_t i, int8_t j) {
 
 typedef unsigned char v32i8 __attribute__((vector_size(32)));
 
-// CHECK-LABEL: define void @f_vec_large_v32i8(<32 x i8>*)
+// CHECK-LABEL: define void @f_vec_large_v32i8(<32 x i8>* %0)
 void f_vec_large_v32i8(v32i8 x) {
   x[0] = x[7];
 }
@@ -192,7 +192,7 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
   return g + h;
 }
 
-// CHECK-LABEL: define signext i32 @f_scalar_stack_2(i32 signext %a, i128 %b, i64 %c, fp128 %d, <32 x i8>*, i8 zeroext %f, i8 %g, i8 %h)
+// CHECK-LABEL: define signext i32 @f_scalar_stack_2(i32 signext %a, i128 %b, i64 %c, fp128 %d, <32 x i8>* %0, i8 zeroext %f, i8 %g, i8 %h)
 int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
                      uint8_t f, int8_t g, uint8_t h) {
   return g + h;
@@ -202,7 +202,7 @@ int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define void @f_scalar_stack_3(%struct.large* noalias sret %agg.result, i32 signext %a, i128 %b, fp128 %c, <32 x i8>*, i8 zeroext %e, i8 %f, i8 %g)
+// CHECK-LABEL: define void @f_scalar_stack_3(%struct.large* noalias sret %agg.result, i32 signext %a, i128 %b, fp128 %c, <32 x i8>* %0, i8 zeroext %e, i8 %f, i8 %g)
 struct large f_scalar_stack_3(uint32_t a, __int128_t b, long double c, v32i8 d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};

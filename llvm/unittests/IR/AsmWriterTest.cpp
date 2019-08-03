@@ -35,6 +35,18 @@ TEST(AsmWriterTest, DebugPrintDetachedInstruction) {
   EXPECT_TRUE(r != std::string::npos);
 }
 
+TEST(AsmWriterTest, DebugPrintDetachedArgument) {
+  LLVMContext Ctx;
+  auto Ty = Type::getInt32Ty(Ctx);
+  auto Arg = new Argument(Ty);
+
+  std::string S;
+  raw_string_ostream OS(S);
+  Arg->print(OS);
+  EXPECT_EQ(S, "i32 <badref>");
+  delete Arg;
+}
+
 TEST(AsmWriterTest, DumpDIExpression) {
   LLVMContext Ctx;
   uint64_t Ops[] = {

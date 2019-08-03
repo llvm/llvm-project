@@ -956,7 +956,7 @@ SystemZTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'K': // Signed 16-bit constant
     case 'L': // Signed 20-bit displacement (on all targets we support)
     case 'M': // 0x7fffffff
-      return C_Other;
+      return C_Immediate;
 
     default:
       break;

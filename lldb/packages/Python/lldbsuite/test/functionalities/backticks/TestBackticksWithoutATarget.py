@@ -5,8 +5,6 @@ Test that backticks without a target should work (not infinite looping).
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

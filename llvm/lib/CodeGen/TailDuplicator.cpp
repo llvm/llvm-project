@@ -385,7 +385,7 @@ void TailDuplicator::duplicateInstruction(
       if (!MO.isReg())
         continue;
       unsigned Reg = MO.getReg();
-      if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      if (!Register::isVirtualRegister(Reg))
         continue;
       if (MO.isDef()) {
         const TargetRegisterClass *RC = MRI->getRegClass(Reg);

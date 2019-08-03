@@ -157,7 +157,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       unsigned Reg = MO.getReg();
       if (!Reg)
         continue;
-      assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+
       if (LocalDefSet.count(Reg)) {
         MO.setIsInternalRead();
         if (MO.isKill())
@@ -194,7 +194,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           DeadDefSet.erase(Reg);
       }
 
-      if (!MO.isDead()) {
+      if (!MO.isDead() && Register::isPhysicalRegister(Reg)) {
         for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
           unsigned SubReg = *SubRegs;
           if (LocalDefSet.insert(SubReg).second)
@@ -316,7 +316,7 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
   bool AllDefsDead = true;
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
-  assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
+  assert(Register::isPhysicalRegister(Reg) &&
          "analyzePhysReg not given a physical register!");
   for (; isValid(); ++*this) {
     MachineOperand &MO = deref();
@@ -330,7 +330,7 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
       continue;
 
     unsigned MOReg = MO.getReg();
-    if (!MOReg || !TargetRegisterInfo::isPhysicalRegister(MOReg))
+    if (!MOReg || !Register::isPhysicalRegister(MOReg))
       continue;
 
     if (!TRI->regsOverlap(MOReg, Reg))

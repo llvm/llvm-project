@@ -399,7 +399,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
     } else {
       const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
       MachineLocation Location(RI->getFrameRegister(*Asm->MF));
-      if (RI->isPhysicalRegister(Location.getReg()))
+      if (Register::isPhysicalRegister(Location.getReg()))
         addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
     }
   }

@@ -6,8 +6,6 @@ should compile and link with the LLDB framework."""
 from __future__ import print_function
 
 
-import os
-import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

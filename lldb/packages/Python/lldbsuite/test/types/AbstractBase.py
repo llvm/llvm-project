@@ -5,7 +5,6 @@ Abstract base class of basic types provides a generic type tester method.
 from __future__ import print_function
 
 import os
-import time
 import re
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -200,7 +199,6 @@ class GenericTester(TestBase):
             nv = ("%s = '%s'" if quotedDisplay else "%s = %s") % (var, val)
             self.expect(output, Msg(var, val, True), exe=False,
                         substrs=[nv])
-        pass
 
     def generic_type_expr_tester(
             self,
@@ -297,4 +295,3 @@ class GenericTester(TestBase):
             valPart = ("'%s'" if quotedDisplay else "%s") % val
             self.expect(output, Msg(var, val, False), exe=False,
                         substrs=[valPart])
-        pass

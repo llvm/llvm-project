@@ -54,7 +54,12 @@ TEST(SanitizerCommon, PthreadDestructorIterations) {
   SpawnThread(GetPthreadDestructorIterations());
   EXPECT_TRUE(destructor_executed);
   SpawnThread(GetPthreadDestructorIterations() + 1);
+#if SANITIZER_SOLARIS
+  // Solaris continues calling destructors beyond PTHREAD_DESTRUCTOR_ITERATIONS.
+  EXPECT_TRUE(destructor_executed);
+#else
   EXPECT_FALSE(destructor_executed);
+#endif
   ASSERT_EQ(0, pthread_key_delete(key));
 }
 

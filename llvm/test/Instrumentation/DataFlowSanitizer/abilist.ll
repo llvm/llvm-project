@@ -13,7 +13,7 @@ define i32 @functional(i32 %a, i32 %b) {
   ret i32 %c
 }
 
-; CHECK: define i32 (i32, i32)* @discardg(i32)
+; CHECK: define i32 (i32, i32)* @discardg(i32 %0)
 ; CHECK: %[[CALL:.*]] = call { i32 (i32, i32)*, i16 } @"dfs$g"(i32 %0, i16 0)
 ; CHECK: %[[XVAL:.*]] = extractvalue { i32 (i32, i32)*, i16 } %[[CALL]], 0
 ; CHECK: ret {{.*}} %[[XVAL]]
@@ -21,7 +21,7 @@ define i32 @functional(i32 %a, i32 %b) {
 
 declare void @custom1(i32 %a, i32 %b)
 
-; CHECK: define linkonce_odr { i32, i16 } @"dfsw$custom2"(i32, i32, i16, i16)
+; CHECK: define linkonce_odr { i32, i16 } @"dfsw$custom2"(i32 %0, i32 %1, i16 %2, i16 %3)
 ; CHECK: %[[LABELRETURN2:.*]] = alloca i16
 ; CHECK: %[[RV:.*]] = call i32 @__dfsw_custom2
 ; CHECK: %[[RVSHADOW:.*]] = load i16, i16* %[[LABELRETURN2]]
@@ -30,7 +30,7 @@ declare void @custom1(i32 %a, i32 %b)
 ; CHECK: ret { i32, i16 }
 declare i32 @custom2(i32 %a, i32 %b)
 
-; CHECK: define linkonce_odr void @"dfsw$custom3"(i32, i16, i16*, ...)
+; CHECK: define linkonce_odr void @"dfsw$custom3"(i32 %0, i16 %1, i16* %2, ...)
 ; CHECK: call void @__dfsan_vararg_wrapper(i8*
 ; CHECK: unreachable
 declare void @custom3(i32 %a, ...)
@@ -78,7 +78,7 @@ define i32 (i32, i32)* @g(i32) {
   ret i32 (i32, i32)* @custom2
 }
 
-; CHECK: define { i32, i16 } @"dfs$adiscard"(i32, i32, i16, i16)
+; CHECK: define { i32, i16 } @"dfs$adiscard"(i32 %0, i32 %1, i16 %2, i16 %3)
 ; CHECK: %[[CALL:.*]] = call i32 @discard(i32 %0, i32 %1)
 ; CHECK: %[[IVAL0:.*]] = insertvalue { i32, i16 } undef, i32 %[[CALL]], 0
 ; CHECK: %[[IVAL1:.*]] = insertvalue { i32, i16 } %[[IVAL0]], i16 0, 1
@@ -88,7 +88,7 @@ define i32 (i32, i32)* @g(i32) {
 ; CHECK: declare void @__dfsw_custom1(i32, i32, i16, i16)
 ; CHECK: declare i32 @__dfsw_custom2(i32, i32, i16, i16, i16*)
 
-; CHECK-LABEL: define linkonce_odr i32 @"dfst0$customcb"(i32 (i32)*, i32, i16, i16*)
+; CHECK-LABEL: define linkonce_odr i32 @"dfst0$customcb"(i32 (i32)* %0, i32 %1, i16 %2, i16* %3)
 ; CHECK: %[[BC:.*]] = bitcast i32 (i32)* %0 to { i32, i16 } (i32, i16)*
 ; CHECK: %[[CALL:.*]] = call { i32, i16 } %[[BC]](i32 %1, i16 %2)
 ; CHECK: %[[XVAL0:.*]] = extractvalue { i32, i16 } %[[CALL]], 0

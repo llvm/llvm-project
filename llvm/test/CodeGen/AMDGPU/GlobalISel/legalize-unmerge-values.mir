@@ -39,11 +39,13 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_unmerge_s16_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
-    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: $vgpr1 = COPY [[COPY2]](s32)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(s16), %2:_(s16) = G_UNMERGE_VALUES %0
     %3:_(s32) = G_ANYEXT %1
@@ -77,6 +79,72 @@ body: |
 ...
 
 ---
+
+name: test_unmerge_s16_v4s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: test_unmerge_s16_v4s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
+    ; CHECK: $vgpr2 = COPY [[ANYEXT2]](s32)
+    ; CHECK: $vgpr3 = COPY [[ANYEXT3]](s32)
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(s16), %2:_(s16), %3:_(s16), %4:_(s16) = G_UNMERGE_VALUES %0
+    %5:_(s32) = G_ANYEXT %1
+    %6:_(s32) = G_ANYEXT %2
+    %7:_(s32) = G_ANYEXT %3
+    %8:_(s32) = G_ANYEXT %4
+    $vgpr0 = COPY %5
+    $vgpr1 = COPY %6
+    $vgpr2 = COPY %7
+    $vgpr3 = COPY %8
+...
+
+---
+name: test_unmerge_s16_v6s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: test_unmerge_s16_v6s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
+    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
+    ; CHECK: $vgpr2 = COPY [[ANYEXT2]](s32)
+    ; CHECK: $vgpr3 = COPY [[ANYEXT3]](s32)
+    ; CHECK: $vgpr4 = COPY [[ANYEXT4]](s32)
+    ; CHECK: $vgpr5 = COPY [[ANYEXT5]](s32)
+    %0:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s16), %2:_(s16), %3:_(s16), %4:_(s16), %5:_(s16), %6:_(s16) = G_UNMERGE_VALUES %0
+    %7:_(s32) = G_ANYEXT %1
+    %8:_(s32) = G_ANYEXT %2
+    %9:_(s32) = G_ANYEXT %3
+    %10:_(s32) = G_ANYEXT %4
+    %11:_(s32) = G_ANYEXT %5
+    %12:_(s32) = G_ANYEXT %6
+    $vgpr0 = COPY %7
+    $vgpr1 = COPY %8
+    $vgpr2 = COPY %9
+    $vgpr3 = COPY %10
+    $vgpr4 = COPY %11
+    $vgpr5 = COPY %12
+...
+
+---
+
 name: test_unmerge_s8_s16
 body: |
   bb.0:

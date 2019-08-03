@@ -28,7 +28,7 @@
 // CHECK-NEXT:   Version: 1
 // CHECK-NEXT:   Entry: 0x10010000
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34
-// CHECK-NEXT:   SectionHeaderOffset: 0x11044
+// CHECK-NEXT:   SectionHeaderOffset: 0x10050
 // CHECK-NEXT:   Flags [ (0x0)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
@@ -83,7 +83,7 @@
 // CHECK-NEXT:       SHF_STRINGS (0x20)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x11000
+// CHECK-NEXT:     Offset: 0x1000C
 // CHECK-NEXT:     Size: 8
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -97,7 +97,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x11008
+// CHECK-NEXT:     Offset: 0x10014
 // CHECK-NEXT:     Size: 16
 // CHECK-NEXT:     Link: 5
 // CHECK-NEXT:     Info: 1
@@ -114,7 +114,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x11018
+// CHECK-NEXT:     Offset: 0x10024
 // CHECK-NEXT:     Size: 42
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -128,7 +128,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x11042
+// CHECK-NEXT:     Offset: 0x1004E
 // CHECK-NEXT:     Size: 1
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -169,8 +169,8 @@
 // CHECK-NEXT:     Offset: 0x1000
 // CHECK-NEXT:     VirtualAddress: 0x10010000
 // CHECK-NEXT:     PhysicalAddress: 0x10010000
-// CHECK-NEXT:     FileSize: 4096
-// CHECK-NEXT:     MemSize: 4096
+// CHECK-NEXT:     FileSize: 12
+// CHECK-NEXT:     MemSize: 12
 // CHECK-NEXT:     Flags [ (0x5)
 // CHECK-NEXT:       PF_R (0x4)
 // CHECK-NEXT:       PF_X (0x1)

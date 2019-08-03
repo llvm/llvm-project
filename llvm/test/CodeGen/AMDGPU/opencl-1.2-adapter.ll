@@ -2,19 +2,19 @@
 
 ; CHECK-NOT: define linkonce_odr <2 x i32> @_Z6vload2mPKi
 
-; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS1Ki(i64, i32 addrspace(1)*)
+; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS1Ki(i64 %0, i32 addrspace(1)* %1)
 ; CHECK: %[[r2:.*]] = addrspacecast i32 addrspace(1)* %1 to i32*
 ; CHECK: %[[r3:.*]] = call <2 x i32> @_Z6vload2mPKi(i64 %0, i32* %[[r2]])
 ; CHECK: ret <2 x i32> %[[r3]]
 
 ; CHECK-NOT: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS4Ki
 
-; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS3Ki(i64, i32 addrspace(3)*)
+; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS3Ki(i64 %0, i32 addrspace(3)* %1)
 ; CHECK: %[[r2:.*]] = addrspacecast i32 addrspace(3)* %1 to i32*
 ; CHECK: %[[r3:.*]] = call <2 x i32> @_Z6vload2mPKi(i64 %0, i32* %[[r2]])
 ; CHECK: ret <2 x i32> %[[r3]]
 
-; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS5Ki(i64, i32 addrspace(5)*)
+; CHECK-LABEL: define linkonce_odr <2 x i32> @_Z6vload2mPU3AS5Ki(i64 %0, i32 addrspace(5)* %1)
 ; CHECK: %[[r2:.*]] = addrspacecast i32 addrspace(5)* %1 to i32*
 ; CHECK: %[[r3:.*]] = call <2 x i32> @_Z6vload2mPKi(i64 %0, i32* %[[r2]])
 ; CHECK: ret <2 x i32> %[[r3]]

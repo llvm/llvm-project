@@ -4,7 +4,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @g()
 
-; CHECK: define { i32, i16 } @"dfs$f"(i32, i32, i16, i16)
+; CHECK: define { i32, i16 } @"dfs$f"(i32 %0, i32 %1, i16 %2, i16 %3)
 define i32 @f(i32, i32) {
   ; CHECK: [[LOCALLABELALLOCA:%.*]] = alloca i16
   %i = alloca i32

@@ -7,27 +7,27 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 
 ; TEST 1
-; ATTRIBUTOR: define align 8 i32* @test1(i32* returned align 8)
-define i32* @test1(i32* align 8) #0 {
+; ATTRIBUTOR: define align 8 i32* @test1(i32* returned align 8 %0)
+define i32* @test1(i32* align 8 %0) #0 {
   ret i32* %0
 }
 
 ; TEST 2
-; ATTRIBUTOR: define i32* @test2(i32* returned)
-define i32* @test2(i32*) #0 {
+; ATTRIBUTOR: define i32* @test2(i32* returned %0)
+define i32* @test2(i32* %0) #0 {
   ret i32* %0
 }
 
 ; TEST 3
-; ATTRIBUTOR: define align 4 i32* @test3(i32* align 8, i32* align 4, i1)
-define i32* @test3(i32* align 8, i32* align 4, i1) #0 {
+; ATTRIBUTOR: define align 4 i32* @test3(i32* align 8 %0, i32* align 4 %1, i1 %2)
+define i32* @test3(i32* align 8 %0, i32* align 4 %1, i1 %2) #0 {
   %ret = select i1 %2, i32* %0, i32* %1
   ret i32* %ret
 }
 
 ; TEST 4
-; ATTRIBUTOR: define align 32 i32* @test4(i32* align 32, i32* align 32, i1)
-define i32* @test4(i32* align 32, i32* align 32, i1) #0 {
+; ATTRIBUTOR: define align 32 i32* @test4(i32* align 32 %0, i32* align 32 %1, i1 %2)
+define i32* @test4(i32* align 32 %0, i32* align 32 %1, i1 %2) #0 {
   %ret = select i1 %2, i32* %0, i32* %1
   ret i32* %ret
 }
@@ -82,8 +82,8 @@ define i32* @test6_2() #0 {
 @a2 = common global i8 0, align 16
 
 ; Function Attrs: nounwind readnone ssp uwtable
-define internal i8* @f1(i8* readnone) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f1(i8* nonnull readnone align 8)
+define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal nonnull align 8 i8* @f1(i8* nonnull readnone align 8 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 
@@ -98,8 +98,8 @@ define internal i8* @f1(i8* readnone) local_unnamed_addr #0 {
 }
 
 ; Function Attrs: nounwind readnone ssp uwtable
-define internal i8* @f2(i8* readnone) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f2(i8* nonnull readnone align 8)
+define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal nonnull align 8 i8* @f2(i8* nonnull readnone align 8 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
 
@@ -120,8 +120,8 @@ define internal i8* @f2(i8* readnone) local_unnamed_addr #0 {
 }
 
 ; Function Attrs: nounwind readnone ssp uwtable
-define internal i8* @f3(i8* readnone) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f3(i8* nonnull readnone align 16)
+define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal nonnull align 8 i8* @f3(i8* nonnull readnone align 16 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 

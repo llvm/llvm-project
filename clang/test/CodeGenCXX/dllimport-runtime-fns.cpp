@@ -28,14 +28,14 @@ void foo2() noexcept(true) { bar(); }
 // MSVC: declare dso_local void @__std_terminate()
 
 // _ZSt9terminatev and __cxa_begin_catch should be marked dllimport.
-// ITANIUM-LABEL: define linkonce_odr hidden void @__clang_call_terminate(i8*)
+// ITANIUM-LABEL: define linkonce_odr hidden void @__clang_call_terminate(i8* %0)
 // ITANIUM: call i8* @__cxa_begin_catch({{.*}})
 // ITANIUM: call void @_ZSt9terminatev()
 // ITANIUM: declare dllimport i8* @__cxa_begin_catch(i8*)
 // ITANIUM: declare dllimport void @_ZSt9terminatev()
 
 // .. not for mingw.
-// GNU-LABEL: define linkonce_odr hidden void @__clang_call_terminate(i8*)
+// GNU-LABEL: define linkonce_odr hidden void @__clang_call_terminate(i8* %0)
 // GNU: call i8* @__cxa_begin_catch({{.*}})
 // GNU: call void @_ZSt9terminatev()
 // GNU: declare dso_local i8* @__cxa_begin_catch(i8*)

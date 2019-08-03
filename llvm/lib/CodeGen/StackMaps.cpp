@@ -148,7 +148,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (MOI->isImplicit())
       return ++MOI;
 
-    assert(TargetRegisterInfo::isPhysicalRegister(MOI->getReg()) &&
+    assert(Register::isPhysicalRegister(MOI->getReg()) &&
            "Virtreg operands should have been rewritten before now.");
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(MOI->getReg());
     assert(!MOI->getSubReg() && "Physical subreg still around.");

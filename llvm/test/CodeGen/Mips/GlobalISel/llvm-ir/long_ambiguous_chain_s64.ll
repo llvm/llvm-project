@@ -222,9 +222,7 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:  # %bb.3: # %b.PHI.1.0
 ; MIPS32-NEXT:    lw $1, 60($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 0($1)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    lw $3, 4($1)
 ; MIPS32-NEXT:    sw $2, 44($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $3, 40($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    j $BB1_6
@@ -232,9 +230,7 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:  $BB1_4: # %b.PHI.1.1
 ; MIPS32-NEXT:    lw $1, 76($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 0($1)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    lw $3, 4($1)
 ; MIPS32-NEXT:    sw $2, 44($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $3, 40($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    j $BB1_6
@@ -242,9 +238,7 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:  $BB1_5: # %b.PHI.1.2
 ; MIPS32-NEXT:    lw $1, 56($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 0($1)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    lw $3, 4($1)
 ; MIPS32-NEXT:    sw $2, 44($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $3, 40($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB1_6: # %b.PHI.1
@@ -272,10 +266,8 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:    lw $1, 32($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 52($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 0($2)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $2, $3
-; MIPS32-NEXT:    lw $4, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    sw $4, 0($3)
+; MIPS32-NEXT:    lw $3, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sw $3, 4($2)
 ; MIPS32-NEXT:    addiu $sp, $sp, 80
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -291,9 +283,7 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:  $BB1_11: # %b.PHI.2.0
 ; MIPS32-NEXT:    lw $1, 60($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 0($1)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    lw $3, 4($1)
 ; MIPS32-NEXT:    sw $2, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    j $BB1_13
@@ -301,9 +291,7 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:  $BB1_12: # %b.PHI.2.1
 ; MIPS32-NEXT:    lw $1, 76($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 0($1)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    lw $3, 4($1)
 ; MIPS32-NEXT:    sw $2, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB1_13: # %b.PHI.2
@@ -328,10 +316,8 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 52($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 0($2)
-; MIPS32-NEXT:    ori $3, $zero, 4
-; MIPS32-NEXT:    addu $3, $2, $3
-; MIPS32-NEXT:    lw $4, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    sw $4, 0($3)
+; MIPS32-NEXT:    lw $3, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sw $3, 4($2)
 ; MIPS32-NEXT:    addiu $sp, $sp, 80
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -353,13 +339,9 @@ define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %
 ; MIPS32-NEXT:    movn $2, $1, $5
 ; MIPS32-NEXT:    lw $1, 52($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $8, 0($1)
-; MIPS32-NEXT:    ori $5, $zero, 4
-; MIPS32-NEXT:    addu $5, $1, $5
-; MIPS32-NEXT:    sw $2, 0($5)
+; MIPS32-NEXT:    sw $2, 4($1)
 ; MIPS32-NEXT:    sw $4, 0($1)
-; MIPS32-NEXT:    ori $2, $zero, 4
-; MIPS32-NEXT:    addu $2, $1, $2
-; MIPS32-NEXT:    sw $3, 0($2)
+; MIPS32-NEXT:    sw $3, 4($1)
 ; MIPS32-NEXT:    addiu $sp, $sp, 80
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

@@ -1431,7 +1431,7 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
   unsigned Reg = InitVal->getReg();
 
   // We don't know the value of a physical register.
-  if (!TargetRegisterInfo::isVirtualRegister(Reg))
+  if (!Register::isVirtualRegister(Reg))
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -1509,7 +1509,7 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
   int64_t TV;
 
   unsigned R = MO.getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(R))
+  if (!Register::isVirtualRegister(R))
     return false;
   MachineInstr *DI = MRI->getVRegDef(R);
   unsigned DOpc = DI->getOpcode();

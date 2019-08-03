@@ -20,5 +20,5 @@ define linkonce_odr hidden i32 @g(i32 %x, i32 %y) comdat {
 }
 
 ; CHECK-DAG: define linkonce_odr hidden i32 @f(i32 %x, i32 %y) comdat
-; CHECK-DAG: define linkonce_odr hidden i32 @g(i32, i32) comdat
+; CHECK-DAG: define linkonce_odr hidden i32 @g(i32 %0, i32 %1) comdat
 

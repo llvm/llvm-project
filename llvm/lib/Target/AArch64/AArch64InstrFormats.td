@@ -885,6 +885,14 @@ class neg_addsub_shifted_imm<ValueType Ty>
 def neg_addsub_shifted_imm32 : neg_addsub_shifted_imm<i32>;
 def neg_addsub_shifted_imm64 : neg_addsub_shifted_imm<i64>;
 
+def gi_neg_addsub_shifted_imm32 :
+    GIComplexOperandMatcher<s32, "selectNegArithImmed">,
+    GIComplexPatternEquiv<neg_addsub_shifted_imm32>;
+
+def gi_neg_addsub_shifted_imm64 :
+    GIComplexOperandMatcher<s64, "selectNegArithImmed">,
+    GIComplexPatternEquiv<neg_addsub_shifted_imm64>;
+
 // An extend operand:
 //  {5-3} - extend type
 //  {2-0} - imm3

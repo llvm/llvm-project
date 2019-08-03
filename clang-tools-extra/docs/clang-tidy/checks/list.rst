@@ -4,6 +4,7 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+
    abseil-duration-addition
    abseil-duration-comparison
    abseil-duration-conversion-cast
@@ -102,6 +103,90 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cert-oop54-cpp (redirects to bugprone-unhandled-self-assignment) <cert-oop54-cpp>
+   clang-analyzer-core.CallAndMessage
+   clang-analyzer-core.DivideZero
+   clang-analyzer-core.DynamicTypePropagation
+   clang-analyzer-core.NonNullParamChecker
+   clang-analyzer-core.NullDereference
+   clang-analyzer-core.StackAddressEscape
+   clang-analyzer-core.UndefinedBinaryOperatorResult
+   clang-analyzer-core.VLASize
+   clang-analyzer-core.uninitialized.ArraySubscript
+   clang-analyzer-core.uninitialized.Assign
+   clang-analyzer-core.uninitialized.Branch
+   clang-analyzer-core.uninitialized.CapturedBlockVariable
+   clang-analyzer-core.uninitialized.UndefReturn
+   clang-analyzer-cplusplus.InnerPointer
+   clang-analyzer-cplusplus.Move
+   clang-analyzer-cplusplus.NewDelete
+   clang-analyzer-cplusplus.NewDeleteLeaks
+   clang-analyzer-deadcode.DeadStores
+   clang-analyzer-nullability.NullPassedToNonnull
+   clang-analyzer-nullability.NullReturnedFromNonnull
+   clang-analyzer-nullability.NullableDereferenced
+   clang-analyzer-nullability.NullablePassedToNonnull
+   clang-analyzer-nullability.NullableReturnedFromNonnull
+   clang-analyzer-optin.cplusplus.UninitializedObject
+   clang-analyzer-optin.cplusplus.VirtualCall
+   clang-analyzer-optin.mpi.MPI-Checker
+   clang-analyzer-optin.osx.OSObjectCStyleCast
+   clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker
+   clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker
+   clang-analyzer-optin.performance.GCDAntipattern
+   clang-analyzer-optin.performance.Padding
+   clang-analyzer-optin.portability.UnixAPI
+   clang-analyzer-osx.API
+   clang-analyzer-osx.MIG
+   clang-analyzer-osx.NumberObjectConversion
+   clang-analyzer-osx.OSObjectRetainCount
+   clang-analyzer-osx.ObjCProperty
+   clang-analyzer-osx.SecKeychainAPI
+   clang-analyzer-osx.cocoa.AtSync
+   clang-analyzer-osx.cocoa.AutoreleaseWrite
+   clang-analyzer-osx.cocoa.ClassRelease
+   clang-analyzer-osx.cocoa.Dealloc
+   clang-analyzer-osx.cocoa.IncompatibleMethodTypes
+   clang-analyzer-osx.cocoa.Loops
+   clang-analyzer-osx.cocoa.MissingSuperCall
+   clang-analyzer-osx.cocoa.NSAutoreleasePool
+   clang-analyzer-osx.cocoa.NSError
+   clang-analyzer-osx.cocoa.NilArg
+   clang-analyzer-osx.cocoa.NonNilReturnValue
+   clang-analyzer-osx.cocoa.ObjCGenerics
+   clang-analyzer-osx.cocoa.RetainCount
+   clang-analyzer-osx.cocoa.RunLoopAutoreleaseLeak
+   clang-analyzer-osx.cocoa.SelfInit
+   clang-analyzer-osx.cocoa.SuperDealloc
+   clang-analyzer-osx.cocoa.UnusedIvars
+   clang-analyzer-osx.cocoa.VariadicMethodTypes
+   clang-analyzer-osx.coreFoundation.CFError
+   clang-analyzer-osx.coreFoundation.CFNumber
+   clang-analyzer-osx.coreFoundation.CFRetainRelease
+   clang-analyzer-osx.coreFoundation.containers.OutOfBounds
+   clang-analyzer-osx.coreFoundation.containers.PointerSizedValues
+   clang-analyzer-security.FloatLoopCounter
+   clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+   clang-analyzer-security.insecureAPI.UncheckedReturn
+   clang-analyzer-security.insecureAPI.bcmp
+   clang-analyzer-security.insecureAPI.bcopy
+   clang-analyzer-security.insecureAPI.bzero
+   clang-analyzer-security.insecureAPI.getpw
+   clang-analyzer-security.insecureAPI.gets
+   clang-analyzer-security.insecureAPI.mkstemp
+   clang-analyzer-security.insecureAPI.mktemp
+   clang-analyzer-security.insecureAPI.rand
+   clang-analyzer-security.insecureAPI.strcpy
+   clang-analyzer-security.insecureAPI.vfork
+   clang-analyzer-unix.API
+   clang-analyzer-unix.Malloc
+   clang-analyzer-unix.MallocSizeof
+   clang-analyzer-unix.MismatchedDeallocator
+   clang-analyzer-unix.Vfork
+   clang-analyzer-unix.cstring.BadSizeArg
+   clang-analyzer-unix.cstring.NullArg
+   clang-analyzer-valist.CopyToSelf
+   clang-analyzer-valist.Uninitialized
+   clang-analyzer-valist.Unterminated
    cppcoreguidelines-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <cppcoreguidelines-avoid-c-arrays>
    cppcoreguidelines-avoid-goto
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>

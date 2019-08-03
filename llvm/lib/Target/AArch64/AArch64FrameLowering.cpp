@@ -2113,7 +2113,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(AArch64::LR);
   }
 
-  LLVM_DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
+  LLVM_DEBUG(dbgs() << "*** determineCalleeSaves\nSaved CSRs:";
              for (unsigned Reg
                   : SavedRegs.set_bits()) dbgs()
              << ' ' << printReg(Reg, RegInfo);
@@ -2145,7 +2145,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       // store the pair.
       if (produceCompactUnwindFrame(MF))
         SavedRegs.set(UnspilledCSGPRPaired);
-      ExtraCSSpill = UnspilledCSGPRPaired;
+      ExtraCSSpill = UnspilledCSGPR;
     }
 
     // If we didn't find an extra callee-saved register to spill, create

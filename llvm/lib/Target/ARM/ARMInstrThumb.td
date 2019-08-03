@@ -592,6 +592,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
                       [(ARMbrjt tGPR:$target, tjumptable:$jt)]>,
                       Sched<[WriteBrTbl]> {
     let Size = 2;
+    let isNotDuplicable = 1;
     list<Predicate> Predicates = [IsThumb, IsThumb1Only];
   }
 }
@@ -1471,7 +1472,7 @@ def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
 // Thumb-1 doesn't have the TBB or TBH instructions, but we can synthesize them
 // and make use of the same compressed jump table format as Thumb-2.
 let Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
-    isIndirectBranch = 1 in {
+    isIndirectBranch = 1, isNotDuplicable = 1 in {
 def tTBB_JT : tPseudoInst<(outs),
         (ins tGPRwithpc:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0,
          IIC_Br, []>, Sched<[WriteBr]>;

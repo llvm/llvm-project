@@ -101,7 +101,7 @@ RegisterRef PhysicalRegisterInfo::normalize(RegisterRef RR) const {
 std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
   // Do not include RR in the alias set.
   std::set<RegisterId> AS;
-  assert(isRegMaskId(Reg) || TargetRegisterInfo::isPhysicalRegister(Reg));
+  assert(isRegMaskId(Reg) || Register::isPhysicalRegister(Reg));
   if (isRegMaskId(Reg)) {
     // XXX SLOW
     const uint32_t *MB = getRegMaskBits(Reg);
@@ -129,8 +129,8 @@ std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
 }
 
 bool PhysicalRegisterInfo::aliasRR(RegisterRef RA, RegisterRef RB) const {
-  assert(TargetRegisterInfo::isPhysicalRegister(RA.Reg));
-  assert(TargetRegisterInfo::isPhysicalRegister(RB.Reg));
+  assert(Register::isPhysicalRegister(RA.Reg));
+  assert(Register::isPhysicalRegister(RB.Reg));
 
   MCRegUnitMaskIterator UMA(RA.Reg, &TRI);
   MCRegUnitMaskIterator UMB(RB.Reg, &TRI);
@@ -160,7 +160,7 @@ bool PhysicalRegisterInfo::aliasRR(RegisterRef RA, RegisterRef RB) const {
 }
 
 bool PhysicalRegisterInfo::aliasRM(RegisterRef RR, RegisterRef RM) const {
-  assert(TargetRegisterInfo::isPhysicalRegister(RR.Reg) && isRegMaskId(RM.Reg));
+  assert(Register::isPhysicalRegister(RR.Reg) && isRegMaskId(RM.Reg));
   const uint32_t *MB = getRegMaskBits(RM.Reg);
   bool Preserved = MB[RR.Reg/32] & (1u << (RR.Reg%32));
   // If the lane mask information is "full", e.g. when the given lane mask

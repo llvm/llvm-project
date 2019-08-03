@@ -41,7 +41,8 @@ Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
 Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*TSM.getModule()))
+  if (auto Err =
+          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
     return Err;
 
   return CompileLayer->add(JD, std::move(TSM), ES->allocateVModule());
@@ -63,12 +64,18 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
   auto GetMemMgr = []() { return llvm::make_unique<SectionMemoryManager>(); };
-  return llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
+  auto ObjLinkingLayer =
+      llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
+
+  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
+    ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+
+  return ObjLinkingLayer;
 }
 
 Expected<IRCompileLayer::CompileFunction>
@@ -166,10 +173,14 @@ Error LLLazyJITBuilderState::prepareForConstruction() {
 Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*TSM.getModule()))
-    return Err;
+  if (auto Err = TSM.withModuleDo([&](Module &M) -> Error {
+        if (auto Err = applyDataLayout(M))
+          return Err;
 
-  recordCtorDtors(*TSM.getModule());
+        recordCtorDtors(M);
+        return Error::success();
+      }))
+    return Err;
 
   return CODLayer->add(JD, std::move(TSM), ES->allocateVModule());
 }

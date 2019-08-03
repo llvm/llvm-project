@@ -20,10 +20,10 @@
 ; and that we generate summary information needed for index-based WPD.
 ; RUN: llvm-dis -o - %t2.o | FileCheck %s --check-prefix=NOENABLESPLITFLAG
 ; NOENABLESPLITFLAG-DAG: !{i32 1, !"EnableSplitLTOUnit", i32 0}
-; NOENABLESPLITFLAG-DAG: [[An:\^[0-9]+]] = gv: (name: "_ZN1A1nEi")
-; NOENABLESPLITFLAG-DAG: [[Bf:\^[0-9]+]] = gv: (name: "_ZN1B1fEi")
-; NOENABLESPLITFLAG-DAG: [[Cf:\^[0-9]+]] = gv: (name: "_ZN1C1fEi")
-; NOENABLESPLITFLAG-DAG: [[Dm:\^[0-9]+]] = gv: (name: "_ZN1D1mEi")
+; NOENABLESPLITFLAG-DAG: [[An:\^[0-9]+]] = gv: (name: "_ZN1A1nEi"
+; NOENABLESPLITFLAG-DAG: [[Bf:\^[0-9]+]] = gv: (name: "_ZN1B1fEi"
+; NOENABLESPLITFLAG-DAG: [[Cf:\^[0-9]+]] = gv: (name: "_ZN1C1fEi"
+; NOENABLESPLITFLAG-DAG: [[Dm:\^[0-9]+]] = gv: (name: "_ZN1D1mEi"
 ; NOENABLESPLITFLAG-DAG: [[B:\^[0-9]+]] = gv: (name: "_ZTV1B", {{.*}} vTableFuncs: ((virtFunc: [[Bf]], offset: 16), (virtFunc: [[An]], offset: 24)), refs: ([[Bf]], [[An]])
 ; NOENABLESPLITFLAG-DAG: [[C:\^[0-9]+]] = gv: (name: "_ZTV1C", {{.*}} vTableFuncs: ((virtFunc: [[Cf]], offset: 16), (virtFunc: [[An]], offset: 24)), refs: ([[An]], [[Cf]])
 ; NOENABLESPLITFLAG-DAG: [[D:\^[0-9]+]] = gv: (name: "_ZTV1D", {{.*}} vTableFuncs: ((virtFunc: [[Dm]], offset: 16)), refs: ([[Dm]])
@@ -33,7 +33,31 @@
 ; Type Id on _ZTV1D should have been promoted
 ; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "1${{.*}}", summary: ((offset: 16, [[D]])))
 
-; TODO: Test index-based WPD one %t2.o once implemented.
+; Legacy PM, Index based WPD
+; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \
+; RUN:   -o %t3 \
+; RUN:   -r=%t2.o,test,px \
+; RUN:   -r=%t2.o,_ZN1A1nEi,p \
+; RUN:   -r=%t2.o,_ZN1B1fEi,p \
+; RUN:   -r=%t2.o,_ZN1C1fEi,p \
+; RUN:   -r=%t2.o,_ZN1D1mEi,p \
+; RUN:   -r=%t2.o,_ZTV1B,px \
+; RUN:   -r=%t2.o,_ZTV1C,px \
+; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+
+; New PM, Index based WPD
+; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:   -o %t3 \
+; RUN:   -r=%t2.o,test,px \
+; RUN:   -r=%t2.o,_ZN1A1nEi,p \
+; RUN:   -r=%t2.o,_ZN1B1fEi,p \
+; RUN:   -r=%t2.o,_ZN1C1fEi,p \
+; RUN:   -r=%t2.o,_ZN1D1mEi,p \
+; RUN:   -r=%t2.o,_ZTV1B,px \
+; RUN:   -r=%t2.o,_ZTV1C,px \
+; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; Legacy PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
@@ -138,10 +162,24 @@ entry:
 declare i1 @llvm.type.test(i8*, metadata)
 declare void @llvm.assume(i1)
 
-declare i32 @_ZN1B1fEi(%struct.B* %this, i32 %a)
-declare i32 @_ZN1A1nEi(%struct.A* %this, i32 %a)
-declare i32 @_ZN1C1fEi(%struct.C* %this, i32 %a)
-declare i32 @_ZN1D1mEi(%struct.D* %this, i32 %a)
+define i32 @_ZN1B1fEi(%struct.B* %this, i32 %a) #0 {
+   ret i32 0;
+}
+
+define i32 @_ZN1A1nEi(%struct.A* %this, i32 %a) #0 {
+   ret i32 0;
+}
+
+define i32 @_ZN1C1fEi(%struct.C* %this, i32 %a) #0 {
+   ret i32 0;
+}
+
+define i32 @_ZN1D1mEi(%struct.D* %this, i32 %a) #0 {
+   ret i32 0;
+}
+
+; Make sure we don't inline or otherwise optimize out the direct calls.
+attributes #0 = { noinline optnone }
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTS1B"}

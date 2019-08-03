@@ -24,6 +24,6 @@ v4df foo2(struct sdf a, v4df b, struct sdf2 c) {
 // QPX-LABEL: define <4 x double> @foo2(<4 x double> inreg %a.coerce, <4 x double> %b, [2 x i256] %c.coerce)
 // QPX: ret <4 x double>
 
-// NORMAL-LABEL: define void @foo2(<4 x double>* noalias sret %agg.result, [2 x i128] %a.coerce, <4 x double>*, [4 x i128] %c.coerce)
+// NORMAL-LABEL: define void @foo2(<4 x double>* noalias sret %agg.result, [2 x i128] %a.coerce, <4 x double>* %0, [4 x i128] %c.coerce)
 // NORMAL: ret void
 

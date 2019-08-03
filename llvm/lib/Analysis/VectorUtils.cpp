@@ -964,6 +964,10 @@ void InterleavedAccessInfo::analyzeInterleaving(
         // instructions that precede it.
         if (isInterleaved(A)) {
           InterleaveGroup<Instruction> *StoreGroup = getInterleaveGroup(A);
+
+          LLVM_DEBUG(dbgs() << "LV: Invalidated store group due to "
+                               "dependence between " << *A << " and "<< *B << '\n');
+
           StoreGroups.remove(StoreGroup);
           releaseGroup(StoreGroup);
         }

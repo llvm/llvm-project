@@ -1289,7 +1289,16 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     // FIXME: Better EqualLoc?
     InitializationKind Kind =
         InitializationKind::CreateCopy(expr->getBeginLoc(), SourceLocation());
-    InitializationSequence Seq(SemaRef, Entity, Kind, expr,
+
+    // Vector elements can be initialized from other vectors in which case
+    // we need initialization entity with a type of a vector (and not a vector
+    // element!) initializing multiple vector elements.
+    auto TmpEntity =
+        (ElemType->isExtVectorType() && !Entity.getType()->isExtVectorType())
+            ? InitializedEntity::InitializeTemporary(ElemType)
+            : Entity;
+
+    InitializationSequence Seq(SemaRef, TmpEntity, Kind, expr,
                                /*TopLevelOfInitList*/ true);
 
     // C++14 [dcl.init.aggr]p13:
@@ -1300,8 +1309,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     // assignment-expression.
     if (Seq || isa<InitListExpr>(expr)) {
       if (!VerifyOnly) {
-        ExprResult Result =
-          Seq.Perform(SemaRef, Entity, Kind, expr);
+        ExprResult Result = Seq.Perform(SemaRef, TmpEntity, Kind, expr);
         if (Result.isInvalid())
           hadError = true;
 

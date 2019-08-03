@@ -31,16 +31,16 @@ const void *unit4(const int *arg) {
 }
 // CHECK: define dso_local i8* @unit4
 // CHECK-NOT: getelementptr
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %{{[0-9a-z]+}}, i32 0, i32 1)
+// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %{{[0-9a-z]+}}, i32 0, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[POINTER:[0-9]+]]
 
 const void *unit5(const int *arg[5]) {
   return _(&arg[1][2]);
 }
 // CHECK: define dso_local i8* @unit5
 // CHECK-NOT: getelementptr
-// CHECK: call i32** @llvm.preserve.array.access.index.p0p0i32.p0p0i32(i32** %{{[0-9a-z]+}}, i32 0, i32 1)
+// CHECK: call i32** @llvm.preserve.array.access.index.p0p0i32.p0p0i32(i32** %{{[0-9a-z]+}}, i32 0, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index !{{[0-9]+}}
 // CHECK-NOT: getelementptr
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %{{[0-9a-z]+}}, i32 0, i32 2)
+// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %{{[0-9a-z]+}}, i32 0, i32 2), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[POINTER:[0-9]+]]
 
 struct s1 {
   char a;
@@ -141,7 +141,7 @@ const void *unit13(struct s4 *arg) {
 // CHECK: define dso_local i8* @unit13
 // CHECK: call %union.u* @llvm.preserve.struct.access.index.p0s_union.us.p0s_struct.s4s(%struct.s4* %{{[0-9a-z]+}}, i32 1, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[STRUCT_S4:[0-9]+]]
 // CHECK: call %union.u* @llvm.preserve.union.access.index.p0s_union.us.p0s_union.us(%union.u* %{{[0-9a-z]+}}, i32 0), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[UNION_I_U:[0-9]+]]
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* %{{[0-9a-z]+}}, i32 1, i32 2)
+// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* %{{[0-9a-z]+}}, i32 1, i32 2), !dbg !{{[0-9]+}}, !llvm.preserve.access.index !{{[0-9]+}}
 
 const void *unit14(union u3 *arg) {
   return _(&arg->c.b[2]);
@@ -149,13 +149,13 @@ const void *unit14(union u3 *arg) {
 // CHECK: define dso_local i8* @unit14
 // CHECK: call %union.u3* @llvm.preserve.union.access.index.p0s_union.u3s.p0s_union.u3s(%union.u3* %{{[0-9a-z]+}}, i32 0), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[UNION_U3:[0-9]+]]
 // CHECK: call [4 x i32]* @llvm.preserve.struct.access.index.p0a4i32.p0s_struct.ss(%struct.s* %{{[0-9a-z]+}}, i32 0, i32 0), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[STRUCT_I_S:[0-9]+]]
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* %{{[0-9a-z]+}}, i32 1, i32 2)
+// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* %{{[0-9a-z]+}}, i32 1, i32 2), !dbg !{{[0-9]+}}, !llvm.preserve.access.index !{{[0-9]+}}
 
 const void *unit15(struct s4 *arg) {
   return _(&arg[2].c.a);
 }
 // CHECK: define dso_local i8* @unit15
-// CHECK: call %struct.s4* @llvm.preserve.array.access.index.p0s_struct.s4s.p0s_struct.s4s(%struct.s4* %{{[0-9a-z]+}}, i32 0, i32 2)
+// CHECK: call %struct.s4* @llvm.preserve.array.access.index.p0s_struct.s4s.p0s_struct.s4s(%struct.s4* %{{[0-9a-z]+}}, i32 0, i32 2), !dbg !{{[0-9]+}}, !llvm.preserve.access.index !{{[0-9]+}}
 // CHECK: call %union.u* @llvm.preserve.struct.access.index.p0s_union.us.p0s_struct.s4s(%struct.s4* %{{[0-9a-z]+}}, i32 1, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[STRUCT_S4]]
 // CHECK: call %union.u* @llvm.preserve.union.access.index.p0s_union.us.p0s_union.us(%union.u* %{{[0-9a-z]+}}, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[UNION_I_U]]
 
@@ -163,15 +163,16 @@ const void *unit16(union u3 *arg) {
   return _(&arg[2].a);
 }
 // CHECK: define dso_local i8* @unit16
-// CHECK: call %union.u3* @llvm.preserve.array.access.index.p0s_union.u3s.p0s_union.u3s(%union.u3* %{{[0-9a-z]+}}, i32 0, i32 2)
+// CHECK: call %union.u3* @llvm.preserve.array.access.index.p0s_union.u3s.p0s_union.u3s(%union.u3* %{{[0-9a-z]+}}, i32 0, i32 2), !dbg !{{[0-9]+}}, !llvm.preserve.access.index !{{[0-9]+}}
 // CHECK: call %union.u3* @llvm.preserve.union.access.index.p0s_union.u3s.p0s_union.u3s(%union.u3* %{{[0-9a-z]+}}, i32 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[UNION_U3]]
 
+// CHECK: ![[POINTER]] = !DIDerivedType(tag: DW_TAG_pointer_type
+// CHECK: ![[STRUCT_S4]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s4"
+// CHECK: ![[UNION_I_U]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u"
+// CHECK: ![[UNION_U3]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u3"
+// CHECK: ![[STRUCT_I_S]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s"
 // CHECK: ![[STRUCT_S1]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s1"
 // CHECK: ![[STRUCT_S2]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s2"
 // CHECK: ![[STRUCT_S3]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s3"
 // CHECK: ![[UNION_U1]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u1"
 // CHECK: ![[UNION_U2]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u2"
-// CHECK: ![[STRUCT_S4]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s4"
-// CHECK: ![[UNION_I_U]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u"
-// CHECK: ![[UNION_U3]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "u3"
-// CHECK: ![[STRUCT_I_S]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s"

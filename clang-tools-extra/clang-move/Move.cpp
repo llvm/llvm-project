@@ -92,10 +92,10 @@ std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
                  << '\n';
   // Handle symbolic link path cases.
   // We are trying to get the real file path of the symlink.
-  const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
+  auto Dir = SM.getFileManager().getDirectory(
       llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
-    StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+    StringRef DirName = SM.getFileManager().getCanonicalName(*Dir);
     // FIXME: getCanonicalName might fail to get real path on VFS.
     if (llvm::sys::path::is_absolute(DirName)) {
       SmallString<128> AbsoluteFilename;
@@ -115,7 +115,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
   auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
-  auto FileEntry =
+  auto *FileEntry =
       SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry)
     return false;
@@ -842,12 +842,12 @@ void ClangMoveTool::moveDeclsToNewFiles() {
 // Move all contents from OldFile to NewFile.
 void ClangMoveTool::moveAll(SourceManager &SM, StringRef OldFile,
                             StringRef NewFile) {
-  const FileEntry *FE = SM.getFileManager().getFile(makeAbsolutePath(OldFile));
+  auto FE = SM.getFileManager().getFile(makeAbsolutePath(OldFile));
   if (!FE) {
     llvm::errs() << "Failed to get file: " << OldFile << "\n";
     return;
   }
-  FileID ID = SM.getOrCreateFileID(FE, SrcMgr::C_User);
+  FileID ID = SM.getOrCreateFileID(*FE, SrcMgr::C_User);
   auto Begin = SM.getLocForStartOfFile(ID);
   auto End = SM.getLocForEndOfFile(ID);
   tooling::Replacement RemoveAll(SM, CharSourceRange::getCharRange(Begin, End),

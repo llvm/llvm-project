@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// ASan-private header for asan_memintrin.cc
+// ASan-private header for asan_interceptors_memintrinsics.cpp
 //===---------------------------------------------------------------------===//
 #ifndef ASAN_MEMINTRIN_H
 #define ASAN_MEMINTRIN_H

@@ -24,7 +24,7 @@ add_compiler_rt_runtime(clang_rt.stats
   ${STATS_LIB_FLAVOR}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
-  SOURCES stats.cc
+  SOURCES stats.cpp
   ADDITIONAL_HEADERS ${STATS_HEADERS}
   OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
@@ -38,7 +38,7 @@ add_compiler_rt_runtime(clang_rt.stats_client
   STATIC
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
-  SOURCES stats_client.cc
+  SOURCES stats_client.cpp
   ADDITIONAL_HEADERS ${STATS_HEADERS}
   CFLAGS ${SANITIZER_COMMON_CFLAGS}
   LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}

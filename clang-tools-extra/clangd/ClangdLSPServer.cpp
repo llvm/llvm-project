@@ -615,6 +615,10 @@ void ClangdLSPServer::onDocumentDidClose(
     std::lock_guard<std::mutex> Lock(FixItsMutex);
     FixItsMap.erase(File);
   }
+  {
+    std::lock_guard<std::mutex> HLock(HighlightingsMutex);
+    FileToHighlightings.erase(File);
+  }
   // clangd will not send updates for this file anymore, so we empty out the
   // list of diagnostics shown on the client (e.g. in the "Problems" pane of
   // VSCode). Note that this cannot race with actual diagnostics responses
@@ -1113,10 +1117,21 @@ bool ClangdLSPServer::shouldRunCompletion(
 }
 
 void ClangdLSPServer::onHighlightingsReady(
-    PathRef File, std::vector<HighlightingToken> Highlightings) {
+    PathRef File, std::vector<HighlightingToken> Highlightings, int NumLines) {
+  std::vector<HighlightingToken> Old;
+  std::vector<HighlightingToken> HighlightingsCopy = Highlightings;
+  {
+    std::lock_guard<std::mutex> Lock(HighlightingsMutex);
+    Old = std::move(FileToHighlightings[File]);
+    FileToHighlightings[File] = std::move(HighlightingsCopy);
+  }
+  // LSP allows us to send incremental edits of highlightings. Also need to diff
+  // to remove highlightings from tokens that should no longer have them.
+  std::vector<LineHighlightings> Diffed =
+      diffHighlightings(Highlightings, Old, NumLines);
   publishSemanticHighlighting(
       {{URIForFile::canonicalize(File, /*TUPath=*/File)},
-       toSemanticHighlightingInformation(Highlightings)});
+       toSemanticHighlightingInformation(Diffed)});
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,

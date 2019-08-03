@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import curses
 import curses.panel
 import sys
-import time
 
 # Third-party modules
 import six
@@ -239,7 +238,6 @@ class Window(object):
 
     def relinquish_first_responder(self):
         '''Override if there is something that you need to do when you lose first responder status.'''
-        pass
 
     # def resign_first_responder(self, remove_from_parent, new_first_responder):
     #     success = False

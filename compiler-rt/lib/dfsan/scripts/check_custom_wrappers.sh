@@ -2,7 +2,7 @@
 
 DFSAN_DIR=$(dirname "$0")/../
 DFSAN_CUSTOM_TESTS=${DFSAN_DIR}/../../test/dfsan/custom.cc
-DFSAN_CUSTOM_WRAPPERS=${DFSAN_DIR}/dfsan_custom.cc
+DFSAN_CUSTOM_WRAPPERS=${DFSAN_DIR}/dfsan_custom.cpp
 DFSAN_ABI_LIST=${DFSAN_DIR}/done_abilist.txt
 
 DIFFOUT=$(mktemp -q /tmp/tmp.XXXXXXXXXX)

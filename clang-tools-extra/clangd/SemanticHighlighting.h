@@ -43,7 +43,16 @@ struct HighlightingToken {
   Range R;
 };
 
-bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs);
+bool operator==(const HighlightingToken &L, const HighlightingToken &R);
+bool operator<(const HighlightingToken &L, const HighlightingToken &R);
+
+/// Contains all information about highlightings on a single line.
+struct LineHighlightings {
+  int Line;
+  std::vector<HighlightingToken> Tokens;
+};
+
+bool operator==(const LineHighlightings &L, const LineHighlightings &R);
 
 // Returns all HighlightingTokens from an AST. Only generates highlights for the
 // main AST.
@@ -53,9 +62,22 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
 /// (https://manual.macromates.com/en/language_grammars).
 llvm::StringRef toTextMateScope(HighlightingKind Kind);
 
-// Convert to LSP's semantic highlighting information.
+/// Convert to LSP's semantic highlighting information.
 std::vector<SemanticHighlightingInformation>
-toSemanticHighlightingInformation(llvm::ArrayRef<HighlightingToken> Tokens);
+toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens);
+
+/// Return a line-by-line diff between two highlightings.
+///  - if the tokens on a line are the same in both hightlightings, this line is
+///  omitted.
+///  - if a line exists in New but not in Old the tokens on this line are
+///  emitted.
+///  - if a line does not exists in New but exists in Old an empty line is
+///  emitted (to tell client to clear the previous highlightings on this line).
+/// \p NewMaxLine is the maximum line number from the new file.
+/// REQUIRED: Old and New are sorted.
+std::vector<LineHighlightings>
+diffHighlightings(ArrayRef<HighlightingToken> New,
+                  ArrayRef<HighlightingToken> Old, int NewMaxLine);
 
 } // namespace clangd
 } // namespace clang

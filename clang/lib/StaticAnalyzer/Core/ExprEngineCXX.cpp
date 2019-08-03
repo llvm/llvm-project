@@ -323,7 +323,8 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       CallEventManager &CEMgr = getStateManager().getCallEventManager();
       SVal V = UnknownVal();
       auto getArgLoc = [&](CallEventRef<> Caller) -> Optional<SVal> {
-        const LocationContext *FutureSFC = Caller->getCalleeStackFrame();
+        const LocationContext *FutureSFC =
+            Caller->getCalleeStackFrame(currBldrCtx->blockCount());
         // Return early if we are unable to reliably foresee
         // the future stack frame.
         if (!FutureSFC)
@@ -342,7 +343,7 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
         // because this-argument is implemented as a normal argument in
         // operator call expressions but not in operator declarations.
         const VarRegion *VR = Caller->getParameterLocation(
-            *Caller->getAdjustedParameterIndex(Idx));
+            *Caller->getAdjustedParameterIndex(Idx), currBldrCtx->blockCount());
         if (!VR)
           return None;
 

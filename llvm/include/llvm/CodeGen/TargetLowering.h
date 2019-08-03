@@ -1904,7 +1904,8 @@ public:
   /// This may be true if the target does not directly support the
   /// multiplication operation for the specified type or the sequence of simpler
   /// ops is faster than the multiply.
-  virtual bool decomposeMulByConstant(EVT VT, SDValue C) const {
+  virtual bool decomposeMulByConstant(LLVMContext &Context,
+                                      EVT VT, SDValue C) const {
     return false;
   }
 
@@ -3741,6 +3742,7 @@ public:
     C_Register,            // Constraint represents specific register(s).
     C_RegisterClass,       // Constraint represents any of register(s) in class.
     C_Memory,              // Memory constraint.
+    C_Immediate,           // Requires an immediate.
     C_Other,               // Something else.
     C_Unknown              // Unsupported constraint.
   };

@@ -1,5 +1,6 @@
 // RUN: %clang %s -### \
 // RUN:     -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
 // CHECK-ABSOLUTE-LD: /usr/local/bin/or1k-linux-ld
 

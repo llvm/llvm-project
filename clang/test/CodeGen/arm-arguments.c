@@ -204,7 +204,7 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
                             *(float32x4_t *)&s2);
   return v;
 }
-// APCS-GNU-LABEL: define <4 x float> @f35(i32 %i, %struct.s35* byval(%struct.s35) align 4, %struct.s35* byval(%struct.s35) align 4)
+// APCS-GNU-LABEL: define <4 x float> @f35(i32 %i, %struct.s35* byval(%struct.s35) align 4 %0, %struct.s35* byval(%struct.s35) align 4 %1)
 // APCS-GNU: %[[a:.*]] = alloca %struct.s35, align 16
 // APCS-GNU: %[[b:.*]] = bitcast %struct.s35* %[[a]] to i8*
 // APCS-GNU: %[[c:.*]] = bitcast %struct.s35* %0 to i8*

@@ -73,6 +73,7 @@ unittest("ClangdTests") {
     "TestTU.cpp",
     "ThreadingTests.cpp",
     "TraceTests.cpp",
+    "TweakTesting.cpp",
     "TweakTests.cpp",
     "TypeHierarchyTests.cpp",
     "URITests.cpp",

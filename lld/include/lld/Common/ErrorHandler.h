@@ -103,6 +103,8 @@ public:
 
 private:
   void printHeader(StringRef s, raw_ostream::Colors c, const Twine &msg);
+  void printErrorMsg(const Twine &msg);
+  void printError(const Twine &msg);
 };
 
 /// Returns the default error handler.

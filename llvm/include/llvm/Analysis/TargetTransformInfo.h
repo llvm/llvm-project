@@ -469,12 +469,17 @@ public:
     bool Force;
     /// Allow using trip count upper bound to unroll loops.
     bool UpperBound;
-    /// Allow peeling off loop iterations for loops with low dynamic tripcount.
+    /// Allow peeling off loop iterations.
     bool AllowPeeling;
     /// Allow unrolling of all the iterations of the runtime loop remainder.
     bool UnrollRemainder;
     /// Allow unroll and jam. Used to enable unroll and jam for the target.
     bool UnrollAndJam;
+    /// Allow peeling basing on profile. Uses to enable peeling off all
+    /// iterations basing on provided profile.
+    /// If the value is true the peeling cost model can decide to peel only
+    /// some iterations and in this case it will set this to false.
+    bool PeelProfiledIterations;
     /// Threshold for unroll and jam, for inner loop size. The 'Threshold'
     /// value above is used during unroll and jam for the outer loop size.
     /// This value is used in the same manner to limit the size of the inner

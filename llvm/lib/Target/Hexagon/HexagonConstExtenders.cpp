@@ -14,9 +14,10 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Pass.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -235,24 +236,24 @@ namespace {
           Reg = Op.getReg();
           Sub = Op.getSubReg();
         } else if (Op.isFI()) {
-          Reg = TargetRegisterInfo::index2StackSlot(Op.getIndex());
+          Reg = llvm::Register::index2StackSlot(Op.getIndex());
         }
         return *this;
       }
       bool isVReg() const {
-        return Reg != 0 && !TargetRegisterInfo::isStackSlot(Reg) &&
-               TargetRegisterInfo::isVirtualRegister(Reg);
+        return Reg != 0 && !llvm::Register::isStackSlot(Reg) &&
+               llvm::Register::isVirtualRegister(Reg);
       }
       bool isSlot() const {
-        return Reg != 0 && TargetRegisterInfo::isStackSlot(Reg);
+        return Reg != 0 && llvm::Register::isStackSlot(Reg);
       }
       operator MachineOperand() const {
         if (isVReg())
           return MachineOperand::CreateReg(Reg, /*Def*/false, /*Imp*/false,
                           /*Kill*/false, /*Dead*/false, /*Undef*/false,
                           /*EarlyClobber*/false, Sub);
-        if (TargetRegisterInfo::isStackSlot(Reg)) {
-          int FI = TargetRegisterInfo::stackSlot2Index(Reg);
+        if (llvm::Register::isStackSlot(Reg)) {
+          int FI = llvm::Register::stackSlot2Index(Reg);
           return MachineOperand::CreateFI(FI);
         }
         llvm_unreachable("Cannot create MachineOperand");

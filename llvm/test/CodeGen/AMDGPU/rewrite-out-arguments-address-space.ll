@@ -6,7 +6,7 @@
 ; CHECK-LABEL: define private %void_one_out_non_private_arg_i32_1_use @void_one_out_non_private_arg_i32_1_use.body(i32 addrspace(1)* %val) #0 {
 ; CHECK-NEXT: ret %void_one_out_non_private_arg_i32_1_use zeroinitializer
 
-; CHECK-LABEL: define void @void_one_out_non_private_arg_i32_1_use(i32 addrspace(1)*) #1 {
+; CHECK-LABEL: define void @void_one_out_non_private_arg_i32_1_use(i32 addrspace(1)* %0) #1 {
 ; CHECK-NEXT: %2 = call %void_one_out_non_private_arg_i32_1_use @void_one_out_non_private_arg_i32_1_use.body(i32 addrspace(1)* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_non_private_arg_i32_1_use %2, 0
 ; CHECK-NEXT: store i32 %3, i32 addrspace(1)* %0, align 4
@@ -23,7 +23,7 @@ define void @void_one_out_non_private_arg_i32_1_use(i32 addrspace(1)* %val) #0 {
 ; CHECK-NEXT: %2 = insertvalue %bitcast_pointer_as1 undef, <3 x i32> %1, 0
 ; CHECK-NEXT: ret %bitcast_pointer_as1 %2
 
-; CHECK-LABEL: define void @bitcast_pointer_as1(<3 x i32> addrspace(1)*) #1 {
+; CHECK-LABEL: define void @bitcast_pointer_as1(<3 x i32> addrspace(1)* %0) #1 {
 ; CHECK-NEXT: %2 = call %bitcast_pointer_as1 @bitcast_pointer_as1.body(<3 x i32> addrspace(1)* undef)
 define void @bitcast_pointer_as1(<3 x i32> addrspace(1)* %out) #0 {
   %load = load volatile <4 x i32>, <4 x i32> addrspace(1)* undef

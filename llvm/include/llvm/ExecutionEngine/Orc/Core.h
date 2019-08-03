@@ -638,7 +638,6 @@ private:
     void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     void removeQuery(const AsynchronousSymbolQuery &Q);
     AsynchronousSymbolQueryList takeQueriesMeeting(SymbolState RequiredState);
-    AsynchronousSymbolQueryList takeAllQueries();
     bool hasQueriesPending() const { return !PendingQueries.empty(); }
     const AsynchronousSymbolQueryList &pendingQueries() const {
       return PendingQueries;

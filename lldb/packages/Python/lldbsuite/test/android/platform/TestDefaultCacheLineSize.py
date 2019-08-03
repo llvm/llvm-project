@@ -5,7 +5,6 @@ Verify the default cache line size for android targets
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

@@ -17,11 +17,11 @@ int bar2() {
 // LINUX: @_Z12foo_overloadv.ifunc = ifunc i32 (), i32 ()* ()* @_Z12foo_overloadv.resolver
 // LINUX: @_Z12foo_overloadi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_Z12foo_overloadi.resolver
 
-// LINUX: define i32 @_Z12foo_overloadi.sse4.2(i32)
+// LINUX: define i32 @_Z12foo_overloadi.sse4.2(i32 %0)
 // LINUX: ret i32 0
-// LINUX: define i32 @_Z12foo_overloadi.arch_ivybridge(i32)
+// LINUX: define i32 @_Z12foo_overloadi.arch_ivybridge(i32 %0)
 // LINUX: ret i32 1
-// LINUX: define i32 @_Z12foo_overloadi(i32)
+// LINUX: define i32 @_Z12foo_overloadi(i32 %0)
 // LINUX: ret i32 2
 // LINUX: define i32 @_Z12foo_overloadv.sse4.2()
 // LINUX: ret i32 0
@@ -30,11 +30,11 @@ int bar2() {
 // LINUX: define i32 @_Z12foo_overloadv()
 // LINUX: ret i32 2
 
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.sse4.2"(i32)
+// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.sse4.2"(i32 %0)
 // WINDOWS: ret i32 0
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.arch_ivybridge"(i32)
+// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.arch_ivybridge"(i32 %0)
 // WINDOWS: ret i32 1
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z"(i32)
+// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z"(i32 %0)
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @"?foo_overload@@YAHXZ.sse4.2"()
 // WINDOWS: ret i32 0
@@ -69,7 +69,7 @@ int bar2() {
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi.sse4.2
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi
 
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32) comdat
+// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32 %0) comdat
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.sse4.2"

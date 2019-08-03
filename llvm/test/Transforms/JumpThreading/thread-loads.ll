@@ -496,7 +496,7 @@ declare void @fn3(i64)
 ; merge fully redudant and then we can jump-thread the block with the
 ; store.
 ;
-; CHECK-LABEL: define i32 @phi_translate_partial_redundant_loads(i32, i32*, i32*
+; CHECK-LABEL: define i32 @phi_translate_partial_redundant_loads(i32 %0, i32* %1, i32* %2
 ; CHECK: merge.thread:
 ; CHECK: store
 ; CHECK: br label %left_x

@@ -34,7 +34,8 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("MinGW::Linker", "linker", TC) {}
+  Linker(const ToolChain &TC)
+      : Tool("MinGW::Linker", "linker", TC, Tool::RF_Full) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

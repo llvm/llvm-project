@@ -58,7 +58,7 @@ using namespace llvm;
 
 static bool isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
   assert(MRI.isSSA());
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return false;
   const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
   return MI && MI->isImplicitDef();

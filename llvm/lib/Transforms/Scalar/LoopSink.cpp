@@ -230,12 +230,9 @@ static bool sinkInstruction(Loop &L, Instruction &I,
     IC->setName(I.getName());
     IC->insertBefore(&*N->getFirstInsertionPt());
     // Replaces uses of I with IC in N
-    for (Value::use_iterator UI = I.use_begin(), UE = I.use_end(); UI != UE;) {
-      Use &U = *UI++;
-      auto *I = cast<Instruction>(U.getUser());
-      if (I->getParent() == N)
-        U.set(IC);
-    }
+    I.replaceUsesWithIf(IC, [N](Use &U) {
+      return cast<Instruction>(U.getUser())->getParent() == N;
+    });
     // Replaces uses of I with IC in blocks dominated by N
     replaceDominatedUsesWith(&I, IC, DT, N);
     LLVM_DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()

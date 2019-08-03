@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// ASan-private header for asan_descriptions.cc.
+// ASan-private header for asan_descriptions.cpp.
 // TODO(filcab): Most struct definitions should move to the interface headers.
 //===----------------------------------------------------------------------===//
 #ifndef ASAN_DESCRIPTIONS_H

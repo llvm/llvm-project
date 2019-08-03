@@ -110,7 +110,7 @@ public:
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
   /// overlaps PhysReg, or 0 if Reg doesn't overlap a CalleeSavedAliases.
   unsigned getLastCalleeSavedAlias(unsigned PhysReg) const {
-    assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
+    assert(Register::isPhysicalRegister(PhysReg));
     if (PhysReg < CalleeSavedAliases.size())
       return CalleeSavedAliases[PhysReg];
     return 0;

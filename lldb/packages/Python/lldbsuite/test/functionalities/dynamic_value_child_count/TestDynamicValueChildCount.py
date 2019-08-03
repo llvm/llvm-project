@@ -5,9 +5,6 @@ Test that dynamic values update their child count correctly
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

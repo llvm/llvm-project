@@ -24,7 +24,7 @@
 define dso_local i32 @test([7 x %union.u]* %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata [7 x %union.u]* %arg, metadata !28, metadata !DIExpression()), !dbg !29
-  %0 = tail call [7 x %union.u]* @llvm.preserve.array.access.index.p0a7s_union.us.p0a7s_union.us([7 x %union.u]* %arg, i32 0, i32 1), !dbg !30
+  %0 = tail call [7 x %union.u]* @llvm.preserve.array.access.index.p0a7s_union.us.p0a7s_union.us([7 x %union.u]* %arg, i32 0, i32 1), !dbg !30, !llvm.preserve.access.index !14
   %arraydecay = getelementptr inbounds [7 x %union.u], [7 x %union.u]* %0, i64 0, i64 0, !dbg !30
   %1 = tail call %union.u* @llvm.preserve.union.access.index.p0s_union.us.p0s_union.us(%union.u* %arraydecay, i32 1), !dbg !30, !llvm.preserve.access.index !16
   %d = getelementptr inbounds %union.u, %union.u* %1, i64 0, i32 0, !dbg !30

@@ -72,3 +72,80 @@ entry:
   %shr = shl i64 %y, %sh_prom
   ret i64 %shr
 }
+
+; PR42644 - https://bugs.llvm.org/show_bug.cgi?id=42644
+
+define i64 @ashr_add_shl_i32(i64 %r) {
+; CHECK-LABEL: ashr_add_shl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    ret
+  %conv = shl i64 %r, 32
+  %sext = add i64 %conv, 4294967296
+  %conv1 = ashr i64 %sext, 32
+  ret i64 %conv1
+}
+
+define i64 @ashr_add_shl_i8(i64 %r) {
+; CHECK-LABEL: ashr_add_shl_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    sxtb x0, w8
+; CHECK-NEXT:    ret
+  %conv = shl i64 %r, 56
+  %sext = add i64 %conv, 72057594037927936
+  %conv1 = ashr i64 %sext, 56
+  ret i64 %conv1
+}
+
+define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) {
+; CHECK-LABEL: ashr_add_shl_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4s, v0.4s, #24
+; CHECK-NEXT:    movi v1.4s, #1, lsl #24
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sshr v0.4s, v0.4s, #24
+; CHECK-NEXT:    ret
+  %conv = shl <4 x i32> %r, <i32 24, i32 24, i32 24, i32 24>
+  %sext = add <4 x i32> %conv, <i32 16777216, i32 16777216, i32 16777216, i32 16777216>
+  %conv1 = ashr <4 x i32> %sext, <i32 24, i32 24, i32 24, i32 24>
+  ret <4 x i32> %conv1
+}
+
+define i64 @ashr_add_shl_i36(i64 %r) {
+; CHECK-LABEL: ashr_add_shl_i36:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sbfx x0, x0, #0, #28
+; CHECK-NEXT:    ret
+  %conv = shl i64 %r, 36
+  %sext = add i64 %conv, 4294967296
+  %conv1 = ashr i64 %sext, 36
+  ret i64 %conv1
+}
+
+define i64 @ashr_add_shl_mismatch_shifts1(i64 %r) {
+; CHECK-LABEL: ashr_add_shl_mismatch_shifts1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    add x8, x8, x0, lsl #8
+; CHECK-NEXT:    asr x0, x8, #32
+; CHECK-NEXT:    ret
+  %conv = shl i64 %r, 8
+  %sext = add i64 %conv, 4294967296
+  %conv1 = ashr i64 %sext, 32
+  ret i64 %conv1
+}
+
+define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) {
+; CHECK-LABEL: ashr_add_shl_mismatch_shifts2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    add x8, x8, x0, lsr #8
+; CHECK-NEXT:    lsr x0, x8, #8
+; CHECK-NEXT:    ret
+  %conv = lshr i64 %r, 8
+  %sext = add i64 %conv, 4294967296
+  %conv1 = ashr i64 %sext, 8
+  ret i64 %conv1
+}

@@ -267,7 +267,7 @@ inline bool addr_is_type(uptr addr, MappingDesc::Type mapping_type) {
 #define MEM_IS_SHADOW(mem) addr_is_type((uptr)(mem), MappingDesc::SHADOW)
 #define MEM_IS_ORIGIN(mem) addr_is_type((uptr)(mem), MappingDesc::ORIGIN)
 
-// These constants must be kept in sync with the ones in MemorySanitizer.cc.
+// These constants must be kept in sync with the ones in MemorySanitizer.cpp.
 const int kMsanParamTlsSize = 800;
 const int kMsanRetvalTlsSize = 800;
 

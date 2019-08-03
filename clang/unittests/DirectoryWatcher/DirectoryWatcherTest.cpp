@@ -377,7 +377,7 @@ TEST(DirectoryWatcherTest, DeleteFile) {
   VerifyingConsumer TestConsumer{
       {{EventKind::Modified, "a"}},
       {{EventKind::Removed, "a"}},
-      {{EventKind::Modified, "a"}}};
+      {{EventKind::Modified, "a"}, {EventKind::Removed, "a"}}};
 
   auto DW = DirectoryWatcher::create(
       fixture.TestWatchedDir,

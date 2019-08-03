@@ -52,9 +52,12 @@ public:
   virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
 
   /// Called by ClangdServer when some \p Highlightings for \p File are ready.
+  /// \p NumLines are the number of lines in the file where the highlightings
+  /// where generated from.
   virtual void
   onHighlightingsReady(PathRef File,
-                       std::vector<HighlightingToken> Highlightings) {}
+                       std::vector<HighlightingToken> Highlightings,
+                       int NumLines) {}
 };
 
 /// When set, used by ClangdServer to get clang-tidy options for each particular

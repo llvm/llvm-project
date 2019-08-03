@@ -457,7 +457,7 @@ bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
 // return the defining instruction.
 static MachineInstr *canFoldIntoSelect(unsigned Reg,
                                        const MachineRegisterInfo &MRI) {
-  if (!TargetRegisterInfo::isVirtualRegister(Reg))
+  if (!Register::isVirtualRegister(Reg))
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
     return nullptr;
@@ -479,7 +479,7 @@ static MachineInstr *canFoldIntoSelect(unsigned Reg,
     // MI can't have any tied operands, that would conflict with predication.
     if (MO.isTied())
       return nullptr;
-    if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
+    if (Register::isPhysicalRegister(MO.getReg()))
       return nullptr;
     if (MO.isDef() && !MO.isDead())
       return nullptr;

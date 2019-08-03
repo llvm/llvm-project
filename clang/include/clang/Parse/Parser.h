@@ -972,7 +972,7 @@ private:
   };
 
   /// Consume any extra semi-colons until the end of the line.
-  void ConsumeExtraSemi(ExtraSemiKind Kind, unsigned TST = TST_unspecified);
+  void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
 
   /// Return false if the next token is an identifier. An 'expected identifier'
   /// error is emitted otherwise.
@@ -2160,7 +2160,7 @@ private:
                           const ParsedTemplateInfo &TemplateInfo,
                           AccessSpecifier AS, DeclSpecContext DSC);
   void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl);
-  void ParseStructUnionBody(SourceLocation StartLoc, unsigned TagType,
+  void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             Decl *TagDecl);
 
   void ParseStructDeclaration(

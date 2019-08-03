@@ -1843,7 +1843,7 @@ static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
 template <class Container>
 static void addRegAndItsAliases(unsigned Reg, const TargetRegisterInfo *TRI,
                                 Container &Set) {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+  if (Register::isPhysicalRegister(Reg)) {
     for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
       Set.insert(*AI);
   } else {
@@ -1944,7 +1944,7 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
       addRegAndItsAliases(Reg, TRI, Uses);
     } else {
       if (Uses.erase(Reg)) {
-        if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+        if (Register::isPhysicalRegister(Reg)) {
           for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
             Uses.erase(*SubRegs); // Use sub-registers to be conservative
         }
@@ -2066,7 +2066,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (!AllDefsSet.count(Reg)) {
         continue;
       }
-      if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+      if (Register::isPhysicalRegister(Reg)) {
         for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
           ActiveDefsSet.erase(*AI);
       } else {
@@ -2079,7 +2079,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       unsigned Reg = MO.getReg();
-      if (!Reg || TargetRegisterInfo::isVirtualRegister(Reg))
+      if (!Reg || Register::isVirtualRegister(Reg))
         continue;
       addRegAndItsAliases(Reg, TRI, ActiveDefsSet);
       addRegAndItsAliases(Reg, TRI, AllDefsSet);

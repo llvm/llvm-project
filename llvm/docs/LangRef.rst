@@ -17395,6 +17395,10 @@ based on array base ``base``, array dimension ``dim`` and the last access index 
 into the array. The return type ``ret_type`` is a pointer type to the array element.
 The array ``dim`` and ``index`` are preserved which is more robust than
 getelementptr instruction which may be subject to compiler transformation.
+The ``llvm.preserve.access.index`` type of metadata is attached to this call instruction
+to provide array or pointer debuginfo type.
+The metadata is a ``DICompositeType`` or ``DIDerivedType`` representing the
+debuginfo version of ``type``.
 
 Arguments:
 """"""""""

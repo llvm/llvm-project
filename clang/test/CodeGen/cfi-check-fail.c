@@ -7,7 +7,7 @@ void caller(void (*f)()) {
   f();
 }
 
-// CHECK: define weak_odr hidden void @__cfi_check_fail(i8*, i8*)
+// CHECK: define weak_odr hidden void @__cfi_check_fail(i8* %0, i8* %1)
 // CHECK: store i8* %0, i8** %[[ALLOCA0:.*]], align 8
 // CHECK: store i8* %1, i8** %[[ALLOCA1:.*]], align 8
 // CHECK: %[[DATA:.*]] = load i8*, i8** %[[ALLOCA0]], align 8
@@ -73,7 +73,7 @@ void caller(void (*f)()) {
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
 
-// CHECK: define weak void @__cfi_check(i64, i8*, i8*)
+// CHECK: define weak void @__cfi_check(i64 %0, i8* %1, i8* %2)
 // CHECK-NOT: }
 // CHECK: call void @llvm.trap()
 // CHECK-NEXT: ret void

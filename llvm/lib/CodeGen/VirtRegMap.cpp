@@ -81,8 +81,8 @@ void VirtRegMap::grow() {
 }
 
 void VirtRegMap::assignVirt2Phys(unsigned virtReg, MCPhysReg physReg) {
-  assert(TargetRegisterInfo::isVirtualRegister(virtReg) &&
-         TargetRegisterInfo::isPhysicalRegister(physReg));
+  assert(Register::isVirtualRegister(virtReg) &&
+         Register::isPhysicalRegister(physReg));
   assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
          "attempt to assign physical register to already mapped "
          "virtual register");
@@ -103,22 +103,22 @@ bool VirtRegMap::hasPreferredPhys(unsigned VirtReg) {
   unsigned Hint = MRI->getSimpleHint(VirtReg);
   if (!Hint)
     return false;
-  if (TargetRegisterInfo::isVirtualRegister(Hint))
+  if (Register::isVirtualRegister(Hint))
     Hint = getPhys(Hint);
   return getPhys(VirtReg) == Hint;
 }
 
 bool VirtRegMap::hasKnownPreference(unsigned VirtReg) {
   std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(VirtReg);
-  if (TargetRegisterInfo::isPhysicalRegister(Hint.second))
+  if (Register::isPhysicalRegister(Hint.second))
     return true;
-  if (TargetRegisterInfo::isVirtualRegister(Hint.second))
+  if (Register::isVirtualRegister(Hint.second))
     return hasPhys(Hint.second);
   return false;
 }
 
 int VirtRegMap::assignVirt2StackSlot(unsigned virtReg) {
-  assert(TargetRegisterInfo::isVirtualRegister(virtReg));
+  assert(Register::isVirtualRegister(virtReg));
   assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   const TargetRegisterClass* RC = MF->getRegInfo().getRegClass(virtReg);
@@ -126,7 +126,7 @@ int VirtRegMap::assignVirt2StackSlot(unsigned virtReg) {
 }
 
 void VirtRegMap::assignVirt2StackSlot(unsigned virtReg, int SS) {
-  assert(TargetRegisterInfo::isVirtualRegister(virtReg));
+  assert(Register::isVirtualRegister(virtReg));
   assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   assert((SS >= 0 ||
@@ -138,7 +138,7 @@ void VirtRegMap::assignVirt2StackSlot(unsigned virtReg, int SS) {
 void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   OS << "********** REGISTER MAP **********\n";
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (Virt2PhysMap[Reg] != (unsigned)VirtRegMap::NO_PHYS_REG) {
       OS << '[' << printReg(Reg, TRI) << " -> "
          << printReg(Virt2PhysMap[Reg], TRI) << "] "
@@ -147,7 +147,7 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   }
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     if (Virt2StackSlotMap[Reg] != VirtRegMap::NO_STACK_SLOT) {
       OS << '[' << printReg(Reg, TRI) << " -> fi#" << Virt2StackSlotMap[Reg]
          << "] " << TRI->getRegClassName(MRI->getRegClass(Reg)) << "\n";
@@ -312,7 +312,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
 // assignments.
 void VirtRegRewriter::addMBBLiveIns() {
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
-    unsigned VirtReg = TargetRegisterInfo::index2VirtReg(Idx);
+    unsigned VirtReg = Register::index2VirtReg(Idx);
     if (MRI->reg_nodbg_empty(VirtReg))
       continue;
     LiveInterval &LI = LIS->getInterval(VirtReg);
@@ -513,7 +513,7 @@ void VirtRegRewriter::rewrite() {
         if (MO.isRegMask())
           MRI->addPhysRegsUsedFromRegMask(MO.getRegMask());
 
-        if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+        if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
           continue;
         unsigned VirtReg = MO.getReg();
         unsigned PhysReg = VRM->getPhys(VirtReg);

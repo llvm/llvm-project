@@ -134,7 +134,7 @@ void RegScavenger::determineKillsAndDefs() {
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg) || isReserved(Reg))
+    if (!Register::isPhysicalRegister(Reg) || isReserved(Reg))
       continue;
 
     if (MO.isUse()) {
@@ -205,7 +205,7 @@ void RegScavenger::forward() {
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg) || isReserved(Reg))
+    if (!Register::isPhysicalRegister(Reg) || isReserved(Reg))
       continue;
     if (MO.isUse()) {
       if (MO.isUndef())
@@ -329,7 +329,7 @@ unsigned RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
         Candidates.clearBitsNotInMask(MO.getRegMask());
       if (!MO.isReg() || MO.isUndef() || !MO.getReg())
         continue;
-      if (TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+      if (Register::isVirtualRegister(MO.getReg())) {
         if (MO.isDef())
           isVirtDefInsn = true;
         else if (MO.isKill())
@@ -430,7 +430,7 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
       // be usefull for this other vreg as well later.
       bool FoundVReg = false;
       for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+        if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
           FoundVReg = true;
           break;
         }
@@ -542,7 +542,7 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   // Exclude all the registers being used by the instruction.
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg() && MO.getReg() != 0 && !(MO.isUse() && MO.isUndef()) &&
-        !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+        !Register::isVirtualRegister(MO.getReg()))
       for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
         Candidates.reset(*AI);
   }
@@ -698,8 +698,8 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         // We only care about virtual registers and ignore virtual registers
         // created by the target callbacks in the process (those will be handled
         // in a scavenging round).
-        if (!TargetRegisterInfo::isVirtualRegister(Reg) ||
-            TargetRegisterInfo::virtReg2Index(Reg) >= InitialNumVirtRegs)
+        if (!Register::isVirtualRegister(Reg) ||
+            Register::virtReg2Index(Reg) >= InitialNumVirtRegs)
           continue;
         if (!MO.readsReg())
           continue;
@@ -718,8 +718,8 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         continue;
       unsigned Reg = MO.getReg();
       // Only vregs, no newly created vregs (see above).
-      if (!TargetRegisterInfo::isVirtualRegister(Reg) ||
-          TargetRegisterInfo::virtReg2Index(Reg) >= InitialNumVirtRegs)
+      if (!Register::isVirtualRegister(Reg) ||
+          Register::virtReg2Index(Reg) >= InitialNumVirtRegs)
         continue;
       // We have to look at all operands anyway so we can precalculate here
       // whether there is a reading operand. This allows use to skip the use
@@ -737,7 +737,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
   }
 #ifndef NDEBUG
   for (const MachineOperand &MO : MBB.front().operands()) {
-    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
     assert(!MO.isInternalRead() && "Cannot assign inside bundles");
     assert((!MO.isUndef() || MO.isDef()) && "Cannot handle undef uses");

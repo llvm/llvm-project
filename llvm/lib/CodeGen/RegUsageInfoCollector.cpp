@@ -164,7 +164,8 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
       SetRegAsDefined(PReg);
   }
 
-  if (TargetFrameLowering::isSafeForNoCSROpt(F)) {
+  if (TargetFrameLowering::isSafeForNoCSROpt(F) &&
+      MF.getSubtarget().getFrameLowering()->isProfitableForNoCSROpt(F)) {
     ++NumCSROpt;
     LLVM_DEBUG(dbgs() << MF.getName()
                       << " function optimized for not having CSR.\n");

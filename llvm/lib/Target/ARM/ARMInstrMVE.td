@@ -985,9 +985,9 @@ def MVE_VBIC : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
   let Inst{0} = 0b0;
 }
 
-class MVE_VREV<string iname, string suffix, bits<2> size, bits<2> bit_8_7>
+class MVE_VREV<string iname, string suffix, bits<2> size, bits<2> bit_8_7, string cstr="">
   : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qm), iname,
-                  suffix, "$Qd, $Qm", ""> {
+                  suffix, "$Qd, $Qm", cstr> {
 
   let Inst{28} = 0b1;
   let Inst{25-23} = 0b111;
@@ -1001,9 +1001,9 @@ class MVE_VREV<string iname, string suffix, bits<2> size, bits<2> bit_8_7>
   let Inst{0} = 0b0;
 }
 
-def MVE_VREV64_8  : MVE_VREV<"vrev64", "8", 0b00, 0b00>;
-def MVE_VREV64_16 : MVE_VREV<"vrev64", "16", 0b01, 0b00>;
-def MVE_VREV64_32 : MVE_VREV<"vrev64", "32", 0b10, 0b00>;
+def MVE_VREV64_8  : MVE_VREV<"vrev64", "8", 0b00, 0b00, "@earlyclobber $Qd">;
+def MVE_VREV64_16 : MVE_VREV<"vrev64", "16", 0b01, 0b00, "@earlyclobber $Qd">;
+def MVE_VREV64_32 : MVE_VREV<"vrev64", "32", 0b10, 0b00, "@earlyclobber $Qd">;
 
 def MVE_VREV32_8  : MVE_VREV<"vrev32", "8", 0b00, 0b01>;
 def MVE_VREV32_16 : MVE_VREV<"vrev32", "16", 0b01, 0b01>;
