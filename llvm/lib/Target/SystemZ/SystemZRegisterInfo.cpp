@@ -169,7 +169,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 
       auto tryAddHint = [&](const MachineOperand *MO) -> void {
         Register Reg = MO->getReg();
-        Register PhysReg = isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+        Register PhysReg =
+            Register::isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
         if (PhysReg) {
           if (MO->getSubReg())
             PhysReg = getSubReg(PhysReg, MO->getSubReg());
@@ -385,7 +386,7 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   MEE++;
   for (; MII != MEE; ++MII) {
     for (const MachineOperand &MO : MII->operands())
-      if (MO.isReg() && isPhysicalRegister(MO.getReg())) {
+      if (MO.isReg() && Register::isPhysicalRegister(MO.getReg())) {
         for (MCSuperRegIterator SI(MO.getReg(), this, true/*IncludeSelf*/);
              SI.isValid(); ++SI)
           if (NewRC->contains(*SI)) {

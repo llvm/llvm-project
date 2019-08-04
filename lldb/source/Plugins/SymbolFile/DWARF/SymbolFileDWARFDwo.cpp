@@ -23,21 +23,21 @@ using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
                                        DWARFCompileUnit &dwarf_cu)
-    : SymbolFileDWARF(objfile.get(), objfile->GetSectionList(
-                                         /*update_module_section_list*/ false)),
-      m_obj_file_sp(objfile), m_base_dwarf_cu(dwarf_cu) {
+    : SymbolFileDWARF(objfile, objfile->GetSectionList(
+                                   /*update_module_section_list*/ false)),
+      m_base_dwarf_cu(dwarf_cu) {
   SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
                                          DWARFDataExtractor &data) {
   const SectionList *section_list =
-      m_obj_file->GetSectionList(false /* update_module_section_list */);
+      m_objfile_sp->GetSectionList(false /* update_module_section_list */);
   if (section_list) {
     SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
     if (section_sp) {
 
-      if (m_obj_file->ReadSectionData(section_sp.get(), data) != 0)
+      if (m_objfile_sp->ReadSectionData(section_sp.get(), data) != 0)
         return;
 
       data.Clear();
@@ -140,7 +140,7 @@ SymbolFileDWARFDwo::GetLocationListFormat() const {
   return DWARFExpression::SplitDwarfLocationList;
 }
 
-TypeSystem *
+llvm::Expected<TypeSystem &>
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
   return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
 }

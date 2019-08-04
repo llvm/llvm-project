@@ -57,7 +57,7 @@ namespace llvm {
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return TargetRegisterInfo::virtReg2Index(VirtReg);
+      return Register::virtReg2Index(VirtReg);
     }
   };
 

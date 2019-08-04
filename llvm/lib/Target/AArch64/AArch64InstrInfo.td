@@ -133,6 +133,8 @@ def HasBTI           : Predicate<"Subtarget->hasBTI()">,
                        AssemblerPredicate<"FeatureBranchTargetId", "bti">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                        AssemblerPredicate<"FeatureMTE", "mte">;
+def HasTME           : Predicate<"Subtarget->hasTME()">,
+                       AssemblerPredicate<"FeatureTME", "tme">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
                        AssemblerPredicate<"FeatureETE", "ete">;
 def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
@@ -808,6 +810,23 @@ def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
+
+let Predicates = [HasTME] in {
+
+def TSTART : TMSystemI<0b0000, "tstart",
+                      [(set GPR64:$Rt, (int_aarch64_tstart))]>;
+
+def TCOMMIT : TMSystemINoOperand<0b0000, "tcommit", [(int_aarch64_tcommit)]>;
+
+def TCANCEL : TMSystemException<0b011, "tcancel",
+                                [(int_aarch64_tcancel i64_imm0_65535:$imm)]>;
+
+def TTEST : TMSystemI<0b0001, "ttest", [(set GPR64:$Rt, (int_aarch64_ttest))]> {
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+} // HasTME
+
 //===----------------------------------------------------------------------===//
 // Move immediate instructions.
 //===----------------------------------------------------------------------===//
@@ -819,12 +838,12 @@ let PostEncoderMethod = "fixMOVZ" in
 defm MOVZ : MoveImmediate<0b10, "movz">;
 
 // First group of aliases covers an implicit "lsl #0".
-def : InstAlias<"movk $dst, $imm", (MOVKWi GPR32:$dst, imm0_65535:$imm, 0), 0>;
-def : InstAlias<"movk $dst, $imm", (MOVKXi GPR64:$dst, imm0_65535:$imm, 0), 0>;
-def : InstAlias<"movn $dst, $imm", (MOVNWi GPR32:$dst, imm0_65535:$imm, 0)>;
-def : InstAlias<"movn $dst, $imm", (MOVNXi GPR64:$dst, imm0_65535:$imm, 0)>;
-def : InstAlias<"movz $dst, $imm", (MOVZWi GPR32:$dst, imm0_65535:$imm, 0)>;
-def : InstAlias<"movz $dst, $imm", (MOVZXi GPR64:$dst, imm0_65535:$imm, 0)>;
+def : InstAlias<"movk $dst, $imm", (MOVKWi GPR32:$dst, i32_imm0_65535:$imm, 0), 0>;
+def : InstAlias<"movk $dst, $imm", (MOVKXi GPR64:$dst, i32_imm0_65535:$imm, 0), 0>;
+def : InstAlias<"movn $dst, $imm", (MOVNWi GPR32:$dst, i32_imm0_65535:$imm, 0)>;
+def : InstAlias<"movn $dst, $imm", (MOVNXi GPR64:$dst, i32_imm0_65535:$imm, 0)>;
+def : InstAlias<"movz $dst, $imm", (MOVZWi GPR32:$dst, i32_imm0_65535:$imm, 0)>;
+def : InstAlias<"movz $dst, $imm", (MOVZXi GPR64:$dst, i32_imm0_65535:$imm, 0)>;
 
 // Next, we have various ELF relocations with the ":XYZ_g0:sym" syntax.
 def : InstAlias<"movz $Rd, $sym", (MOVZXi GPR64:$Rd, movw_symbol_g3:$sym, 48)>;

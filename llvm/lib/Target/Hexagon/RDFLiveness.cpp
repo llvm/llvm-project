@@ -890,7 +890,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
         continue;
       unsigned R = Op.getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(R))
+      if (!Register::isPhysicalRegister(R))
         continue;
       for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR)
         Live.reset(*SR);
@@ -899,7 +899,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       unsigned R = Op.getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(R))
+      if (!Register::isPhysicalRegister(R))
         continue;
       bool IsLive = false;
       for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {

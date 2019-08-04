@@ -75,6 +75,7 @@ protected:
   bool HasFminFmaxLegacy;
   bool EnablePromoteAlloca;
   bool HasTrigReducedRange;
+  unsigned MaxWavesPerEU;
   int LocalMemorySize;
   unsigned WavefrontSize;
 
@@ -223,7 +224,9 @@ public:
   /// subtarget.
   virtual unsigned getMinWavesPerEU() const = 0;
 
-  unsigned getMaxWavesPerEU() const { return 10; }
+  /// \returns Maximum number of waves per execution unit supported by the
+  /// subtarget without any kind of limitation.
+  unsigned getMaxWavesPerEU() const { return MaxWavesPerEU; }
 
   /// Creates value range metadata on an workitemid.* inrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
@@ -245,6 +248,9 @@ public:
 
 class GCNSubtarget : public AMDGPUGenSubtargetInfo,
                      public AMDGPUSubtarget {
+
+  using AMDGPUSubtarget::getMaxWavesPerEU;
+
 public:
   enum TrapHandlerAbi {
     TrapHandlerAbiNone = 0,
@@ -881,12 +887,6 @@ public:
     return AMDGPU::IsaInfo::getMaxWavesPerCU(this, FlatWorkGroupSize);
   }
 
-  /// \returns Maximum number of waves per execution unit supported by the
-  /// subtarget without any kind of limitation.
-  unsigned getMaxWavesPerEU() const {
-    return AMDGPU::IsaInfo::getMaxWavesPerEU(this);
-  }
-
   /// \returns Number of waves per work group supported by the subtarget and
   /// limited by given \p FlatWorkGroupSize.
   unsigned getWavesPerWorkGroup(unsigned FlatWorkGroupSize) const {
@@ -1035,6 +1035,13 @@ public:
   /// Return the maximum number of waves per SIMD for kernels using \p VGPRs
   /// VGPRs
   unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
+
+  /// Return occupancy for the given function. Used LDS and a number of
+  /// registers if provided.
+  /// Note, occupancy can be affected by the scratch allocation as well, but
+  /// we do not have enough information to compute it.
+  unsigned computeOccupancy(const MachineFunction &MF, unsigned LDSSize = 0,
+                            unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.

@@ -22,9 +22,9 @@ extern Checksum HashAlgorithm;
 
 INLINE u16 computeChecksum(u32 Seed, uptr Value, uptr *Array, uptr ArraySize) {
   // If the hardware CRC32 feature is defined here, it was enabled everywhere,
-  // as opposed to only for crc32_hw.cc. This means that other hardware specific
-  // instructions were likely emitted at other places, and as a result there is
-  // no reason to not use it here.
+  // as opposed to only for crc32_hw.cpp. This means that other hardware
+  // specific instructions were likely emitted at other places, and as a result
+  // there is no reason to not use it here.
 #if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
   u32 Crc = static_cast<u32>(CRC32_INTRINSIC(Seed, Value));
   for (uptr I = 0; I < ArraySize; I++)

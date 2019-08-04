@@ -73,8 +73,11 @@ public:
   /// operands
   bool isAlwaysUniform(const Value &Val) const;
 
-  /// \brief Whether \p Val is a divergent value
+  /// \brief Whether \p Val is divergent at its definition.
   bool isDivergent(const Value &Val) const;
+
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be divergent.
+  bool isDivergentUse(const Use &U) const;
 
   void print(raw_ostream &OS, const Module *) const;
 
@@ -189,11 +192,18 @@ public:
   /// The GPU kernel this analysis result is for
   const Function &getFunction() const { return DA.getFunction(); }
 
-  /// Whether \p V is divergent.
+  /// Whether \p V is divergent at its definition.
   bool isDivergent(const Value &V) const;
 
-  /// Whether \p V is uniform/non-divergent
+  /// Whether \p U is divergent. Uses of a uniform value can be divergent.
+  bool isDivergentUse(const Use &U) const;
+
+  /// Whether \p V is uniform/non-divergent.
   bool isUniform(const Value &V) const { return !isDivergent(V); }
+
+  /// Whether \p U is uniform/non-divergent. Uses of a uniform value can be
+  /// divergent.
+  bool isUniformUse(const Use &U) const { return !isDivergentUse(U); }
 
   /// Print all divergent values in the kernel.
   void print(raw_ostream &OS, const Module *) const;

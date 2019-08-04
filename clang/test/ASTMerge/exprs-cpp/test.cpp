@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1z -fcxx-exceptions -emit-pch -o %t.1.ast %S/Inputs/exprs3.cpp
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1z -fcxx-exceptions -ast-merge %t.1.ast -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1z -fcxx-exceptions -Wno-signed-unsigned-wchar -emit-pch -o %t.1.ast %S/Inputs/exprs3.cpp
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1z -fcxx-exceptions -Wno-signed-unsigned-wchar -ast-merge %t.1.ast -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 static_assert(Ch1 == 'a');

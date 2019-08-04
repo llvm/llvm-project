@@ -236,7 +236,8 @@ private:
     for (const auto &Inc : Includes.MainFileIncludes) {
       const FileEntry *File = nullptr;
       if (Inc.Resolved != "")
-        File = SM.getFileManager().getFile(Inc.Resolved);
+        if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
+          File = *FE;
 
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
@@ -374,7 +375,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     }
   }
 
-  // Add IncludeFixer which can recorver diagnostics caused by missing includes
+  // Add IncludeFixer which can recover diagnostics caused by missing includes
   // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();

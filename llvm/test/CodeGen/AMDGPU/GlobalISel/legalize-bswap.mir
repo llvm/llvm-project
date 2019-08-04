@@ -87,17 +87,18 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: bswap_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[ANYEXT]]
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[COPY1]](s32)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[ANYEXT1]]
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP1]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+    ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[COPY2]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CHECK: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[COPY3]]
+    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP1]], [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
     ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0

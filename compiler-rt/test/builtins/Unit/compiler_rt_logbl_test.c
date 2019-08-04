@@ -1,4 +1,8 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+//
+// Bug 42496
+// XFAIL: sparcv9-target-arch
+//
 //===-- compiler_rt_logbl_test.c - Test __compiler_rt_logbl ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

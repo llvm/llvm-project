@@ -111,7 +111,7 @@ class TargetInstrInfo;
     /// clears the specified virtual register's, physical
     /// register mapping
     void clearVirt(unsigned virtReg) {
-      assert(TargetRegisterInfo::isVirtualRegister(virtReg));
+      assert(Register::isVirtualRegister(virtReg));
       assert(Virt2PhysMap[virtReg] != NO_PHYS_REG &&
              "attempt to clear a not assigned virtual register");
       Virt2PhysMap[virtReg] = NO_PHYS_REG;
@@ -163,7 +163,7 @@ class TargetInstrInfo;
     /// returns the stack slot mapped to the specified virtual
     /// register
     int getStackSlot(unsigned virtReg) const {
-      assert(TargetRegisterInfo::isVirtualRegister(virtReg));
+      assert(Register::isVirtualRegister(virtReg));
       return Virt2StackSlotMap[virtReg];
     }
 

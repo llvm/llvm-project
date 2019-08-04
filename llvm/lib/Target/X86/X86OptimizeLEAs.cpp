@@ -198,8 +198,7 @@ static inline MemOpKey getMemOpKey(const MachineInstr &MI, unsigned N) {
 static inline bool isIdenticalOp(const MachineOperand &MO1,
                                  const MachineOperand &MO2) {
   return MO1.isIdenticalTo(MO2) &&
-         (!MO1.isReg() ||
-          !TargetRegisterInfo::isPhysicalRegister(MO1.getReg()));
+         (!MO1.isReg() || !Register::isPhysicalRegister(MO1.getReg()));
 }
 
 #ifndef NDEBUG

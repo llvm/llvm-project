@@ -666,3 +666,32 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
   %resF = insertelement <16 x i16> %resE, i16 %valF, i16 15
   ret <16 x i16> %resF
 }
+
+;
+; Volatile tests.
+;
+
+@l = external global <32 x i8>, align 32
+
+define <2 x i8> @PR42846(<2 x i8>* %j, <2 x i8> %k) {
+; AVX-LABEL: PR42846:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*}}(%rip), %ymm1
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpextrw $0, %xmm1, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; X32-AVX-LABEL: PR42846:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vmovdqa l, %ymm1
+; X32-AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; X32-AVX-NEXT:    vpextrw $0, %xmm1, (%eax)
+; X32-AVX-NEXT:    vzeroupper
+; X32-AVX-NEXT:    retl
+  %t0 = load volatile <32 x i8>, <32 x i8>* @l, align 32
+  %shuffle = shufflevector <32 x i8> %t0, <32 x i8> undef, <2 x i32> <i32 0, i32 1>
+  store <2 x i8> %shuffle, <2 x i8>* %j, align 2
+  ret <2 x i8> %shuffle
+}

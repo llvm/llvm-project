@@ -353,7 +353,8 @@ void Module::SetUUID(const lldb_private::UUID &uuid) {
   }
 }
 
-TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language) {
+llvm::Expected<TypeSystem &>
+Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 
@@ -365,7 +366,7 @@ void Module::ParseAllDebugSymbols() {
 
   SymbolContext sc;
   sc.module_sp = shared_from_this();
-  SymbolVendor *symbols = GetSymbolVendor();
+  SymbolFile *symbols = GetSymbolFile();
 
   for (size_t cu_idx = 0; cu_idx < num_comp_units; cu_idx++) {
     sc.comp_unit = symbols->GetCompileUnitAtIndex(cu_idx).get();
@@ -405,8 +406,7 @@ size_t Module::GetNumCompileUnits() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "Module::GetNumCompileUnits (module = %p)",
                      static_cast<void *>(this));
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
+  if (SymbolFile *symbols = GetSymbolFile())
     return symbols->GetNumCompileUnits();
   return 0;
 }
@@ -417,8 +417,7 @@ CompUnitSP Module::GetCompileUnitAtIndex(size_t index) {
   CompUnitSP cu_sp;
 
   if (index < num_comp_units) {
-    SymbolVendor *symbols = GetSymbolVendor();
-    if (symbols)
+    if (SymbolFile *symbols = GetSymbolFile())
       cu_sp = symbols->GetCompileUnitAtIndex(index);
   }
   return cu_sp;
@@ -456,8 +455,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
     sc.module_sp = shared_from_this();
     resolved_flags |= eSymbolContextModule;
 
-    SymbolVendor *sym_vendor = GetSymbolVendor();
-    if (!sym_vendor)
+    SymbolFile *symfile = GetSymbolFile();
+    if (!symfile)
       return resolved_flags;
 
     // Resolve the compile unit, function, block, line table or line entry if
@@ -468,14 +467,14 @@ uint32_t Module::ResolveSymbolContextForAddress(
         resolve_scope & eSymbolContextLineEntry ||
         resolve_scope & eSymbolContextVariable) {
       resolved_flags |=
-          sym_vendor->ResolveSymbolContext(so_addr, resolve_scope, sc);
+          symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've
     // already found it.
     if (resolve_scope & eSymbolContextSymbol &&
         !(resolved_flags & eSymbolContextSymbol)) {
-      Symtab *symtab = sym_vendor->GetSymtab();
+      Symtab *symtab = symfile->GetSymtab();
       if (symtab && so_addr.IsSectionOffset()) {
         Symbol *matching_symbol = nullptr;
 
@@ -508,18 +507,15 @@ uint32_t Module::ResolveSymbolContextForAddress(
             // files on MacOSX have an unstripped symbol table inside of them.
             ObjectFile *symtab_objfile = symtab->GetObjectFile();
             if (symtab_objfile && symtab_objfile->IsStripped()) {
-              SymbolFile *symfile = sym_vendor->GetSymbolFile();
-              if (symfile) {
-                ObjectFile *symfile_objfile = symfile->GetObjectFile();
-                if (symfile_objfile != symtab_objfile) {
-                  Symtab *symfile_symtab = symfile_objfile->GetSymtab();
-                  if (symfile_symtab) {
-                    Symbol *symbol =
-                        symfile_symtab->FindSymbolContainingFileAddress(
-                            so_addr.GetFileAddress());
-                    if (symbol && !symbol->IsSynthetic()) {
-                      sc.symbol = symbol;
-                    }
+              ObjectFile *symfile_objfile = symfile->GetObjectFile();
+              if (symfile_objfile != symtab_objfile) {
+                Symtab *symfile_symtab = symfile_objfile->GetSymtab();
+                if (symfile_symtab) {
+                  Symbol *symbol =
+                      symfile_symtab->FindSymbolContainingFileAddress(
+                          so_addr.GetFileAddress());
+                  if (symbol && !symbol->IsSynthetic()) {
+                    sc.symbol = symbol;
                   }
                 }
               }
@@ -591,8 +587,7 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(
 
   const uint32_t initial_count = sc_list.GetSize();
 
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
+  if (SymbolFile *symbols = GetSymbolFile())
     symbols->ResolveSymbolContext(file_spec, line, check_inlines, resolve_scope,
                                   sc_list);
 
@@ -603,8 +598,7 @@ size_t Module::FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext *parent_decl_ctx,
                                    size_t max_matches,
                                    VariableList &variables) {
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
+  if (SymbolFile *symbols = GetSymbolFile())
     return symbols->FindGlobalVariables(name, parent_decl_ctx, max_matches,
                                         variables);
   return 0;
@@ -613,7 +607,7 @@ size_t Module::FindGlobalVariables(ConstString name,
 size_t Module::FindGlobalVariables(const RegularExpression &regex,
                                    size_t max_matches,
                                    VariableList &variables) {
-  SymbolVendor *symbols = GetSymbolVendor();
+  SymbolFile *symbols = GetSymbolFile();
   if (symbols)
     return symbols->FindGlobalVariables(regex, max_matches, variables);
   return 0;
@@ -810,7 +804,7 @@ size_t Module::FindFunctions(ConstString name,
   const size_t old_size = sc_list.GetSize();
 
   // Find all the functions (not symbols, but debug information functions...
-  SymbolVendor *symbols = GetSymbolVendor();
+  SymbolFile *symbols = GetSymbolFile();
 
   if (name_type_mask & eFunctionNameTypeAuto) {
     LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
@@ -860,8 +854,7 @@ size_t Module::FindFunctions(const RegularExpression &regex,
 
   const size_t start_size = sc_list.GetSize();
 
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols) {
+  if (SymbolFile *symbols = GetSymbolFile()) {
     symbols->FindFunctions(regex, include_inlines, append, sc_list);
 
     // Now check our symbol table for symbols that are code symbols if
@@ -953,8 +946,7 @@ size_t Module::FindTypes_Impl(
     TypeMap &types) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
+  if (SymbolFile *symbols = GetSymbolFile())
     return symbols->FindTypes(name, parent_decl_ctx, append, max_matches,
                               searched_symbol_files, types);
   return 0;
@@ -1061,6 +1053,12 @@ SymbolVendor *Module::GetSymbolVendor(bool can_create,
     }
   }
   return m_symfile_up.get();
+}
+
+SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
+  if (SymbolVendor *vendor = GetSymbolVendor(can_create, feedback_strm))
+    return vendor->GetSymbolFile();
+  return nullptr;
 }
 
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
@@ -1289,9 +1287,8 @@ void Module::SectionFileAddressesChanged() {
   ObjectFile *obj_file = GetObjectFile();
   if (obj_file)
     obj_file->SectionFileAddressesChanged();
-  SymbolVendor *sym_vendor = GetSymbolVendor();
-  if (sym_vendor != nullptr)
-    sym_vendor->SectionFileAddressesChanged();
+  if (SymbolFile *symbols = GetSymbolFile())
+    symbols->SectionFileAddressesChanged();
 }
 
 UnwindTable &Module::GetUnwindTable() {
@@ -1406,18 +1403,16 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
 
 void Module::PreloadSymbols() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SymbolVendor * sym_vendor = GetSymbolVendor();
-  if (!sym_vendor) {
+  SymbolFile *sym_file = GetSymbolFile();
+  if (!sym_file)
     return;
-  }
+
   // Prime the symbol file first, since it adds symbols to the symbol table.
-  if (SymbolFile *symbol_file = sym_vendor->GetSymbolFile()) {
-    symbol_file->PreloadSymbols();
-  }
+  sym_file->PreloadSymbols();
+
   // Now we can prime the symbol table.
-  if (Symtab * symtab = sym_vendor->GetSymtab()) {
+  if (Symtab *symtab = sym_file->GetSymtab())
     symtab->PreloadSymbols();
-  }
 }
 
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
@@ -1427,7 +1422,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
     // Remove any sections in the unified section list that come from the
     // current symbol vendor.
     SectionList *section_list = GetSectionList();
-    SymbolFile *symbol_file = m_symfile_up->GetSymbolFile();
+    SymbolFile *symbol_file = GetSymbolFile();
     if (section_list && symbol_file) {
       ObjectFile *obj_file = symbol_file->GetObjectFile();
       // Make sure we have an object file and that the symbol vendor's objfile

@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-import os
 import lldb
 import re
 from lldbsuite.test.lldbplatformutil import getDarwinOSTriples

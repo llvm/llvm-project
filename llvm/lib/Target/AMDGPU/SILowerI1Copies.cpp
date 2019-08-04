@@ -96,7 +96,7 @@ private:
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
 
   bool isVreg1(unsigned Reg) const {
-    return TargetRegisterInfo::isVirtualRegister(Reg) &&
+    return Register::isVirtualRegister(Reg) &&
            MRI->getRegClass(Reg) == &AMDGPU::VReg_1RegClass;
   }
 
@@ -689,7 +689,7 @@ void SILowerI1Copies::lowerCopiesToI1() {
       unsigned SrcReg = MI.getOperand(1).getReg();
       assert(!MI.getOperand(1).getSubReg());
 
-      if (!TargetRegisterInfo::isVirtualRegister(SrcReg) ||
+      if (!Register::isVirtualRegister(SrcReg) ||
           (!isLaneMaskReg(SrcReg) && !isVreg1(SrcReg))) {
         assert(TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 32);
         unsigned TmpReg = createLaneMaskReg(*MF);
@@ -734,7 +734,7 @@ bool SILowerI1Copies::isConstantLaneMask(unsigned Reg, bool &Val) const {
       break;
 
     Reg = MI->getOperand(1).getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       return false;
     if (!isLaneMaskReg(Reg))
       return false;

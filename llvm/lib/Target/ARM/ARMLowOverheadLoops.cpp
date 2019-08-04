@@ -207,9 +207,15 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return false;
   }
 
-  if (!End->getOperand(1).isMBB() ||
-      End->getOperand(1).getMBB() != ML->getHeader())
-    report_fatal_error("Expected LoopEnd to target Loop Header");
+  if (!End->getOperand(1).isMBB())
+    report_fatal_error("Expected LoopEnd to target basic block");
+
+  // TODO Maybe there's cases where the target doesn't have to be the header,
+  // but for now be safe and revert.
+  if (End->getOperand(1).getMBB() != ML->getHeader()) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targetting header.\n");
+    Revert = true;
+  }
 
   // The WLS and LE instructions have 12-bits for the label offset. WLS
   // requires a positive offset, while LE uses negative.

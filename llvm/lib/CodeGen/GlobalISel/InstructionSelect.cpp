@@ -161,8 +161,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       unsigned SrcReg = MI.getOperand(1).getReg();
       unsigned DstReg = MI.getOperand(0).getReg();
-      if (TargetRegisterInfo::isVirtualRegister(SrcReg) &&
-          TargetRegisterInfo::isVirtualRegister(DstReg)) {
+      if (Register::isVirtualRegister(SrcReg) &&
+          Register::isVirtualRegister(DstReg)) {
         auto SrcRC = MRI.getRegClass(SrcReg);
         auto DstRC = MRI.getRegClass(DstReg);
         if (SrcRC == DstRC) {
@@ -179,7 +179,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned VReg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned VReg = Register::index2VirtReg(I);
 
     MachineInstr *MI = nullptr;
     if (!MRI.def_empty(VReg))

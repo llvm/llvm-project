@@ -290,7 +290,7 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
     // at machine code level, we don't need this, but if we decide
     // to move new value jump prior to RA, we would be needing this.
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (secondReg && !TargetRegisterInfo::isPhysicalRegister(cmpOp2)) {
+    if (secondReg && !Register::isPhysicalRegister(cmpOp2)) {
       MachineInstr *def = MRI.getVRegDef(cmpOp2);
       if (def->getOpcode() == TargetOpcode::COPY)
         return false;
@@ -516,7 +516,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         jmpPos = MII;
         jmpInstr = &MI;
         predReg = MI.getOperand(0).getReg();
-        afterRA = TargetRegisterInfo::isPhysicalRegister(predReg);
+        afterRA = Register::isPhysicalRegister(predReg);
 
         // If ifconverter had not messed up with the kill flags of the
         // operands, the following check on the kill flag would suffice.

@@ -121,13 +121,6 @@ AnyScopesHaveTemplateParams(llvm::ArrayRef<llvm::ms_demangle::Node *> scopes) {
   return false;
 }
 
-static ClangASTContext &GetClangASTContext(ObjectFile &obj) {
-  TypeSystem *ts =
-      obj.GetModule()->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
-  lldbassert(ts);
-  return static_cast<ClangASTContext &>(*ts);
-}
-
 static llvm::Optional<clang::CallingConv>
 TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
   using CC = llvm::codeview::CallingConvention;
@@ -209,8 +202,8 @@ static bool IsAnonymousNamespaceName(llvm::StringRef name) {
   return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
 
-PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index)
-    : m_index(index), m_clang(GetClangASTContext(obj)) {
+PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang)
+    : m_index(index), m_clang(clang) {
   BuildParentMap();
 }
 
@@ -1091,7 +1084,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
     CompilerType param_type_ct(&m_clang, qt.getAsOpaquePtr());
     clang::ParmVarDecl *param = m_clang.CreateParameterDeclaration(
         &function_decl, param_name.str().c_str(), param_type_ct,
-        clang::SC_None);
+        clang::SC_None, true);
     lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
 
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;

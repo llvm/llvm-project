@@ -1490,6 +1490,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::ADDE:          return "ARMISD::ADDE";
   case ARMISD::SUBC:          return "ARMISD::SUBC";
   case ARMISD::SUBE:          return "ARMISD::SUBE";
+  case ARMISD::LSLS:          return "ARMISD::LSLS";
 
   case ARMISD::VMOVRRD:       return "ARMISD::VMOVRRD";
   case ARMISD::VMOVDRR:       return "ARMISD::VMOVDRR";
@@ -2449,7 +2450,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = std::numeric_limits<int>::max();
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(VR))
+    if (!Register::isVirtualRegister(VR))
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -4071,6 +4072,67 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // operand.
     CC = ISD::getSetCCSwappedOperands(CC);
     std::swap(LHS, RHS);
+  }
+
+  // Thumb1 has very limited immediate modes, so turning an "and" into a
+  // shift can save multiple instructions.
+  //
+  // If we have (x & C1), and C1 is an appropriate mask, we can transform it
+  // into "((x << n) >> n)".  But that isn't necessarily profitable on its
+  // own. If it's the operand to an unsigned comparison with an immediate,
+  // we can eliminate one of the shifts: we transform
+  // "((x << n) >> n) == C2" to "(x << n) == (C2 << n)".
+  //
+  // We avoid transforming cases which aren't profitable due to encoding
+  // details:
+  //
+  // 1. C2 fits into the immediate field of a cmp, and the transformed version
+  // would not; in that case, we're essentially trading one immediate load for
+  // another.
+  // 2. C1 is 255 or 65535, so we can use uxtb or uxth.
+  // 3. C2 is zero; we have other code for this special case.
+  //
+  // FIXME: Figure out profitability for Thumb2; we usually can't save an
+  // instruction, since the AND is always one instruction anyway, but we could
+  // use narrow instructions in some cases.
+  if (Subtarget->isThumb1Only() && LHS->getOpcode() == ISD::AND &&
+      LHS->hasOneUse() && isa<ConstantSDNode>(LHS.getOperand(1)) &&
+      LHS.getValueType() == MVT::i32 && isa<ConstantSDNode>(RHS) &&
+      !isSignedIntSetCC(CC)) {
+    unsigned Mask = cast<ConstantSDNode>(LHS.getOperand(1))->getZExtValue();
+    auto *RHSC = cast<ConstantSDNode>(RHS.getNode());
+    uint64_t RHSV = RHSC->getZExtValue();
+    if (isMask_32(Mask) && (RHSV & ~Mask) == 0 && Mask != 255 && Mask != 65535) {
+      unsigned ShiftBits = countLeadingZeros(Mask);
+      if (RHSV && (RHSV > 255 || (RHSV << ShiftBits) <= 255)) {
+        SDValue ShiftAmt = DAG.getConstant(ShiftBits, dl, MVT::i32);
+        LHS = DAG.getNode(ISD::SHL, dl, MVT::i32, LHS.getOperand(0), ShiftAmt);
+        RHS = DAG.getConstant(RHSV << ShiftBits, dl, MVT::i32);
+      }
+    }
+  }
+
+  // The specific comparison "(x<<c) > 0x80000000U" can be optimized to a
+  // single "lsls x, c+1".  The shift sets the "C" and "Z" flags the same
+  // way a cmp would.
+  // FIXME: Add support for ARM/Thumb2; this would need isel patterns, and
+  // some tweaks to the heuristics for the previous and->shift transform.
+  // FIXME: Optimize cases where the LHS isn't a shift.
+  if (Subtarget->isThumb1Only() && LHS->getOpcode() == ISD::SHL &&
+      isa<ConstantSDNode>(RHS) &&
+      cast<ConstantSDNode>(RHS)->getZExtValue() == 0x80000000U &&
+      CC == ISD::SETUGT && isa<ConstantSDNode>(LHS.getOperand(1)) &&
+      cast<ConstantSDNode>(LHS.getOperand(1))->getZExtValue() < 31) {
+    unsigned ShiftAmt =
+      cast<ConstantSDNode>(LHS.getOperand(1))->getZExtValue() + 1;
+    SDValue Shift = DAG.getNode(ARMISD::LSLS, dl,
+                                DAG.getVTList(MVT::i32, MVT::i32),
+                                LHS.getOperand(0),
+                                DAG.getConstant(ShiftAmt, dl, MVT::i32));
+    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, ARM::CPSR,
+                                     Shift.getValue(1), SDValue());
+    ARMcc = DAG.getConstant(ARMCC::HI, dl, MVT::i32);
+    return Chain.getValue(1);
   }
 
   ARMCC::CondCodes CondCode = IntCCToARMCC(CC);

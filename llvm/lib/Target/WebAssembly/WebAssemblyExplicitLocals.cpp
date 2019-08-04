@@ -221,7 +221,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // drops to their defs.
   BitVector UseEmpty(MRI.getNumVirtRegs());
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I)
-    UseEmpty[I] = MRI.use_empty(TargetRegisterInfo::index2VirtReg(I));
+    UseEmpty[I] = MRI.use_empty(Register::index2VirtReg(I));
 
   // Visit each instruction in the function.
   for (MachineBasicBlock &MBB : MF) {
@@ -280,7 +280,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             Changed = true;
             continue;
           }
-          if (UseEmpty[TargetRegisterInfo::virtReg2Index(OldReg)]) {
+          if (UseEmpty[Register::virtReg2Index(OldReg)]) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
@@ -369,7 +369,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // TODO: Sort the locals for better compression.
   MFI.setNumLocals(CurLocal - MFI.getParams().size());
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned Reg = Register::index2VirtReg(I);
     auto RL = Reg2Local.find(Reg);
     if (RL == Reg2Local.end() || RL->second < MFI.getParams().size())
       continue;

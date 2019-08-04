@@ -110,14 +110,12 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 
 namespace {
 
-static constexpr PropertyDefinition g_properties[] = {
 #define LLDB_PROPERTIES_processgdbremote
-#include "Properties.inc"
-};
+#include "ProcessGDBRemoteProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_processgdbremote
-#include "PropertiesEnum.inc"
+#include "ProcessGDBRemotePropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
@@ -128,7 +126,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_processgdbremote_properties);
   }
 
   ~PluginProperties() override {}
@@ -136,7 +134,7 @@ public:
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyPacketTimeout;
     return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        nullptr, idx, g_properties[idx].default_uint_value);
+        nullptr, idx, g_processgdbremote_properties[idx].default_uint_value);
   }
 
   bool SetPacketTimeout(uint64_t timeout) {
@@ -152,7 +150,8 @@ public:
   bool GetUseSVR4() const {
     const uint32_t idx = ePropertyUseSVR4;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_properties[idx].default_uint_value != 0);
+        nullptr, idx,
+        g_processgdbremote_properties[idx].default_uint_value != 0);
   }
 };
 
@@ -4525,16 +4524,15 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 // information to the current process.  It will call itself recursively
 // for nested register definition files.  It returns true if it was able
 // to fetch and parse an xml file.
-bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use, 
-                                                             std::string xml_filename,
-                                                             uint32_t &cur_reg_num,
-                                                             uint32_t &reg_offset) {
+bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
+    ArchSpec &arch_to_use, std::string xml_filename, uint32_t &cur_reg_num,
+    uint32_t &reg_offset) {
   // request the target xml file
   std::string raw;
   lldb_private::Status lldberr;
-  if (!m_gdb_comm.ReadExtFeature(ConstString("features"), 
-                           ConstString(xml_filename.c_str()), 
-                           raw, lldberr)) {
+  if (!m_gdb_comm.ReadExtFeature(ConstString("features"),
+                                 ConstString(xml_filename.c_str()), raw,
+                                 lldberr)) {
     return false;
   }
 
@@ -4636,8 +4634,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_u
       }
 
       for (const auto &include : target_info.includes) {
-        GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include, 
-                                              cur_reg_num, reg_offset);
+        GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include, cur_reg_num,
+                                              reg_offset);
       }
     }
   } else {

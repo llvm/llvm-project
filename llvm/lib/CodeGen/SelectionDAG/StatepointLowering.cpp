@@ -1016,20 +1016,27 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     return;
   }
 
-  SDValue SpillSlot =
-    DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
+  unsigned Index = *DerivedPtrLocation;
+  SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
 
   // Note: We know all of these reloads are independent, but don't bother to
   // exploit that chain wise.  DAGCombine will happily do so as needed, so
   // doing it here would be a small compile time win at most.
   SDValue Chain = getRoot();
 
-  SDValue SpillLoad =
-      DAG.getLoad(DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                           Relocate.getType()),
-                  getCurSDLoc(), Chain, SpillSlot,
-                  MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
-                                                    *DerivedPtrLocation));
+  auto &MF = DAG.getMachineFunction();
+  auto &MFI = MF.getFrameInfo();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
+  auto *LoadMMO =
+    MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 
+                            MFI.getObjectSize(Index),
+                            MFI.getObjectAlignment(Index));
+
+  auto LoadVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                         Relocate.getType());
+
+  SDValue SpillLoad = DAG.getLoad(LoadVT, getCurSDLoc(), Chain,
+                                  SpillSlot, LoadMMO);
 
   DAG.setRoot(SpillLoad.getValue(1));
 

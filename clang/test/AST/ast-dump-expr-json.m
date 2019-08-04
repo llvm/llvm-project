@@ -612,7 +612,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        "name": "s", 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "SEL *", 
-// CHECK-NEXT:         "qualType": "SEL"
+// CHECK-NEXT:         "qualType": "SEL", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "init": "c", 
 // CHECK-NEXT:        "inner": [
@@ -631,7 +632,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "SEL *", 
-// CHECK-NEXT:           "qualType": "SEL"
+// CHECK-NEXT:           "qualType": "SEL", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "selector": "dealloc"
@@ -691,7 +693,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    "name": "Obj", 
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "id", 
-// CHECK-NEXT:     "qualType": "id"
+// CHECK-NEXT:     "qualType": "id", 
+// CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }, 
 // CHECK-NEXT:   {
@@ -745,7 +748,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "valueCategory": "rvalue", 
 // CHECK-NEXT:        "castKind": "LValueToRValue", 
@@ -765,7 +769,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "lvalue", 
 // CHECK-NEXT:          "referencedDecl": {
@@ -774,7 +779,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:           "name": "Obj", 
 // CHECK-NEXT:           "type": {
 // CHECK-NEXT:            "desugaredQualType": "id", 
-// CHECK-NEXT:            "qualType": "id"
+// CHECK-NEXT:            "qualType": "id", 
+// CHECK-NEXT:            "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -1843,7 +1849,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "id", 
-// CHECK-NEXT:       "qualType": "id"
+// CHECK-NEXT:       "qualType": "id", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
 // CHECK-NEXT:      "inner": [
@@ -2236,7 +2243,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "valueCategory": "rvalue", 
 // CHECK-NEXT:        "inner": [
@@ -2255,7 +2263,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "castKind": "NullToPointer", 
@@ -2426,7 +2435,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "inner": [
@@ -2445,7 +2455,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "desugaredQualType": "id", 
-// CHECK-NEXT:             "qualType": "id"
+// CHECK-NEXT:             "qualType": "id", 
+// CHECK-NEXT:             "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "valueCategory": "rvalue", 
 // CHECK-NEXT:            "castKind": "NullToPointer", 
@@ -2593,7 +2604,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        "name": "i", 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "init": "c", 
 // CHECK-NEXT:        "inner": [
@@ -2612,7 +2624,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "inner": [
@@ -2864,7 +2877,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "desugaredQualType": "id", 
-// CHECK-NEXT:             "qualType": "id"
+// CHECK-NEXT:             "qualType": "id", 
+// CHECK-NEXT:             "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "valueCategory": "rvalue", 
 // CHECK-NEXT:            "selector": "objectAtIndexedSubscript:", 
@@ -3000,7 +3014,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "id", 
-// CHECK-NEXT:       "qualType": "id"
+// CHECK-NEXT:       "qualType": "id", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
 // CHECK-NEXT:      "inner": [
@@ -3433,7 +3448,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "valueCategory": "rvalue", 
 // CHECK-NEXT:        "inner": [
@@ -3452,7 +3468,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "castKind": "NullToPointer", 
@@ -3623,7 +3640,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "inner": [
@@ -3642,7 +3660,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "desugaredQualType": "id", 
-// CHECK-NEXT:             "qualType": "id"
+// CHECK-NEXT:             "qualType": "id", 
+// CHECK-NEXT:             "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "valueCategory": "rvalue", 
 // CHECK-NEXT:            "castKind": "NullToPointer", 
@@ -3726,7 +3745,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "castKind": "BitCast", 
@@ -3812,7 +3832,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "id", 
-// CHECK-NEXT:       "qualType": "id"
+// CHECK-NEXT:       "qualType": "id", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
 // CHECK-NEXT:      "opcode": "=", 
@@ -3832,7 +3853,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "valueCategory": "lvalue", 
 // CHECK-NEXT:        "referencedDecl": {
@@ -3841,7 +3863,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         "name": "i", 
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "desugaredQualType": "id", 
-// CHECK-NEXT:          "qualType": "id"
+// CHECK-NEXT:          "qualType": "id", 
+// CHECK-NEXT:          "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }, 
@@ -3860,7 +3883,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id", 
-// CHECK-NEXT:         "qualType": "id"
+// CHECK-NEXT:         "qualType": "id", 
+// CHECK-NEXT:         "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "valueCategory": "rvalue", 
 // CHECK-NEXT:        "inner": [
@@ -4152,7 +4176,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "desugaredQualType": "id", 
-// CHECK-NEXT:           "qualType": "id"
+// CHECK-NEXT:           "qualType": "id", 
+// CHECK-NEXT:           "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "valueCategory": "rvalue", 
 // CHECK-NEXT:          "selector": "objectForKeyedSubscript:", 
@@ -4240,7 +4265,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "desugaredQualType": "id", 
-// CHECK-NEXT:             "qualType": "id"
+// CHECK-NEXT:             "qualType": "id", 
+// CHECK-NEXT:             "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "valueCategory": "rvalue", 
 // CHECK-NEXT:            "castKind": "BitCast", 
@@ -4558,7 +4584,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "signed char", 
-// CHECK-NEXT:       "qualType": "BOOL"
+// CHECK-NEXT:       "qualType": "BOOL", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
 // CHECK-NEXT:      "value": "__objc_yes"
@@ -4579,7 +4606,8 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "signed char", 
-// CHECK-NEXT:       "qualType": "BOOL"
+// CHECK-NEXT:       "qualType": "BOOL", 
+// CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
 // CHECK-NEXT:      "value": "__objc_no"

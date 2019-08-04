@@ -1,6 +1,8 @@
 add_compiler_rt_component(safestack)
 
-set(SAFESTACK_SOURCES safestack.cc)
+set(SAFESTACK_SOURCES
+  safestack.cpp
+  )
 
 include_directories(..)
 

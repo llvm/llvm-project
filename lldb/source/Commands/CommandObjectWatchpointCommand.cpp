@@ -24,19 +24,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// CommandObjectWatchpointCommandAdd
-
 // FIXME: "script-type" needs to have its contents determined dynamically, so
-// somebody can add a new scripting
-// language to lldb and have it pickable here without having to change this
-// enumeration by hand and rebuild lldb proper.
-
+// somebody can add a new scripting language to lldb and have it pickable here
+// without having to change this enumeration by hand and rebuild lldb proper.
 static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {eScriptLanguageNone, "command",
-     "Commands are in the lldb command interpreter language"},
-    {eScriptLanguagePython, "python", "Commands are in the Python language."},
-    {eSortOrderByName, "default-script",
-     "Commands are in the default scripting language."} };
+    {
+        eScriptLanguageNone,
+        "command",
+        "Commands are in the lldb command interpreter language",
+    },
+    {
+        eScriptLanguagePython,
+        "python",
+        "Commands are in the Python language.",
+    },
+    {
+        eSortOrderByName,
+        "default-script",
+        "Commands are in the default scripting language.",
+    },
+};
 
 static constexpr OptionEnumValues ScriptOptionEnum() {
   return OptionEnumValues(g_script_option_enumeration);

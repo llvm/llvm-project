@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "call-lowering"
@@ -44,9 +45,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
-    // We don't currently support swiftself args.
-    if (OrigArg.Flags.isSwiftSelf())
-      return false;
     OrigArgs.push_back(OrigArg);
     ++i;
   }
@@ -61,8 +59,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
   if (!OrigRet.Ty->isVoidTy())
     setArgFlags(OrigRet, AttributeList::ReturnIndex, DL, CS);
 
+  const MDNode *KnownCallees =
+      CS.getInstruction()->getMetadata(LLVMContext::MD_callees);
+
   return lowerCall(MIRBuilder, CS.getCallingConv(), Callee, OrigRet, OrigArgs,
-                   SwiftErrorVReg);
+                   SwiftErrorVReg, KnownCallees);
 }
 
 template <typename FuncInfoTy>

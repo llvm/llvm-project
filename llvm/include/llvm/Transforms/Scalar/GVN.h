@@ -159,6 +159,7 @@ private:
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE;
   ImplicitControlFlowTracking *ICF;
+  LoopInfo *LI;
 
   ValueTable VN;
 

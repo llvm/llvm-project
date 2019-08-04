@@ -622,8 +622,11 @@ protected:
       Builder.defineMacro("_XOPEN_SOURCE", "600");
     else
       Builder.defineMacro("_XOPEN_SOURCE", "500");
-    if (Opts.CPlusPlus)
+    if (Opts.CPlusPlus) {
       Builder.defineMacro("__C99FEATURES__");
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+    }
+    // GCC restricts the next two to C++.
     Builder.defineMacro("_LARGEFILE_SOURCE");
     Builder.defineMacro("_LARGEFILE64_SOURCE");
     Builder.defineMacro("__EXTENSIONS__");

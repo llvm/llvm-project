@@ -148,6 +148,8 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
       RefFlags |= AArch64MCExpr::VK_TLSDESC;
       break;
     }
+  } else if (MO.getTargetFlags() & AArch64II::MO_PREL) {
+    RefFlags |= AArch64MCExpr::VK_PREL;
   } else {
     // No modifier means this is a generic reference, classified as absolute for
     // the cases where it matters (:abs_g0: etc).

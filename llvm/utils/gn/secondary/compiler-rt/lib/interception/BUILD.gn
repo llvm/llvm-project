@@ -6,12 +6,12 @@ source_set("sources") {
   ]
   sources = [
     "interception.h",
-    "interception_linux.cc",
+    "interception_linux.cpp",
     "interception_linux.h",
-    "interception_mac.cc",
+    "interception_mac.cpp",
     "interception_mac.h",
-    "interception_type_test.cc",
-    "interception_win.cc",
+    "interception_type_test.cpp",
+    "interception_win.cpp",
     "interception_win.h",
   ]
 }

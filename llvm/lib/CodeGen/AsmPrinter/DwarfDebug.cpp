@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -39,6 +40,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
@@ -82,6 +84,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
+
+STATISTIC(NumCSParams, "Number of dbg call site params created");
 
 static cl::opt<bool>
 DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
@@ -551,6 +555,148 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
+/// Try to interpret values loaded into registers that forward parameters
+/// for \p CallMI. Store parameters with interpreted value into \p Params.
+static void collectCallSiteParameters(const MachineInstr *CallMI,
+                                      ParamSet &Params) {
+  auto *MF = CallMI->getMF();
+  auto CalleesMap = MF->getCallSitesInfo();
+  auto CallFwdRegsInfo = CalleesMap.find(CallMI);
+
+  // There is no information for the call instruction.
+  if (CallFwdRegsInfo == CalleesMap.end())
+    return;
+
+  auto *MBB = CallMI->getParent();
+  const auto &TRI = MF->getSubtarget().getRegisterInfo();
+  const auto &TII = MF->getSubtarget().getInstrInfo();
+  const auto &TLI = MF->getSubtarget().getTargetLowering();
+
+  // Skip the call instruction.
+  auto I = std::next(CallMI->getReverseIterator());
+
+  DenseSet<unsigned> ForwardedRegWorklist;
+  // Add all the forwarding registers into the ForwardedRegWorklist.
+  for (auto ArgReg : CallFwdRegsInfo->second) {
+    bool InsertedReg = ForwardedRegWorklist.insert(ArgReg.Reg).second;
+    assert(InsertedReg && "Single register used to forward two arguments?");
+    (void)InsertedReg;
+  }
+
+  // We erase, from the ForwardedRegWorklist, those forwarding registers for
+  // which we successfully describe a loaded value (by using
+  // the describeLoadedValue()). For those remaining arguments in the working
+  // list, for which we do not describe a loaded value by
+  // the describeLoadedValue(), we try to generate an entry value expression
+  // for their call site value desctipion, if the call is within the entry MBB.
+  // The RegsForEntryValues maps a forwarding register into the register holding
+  // the entry value.
+  // TODO: Handle situations when call site parameter value can be described
+  // as the entry value within basic blocks other then the first one.
+  bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
+  DenseMap<unsigned, unsigned> RegsForEntryValues;
+
+  // If the MI is an instruction defining a parameter's forwarding register,
+  // add it into the Defs. If the MI clobbers more then one register, we use
+  // the Defs in order to remove all the registers from
+  // the ForwardedRegWorklist, since we do not support such situations now.
+  auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
+                                         SmallVectorImpl<unsigned> &Defs) {
+    if (MI.isDebugInstr())
+      return;
+
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isDef() &&
+          Register::isPhysicalRegister(MO.getReg())) {
+        for (auto FwdReg : ForwardedRegWorklist) {
+          if (TRI->regsOverlap(FwdReg, MO.getReg())) {
+            Defs.push_back(FwdReg);
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  auto finishCallSiteParam = [&](DbgValueLoc DbgLocVal, unsigned Reg) {
+    unsigned FwdReg = Reg;
+    if (ShouldTryEmitEntryVals) {
+      auto EntryValReg = RegsForEntryValues.find(Reg);
+      if (EntryValReg != RegsForEntryValues.end())
+        FwdReg = EntryValReg->second;
+    }
+
+    DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
+    Params.push_back(CSParm);
+    ++NumCSParams;
+  };
+
+  // Search for a loading value in forwaring registers.
+  for (; I != MBB->rend(); ++I) {
+    // If the next instruction is a call we can not interpret parameter's
+    // forwarding registers or we finished the interpretation of all parameters.
+    if (I->isCall())
+      return;
+
+    if (ForwardedRegWorklist.empty())
+      return;
+
+    SmallVector<unsigned, 4> Defs;
+    getForwardingRegsDefinedByMI(*I, Defs);
+    if (Defs.empty())
+      continue;
+
+    // If the MI clobbers more then one forwarding register we must remove
+    // all of them from the working list.
+    for (auto Reg : Defs)
+      ForwardedRegWorklist.erase(Reg);
+    if (I->getNumDefs() != 1)
+      continue;
+    unsigned Reg = Defs[0];
+
+    if (auto ParamValue = TII->describeLoadedValue(*I)) {
+      if (ParamValue->first->isImm()) {
+        unsigned Val = ParamValue->first->getImm();
+        DbgValueLoc DbgLocVal(ParamValue->second, Val);
+        finishCallSiteParam(DbgLocVal, Reg);
+      } else if (ParamValue->first->isReg()) {
+        unsigned RegLoc = ParamValue->first->getReg();
+        unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+        unsigned FP = TRI->getFrameRegister(*MF);
+        bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
+        if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+          DbgValueLoc DbgLocVal(ParamValue->second,
+                                MachineLocation(RegLoc,
+                                                /*IsIndirect=*/IsSPorFP));
+          finishCallSiteParam(DbgLocVal, Reg);
+        } else if (ShouldTryEmitEntryVals) {
+          ForwardedRegWorklist.insert(RegLoc);
+          RegsForEntryValues[RegLoc] = Reg;
+        }
+      }
+    }
+  }
+
+  // Emit the call site parameter's value as an entry value.
+  if (ShouldTryEmitEntryVals) {
+    // Create an entry value expression where the expression following
+    // the 'DW_OP_entry_value' will be the size of 1 (a register operation).
+    DIExpression *EntryExpr = DIExpression::get(MF->getFunction().getContext(),
+                                                {dwarf::DW_OP_entry_value, 1});
+    for (auto RegEntry : ForwardedRegWorklist) {
+      unsigned FwdReg = RegEntry;
+      auto EntryValReg = RegsForEntryValues.find(RegEntry);
+        if (EntryValReg != RegsForEntryValues.end())
+          FwdReg = EntryValReg->second;
+
+      DbgValueLoc DbgLocVal(EntryExpr, MachineLocation(RegEntry));
+      DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
+      Params.push_back(CSParm);
+      ++NumCSParams;
+    }
+  }
+}
+
 void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                             DwarfCompileUnit &CU, DIE &ScopeDIE,
                                             const MachineFunction &MF) {
@@ -563,10 +709,12 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
   // for both tail and non-tail calls. Don't use DW_AT_call_all_source_calls
   // because one of its requirements is not met: call site entries for
   // optimized-out calls are elided.
-  CU.addFlag(ScopeDIE, dwarf::DW_AT_call_all_calls);
+  CU.addFlag(ScopeDIE,
+             CU.getDwarf5OrGNUCallSiteAttr(dwarf::DW_AT_call_all_calls));
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "TargetInstrInfo not found: cannot label tail calls");
+  bool ApplyGNUExtensions = getDwarfVersion() == 4 && tuneForGDB();
 
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
@@ -581,30 +729,66 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         return;
 
       // If this is a direct call, find the callee's subprogram.
+      // In the case of an indirect call find the register that holds
+      // the callee.
       const MachineOperand &CalleeOp = MI.getOperand(0);
-      if (!CalleeOp.isGlobal())
-        continue;
-      const Function *CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
-      if (!CalleeDecl || !CalleeDecl->getSubprogram())
+      if (!CalleeOp.isGlobal() && !CalleeOp.isReg())
         continue;
 
+      unsigned CallReg = 0;
+      const DISubprogram *CalleeSP = nullptr;
+      const Function *CalleeDecl = nullptr;
+      if (CalleeOp.isReg()) {
+        CallReg = CalleeOp.getReg();
+        if (!CallReg)
+          continue;
+      } else {
+        CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
+        if (!CalleeDecl || !CalleeDecl->getSubprogram())
+          continue;
+        CalleeSP = CalleeDecl->getSubprogram();
+      }
+
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
-      // TODO: Add support for indirect calls.
 
       bool IsTail = TII->isTailCall(MI);
 
-      // For tail calls, no return PC information is needed. For regular calls,
-      // the return PC is needed to disambiguate paths in the call graph which
-      // could lead to some target function.
+      // For tail calls, for non-gdb tuning, no return PC information is needed.
+      // For regular calls (and tail calls in GDB tuning), the return PC
+      // is needed to disambiguate paths in the call graph which could lead to
+      // some target function.
       const MCExpr *PCOffset =
-          IsTail ? nullptr : getFunctionLocalOffsetAfterInsn(&MI);
+          (IsTail && !tuneForGDB()) ? nullptr
+                                    : getFunctionLocalOffsetAfterInsn(&MI);
 
-      assert((IsTail || PCOffset) && "Call without return PC information");
+      // Address of a call-like instruction for a normal call or a jump-like
+      // instruction for a tail call. This is needed for GDB + DWARF 4 tuning.
+      const MCSymbol *PCAddr =
+          ApplyGNUExtensions ? const_cast<MCSymbol*>(getLabelAfterInsn(&MI))
+                             : nullptr;
+
+      assert((IsTail || PCOffset || PCAddr) &&
+             "Call without return PC information");
+
       LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
-                        << CalleeDecl->getName() << (IsTail ? " [tail]" : "")
-                        << "\n");
-      CU.constructCallSiteEntryDIE(ScopeDIE, *CalleeDecl->getSubprogram(),
-                                   IsTail, PCOffset);
+                        << (CalleeDecl ? CalleeDecl->getName()
+                                       : StringRef(MF.getSubtarget()
+                                                       .getRegisterInfo()
+                                                       ->getName(CallReg)))
+                        << (IsTail ? " [IsTail]" : "") << "\n");
+
+      DIE &CallSiteDIE =
+            CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, IsTail, PCAddr,
+                                         PCOffset, CallReg);
+
+      // For now only GDB supports call site parameter debug info.
+      if (Asm->TM.Options.EnableDebugEntryValues &&
+          tuneForGDB()) {
+        ParamSet Params;
+        // Try to interpret values of call site parameters.
+        collectCallSiteParameters(&MI, Params);
+        CU.constructCallSiteParmEntryDIEs(CallSiteDIE, Params);
+      }
     }
   }
 }

@@ -102,8 +102,8 @@ CommandObjectReproducer::CommandObjectReproducer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "reproducer",
-          "Commands to inspect and manipulate the reproducer functionality.",
-          "log <subcommand> [<command-options>]") {
+          "Commands for manipulate the reproducer functionality.",
+          "reproducer <subcommand> [<subcommand-options>]") {
   LoadSubCommand(
       "generate",
       CommandObjectSP(new CommandObjectReproducerGenerate(interpreter)));

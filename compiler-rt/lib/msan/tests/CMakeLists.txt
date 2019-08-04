@@ -11,12 +11,17 @@ set(MSAN_LIBCXX_CFLAGS
   -Wno-pedantic)
 
 # Unittest sources and build flags.
-set(MSAN_UNITTEST_SOURCES msan_test.cc msan_test_main.cc)
-set(MSAN_LOADABLE_SOURCE msan_loadable.cc)
+set(MSAN_UNITTEST_SOURCES
+  msan_test.cpp
+  msan_test_main.cpp
+  )
+set(MSAN_LOADABLE_SOURCE
+  msan_loadable.cpp
+  )
 set(MSAN_UNITTEST_HEADERS
   msan_test_config.h
   ../../../include/sanitizer/msan_interface.h
-)
+  )
 set(MSAN_UNITTEST_COMMON_CFLAGS
   -nostdinc++
   -isystem ${COMPILER_RT_LIBCXX_PATH}/include

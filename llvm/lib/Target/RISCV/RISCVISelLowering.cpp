@@ -2397,6 +2397,21 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+/// getConstraintType - Given a constraint letter, return the type of
+/// constraint it is for this target.
+RISCVTargetLowering::ConstraintType
+RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'f':
+      return C_RegisterClass;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
@@ -2407,9 +2422,61 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     switch (Constraint[0]) {
     case 'r':
       return std::make_pair(0U, &RISCV::GPRRegClass);
+    case 'f':
+      if (Subtarget.hasStdExtF() && VT == MVT::f32)
+        return std::make_pair(0U, &RISCV::FPR32RegClass);
+      if (Subtarget.hasStdExtD() && VT == MVT::f64)
+        return std::make_pair(0U, &RISCV::FPR64RegClass);
+      break;
     default:
       break;
     }
+  }
+
+  // Since TargetLowering::getRegForInlineAsmConstraint uses the name of the
+  // TableGen record rather than the AsmName to choose registers for InlineAsm
+  // constraints, plus we want to match those names to the widest floating point
+  // register type available, manually select floating point registers here.
+  if (Subtarget.hasStdExtF() || Subtarget.hasStdExtD()) {
+    std::pair<unsigned, unsigned> FReg =
+        StringSwitch<std::pair<unsigned, unsigned>>(Constraint.lower())
+            .Case("{f0}", {RISCV::F0_32, RISCV::F0_64})
+            .Case("{f1}", {RISCV::F1_32, RISCV::F1_64})
+            .Case("{f2}", {RISCV::F2_32, RISCV::F2_64})
+            .Case("{f3}", {RISCV::F3_32, RISCV::F3_64})
+            .Case("{f4}", {RISCV::F4_32, RISCV::F4_64})
+            .Case("{f5}", {RISCV::F5_32, RISCV::F5_64})
+            .Case("{f6}", {RISCV::F6_32, RISCV::F6_64})
+            .Case("{f7}", {RISCV::F7_32, RISCV::F7_64})
+            .Case("{f8}", {RISCV::F8_32, RISCV::F8_64})
+            .Case("{f9}", {RISCV::F9_32, RISCV::F9_64})
+            .Case("{f10}", {RISCV::F10_32, RISCV::F10_64})
+            .Case("{f11}", {RISCV::F11_32, RISCV::F11_64})
+            .Case("{f12}", {RISCV::F12_32, RISCV::F12_64})
+            .Case("{f13}", {RISCV::F13_32, RISCV::F13_64})
+            .Case("{f14}", {RISCV::F14_32, RISCV::F14_64})
+            .Case("{f15}", {RISCV::F15_32, RISCV::F15_64})
+            .Case("{f16}", {RISCV::F16_32, RISCV::F16_64})
+            .Case("{f17}", {RISCV::F17_32, RISCV::F17_64})
+            .Case("{f18}", {RISCV::F18_32, RISCV::F18_64})
+            .Case("{f19}", {RISCV::F19_32, RISCV::F19_64})
+            .Case("{f20}", {RISCV::F20_32, RISCV::F20_64})
+            .Case("{f21}", {RISCV::F21_32, RISCV::F21_64})
+            .Case("{f22}", {RISCV::F22_32, RISCV::F22_64})
+            .Case("{f23}", {RISCV::F23_32, RISCV::F23_64})
+            .Case("{f24}", {RISCV::F24_32, RISCV::F24_64})
+            .Case("{f25}", {RISCV::F25_32, RISCV::F25_64})
+            .Case("{f26}", {RISCV::F26_32, RISCV::F26_64})
+            .Case("{f27}", {RISCV::F27_32, RISCV::F27_64})
+            .Case("{f28}", {RISCV::F28_32, RISCV::F28_64})
+            .Case("{f29}", {RISCV::F29_32, RISCV::F29_64})
+            .Case("{f30}", {RISCV::F30_32, RISCV::F30_64})
+            .Case("{f31}", {RISCV::F31_32, RISCV::F31_64})
+            .Default({-1U, -1U});
+    if (FReg.first != -1U)
+      return Subtarget.hasStdExtD()
+                 ? std::make_pair(FReg.second, &RISCV::FPR64RegClass)
+                 : std::make_pair(FReg.first, &RISCV::FPR32RegClass);
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);

@@ -13,7 +13,7 @@ struct S {
   virtual int v() { return 0; }
 };
 
-// See the proper definition in ubsan_type_hash_itanium.cc
+// See the proper definition in ubsan_type_hash_itanium.cpp
 struct VtablePrefix {
   signed long Offset;
   std::type_info *TypeInfo;

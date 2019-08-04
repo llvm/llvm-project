@@ -32,7 +32,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     if (getMappingClass() != XCOFF::XMC_RW)
       llvm_unreachable("Unsupported storage-mapping class for common csect");
     if (getCSectType() != XCOFF::XTY_CM)
-      llvm_unreachable("wrong csect type for common csect");
+      llvm_unreachable("wrong csect type for .bss csect");
     // Don't have to print a directive for switching to section for commons.
     // '.comm' and '.lcomm' directives for the variable will create the needed
     // csect.

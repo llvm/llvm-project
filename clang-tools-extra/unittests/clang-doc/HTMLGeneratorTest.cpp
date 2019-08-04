@@ -171,10 +171,6 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   ClangDocContext CDCtx = getClangDocContext();
   auto Err = G->generateDocForInfo(&I, Actual, CDCtx);
   assert(!Err);
-  SmallString<16> PathToFloat;
-  llvm::sys::path::native("path/to/float.html", PathToFloat);
-  SmallString<16> PathToInt;
-  llvm::sys::path::native("path/to/int.html", PathToInt);
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title></title>
@@ -182,11 +178,9 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 <div>
   <h3>f</h3>
   <p>
-    <a href=")raw" + std::string(PathToFloat.str()) +
-                         R"raw(">float</a>
+    <a href="path/to/float.html">float</a>
      f(
-    <a href=")raw" + std::string(PathToInt.str()) +
-                         R"raw(">int</a>
+    <a href="path/to/int.html">int</a>
      P)
   </p>
   <p>Defined at line 10 of test.cpp</p>

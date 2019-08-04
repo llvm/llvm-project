@@ -9,6 +9,8 @@
 #ifndef liblldb_RegisterContextWindows_x86_H_
 #define liblldb_RegisterContextWindows_x86_H_
 
+#if defined(__i386__) || defined(_M_IX86)
+
 #include "RegisterContextWindows.h"
 #include "lldb/lldb-forward.h"
 
@@ -43,5 +45,7 @@ private:
                           DWORD value, RegisterValue &reg_value) const;
 };
 }
+
+#endif // defined(__i386__) || defined(_M_IX86)
 
 #endif // #ifndef liblldb_RegisterContextWindows_x86_H_

@@ -72,7 +72,7 @@ TEST(ThreadSafeModuleTest, BasicContextLockAPI) {
 
   { auto L = TSCtx.getLock(); }
 
-  { auto L = TSM.getContextLock(); }
+  { auto L = TSM.getContext().getLock(); }
 }
 
 TEST(ThreadSafeModuleTest, ContextLockPreservesContext) {

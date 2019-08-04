@@ -5,7 +5,6 @@ Test that 'stty -a' displays the same output before and after running the lldb c
 from __future__ import print_function
 
 
-import os
 import lldb
 import six
 from lldbsuite.test.decorators import *

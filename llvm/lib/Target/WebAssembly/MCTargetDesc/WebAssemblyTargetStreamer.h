@@ -56,9 +56,6 @@ protected:
 /// This part is for ascii assembly output
 class WebAssemblyTargetAsmStreamer final : public WebAssemblyTargetStreamer {
   formatted_raw_ostream &OS;
-  void emitSignature(const wasm::WasmSignature *Sig);
-  void emitParamList(const wasm::WasmSignature *Sig);
-  void emitReturnList(const wasm::WasmSignature *Sig);
 
 public:
   WebAssemblyTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);

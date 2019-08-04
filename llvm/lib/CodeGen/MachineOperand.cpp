@@ -73,7 +73,7 @@ void MachineOperand::setReg(unsigned Reg) {
 
 void MachineOperand::substVirtReg(unsigned Reg, unsigned SubIdx,
                                   const TargetRegisterInfo &TRI) {
-  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(Register::isVirtualRegister(Reg));
   if (SubIdx && getSubReg())
     SubIdx = TRI.composeSubRegIndices(SubIdx, getSubReg());
   setReg(Reg);
@@ -82,7 +82,7 @@ void MachineOperand::substVirtReg(unsigned Reg, unsigned SubIdx,
 }
 
 void MachineOperand::substPhysReg(unsigned Reg, const TargetRegisterInfo &TRI) {
-  assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+  assert(Register::isPhysicalRegister(Reg));
   if (getSubReg()) {
     Reg = TRI.getSubReg(Reg, getSubReg());
     // Note that getSubReg() may return 0 if the sub-register doesn't exist.
@@ -114,7 +114,7 @@ void MachineOperand::setIsDef(bool Val) {
 
 bool MachineOperand::isRenamable() const {
   assert(isReg() && "Wrong MachineOperand accessor");
-  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+  assert(Register::isPhysicalRegister(getReg()) &&
          "isRenamable should only be checked on physical registers");
   if (!IsRenamable)
     return false;
@@ -132,7 +132,7 @@ bool MachineOperand::isRenamable() const {
 
 void MachineOperand::setIsRenamable(bool Val) {
   assert(isReg() && "Wrong MachineOperand accessor");
-  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+  assert(Register::isPhysicalRegister(getReg()) &&
          "setIsRenamable should only be called on physical registers");
   IsRenamable = Val;
 }
@@ -169,7 +169,7 @@ void MachineOperand::ChangeToFPImmediate(const ConstantFP *FPImm) {
 }
 
 void MachineOperand::ChangeToES(const char *SymName,
-                                unsigned char TargetFlags) {
+                                unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an external symbol");
 
@@ -182,7 +182,7 @@ void MachineOperand::ChangeToES(const char *SymName,
 }
 
 void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
-                                unsigned char TargetFlags) {
+                                unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a global address");
 
@@ -215,7 +215,7 @@ void MachineOperand::ChangeToFrameIndex(int Idx) {
 }
 
 void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
-                                         unsigned char TargetFlags) {
+                                         unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a FrameIndex");
 
@@ -762,13 +762,13 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "undef ";
     if (isEarlyClobber())
       OS << "early-clobber ";
-    if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
+    if (Register::isPhysicalRegister(getReg()) && isRenamable())
       OS << "renamable ";
     // isDebug() is exactly true for register operands of a DBG_VALUE. So we
     // simply infer it when parsing and do not need to print it.
 
     const MachineRegisterInfo *MRI = nullptr;
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (Register::isVirtualRegister(Reg)) {
       if (const MachineFunction *MF = getMFIfAvailable(*this)) {
         MRI = &MF->getRegInfo();
       }
@@ -783,7 +783,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << ".subreg" << SubReg;
     }
     // Print the register class / bank.
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (Register::isVirtualRegister(Reg)) {
       if (const MachineFunction *MF = getMFIfAvailable(*this)) {
         const MachineRegisterInfo &MRI = MF->getRegInfo();
         if (IsStandalone || !PrintDef || MRI.def_empty(Reg)) {

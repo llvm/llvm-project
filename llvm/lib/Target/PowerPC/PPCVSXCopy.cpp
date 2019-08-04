@@ -50,7 +50,7 @@ namespace {
 
     bool IsRegInClass(unsigned Reg, const TargetRegisterClass *RC,
                       MachineRegisterInfo &MRI) {
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         return RC->hasSubClassEq(MRI.getRegClass(Reg));
       } else if (RC->contains(Reg)) {
         return true;

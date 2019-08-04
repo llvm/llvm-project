@@ -489,6 +489,11 @@ public:
     return buildInstr(TargetOpcode::G_PTRTOINT, {Dst}, {Src});
   }
 
+  /// Build and insert a G_INTTOPTR instruction.
+  MachineInstrBuilder buildIntToPtr(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_INTTOPTR, {Dst}, {Src});
+  }
+
   /// Build and insert \p Dst = G_BITCAST \p Src
   MachineInstrBuilder buildBitcast(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_BITCAST, {Dst}, {Src});
@@ -867,7 +872,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildFCmp(CmpInst::Predicate Pred, const DstOp &Res,
-                                const SrcOp &Op0, const SrcOp &Op1);
+                                const SrcOp &Op0, const SrcOp &Op1,
+                                Optional<unsigned> Flags = None);
 
   /// Build and insert a \p Res = G_SELECT \p Tst, \p Op0, \p Op1
   ///
@@ -880,7 +886,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSelect(const DstOp &Res, const SrcOp &Tst,
-                                  const SrcOp &Op0, const SrcOp &Op1);
+                                  const SrcOp &Op0, const SrcOp &Op1,
+                                  Optional<unsigned> Flags = None);
 
   /// Build and insert \p Res = G_INSERT_VECTOR_ELT \p Val,
   /// \p Elt, \p Idx
@@ -961,8 +968,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, Register OldValRes,
-                                     Register Addr, Register Val,
+  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, const DstOp &OldValRes,
+                                     const SrcOp &Addr, const SrcOp &Val,
                                      MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_XCHG Addr, Val, MMO`.
@@ -1135,6 +1142,16 @@ public:
   MachineInstrBuilder buildAtomicRMWUmin(Register OldValRes, Register Addr,
                                          Register Val, MachineMemOperand &MMO);
 
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FADD Addr, Val, MMO`.
+  MachineInstrBuilder buildAtomicRMWFAdd(
+    const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+    MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FSUB Addr, Val, MMO`.
+  MachineInstrBuilder buildAtomicRMWFSub(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
+
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
 
@@ -1208,6 +1225,12 @@ public:
                                  const SrcOp &Src1,
                                  Optional<unsigned> Flags = None) {
     return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildFMul(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMUL, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
@@ -1322,8 +1345,9 @@ public:
   }
 
   /// Build and insert \p Res = G_FABS \p Op0
-  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0});
+  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_FCANONICALIZE \p Src0

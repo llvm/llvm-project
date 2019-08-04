@@ -30,7 +30,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -465,7 +465,7 @@ unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
 static bool regIsPICBase(unsigned BaseReg, const MachineRegisterInfo &MRI) {
   // Don't waste compile time scanning use-def chains of physregs.
-  if (!TargetRegisterInfo::isVirtualRegister(BaseReg))
+  if (!Register::isVirtualRegister(BaseReg))
     return false;
   bool isPICBase = false;
   for (MachineRegisterInfo::def_instr_iterator I = MRI.def_instr_begin(BaseReg),
@@ -684,7 +684,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     isKill = Src.isKill();
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
-    if (TargetRegisterInfo::isVirtualRegister(NewSrc) &&
+    if (Register::isVirtualRegister(NewSrc) &&
         !MF.getRegInfo().constrainRegClass(NewSrc, RC))
       return false;
 
@@ -693,7 +693,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
   // This is for an LEA64_32r and incoming registers are 32-bit. One way or
   // another we need to add 64-bit registers to the final MI.
-  if (TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+  if (Register::isPhysicalRegister(SrcReg)) {
     ImplicitOp = Src;
     ImplicitOp.setImplicit();
 
@@ -888,7 +888,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     if (!isTruncatedShiftCountForLEA(ShAmt)) return nullptr;
 
     // LEA can't handle RSP.
-    if (TargetRegisterInfo::isVirtualRegister(Src.getReg()) &&
+    if (Register::isVirtualRegister(Src.getReg()) &&
         !MF.getRegInfo().constrainRegClass(Src.getReg(),
                                            &X86::GR64_NOSPRegClass))
       return nullptr;
@@ -4252,7 +4252,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   // If MI is marked as reading Reg, the partial register update is wanted.
   const MachineOperand &MO = MI.getOperand(0);
   unsigned Reg = MO.getReg();
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     if (MO.readsReg() || MI.readsVirtualRegister(Reg))
       return 0;
   } else {
@@ -4456,7 +4456,7 @@ X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned &OpNum,
   OpNum = 1;
 
   const MachineOperand &MO = MI.getOperand(OpNum);
-  if (MO.isUndef() && TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+  if (MO.isUndef() && Register::isPhysicalRegister(MO.getReg())) {
     return UndefRegClearance;
   }
   return 0;
@@ -4539,7 +4539,7 @@ static void updateOperandRegConstraints(MachineFunction &MF,
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TRI.isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
 
     auto *NewRC = MRI.constrainRegClass(
@@ -4822,7 +4822,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // value and zero-extend the top bits. Change the destination register
       // to a 32-bit one.
       unsigned DstReg = NewMI->getOperand(0).getReg();
-      if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+      if (Register::isPhysicalRegister(DstReg))
         NewMI->getOperand(0).setReg(RI.getSubReg(DstReg, X86::sub_32bit));
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
@@ -7364,6 +7364,91 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath;
   default:
     return false;
+  }
+}
+
+Optional<ParamLoadedValue>
+X86InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+  const MachineOperand *Op = nullptr;
+  DIExpression *Expr = nullptr;
+
+  switch (MI.getOpcode()) {
+  case X86::LEA32r:
+  case X86::LEA64r:
+  case X86::LEA64_32r: {
+    // Operand 4 could be global address. For now we do not support
+    // such situation.
+    if (!MI.getOperand(4).isImm() || !MI.getOperand(2).isImm())
+      return None;
+
+    const MachineOperand &Op1 = MI.getOperand(1);
+    const MachineOperand &Op2 = MI.getOperand(3);
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    assert(Op2.isReg() && (Op2.getReg() == X86::NoRegister ||
+                           Register::isPhysicalRegister(Op2.getReg())));
+
+    // Omit situations like:
+    // %rsi = lea %rsi, 4, ...
+    if ((Op1.isReg() && Op1.getReg() == MI.getOperand(0).getReg()) ||
+        Op2.getReg() == MI.getOperand(0).getReg())
+      return None;
+    else if ((Op1.isReg() && Op1.getReg() != X86::NoRegister &&
+              TRI->regsOverlap(Op1.getReg(), MI.getOperand(0).getReg())) ||
+             (Op2.getReg() != X86::NoRegister &&
+              TRI->regsOverlap(Op2.getReg(), MI.getOperand(0).getReg())))
+      return None;
+
+    int64_t Coef = MI.getOperand(2).getImm();
+    int64_t Offset = MI.getOperand(4).getImm();
+    SmallVector<uint64_t, 8> Ops;
+
+    if ((Op1.isReg() && Op1.getReg() != X86::NoRegister)) {
+      Op = &Op1;
+    } else if (Op1.isFI())
+      Op = &Op1;
+
+    if (Op && Op->isReg() && Op->getReg() == Op2.getReg() && Coef > 0) {
+      Ops.push_back(dwarf::DW_OP_constu);
+      Ops.push_back(Coef + 1);
+      Ops.push_back(dwarf::DW_OP_mul);
+    } else {
+      if (Op && Op2.getReg() != X86::NoRegister) {
+        int dwarfReg = TRI->getDwarfRegNum(Op2.getReg(), false);
+        if (dwarfReg < 0)
+          return None;
+        else if (dwarfReg < 32) {
+          Ops.push_back(dwarf::DW_OP_breg0 + dwarfReg);
+          Ops.push_back(0);
+        } else {
+          Ops.push_back(dwarf::DW_OP_bregx);
+          Ops.push_back(dwarfReg);
+          Ops.push_back(0);
+        }
+      } else if (!Op) {
+        assert(Op2.getReg() != X86::NoRegister);
+        Op = &Op2;
+      }
+
+      if (Coef > 1) {
+        assert(Op2.getReg() != X86::NoRegister);
+        Ops.push_back(dwarf::DW_OP_constu);
+        Ops.push_back(Coef);
+        Ops.push_back(dwarf::DW_OP_mul);
+      }
+
+      if (((Op1.isReg() && Op1.getReg() != X86::NoRegister) || Op1.isFI()) &&
+          Op2.getReg() != X86::NoRegister) {
+        Ops.push_back(dwarf::DW_OP_plus);
+      }
+    }
+
+    DIExpression::appendOffset(Ops, Offset);
+    Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), Ops);
+
+    return ParamLoadedValue(Op, Expr);;
+  }
+  default:
+    return TargetInstrInfo::describeLoadedValue(MI);
   }
 }
 

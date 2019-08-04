@@ -36,7 +36,8 @@ public:
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs) const override;
+                 ArrayRef<ArgInfo> OrigArgs,
+                 const MDNode *KnownCallees = nullptr) const override;
 
 private:
   /// A function of this type is used to perform value split action.

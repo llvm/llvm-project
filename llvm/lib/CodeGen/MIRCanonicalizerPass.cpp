@@ -190,7 +190,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       if (!MO.isReg())
         continue;
 
-      if (TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+      if (Register::isVirtualRegister(MO.getReg()))
         continue;
 
       if (!MO.isDef())
@@ -207,7 +207,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       continue;
 
     MachineOperand &MO = II->getOperand(0);
-    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
     if (!MO.isDef())
       continue;
@@ -220,7 +220,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       }
 
       if (II->getOperand(i).isReg()) {
-        if (!TargetRegisterInfo::isVirtualRegister(II->getOperand(i).getReg()))
+        if (!Register::isVirtualRegister(II->getOperand(i).getReg()))
           if (llvm::find(PhysRegDefs, II->getOperand(i).getReg()) ==
               PhysRegDefs.end()) {
             continue;
@@ -343,9 +343,9 @@ static bool propagateLocalCopies(MachineBasicBlock *MBB) {
     const unsigned Dst = MI->getOperand(0).getReg();
     const unsigned Src = MI->getOperand(1).getReg();
 
-    if (!TargetRegisterInfo::isVirtualRegister(Dst))
+    if (!Register::isVirtualRegister(Dst))
       continue;
-    if (!TargetRegisterInfo::isVirtualRegister(Src))
+    if (!Register::isVirtualRegister(Src))
       continue;
     // Not folding COPY instructions if regbankselect has not set the RCs.
     // Why are we only considering Register Classes? Because the verifier
@@ -387,7 +387,7 @@ static std::vector<MachineInstr *> populateCandidates(MachineBasicBlock *MBB) {
 
     if (MI->getNumOperands() > 0 && MI->getOperand(0).isReg()) {
       const unsigned Dst = MI->getOperand(0).getReg();
-      DoesMISideEffect |= !TargetRegisterInfo::isVirtualRegister(Dst);
+      DoesMISideEffect |= !Register::isVirtualRegister(Dst);
 
       for (auto UI = MRI.use_begin(Dst); UI != MRI.use_end(); ++UI) {
         if (DoesMISideEffect)
@@ -428,7 +428,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
     assert(TReg.isReg() && "Expected vreg or physreg.");
     unsigned Reg = TReg.getReg();
 
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (Register::isVirtualRegister(Reg)) {
       LLVM_DEBUG({
         dbgs() << "Popping vreg ";
         MRI.def_begin(Reg)->dump();
@@ -554,7 +554,7 @@ GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,
         NVC.incrementVirtualVReg(LastRenameReg % 10);
       FirstCandidate = false;
       continue;
-    } else if (!TargetRegisterInfo::isVirtualRegister(vreg.getReg())) {
+    } else if (!Register::isVirtualRegister(vreg.getReg())) {
       unsigned LastRenameReg = NVC.incrementVirtualVReg();
       (void)LastRenameReg;
       LLVM_DEBUG({
@@ -706,7 +706,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
         break;
 
       MachineOperand &MO = candidate->getOperand(i);
-      if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
+      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
         continue;
 
       LLVM_DEBUG(dbgs() << "Enqueue register"; MO.dump(); dbgs() << "\n";);

@@ -22,3 +22,11 @@ define void @constraint_K() {
   tail call void asm sideeffect "csrwi mstatus, $0", "K"(i32 -1)
   ret void
 }
+
+define void @constraint_f() nounwind {
+; CHECK: error: couldn't allocate input reg for constraint 'f'
+  tail call void asm "fadd.s fa0, fa0, $0", "f"(float 0.0)
+; CHECK: error: couldn't allocate input reg for constraint 'f'
+  tail call void asm "fadd.d fa0, fa0, $0", "f"(double 0.0)
+  ret void
+}

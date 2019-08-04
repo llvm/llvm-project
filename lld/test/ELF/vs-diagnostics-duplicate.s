@@ -8,8 +8,9 @@
 // CHECK:      duplicate.s(15): error: duplicate symbol: bar
 // CHECK-NEXT: >>> defined at duplicate.s:15
 // CHECK-NEXT: >>>{{.*}}1.o:(.text+0x{{.+}})
-// CHECK: >>> defined at duplicate2.s:20
-// CHECK: >>>{{.*}}2.o:(.text+0x{{.+}})
+// CHECK:      duplicate2.s(20): error: duplicate symbol: bar
+// CHECK-NEXT: >>> defined at duplicate2.s:20
+// CHECK-NEXT: >>>{{.*}}2.o:(.text+0x{{.+}})
 
 // Case 2. The source locations are unknown for both symbols.
 // CHECK:      {{.*}}ld.lld{{.*}}: error: duplicate symbol: foo

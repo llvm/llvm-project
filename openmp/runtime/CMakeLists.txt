@@ -97,8 +97,6 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
 endif()
 
 # User specified flags.  These are appended to the configured flags.
-set(LIBOMP_CFLAGS "" CACHE STRING
-  "Appended user specified C compiler flags.")
 set(LIBOMP_CXXFLAGS "" CACHE STRING
   "Appended user specified C++ compiler flags.")
 set(LIBOMP_CPPFLAGS "" CACHE STRING

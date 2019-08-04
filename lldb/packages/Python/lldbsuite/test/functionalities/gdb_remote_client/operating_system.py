@@ -1,5 +1,4 @@
 import lldb
-import struct
 
 
 class OperatingSystemPlugIn(object):

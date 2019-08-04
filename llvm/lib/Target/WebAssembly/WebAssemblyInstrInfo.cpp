@@ -60,7 +60,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // exist. However we need to handle both here.
   auto &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
-      TargetRegisterInfo::isVirtualRegister(DestReg)
+      Register::isVirtualRegister(DestReg)
           ? MRI.getRegClass(DestReg)
           : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(DestReg);
 

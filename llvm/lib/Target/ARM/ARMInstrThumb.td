@@ -1362,6 +1362,12 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                             [(set tGPR:$Rd, CPSR, (ARMsubc 0, tGPR:$Rn))]>,
                 Requires<[IsThumb1Only]>,
                 Sched<[WriteALU]>;
+
+  def tLSLSri : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rn, imm0_31:$imm5),
+                            2, IIC_iALUr,
+                            [(set tGPR:$Rd, CPSR, (ARMlsls tGPR:$Rn, imm0_31:$imm5))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
 }
 
 

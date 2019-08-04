@@ -84,6 +84,7 @@ endif()
 
 set(BENCHMARK_TEST_COMPILE_FLAGS
     ${BENCHMARK_DIALECT_FLAG} -O2
+    -fsized-deallocation
     -I${BENCHMARK_LIBCXX_INSTALL}/include
     -I${LIBCXX_SOURCE_DIR}/test/support
 )
@@ -219,3 +220,4 @@ if (LIBCXX_INCLUDE_TESTS)
           DEPENDS cxx-benchmarks ${LIBCXX_TEST_DEPS}
           ARGS ${BENCHMARK_LIT_ARGS})
 endif()
+

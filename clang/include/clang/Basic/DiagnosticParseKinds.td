@@ -436,8 +436,6 @@ def err_objc_property_requires_field_name : Error<
   "property requires fields to be named">;
 def err_objc_property_bitfield : Error<"property name cannot be a bit-field">;
 def err_objc_expected_property_attr : Error<"unknown property attribute %0">;
-def err_objc_properties_require_objc2 : Error<
-  "properties are an Objective-C 2 feature">;
 def err_objc_unexpected_attr : Error<
   "prefix attribute must be followed by an interface, protocol, or implementation">;
 def err_objc_postfix_attribute : Error <

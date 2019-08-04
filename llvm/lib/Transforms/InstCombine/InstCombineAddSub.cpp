@@ -1382,17 +1382,32 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
-  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  Value *X;
   // (-X) + Y --> Y - X
-  if (match(LHS, m_FNeg(m_Value(X))))
-    return BinaryOperator::CreateFSubFMF(RHS, X, &I);
-  // Y + (-X) --> Y - X
-  if (match(RHS, m_FNeg(m_Value(X))))
-    return BinaryOperator::CreateFSubFMF(LHS, X, &I);
+  Value *X, *Y;
+  if (match(&I, m_c_FAdd(m_FNeg(m_Value(X)), m_Value(Y))))
+    return BinaryOperator::CreateFSubFMF(Y, X, &I);
+
+  // Similar to above, but look through fmul/fdiv for the negated term.
+  // (-X * Y) + Z --> Z - (X * Y) [4 commuted variants]
+  Value *Z;
+  if (match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_FNeg(m_Value(X)), m_Value(Y))),
+                         m_Value(Z)))) {
+    Value *XY = Builder.CreateFMulFMF(X, Y, &I);
+    return BinaryOperator::CreateFSubFMF(Z, XY, &I);
+  }
+  // (-X / Y) + Z --> Z - (X / Y) [2 commuted variants]
+  // (X / -Y) + Z --> Z - (X / Y) [2 commuted variants]
+  if (match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_FNeg(m_Value(X)), m_Value(Y))),
+                         m_Value(Z))) ||
+      match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))),
+                         m_Value(Z)))) {
+    Value *XY = Builder.CreateFDivFMF(X, Y, &I);
+    return BinaryOperator::CreateFSubFMF(Z, XY, &I);
+  }
 
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   if (SIToFPInst *LHSConv = dyn_cast<SIToFPInst>(LHS)) {
     Value *LHSIntVal = LHSConv->getOperand(0);
     Type *FPType = LHSConv->getType();
@@ -1675,13 +1690,9 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
         if (SPF == SPF_ABS || SPF == SPF_NABS) {
           // This is a negate of an ABS/NABS pattern. Just swap the operands
           // of the select.
-          SelectInst *SI = cast<SelectInst>(Op1);
-          Value *TrueVal = SI->getTrueValue();
-          Value *FalseVal = SI->getFalseValue();
-          SI->setTrueValue(FalseVal);
-          SI->setFalseValue(TrueVal);
+          cast<SelectInst>(Op1)->swapValues();
           // Don't swap prof metadata, we didn't change the branch behavior.
-          return replaceInstUsesWith(I, SI);
+          return replaceInstUsesWith(I, Op1);
         }
       }
     }
@@ -1885,6 +1896,22 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
   return nullptr;
 }
 
+static Instruction *hoistFNegAboveFMulFDiv(Instruction &I,
+                                           InstCombiner::BuilderTy &Builder) {
+  Value *FNeg;
+  if (!match(&I, m_FNeg(m_Value(FNeg))))
+    return nullptr;
+
+  Value *X, *Y;
+  if (match(FNeg, m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
+    return BinaryOperator::CreateFMulFMF(Builder.CreateFNegFMF(X, &I), Y, &I);
+
+  if (match(FNeg, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))))
+    return BinaryOperator::CreateFDivFMF(Builder.CreateFNegFMF(X, &I), Y, &I);
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
   Value *Op = I.getOperand(0);
 
@@ -1901,6 +1928,9 @@ Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
   if (I.hasNoSignedZeros() &&
       match(Op, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))))
     return BinaryOperator::CreateFSubFMF(Y, X, &I);
+
+  if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
+    return R;
 
   return nullptr;
 }
@@ -1922,6 +1952,9 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
 
   if (Instruction *X = foldFNegIntoConstant(I))
     return X;
+
+  if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
+    return R;
 
   Value *X, *Y;
   Constant *C;

@@ -82,14 +82,14 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
   return new SIOptimizeExecMaskingPreRA();
 }
 
-static bool isEndCF(const MachineInstr &MI, const SIRegisterInfo *TRI,
-                    const GCNSubtarget &ST) {
+static bool isEndCF(const MachineInstr &MI, const GCNSubtarget &ST,
+                    const SIRegisterInfo *TRI) {
   if (ST.isWave32()) {
-    return MI.getOpcode() == AMDGPU::S_OR_B32 &&
+    return MI.getOpcode() == AMDGPU::S_OR_B32_term &&
            MI.modifiesRegister(AMDGPU::EXEC_LO, TRI);
   }
 
-  return MI.getOpcode() == AMDGPU::S_OR_B64 &&
+  return MI.getOpcode() == AMDGPU::S_OR_B64_term &&
          MI.modifiesRegister(AMDGPU::EXEC, TRI);
 }
 
@@ -266,20 +266,19 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
 
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  if ((TargetRegisterInfo::isVirtualRegister(CmpReg) &&
-       MRI.use_nodbg_empty(CmpReg)) ||
+  if ((Register::isVirtualRegister(CmpReg) && MRI.use_nodbg_empty(CmpReg)) ||
       (CmpReg == CondReg &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
-                      return MI.readsRegister(CondReg, TRI); }))) {
+                      return MI.readsRegister(CondReg, TRI);
+                    }))) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
 
     LIS->RemoveMachineInstrFromMaps(*Cmp);
     Cmp->eraseFromParent();
 
     // Try to remove v_cndmask_b32.
-    if (TargetRegisterInfo::isVirtualRegister(SelReg) &&
-        MRI.use_nodbg_empty(SelReg)) {
+    if (Register::isVirtualRegister(SelReg) && MRI.use_nodbg_empty(SelReg)) {
       LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
       LIS->RemoveMachineInstrFromMaps(*Sel);
@@ -380,13 +379,13 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     // Try to collapse adjacent endifs.
     auto E = MBB.end();
-    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
-    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI, ST))
+    auto Lead = MBB.getFirstTerminator();
+    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, ST, TRI))
       continue;
 
     MachineBasicBlock *TmpMBB = &MBB;
     auto NextLead = skipIgnoreExecInstsTrivialSucc(TmpMBB, std::next(Lead));
-    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, TRI, ST) ||
+    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, ST, TRI) ||
         !getOrExecSource(*NextLead, *TII, MRI, ST))
       continue;
 
@@ -434,7 +433,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
   if (Changed) {
     for (auto Reg : RecalcRegs) {
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         LIS->removeInterval(Reg);
         if (!MRI.reg_empty(Reg))
           LIS->createAndComputeVirtRegInterval(Reg);

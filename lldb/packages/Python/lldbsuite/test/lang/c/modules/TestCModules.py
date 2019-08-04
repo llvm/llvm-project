@@ -3,10 +3,7 @@
 from __future__ import print_function
 
 
-from distutils.version import StrictVersion
 import os
-import time
-import platform
 
 import lldb
 from lldbsuite.test.decorators import *

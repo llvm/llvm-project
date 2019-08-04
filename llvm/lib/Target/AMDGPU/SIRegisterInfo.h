@@ -141,7 +141,7 @@ public:
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, unsigned Reg) const {
     const TargetRegisterClass *RC;
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
+    if (Register::isVirtualRegister(Reg))
       RC = MRI.getRegClass(Reg);
     else
       RC = getPhysRegClass(Reg);

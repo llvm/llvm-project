@@ -5,9 +5,6 @@ Test that we obey thread conditioned breakpoints.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -27,7 +24,6 @@ class ThreadSpecificBreakTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
 
-    @expectedFailureAll(oslist=["windows"])
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
     @expectedFailureNetBSD
     def test_thread_id(self):
@@ -46,13 +42,6 @@ class ThreadSpecificBreakTestCase(TestBase):
         (target, process, main_thread, main_breakpoint) = lldbutil.run_to_source_breakpoint(self,
                 "Set main breakpoint here", main_source_spec)
 
-        main_thread_id = main_thread.GetThreadID()
-
-        # This test works by setting a breakpoint in a function conditioned to stop only on
-        # the main thread, and then calling this function on a secondary thread, joining,
-        # and then calling again on the main thread.  If the thread specific breakpoint works
-        # then it should not be hit on the secondary thread, only on the main
-        # thread.
         thread_breakpoint = target.BreakpointCreateBySourceRegex(
             "Set thread-specific breakpoint here", main_source_spec)
         self.assertGreater(
@@ -60,11 +49,11 @@ class ThreadSpecificBreakTestCase(TestBase):
             0,
             "thread breakpoint has no locations associated with it.")
 
-        # Set the thread-specific breakpoint to only stop on the main thread.  The run the function
-        # on another thread and join on it.  If the thread-specific breakpoint works, the next
-        # stop should be on the main thread.
-
-        main_thread_id = main_thread.GetThreadID()
+        # Set the thread-specific breakpoint to stop only on the main thread
+        # before the secondary thread has a chance to execute it.  The main
+        # thread joins the secondary thread, and then the main thread will
+        # execute the code at the breakpoint.  If the thread-specific
+        # breakpoint works, the next stop will be on the main thread.
         setter_method(main_thread, thread_breakpoint)
 
         process.Continue()
@@ -81,5 +70,5 @@ class ThreadSpecificBreakTestCase(TestBase):
             "thread breakpoint stopped at unexpected number of threads")
         self.assertEqual(
             stopped_threads[0].GetThreadID(),
-            main_thread_id,
+            main_thread.GetThreadID(),
             "thread breakpoint stopped at the wrong thread")

@@ -7,4 +7,5 @@ add_lldb_library(lldbPluginSymbolVendorMacOSX PLUGIN
     lldbCore
     lldbHost
     lldbSymbol
+    lldbPluginObjectFileMachO
   )

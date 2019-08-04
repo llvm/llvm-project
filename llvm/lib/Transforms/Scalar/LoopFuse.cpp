@@ -66,7 +66,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-fusion"
 
-STATISTIC(FuseCounter, "Count number of loop fusions performed");
+STATISTIC(FuseCounter, "Loops fused");
 STATISTIC(NumFusionCandidates, "Number of candidates for loop fusion");
 STATISTIC(InvalidPreheader, "Loop has invalid preheader");
 STATISTIC(InvalidHeader, "Loop has invalid header");
@@ -79,12 +79,12 @@ STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
-STATISTIC(InvalidTripCount,
-          "Loop does not have invariant backedge taken count");
+STATISTIC(UnknownTripCount, "Loop has unknown trip count");
 STATISTIC(UncomputableTripCount, "SCEV cannot compute trip count of loop");
-STATISTIC(NonEqualTripCount, "Candidate trip counts are not the same");
-STATISTIC(NonAdjacent, "Candidates are not adjacent");
-STATISTIC(NonEmptyPreheader, "Candidate has a non-empty preheader");
+STATISTIC(NonEqualTripCount, "Loop trip counts are not the same");
+STATISTIC(NonAdjacent, "Loops are not adjacent");
+STATISTIC(NonEmptyPreheader, "Loop has a non-empty preheader");
+STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -151,11 +151,14 @@ struct FusionCandidate {
   const DominatorTree *DT;
   const PostDominatorTree *PDT;
 
+  OptimizationRemarkEmitter &ORE;
+
   FusionCandidate(Loop *L, const DominatorTree *DT,
-                  const PostDominatorTree *PDT)
+                  const PostDominatorTree *PDT, OptimizationRemarkEmitter &ORE)
       : Preheader(L->getLoopPreheader()), Header(L->getHeader()),
         ExitingBlock(L->getExitingBlock()), ExitBlock(L->getExitBlock()),
-        Latch(L->getLoopLatch()), L(L), Valid(true), DT(DT), PDT(PDT) {
+        Latch(L->getLoopLatch()), L(L), Valid(true), DT(DT), PDT(PDT),
+        ORE(ORE) {
 
     // Walk over all blocks in the loop and check for conditions that may
     // prevent fusion. For each block, walk over all instructions and collect
@@ -163,28 +166,28 @@ struct FusionCandidate {
     // found, invalidate this object and return.
     for (BasicBlock *BB : L->blocks()) {
       if (BB->hasAddressTaken()) {
-        AddressTakenBB++;
         invalidate();
+        reportInvalidCandidate(AddressTakenBB);
         return;
       }
 
       for (Instruction &I : *BB) {
         if (I.mayThrow()) {
-          MayThrowException++;
           invalidate();
+          reportInvalidCandidate(MayThrowException);
           return;
         }
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
           if (SI->isVolatile()) {
-            ContainsVolatileAccess++;
             invalidate();
+            reportInvalidCandidate(ContainsVolatileAccess);
             return;
           }
         }
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
           if (LI->isVolatile()) {
-            ContainsVolatileAccess++;
             invalidate();
+            reportInvalidCandidate(ContainsVolatileAccess);
             return;
           }
         }
@@ -227,6 +230,44 @@ struct FusionCandidate {
   }
 #endif
 
+  /// Determine if a fusion candidate (representing a loop) is eligible for
+  /// fusion. Note that this only checks whether a single loop can be fused - it
+  /// does not check whether it is *legal* to fuse two loops together.
+  bool isEligibleForFusion(ScalarEvolution &SE) const {
+    if (!isValid()) {
+      LLVM_DEBUG(dbgs() << "FC has invalid CFG requirements!\n");
+      if (!Preheader)
+        ++InvalidPreheader;
+      if (!Header)
+        ++InvalidHeader;
+      if (!ExitingBlock)
+        ++InvalidExitingBlock;
+      if (!ExitBlock)
+        ++InvalidExitBlock;
+      if (!Latch)
+        ++InvalidLatch;
+      if (L->isInvalid())
+        ++InvalidLoop;
+
+      return false;
+    }
+
+    // Require ScalarEvolution to be able to determine a trip count.
+    if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
+      LLVM_DEBUG(dbgs() << "Loop " << L->getName()
+                        << " trip count not computable!\n");
+      return reportInvalidCandidate(UnknownTripCount);
+    }
+
+    if (!L->isLoopSimplifyForm()) {
+      LLVM_DEBUG(dbgs() << "Loop " << L->getName()
+                        << " is not in simplified form!\n");
+      return reportInvalidCandidate(NotSimplifiedForm);
+    }
+
+    return true;
+  }
+
 private:
   // This is only used internally for now, to clear the MemWrites and MemReads
   // list and setting Valid to false. I can't envision other uses of this right
@@ -238,6 +279,17 @@ private:
     MemWrites.clear();
     MemReads.clear();
     Valid = false;
+  }
+
+  bool reportInvalidCandidate(llvm::Statistic &Stat) const {
+    using namespace ore;
+    assert(L && Preheader && "Fusion candidate not initialized properly!");
+    ++Stat;
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
+                                        L->getStartLoc(), Preheader)
+             << "[" << Preheader->getParent()->getName() << "]: "
+             << "Loop is not a candidate for fusion: " << Stat.getDesc());
+    return false;
   }
 };
 
@@ -391,16 +443,6 @@ static void printLoopVector(const LoopVector &LV) {
 }
 #endif
 
-static void reportLoopFusion(const FusionCandidate &FC0,
-                             const FusionCandidate &FC1,
-                             OptimizationRemarkEmitter &ORE) {
-  using namespace ore;
-  ORE.emit(
-      OptimizationRemark(DEBUG_TYPE, "LoopFusion", FC0.Preheader->getParent())
-      << "Fused " << NV("Cand1", StringRef(FC0.Preheader->getName()))
-      << " with " << NV("Cand2", StringRef(FC1.Preheader->getName())));
-}
-
 struct LoopFuser {
 private:
   // Sets of control flow equivalent fusion candidates for a given nest level.
@@ -506,53 +548,13 @@ private:
     return false;
   }
 
-  /// Determine if a fusion candidate (representing a loop) is eligible for
-  /// fusion. Note that this only checks whether a single loop can be fused - it
-  /// does not check whether it is *legal* to fuse two loops together.
-  bool eligibleForFusion(const FusionCandidate &FC) const {
-    if (!FC.isValid()) {
-      LLVM_DEBUG(dbgs() << "FC " << FC << " has invalid CFG requirements!\n");
-      if (!FC.Preheader)
-        InvalidPreheader++;
-      if (!FC.Header)
-        InvalidHeader++;
-      if (!FC.ExitingBlock)
-        InvalidExitingBlock++;
-      if (!FC.ExitBlock)
-        InvalidExitBlock++;
-      if (!FC.Latch)
-        InvalidLatch++;
-      if (FC.L->isInvalid())
-        InvalidLoop++;
-
-      return false;
-    }
-
-    // Require ScalarEvolution to be able to determine a trip count.
-    if (!SE.hasLoopInvariantBackedgeTakenCount(FC.L)) {
-      LLVM_DEBUG(dbgs() << "Loop " << FC.L->getName()
-                        << " trip count not computable!\n");
-      InvalidTripCount++;
-      return false;
-    }
-
-    if (!FC.L->isLoopSimplifyForm()) {
-      LLVM_DEBUG(dbgs() << "Loop " << FC.L->getName()
-                        << " is not in simplified form!\n");
-      NotSimplifiedForm++;
-      return false;
-    }
-
-    return true;
-  }
-
   /// Iterate over all loops in the given loop set and identify the loops that
   /// are eligible for fusion. Place all eligible fusion candidates into Control
   /// Flow Equivalent sets, sorted by dominance.
   void collectFusionCandidates(const LoopVector &LV) {
     for (Loop *L : LV) {
-      FusionCandidate CurrCand(L, &DT, &PDT);
-      if (!eligibleForFusion(CurrCand))
+      FusionCandidate CurrCand(L, &DT, &PDT, ORE);
+      if (!CurrCand.isEligibleForFusion(SE))
         continue;
 
       // Go through each list in FusionCandidates and determine if L is control
@@ -664,14 +666,15 @@ private:
           if (!identicalTripCounts(*FC0, *FC1)) {
             LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
                                  "counts. Not fusing.\n");
-            NonEqualTripCount++;
+            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                       NonEqualTripCount);
             continue;
           }
 
           if (!isAdjacent(*FC0, *FC1)) {
             LLVM_DEBUG(dbgs()
                        << "Fusion candidates are not adjacent. Not fusing.\n");
-            NonAdjacent++;
+            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1, NonAdjacent);
             continue;
           }
 
@@ -683,12 +686,15 @@ private:
           if (!isEmptyPreheader(*FC1)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty "
                                  "preheader. Not fusing.\n");
-            NonEmptyPreheader++;
+            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                       NonEmptyPreheader);
             continue;
           }
 
           if (!dependencesAllowFusion(*FC0, *FC1)) {
             LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
+            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                       InvalidDependencies);
             continue;
           }
 
@@ -696,9 +702,11 @@ private:
           LLVM_DEBUG(dbgs()
                      << "\tFusion appears to be "
                      << (BeneficialToFuse ? "" : "un") << "profitable!\n");
-          if (!BeneficialToFuse)
+          if (!BeneficialToFuse) {
+            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                       FusionNotBeneficial);
             continue;
-
+          }
           // All analysis has completed and has determined that fusion is legal
           // and profitable. At this point, start transforming the code and
           // perform fusion.
@@ -710,15 +718,14 @@ private:
           // Note this needs to be done *before* performFusion because
           // performFusion will change the original loops, making it not
           // possible to identify them after fusion is complete.
-          reportLoopFusion(*FC0, *FC1, ORE);
+          reportLoopFusion<OptimizationRemark>(*FC0, *FC1, FuseCounter);
 
-          FusionCandidate FusedCand(performFusion(*FC0, *FC1), &DT, &PDT);
+          FusionCandidate FusedCand(performFusion(*FC0, *FC1), &DT, &PDT, ORE);
           FusedCand.verify();
-          assert(eligibleForFusion(FusedCand) &&
+          assert(FusedCand.isEligibleForFusion(SE) &&
                  "Fused candidate should be eligible for fusion!");
 
           // Notify the loop-depth-tree that these loops are not valid objects
-          // anymore.
           LDT.removeLoop(FC1->L);
 
           CandidateSet.erase(FC0);
@@ -1136,6 +1143,33 @@ private:
     LLVM_DEBUG(dbgs() << "Fusion done:\n");
 
     return FC0.L;
+  }
+
+  /// Report details on loop fusion opportunities.
+  ///
+  /// This template function can be used to report both successful and missed
+  /// loop fusion opportunities, based on the RemarkKind. The RemarkKind should
+  /// be one of:
+  ///   - OptimizationRemarkMissed to report when loop fusion is unsuccessful
+  ///     given two valid fusion candidates.
+  ///   - OptimizationRemark to report successful fusion of two fusion
+  ///     candidates.
+  /// The remarks will be printed using the form:
+  ///    <path/filename>:<line number>:<column number>: [<function name>]:
+  ///       <Cand1 Preheader> and <Cand2 Preheader>: <Stat Description>
+  template <typename RemarkKind>
+  void reportLoopFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
+                        llvm::Statistic &Stat) {
+    assert(FC0.Preheader && FC1.Preheader &&
+           "Expecting valid fusion candidates");
+    using namespace ore;
+    ++Stat;
+    ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLoc(),
+                        FC0.Preheader)
+             << "[" << FC0.Preheader->getParent()->getName()
+             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
+             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
+             << ": " << Stat.getDesc());
   }
 };
 

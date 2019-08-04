@@ -5,8 +5,6 @@ Test that the user can input a format but it will not prevail over summary forma
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil

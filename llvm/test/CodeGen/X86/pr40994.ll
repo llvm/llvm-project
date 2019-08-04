@@ -3,7 +3,7 @@
 
 define <8 x i8> @foo(<16 x i8> %a) {
 ; CHECK-LABEL: foo:
-; CHECK:       # %bb.0: # %cond.store
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextrb $0, %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    pextrb $2, %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    pextrb $4, %xmm0, -{{[0-9]+}}(%rsp)

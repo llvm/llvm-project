@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -disable-arm-loloops=false %s -o - | FileCheck %s --check-prefix=CHECK-LLC
-; RUN: opt -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi %s -o - | FileCheck %s --check-prefix=CHECK-LLC
+; RUN: opt -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | llc -mtriple=thumbv8.1m.main | FileCheck %s --check-prefix=CHECK-UNROLL
 
 ; CHECK-LABEL: early_exit
 ; CHECK-NOT: llvm.set.loop.iterations

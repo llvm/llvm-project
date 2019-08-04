@@ -16,9 +16,7 @@ define i64 @load_i64(i64* %ptr) {
 ; MIPS32-LABEL: load_i64:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
-; MIPS32-NEXT:    ori $1, $zero, 4
-; MIPS32-NEXT:    addu $1, $4, $1
-; MIPS32-NEXT:    lw $3, 0($1)
+; MIPS32-NEXT:    lw $3, 4($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

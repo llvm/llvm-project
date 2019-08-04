@@ -576,7 +576,7 @@ def int_siglongjmp : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [IntrNoReturn]>;
 def int_objectsize : Intrinsic<[llvm_anyint_ty],
                                [llvm_anyptr_ty, llvm_i1_ty,
                                 llvm_i1_ty, llvm_i1_ty],
-                               [IntrNoMem, IntrSpeculatable, ImmArg<1>, ImmArg<2>, ImmArg<3>]>,
+                               [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<1>, ImmArg<2>, ImmArg<3>]>,
                                GCCBuiltin<"__builtin_object_size">;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
@@ -1013,7 +1013,7 @@ def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : Intrinsic<[llvm_i1_ty], [],
-                                           [IntrInaccessibleMemOnly]>;
+                                           [IntrInaccessibleMemOnly, IntrWillReturn]>;
 
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
@@ -1022,7 +1022,7 @@ def int_donothing : Intrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
 // has having opaque side effects. This may be inserted into loops to ensure
 // that they are not removed even if they turn out to be empty, for languages
 // which specify that infinite loops must be preserved.
-def int_sideeffect : Intrinsic<[], [], [IntrInaccessibleMemOnly]>;
+def int_sideeffect : Intrinsic<[], [], [IntrInaccessibleMemOnly, IntrWillReturn]>;
 
 // Intrisics to support half precision floating point format
 let IntrProperties = [IntrNoMem, IntrWillReturn] in {

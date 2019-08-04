@@ -15,13 +15,6 @@
 #ifndef LLVM_DEMANGLE_COMPILER_H
 #define LLVM_DEMANGLE_COMPILER_H
 
-#ifdef _MSC_VER
-// snprintf is implemented in VS 2015
-#if _MSC_VER < 1900
-#define snprintf _snprintf_s
-#endif
-#endif
-
 #ifndef __has_feature
 #define __has_feature(x) 0
 #endif

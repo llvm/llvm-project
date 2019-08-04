@@ -5,7 +5,6 @@ Test that step-inst over a crash behaves correctly.
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

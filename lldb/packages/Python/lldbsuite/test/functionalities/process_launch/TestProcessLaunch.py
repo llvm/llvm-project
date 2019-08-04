@@ -4,9 +4,7 @@ Test lldb process launch flags.
 
 from __future__ import print_function
 
-import copy
 import os
-import time
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -166,7 +164,6 @@ class ProcessLaunchTestCase(TestBase):
         try:
             os.remove(out_file_path)
             os.remove(err_file_path)
-            pass
         except OSError:
             pass
 
@@ -206,4 +203,3 @@ class ProcessLaunchTestCase(TestBase):
         self.assertEqual(value, evil_var)
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
-        pass

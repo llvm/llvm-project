@@ -91,23 +91,26 @@ public:
 
   FileProvider(const FileSpec &directory)
       : Provider(directory),
-        m_collector(directory.CopyByAppendingPathComponent("root").GetPath(),
-                    directory.GetPath()) {}
+        m_collector(std::make_shared<llvm::FileCollector>(
+            directory.CopyByAppendingPathComponent("root").GetPath(),
+            directory.GetPath())) {}
 
-  llvm::FileCollector &GetFileCollector() { return m_collector; }
+  std::shared_ptr<llvm::FileCollector> GetFileCollector() {
+    return m_collector;
+  }
 
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
     // Temporary files that are removed during execution can cause copy errors.
-    if (auto ec = m_collector.copyFiles(/*stop_on_error=*/false))
+    if (auto ec = m_collector->copyFiles(/*stop_on_error=*/false))
       return;
-    m_collector.writeMapping(mapping.GetPath());
+    m_collector->writeMapping(mapping.GetPath());
   }
 
   static char ID;
 
 private:
-  llvm::FileCollector m_collector;
+  std::shared_ptr<llvm::FileCollector> m_collector;
 };
 
 /// Provider for the LLDB version number.

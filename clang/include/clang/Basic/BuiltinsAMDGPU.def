@@ -118,6 +118,13 @@ BUILTIN(__builtin_amdgcn_cvt_pknorm_u16, "E2Usff", "nc")
 BUILTIN(__builtin_amdgcn_cvt_pk_i16, "E2sii", "nc")
 BUILTIN(__builtin_amdgcn_cvt_pk_u16, "E2UsUiUi", "nc")
 BUILTIN(__builtin_amdgcn_cvt_pk_u8_f32, "UifUiUi", "nc")
+BUILTIN(__builtin_amdgcn_sad_u8, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_msad_u8, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_sad_hi_u8, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_sad_u16, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_qsad_pk_u16_u8, "LUiLUiUiLUi", "nc")
+BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "LUiLUiUiLUi", "nc")
+BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiLUiUiV4Ui", "nc")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.

@@ -11,26 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBTableGenBackends.h"
+#include "LLDBTableGenUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <map>
 #include <vector>
 
 using namespace llvm;
-
-/// Map of properties definitions to their associated records. Also makes sure
-/// our property definitions are sorted in a deterministic way.
-typedef std::map<std::string, std::vector<Record *>> RecordsByDefinition;
-
-/// Groups all properties by their definition.
-static RecordsByDefinition getPropertyList(std::vector<Record *> Properties) {
-  RecordsByDefinition result;
-  for (Record *Property : Properties)
-    result[Property->getValueAsString("Definition").str()].push_back(Property);
-  return result;
-}
+using namespace lldb_private;
 
 static void emitPropertyEnum(Record *Property, raw_ostream &OS) {
   OS << "eProperty";
@@ -124,8 +113,11 @@ static void emityProperties(std::string PropertyName,
   // user to define the macro for the options that are needed.
   OS << "// Property definitions for " << PropertyName << "\n";
   OS << "#ifdef " << NeededMacro << "\n";
+  OS << "static constexpr PropertyDefinition g_" << PropertyName
+     << "_properties[] = {\n";
   for (Record *R : PropertyRecords)
     emitProperty(R, OS);
+  OS << "};\n";
   // We undefine the macro for the user like Clang's include files are doing it.
   OS << "#undef " << NeededMacro << "\n";
   OS << "#endif // " << PropertyName << " Property\n\n";
@@ -156,7 +148,7 @@ void lldb_private::EmitPropertyDefs(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");
-  for (auto &PropertyRecordPair : getPropertyList(Properties)) {
+  for (auto &PropertyRecordPair : getRecordsByName(Properties, "Definition")) {
     emityProperties(PropertyRecordPair.first, PropertyRecordPair.second, OS);
   }
 }
@@ -167,7 +159,7 @@ void lldb_private::EmitPropertyEnumDefs(RecordKeeper &Records,
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");
-  for (auto &PropertyRecordPair : getPropertyList(Properties)) {
+  for (auto &PropertyRecordPair : getRecordsByName(Properties, "Definition")) {
     emitPropertyEnum(PropertyRecordPair.first, PropertyRecordPair.second, OS);
   }
 }

@@ -230,7 +230,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     else if (SchedRetvalOptimization) {
       const MachineInstr *MI = DAG->SUnits[su].getInstr();
       if (MI->isCopy() &&
-          TargetRegisterInfo::isPhysicalRegister(MI->getOperand(1).getReg())) {
+          Register::isPhysicalRegister(MI->getOperand(1).getReg())) {
         // %vregX = COPY %r0
         VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
         LastVRegUse.erase(MI->getOperand(1).getReg());
@@ -243,8 +243,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
               VRegHoldingReg.count(MO.getReg())) {
             // <use of %vregX>
             LastVRegUse[VRegHoldingReg[MO.getReg()]] = &DAG->SUnits[su];
-          } else if (MO.isDef() &&
-                     TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+          } else if (MO.isDef() && Register::isPhysicalRegister(MO.getReg())) {
             for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
                  ++AI) {
               if (LastVRegUse.count(*AI) &&

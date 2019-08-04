@@ -65,6 +65,8 @@ static cl::opt<bool> UnrollPeelMultiDeoptExit(
     "unroll-peel-multi-deopt-exit", cl::init(true), cl::Hidden,
     cl::desc("Allow peeling of loops with multiple deopt exits."));
 
+static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
+
 // Designates that a Phi is estimated to become invariant after an "infinite"
 // number of loop iterations (i.e. only may become an invariant if the loop is
 // fully unrolled).
@@ -275,11 +277,19 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
                       << " iterations.\n");
     UP.PeelCount = UnrollForcePeelCount;
+    UP.PeelProfiledIterations = true;
     return;
   }
 
   // Skip peeling if it's disabled.
   if (!UP.AllowPeeling)
+    return;
+
+  unsigned AlreadyPeeled = 0;
+  if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
+    AlreadyPeeled = *Peeled;
+  // Stop if we already peeled off the maximum number of iterations.
+  if (AlreadyPeeled >= UnrollPeelMaxCount)
     return;
 
   // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
@@ -317,11 +327,14 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
       // Consider max peel count limitation.
       assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
-      LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
-                        << " iteration(s) to turn"
-                        << " some Phis into invariants.\n");
-      UP.PeelCount = DesiredPeelCount;
-      return;
+      if (DesiredPeelCount + AlreadyPeeled <= UnrollPeelMaxCount) {
+        LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
+                          << " iteration(s) to turn"
+                          << " some Phis into invariants.\n");
+        UP.PeelCount = DesiredPeelCount;
+        UP.PeelProfiledIterations = false;
+        return;
+      }
     }
   }
 
@@ -330,6 +343,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (TripCount)
     return;
 
+  // Do not apply profile base peeling if it is disabled.
+  if (!UP.PeelProfiledIterations)
+    return;
   // If we don't know the trip count, but have reason to believe the average
   // trip count is low, peeling should be beneficial, since we will usually
   // hit the peeled section.
@@ -344,7 +360,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                       << "\n");
 
     if (*PeelCount) {
-      if ((*PeelCount <= UnrollPeelMaxCount) &&
+      if ((*PeelCount + AlreadyPeeled <= UnrollPeelMaxCount) &&
           (LoopSize * (*PeelCount + 1) <= UP.Threshold)) {
         LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
                           << " iterations.\n");
@@ -352,6 +368,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
         return;
       }
       LLVM_DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
+      LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
       LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
       LLVM_DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1)
                         << "\n");
@@ -737,6 +754,12 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
+
+  // Update Metadata for count of peeled off iterations.
+  unsigned AlreadyPeeled = 0;
+  if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
+    AlreadyPeeled = *Peeled;
+  addStringMetadataToLoop(L, PeeledCountMetaData, AlreadyPeeled + PeelCount);
 
   return true;
 }

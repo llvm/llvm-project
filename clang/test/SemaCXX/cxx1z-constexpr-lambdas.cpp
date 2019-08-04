@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -fblocks %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
@@ -24,6 +25,34 @@ namespace ns1 {
 namespace ns2 {
   auto L = [](int I) constexpr { asm("non-constexpr");  }; //expected-error{{not allowed in constexpr function}}
 } // end ns1
+
+// This is not constexpr until C++20, as the requirements on constexpr
+// functions don't permit try-catch blocks.
+#if __cplusplus <= 201703L
+// expected-error@#try-catch {{constant expression}}
+// expected-note@#try-catch {{non-constexpr function 'operator()'}}
+// expected-note@#try-catch {{declared here}}
+#endif
+constexpr int try_catch = [] { // #try-catch
+  try { return 0; } catch (...) { return 1; }
+}();
+
+// These lambdas have constexpr operator() even though they can never produce a
+// constant expression.
+auto never_constant_1 = [] { // expected-note {{here}}
+  volatile int n = 0;
+  return n;
+};
+auto never_constant_2 = [] () -> int { // expected-note {{here}}
+};
+struct test_never_constant {
+  #if __cplusplus >= 201703L
+  // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
+  // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
+  #endif
+  friend auto decltype(never_constant_1)::operator()() const;
+  friend int decltype(never_constant_2)::operator()() const;
+};
 
 } // end ns test_constexpr_checking
 

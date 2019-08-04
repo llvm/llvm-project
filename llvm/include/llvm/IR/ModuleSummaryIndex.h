@@ -119,7 +119,7 @@ class GlobalValueSummary;
 
 using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;
 
-struct LLVM_ALIGNAS(8) GlobalValueSummaryInfo {
+struct alignas(8) GlobalValueSummaryInfo {
   union NameOrGV {
     NameOrGV(bool HaveGVs) {
       if (HaveGVs)
@@ -631,6 +631,8 @@ public:
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
+
+  void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
 
   /// Returns the list of type identifiers used by this function in
   /// llvm.type.test intrinsics other than by an llvm.assume intrinsic,
@@ -1291,6 +1293,12 @@ public:
       if (It->second.first == TypeId)
         return &It->second.second;
     return nullptr;
+  }
+
+  TypeIdSummary *getTypeIdSummary(StringRef TypeId) {
+    return const_cast<TypeIdSummary *>(
+        static_cast<const ModuleSummaryIndex *>(this)->getTypeIdSummary(
+            TypeId));
   }
 
   const std::map<std::string, TypeIdCompatibleVtableInfo> &

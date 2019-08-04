@@ -1,12 +1,13 @@
 set(TSAN_UNIT_TEST_SOURCES
-  tsan_clock_test.cc
-  tsan_flags_test.cc
-  tsan_mman_test.cc
-  tsan_mutex_test.cc
-  tsan_shadow_test.cc
-  tsan_stack_test.cc
-  tsan_sync_test.cc
-  tsan_unit_test_main.cc)
+  tsan_clock_test.cpp
+  tsan_flags_test.cpp
+  tsan_mman_test.cpp
+  tsan_mutex_test.cpp
+  tsan_shadow_test.cpp
+  tsan_stack_test.cpp
+  tsan_sync_test.cpp
+  tsan_unit_test_main.cpp
+  )
 
 add_tsan_unittest(TsanUnitTest
   SOURCES ${TSAN_UNIT_TEST_SOURCES})

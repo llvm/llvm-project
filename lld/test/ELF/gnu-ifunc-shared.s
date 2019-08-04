@@ -41,10 +41,13 @@
 // DISASM-NEXT:     105b:       e9 e0 ff ff ff          jmp     -32 <f2@plt>
 
 // CHECK: Relocations [
-// CHECK-NEXT:   Section (4) .rela.plt {
+// CHECK-NEXT:   Section (4) .rela.dyn {
+// CHECK-NEXT:     0x3028 R_X86_64_IRELATIVE - 0x1000
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Section (5) .rela.plt {
 // CHECK-NEXT:     0x3018 R_X86_64_JUMP_SLOT fct2 0x0
 // CHECK-NEXT:     0x3020 R_X86_64_JUMP_SLOT f2 0x0
-// CHECK-NEXT:     0x3028 R_X86_64_IRELATIVE - 0x1000
+// CHECK-NEXT:   }
 
  // Hidden expect IRELATIVE
  .globl fct

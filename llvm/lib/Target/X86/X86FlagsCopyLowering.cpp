@@ -721,8 +721,9 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
   for (MachineInstr &MI :
        llvm::reverse(llvm::make_range(MBB.begin(), TestPos))) {
     X86::CondCode Cond = X86::getCondFromSETCC(MI);
-    if (Cond != X86::COND_INVALID && !MI.mayStore() && MI.getOperand(0).isReg() &&
-        TRI->isVirtualRegister(MI.getOperand(0).getReg())) {
+    if (Cond != X86::COND_INVALID && !MI.mayStore() &&
+        MI.getOperand(0).isReg() &&
+        Register::isVirtualRegister(MI.getOperand(0).getReg())) {
       assert(MI.getOperand(0).isDef() &&
              "A non-storing SETcc should always define a register!");
       CondRegs[Cond] = MI.getOperand(0).getReg();

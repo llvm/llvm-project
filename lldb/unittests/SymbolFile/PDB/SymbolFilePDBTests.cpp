@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -390,8 +391,12 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
-  auto clang_ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+  auto clang_ast_ctx_or_err =
+      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
+
+  auto clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
@@ -440,8 +445,12 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
-  auto clang_ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+  auto clang_ast_ctx_or_err =
+      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
+
+  auto clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   auto ast_ctx = clang_ast_ctx->getASTContext();

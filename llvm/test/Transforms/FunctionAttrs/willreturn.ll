@@ -454,10 +454,9 @@ f:
 ; unreachable exit
 
 ; 15.1 (positive case)
-; FIXME: missing willreturn
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NEXT: define void @unreachable_exit_positive1()
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_positive1()
 define void @unreachable_exit_positive1() #0 {
   tail call void @will_return()
@@ -471,7 +470,7 @@ unreachable_label:
 ; FIXME: missing willreturn
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NEXT: define i32 @unreachable_exit_positive2(i32)
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define i32 @unreachable_exit_positive2(i32)
 define i32 @unreachable_exit_positive2(i32) local_unnamed_addr #0 {
   %2 = icmp slt i32 %0, 1
@@ -515,7 +514,7 @@ unreachable_label:
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @unreachable_exit_negative2()
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_negative2()
 define void @unreachable_exit_negative2() #0 {

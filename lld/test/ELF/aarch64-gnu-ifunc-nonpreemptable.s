@@ -48,7 +48,7 @@ main:
 
 ## The adrp to myfunc should generate a PLT entry and a GOT entry with an
 ## irelative relocation.
-# PDE-RELOC:      .rela.plt {
+# PDE-RELOC:      .rela.dyn {
 # PDE-RELOC-NEXT:   0x220000 R_AARCH64_IRELATIVE - 0x210000
 # PDE-RELOC-NEXT: }
 
@@ -67,6 +67,6 @@ main:
 # PIE-NEXT:    10018: add     x16, x16, #0
 # PIE-NEXT:    1001c: br      x17
 
-# PIE-RELOC:      .rela.plt {
+# PIE-RELOC:      .rela.dyn {
 # PIE-RELOC-NEXT:   0x30000 R_AARCH64_IRELATIVE - 0x10000
 # PIE-RELOC-NEXT: }

@@ -26,52 +26,58 @@ append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)
 
 set(TSAN_SOURCES
-  rtl/tsan_clock.cc
-  rtl/tsan_debugging.cc
-  rtl/tsan_external.cc
-  rtl/tsan_fd.cc
-  rtl/tsan_flags.cc
-  rtl/tsan_ignoreset.cc
-  rtl/tsan_interceptors.cc
-  rtl/tsan_interface.cc
-  rtl/tsan_interface_ann.cc
-  rtl/tsan_interface_atomic.cc
-  rtl/tsan_interface_java.cc
-  rtl/tsan_malloc_mac.cc
-  rtl/tsan_md5.cc
-  rtl/tsan_mman.cc
-  rtl/tsan_mutex.cc
-  rtl/tsan_mutexset.cc
-  rtl/tsan_preinit.cc
-  rtl/tsan_report.cc
-  rtl/tsan_rtl.cc
-  rtl/tsan_rtl_mutex.cc
-  rtl/tsan_rtl_proc.cc
-  rtl/tsan_rtl_report.cc
-  rtl/tsan_rtl_thread.cc
-  rtl/tsan_stack_trace.cc
-  rtl/tsan_stat.cc
-  rtl/tsan_suppressions.cc
-  rtl/tsan_symbolize.cc
-  rtl/tsan_sync.cc)
+  rtl/tsan_clock.cpp
+  rtl/tsan_debugging.cpp
+  rtl/tsan_external.cpp
+  rtl/tsan_fd.cpp
+  rtl/tsan_flags.cpp
+  rtl/tsan_ignoreset.cpp
+  rtl/tsan_interceptors.cpp
+  rtl/tsan_interface.cpp
+  rtl/tsan_interface_ann.cpp
+  rtl/tsan_interface_atomic.cpp
+  rtl/tsan_interface_java.cpp
+  rtl/tsan_malloc_mac.cpp
+  rtl/tsan_md5.cpp
+  rtl/tsan_mman.cpp
+  rtl/tsan_mutex.cpp
+  rtl/tsan_mutexset.cpp
+  rtl/tsan_preinit.cpp
+  rtl/tsan_report.cpp
+  rtl/tsan_rtl.cpp
+  rtl/tsan_rtl_mutex.cpp
+  rtl/tsan_rtl_proc.cpp
+  rtl/tsan_rtl_report.cpp
+  rtl/tsan_rtl_thread.cpp
+  rtl/tsan_stack_trace.cpp
+  rtl/tsan_stat.cpp
+  rtl/tsan_suppressions.cpp
+  rtl/tsan_symbolize.cpp
+  rtl/tsan_sync.cpp
+  )
 
 set(TSAN_CXX_SOURCES
-  rtl/tsan_new_delete.cc)
+  rtl/tsan_new_delete.cpp
+  )
 
 if(APPLE)
   list(APPEND TSAN_SOURCES
-    rtl/tsan_interceptors_mac.cc
-    rtl/tsan_platform_mac.cc
-    rtl/tsan_platform_posix.cc)
+    rtl/tsan_interceptors_mac.cpp
+    rtl/tsan_platform_mac.cpp
+    rtl/tsan_platform_posix.cpp
+    )
 elseif(UNIX)
   # Assume Linux
   list(APPEND TSAN_SOURCES
-    rtl/tsan_platform_linux.cc
-    rtl/tsan_platform_posix.cc)
+    rtl/tsan_platform_linux.cpp
+    rtl/tsan_platform_posix.cpp
+    )
 endif()
 
 if(COMPILER_RT_INTERCEPT_LIBDISPATCH)
-  list(APPEND TSAN_SOURCES rtl/tsan_libdispatch.cc)
+  list(APPEND TSAN_SOURCES
+    rtl/tsan_libdispatch.cpp
+    )
   list(APPEND TSAN_RTL_CFLAGS ${COMPILER_RT_LIBDISPATCH_CFLAGS})
 endif()
 

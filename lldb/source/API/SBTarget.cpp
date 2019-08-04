@@ -44,11 +44,11 @@
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Language.h"
@@ -1858,11 +1858,11 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
     }
 
     // No matches, search for basic typename matches
-    ClangASTContext *clang_ast = target_sp->GetScratchClangASTContext();
-    if (clang_ast)
-      return LLDB_RECORD_RESULT(SBType(ClangASTContext::GetBasicType(
-          clang_ast->getASTContext(), const_typename)));
+    for (auto *type_system : target_sp->GetScratchTypeSystems())
+      if (auto type = type_system->GetBuiltinTypeByName(const_typename))
+        return LLDB_RECORD_RESULT(SBType(type));
   }
+
   return LLDB_RECORD_RESULT(SBType());
 }
 
@@ -1872,10 +1872,9 @@ SBType SBTarget::GetBasicType(lldb::BasicType type) {
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
-    ClangASTContext *clang_ast = target_sp->GetScratchClangASTContext();
-    if (clang_ast)
-      return LLDB_RECORD_RESULT(SBType(
-          ClangASTContext::GetBasicType(clang_ast->getASTContext(), type)));
+    for (auto *type_system : target_sp->GetScratchTypeSystems())
+      if (auto compiler_type = type_system->GetBasicTypeFromAST(type))
+        return LLDB_RECORD_RESULT(SBType(compiler_type));
   }
   return LLDB_RECORD_RESULT(SBType());
 }
@@ -1918,10 +1917,10 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
 
     if (sb_type_list.GetSize() == 0) {
       // No matches, search for basic typename matches
-      ClangASTContext *clang_ast = target_sp->GetScratchClangASTContext();
-      if (clang_ast)
-        sb_type_list.Append(SBType(ClangASTContext::GetBasicType(
-            clang_ast->getASTContext(), const_typename)));
+      for (auto *type_system : target_sp->GetScratchTypeSystems())
+        if (auto compiler_type =
+                type_system->GetBuiltinTypeByName(const_typename))
+          sb_type_list.Append(SBType(compiler_type));
     }
   }
   return LLDB_RECORD_RESULT(sb_type_list);

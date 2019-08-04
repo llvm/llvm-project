@@ -1984,7 +1984,6 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   unsigned Opcode = 0;
   switch (I.getOperation()) {
   default:
-    llvm_unreachable("Unknown atomicrmw op");
     return false;
   case AtomicRMWInst::Xchg:
     Opcode = TargetOpcode::G_ATOMICRMW_XCHG;
@@ -2018,6 +2017,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   case AtomicRMWInst::UMin:
     Opcode = TargetOpcode::G_ATOMICRMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Opcode = TargetOpcode::G_ATOMICRMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Opcode = TargetOpcode::G_ATOMICRMW_FSUB;
     break;
   }
 
@@ -2276,18 +2281,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     if (Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
       SwiftError.setCurrentVReg(EntryBB, SwiftError.getFunctionArg(), VRegs[0]);
-    }
-  }
-
-  // We don't currently support translating swifterror or swiftself functions.
-  for (auto &Arg : F.args()) {
-    if (Arg.hasSwiftSelfAttr()) {
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 F.getSubprogram(), &F.getEntryBlock());
-      R << "unable to lower arguments due to swiftself: "
-        << ore::NV("Prototype", F.getType());
-      reportTranslationError(*MF, *TPC, *ORE, R);
-      return false;
     }
   }
 

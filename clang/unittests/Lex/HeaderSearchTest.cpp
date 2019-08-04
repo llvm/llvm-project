@@ -39,9 +39,9 @@ protected:
   void addSearchDir(llvm::StringRef Dir) {
     VFS->addFile(Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/None,
                  /*Group=*/None, llvm::sys::fs::file_type::directory_file);
-    const DirectoryEntry *DE = FileMgr.getDirectory(Dir);
+    auto DE = FileMgr.getDirectory(Dir);
     assert(DE);
-    auto DL = DirectoryLookup(DE, SrcMgr::C_User, /*isFramework=*/false);
+    auto DL = DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false);
     Search.AddSearchPath(DL, /*isAngled=*/false);
   }
 

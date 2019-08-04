@@ -31,8 +31,8 @@
 
 #include "DynamicLoaderDarwinKernel.h"
 
-#include <memory>
 #include <algorithm>
+#include <memory>
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -61,25 +61,37 @@ enum KASLRScanType {
 };
 
 static constexpr OptionEnumValueElement g_kaslr_kernel_scan_enum_values[] = {
-    {eKASLRScanNone, "none",
-     "Do not read memory looking for a Darwin kernel when attaching."},
-    {eKASLRScanLowgloAddresses, "basic", "Check for the Darwin kernel's load "
-                                         "addr in the lowglo page "
-                                         "(boot-args=debug) only."},
-    {eKASLRScanNearPC, "fast-scan", "Scan near the pc value on attach to find "
-                                    "the Darwin kernel's load address."},
-    {eKASLRScanExhaustiveScan, "exhaustive-scan",
-     "Scan through the entire potential address range of Darwin kernel (only "
-     "on 32-bit targets)."}};
-
-static constexpr PropertyDefinition g_properties[] = {
-#define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "Properties.inc"
+    {
+        eKASLRScanNone,
+        "none",
+        "Do not read memory looking for a Darwin kernel when attaching.",
+    },
+    {
+        eKASLRScanLowgloAddresses,
+        "basic",
+        "Check for the Darwin kernel's load addr in the lowglo page "
+        "(boot-args=debug) only.",
+    },
+    {
+        eKASLRScanNearPC,
+        "fast-scan",
+        "Scan near the pc value on attach to find the Darwin kernel's load "
+        "address.",
+    },
+    {
+        eKASLRScanExhaustiveScan,
+        "exhaustive-scan",
+        "Scan through the entire potential address range of Darwin kernel "
+        "(only on 32-bit targets).",
+    },
 };
+
+#define LLDB_PROPERTIES_dynamicloaderdarwinkernel
+#include "DynamicLoaderDarwinKernelProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
-#include "PropertiesEnum.inc"
+#include "DynamicLoaderDarwinKernelPropertiesEnum.inc"
 };
 
 class DynamicLoaderDarwinKernelProperties : public Properties {
@@ -91,7 +103,7 @@ public:
 
   DynamicLoaderDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties);
   }
 
   ~DynamicLoaderDarwinKernelProperties() override {}
@@ -99,13 +111,15 @@ public:
   bool GetLoadKexts() const {
     const uint32_t idx = ePropertyLoadKexts;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_properties[idx].default_uint_value != 0);
+        nullptr, idx,
+        g_dynamicloaderdarwinkernel_properties[idx].default_uint_value != 0);
   }
 
   KASLRScanType GetScanType() const {
     const uint32_t idx = ePropertyScanType;
     return (KASLRScanType)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-        nullptr, idx, g_properties[idx].default_uint_value);
+        nullptr, idx,
+        g_dynamicloaderdarwinkernel_properties[idx].default_uint_value);
   }
 };
 

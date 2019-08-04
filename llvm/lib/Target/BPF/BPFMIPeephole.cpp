@@ -105,9 +105,9 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
       return false;
 
     unsigned Reg = opnd.getReg();
-    if ((TargetRegisterInfo::isVirtualRegister(Reg) &&
+    if ((Register::isVirtualRegister(Reg) &&
          MRI->getRegClass(Reg) == &BPF::GPRRegClass))
-       return false;
+      return false;
   }
 
   LLVM_DEBUG(dbgs() << "  One ZExt elim sequence identified.\n");

@@ -5,9 +5,6 @@ Use lldb Python SBValue.WatchPointee() API to create a watchpoint for write of '
 from __future__ import print_function
 
 
-import os
-import re
-import time
 
 import lldb
 from lldbsuite.test.decorators import *

@@ -2,63 +2,76 @@
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
-    xray_buffer_queue.cc
-    xray_init.cc
-    xray_flags.cc
-    xray_interface.cc
-    xray_log_interface.cc
-    xray_utils.cc)
+  xray_buffer_queue.cpp
+  xray_init.cpp
+  xray_flags.cpp
+  xray_interface.cpp
+  xray_log_interface.cpp
+  xray_utils.cpp
+  )
 
 # Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
-    xray_fdr_flags.cc
-    xray_fdr_logging.cc)
+  xray_fdr_flags.cpp
+  xray_fdr_logging.cpp
+  )
 
 set(XRAY_BASIC_MODE_SOURCES
-    xray_basic_flags.cc
-    xray_basic_logging.cc)
+  xray_basic_flags.cpp
+  xray_basic_logging.cpp
+  )
 
 set(XRAY_PROFILING_MODE_SOURCES
-    xray_profile_collector.cc
-    xray_profiling.cc
-    xray_profiling_flags.cc)
+  xray_profile_collector.cpp
+  xray_profiling.cpp
+  xray_profiling_flags.cpp
+  )
 
 # Implementation files for all XRay architectures.
 set(x86_64_SOURCES
-    xray_x86_64.cc
-    xray_trampoline_x86_64.S)
+  xray_x86_64.cpp
+  xray_trampoline_x86_64.S
+  )
 
 set(arm_SOURCES
-    xray_arm.cc
-    xray_trampoline_arm.S)
+  xray_arm.cpp
+  xray_trampoline_arm.S
+  )
 
 set(armhf_SOURCES
-    ${arm_SOURCES})
+  ${arm_SOURCES}
+  )
 
 set(aarch64_SOURCES
-    xray_AArch64.cc
-    xray_trampoline_AArch64.S)
+  xray_AArch64.cpp
+  xray_trampoline_AArch64.S
+  )
 
 set(mips_SOURCES
-    xray_mips.cc
-    xray_trampoline_mips.S)
+  xray_mips.cpp
+  xray_trampoline_mips.S
+  )
 
 set(mipsel_SOURCES
-    xray_mips.cc
-    xray_trampoline_mips.S)
+  xray_mips.cpp
+  xray_trampoline_mips.S
+  )
 
 set(mips64_SOURCES
-    xray_mips64.cc
-    xray_trampoline_mips64.S)
+  xray_mips64.cpp
+  xray_trampoline_mips64.S
+  )
 
 set(mips64el_SOURCES
-    xray_mips64.cc
-    xray_trampoline_mips64.S)
+  xray_mips64.cpp
+  xray_trampoline_mips64.S
+  )
 
 set(powerpc64le_SOURCES
-    xray_powerpc64.cc
-    xray_trampoline_powerpc64.cc
-    xray_trampoline_powerpc64_asm.S)
+  xray_powerpc64.cpp
+  xray_trampoline_powerpc64.cpp
+  xray_trampoline_powerpc64_asm.S
+  )
 
 set(XRAY_IMPL_HEADERS
   xray_allocator.h
@@ -85,7 +98,8 @@ set(XRAY_IMPL_HEADERS
   xray_segmented_array.h
   xray_tsc.h
   xray_utils.h
-  xray_x86_64.inc)
+  xray_x86_64.inc
+  )
 
 # Create list of all source files for
 # consumption by tests.
@@ -103,7 +117,7 @@ set(XRAY_ALL_SOURCE_FILES
   ${mips64el_SOURCES}
   ${powerpc64le_SOURCES}
   ${XRAY_IMPL_HEADERS}
-)
+  )
 list(REMOVE_DUPLICATES XRAY_ALL_SOURCE_FILES)
 # Make list that uses absolute paths
 set(XRAY_ALL_SOURCE_FILES_ABS_PATHS "")

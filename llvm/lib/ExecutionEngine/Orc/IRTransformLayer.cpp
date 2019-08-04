@@ -19,7 +19,7 @@ IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
 
 void IRTransformLayer::emit(MaterializationResponsibility R,
                             ThreadSafeModule TSM) {
-  assert(TSM.getModule() && "Module must not be null");
+  assert(TSM && "Module must not be null");
 
   if (auto TransformedTSM = Transform(std::move(TSM), R))
     BaseLayer.emit(std::move(R), std::move(*TransformedTSM));

@@ -9,40 +9,42 @@ if(APPLE)
 endif()
 
 set(SANITIZER_UNITTESTS
-  sanitizer_allocator_test.cc
-  sanitizer_atomic_test.cc
-  sanitizer_bitvector_test.cc
-  sanitizer_bvgraph_test.cc
-  sanitizer_common_test.cc
-  sanitizer_deadlock_detector_test.cc
-  sanitizer_flags_test.cc
-  sanitizer_format_interceptor_test.cc
-  sanitizer_ioctl_test.cc
-  sanitizer_libc_test.cc
-  sanitizer_linux_test.cc
-  sanitizer_list_test.cc
-  sanitizer_mutex_test.cc
-  sanitizer_nolibc_test.cc
-  sanitizer_posix_test.cc
-  sanitizer_printf_test.cc
-  sanitizer_procmaps_test.cc
-  sanitizer_ring_buffer_test.cc
-  sanitizer_quarantine_test.cc
-  sanitizer_stackdepot_test.cc
-  sanitizer_stacktrace_printer_test.cc
-  sanitizer_stacktrace_test.cc
-  sanitizer_stoptheworld_test.cc
-  sanitizer_suppressions_test.cc
-  sanitizer_symbolizer_test.cc
-  sanitizer_test_main.cc
-  sanitizer_thread_registry_test.cc
-  sanitizer_type_traits_test.cc
-  sanitizer_vector_test.cc)
+  sanitizer_allocator_test.cpp
+  sanitizer_atomic_test.cpp
+  sanitizer_bitvector_test.cpp
+  sanitizer_bvgraph_test.cpp
+  sanitizer_common_test.cpp
+  sanitizer_deadlock_detector_test.cpp
+  sanitizer_flags_test.cpp
+  sanitizer_format_interceptor_test.cpp
+  sanitizer_ioctl_test.cpp
+  sanitizer_libc_test.cpp
+  sanitizer_linux_test.cpp
+  sanitizer_list_test.cpp
+  sanitizer_mutex_test.cpp
+  sanitizer_nolibc_test.cpp
+  sanitizer_posix_test.cpp
+  sanitizer_printf_test.cpp
+  sanitizer_procmaps_test.cpp
+  sanitizer_ring_buffer_test.cpp
+  sanitizer_quarantine_test.cpp
+  sanitizer_stackdepot_test.cpp
+  sanitizer_stacktrace_printer_test.cpp
+  sanitizer_stacktrace_test.cpp
+  sanitizer_stoptheworld_test.cpp
+  sanitizer_suppressions_test.cpp
+  sanitizer_symbolizer_test.cpp
+  sanitizer_test_main.cpp
+  sanitizer_thread_registry_test.cpp
+  sanitizer_type_traits_test.cpp
+  sanitizer_vector_test.cpp
+  )
 
 set(SANITIZER_TEST_HEADERS
   sanitizer_pthread_wrappers.h
   sanitizer_test_config.h
-  sanitizer_test_utils.h)
+  sanitizer_test_utils.h
+  )
 foreach(header ${SANITIZER_IMPL_HEADERS})
   list(APPEND SANITIZER_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
@@ -57,7 +59,8 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -O2
   -Werror=sign-compare
   -Wno-non-virtual-dtor
-  -Wno-gnu-zero-variadic-macro-arguments)
+  -Wno-gnu-zero-variadic-macro-arguments
+  )
 
 set(SANITIZER_TEST_LINK_FLAGS_COMMON ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 
@@ -156,9 +159,9 @@ macro(add_sanitizer_tests_for_arch arch)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND "${arch}" STREQUAL "x86_64")
     # Test that the libc-independent part of sanitizer_common is indeed
     # independent of libc, by linking this binary without libc (here) and
-    # executing it (unit test in sanitizer_nolibc_test.cc).
+    # executing it (unit test in sanitizer_nolibc_test.cpp).
     clang_compile(sanitizer_nolibc_test_main.${arch}.o
-                  sanitizer_nolibc_test_main.cc
+                  sanitizer_nolibc_test_main.cpp
                   CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
                   DEPS ${SANITIZER_TEST_COMPILE_DEPS})
     add_compiler_rt_test(SanitizerUnitTests "Sanitizer-${arch}-Test-Nolibc" ${arch}

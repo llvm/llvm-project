@@ -859,6 +859,26 @@
 // CHECK-OPENSUSE-TW-ARMV7HL: "{{.*}}/usr/lib/gcc/armv7hl-suse-linux-gnueabi/5{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-ARMV7HL: "{{.*}}/usr/lib/gcc/armv7hl-suse-linux-gnueabi/5/../../../../lib{{/|\\\\}}crtn.o"
 //
+// Check openSUSE Tumbleweed on riscv64
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=riscv64-suse-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_riscv64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-RISCV64 %s
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=riscv64-suse-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_riscv64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-RISCV64 %s
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64{{/|\\\\}}crt1.o"
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64{{/|\\\\}}crti.o"
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9{{/|\\\\}}crtbegin.o"
+// CHECK-OPENSUSE-TW-RISCV64: "-L[[SYSROOT]]/usr/lib64/gcc/riscv64-suse-linux/9"
+// CHECK-OPENSUSE-TW-RISCV64: "-L[[SYSROOT]]/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64"
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9{{/|\\\\}}crtend.o"
+// CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64{{/|\\\\}}crtn.o"
+//
 // Check dynamic-linker for different archs
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-gnueabi \

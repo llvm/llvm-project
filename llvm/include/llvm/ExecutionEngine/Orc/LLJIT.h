@@ -184,8 +184,8 @@ private:
 
 class LLJITBuilderState {
 public:
-  using ObjectLinkingLayerCreator =
-      std::function<std::unique_ptr<ObjectLayer>(ExecutionSession &)>;
+  using ObjectLinkingLayerCreator = std::function<std::unique_ptr<ObjectLayer>(
+      ExecutionSession &, const Triple &TT)>;
 
   using CompileFunctionCreator =
       std::function<Expected<IRCompileLayer::CompileFunction>(

@@ -34,14 +34,14 @@
 
 // Two relocs, one for the GOT and the other for .data.
 // IREL2-NOT: R_X86_64_
-// IREL2: .rela.plt
+// IREL2: .rela.dyn
 // IREL2-NEXT: R_X86_64_IRELATIVE
 // IREL2-NEXT: R_X86_64_IRELATIVE
 // IREL2-NOT: R_X86_64_
 
 // One reloc for the canonical PLT.
 // IREL1-NOT: R_X86_64_
-// IREL1: .rela.plt
+// IREL1: .rela.dyn
 // IREL1-NEXT: R_X86_64_IRELATIVE
 // IREL1-NOT: R_X86_64_
 
@@ -51,7 +51,6 @@
 // IREL1-REL2: .rela.dyn
 // IREL1-REL2-NEXT: R_X86_64_RELATIVE
 // IREL1-REL2-NEXT: R_X86_64_RELATIVE
-// IREL1-REL2: .rela.plt
 // IREL1-REL2-NEXT: R_X86_64_IRELATIVE
 // IREL1-REL2-NOT: R_X86_64_
 
@@ -62,7 +61,6 @@
 // IREL1-REL3-NEXT: R_X86_64_RELATIVE
 // IREL1-REL3-NEXT: R_X86_64_RELATIVE
 // IREL1-REL3-NEXT: R_X86_64_RELATIVE
-// IREL1-REL3: .rela.plt
 // IREL1-REL3-NEXT: R_X86_64_IRELATIVE
 // IREL1-REL3-NOT: R_X86_64_
 

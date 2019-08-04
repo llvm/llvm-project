@@ -949,7 +949,7 @@ template <typename DerivedT> class AAResultBase {
 
   /// A pointer to the AAResults object that this AAResult is
   /// aggregated within. May be null if not aggregated.
-  AAResults *AAR;
+  AAResults *AAR = nullptr;
 
   /// Helper to dispatch calls back through the derived type.
   DerivedT &derived() { return static_cast<DerivedT &>(*this); }

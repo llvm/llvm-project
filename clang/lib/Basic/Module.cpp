@@ -246,8 +246,8 @@ ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
   if (!TopHeaderNames.empty()) {
     for (std::vector<std::string>::iterator
            I = TopHeaderNames.begin(), E = TopHeaderNames.end(); I != E; ++I) {
-      if (const FileEntry *FE = FileMgr.getFile(*I))
-        TopHeaders.insert(FE);
+      if (auto FE = FileMgr.getFile(*I))
+        TopHeaders.insert(*FE);
     }
     TopHeaderNames.clear();
   }

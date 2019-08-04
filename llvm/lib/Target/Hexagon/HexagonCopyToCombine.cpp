@@ -226,7 +226,7 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
 }
 
 static bool isEvenReg(unsigned Reg) {
-  assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+  assert(Register::isPhysicalRegister(Reg));
   if (Hexagon::IntRegsRegClass.contains(Reg))
     return (Reg - Hexagon::R0) % 2 == 0;
   if (Hexagon::HvxVRRegClass.contains(Reg))

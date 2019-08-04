@@ -5,14 +5,14 @@
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
-# RUN: llvm-readelf -r %t | FileCheck --check-prefix=DYNREL %s
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=REL %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
-# RUN: llvm-readelf -r %t | FileCheck --check-prefix=DYNREL %s
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=REL %s
 
 # NM-DAG: 0000000010028000 d .TOC.
 # NM-DAG: 0000000010010000 T ifunc
@@ -46,9 +46,12 @@
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 
-# Check that we emit 2 R_PPC64_IRELATIVE.
-# DYNREL: R_PPC64_IRELATIVE       10010000
-# DYNREL: R_PPC64_IRELATIVE       10010004
+## Check that we emit 2 R_PPC64_IRELATIVE in .rela.dyn.
+## glibc powerpc64 does not eagerly resolve R_PPC64_IRELATIVE if they are in .rela.plt.
+# REL:      .rela.dyn {
+# REL-NEXT:   0x10030000 R_PPC64_IRELATIVE - 0x10010000
+# REL-NEXT:   0x10030008 R_PPC64_IRELATIVE - 0x10010004
+# REL-NEXT: }
 
 .type ifunc STT_GNU_IFUNC
 .globl ifunc

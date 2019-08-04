@@ -1958,7 +1958,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_udot4:
     case Intrinsic::amdgcn_sdot8:
     case Intrinsic::amdgcn_udot8:
-    case Intrinsic::amdgcn_fdiv_fast:
     case Intrinsic::amdgcn_wwm:
     case Intrinsic::amdgcn_wqm:
       return getDefaultMappingVOP(MI);
@@ -2230,6 +2229,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_MIN:
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
+  case AMDGPU::G_ATOMICRMW_FADD:
   case AMDGPU::G_ATOMIC_CMPXCHG: {
     return getDefaultMappingAllVGPR(MI);
   }

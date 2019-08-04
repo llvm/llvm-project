@@ -628,10 +628,9 @@ public:
 
   SDValue getGlobalAddress(const GlobalValue *GV, const SDLoc &DL, EVT VT,
                            int64_t offset = 0, bool isTargetGA = false,
-                           unsigned char TargetFlags = 0);
+                           unsigned TargetFlags = 0);
   SDValue getTargetGlobalAddress(const GlobalValue *GV, const SDLoc &DL, EVT VT,
-                                 int64_t offset = 0,
-                                 unsigned char TargetFlags = 0) {
+                                 int64_t offset = 0, unsigned TargetFlags = 0) {
     return getGlobalAddress(GV, DL, VT, offset, true, TargetFlags);
   }
   SDValue getFrameIndex(int FI, EVT VT, bool isTarget = false);
@@ -639,28 +638,27 @@ public:
     return getFrameIndex(FI, VT, true);
   }
   SDValue getJumpTable(int JTI, EVT VT, bool isTarget = false,
-                       unsigned char TargetFlags = 0);
-  SDValue getTargetJumpTable(int JTI, EVT VT, unsigned char TargetFlags = 0) {
+                       unsigned TargetFlags = 0);
+  SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
-  SDValue getConstantPool(const Constant *C, EVT VT,
-                          unsigned Align = 0, int Offs = 0, bool isT=false,
-                          unsigned char TargetFlags = 0);
-  SDValue getTargetConstantPool(const Constant *C, EVT VT,
-                                unsigned Align = 0, int Offset = 0,
-                                unsigned char TargetFlags = 0) {
+  SDValue getConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
+                          int Offs = 0, bool isT = false,
+                          unsigned TargetFlags = 0);
+  SDValue getTargetConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
+                                int Offset = 0, unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
   SDValue getConstantPool(MachineConstantPoolValue *C, EVT VT,
                           unsigned Align = 0, int Offs = 0, bool isT=false,
-                          unsigned char TargetFlags = 0);
-  SDValue getTargetConstantPool(MachineConstantPoolValue *C,
-                                  EVT VT, unsigned Align = 0,
-                                  int Offset = 0, unsigned char TargetFlags=0) {
+                          unsigned TargetFlags = 0);
+  SDValue getTargetConstantPool(MachineConstantPoolValue *C, EVT VT,
+                                unsigned Align = 0, int Offset = 0,
+                                unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
   SDValue getTargetIndex(int Index, EVT VT, int64_t Offset = 0,
-                         unsigned char TargetFlags = 0);
+                         unsigned TargetFlags = 0);
   // When generating a branch to a BB, we don't in general know enough
   // to provide debug info for the BB at that time, so keep this one around.
   SDValue getBasicBlock(MachineBasicBlock *MBB);
@@ -668,7 +666,7 @@ public:
   SDValue getExternalSymbol(const char *Sym, EVT VT);
   SDValue getExternalSymbol(const char *Sym, const SDLoc &dl, EVT VT);
   SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
-                                  unsigned char TargetFlags = 0);
+                                  unsigned TargetFlags = 0);
   SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   SDValue getValueType(EVT);
@@ -677,12 +675,10 @@ public:
   SDValue getEHLabel(const SDLoc &dl, SDValue Root, MCSymbol *Label);
   SDValue getLabelNode(unsigned Opcode, const SDLoc &dl, SDValue Root,
                        MCSymbol *Label);
-  SDValue getBlockAddress(const BlockAddress *BA, EVT VT,
-                          int64_t Offset = 0, bool isTarget = false,
-                          unsigned char TargetFlags = 0);
+  SDValue getBlockAddress(const BlockAddress *BA, EVT VT, int64_t Offset = 0,
+                          bool isTarget = false, unsigned TargetFlags = 0);
   SDValue getTargetBlockAddress(const BlockAddress *BA, EVT VT,
-                                int64_t Offset = 0,
-                                unsigned char TargetFlags = 0) {
+                                int64_t Offset = 0, unsigned TargetFlags = 0) {
     return getBlockAddress(BA, VT, Offset, true, TargetFlags);
   }
 
@@ -1715,7 +1711,7 @@ private:
   std::map<EVT, SDNode*, EVT::compareRawBits> ExtendedValueTypeNodes;
   StringMap<SDNode*> ExternalSymbols;
 
-  std::map<std::pair<std::string, unsigned char>,SDNode*> TargetExternalSymbols;
+  std::map<std::pair<std::string, unsigned>, SDNode *> TargetExternalSymbols;
   DenseMap<MCSymbol *, SDNode *> MCSymbols;
 };
 

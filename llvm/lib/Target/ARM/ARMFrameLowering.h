@@ -63,6 +63,11 @@ public:
   bool enableShrinkWrapping(const MachineFunction &MF) const override {
     return true;
   }
+  bool isProfitableForNoCSROpt(const Function &F) const override {
+    // The no-CSR optimisation is bad for code size on ARM, because we can save
+    // many registers with a single PUSH/POP pair.
+    return false;
+  }
 
 private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,

@@ -17,6 +17,7 @@ add_clang_library(clangTidyGoogleModule
   OverloadedUnaryAndCheck.cpp
   TodoCommentCheck.cpp
   UnnamedNamespaceInHeaderCheck.cpp
+  UpgradeGoogletestCaseCheck.cpp
   UsingNamespaceDirectiveCheck.cpp
 
   LINK_LIBS

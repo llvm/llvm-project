@@ -34,8 +34,8 @@ public:
   FileSystem()
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
         m_mapped(false) {}
-  FileSystem(llvm::FileCollector &collector)
-      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(&collector),
+  FileSystem(std::shared_ptr<llvm::FileCollector> collector)
+      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(collector),
         m_mapped(false) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
              bool mapped = false)
@@ -47,7 +47,7 @@ public:
   static FileSystem &Instance();
 
   static void Initialize();
-  static void Initialize(llvm::FileCollector &collector);
+  static void Initialize(std::shared_ptr<llvm::FileCollector> collector);
   static llvm::Error Initialize(const FileSpec &mapping);
   static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
   static void Terminate();
@@ -188,7 +188,7 @@ public:
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
-  llvm::FileCollector *m_collector;
+  std::shared_ptr<llvm::FileCollector> m_collector;
   bool m_mapped;
 };
 } // namespace lldb_private

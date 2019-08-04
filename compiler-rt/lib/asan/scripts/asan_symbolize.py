@@ -41,7 +41,7 @@ def fix_filename(file_name):
   if fix_filename_patterns:
     for path_to_cut in fix_filename_patterns:
       file_name = re.sub('.*' + path_to_cut, '', file_name)
-  file_name = re.sub('.*asan_[a-z_]*.cc:[0-9]*', '_asan_rtl_', file_name)
+  file_name = re.sub('.*asan_[a-z_]*.(cc|cpp):[0-9]*', '_asan_rtl_', file_name)
   file_name = re.sub('.*crtstuff.c:0', '???:0', file_name)
   return file_name
 
@@ -463,6 +463,7 @@ class SymbolizationLoop(object):
         '^( *#([0-9]+) *)(0x[0-9a-f]+) *(?:in *.+)? *\((.*)\+(0x[0-9a-f]+)\)')
     match = re.match(stack_trace_line_format, line)
     if not match:
+      logging.debug('Line "{}" does not match regex'.format(line))
       return [self.current_line]
     logging.debug(line)
     _, frameno_str, addr, binary, offset = match.groups()
@@ -756,7 +757,9 @@ def get_uuid_from_binary(path_to_binary, arch=None):
     uuid = split_uuid_line[1]
     break
   if uuid is None:
-    raise GetUUIDFromBinaryException('Failed to retrieve UUID')
+    logging.error('Failed to retrieve UUID from binary {}'.format(path_to_binary))
+    logging.error('otool output was:\n{}'.format(output_str))
+    raise GetUUIDFromBinaryException('Failed to retrieve UUID from binary "{}"'.format(path_to_binary))
   else:
     # Update cache
     _get_uuid_from_binary_cache[cache_key] = uuid
@@ -788,7 +791,7 @@ class ModuleMap(object):
   def modules(self):
     return set(self._module_name_to_description_map.values())
 
-  def get_module_path_for_symbolication(self, module_name, proxy):
+  def get_module_path_for_symbolication(self, module_name, proxy, validate_uuid):
     module_desc = self.find_module_by_name(module_name)
     if module_desc is None:
       return None
@@ -797,15 +800,19 @@ class ModuleMap(object):
     module_desc = proxy.filter_module_desc(module_desc)
     if module_desc is None:
       return None
-    try:
-      uuid = get_uuid_from_binary(module_desc.module_path_for_symbolization, arch = module_desc.arch)
-      if uuid != module_desc.uuid:
-        logging.warning("Detected UUID mismatch {} != {}".format(uuid, module_desc.uuid))
-        # UUIDs don't match. Tell client to not symbolize this.
+    if validate_uuid:
+      logging.debug('Validating UUID of {}'.format(module_desc.module_path_for_symbolization))
+      try:
+        uuid = get_uuid_from_binary(module_desc.module_path_for_symbolization, arch = module_desc.arch)
+        if uuid != module_desc.uuid:
+          logging.warning("Detected UUID mismatch {} != {}".format(uuid, module_desc.uuid))
+          # UUIDs don't match. Tell client to not symbolize this.
+          return None
+      except GetUUIDFromBinaryException as e:
+        logging.error('Failed to get binary from UUID: %s', str(e))
         return None
-    except GetUUIDFromBinaryException as e:
-      logging.error('Failed to binary from UUID: %s', str(e))
-      return None
+    else:
+      logging.warning('Skipping validation of UUID of {}'.format(module_desc.module_path_for_symbolization))
     return module_desc.module_path_for_symbolization
 
   @staticmethod
@@ -888,10 +895,16 @@ class SysRootFilterPlugIn(AsanSymbolizerPlugIn):
 class ModuleMapPlugIn(AsanSymbolizerPlugIn):
   def __init__(self):
     self._module_map = None
+    self._uuid_validation = True
   def register_cmdline_args(self, parser):
     parser.add_argument('--module-map',
                         help='Path to text file containing module map'
                         'output. See print_module_map ASan option.')
+    parser.add_argument('--skip-uuid-validation',
+                        default=False,
+                        action='store_true',
+                        help='Skips validating UUID of modules using otool.')
+
   def process_cmdline_args(self, pargs):
     if not pargs.module_map:
       return False
@@ -900,7 +913,9 @@ class ModuleMapPlugIn(AsanSymbolizerPlugIn):
       msg = 'Failed to find module map'
       logging.error(msg)
       raise Exception(msg)
+    self._uuid_validation = not pargs.skip_uuid_validation
     return True
+
   def filter_binary_path(self, binary_path):
     if os.path.isabs(binary_path):
       # This is a binary path so transform into
@@ -908,7 +923,11 @@ class ModuleMapPlugIn(AsanSymbolizerPlugIn):
       module_name = os.path.basename(binary_path)
     else:
       module_name = binary_path
-    return self._module_map.get_module_path_for_symbolication(module_name, self.proxy)
+    return self._module_map.get_module_path_for_symbolication(
+      module_name,
+      self.proxy,
+      self._uuid_validation
+    )
 
 def add_logging_args(parser):
   parser.add_argument('--log-dest',

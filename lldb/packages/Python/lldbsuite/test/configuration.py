@@ -12,8 +12,6 @@ from __future__ import print_function
 
 # System modules
 import os
-import platform
-import subprocess
 
 
 # Third-party modules
@@ -116,12 +114,6 @@ test_build_dir = None
 # specified, and an exclusive test subdirectory is specified, the latter option
 # takes precedence.
 exclusive_test_subdir = None
-
-# Parallel execution settings
-is_inferior_test_runner = False
-num_threads = None
-no_multiprocess_test_runner = False
-test_runner_name = None
 
 # Test results handling globals
 results_filename = None

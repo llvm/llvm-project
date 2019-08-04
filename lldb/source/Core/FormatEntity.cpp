@@ -2350,7 +2350,6 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
   llvm::StringRef str = request.GetCursorArgumentPrefix().str();
 
   request.SetWordComplete(false);
-  str = str.drop_front(request.GetMatchStartPoint());
 
   const size_t dollar_pos = str.rfind('$');
   if (dollar_pos == llvm::StringRef::npos)

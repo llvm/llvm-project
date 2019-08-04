@@ -54,11 +54,12 @@ static ThreadSafeModule extractSubModule(ThreadSafeModule &TSM,
       llvm_unreachable("Unsupported global type");
   };
 
-  auto NewTSMod = cloneToNewContext(TSM, ShouldExtract, DeleteExtractedDefs);
-  auto &M = *NewTSMod.getModule();
-  M.setModuleIdentifier((M.getModuleIdentifier() + Suffix).str());
+  auto NewTSM = cloneToNewContext(TSM, ShouldExtract, DeleteExtractedDefs);
+  NewTSM.withModuleDo([&](Module &M) {
+    M.setModuleIdentifier((M.getModuleIdentifier() + Suffix).str());
+  });
 
-  return NewTSMod;
+  return NewTSM;
 }
 
 namespace llvm {
@@ -119,32 +120,34 @@ void CompileOnDemandLayer::setPartitionFunction(PartitionFunction Partition) {
 
 void CompileOnDemandLayer::emit(MaterializationResponsibility R,
                                 ThreadSafeModule TSM) {
-  assert(TSM.getModule() && "Null module");
+  assert(TSM && "Null module");
 
   auto &ES = getExecutionSession();
-  auto &M = *TSM.getModule();
 
-  // First, do some cleanup on the module:
-  cleanUpModule(M);
-
-  // Now sort the callables and non-callables, build re-exports and lodge the
+  // Sort the callables and non-callables, build re-exports and lodge the
   // actual module with the implementation dylib.
   auto &PDR = getPerDylibResources(R.getTargetJITDylib());
 
-  MangleAndInterner Mangle(ES, M.getDataLayout());
   SymbolAliasMap NonCallables;
   SymbolAliasMap Callables;
-  for (auto &GV : M.global_values()) {
-    if (GV.isDeclaration() || GV.hasLocalLinkage() || GV.hasAppendingLinkage())
-      continue;
+  TSM.withModuleDo([&](Module &M) {
+    // First, do some cleanup on the module:
+    cleanUpModule(M);
 
-    auto Name = Mangle(GV.getName());
-    auto Flags = JITSymbolFlags::fromGlobalValue(GV);
-    if (Flags.isCallable())
-      Callables[Name] = SymbolAliasMapEntry(Name, Flags);
-    else
-      NonCallables[Name] = SymbolAliasMapEntry(Name, Flags);
-  }
+    MangleAndInterner Mangle(ES, M.getDataLayout());
+    for (auto &GV : M.global_values()) {
+      if (GV.isDeclaration() || GV.hasLocalLinkage() ||
+          GV.hasAppendingLinkage())
+        continue;
+
+      auto Name = Mangle(GV.getName());
+      auto Flags = JITSymbolFlags::fromGlobalValue(GV);
+      if (Flags.isCallable())
+        Callables[Name] = SymbolAliasMapEntry(Name, Flags);
+      else
+        NonCallables[Name] = SymbolAliasMapEntry(Name, Flags);
+    }
+  });
 
   // Create a partitioning materialization unit and lodge it with the
   // implementation dylib.
@@ -239,14 +242,16 @@ void CompileOnDemandLayer::emitPartition(
   //        memory manager instance to the linking layer.
 
   auto &ES = getExecutionSession();
-
   GlobalValueSet RequestedGVs;
   for (auto &Name : R.getRequestedSymbols()) {
     assert(Defs.count(Name) && "No definition for symbol");
     RequestedGVs.insert(Defs[Name]);
   }
 
-  auto GVsToExtract = Partition(RequestedGVs);
+  /// Perform partitioning with the context lock held, since the partition
+  /// function is allowed to access the globals to compute the partition.
+  auto GVsToExtract =
+      TSM.withModuleDo([&](Module &M) { return Partition(RequestedGVs); });
 
   // Take a 'None' partition to mean the whole module (as opposed to an empty
   // partition, which means "materialize nothing"). Emit the whole module
@@ -265,37 +270,46 @@ void CompileOnDemandLayer::emitPartition(
   }
 
   // Ok -- we actually need to partition the symbols. Promote the symbol
-  // linkages/names.
-  // FIXME: We apply this once per partitioning. It's safe, but overkill.
-  {
-    auto PromotedGlobals = PromoteSymbols(*TSM.getModule());
-    if (!PromotedGlobals.empty()) {
-      MangleAndInterner Mangle(ES, TSM.getModule()->getDataLayout());
-      SymbolFlagsMap SymbolFlags;
-      for (auto &GV : PromotedGlobals)
-        SymbolFlags[Mangle(GV->getName())] =
-            JITSymbolFlags::fromGlobalValue(*GV);
-      if (auto Err = R.defineMaterializing(SymbolFlags)) {
-        ES.reportError(std::move(Err));
-        R.failMaterialization();
-        return;
-      }
-    }
+  // linkages/names, expand the partition to include any required symbols
+  // (i.e. symbols that can't be separated from our partition), and
+  // then extract the partition.
+  //
+  // FIXME: We apply this promotion once per partitioning. It's safe, but
+  // overkill.
+
+  auto ExtractedTSM =
+      TSM.withModuleDo([&](Module &M) -> Expected<ThreadSafeModule> {
+        auto PromotedGlobals = PromoteSymbols(M);
+        if (!PromotedGlobals.empty()) {
+          MangleAndInterner Mangle(ES, M.getDataLayout());
+          SymbolFlagsMap SymbolFlags;
+          for (auto &GV : PromotedGlobals)
+            SymbolFlags[Mangle(GV->getName())] =
+                JITSymbolFlags::fromGlobalValue(*GV);
+          if (auto Err = R.defineMaterializing(SymbolFlags))
+            return std::move(Err);
+        }
+
+        expandPartition(*GVsToExtract);
+
+        // Extract the requested partiton (plus any necessary aliases) and
+        // put the rest back into the impl dylib.
+        auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
+          return GVsToExtract->count(&GV);
+        };
+
+        return extractSubModule(TSM, ".submodule", ShouldExtract);
+      });
+
+  if (!ExtractedTSM) {
+    ES.reportError(ExtractedTSM.takeError());
+    R.failMaterialization();
+    return;
   }
 
-  expandPartition(*GVsToExtract);
-
-  // Extract the requested partiton (plus any necessary aliases) and
-  // put the rest back into the impl dylib.
-  auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
-    return GVsToExtract->count(&GV);
-  };
-
-  auto ExtractedTSM = extractSubModule(TSM, ".submodule", ShouldExtract);
   R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
       ES, std::move(TSM), R.getVModuleKey(), *this));
-
-  BaseLayer.emit(std::move(R), std::move(ExtractedTSM));
+  BaseLayer.emit(std::move(R), std::move(*ExtractedTSM));
 }
 
 } // end namespace orc

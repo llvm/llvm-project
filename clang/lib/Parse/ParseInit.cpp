@@ -45,6 +45,7 @@ bool Parser::MayBeDesignationStart() {
 
     case tok::amp:
     case tok::kw_this:
+    case tok::star:
     case tok::identifier:
       // We have to do additional analysis, because these could be the
       // start of a constant expression or a lambda capture list.

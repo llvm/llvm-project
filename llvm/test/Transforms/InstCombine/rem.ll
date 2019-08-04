@@ -201,8 +201,8 @@ define <2 x i19> @weird_vec_power_of_2_constant_splat_divisor(<2 x i19> %A) {
 
 define i1 @test3a(i32 %A) {
 ; CHECK-LABEL: @test3a(
-; CHECK-NEXT:    [[B1:%.*]] = and i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, -8
@@ -212,8 +212,8 @@ define i1 @test3a(i32 %A) {
 
 define <2 x i1> @test3a_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test3a_vec(
-; CHECK-NEXT:    [[B1:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[B1]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = srem <2 x i32> %A, <i32 -8, i32 -8>
@@ -681,8 +681,8 @@ define <2 x i1> @test24_vec(<2 x i32> %A) {
 
 define i1 @test25(i32 %A) {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], -2147483648
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, 2147483648 ; signbit
@@ -692,8 +692,8 @@ define i1 @test25(i32 %A) {
 
 define <2 x i1> @test25_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test25_vec(
-; CHECK-NEXT:    [[B:%.*]] = srem <2 x i32> [[A:%.*]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = srem <2 x i32> %A, <i32 2147483648, i32 2147483648>
@@ -703,9 +703,10 @@ define <2 x i1> @test25_vec(<2 x i32> %A) {
 
 define i1 @test26(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[C:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = srem i32 [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[E:%.*]] = icmp ne i32 [[D]], 0
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[NOTMASK]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[E]]
 ;
   %C = shl i32 1, %B ; not a constant
@@ -729,8 +730,8 @@ define i1 @test27(i32 %A, i32* %remdst) {
 
 define i1 @test28(i32 %A) {
 ; CHECK-LABEL: @test28(
-; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], -2147483648
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, 2147483648 ; signbit

@@ -14,7 +14,7 @@ foo:
 _start:
  call foo
 
-// CHECK:      Section ({{.*}}) .rela.plt {
+// CHECK:      Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:   R_X86_64_IRELATIVE - 0x[[ADDR:.*]]
 // CHECK-NEXT: }
 

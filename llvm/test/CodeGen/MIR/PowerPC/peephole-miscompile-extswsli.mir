@@ -20,10 +20,11 @@ body:             |
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   liveins: $x3
+  ; CHECK:   [[EXTSW:%[0-9]+]]:g8rc = EXTSW $x3
   ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR [[ANDIo8_]], 2, 61
   ; CHECK:   $x3 = COPY [[RLDICR]]
-  ; CHECK:   [[EXTSWSLI:%[0-9]+]]:g8rc = EXTSWSLI $x3, 2, implicit-def $carry
-  ; CHECK:   [[ADD8_:%[0-9]+]]:g8rc = ADD8 [[COPY3]], [[EXTSWSLI]]
+  ; CHECK:   [[RLDICR1:%[0-9]+]]:g8rc = RLDICR [[EXTSW]], 2, 61
+  ; CHECK:   [[ADD8_:%[0-9]+]]:g8rc = ADD8 [[COPY3]], [[RLDICR1]]
   ; CHECK:   $x3 = COPY [[ADD8_]]
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
   ; CHECK: bb.2:

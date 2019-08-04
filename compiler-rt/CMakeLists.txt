@@ -313,12 +313,11 @@ if(MSVC)
   endif()
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
-  # VS 2015 (version 1900) added support for thread safe static initialization.
-  # However, ASan interceptors run before CRT initialization, which causes the
-  # new thread safe code to crash. Disable this feature for now.
-  if (MSVC_VERSION GREATER 1899 OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    list(APPEND SANITIZER_COMMON_CFLAGS /Zc:threadSafeInit-)
-  endif()
+
+  # Disable thread safe initialization for static locals. ASan shouldn't need
+  # it. Thread safe initialization assumes that the CRT has already been
+  # initialized, but ASan initializes before the CRT.
+  list(APPEND SANITIZER_COMMON_CFLAGS /Zc:threadSafeInit-)
 endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)

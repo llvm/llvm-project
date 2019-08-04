@@ -2119,15 +2119,12 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
     target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 }
 
-TypeSystem *Target::GetScratchTypeSystemForLanguage(Status *error,
-                                                    lldb::LanguageType language,
-                                                    bool create_on_demand) {
+llvm::Expected<TypeSystem &>
+Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
+                                        bool create_on_demand) {
   if (!m_valid)
-    return nullptr;
-
-  if (error) {
-    error->Clear();
-  }
+    return llvm::make_error<llvm::StringError>("Invalid Target",
+                                               llvm::inconvertibleErrorCode());
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2143,7 +2140,9 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(Status *error,
                                  // target language.
     } else {
       if (languages_for_expressions.empty()) {
-        return nullptr;
+        return llvm::make_error<llvm::StringError>(
+            "No expression support for any languages",
+            llvm::inconvertibleErrorCode());
       } else {
         language = *languages_for_expressions.begin();
       }
@@ -2154,16 +2153,47 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(Status *error,
                                                             create_on_demand);
 }
 
+std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
+  if (!m_valid)
+    return {};
+
+  std::vector<TypeSystem *> scratch_type_systems;
+
+  std::set<lldb::LanguageType> languages_for_types;
+  std::set<lldb::LanguageType> languages_for_expressions;
+
+  Language::GetLanguagesSupportingTypeSystems(languages_for_types,
+                                              languages_for_expressions);
+
+  for (auto lang : languages_for_expressions) {
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(lang, create_on_demand);
+    if (!type_system_or_err)
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                     type_system_or_err.takeError(),
+                     "Language '{}' has expression support but no scratch type "
+                     "system available",
+                     Language::GetNameForLanguageType(lang));
+    else
+      scratch_type_systems.emplace_back(&type_system_or_err.get());
+  }
+
+  return scratch_type_systems;
+}
+
 PersistentExpressionState *
 Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(nullptr, language, true);
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language, true);
 
-  if (type_system) {
-    return type_system->GetPersistentExpressionState();
-  } else {
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err),
+                   "Unable to get persistent expression state for language {}",
+                   Language::GetNameForLanguageType(language));
     return nullptr;
   }
+
+  return type_system_or_err->GetPersistentExpressionState();
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
@@ -2171,22 +2201,17 @@ UserExpression *Target::GetUserExpressionForLanguage(
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  Status type_system_error;
-
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
-  UserExpression *user_expr = nullptr;
-
-  if (!type_system) {
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
+        llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
-  user_expr = type_system->GetUserExpression(expr, prefix, language,
-                                             desired_type, options, ctx_obj);
+  auto *user_expr = type_system_or_err->GetUserExpression(
+      expr, prefix, language, desired_type, options, ctx_obj);
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2199,21 +2224,17 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
     lldb::LanguageType language, const CompilerType &return_type,
     const Address &function_address, const ValueList &arg_value_list,
     const char *name, Status &error) {
-  Status type_system_error;
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
-  FunctionCaller *persistent_fn = nullptr;
-
-  if (!type_system) {
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
-    return persistent_fn;
+        llvm::toString(std::move(err)).c_str());
+    return nullptr;
   }
 
-  persistent_fn = type_system->GetFunctionCaller(return_type, function_address,
-                                                 arg_value_list, name);
+  auto *persistent_fn = type_system_or_err->GetFunctionCaller(
+      return_type, function_address, arg_value_list, name);
   if (!persistent_fn)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2226,20 +2247,17 @@ UtilityFunction *
 Target::GetUtilityFunctionForLanguage(const char *text,
                                       lldb::LanguageType language,
                                       const char *name, Status &error) {
-  Status type_system_error;
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
-  UtilityFunction *utility_fn = nullptr;
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
 
-  if (!type_system) {
+  if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
         Language::GetNameForLanguageType(language),
-        type_system_error.AsCString());
-    return utility_fn;
+        llvm::toString(std::move(err)).c_str());
+    return nullptr;
   }
 
-  utility_fn = type_system->GetUtilityFunction(text, name);
+  auto *utility_fn = type_system_or_err->GetUtilityFunction(text, name);
   if (!utility_fn)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2249,12 +2267,17 @@ Target::GetUtilityFunctionForLanguage(const char *text,
 }
 
 ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand) {
-  if (m_valid) {
-    if (TypeSystem *type_system = GetScratchTypeSystemForLanguage(
-            nullptr, eLanguageTypeC, create_on_demand))
-      return llvm::dyn_cast<ClangASTContext>(type_system);
+  if (!m_valid)
+    return nullptr;
+
+  auto type_system_or_err =
+          GetScratchTypeSystemForLanguage(eLanguageTypeC, create_on_demand);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err), "Couldn't get scratch ClangASTContext");
+    return nullptr;
   }
-  return nullptr;
+  return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
 }
 
 ClangASTImporterSP Target::GetClangASTImporter() {
@@ -2348,13 +2371,19 @@ ExpressionResults Target::EvaluateExpression(
 
   // Make sure we aren't just trying to see the value of a persistent variable
   // (something like "$0")
-  lldb::ExpressionVariableSP persistent_var_sp;
   // Only check for persistent variables the expression starts with a '$'
-  if (expr[0] == '$')
-    persistent_var_sp = GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC)
-                            ->GetPersistentExpressionState()
-                            ->GetVariable(expr);
-
+  lldb::ExpressionVariableSP persistent_var_sp;
+  if (expr[0] == '$') {
+    auto type_system_or_err =
+            GetScratchTypeSystemForLanguage(eLanguageTypeC);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                     std::move(err), "Unable to get scratch type system");
+    } else {
+      persistent_var_sp =
+          type_system_or_err->GetPersistentExpressionState()->GetVariable(expr);
+    }
+  }
   if (persistent_var_sp) {
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
@@ -3202,33 +3231,51 @@ void Target::StopHook::GetDescription(Stream *s,
   s->SetIndentLevel(indent_level);
 }
 
-// class TargetProperties
-
-// clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
-    {eNoDynamicValues, "no-dynamic-values",
-     "Don't calculate the dynamic type of values"},
-    {eDynamicCanRunTarget, "run-target", "Calculate the dynamic type of values "
-                                         "even if you have to run the target."},
-    {eDynamicDontRunTarget, "no-run-target",
-     "Calculate the dynamic type of values, but don't run the target."} };
+    {
+        eNoDynamicValues,
+        "no-dynamic-values",
+        "Don't calculate the dynamic type of values",
+    },
+    {
+        eDynamicCanRunTarget,
+        "run-target",
+        "Calculate the dynamic type of values "
+        "even if you have to run the target.",
+    },
+    {
+        eDynamicDontRunTarget,
+        "no-run-target",
+        "Calculate the dynamic type of values, but don't run the target.",
+    },
+};
 
 OptionEnumValues lldb_private::GetDynamicValueTypes() {
   return OptionEnumValues(g_dynamic_value_types);
 }
 
 static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
-    {eInlineBreakpointsNever, "never", "Never look for inline breakpoint "
-                                       "locations (fastest). This setting "
-                                       "should only be used if you know that "
-                                       "no inlining occurs in your programs."},
-    {eInlineBreakpointsHeaders, "headers",
-     "Only check for inline breakpoint locations when setting breakpoints in "
-     "header files, but not when setting breakpoint in implementation source "
-     "files (default)."},
-    {eInlineBreakpointsAlways, "always",
-     "Always look for inline breakpoint locations when setting file and line "
-     "breakpoints (slower but most accurate)."} };
+    {
+        eInlineBreakpointsNever,
+        "never",
+        "Never look for inline breakpoint locations (fastest). This setting "
+        "should only be used if you know that no inlining occurs in your"
+        "programs.",
+    },
+    {
+        eInlineBreakpointsHeaders,
+        "headers",
+        "Only check for inline breakpoint locations when setting breakpoints "
+        "in header files, but not when setting breakpoint in implementation "
+        "source files (default).",
+    },
+    {
+        eInlineBreakpointsAlways,
+        "always",
+        "Always look for inline breakpoint locations when setting file and "
+        "line breakpoints (slower but most accurate).",
+    },
+};
 
 enum x86DisassemblyFlavor {
   eX86DisFlavorDefault,
@@ -3237,50 +3284,99 @@ enum x86DisassemblyFlavor {
 };
 
 static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
-    {eX86DisFlavorDefault, "default", "Disassembler default (currently att)."},
-    {eX86DisFlavorIntel, "intel", "Intel disassembler flavor."},
-    {eX86DisFlavorATT, "att", "AT&T disassembler flavor."} };
+    {
+        eX86DisFlavorDefault,
+        "default",
+        "Disassembler default (currently att).",
+    },
+    {
+        eX86DisFlavorIntel,
+        "intel",
+        "Intel disassembler flavor.",
+    },
+    {
+        eX86DisFlavorATT,
+        "att",
+        "AT&T disassembler flavor.",
+    },
+};
 
 static constexpr OptionEnumValueElement g_hex_immediate_style_values[] = {
-    {Disassembler::eHexStyleC, "c", "C-style (0xffff)."},
-    {Disassembler::eHexStyleAsm, "asm", "Asm-style (0ffffh)."} };
+    {
+        Disassembler::eHexStyleC,
+        "c",
+        "C-style (0xffff).",
+    },
+    {
+        Disassembler::eHexStyleAsm,
+        "asm",
+        "Asm-style (0ffffh).",
+    },
+};
 
 static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
-    {eLoadScriptFromSymFileTrue, "true",
-     "Load debug scripts inside symbol files"},
-    {eLoadScriptFromSymFileFalse, "false",
-     "Do not load debug scripts inside symbol files."},
-    {eLoadScriptFromSymFileWarn, "warn",
-     "Warn about debug scripts inside symbol files but do not load them."} };
+    {
+        eLoadScriptFromSymFileTrue,
+        "true",
+        "Load debug scripts inside symbol files",
+    },
+    {
+        eLoadScriptFromSymFileFalse,
+        "false",
+        "Do not load debug scripts inside symbol files.",
+    },
+    {
+        eLoadScriptFromSymFileWarn,
+        "warn",
+        "Warn about debug scripts inside symbol files but do not load them.",
+    },
+};
 
-static constexpr
-OptionEnumValueElement g_load_current_working_dir_lldbinit_values[] = {
-    {eLoadCWDlldbinitTrue, "true",
-     "Load .lldbinit files from current directory"},
-    {eLoadCWDlldbinitFalse, "false",
-     "Do not load .lldbinit files from current directory"},
-    {eLoadCWDlldbinitWarn, "warn",
-     "Warn about loading .lldbinit files from current directory"} };
+static constexpr OptionEnumValueElement g_load_cwd_lldbinit_values[] = {
+    {
+        eLoadCWDlldbinitTrue,
+        "true",
+        "Load .lldbinit files from current directory",
+    },
+    {
+        eLoadCWDlldbinitFalse,
+        "false",
+        "Do not load .lldbinit files from current directory",
+    },
+    {
+        eLoadCWDlldbinitWarn,
+        "warn",
+        "Warn about loading .lldbinit files from current directory",
+    },
+};
 
 static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
-    {eMemoryModuleLoadLevelMinimal, "minimal",
-     "Load minimal information when loading modules from memory. Currently "
-     "this setting loads sections only."},
-    {eMemoryModuleLoadLevelPartial, "partial",
-     "Load partial information when loading modules from memory. Currently "
-     "this setting loads sections and function bounds."},
-    {eMemoryModuleLoadLevelComplete, "complete",
-     "Load complete information when loading modules from memory. Currently "
-     "this setting loads sections and all symbols."} };
-
-static constexpr PropertyDefinition g_properties[] = {
-#define LLDB_PROPERTIES_target
-#include "Properties.inc"
+    {
+        eMemoryModuleLoadLevelMinimal,
+        "minimal",
+        "Load minimal information when loading modules from memory. Currently "
+        "this setting loads sections only.",
+    },
+    {
+        eMemoryModuleLoadLevelPartial,
+        "partial",
+        "Load partial information when loading modules from memory. Currently "
+        "this setting loads sections and function bounds.",
+    },
+    {
+        eMemoryModuleLoadLevelComplete,
+        "complete",
+        "Load complete information when loading modules from memory. Currently "
+        "this setting loads sections and all symbols.",
+    },
 };
+
+#define LLDB_PROPERTIES_target
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_target
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
   ePropertyExperimental,
 };
 
@@ -3328,7 +3424,7 @@ protected:
         m_got_host_env = true;
         const uint32_t idx = ePropertyInheritEnv;
         if (GetPropertyAtIndexAsBoolean(
-                nullptr, idx, g_properties[idx].default_uint_value != 0)) {
+                nullptr, idx, g_target_properties[idx].default_uint_value != 0)) {
           PlatformSP platform_sp(m_target->GetPlatform());
           if (platform_sp) {
             Environment env = platform_sp->GetEnvironment();
@@ -3356,14 +3452,12 @@ protected:
 };
 
 // TargetProperties
-static constexpr PropertyDefinition g_experimental_properties[]{
 #define LLDB_PROPERTIES_experimental
-#include "Properties.inc"
-};
+#include "TargetProperties.inc"
 
 enum {
 #define LLDB_PROPERTIES_experimental
-#include "PropertiesEnum.inc"
+#include "TargetPropertiesEnum.inc"
 };
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {
@@ -3434,7 +3528,7 @@ TargetProperties::TargetProperties(Target *target)
   } else {
     m_collection_sp =
         std::make_shared<TargetOptionValueProperties>(ConstString("target"));
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_target_properties);
     m_experimental_properties_up.reset(new TargetExperimentalProperties());
     m_collection_sp->AppendProperty(
         ConstString(Properties::GetExperimentalSettingsName()),
@@ -3503,14 +3597,14 @@ void TargetProperties::SetDefaultArchitecture(const ArchSpec &arch) {
 bool TargetProperties::GetMoveToNearestCode() const {
   const uint32_t idx = ePropertyMoveToNearestCode;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 lldb::DynamicValueType TargetProperties::GetPreferDynamicValue() const {
   const uint32_t idx = ePropertyPreferDynamic;
   return (lldb::DynamicValueType)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
@@ -3521,7 +3615,7 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 bool TargetProperties::GetPreloadSymbols() const {
   const uint32_t idx = ePropertyPreloadSymbols;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetPreloadSymbols(bool b) {
@@ -3532,7 +3626,7 @@ void TargetProperties::SetPreloadSymbols(bool b) {
 bool TargetProperties::GetDisableASLR() const {
   const uint32_t idx = ePropertyDisableASLR;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisableASLR(bool b) {
@@ -3543,7 +3637,7 @@ void TargetProperties::SetDisableASLR(bool b) {
 bool TargetProperties::GetDetachOnError() const {
   const uint32_t idx = ePropertyDetachOnError;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDetachOnError(bool b) {
@@ -3554,7 +3648,7 @@ void TargetProperties::SetDetachOnError(bool b) {
 bool TargetProperties::GetDisableSTDIO() const {
   const uint32_t idx = ePropertyDisableSTDIO;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisableSTDIO(bool b) {
@@ -3568,7 +3662,7 @@ const char *TargetProperties::GetDisassemblyFlavor() const {
 
   x86DisassemblyFlavor flavor_value =
       (x86DisassemblyFlavor)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_target_properties[idx].default_uint_value);
   return_value = g_x86_dis_flavor_value_types[flavor_value].string_value;
   return return_value;
 }
@@ -3576,7 +3670,7 @@ const char *TargetProperties::GetDisassemblyFlavor() const {
 InlineStrategy TargetProperties::GetInlineStrategy() const {
   const uint32_t idx = ePropertyInlineStrategy;
   return (InlineStrategy)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 llvm::StringRef TargetProperties::GetArg0() const {
@@ -3620,7 +3714,7 @@ void TargetProperties::SetEnvironment(Environment env) {
 bool TargetProperties::GetSkipPrologue() const {
   const uint32_t idx = ePropertySkipPrologue;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 PathMappingList &TargetProperties::GetSourcePathMap() const {
@@ -3671,55 +3765,55 @@ FileSpecList TargetProperties::GetClangModuleSearchPaths() {
 bool TargetProperties::GetEnableAutoImportClangModules() const {
   const uint32_t idx = ePropertyAutoImportClangModules;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableImportStdModule() const {
   const uint32_t idx = ePropertyImportStdModule;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableAutoApplyFixIts() const {
   const uint32_t idx = ePropertyAutoApplyFixIts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableNotifyAboutFixIts() const {
   const uint32_t idx = ePropertyNotifyAboutFixIts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableSaveObjects() const {
   const uint32_t idx = ePropertySaveObjects;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 uint32_t TargetProperties::GetMaximumSizeOfStringSummary() const {
   const uint32_t idx = ePropertyMaxSummaryLength;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 uint32_t TargetProperties::GetMaximumMemReadSize() const {
   const uint32_t idx = ePropertyMaxMemReadSize;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 FileSpec TargetProperties::GetStandardInputPath() const {
@@ -3779,52 +3873,52 @@ llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetUseHexImmediates() const {
   const uint32_t idx = ePropertyUseHexImmediates;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetUseFastStepping() const {
   const uint32_t idx = ePropertyUseFastStepping;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetDisplayExpressionsInCrashlogs() const {
   const uint32_t idx = ePropertyDisplayExpressionsInCrashlogs;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 LoadScriptFromSymFile TargetProperties::GetLoadScriptFromSymbolFile() const {
   const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
   return (LoadScriptFromSymFile)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 LoadCWDlldbinitFile TargetProperties::GetLoadCWDlldbinitFile() const {
   const uint32_t idx = ePropertyLoadCWDlldbinitFile;
   return (LoadCWDlldbinitFile)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 Disassembler::HexImmediateStyle TargetProperties::GetHexImmediateStyle() const {
   const uint32_t idx = ePropertyHexImmediateStyle;
   return (Disassembler::HexImmediateStyle)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 MemoryModuleLoadLevel TargetProperties::GetMemoryModuleLoadLevel() const {
   const uint32_t idx = ePropertyMemoryModuleLoadLevel;
   return (MemoryModuleLoadLevel)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_properties[idx].default_uint_value);
+          nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetUserSpecifiedTrapHandlerNames(Args &args) const {
@@ -3901,7 +3995,7 @@ void TargetProperties::SetProcessLaunchInfo(
 bool TargetProperties::GetRequireHardwareBreakpoints() const {
   const uint32_t idx = ePropertyRequireHardwareBreakpoints;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetRequireHardwareBreakpoints(bool b) {

@@ -163,8 +163,7 @@ void MipsRegisterBankInfo::AmbiguousRegDefUseContainer::addDefUses(
     MachineInstr *NonCopyInstr = skipCopiesOutgoing(&UseMI);
     // Copy with many uses.
     if (NonCopyInstr->getOpcode() == TargetOpcode::COPY &&
-        !TargetRegisterInfo::isPhysicalRegister(
-            NonCopyInstr->getOperand(0).getReg()))
+        !Register::isPhysicalRegister(NonCopyInstr->getOperand(0).getReg()))
       addDefUses(NonCopyInstr->getOperand(0).getReg(), MRI);
     else
       DefUses.push_back(skipCopiesOutgoing(&UseMI));
@@ -186,7 +185,7 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::skipCopiesOutgoing(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineInstr *Ret = MI;
   while (Ret->getOpcode() == TargetOpcode::COPY &&
-         !TargetRegisterInfo::isPhysicalRegister(Ret->getOperand(0).getReg()) &&
+         !Register::isPhysicalRegister(Ret->getOperand(0).getReg()) &&
          MRI.hasOneUse(Ret->getOperand(0).getReg())) {
     Ret = &(*MRI.use_instr_begin(Ret->getOperand(0).getReg()));
   }
@@ -200,7 +199,7 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::skipCopiesIncoming(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineInstr *Ret = MI;
   while (Ret->getOpcode() == TargetOpcode::COPY &&
-         !TargetRegisterInfo::isPhysicalRegister(Ret->getOperand(1).getReg()))
+         !Register::isPhysicalRegister(Ret->getOperand(1).getReg()))
     Ret = MRI.getVRegDef(Ret->getOperand(1).getReg());
   return Ret;
 }
@@ -318,8 +317,7 @@ void MipsRegisterBankInfo::TypeInfoForMF::setTypes(const MachineInstr *MI,
 
 void MipsRegisterBankInfo::TypeInfoForMF::setTypesAccordingToPhysicalRegister(
     const MachineInstr *MI, const MachineInstr *CopyInst, unsigned Op) {
-  assert((TargetRegisterInfo::isPhysicalRegister(
-             CopyInst->getOperand(Op).getReg())) &&
+  assert((Register::isPhysicalRegister(CopyInst->getOperand(Op).getReg())) &&
          "Copies of non physical registers should not be considered here.\n");
 
   const MachineFunction &MF = *CopyInst->getMF();

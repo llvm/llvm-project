@@ -56,9 +56,9 @@ class RewriterTestContext {
         llvm::MemoryBuffer::getMemBuffer(Content);
     InMemoryFileSystem->addFile(Name, 0, std::move(Source));
 
-    const FileEntry *Entry = Files.getFile(Name);
-    assert(Entry != nullptr);
-    return Sources.createFileID(Entry, SourceLocation(), SrcMgr::C_User);
+    auto Entry = Files.getFile(Name);
+    assert(Entry);
+    return Sources.createFileID(*Entry, SourceLocation(), SrcMgr::C_User);
   }
 
   // FIXME: this code is mostly a duplicate of
@@ -73,14 +73,14 @@ class RewriterTestContext {
     llvm::raw_fd_ostream OutStream(FD, true);
     OutStream << Content;
     OutStream.close();
-    const FileEntry *File = Files.getFile(Path);
-    assert(File != nullptr);
+    auto File = Files.getFile(Path);
+    assert(File);
 
     StringRef Found =
         TemporaryFiles.insert(std::make_pair(Name, Path.str())).first->second;
     assert(Found == Path);
     (void)Found;
-    return Sources.createFileID(File, SourceLocation(), SrcMgr::C_User);
+    return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
   }
 
   SourceLocation getLocation(FileID ID, unsigned Line, unsigned Column) {

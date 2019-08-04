@@ -2,7 +2,7 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10\
 // RUN:     -analyzer-checker=core,osx.coreFoundation.CFRetainRelease\
 // RUN:     -analyzer-checker=osx.cocoa.ClassRelease,osx.cocoa.RetainCount\
-// RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify=expected,C %s\
+// RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify %s\
 // RUN:     -Wno-objc-root-class -analyzer-output=plist -o %t.objc.plist
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10\
 // RUN:     -analyzer-checker=core,osx.coreFoundation.CFRetainRelease\
@@ -1231,7 +1231,7 @@ typedef __darwin_pthread_attr_t pthread_attr_t;
 typedef unsigned long __darwin_pthread_key_t;
 typedef __darwin_pthread_key_t pthread_key_t;
 
-int pthread_create(pthread_t *, const pthread_attr_t *,  // C-warning{{declaration of built-in function 'pthread_create' requires inclusion of the header <pthread.h>}}
+int pthread_create(pthread_t *, const pthread_attr_t *,
                    void *(*)(void *), void *);
 
 int pthread_setspecific(pthread_key_t key, const void *value);

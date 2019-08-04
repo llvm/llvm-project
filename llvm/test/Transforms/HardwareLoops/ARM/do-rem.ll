@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | FileCheck %s
 
 @g = common local_unnamed_addr global i32* null, align 4
 

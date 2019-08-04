@@ -184,9 +184,10 @@ void DirectoryWatcherLinux::InotifyPollingLoop() {
   // the inotify file descriptor should have the same alignment as
   // struct inotify_event.
 
-  auto ManagedBuffer =
-      llvm::make_unique<llvm::AlignedCharArray<alignof(struct inotify_event),
-                                               EventBufferLength>>();
+  struct Buffer {
+    alignas(struct inotify_event) char buffer[EventBufferLength];
+  };
+  auto ManagedBuffer = llvm::make_unique<Buffer>();
   char *const Buf = ManagedBuffer->buffer;
 
   const int EpollFD = epoll_create1(EPOLL_CLOEXEC);

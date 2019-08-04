@@ -353,12 +353,6 @@ elseif(MINGW) # FIXME: Also cygwin?
 endif()
 
 if( MSVC )
-  if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0 )
-    # For MSVC 2013, disable iterator null pointer checking in debug mode,
-    # especially so std::equal(nullptr, nullptr, nullptr) will not assert.
-    add_definitions("-D_DEBUG_POINTER_IMPL=")
-  endif()
-
   include(ChooseMSVCCRT)
 
   # Add definitions that make MSVC much less annoying.
@@ -397,16 +391,10 @@ if( MSVC )
           CMAKE_SHARED_LINKER_FLAGS)
   endif()
 
-  # /Zc:strictStrings is incompatible with VS12's (Visual Studio 2013's)
-  # debug mode headers. Instead of only enabling them in VS2013's debug mode,
-  # we'll just enable them for Visual Studio 2015 (VS 14, MSVC_VERSION 1900)
-  # and up.
-  if (NOT (MSVC_VERSION LESS 1900))
-    # Disable string literal const->non-const type conversion.
-    # "When specified, the compiler requires strict const-qualification
-    # conformance for pointers initialized by using string literals."
-    append("/Zc:strictStrings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  endif(NOT (MSVC_VERSION LESS 1900))
+  # Disable string literal const->non-const type conversion.
+  # "When specified, the compiler requires strict const-qualification
+  # conformance for pointers initialized by using string literals."
+  append("/Zc:strictStrings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # "Generate Intrinsic Functions".
   append("/Oi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

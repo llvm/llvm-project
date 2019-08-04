@@ -29,7 +29,8 @@ protected:
   DoCreateRegisterContextForFrame(StackFrame *frame) override;
 
   bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                             lldb::addr_t &pc) override;
+                             lldb::addr_t &pc,
+                             bool &behaves_like_zeroth_frame) override;
   uint32_t DoGetFrameCount() override;
 
 private:

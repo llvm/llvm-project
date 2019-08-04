@@ -347,10 +347,12 @@ f:
 }
 
 ; The callsite must execute in order for the attribute to transfer to the parent.
-; The volatile load might trap, so there's no guarantee that we'll ever get to the call.
+; The volatile load can't trap, so we can guarantee that we'll get to the call.
 
 define i8 @parent6(i8* %a, i8* %b) {
-; BOTH-LABEL: @parent6(i8* %a, i8* %b)
+; FNATTR-LABEL: @parent6(i8* nonnull %a, i8* %b)
+; FIXME: missing "nonnull"
+; ATTRIBUTOR-LABEL: @parent6(i8* %a, i8* %b)
 ; BOTH-NEXT:    [[C:%.*]] = load volatile i8, i8* %b
 ; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
 ; ATTRIBUTOR-NEXT:    call void @use1nonnull(i8* nonnull %a)

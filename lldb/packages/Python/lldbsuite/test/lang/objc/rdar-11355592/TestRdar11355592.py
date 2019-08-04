@@ -5,8 +5,6 @@ Test that we do not attempt to make a dynamic type for a 'const char*'
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

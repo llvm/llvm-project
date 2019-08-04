@@ -29,6 +29,7 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "lldb/lldb-enumerations.h"
@@ -50,14 +51,16 @@ using namespace lldb_private;
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
                        bool cfa_is_valid, addr_t pc, StackFrame::Kind kind,
+                       bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
       m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
-      m_stack_frame_kind(kind), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
-      m_mutex() {
+      m_stack_frame_kind(kind),
+      m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
+      m_variable_list_sp(), m_variable_list_value_objects(),
+      m_recognized_frame_sp(), m_disassembly(), m_mutex() {
   // If we don't have a CFA value, use the frame index for our StackID so that
   // recursive functions properly aren't confused with one another on a history
   // stack.
@@ -74,15 +77,17 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
                        const RegisterContextSP &reg_context_sp, addr_t cfa,
-                       addr_t pc, const SymbolContext *sc_ptr)
+                       addr_t pc, bool behaves_like_zeroth_frame,
+                       const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp), m_id(pc, cfa, nullptr),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
-      m_mutex() {
+      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
+      m_variable_list_sp(), m_variable_list_value_objects(),
+      m_recognized_frame_sp(), m_disassembly(), m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -98,7 +103,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
                        const RegisterContextSP &reg_context_sp, addr_t cfa,
-                       const Address &pc_addr, const SymbolContext *sc_ptr)
+                       const Address &pc_addr, bool behaves_like_zeroth_frame,
+                       const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
@@ -106,9 +112,10 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
            nullptr),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
-      m_mutex() {
+      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
+      m_variable_list_sp(), m_variable_list_value_objects(),
+      m_recognized_frame_sp(), m_disassembly(), m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -288,7 +295,7 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
     // following the function call instruction...
 
     Address lookup_addr(GetFrameCodeAddress());
-    if (m_frame_index > 0 && lookup_addr.IsValid()) {
+    if (!m_behaves_like_zeroth_frame && lookup_addr.IsValid()) {
       addr_t offset = lookup_addr.GetOffset();
       if (offset > 0) {
         lookup_addr.SetOffset(offset - 1);
@@ -1357,13 +1364,16 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
       if (target_sp->ResolveLoadAddress(base_and_offset.first->m_immediate +
                                             base_and_offset.second,
                                         addr)) {
-        TypeSystem *c_type_system =
-            target_sp->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC);
-        if (!c_type_system) {
+        auto c_type_system_or_err =
+            target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
+        if (auto err = c_type_system_or_err.takeError()) {
+          LLDB_LOG_ERROR(
+              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD),
+              std::move(err), "Unable to guess value for given address");
           return ValueObjectSP();
         } else {
           CompilerType void_ptr_type =
-              c_type_system
+              c_type_system_or_err
                   ->GetBasicTypeFromAST(lldb::BasicType::eBasicTypeChar)
                   .GetPointerType();
           return ValueObjectMemory::Create(this, "", addr, void_ptr_type);

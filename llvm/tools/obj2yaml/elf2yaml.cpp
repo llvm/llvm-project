@@ -376,8 +376,12 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
 
   if (Shdr->sh_link != ELF::SHN_UNDEF) {
     auto LinkSection = Obj.getSection(Shdr->sh_link);
-    if (LinkSection.takeError())
-      return LinkSection.takeError();
+    if (!LinkSection)
+      return make_error<StringError>(
+          "unable to resolve sh_link reference in section '" + S.Name +
+              "': " + toString(LinkSection.takeError()),
+          inconvertibleErrorCode());
+
     NameOrErr = getUniquedSectionName(*LinkSection);
     if (!NameOrErr)
       return NameOrErr.takeError();

@@ -275,7 +275,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             continue;
           // If this is a virtual register, only clobber it since it doesn't
           // have aliases.
-          if (TRI->isVirtualRegister(MO.getReg()))
+          if (Register::isVirtualRegister(MO.getReg()))
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value
@@ -296,7 +296,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
           // Don't consider SP to be clobbered by register masks.
           for (auto It : RegVars) {
             unsigned int Reg = It.first;
-            if (Reg != SP && TRI->isPhysicalRegister(Reg) &&
+            if (Reg != SP && Register::isPhysicalRegister(Reg) &&
                 MO.clobbersPhysReg(Reg))
               RegsToClobber.push_back(Reg);
           }

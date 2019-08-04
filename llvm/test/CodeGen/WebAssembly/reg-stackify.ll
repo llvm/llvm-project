@@ -655,7 +655,7 @@ define i32 @stackpointer_dependency(i8* readnone) {
 ; NOREGS-NEXT: local.tee 0
 ; NOREGS:      i32.load  0
 ; NOREGS-NEXT: i32.load  0
-; NOREGS-NEXT: i32.call_indirect
+; NOREGS-NEXT: i32.call_indirect (i32, i32) -> (i32)
 %class.call_indirect = type { i32 (...)** }
 define i32 @call_indirect_stackify(%class.call_indirect** %objptr, i32 %arg) {
   %obj = load %class.call_indirect*, %class.call_indirect** %objptr

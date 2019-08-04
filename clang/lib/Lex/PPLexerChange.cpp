@@ -206,8 +206,8 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
   StringRef FilePath = File->getDir()->getName();
   StringRef Path = FilePath;
   while (!Path.empty()) {
-    if (const DirectoryEntry *CurDir = FM.getDirectory(Path)) {
-      if (CurDir == Dir) {
+    if (auto CurDir = FM.getDirectory(Path)) {
+      if (*CurDir == Dir) {
         Result = FilePath.substr(Path.size());
         llvm::sys::path::append(Result,
                                 llvm::sys::path::filename(File->getName()));
@@ -287,12 +287,12 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
              .Default(false))
       continue;
 
-    if (const FileEntry *Header = getFileManager().getFile(Entry->path()))
-      if (!getSourceManager().hasFileInfo(Header)) {
-        if (!ModMap.isHeaderInUnavailableModule(Header)) {
+    if (auto Header = getFileManager().getFile(Entry->path()))
+      if (!getSourceManager().hasFileInfo(*Header)) {
+        if (!ModMap.isHeaderInUnavailableModule(*Header)) {
           // Find the relative path that would access this header.
           SmallString<128> RelativePath;
-          computeRelativePath(FileMgr, Dir, Header, RelativePath);
+          computeRelativePath(FileMgr, Dir, *Header, RelativePath);
           Diag(StartLoc, diag::warn_uncovered_module_header)
               << Mod.getFullModuleName() << RelativePath;
         }

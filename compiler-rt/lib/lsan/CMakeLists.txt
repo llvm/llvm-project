@@ -4,26 +4,29 @@ set(LSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF LSAN_CFLAGS)
 
 set(LSAN_COMMON_SOURCES
-  lsan_common.cc
-  lsan_common_linux.cc
-  lsan_common_mac.cc)
+  lsan_common.cpp
+  lsan_common_linux.cpp
+  lsan_common_mac.cpp
+  )
 
 set(LSAN_SOURCES
-  lsan.cc
-  lsan_allocator.cc
-  lsan_linux.cc
-  lsan_interceptors.cc
-  lsan_mac.cc
-  lsan_malloc_mac.cc
-  lsan_preinit.cc
-  lsan_thread.cc)
+  lsan.cpp
+  lsan_allocator.cpp
+  lsan_linux.cpp
+  lsan_interceptors.cpp
+  lsan_mac.cpp
+  lsan_malloc_mac.cpp
+  lsan_preinit.cpp
+  lsan_thread.cpp
+  )
 
 set(LSAN_HEADERS
   lsan.h
   lsan_allocator.h
   lsan_common.h
   lsan_flags.inc
-  lsan_thread.h)
+  lsan_thread.h
+  )
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 

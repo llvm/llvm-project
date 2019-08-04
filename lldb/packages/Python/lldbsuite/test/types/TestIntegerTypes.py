@@ -5,7 +5,6 @@ Test that variables of integer basic types are displayed correctly.
 from __future__ import print_function
 
 import AbstractBase
-import sys
 
 import lldb
 from lldbsuite.test.decorators import *

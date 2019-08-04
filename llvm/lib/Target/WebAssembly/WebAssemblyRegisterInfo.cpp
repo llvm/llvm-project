@@ -92,7 +92,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     MachineOperand &OtherMO = MI.getOperand(3 - FIOperandNum);
     if (OtherMO.isReg()) {
       unsigned OtherMOReg = OtherMO.getReg();
-      if (TargetRegisterInfo::isVirtualRegister(OtherMOReg)) {
+      if (Register::isVirtualRegister(OtherMOReg)) {
         MachineInstr *Def = MF.getRegInfo().getUniqueVRegDef(OtherMOReg);
         // TODO: For now we just opportunistically do this in the case where
         // the CONST_I32 happens to have exactly one def and one use. We

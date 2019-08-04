@@ -963,7 +963,7 @@ void DataFlowGraph::build(unsigned Options) {
 
 RegisterRef DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const {
   assert(PhysicalRegisterInfo::isRegMaskId(Reg) ||
-         TargetRegisterInfo::isPhysicalRegister(Reg));
+         Register::isPhysicalRegister(Reg));
   assert(Reg != 0);
   if (Sub != 0)
     Reg = TRI.getSubReg(Reg, Sub);
@@ -1292,7 +1292,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
       continue;
     unsigned R = Op.getReg();
-    if (!R || !TargetRegisterInfo::isPhysicalRegister(R))
+    if (!R || !Register::isPhysicalRegister(R))
       continue;
     uint16_t Flags = NodeAttrs::None;
     if (TOI.isPreserving(In, OpN)) {
@@ -1337,7 +1337,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isDef() || !Op.isImplicit())
       continue;
     unsigned R = Op.getReg();
-    if (!R || !TargetRegisterInfo::isPhysicalRegister(R) || DoneDefs.test(R))
+    if (!R || !Register::isPhysicalRegister(R) || DoneDefs.test(R))
       continue;
     RegisterRef RR = makeRegRef(Op);
     uint16_t Flags = NodeAttrs::None;
@@ -1366,7 +1366,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isUse())
       continue;
     unsigned R = Op.getReg();
-    if (!R || !TargetRegisterInfo::isPhysicalRegister(R))
+    if (!R || !Register::isPhysicalRegister(R))
       continue;
     uint16_t Flags = NodeAttrs::None;
     if (Op.isUndef())

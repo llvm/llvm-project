@@ -93,7 +93,7 @@ const RegClassWeight &R600RegisterInfo::getRegClassWeight(
 }
 
 bool R600RegisterInfo::isPhysRegLiveAcrossClauses(unsigned Reg) const {
-  assert(!TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(!Register::isVirtualRegister(Reg));
 
   switch (Reg) {
   case R600::OQAP:

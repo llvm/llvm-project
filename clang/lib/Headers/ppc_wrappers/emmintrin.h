@@ -35,6 +35,8 @@
 #ifndef EMMINTRIN_H_
 #define EMMINTRIN_H_
 
+#if defined(__linux__) && defined(__ppc64__)
+
 #include <altivec.h>
 
 /* We need definitions from the SSE header files.  */
@@ -2314,5 +2316,9 @@ _mm_castsi128_pd(__m128i __A)
 {
   return (__m128d) __A;
 }
+
+#else
+#include_next <emmintrin.h>
+#endif /* defined(__linux__) && defined(__ppc64__) */
 
 #endif /* EMMINTRIN_H_ */

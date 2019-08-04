@@ -2076,8 +2076,16 @@ public:
                                      bool &AddToScope);
   bool AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD);
 
-  bool CheckConstexprFunctionDecl(const FunctionDecl *FD);
-  bool CheckConstexprFunctionBody(const FunctionDecl *FD, Stmt *Body);
+  enum class CheckConstexprKind {
+    /// Diagnose issues that are non-constant or that are extensions.
+    Diagnose,
+    /// Identify whether this function satisfies the formal rules for constexpr
+    /// functions in the current lanugage mode (with no extensions).
+    CheckValid
+  };
+
+  bool CheckConstexprFunctionDefinition(const FunctionDecl *FD,
+                                        CheckConstexprKind Kind);
 
   void DiagnoseHiddenVirtualMethods(CXXMethodDecl *MD);
   void FindHiddenVirtualMethods(CXXMethodDecl *MD,
@@ -8183,6 +8191,11 @@ public:
                              LocalInstantiationScope *StartingScope,
                              bool InstantiatingVarTemplate = false,
                              VarTemplateSpecializationDecl *PrevVTSD = nullptr);
+
+  VarDecl *getVarTemplateSpecialization(
+      VarTemplateDecl *VarTempl, const TemplateArgumentListInfo *TemplateArgs,
+      const DeclarationNameInfo &MemberNameInfo, SourceLocation TemplateKWLoc);
+
   void InstantiateVariableInitializer(
       VarDecl *Var, VarDecl *OldVar,
       const MultiLevelTemplateArgumentList &TemplateArgs);
@@ -11123,6 +11136,7 @@ public:
   // Emitting members of dllexported classes is delayed until the class
   // (including field initializers) is fully parsed.
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
+  SmallVector<CXXMethodDecl*, 4> DelayedDllExportMemberFunctions;
 
 private:
   class SavePendingParsedClassStateRAII {

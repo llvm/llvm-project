@@ -14,8 +14,6 @@
 
     thread synopsis
 
-#define __STDCPP_THREADS__ __cplusplus
-
 namespace std
 {
 
@@ -106,8 +104,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
-
-#define __STDCPP_THREADS__ __cplusplus
 
 #ifdef _LIBCPP_HAS_NO_THREADS
 #error <thread> is not supported on this single threaded system

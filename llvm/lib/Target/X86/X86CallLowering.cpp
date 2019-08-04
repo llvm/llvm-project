@@ -301,6 +301,7 @@ struct FormalArgHandler : public IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };
@@ -375,7 +376,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 CallingConv::ID CallConv,
                                 const MachineOperand &Callee,
                                 const ArgInfo &OrigRet,
-                                ArrayRef<ArgInfo> OrigArgs) const {
+                                ArrayRef<ArgInfo> OrigArgs,
+                                const MDNode *KnownCallees) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();

@@ -135,7 +135,7 @@ public:
   }
 
   const MachineInstrBuilder &addMBB(MachineBasicBlock *MBB,
-                                    unsigned char TargetFlags = 0) const {
+                                    unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateMBB(MBB, TargetFlags));
     return *this;
   }
@@ -145,42 +145,42 @@ public:
     return *this;
   }
 
-  const MachineInstrBuilder &addConstantPoolIndex(unsigned Idx,
-                                                  int Offset = 0,
-                                          unsigned char TargetFlags = 0) const {
+  const MachineInstrBuilder &
+  addConstantPoolIndex(unsigned Idx, int Offset = 0,
+                       unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateCPI(Idx, Offset, TargetFlags));
     return *this;
   }
 
   const MachineInstrBuilder &addTargetIndex(unsigned Idx, int64_t Offset = 0,
-                                          unsigned char TargetFlags = 0) const {
+                                          unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateTargetIndex(Idx, Offset,
                                                           TargetFlags));
     return *this;
   }
 
   const MachineInstrBuilder &addJumpTableIndex(unsigned Idx,
-                                          unsigned char TargetFlags = 0) const {
+                                               unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateJTI(Idx, TargetFlags));
     return *this;
   }
 
   const MachineInstrBuilder &addGlobalAddress(const GlobalValue *GV,
                                               int64_t Offset = 0,
-                                          unsigned char TargetFlags = 0) const {
+                                              unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateGA(GV, Offset, TargetFlags));
     return *this;
   }
 
   const MachineInstrBuilder &addExternalSymbol(const char *FnName,
-                                          unsigned char TargetFlags = 0) const {
+                                               unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateES(FnName, TargetFlags));
     return *this;
   }
 
   const MachineInstrBuilder &addBlockAddress(const BlockAddress *BA,
                                              int64_t Offset = 0,
-                                          unsigned char TargetFlags = 0) const {
+                                             unsigned TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateBA(BA, Offset, TargetFlags));
     return *this;
   }
@@ -490,16 +490,13 @@ inline unsigned getRenamableRegState(bool B) {
 /// Get all register state flags from machine operand \p RegOp.
 inline unsigned getRegState(const MachineOperand &RegOp) {
   assert(RegOp.isReg() && "Not a register operand");
-  return getDefRegState(RegOp.isDef())                    |
-         getImplRegState(RegOp.isImplicit())              |
-         getKillRegState(RegOp.isKill())                  |
-         getDeadRegState(RegOp.isDead())                  |
-         getUndefRegState(RegOp.isUndef())                |
-         getInternalReadRegState(RegOp.isInternalRead())  |
-         getDebugRegState(RegOp.isDebug())                |
-         getRenamableRegState(
-             TargetRegisterInfo::isPhysicalRegister(RegOp.getReg()) &&
-             RegOp.isRenamable());
+  return getDefRegState(RegOp.isDef()) | getImplRegState(RegOp.isImplicit()) |
+         getKillRegState(RegOp.isKill()) | getDeadRegState(RegOp.isDead()) |
+         getUndefRegState(RegOp.isUndef()) |
+         getInternalReadRegState(RegOp.isInternalRead()) |
+         getDebugRegState(RegOp.isDebug()) |
+         getRenamableRegState(Register::isPhysicalRegister(RegOp.getReg()) &&
+                              RegOp.isRenamable());
 }
 
 /// Helper class for constructing bundles of MachineInstrs.

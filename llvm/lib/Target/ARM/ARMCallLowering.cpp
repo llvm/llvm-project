@@ -405,6 +405,7 @@ struct FormalArgHandler : public IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };
@@ -502,7 +503,8 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 CallingConv::ID CallConv,
                                 const MachineOperand &Callee,
                                 const ArgInfo &OrigRet,
-                                ArrayRef<ArgInfo> OrigArgs) const {
+                                ArrayRef<ArgInfo> OrigArgs,
+                                const MDNode *KnownCallees) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const auto &TLI = *getTLI<ARMTargetLowering>();
   const auto &DL = MF.getDataLayout();
@@ -531,7 +533,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.add(Callee);
   if (!IsDirect) {
     auto CalleeReg = Callee.getReg();
-    if (CalleeReg && !TRI->isPhysicalRegister(CalleeReg)) {
+    if (CalleeReg && !Register::isPhysicalRegister(CalleeReg)) {
       unsigned CalleeIdx = IsThumb ? 2 : 0;
       MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),

@@ -22,9 +22,9 @@ void IRCompileLayer::setNotifyCompiled(NotifyCompiledFunction NotifyCompiled) {
 
 void IRCompileLayer::emit(MaterializationResponsibility R,
                           ThreadSafeModule TSM) {
-  assert(TSM.getModule() && "Module must not be null");
+  assert(TSM && "Module must not be null");
 
-  if (auto Obj = Compile(*TSM.getModule())) {
+  if (auto Obj = TSM.withModuleDo(Compile)) {
     {
       std::lock_guard<std::mutex> Lock(IRLayerMutex);
       if (NotifyCompiled)
