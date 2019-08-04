@@ -604,7 +604,6 @@ private:
     const   value_type* __data;
     size_type           __size;
 };
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 
 
 // [string.view.comparison]

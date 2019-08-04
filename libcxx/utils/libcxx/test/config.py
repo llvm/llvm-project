@@ -911,7 +911,6 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wunused-variable')
         self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
         self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
-        self.cxx.addWarningFlagIfSupported('-Wctad-maybe-unsupported')
         std = self.get_lit_conf('std', None)
         if std in ['c++98', 'c++03']:
             # The '#define static_assert' provided by libc++ in C++03 mode
