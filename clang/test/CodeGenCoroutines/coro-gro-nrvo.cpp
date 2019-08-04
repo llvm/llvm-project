@@ -34,7 +34,7 @@ struct coro {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret %agg.result, i32)
+// CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret %agg.result, i32 %0)
 coro f(int) {
 // CHECK: %call = call i8* @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]
@@ -65,7 +65,7 @@ struct coro_two {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define void @_Z1hi(%struct.coro_two* noalias sret %agg.result, i32)
+// CHECK-LABEL: define void @_Z1hi(%struct.coro_two* noalias sret %agg.result, i32 %0)
  coro_two h(int) {
 
 // CHECK: %call = call i8* @_ZnwmRKSt9nothrow_t

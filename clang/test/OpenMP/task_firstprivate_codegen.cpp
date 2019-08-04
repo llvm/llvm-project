@@ -89,7 +89,7 @@ int main() {
     // LAMBDA: store double 2.0{{.+}}, double* [[G_REF]]
 
     // LAMBDA: store double* %{{.+}}, double** %{{.+}},
-    // LAMBDA: define internal i32 [[TASK_ENTRY]](i32, %{{.+}}* noalias)
+    // LAMBDA: define internal i32 [[TASK_ENTRY]](i32 %0, %{{.+}}* noalias %1)
     g = 1;
     sivar = 11;
     // LAMBDA: store double 1.0{{.+}}, double* %{{.+}},
@@ -135,7 +135,7 @@ int main() {
 
     // BLOCKS: store double* %{{.+}}, double** %{{.+}},
     // BLOCKS: store i{{[0-9]+}}* %{{.+}}, i{{[0-9]+}}** %{{.+}},
-    // BLOCKS: define internal i32 [[TASK_ENTRY]](i32, %{{.+}}* noalias)
+    // BLOCKS: define internal i32 [[TASK_ENTRY]](i32 %0, %{{.+}}* noalias %1)
     g = 1;
     sivar = 11;
     // BLOCKS: store double 1.0{{.+}}, double* %{{.+}},
@@ -267,7 +267,7 @@ int main() {
 // CHECK: ret
 //
 
-// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_MAIN_TY]]* noalias, i32** noalias, [2 x [[S_DOUBLE_TY]]]** noalias, [2 x i32]** noalias, i32** noalias, [[S_DOUBLE_TY]]** noalias)
+// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_MAIN_TY]]* noalias %0, i32** noalias %1, [2 x [[S_DOUBLE_TY]]]** noalias %2, [2 x i32]** noalias %3, i32** noalias %4, [[S_DOUBLE_TY]]** noalias %5)
 // CHECK: [[PRIVATES:%.+]] = load [[PRIVATES_MAIN_TY]]*, [[PRIVATES_MAIN_TY]]**
 // CHECK: [[PRIV_S_VAR:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i32 0, i32 0
 // CHECK: [[ARG3:%.+]] = load [2 x [[S_DOUBLE_TY]]]**, [2 x [[S_DOUBLE_TY]]]*** %{{.+}},
@@ -286,7 +286,7 @@ int main() {
 // CHECK: store i{{[0-9]+}}* [[PRIV_SIVAR]], i{{[0-9]+}}** [[ARG5]],
 // CHECK: ret void
 
-// CHECK: define internal i32 [[TASK_ENTRY]](i32, [[KMP_TASK_MAIN_TY]]* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY]](i32 %0, [[KMP_TASK_MAIN_TY]]* noalias %1)
 
 // CHECK: alloca i32*,
 // CHECK: [[PRIV_T_VAR_ADDR:%.+]] = alloca i32*,
@@ -314,7 +314,7 @@ int main() {
 
 // CHECK: ret
 
-// CHECK: define internal i32 [[DESTRUCTORS]](i32, [[KMP_TASK_MAIN_TY]]* noalias)
+// CHECK: define internal i32 [[DESTRUCTORS]](i32 %0, [[KMP_TASK_MAIN_TY]]* noalias %1)
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_MAIN_TY]], [[KMP_TASK_MAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
@@ -412,7 +412,7 @@ int main() {
 // CHECK: ret
 //
 
-// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_TMAIN_TY]]* noalias, i32** noalias, [2 x i32]** noalias, [2 x [[S_INT_TY]]]** noalias, [[S_INT_TY]]** noalias)
+// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_TMAIN_TY]]* noalias %0, i32** noalias %1, [2 x i32]** noalias %2, [2 x [[S_INT_TY]]]** noalias %3, [[S_INT_TY]]** noalias %4)
 // CHECK: [[PRIVATES:%.+]] = load [[PRIVATES_TMAIN_TY]]*, [[PRIVATES_TMAIN_TY]]**
 // CHECK: [[PRIV_T_VAR:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i32 0, i32 0
 // CHECK: [[ARG1:%.+]] = load i32**, i32*** %{{.+}},
@@ -428,7 +428,7 @@ int main() {
 // CHECK: store [[S_INT_TY]]* [[PRIV_VAR]], [[S_INT_TY]]** [[ARG4]],
 // CHECK: ret void
 
-// CHECK: define internal i32 [[TASK_ENTRY]](i32, [[KMP_TASK_TMAIN_TY]]* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY]](i32 %0, [[KMP_TASK_TMAIN_TY]]* noalias %1)
 // CHECK: alloca i32*,
 // CHECK-DAG: [[PRIV_T_VAR_ADDR:%.+]] = alloca i32*,
 // CHECK-DAG: [[PRIV_VEC_ADDR:%.+]] = alloca [2 x i32]*,
@@ -450,7 +450,7 @@ int main() {
 
 // CHECK: ret
 
-// CHECK: define internal i32 [[DESTRUCTORS]](i32, [[KMP_TASK_TMAIN_TY]]* noalias)
+// CHECK: define internal i32 [[DESTRUCTORS]](i32 %0, [[KMP_TASK_TMAIN_TY]]* noalias %1)
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3

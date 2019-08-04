@@ -201,13 +201,13 @@ void f50(struct s50 a0) { }
 struct s51 { vvbp f0; int f1; };
 void f51(struct s51 a0) { }
 
-// CHECK-LABEL: define void @f52(%struct.s52* byval(%struct.s52) align 4)
+// CHECK-LABEL: define void @f52(%struct.s52* byval(%struct.s52) align 4 %0)
 struct s52 {
   long double a;
 };
 void f52(struct s52 x) {}
 
-// CHECK-LABEL: define void @f53(%struct.s53* byval(%struct.s53) align 4)
+// CHECK-LABEL: define void @f53(%struct.s53* byval(%struct.s53) align 4 %0)
 struct __attribute__((aligned(32))) s53 {
   int x;
   int y;
@@ -229,12 +229,12 @@ v4i32 f55(v4i32 arg) { return arg+arg; }
 
 // CHECK-LABEL: define void @f56(
 // CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
-// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4,
-// CHECK: i64 %a4.coerce, %struct.s56_2* byval(%struct.s56_2) align 4,
+// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4 %0,
+// CHECK: i64 %a4.coerce, %struct.s56_2* byval(%struct.s56_2) align 4 %1,
 // CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 16 %a7,
 // CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 16 %a9,
-// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4,
-// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4)
+// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4 %2,
+// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4 %3)
 
 // CHECK:   call void (i32, ...) @f56_0(i32 1,
 // CHECK: i32 %{{[^ ]*}}, %struct.s56_0* byval(%struct.s56_0) align 4 %{{[^ ]*}},
@@ -289,7 +289,7 @@ void f58(union u58 x) {}
 struct s59 { float x __attribute((aligned(8))); };
 struct s59 f59() { while (1) {} }
 
-// CHECK-LABEL: define void @f60(%struct.s60* byval(%struct.s60) align 4, i32 %y)
+// CHECK-LABEL: define void @f60(%struct.s60* byval(%struct.s60) align 4 %0, i32 %y)
 struct s60 { int x __attribute((aligned(8))); };
 void f60(struct s60 x, int y) {}
 
@@ -298,7 +298,7 @@ typedef int T61 __attribute((vector_size(16)));
 struct s61 { T61 x; int y; };
 void f61(int x, struct s61 y) {}
 
-// CHECK-LABEL: define void @f62(i32 %x, %struct.s62* byval(%struct.s62) align 4)
+// CHECK-LABEL: define void @f62(i32 %x, %struct.s62* byval(%struct.s62) align 4 %0)
 typedef int T62 __attribute((vector_size(16)));
 struct s62 { T62 x; int y; } __attribute((packed, aligned(8)));
 void f62(int x, struct s62 y) {}

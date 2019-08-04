@@ -191,7 +191,7 @@ void test5() {
 // CHECK-NEXT:   call void @__clang_call_terminate(i8* %[[EXN]]) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
 // CHECK-NEXT:   unreachable
 
-// CHECK-LABEL: define {{.*}} void @__clang_call_terminate(i8*)
+// CHECK-LABEL: define {{.*}} void @__clang_call_terminate(i8* %0)
 // CHECK-NEXT:   call i8* @__cxa_begin_catch(i8* %{{.*}})
 // CHECK-NEXT:   call void @_ZSt9terminatev()
 // CHECK-NEXT:   unreachable

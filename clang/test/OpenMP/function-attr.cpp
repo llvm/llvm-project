@@ -14,7 +14,7 @@ struct S {
   ~S() {}
 };
 
-// CHECK: define internal void @.omp.copyprivate.copy_func(i8*, i8*) [[ATTR0:#[0-9]+]] {
+// CHECK: define internal void @.omp.copyprivate.copy_func(i8* %0, i8* %1) [[ATTR0:#[0-9]+]] {
 
 void foo0();
 
@@ -41,7 +41,7 @@ int foo2() {
   return 0;
 }
 
-// CHECK: define internal void @.omp.reduction.reduction_func(i8*, i8*) [[ATTR0]] {
+// CHECK: define internal void @.omp.reduction.reduction_func(i8* %0, i8* %1) [[ATTR0]] {
 
 float foo3(int n, float *a, float *b) {
   int i;

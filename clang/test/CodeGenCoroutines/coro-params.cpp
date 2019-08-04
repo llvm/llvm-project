@@ -95,7 +95,7 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK-NEXT: call i8* @llvm.coro.free(
 }
 
-// CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(%struct.A* %x, %struct.B*, %struct.B* %y)
+// CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(%struct.A* %x, %struct.B* %0, %struct.B* %y)
 template <typename T, typename U>
 void dependent_params(T x, U, U y) {
   // CHECK: %[[x_copy:.+]] = alloca %struct.A
@@ -148,7 +148,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_constructor, i
   };
 };
 
-// CHECK-LABEL: void @_Z38coroutine_matching_promise_constructor28promise_matching_constructorifd(i32, float, double)
+// CHECK-LABEL: void @_Z38coroutine_matching_promise_constructor28promise_matching_constructorifd(i32 %0, float %1, double %2)
 void coroutine_matching_promise_constructor(promise_matching_constructor, int, float, double) {
   // CHECK: %[[INT:.+]] = load i32, i32* %5, align 4
   // CHECK: %[[FLOAT:.+]] = load float, float* %6, align 4

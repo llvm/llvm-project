@@ -139,7 +139,7 @@ namespace test7 {
   // Check that the StringRef is passed byval instead of expanded
   // (which would split it between registers and memory).
   // rdar://problem/9686430
-  // CHECK: define void @_ZN5test71xENS_1AES0_llNS_9StringRefE({{.*}} byval({{.*}}) align 8)
+  // CHECK: define void @_ZN5test71xENS_1AES0_llNS_9StringRefE({{.*}} byval({{.*}}) align 8 {{%.*}})
 
   // And a couple extra related tests:
   A y(A, long double, long, long, StringRef) { return A(); }
@@ -147,7 +147,7 @@ namespace test7 {
   struct StringDouble {char * ptr; double d;};
   A z(A, A, A, A, A, StringDouble) { return A(); }
   A zz(A, A, A, A, StringDouble) { return A(); }
-  // CHECK: define void @_ZN5test71zENS_1AES0_S0_S0_S0_NS_12StringDoubleE({{.*}} byval({{.*}}) align 8)
+  // CHECK: define void @_ZN5test71zENS_1AES0_S0_S0_S0_NS_12StringDoubleE({{.*}} byval({{.*}}) align 8 {{%.*}})
   // CHECK: define void @_ZN5test72zzENS_1AES0_S0_S0_NS_12StringDoubleE({{.*}} i8*
 }
 
@@ -173,25 +173,25 @@ namespace test9 {
 
   struct T { void *data[2]; };
 
-  // CHECK: define void @_ZN5test93fooEPNS_1SEPNS_1TE([[S:%.*]]*, [[T:%.*]]*)
+  // CHECK: define void @_ZN5test93fooEPNS_1SEPNS_1TE([[S:%.*]]* %0, [[T:%.*]]* %1)
   void foo(S*, T*) {}
 
-  // CHECK: define void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32, i32, i32, i32, [[T]]* byval([[T]]) align 8, i8*)
+  // CHECK: define void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T]]* byval([[T]]) align 8 %4, i8* %5)
   S a(int, int, int, int, T, void*) {
     return S();
   }
 
-  // CHECK: define [[S]]* @_ZN5test91bEPNS_1SEiiiiNS_1TEPv([[S]]* {{%.*}}, i32, i32, i32, i32, [[T:%.*]]* byval([[T]]) align 8, i8*)
+  // CHECK: define [[S]]* @_ZN5test91bEPNS_1SEiiiiNS_1TEPv([[S]]* {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T:%.*]]* byval([[T]]) align 8 %4, i8* %5)
   S* b(S* sret, int, int, int, int, T, void*) {
     return sret;
   }
 
-  // CHECK: define void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32, i32, i32, i8* {{%.*}}, i8* {{%.*}}, i8*)
+  // CHECK: define void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
   S c(int, int, int, T, void*) {
     return S();
   }
 
-  // CHECK: define [[S]]* @_ZN5test91dEPNS_1SEiiiNS_1TEPv([[S]]* {{%.*}}, i32, i32, i32, i8* {{%.*}}, i8* {{%.*}}, i8*)
+  // CHECK: define [[S]]* @_ZN5test91dEPNS_1SEiiiNS_1TEPv([[S]]* {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
   S* d(S* sret, int, int, int, T, void*) {
     return sret;
   }
