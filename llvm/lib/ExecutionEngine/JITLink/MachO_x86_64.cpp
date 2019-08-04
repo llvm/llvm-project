@@ -40,8 +40,12 @@ private:
   getRelocationKind(const MachO::relocation_info &RI) {
     switch (RI.r_type) {
     case MachO::X86_64_RELOC_UNSIGNED:
-      if (!RI.r_pcrel && RI.r_length == 3)
-        return RI.r_extern ? Pointer64 : Pointer64Anon;
+      if (!RI.r_pcrel) {
+        if (RI.r_length == 3)
+          return RI.r_extern ? Pointer64 : Pointer64Anon;
+        else if (RI.r_extern && RI.r_length == 2)
+          return Pointer32;
+      }
       break;
     case MachO::X86_64_RELOC_SIGNED:
       if (RI.r_pcrel && RI.r_length == 2)
@@ -94,7 +98,7 @@ private:
         ", symbolnum=" + formatv("{0:x6}", RI.r_symbolnum) +
         ", kind=" + formatv("{0:x1}", RI.r_type) +
         ", pc_rel=" + (RI.r_pcrel ? "true" : "false") +
-        ", extern= " + (RI.r_extern ? "true" : "false") +
+        ", extern=" + (RI.r_extern ? "true" : "false") +
         ", length=" + formatv("{0:d}", RI.r_length));
   }
 
@@ -254,6 +258,13 @@ private:
         case PCRel32:
         case PCRel32GOTLoad:
         case PCRel32GOT:
+          if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
+            TargetAtom = &*TargetAtomOrErr;
+          else
+            return TargetAtomOrErr.takeError();
+          Addend = *(const ulittle32_t *)FixupContent;
+          break;
+        case Pointer32:
           if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
             TargetAtom = &*TargetAtomOrErr;
           else
@@ -526,6 +537,13 @@ private:
         *(little64_t *)FixupPtr = Value;
       break;
     }
+    case Pointer32: {
+      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
+      if (Value > std::numeric_limits<uint32_t>::max())
+        return targetOutOfRangeError(A, E);
+      *(ulittle32_t *)FixupPtr = Value;
+      break;
+    }
     default:
       llvm_unreachable("Unrecognized edge kind");
     }
@@ -565,6 +583,8 @@ StringRef getMachOX86RelocationKindName(Edge::Kind R) {
   switch (R) {
   case Branch32:
     return "Branch32";
+  case Pointer32:
+    return "Pointer32";
   case Pointer64:
     return "Pointer64";
   case Pointer64Anon:

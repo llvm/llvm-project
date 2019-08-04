@@ -90,13 +90,7 @@ inline bool isLiteral(TokenKind K) {
 }
 
 /// Return true if this is any of tok::annot_* kinds.
-inline bool isAnnotation(TokenKind K) {
-#define ANNOTATION(NAME) \
-  if (K == tok::annot_##NAME) \
-    return true;
-#include "clang/Basic/TokenKinds.def"
-  return false;
-}
+bool isAnnotation(TokenKind K);
 
 /// Return true if this is an annotation token representing a pragma.
 bool isPragmaAnnotation(TokenKind K);

@@ -28842,6 +28842,8 @@ bool X86TargetLowering::isLegalStoreImmediate(int64_t Imm) const {
 bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;
+  if (!VT1.isSimple() || !VT2.isSimple())
+    return false;
   unsigned NumBits1 = VT1.getSizeInBits();
   unsigned NumBits2 = VT2.getSizeInBits();
   return NumBits1 > NumBits2;
