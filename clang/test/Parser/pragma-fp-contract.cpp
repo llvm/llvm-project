@@ -8,7 +8,7 @@ void f1(void) {
 
 void f2(void) {
   #pragma STDC FP_CONTRACT OFF
-  #pragma STDC FP_CONTRACT ON 
+  #pragma STDC FP_CONTRACT ON
 }
 
 struct S1 {
@@ -22,4 +22,11 @@ union U1 {
   float f2;
 // expected-error@+1 {{this pragma cannot appear in union declaration}}
 #pragma STDC FP_CONTRACT ON
+};
+
+class C1 {
+  float f1;
+// expected-error@+1 {{this pragma cannot appear in class declaration}}
+#pragma STDC FP_CONTRACT ON
+  float f2;
 };
