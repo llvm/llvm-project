@@ -5,7 +5,7 @@
 
 # RUN: echo "{ global: foo1; foo3; local: *; };" > %t.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so
+# RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so --fatal-warnings
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
 # RUN: echo "# comment" > %t3.script
@@ -17,7 +17,7 @@
 ## Also check that both "global:" and "global :" forms are accepted
 # RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t4.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" >> %t4.script
-# RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so
+# RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so --fatal-warnings
 # RUN: llvm-readobj --dyn-syms %t4.so | FileCheck --check-prefix=VERDSO %s
 
 # RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t5.script

@@ -17274,8 +17274,8 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       if ((Subtarget.hasAVX() && (EltVT == MVT::f64 || EltVT == MVT::f32)) ||
           (Subtarget.hasAVX2() && EltVT == MVT::i32)) {
         SDValue N1Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, N1);
-        N2 = DAG.getIntPtrConstant(1, dl);
-        return DAG.getNode(X86ISD::BLENDI, dl, VT, N0, N1Vec, N2);
+        return DAG.getNode(X86ISD::BLENDI, dl, VT, N0, N1Vec,
+                           DAG.getConstant(1, dl, MVT::i8));
       }
     }
 
@@ -17344,14 +17344,14 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
         // But if optimizing for size and there's a load folding opportunity,
         // generate insertps because blendps does not have a 32-bit memory
         // operand form.
-        N2 = DAG.getIntPtrConstant(1, dl);
         N1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4f32, N1);
-        return DAG.getNode(X86ISD::BLENDI, dl, VT, N0, N1, N2);
+        return DAG.getNode(X86ISD::BLENDI, dl, VT, N0, N1,
+                           DAG.getConstant(1, dl, MVT::i8));
       }
-      N2 = DAG.getIntPtrConstant(IdxVal << 4, dl);
       // Create this as a scalar to vector..
       N1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4f32, N1);
-      return DAG.getNode(X86ISD::INSERTPS, dl, VT, N0, N1, N2);
+      return DAG.getNode(X86ISD::INSERTPS, dl, VT, N0, N1,
+                         DAG.getConstant(IdxVal << 4, dl, MVT::i8));
     }
 
     // PINSR* works with constant index.
@@ -18410,7 +18410,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
     // Low will be bitcasted right away, so do not bother bitcasting back to its
     // original type.
     Low = DAG.getNode(X86ISD::BLENDI, DL, VecI16VT, VecBitcast,
-                      VecCstLowBitcast, DAG.getConstant(0xaa, DL, MVT::i32));
+                      VecCstLowBitcast, DAG.getConstant(0xaa, DL, MVT::i8));
     //     uint4 hi = _mm_blend_epi16( _mm_srli_epi32(v,16),
     //                                 (uint4) 0x53000000, 0xaa);
     SDValue VecCstHighBitcast = DAG.getBitcast(VecI16VT, VecCstHigh);
@@ -18418,7 +18418,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
     // High will be bitcasted right away, so do not bother bitcasting back to
     // its original type.
     High = DAG.getNode(X86ISD::BLENDI, DL, VecI16VT, VecShiftBitcast,
-                       VecCstHighBitcast, DAG.getConstant(0xaa, DL, MVT::i32));
+                       VecCstHighBitcast, DAG.getConstant(0xaa, DL, MVT::i8));
   } else {
     SDValue VecCstMask = DAG.getConstant(0xffff, DL, VecIntVT);
     //     uint4 lo = (v & (uint4) 0xffff) | (uint4) 0x4b000000;
