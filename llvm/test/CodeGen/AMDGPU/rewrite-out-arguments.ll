@@ -153,7 +153,7 @@ define void @void_one_out_arg_i32_1_use_align(i32* align 8 %val) #0 {
 ; CHECK: ret1:
 ; CHECK-NEXT: ret %void_one_out_arg_i32_2_use { i32 9 }
 
-; CHECK-LABEL: define void @void_one_out_arg_i32_2_use(i1, i32*) #2 {
+; CHECK-LABEL: define void @void_one_out_arg_i32_2_use(i1 %0, i32* %1) #2 {
 ; CHECK-NEXT: %3 = call %void_one_out_arg_i32_2_use @void_one_out_arg_i32_2_use.body(i1 %0, i32* undef)
 ; CHECK-NEXT: %4 = extractvalue %void_one_out_arg_i32_2_use %3, 0
 ; CHECK-NEXT: store i32 %4, i32* %1, align 4
@@ -176,7 +176,7 @@ declare void @may.clobber()
 ; CHECK-NEXT: store i32 0, i32* %val
 ; CHECK-NEXT: ret %void_one_out_arg_i32_2_stores { i32 1 }
 
-; CHECK-LABEL: define void @void_one_out_arg_i32_2_stores(i32*) #2 {
+; CHECK-LABEL: define void @void_one_out_arg_i32_2_stores(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %void_one_out_arg_i32_2_stores @void_one_out_arg_i32_2_stores.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_i32_2_stores %2, 0
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -191,7 +191,7 @@ define void @void_one_out_arg_i32_2_stores(i32* %val) #0 {
 ; CHECK-NEXT: call void @may.clobber()
 ; CHECK-NEXT: ret %void_one_out_arg_i32_2_stores_clobber { i32 1 }
 
-; CHECK-LABEL: define void @void_one_out_arg_i32_2_stores_clobber(i32*) #2 {
+; CHECK-LABEL: define void @void_one_out_arg_i32_2_stores_clobber(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %void_one_out_arg_i32_2_stores_clobber @void_one_out_arg_i32_2_stores_clobber.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_i32_2_stores_clobber %2, 0
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -219,7 +219,7 @@ define void @void_one_out_arg_i32_call_may_clobber(i32* %val) #0 {
 ; CHECK-NEXT: call void @may.clobber()
 ; CHECK-NEXT: ret %void_one_out_arg_i32_pre_call_may_clobber zeroinitializer
 
-; CHECK-LABEL: @void_one_out_arg_i32_pre_call_may_clobber(i32*) #2 {
+; CHECK-LABEL: @void_one_out_arg_i32_pre_call_may_clobber(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %void_one_out_arg_i32_pre_call_may_clobber @void_one_out_arg_i32_pre_call_may_clobber.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_i32_pre_call_may_clobber %2, 0
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -278,7 +278,7 @@ ret1:
 ; CHECK-LABEL: define private %void_one_out_arg_v2i32_1_use @void_one_out_arg_v2i32_1_use.body(<2 x i32>* %val) #0 {
 ; CHECK-NEXT: ret %void_one_out_arg_v2i32_1_use { <2 x i32> <i32 17, i32 9> }
 
-; CHECK-LABEL: define void @void_one_out_arg_v2i32_1_use(<2 x i32>*) #2 {
+; CHECK-LABEL: define void @void_one_out_arg_v2i32_1_use(<2 x i32>* %0) #2 {
 ; CHECK-NEXT: %2 = call %void_one_out_arg_v2i32_1_use @void_one_out_arg_v2i32_1_use.body(<2 x i32>* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_v2i32_1_use %2, 0
 ; CHECK-NEXT: store <2 x i32> %3, <2 x i32>* %0, align 8
@@ -294,7 +294,7 @@ define void @void_one_out_arg_v2i32_1_use(<2 x i32>* %val) #0 {
 ; CHECK-NEXT: ret %void_one_out_arg_struct_1_use { %struct { i32 9, i8 99, float 4.000000e+00 } }
 
 ; Normally this is split into element accesses which we don't handle.
-; CHECK-LABEL: define void @void_one_out_arg_struct_1_use(%struct*) #2 {
+; CHECK-LABEL: define void @void_one_out_arg_struct_1_use(%struct* %0) #2 {
 ; CHECK-NEXT: %2 = call %void_one_out_arg_struct_1_use @void_one_out_arg_struct_1_use.body(%struct* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_struct_1_use %2, 0
 ; CHECK-NEXT: store %struct %3, %struct* %0, align 4
@@ -307,7 +307,7 @@ define void @void_one_out_arg_struct_1_use(%struct* %out) #0 {
 ; CHECK-LABEL: define private %i32_one_out_arg_i32_1_use @i32_one_out_arg_i32_1_use.body(i32* %val) #0 {
 ; CHECK-NEXT: ret %i32_one_out_arg_i32_1_use { i32 9, i32 24 }
 
-; CHECK-LABEL: define i32 @i32_one_out_arg_i32_1_use(i32*) #2 {
+; CHECK-LABEL: define i32 @i32_one_out_arg_i32_1_use(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %i32_one_out_arg_i32_1_use @i32_one_out_arg_i32_1_use.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %i32_one_out_arg_i32_1_use %2, 1
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -321,7 +321,7 @@ define i32 @i32_one_out_arg_i32_1_use(i32* %val) #0 {
 ; CHECK-LABEL: define private %unused_different_type @unused_different_type.body(i32* %arg0, float* nocapture %arg1) #0 {
 ; CHECK-NEXT: ret %unused_different_type { float 4.000000e+00 }
 
-; CHECK-LABEL: define void @unused_different_type(i32*, float* nocapture) #2 {
+; CHECK-LABEL: define void @unused_different_type(i32* %0, float* nocapture %1) #2 {
 ; CHECK-NEXT: %3 = call %unused_different_type @unused_different_type.body(i32* %0, float* undef)
 ; CHECK-NEXT: %4 = extractvalue %unused_different_type %3, 0
 ; CHECK-NEXT: store float %4, float* %1, align 4
@@ -350,7 +350,7 @@ define void @multiple_same_return_noalias(i32* noalias %out0, i32* noalias %out1
 ; CHECK-LABEL: define private %multiple_same_return_mayalias @multiple_same_return_mayalias.body(i32* %out0, i32* %out1) #0 {
 ; CHECK-NEXT: ret %multiple_same_return_mayalias { i32 2, i32 1 }
 
-; CHECK-LABEL: define void @multiple_same_return_mayalias(i32*, i32*) #2 {
+; CHECK-LABEL: define void @multiple_same_return_mayalias(i32* %0, i32* %1) #2 {
 ; CHECK-NEXT: %3 = call %multiple_same_return_mayalias @multiple_same_return_mayalias.body(i32* undef, i32* undef)
 ; CHECK-NEXT: %4 = extractvalue %multiple_same_return_mayalias %3, 0
 ; CHECK-NEXT: store i32 %4, i32* %0, align 4
@@ -366,7 +366,7 @@ define void @multiple_same_return_mayalias(i32* %out0, i32* %out1) #0 {
 ; CHECK-LABEL: define private %multiple_same_return_mayalias_order @multiple_same_return_mayalias_order.body(i32* %out0, i32* %out1) #0 {
 ; CHECK-NEXT: ret %multiple_same_return_mayalias_order { i32 1, i32 2 }
 
-; CHECK-LABEL: define void @multiple_same_return_mayalias_order(i32*, i32*) #2 {
+; CHECK-LABEL: define void @multiple_same_return_mayalias_order(i32* %0, i32* %1) #2 {
 ; CHECK-NEXT: %3 = call %multiple_same_return_mayalias_order @multiple_same_return_mayalias_order.body(i32* undef, i32* undef)
 ; CHECK-NEXT: %4 = extractvalue %multiple_same_return_mayalias_order %3, 0
 ; CHECK-NEXT: store i32 %4, i32* %0, align 4
@@ -401,7 +401,7 @@ endif:
 ; CHECK-LABEL: define private %i1_one_out_arg_i32_1_use @i1_one_out_arg_i32_1_use.body(i32* %val) #0 {
 ; CHECK-NEXT: ret %i1_one_out_arg_i32_1_use { i1 true, i32 24 }
 
-; CHECK-LABEL: define i1 @i1_one_out_arg_i32_1_use(i32*) #2 {
+; CHECK-LABEL: define i1 @i1_one_out_arg_i32_1_use(i32* %0) #2 {
 ; CHECK: %2 = call %i1_one_out_arg_i32_1_use @i1_one_out_arg_i32_1_use.body(i32* undef)
 ; CHECK: %3 = extractvalue %i1_one_out_arg_i32_1_use %2, 1
 ; CHECK: store i32 %3, i32* %0, align 4
@@ -418,7 +418,7 @@ define i1 @i1_one_out_arg_i32_1_use(i32* %val) #0 {
 ; CHECK-LABEL: define private %i1_zeroext_one_out_arg_i32_1_use @i1_zeroext_one_out_arg_i32_1_use.body(i32* %val) #0 {
 ; CHECK-NEXT: ret %i1_zeroext_one_out_arg_i32_1_use { i1 true, i32 24 }
 
-; CHECK-LABEL: define zeroext i1 @i1_zeroext_one_out_arg_i32_1_use(i32*) #2 {
+; CHECK-LABEL: define zeroext i1 @i1_zeroext_one_out_arg_i32_1_use(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %i1_zeroext_one_out_arg_i32_1_use @i1_zeroext_one_out_arg_i32_1_use.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %i1_zeroext_one_out_arg_i32_1_use %2, 1
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -432,7 +432,7 @@ define zeroext i1 @i1_zeroext_one_out_arg_i32_1_use(i32* %val) #0 {
 ; CHECK-LABEL: define private %i1_signext_one_out_arg_i32_1_use @i1_signext_one_out_arg_i32_1_use.body(i32* %val) #0 {
 ; CHECK-NEXT: ret %i1_signext_one_out_arg_i32_1_use { i1 true, i32 24 }
 
-; CHECK-LABEL: define signext i1 @i1_signext_one_out_arg_i32_1_use(i32*) #2 {
+; CHECK-LABEL: define signext i1 @i1_signext_one_out_arg_i32_1_use(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %i1_signext_one_out_arg_i32_1_use @i1_signext_one_out_arg_i32_1_use.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %i1_signext_one_out_arg_i32_1_use %2, 1
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -446,7 +446,7 @@ define signext i1 @i1_signext_one_out_arg_i32_1_use(i32* %val) #0 {
 ; CHECK-LABEL: define private %p1i32_noalias_one_out_arg_i32_1_use @p1i32_noalias_one_out_arg_i32_1_use.body(i32* %val) #0 {
 ; CHECK-NEXT: ret %p1i32_noalias_one_out_arg_i32_1_use { i32 addrspace(1)* null, i32 24 }
 
-; CHECK-LABEL: define noalias i32 addrspace(1)* @p1i32_noalias_one_out_arg_i32_1_use(i32*) #2 {
+; CHECK-LABEL: define noalias i32 addrspace(1)* @p1i32_noalias_one_out_arg_i32_1_use(i32* %0) #2 {
 ; CHECK-NEXT: %2 = call %p1i32_noalias_one_out_arg_i32_1_use @p1i32_noalias_one_out_arg_i32_1_use.body(i32* undef)
 ; CHECK-NEXT: %3 = extractvalue %p1i32_noalias_one_out_arg_i32_1_use %2, 1
 ; CHECK-NEXT: store i32 %3, i32* %0, align 4
@@ -466,7 +466,7 @@ define void @void_one_out_non_private_arg_i32_1_use(i32 addrspace(1)* %val) #0 {
 }
 
 ; CHECK-LABEL: define private %func_ptr_type @func_ptr_type.body(void ()** %out) #0 {
-; CHECK-LABEL: define void @func_ptr_type(void ()**) #2 {
+; CHECK-LABEL: define void @func_ptr_type(void ()** %0) #2 {
 ; CHECK: %2 = call %func_ptr_type @func_ptr_type.body(void ()** undef)
 define void @func_ptr_type(void()** %out) #0 {
   %func = load void()*, void()** undef
@@ -475,7 +475,7 @@ define void @func_ptr_type(void()** %out) #0 {
 }
 
 ; CHECK-LABEL: define private %bitcast_func_ptr_type @bitcast_func_ptr_type.body(void ()** %out) #0 {
-; CHECK-LABEL: define void @bitcast_func_ptr_type(void ()**) #2 {
+; CHECK-LABEL: define void @bitcast_func_ptr_type(void ()** %0) #2 {
 define void @bitcast_func_ptr_type(void()** %out) #0 {
   %func = load i32()*, i32()** undef
   %cast = bitcast void()** %out to i32()**
@@ -486,7 +486,7 @@ define void @bitcast_func_ptr_type(void()** %out) #0 {
 ; CHECK-LABEL: define private %out_arg_small_array @out_arg_small_array.body([4 x i32]* %val) #0 {
 ; CHECK-NEXT: ret %out_arg_small_array { [4 x i32] [i32 0, i32 1, i32 2, i32 3] }
 
-; CHECK-LABEL: define void @out_arg_small_array([4 x i32]*) #2 {
+; CHECK-LABEL: define void @out_arg_small_array([4 x i32]* %0) #2 {
 define void @out_arg_small_array([4 x i32]* %val) #0 {
   store [4 x i32] [i32 0, i32 1, i32 2, i32 3], [4 x i32]* %val
   ret void
@@ -510,7 +510,7 @@ define <16 x i32> @num_regs_return_limit(i32* %out, i32 %val) #0 {
 }
 
 ; CHECK-LABEL: define private %num_regs_reach_limit @num_regs_reach_limit.body(i32* %out, i32 %val) #0 {
-; CHECK: define [15 x i32] @num_regs_reach_limit(i32*, i32) #2 {
+; CHECK: define [15 x i32] @num_regs_reach_limit(i32* %0, i32 %1) #2 {
 ; CHECK-NEXT: call %num_regs_reach_limit @num_regs_reach_limit.body(i32* undef, i32 %1)
 define [15 x i32] @num_regs_reach_limit(i32* %out, i32 %val) #0 {
   %load = load volatile [15 x i32], [15 x i32] addrspace(1)* undef
@@ -526,7 +526,7 @@ define [15 x i32] @num_regs_reach_limit(i32* %out, i32 %val) #0 {
 ; CHECK-NEXT: %3 = insertvalue %num_regs_reach_limit_leftover %2, i32 %val0, 2
 ; CHECK-NEXT: ret %num_regs_reach_limit_leftover %3
 
-; CHECK-LABEL: define [15 x i32] @num_regs_reach_limit_leftover(i32*, i32*, i32) #2 {
+; CHECK-LABEL: define [15 x i32] @num_regs_reach_limit_leftover(i32* %0, i32* %1, i32 %2) #2 {
 ; CHECK-NEXT: %4 = call %num_regs_reach_limit_leftover @num_regs_reach_limit_leftover.body(i32* undef, i32* undef, i32 %2)
 ; CHECK-NEXT: %5 = extractvalue %num_regs_reach_limit_leftover %4, 1
 ; CHECK-NEXT: store i32 %5, i32* %0, align 4
@@ -547,7 +547,7 @@ define [15 x i32] @num_regs_reach_limit_leftover(i32* %out0, i32* %out1, i32 %va
 ; CHECK-NEXT: %1 = insertvalue %preserve_debug_info undef, i32 %arg0, 0, !dbg !11
 ; CHECK-NEXT: ret %preserve_debug_info %1, !dbg !11
 
-; CHECK-LABEL: define void @preserve_debug_info(i32, i32*) #2 !dbg !6 {
+; CHECK-LABEL: define void @preserve_debug_info(i32 %0, i32* %1) #2 !dbg !6 {
 ; CHECK-NEXT: %3 = call %preserve_debug_info @preserve_debug_info.body(i32 %0, i32* undef){{$}}
 ; CHECK-NEXT: %4 = extractvalue %preserve_debug_info %3, 0{{$}}
 ; CHECK-NEXT: store i32 %4, i32* %1, align 4{{$}}
@@ -572,7 +572,7 @@ define void @preserve_metadata(i32 %arg0, i32* %val) #0 !kernel_arg_access_qual 
 ; CHECK-NEXT: %2 = insertvalue %bitcast_pointer_v4i32_v3i32 undef, <3 x i32> %1, 0
 ; CHECK-NEXT: ret %bitcast_pointer_v4i32_v3i32 %2
 
-; CHECK-LABEL: define void @bitcast_pointer_v4i32_v3i32(<3 x i32>*) #2 {
+; CHECK-LABEL: define void @bitcast_pointer_v4i32_v3i32(<3 x i32>* %0) #2 {
 ; CHECK-NEXT: %2 = call %bitcast_pointer_v4i32_v3i32 @bitcast_pointer_v4i32_v3i32.body(<3 x i32>* undef)
 ; CHECK-NEXT: %3 = extractvalue %bitcast_pointer_v4i32_v3i32 %2, 0
 ; CHECK-NEXT: store <3 x i32> %3, <3 x i32>* %0, align 16
@@ -609,7 +609,7 @@ define void @bitcast_pointer_v4i32_v3f32(<3 x float>* %out) #0 {
 ; CHECK-NEXT: %2 = insertvalue %bitcast_pointer_i32_f32 undef, float %1, 0
 ; CHECK-NEXT: ret %bitcast_pointer_i32_f32 %2
 
-; CHECK-LABEL: define void @bitcast_pointer_i32_f32(float*) #2 {
+; CHECK-LABEL: define void @bitcast_pointer_i32_f32(float* %0) #2 {
 ; CHECK-NEXT: %2 = call %bitcast_pointer_i32_f32 @bitcast_pointer_i32_f32.body(float* undef)
 ; CHECK-NEXT: %3 = extractvalue %bitcast_pointer_i32_f32 %2, 0
 ; CHECK-NEXT: store float %3, float* %0, align 4
@@ -652,7 +652,7 @@ define void @bitcast_pointer_f16_i32(i32* %out) #0 {
 ; CHECK-NEXT: %3 = insertvalue %bitcast_struct_v3f32_v3f32 undef, %struct.v3f32 %2, 0
 ; CHECK-NEXT: ret %bitcast_struct_v3f32_v3f32 %3
 
-; CHECK-LABEL: define void @bitcast_struct_v3f32_v3f32(%struct.v3f32*, <3 x float>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_v3f32_v3f32(%struct.v3f32* %0, <3 x float> %1) #2 {
 ; CHECK-NEXT: %3 = call %bitcast_struct_v3f32_v3f32 @bitcast_struct_v3f32_v3f32.body(%struct.v3f32* undef, <3 x float> %1)
 ; CHECK-NEXT: %4 = extractvalue %bitcast_struct_v3f32_v3f32 %3, 0
 ; CHECK-NEXT: store %struct.v3f32 %4, %struct.v3f32* %0, align 16
@@ -673,7 +673,7 @@ define void @bitcast_struct_v3f32_v3f32(%struct.v3f32* %out, <3 x float> %value)
 ; CHECK-NEXT: %4 = insertvalue %bitcast_struct_v3f32_v3i32 undef, %struct.v3f32 %3, 0
 ; CHECK-NEXT: ret %bitcast_struct_v3f32_v3i32 %4
 
-; CHECK-LABEL: define void @bitcast_struct_v3f32_v3i32(%struct.v3f32*, <3 x i32>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_v3f32_v3i32(%struct.v3f32* %0, <3 x i32> %1) #2 {
 ; CHECK-NEXT: %3 = call %bitcast_struct_v3f32_v3i32 @bitcast_struct_v3f32_v3i32.body(%struct.v3f32* undef, <3 x i32> %1)
 ; CHECK-NEXT: %4 = extractvalue %bitcast_struct_v3f32_v3i32 %3, 0
 ; CHECK-NEXT: store %struct.v3f32 %4, %struct.v3f32* %0, align 16
@@ -690,7 +690,7 @@ define void @bitcast_struct_v3f32_v3i32(%struct.v3f32* %out, <3 x i32> %value) #
 ; CHECK-NEXT: %2 = insertvalue %bitcast_struct_v4f32_v4f32 undef, %struct.v4f32 %1, 0
 ; CHECK-NEXT: ret %bitcast_struct_v4f32_v4f32 %2
 
-; CHECK-LABEL: define void @bitcast_struct_v4f32_v4f32(%struct.v4f32*, <4 x float>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_v4f32_v4f32(%struct.v4f32* %0, <4 x float> %1) #2 {
 ; CHECK-NEXT: %3 = call %bitcast_struct_v4f32_v4f32 @bitcast_struct_v4f32_v4f32.body(%struct.v4f32* undef, <4 x float> %1)
 define void @bitcast_struct_v4f32_v4f32(%struct.v4f32* %out, <4 x float> %value) #0 {
   %cast = bitcast %struct.v4f32* %out to <4 x float>*
@@ -699,7 +699,7 @@ define void @bitcast_struct_v4f32_v4f32(%struct.v4f32* %out, <4 x float> %value)
 }
 
 ; CHECK-LABEL: define private %bitcast_struct_v3f32_v4i32 @bitcast_struct_v3f32_v4i32.body(%struct.v3f32* %out, <4 x i32> %value) #0 {
-; CHECK-LABEL: define void @bitcast_struct_v3f32_v4i32(%struct.v3f32*, <4 x i32>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_v3f32_v4i32(%struct.v3f32* %0, <4 x i32> %1) #2 {
 define void @bitcast_struct_v3f32_v4i32(%struct.v3f32* %out, <4 x i32> %value) #0 {
   %cast = bitcast %struct.v3f32* %out to <4 x i32>*
   store <4 x i32> %value, <4 x i32>* %cast, align 16
@@ -707,7 +707,7 @@ define void @bitcast_struct_v3f32_v4i32(%struct.v3f32* %out, <4 x i32> %value) #
 }
 
 ; CHECK-LABEL: define private %bitcast_struct_v4f32_v3f32 @bitcast_struct_v4f32_v3f32.body(%struct.v4f32* %out, <3 x float> %value) #0 {
-; CHECK-LABEL: define void @bitcast_struct_v4f32_v3f32(%struct.v4f32*, <3 x float>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_v4f32_v3f32(%struct.v4f32* %0, <3 x float> %1) #2 {
 define void @bitcast_struct_v4f32_v3f32(%struct.v4f32* %out, <3 x float> %value) #0 {
   %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast = bitcast %struct.v4f32* %out to <4 x float>*
@@ -755,7 +755,7 @@ define void @bitcast_struct_i128_v4f32(%struct.i128* %out, <4 x float> %value) #
   ret void
 }
 
-; CHECK-LABEL: define void @bitcast_struct_i128_v4f32(%struct.i128*, <4 x float>) #2 {
+; CHECK-LABEL: define void @bitcast_struct_i128_v4f32(%struct.i128* %0, <4 x float> %1) #2 {
 ; CHECK-NEXT: %3 = call %bitcast_struct_i128_v4f32 @bitcast_struct_i128_v4f32.body(%struct.i128* undef, <4 x float> %1)
 define void @bitcast_array_v4i32_v4f32([4 x i32]* %out, [4 x float] %value) #0 {
   %cast = bitcast [4 x i32]* %out to [4 x float]*

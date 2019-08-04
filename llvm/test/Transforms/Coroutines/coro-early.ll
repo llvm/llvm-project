@@ -50,7 +50,7 @@ entry:
   ret i8* %n
 }
 
-; CHECK-LABEL: define private fastcc void @NoopCoro.ResumeDestroy(%NoopCoro.Frame*) {
+; CHECK-LABEL: define private fastcc void @NoopCoro.ResumeDestroy(%NoopCoro.Frame* %0) {
 ; CHECK-NEXT: entry
 ; CHECK-NEXT:    ret void
 

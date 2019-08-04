@@ -3,8 +3,8 @@
 ; Ensure that we do not merge functions that are identical with the
 ; exception of the order of the incoming blocks to a phi.
 
-; CHECK-LABEL: define linkonce_odr hidden i1 @first(i2)
-define linkonce_odr hidden i1 @first(i2) {
+; CHECK-LABEL: define linkonce_odr hidden i1 @first(i2 %0)
+define linkonce_odr hidden i1 @first(i2 %0) {
 entry:
 ; CHECK: switch i2
   switch i2 %0, label %default [
@@ -26,8 +26,8 @@ done:
   ret i1 %result
 }
 
-; CHECK-LABEL: define linkonce_odr hidden i1 @second(i2)
-define linkonce_odr hidden i1 @second(i2) {
+; CHECK-LABEL: define linkonce_odr hidden i1 @second(i2 %0)
+define linkonce_odr hidden i1 @second(i2 %0) {
 entry:
 ; CHECK: switch i2
   switch i2 %0, label %default [

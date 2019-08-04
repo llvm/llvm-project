@@ -3,7 +3,7 @@
 
 ; Check that numbered variables in a nonzero program address space 200 can be used in a call instruction
 
-define i8 @test_unnamed(i8(i32)*, i8(i32) addrspace(42)*) {
+define i8 @test_unnamed(i8(i32)*, i8(i32) addrspace(42)* %0) {
   ; Calls with explicit address spaces are fine:
   call addrspace(0) i8 %0(i32 0)
   call addrspace(42) i8 %1(i32 0)
@@ -14,7 +14,7 @@ define i8 @test_unnamed(i8(i32)*, i8(i32) addrspace(42)*) {
 }
 
 ; PROGAS42:       target datalayout = "P42"
-; PROGAS42:       define i8 @test_unnamed(i8 (i32)*, i8 (i32) addrspace(42)*) addrspace(42) {
+; PROGAS42:       define i8 @test_unnamed(i8 (i32)* %0, i8 (i32) addrspace(42)* %1) addrspace(42) {
 ; PROGAS42-NEXT:    %3 = call addrspace(0) i8 %0(i32 0)
 ; PROGAS42-NEXT:    %4 = call addrspace(42) i8 %1(i32 0)
 ; PROGAS42-NEXT:    %5 = call addrspace(42) i8 %1(i32 0)

@@ -27,11 +27,6 @@ import time
 assert sys.version_info >= (2, 7)
 
 try:
-    exec("import __builtin__")  # To avoid IDE's grammar check
-except ImportError:
-    import builtins
-
-try:
     dict.iteritems
 except AttributeError:
     # Python 3
@@ -107,12 +102,12 @@ def die(msg):
 def ask_confirm(prompt):
     # Python 2/3 compatibility
     try:
-        input = eval("__builtin__.raw_input")
+        read_input = raw_input
     except NameError:
-        input = builtins.input
+        read_input = input
 
     while True:
-        query = input('%s (y/N): ' % (prompt))
+        query = read_input('%s (y/N): ' % (prompt))
         if query.lower() not in ['y','n', '']:
            print('Expect y or n!')
            continue
@@ -477,7 +472,7 @@ def cmd_push(args):
 
     # Ask confirmation if multiple commits are about to be pushed
     if len(revs) != 1:
-        if not ask_confirm("Are you sure?"):
+        if not ask_confirm("Are you sure you want to create %d commits?" % len(revs)):
             die("Aborting")
 
     for r in revs:

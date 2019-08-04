@@ -607,7 +607,8 @@ public:
   /// Return an assumed unique return value if a single candidate is found. If
   /// there cannot be one, return a nullptr. If it is not clear yet, return the
   /// Optional::NoneType.
-  Optional<Value *> getAssumedUniqueReturnValue(const AAIsDead *LivenessAA) const;
+  Optional<Value *>
+  getAssumedUniqueReturnValue(const AAIsDead *LivenessAA) const;
 
   /// See AbstractState::checkForallReturnedValues(...).
   bool checkForallReturnedValues(
@@ -678,7 +679,6 @@ Optional<Value *> AAReturnedValuesImpl::getAssumedUniqueReturnValue(
 
   std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> Pred =
       [&](Value &RV, const SmallPtrSetImpl<ReturnInst *> &RetInsts) -> bool {
-
     // If all ReturnInsts are dead, then ReturnValue is dead as well
     // and can be ignored.
     if (LivenessAA &&
@@ -754,7 +754,8 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     Value *RV = It.first;
 
     // Ignore dead ReturnValues.
-    if (LivenessAA && !LivenessAA->isLiveInstSet(ReturnInsts.begin(), ReturnInsts.end()))
+    if (LivenessAA &&
+        !LivenessAA->isLiveInstSet(ReturnInsts.begin(), ReturnInsts.end()))
       continue;
 
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Potentially returned value " << *RV
@@ -1615,7 +1616,7 @@ struct AAIsDeadFunction : AAIsDead, BooleanState {
     assert(I->getParent()->getParent() == &getAnchorScope() &&
            "Instruction must be in the same anchor scope function.");
 
-    if(!getAssumed())
+    if (!getAssumed())
       return false;
 
     // If it is not in AssumedLiveBlocks then it for sure dead.

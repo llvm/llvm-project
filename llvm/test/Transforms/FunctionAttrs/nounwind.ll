@@ -50,9 +50,9 @@ define void @call_non_nounwind(){
 ;     return -1;
 ; }
 
-; CHECK: define i32 @maybe_throw(i1 zeroext)
-; ATTRIBUTOR: define i32 @maybe_throw(i1 zeroext)
-define i32 @maybe_throw(i1 zeroext) {
+; CHECK: define i32 @maybe_throw(i1 zeroext %0)
+; ATTRIBUTOR: define i32 @maybe_throw(i1 zeroext %0)
+define i32 @maybe_throw(i1 zeroext %0) {
   br i1 %0, label %2, label %3
 
 2:                                                ; preds = %1
