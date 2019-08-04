@@ -369,9 +369,11 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   SourceManager &SourceMgr = Clang->getSourceManager();
   for (auto &Filename : PreambleDepCollector->getDependencies()) {
-    const FileEntry *File = Clang->getFileManager().getFile(Filename);
-    if (!File || File == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
+    auto FileOrErr = Clang->getFileManager().getFile(Filename);
+    if (!FileOrErr ||
+        *FileOrErr == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
       continue;
+    auto File = *FileOrErr;
     if (time_t ModTime = File->getModificationTime()) {
       FilesInPreamble[File->getName()] =
           PrecompiledPreamble::PreambleFileHash::createForFile(File->getSize(),

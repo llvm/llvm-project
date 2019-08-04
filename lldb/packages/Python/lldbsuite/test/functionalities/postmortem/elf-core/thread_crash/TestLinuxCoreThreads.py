@@ -4,8 +4,6 @@ Test signal reporting when debugging with linux core files.
 
 from __future__ import print_function
 
-import shutil
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *

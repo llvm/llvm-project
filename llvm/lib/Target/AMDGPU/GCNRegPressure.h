@@ -214,7 +214,7 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
   SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    auto Reg = TargetRegisterInfo::index2VirtReg(I);
+    auto Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
       continue;
     auto &LI = LIS.getInterval(Reg);

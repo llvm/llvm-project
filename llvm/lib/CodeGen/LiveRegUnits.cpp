@@ -48,7 +48,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
       if (!O->isDef() || O->isDebug())
         continue;
       unsigned Reg = O->getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (!Register::isPhysicalRegister(Reg))
         continue;
       removeReg(Reg);
     } else if (O->isRegMask())
@@ -60,7 +60,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
     if (!O->isReg() || !O->readsReg() || O->isDebug())
       continue;
     unsigned Reg = O->getReg();
-    if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (!Register::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
   }
@@ -71,7 +71,7 @@ void LiveRegUnits::accumulate(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
       unsigned Reg = O->getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (!Register::isPhysicalRegister(Reg))
         continue;
       if (!O->isDef() && !O->readsReg())
         continue;

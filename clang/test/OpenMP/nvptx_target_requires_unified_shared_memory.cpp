@@ -31,10 +31,10 @@ int bar(int n){
 }
 
 // CHECK-HOST: [[VAR:@.+]] = global double 1.000000e+01
-// CHECK-HOST: [[VAR_DECL_TGT_LINK_PTR:@.+]] = global double* [[VAR]]
+// CHECK-HOST: [[VAR_DECL_TGT_LINK_PTR:@.+]] = weak global double* [[VAR]]
 
 // CHECK-HOST: [[TO_VAR:@.+]] = global double 2.000000e+01
-// CHECK-HOST: [[VAR_DECL_TGT_TO_PTR:@.+]] = global double* [[TO_VAR]]
+// CHECK-HOST: [[VAR_DECL_TGT_TO_PTR:@.+]] = weak global double* [[TO_VAR]]
 
 // CHECK-HOST: [[OFFLOAD_SIZES:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
 // CHECK-HOST: [[OFFLOAD_MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
@@ -44,8 +44,6 @@ int bar(int n){
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [24 x i8]
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (double** [[VAR_DECL_TGT_TO_PTR]] to i8*), i8* getelementptr inbounds ([24 x i8], [24 x i8]* [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME]], i32 0, i32 0), i64 8, i32 0, i32 0 }, section ".omp_offloading.entries"
-
-// CHECK-HOST: @llvm.used = appending global [2 x i8*] [i8* bitcast (double** [[VAR_DECL_TGT_LINK_PTR]] to i8*), i8* bitcast (double** [[VAR_DECL_TGT_TO_PTR]] to i8*)], section "llvm.metadata"
 
 // CHECK-HOST: [[N_CASTED:%.+]] = alloca i64
 // CHECK-HOST: [[SUM_CASTED:%.+]] = alloca i64
@@ -75,10 +73,8 @@ int bar(int n){
 
 // CHECK-HOST: call i32 @__tgt_target(i64 -1, i8* @{{.*}}.region_id, i32 2, i8** [[BPTR7]], i8** [[BPTR8]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[OFFLOAD_SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[OFFLOAD_MAPTYPES]], i32 0, i32 0))
 
-// CHECK-DEVICE: [[VAR_LINK:@.+]] = common global double* null
-// CHECK-DEVICE: [[VAR_TO:@.+]] = common global double* null
-
-// CHECK-DEVICE: @llvm.used = appending global [2 x i8*] [i8* bitcast (double** [[VAR_LINK]] to i8*), i8* bitcast (double** [[VAR_TO]] to i8*)], section "llvm.metadata"
+// CHECK-DEVICE: [[VAR_LINK:@.+]] = weak global double* null
+// CHECK-DEVICE: [[VAR_TO:@.+]] = weak global double* null
 
 // CHECK-DEVICE: [[VAR_TO_PTR:%.+]] = load double*, double** [[VAR_TO]]
 // CHECK-DEVICE: load double, double* [[VAR_TO_PTR]]

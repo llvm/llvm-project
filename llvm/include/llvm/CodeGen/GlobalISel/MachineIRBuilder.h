@@ -489,6 +489,11 @@ public:
     return buildInstr(TargetOpcode::G_PTRTOINT, {Dst}, {Src});
   }
 
+  /// Build and insert a G_INTTOPTR instruction.
+  MachineInstrBuilder buildIntToPtr(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_INTTOPTR, {Dst}, {Src});
+  }
+
   /// Build and insert \p Dst = G_BITCAST \p Src
   MachineInstrBuilder buildBitcast(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_BITCAST, {Dst}, {Src});

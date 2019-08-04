@@ -1258,13 +1258,14 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       assert(NumOps == 3 && "Expected two source registers.");
       Register DstReg = MI.getOperand(0).getReg();
       Register DstPhys =
-        (TRI->isVirtualRegister(DstReg) ? VRM->getPhys(DstReg) : DstReg);
+          (Register::isVirtualRegister(DstReg) ? VRM->getPhys(DstReg) : DstReg);
       Register SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
                                     : ((OpNum == 1 && MI.isCommutable())
                                            ? MI.getOperand(2).getReg()
                                          : Register()));
       if (DstPhys && !SystemZ::GRH32BitRegClass.contains(DstPhys) && SrcReg &&
-          TRI->isVirtualRegister(SrcReg) && DstPhys == VRM->getPhys(SrcReg))
+          Register::isVirtualRegister(SrcReg) &&
+          DstPhys == VRM->getPhys(SrcReg))
         NeedsCommute = (OpNum == 1);
       else
         MemOpcode = -1;

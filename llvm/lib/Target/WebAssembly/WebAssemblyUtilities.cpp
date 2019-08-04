@@ -33,8 +33,7 @@ bool WebAssembly::isChild(const MachineInstr &MI,
   if (!MO.isReg() || MO.isImplicit() || !MO.isDef())
     return false;
   unsigned Reg = MO.getReg();
-  return TargetRegisterInfo::isVirtualRegister(Reg) &&
-         MFI.isVRegStackified(Reg);
+  return Register::isVirtualRegister(Reg) && MFI.isVRegStackified(Reg);
 }
 
 bool WebAssembly::mayThrow(const MachineInstr &MI) {

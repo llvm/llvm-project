@@ -55,9 +55,9 @@ private:
   // Implement DiagnosticsConsumer.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
-  void
-  onHighlightingsReady(PathRef File,
-                       std::vector<HighlightingToken> Highlightings) override;
+  void onHighlightingsReady(PathRef File,
+                            std::vector<HighlightingToken> Highlightings,
+                            int NumLines) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -138,6 +138,8 @@ private:
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
+  std::mutex HighlightingsMutex;
+  llvm::StringMap<std::vector<HighlightingToken>> FileToHighlightings;
 
   // Most code should not deal with Transport directly.
   // MessageHandler deals with incoming messages, use call() etc for outgoing.

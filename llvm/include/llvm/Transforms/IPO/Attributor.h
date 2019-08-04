@@ -269,7 +269,7 @@ struct Attributor {
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
   bool checkForAllCallSites(Function &F, std::function<bool(CallSite)> &Pred,
-                            bool RequireAllCallSites);
+                            bool RequireAllCallSites, AbstractAttribute &AA);
 
 private:
   /// The set of all abstract attributes.
@@ -692,8 +692,9 @@ struct AAReturnedValues : public AbstractAttribute {
   /// This method will evaluate \p Pred on returned values and return
   /// true if (1) all returned values are known, and (2) \p Pred returned true
   /// for all returned values.
-  virtual bool
-  checkForallReturnedValues(std::function<bool(Value &)> &Pred) const = 0;
+  virtual bool checkForallReturnedValues(
+      std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> &Pred)
+      const = 0;
 
   /// See AbstractAttribute::getAttrKind()
   Attribute::AttrKind getAttrKind() const override { return ID; }
@@ -864,6 +865,27 @@ struct AAIsDead : public AbstractAttribute {
 
   /// Returns true if \p BB is known dead.
   virtual bool isKnownDead(BasicBlock *BB) const = 0;
+
+  /// Returns true if \p I is assumed dead.
+  virtual bool isAssumedDead(Instruction *I) const = 0;
+
+  /// Returns true if \p I is known dead.
+  virtual bool isKnownDead(Instruction *I) const = 0;
+
+  /// This method is used to check if at least one instruction in a collection
+  /// of instructions is live.
+  template <typename T> bool isLiveInstSet(T begin, T end) const {
+    for (T I = begin; I != end; ++I) {
+      assert(isa<Instruction>(*I) && "It has to be collection of Instructions");
+      assert((*I)->getParent()->getParent() == &getAnchorScope() &&
+             "Instruction must be in the same anchor scope function.");
+
+      if (!isAssumedDead(*I))
+        return true;
+    }
+
+    return false;
+  }
 };
 
 /// An abstract interface for all dereferenceable attribute.

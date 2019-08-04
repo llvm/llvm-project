@@ -199,9 +199,11 @@ def int_amdgcn_wavefrontsize :
 // The first parameter is s_sendmsg immediate (i16),
 // the second one is copied to m0
 def int_amdgcn_s_sendmsg : GCCBuiltin<"__builtin_amdgcn_s_sendmsg">,
-  Intrinsic <[], [llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, IntrInaccessibleMemOnly]>;
+  Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
+  [ImmArg<0>, IntrNoMem, IntrHasSideEffects]>;
 def int_amdgcn_s_sendmsghalt : GCCBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
-  Intrinsic <[], [llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, IntrInaccessibleMemOnly]>;
+  Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
+  [ImmArg<0>, IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
   Intrinsic<[], [], [IntrConvergent]>;

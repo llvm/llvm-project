@@ -2450,7 +2450,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = std::numeric_limits<int>::max();
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(VR))
+    if (!Register::isVirtualRegister(VR))
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -14976,7 +14976,8 @@ const char *ARMTargetLowering::LowerXConstraint(EVT ConstraintVT) const {
 /// constraint it is for this target.
 ARMTargetLowering::ConstraintType
 ARMTargetLowering::getConstraintType(StringRef Constraint) const {
-  if (Constraint.size() == 1) {
+  unsigned S = Constraint.size();
+  if (S == 1) {
     switch (Constraint[0]) {
     default:  break;
     case 'l': return C_RegisterClass;
@@ -14984,12 +14985,12 @@ ARMTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'h': return C_RegisterClass;
     case 'x': return C_RegisterClass;
     case 't': return C_RegisterClass;
-    case 'j': return C_Other; // Constant for movw.
-      // An address with a single base register. Due to the way we
-      // currently handle addresses it is the same as an 'r' memory constraint.
+    case 'j': return C_Immediate; // Constant for movw.
+    // An address with a single base register. Due to the way we
+    // currently handle addresses it is the same as an 'r' memory constraint.
     case 'Q': return C_Memory;
     }
-  } else if (Constraint.size() == 2) {
+  } else if (S == 2) {
     switch (Constraint[0]) {
     default: break;
     case 'T': return C_RegisterClass;

@@ -133,7 +133,7 @@ INITIALIZE_PASS_END(HexagonGenPredicate, "hexagon-gen-pred",
   "Hexagon generate predicate operations", false, false)
 
 bool HexagonGenPredicate::isPredReg(unsigned R) {
-  if (!TargetRegisterInfo::isVirtualRegister(R))
+  if (!Register::isVirtualRegister(R))
     return false;
   const TargetRegisterClass *RC = MRI->getRegClass(R);
   return RC == &Hexagon::PredRegsRegClass;
@@ -213,7 +213,7 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
         case TargetOpcode::COPY:
           if (isPredReg(MI->getOperand(1).getReg())) {
             RegisterSubReg RD = MI->getOperand(0);
-            if (TargetRegisterInfo::isVirtualRegister(RD.R))
+            if (Register::isVirtualRegister(RD.R))
               PredGPRs.insert(RD);
           }
           break;
@@ -245,7 +245,7 @@ RegisterSubReg HexagonGenPredicate::getPredRegFor(const RegisterSubReg &Reg) {
   // Create a predicate register for a given Reg. The newly created register
   // will have its value copied from Reg, so that it can be later used as
   // an operand in other instructions.
-  assert(TargetRegisterInfo::isVirtualRegister(Reg.R));
+  assert(Register::isVirtualRegister(Reg.R));
   RegToRegMap::iterator F = G2P.find(Reg);
   if (F != G2P.end())
     return F->second;
@@ -471,9 +471,9 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
         continue;
       RegisterSubReg DR = MI.getOperand(0);
       RegisterSubReg SR = MI.getOperand(1);
-      if (!TargetRegisterInfo::isVirtualRegister(DR.R))
+      if (!Register::isVirtualRegister(DR.R))
         continue;
-      if (!TargetRegisterInfo::isVirtualRegister(SR.R))
+      if (!Register::isVirtualRegister(SR.R))
         continue;
       if (MRI->getRegClass(DR.R) != PredRC)
         continue;

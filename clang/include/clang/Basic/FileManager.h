@@ -132,20 +132,24 @@ class FileManager : public RefCountedBase<FileManager> {
   SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
 
   /// A cache that maps paths to directory entries (either real or
-  /// virtual) we have looked up
+  /// virtual) we have looked up, or an error that occurred when we looked up
+  /// the directory.
   ///
   /// The actual Entries for real directories/files are
   /// owned by UniqueRealDirs/UniqueRealFiles above, while the Entries
   /// for virtual directories/files are owned by
   /// VirtualDirectoryEntries/VirtualFileEntries above.
   ///
-  llvm::StringMap<DirectoryEntry*, llvm::BumpPtrAllocator> SeenDirEntries;
+  llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
+  SeenDirEntries;
 
   /// A cache that maps paths to file entries (either real or
-  /// virtual) we have looked up.
+  /// virtual) we have looked up, or an error that occurred when we looked up
+  /// the file.
   ///
   /// \see SeenDirEntries
-  llvm::StringMap<FileEntry*, llvm::BumpPtrAllocator> SeenFileEntries;
+  llvm::StringMap<llvm::ErrorOr<FileEntry &>, llvm::BumpPtrAllocator>
+  SeenFileEntries;
 
   /// The canonical names of directories.
   llvm::DenseMap<const DirectoryEntry *, llvm::StringRef> CanonicalDirNames;
@@ -164,8 +168,9 @@ class FileManager : public RefCountedBase<FileManager> {
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
 
-  bool getStatValue(StringRef Path, llvm::vfs::Status &Status, bool isFile,
-                    std::unique_ptr<llvm::vfs::File> *F);
+  std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
+                               bool isFile,
+                               std::unique_ptr<llvm::vfs::File> *F);
 
   /// Add all ancestors of the given path (pointing to either a file
   /// or a directory) as virtual directories.
@@ -198,24 +203,27 @@ public:
   /// Lookup, cache, and verify the specified directory (real or
   /// virtual).
   ///
-  /// This returns NULL if the directory doesn't exist.
+  /// This returns a \c std::error_code if there was an error reading the
+  /// directory. If there is no error, the DirectoryEntry is guaranteed to be
+  /// non-NULL.
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
-  const DirectoryEntry *getDirectory(StringRef DirName,
-                                     bool CacheFailure = true);
+  llvm::ErrorOr<const DirectoryEntry *>
+  getDirectory(StringRef DirName, bool CacheFailure = true);
 
   /// Lookup, cache, and verify the specified file (real or
   /// virtual).
   ///
-  /// This returns NULL if the file doesn't exist.
+  /// This returns a \c std::error_code if there was an error loading the file.
+  /// If there is no error, the FileEntry is guaranteed to be non-NULL.
   ///
   /// \param OpenFile if true and the file exists, it will be opened.
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
-  const FileEntry *getFile(StringRef Filename, bool OpenFile = false,
-                           bool CacheFailure = true);
+  llvm::ErrorOr<const FileEntry *>
+  getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
 
   /// Returns the current file system options
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
@@ -243,8 +251,9 @@ public:
   /// If the path is relative, it will be resolved against the WorkingDir of the
   /// FileManager's FileSystemOptions.
   ///
-  /// \returns false on success, true on error.
-  bool getNoncachedStatValue(StringRef Path, llvm::vfs::Status &Result);
+  /// \returns a \c std::error_code describing an error, if there was one
+  std::error_code getNoncachedStatValue(StringRef Path,
+                                        llvm::vfs::Status &Result);
 
   /// Remove the real file \p Entry from the cache.
   void invalidateCache(const FileEntry *Entry);

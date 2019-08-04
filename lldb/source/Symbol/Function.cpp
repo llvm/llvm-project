@@ -428,14 +428,8 @@ CompilerDeclContext Function::GetDeclContext() {
   ModuleSP module_sp = CalculateSymbolContextModule();
 
   if (module_sp) {
-    SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-
-    if (sym_vendor) {
-      SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-
-      if (sym_file)
-        return sym_file->GetDeclContextForUID(GetID());
-    }
+    if (SymbolFile *sym_file = module_sp->GetSymbolFile())
+      return sym_file->GetDeclContextForUID(GetID());
   }
   return CompilerDeclContext();
 }
@@ -449,12 +443,7 @@ Type *Function::GetType() {
     if (!sc.module_sp)
       return nullptr;
 
-    SymbolVendor *sym_vendor = sc.module_sp->GetSymbolVendor();
-
-    if (sym_vendor == nullptr)
-      return nullptr;
-
-    SymbolFile *sym_file = sym_vendor->GetSymbolFile();
+    SymbolFile *sym_file = sc.module_sp->GetSymbolFile();
 
     if (sym_file == nullptr)
       return nullptr;

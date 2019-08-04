@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify -Wlogical-op-parentheses %s
 
 // PR16930, PR16727:
 template<class Foo>

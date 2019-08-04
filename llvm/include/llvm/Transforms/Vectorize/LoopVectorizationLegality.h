@@ -55,7 +55,8 @@ OptimizationRemarkAnalysis createLVMissedAnalysis(const char *PassName,
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind { HK_WIDTH, HK_UNROLL, HK_FORCE, HK_ISVECTORIZED };
+  enum HintKind { HK_WIDTH, HK_UNROLL, HK_FORCE, HK_ISVECTORIZED,
+                  HK_PREDICATE };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -80,6 +81,9 @@ class LoopVectorizeHints {
 
   /// Already Vectorized
   Hint IsVectorized;
+
+  /// Vector Predicate
+  Hint Predicate;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -109,6 +113,7 @@ public:
   unsigned getWidth() const { return Width.Value; }
   unsigned getInterleave() const { return Interleave.Value; }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
+  unsigned getPredicate() const { return Predicate.Value; }
   enum ForceKind getForce() const {
     if ((ForceKind)Force.Value == FK_Undefined &&
         hasDisableAllTransformsHint(TheLoop))

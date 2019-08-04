@@ -57,41 +57,44 @@ macro(add_scudo_unittest testname)
 endmacro()
 
 set(SCUDO_UNIT_TEST_SOURCES
-  atomic_test.cc
-  bytemap_test.cc
-  checksum_test.cc
-  chunk_test.cc
-  combined_test.cc
-  flags_test.cc
-  list_test.cc
-  map_test.cc
-  mutex_test.cc
-  primary_test.cc
-  quarantine_test.cc
-  release_test.cc
-  report_test.cc
-  secondary_test.cc
-  size_class_map_test.cc
-  stats_test.cc
-  strings_test.cc
-  tsd_test.cc
-  vector_test.cc
-  scudo_unit_test_main.cc)
+  atomic_test.cpp
+  bytemap_test.cpp
+  checksum_test.cpp
+  chunk_test.cpp
+  combined_test.cpp
+  flags_test.cpp
+  list_test.cpp
+  map_test.cpp
+  mutex_test.cpp
+  primary_test.cpp
+  quarantine_test.cpp
+  release_test.cpp
+  report_test.cpp
+  secondary_test.cpp
+  size_class_map_test.cpp
+  stats_test.cpp
+  strings_test.cpp
+  tsd_test.cpp
+  vector_test.cpp
+  scudo_unit_test_main.cpp
+  )
 
 add_scudo_unittest(ScudoUnitTest
   SOURCES ${SCUDO_UNIT_TEST_SOURCES})
 
 set(SCUDO_C_UNIT_TEST_SOURCES
-  wrappers_c_test.cc
-  scudo_unit_test_main.cc)
+  wrappers_c_test.cpp
+  scudo_unit_test_main.cpp
+  )
 
 add_scudo_unittest(ScudoCUnitTest
   SOURCES ${SCUDO_C_UNIT_TEST_SOURCES}
   ADDITIONAL_RTOBJECTS RTScudoStandaloneCWrappers)
 
 set(SCUDO_CXX_UNIT_TEST_SOURCES
-  wrappers_cpp_test.cc
-  scudo_unit_test_main.cc)
+  wrappers_cpp_test.cpp
+  scudo_unit_test_main.cpp
+  )
 
 add_scudo_unittest(ScudoCxxUnitTest
   SOURCES ${SCUDO_CXX_UNIT_TEST_SOURCES}

@@ -139,8 +139,8 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src.getReg();
         // Just handle virtual registers.
-        if (TargetRegisterInfo::isVirtualRegister(DstReg) &&
-            TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+        if (Register::isVirtualRegister(DstReg) &&
+            Register::isVirtualRegister(SrcReg)) {
           // Map the following:
           // %170 = SXTW %166
           // PeepholeMap[170] = %166
@@ -188,8 +188,8 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src.getReg();
         // Just handle virtual registers.
-        if (TargetRegisterInfo::isVirtualRegister(DstReg) &&
-            TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+        if (Register::isVirtualRegister(DstReg) &&
+            Register::isVirtualRegister(SrcReg)) {
           // Map the following:
           // %170 = NOT_xx %166
           // PeepholeMap[170] = %166
@@ -210,8 +210,8 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src.getReg();
-        if (TargetRegisterInfo::isVirtualRegister(DstReg) &&
-            TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+        if (Register::isVirtualRegister(DstReg) &&
+            Register::isVirtualRegister(SrcReg)) {
           // Try to find in the map.
           if (unsigned PeepholeSrc = PeepholeMap.lookup(SrcReg)) {
             // Change the 1st operand.
@@ -242,7 +242,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
           if (RC0->getID() == Hexagon::PredRegsRegClassID) {
             // Handle instructions that have a prediate register in op0
             // (most cases of predicable instructions).
-            if (TargetRegisterInfo::isVirtualRegister(Reg0)) {
+            if (Register::isVirtualRegister(Reg0)) {
               // Try to find in the map.
               if (unsigned PeepholeSrc = PeepholeMap.lookup(Reg0)) {
                 // Change the 1st operand and, flip the opcode.

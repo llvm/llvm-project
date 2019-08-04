@@ -139,8 +139,7 @@ static bool dominatesAllUsesOf(const MachineInstr *MI, unsigned VReg,
                                MachineDominatorTree *MDT,
                                MachineRegisterInfo *MRI) {
 
-  assert(TargetRegisterInfo::isVirtualRegister(VReg) &&
-         "Expected virtual register!");
+  assert(Register::isVirtualRegister(VReg) && "Expected virtual register!");
 
   for (auto it = MRI->use_nodbg_begin(VReg), end = MRI->use_nodbg_end();
        it != end; ++it) {
@@ -206,8 +205,7 @@ MachineInstr *ARCOptAddrMode::tryToCombine(MachineInstr &Ldst) {
   }
 
   unsigned B = Base.getReg();
-  if (TargetRegisterInfo::isStackSlot(B) ||
-      !TargetRegisterInfo::isVirtualRegister(B)) {
+  if (Register::isStackSlot(B) || !Register::isVirtualRegister(B)) {
     LLVM_DEBUG(dbgs() << "[ABAW] Base is not VReg\n");
     return nullptr;
   }

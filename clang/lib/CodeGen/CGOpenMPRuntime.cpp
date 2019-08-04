@@ -2552,6 +2552,32 @@ CGOpenMPRuntime::createDispatchNextFunction(unsigned IVSize, bool IVSigned) {
   return CGM.CreateRuntimeFunction(FnTy, Name);
 }
 
+/// Obtain information that uniquely identifies a target entry. This
+/// consists of the file and device IDs as well as line number associated with
+/// the relevant entry source location.
+static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
+                                     unsigned &DeviceID, unsigned &FileID,
+                                     unsigned &LineNum) {
+  SourceManager &SM = C.getSourceManager();
+
+  // The loc should be always valid and have a file ID (the user cannot use
+  // #pragma directives in macros)
+
+  assert(Loc.isValid() && "Source location is expected to be always valid.");
+
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+  assert(PLoc.isValid() && "Source location is expected to be always valid.");
+
+  llvm::sys::fs::UniqueID ID;
+  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
+    SM.getDiagnostics().Report(diag::err_cannot_open_file)
+        << PLoc.getFilename() << EC.message();
+
+  DeviceID = ID.getDevice();
+  FileID = ID.getFile();
+  LineNum = PLoc.getLine();
+}
+
 Address CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
   if (CGM.getLangOpts().OpenMPSimd)
     return Address::invalid();
@@ -2563,19 +2589,27 @@ Address CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
     SmallString<64> PtrName;
     {
       llvm::raw_svector_ostream OS(PtrName);
-      OS << CGM.getMangledName(GlobalDecl(VD)) << "_decl_tgt_ref_ptr";
+      OS << CGM.getMangledName(GlobalDecl(VD));
+      if (!VD->isExternallyVisible()) {
+        unsigned DeviceID, FileID, Line;
+        getTargetEntryUniqueInfo(CGM.getContext(),
+                                 VD->getCanonicalDecl()->getBeginLoc(),
+                                 DeviceID, FileID, Line);
+        OS << llvm::format("_%x", FileID);
+      }
+      OS << "_decl_tgt_ref_ptr";
     }
     llvm::Value *Ptr = CGM.getModule().getNamedValue(PtrName);
     if (!Ptr) {
       QualType PtrTy = CGM.getContext().getPointerType(VD->getType());
       Ptr = getOrCreateInternalVariable(CGM.getTypes().ConvertTypeForMem(PtrTy),
                                         PtrName);
-      if (!CGM.getLangOpts().OpenMPIsDevice) {
-        auto *GV = cast<llvm::GlobalVariable>(Ptr);
-        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+
+      auto *GV = cast<llvm::GlobalVariable>(Ptr);
+      GV->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
+
+      if (!CGM.getLangOpts().OpenMPIsDevice)
         GV->setInitializer(CGM.GetAddrOfGlobal(VD));
-      }
-      CGM.addUsedGlobal(cast<llvm::GlobalValue>(Ptr));
       registerTargetGlobalVariable(VD, cast<llvm::Constant>(Ptr));
     }
     return Address(Ptr, CGM.getContext().getDeclAlign(VD));
@@ -2747,32 +2781,6 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     emitThreadPrivateVarInit(*CGF, VDAddr, Ctor, CopyCtor, Dtor, Loc);
   }
   return nullptr;
-}
-
-/// Obtain information that uniquely identifies a target entry. This
-/// consists of the file and device IDs as well as line number associated with
-/// the relevant entry source location.
-static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
-                                     unsigned &DeviceID, unsigned &FileID,
-                                     unsigned &LineNum) {
-  SourceManager &SM = C.getSourceManager();
-
-  // The loc should be always valid and have a file ID (the user cannot use
-  // #pragma directives in macros)
-
-  assert(Loc.isValid() && "Source location is expected to be always valid.");
-
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-  assert(PLoc.isValid() && "Source location is expected to be always valid.");
-
-  llvm::sys::fs::UniqueID ID;
-  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
-    SM.getDiagnostics().Report(diag::err_cannot_open_file)
-        << PLoc.getFilename() << EC.message();
-
-  DeviceID = ID.getDevice();
-  FileID = ID.getFile();
-  LineNum = PLoc.getLine();
 }
 
 bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,

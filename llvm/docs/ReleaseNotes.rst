@@ -53,6 +53,13 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* Unnamed function arguments now get printed with their automatically
+  generated name (e.g. "i32 %0") in definitions. This may require front-ends
+  to update their tests; if so there is a script utils/add_argument_names.py
+  that correctly converted 80-90% of Clang tests. Some manual work will almost
+  certainly still be needed.
+
+
 Changes to building LLVM
 ------------------------
 

@@ -3,7 +3,7 @@
 // CHECK: OK
 // This test is failing on powerpc64 (VMA=44). After calling pthread_cancel,
 // the Thread-specific data destructors are not called, so the destructor 
-// "thread_finalize" (defined in tsan_interceptors.cc) can not set the status
+// "thread_finalize" (defined in tsan_interceptors.cpp) can not set the status
 // of the thread to "ThreadStatusFinished" failing a check in "SetJoined" 
 // (defined in sanitizer_thread_registry.cpp). It might seem a bug on glibc,
 // however the same version GLIBC-2.17 will not make fail the test on 

@@ -149,7 +149,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     Def->OutputFile = Arg->getValue();
 
   if (Def->OutputFile.empty()) {
-    llvm::errs() << "no output file specified\n";
+    llvm::errs() << "no DLL name specified\n";
     return 1;
   }
 

@@ -81,6 +81,7 @@ public:
 };
 
 struct malloc_allocator_base {
+    static size_t outstanding_bytes;
     static size_t alloc_count;
     static size_t dealloc_count;
     static bool disable_default_constructor;
@@ -93,12 +94,13 @@ struct malloc_allocator_base {
     static void reset() {
         assert(outstanding_alloc() == 0);
         disable_default_constructor = false;
+        outstanding_bytes = 0;
         alloc_count = 0;
         dealloc_count = 0;
     }
 };
 
-
+size_t malloc_allocator_base::outstanding_bytes = 0;
 size_t malloc_allocator_base::alloc_count = 0;
 size_t malloc_allocator_base::dealloc_count = 0;
 bool malloc_allocator_base::disable_default_constructor = false;
@@ -117,13 +119,17 @@ public:
 
     T* allocate(std::size_t n)
     {
+        const size_t nbytes = n*sizeof(T);
         ++alloc_count;
-        return static_cast<T*>(std::malloc(n*sizeof(T)));
+        outstanding_bytes += nbytes;
+        return static_cast<T*>(std::malloc(nbytes));
     }
 
-    void deallocate(T* p, std::size_t)
+    void deallocate(T* p, std::size_t n)
     {
+        const size_t nbytes = n*sizeof(T);
         ++dealloc_count;
+        outstanding_bytes -= nbytes;
         std::free(static_cast<void*>(p));
     }
 

@@ -2,8 +2,6 @@
 Test regression for Bug 25251.
 """
 
-import os
-import time
 import unittest2
 import lldb
 from lldbsuite.test.decorators import *

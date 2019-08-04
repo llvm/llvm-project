@@ -378,6 +378,11 @@ public:
     return true;
   }
 
+  /// Check if the no-CSR optimisation is profitable for the given function.
+  virtual bool isProfitableForNoCSROpt(const Function &F) const {
+    return true;
+  }
+
   /// Return initial CFA offset value i.e. the one valid at the beginning of the
   /// function (before any stack operations).
   virtual int getInitialCFAOffset(const MachineFunction &MF) const;

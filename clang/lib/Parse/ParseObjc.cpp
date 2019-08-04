@@ -710,7 +710,6 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
     case tok::objc_required:
     case tok::objc_optional:
       // This is only valid on protocols.
-      // FIXME: Should this check for ObjC2 being enabled?
       if (contextKey != tok::objc_protocol)
         Diag(AtLoc, diag::err_objc_directive_only_in_protocol);
       else
@@ -718,9 +717,6 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       break;
 
     case tok::objc_property:
-      if (!getLangOpts().ObjC)
-        Diag(AtLoc, diag::err_objc_properties_require_objc2);
-
       ObjCDeclSpec OCDS;
       SourceLocation LParenLoc;
       // Parse property attribute list, if any.

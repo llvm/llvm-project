@@ -685,7 +685,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
   // The queue holds (size, reg) pairs.
   const unsigned Size = LI->getSize();
   const unsigned Reg = LI->reg;
-  assert(TargetRegisterInfo::isVirtualRegister(Reg) &&
+  assert(Register::isVirtualRegister(Reg) &&
          "Can only enqueue virtual registers");
   unsigned Prio;
 
@@ -899,7 +899,7 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
     // Check if any interfering live range is heavier than MaxWeight.
     for (unsigned i = Q.interferingVRegs().size(); i; --i) {
       LiveInterval *Intf = Q.interferingVRegs()[i - 1];
-      assert(TargetRegisterInfo::isVirtualRegister(Intf->reg) &&
+      assert(Register::isVirtualRegister(Intf->reg) &&
              "Only expecting virtual register interference from query");
 
       // Do not allow eviction of a virtual register if we are in the middle
@@ -984,7 +984,7 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
         continue;
 
       // Cannot evict non virtual reg interference.
-      if (!TargetRegisterInfo::isVirtualRegister(Intf->reg))
+      if (!Register::isVirtualRegister(Intf->reg))
         return false;
       // Never evict spill products. They cannot split or spill.
       if (getStage(*Intf) == RS_Done)
@@ -2881,7 +2881,7 @@ void RAGreedy::collectHintInfo(unsigned Reg, HintsInfo &Out) {
         continue;
     }
     // Get the current assignment.
-    Register OtherPhysReg = TargetRegisterInfo::isPhysicalRegister(OtherReg)
+    Register OtherPhysReg = Register::isPhysicalRegister(OtherReg)
                                 ? OtherReg
                                 : VRM->getPhys(OtherReg);
     // Push the collected information.
@@ -2932,7 +2932,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
     Reg = RecoloringCandidates.pop_back_val();
 
     // We cannot recolor physical register.
-    if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg))
       continue;
 
     assert(VRM->hasPhys(Reg) && "We have unallocated variable!!");
@@ -3021,7 +3021,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
 /// getting rid of 2 copies.
 void RAGreedy::tryHintsRecoloring() {
   for (LiveInterval *LI : SetOfBrokenHints) {
-    assert(TargetRegisterInfo::isVirtualRegister(LI->reg) &&
+    assert(Register::isVirtualRegister(LI->reg) &&
            "Recoloring is possible only for virtual registers");
     // Some dead defs may be around (e.g., because of debug uses).
     // Ignore those.

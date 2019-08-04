@@ -1,9 +1,6 @@
 from __future__ import print_function
 
 import lldb
-import sys
-import os
-import time
 
 
 def StepOver(debugger, args, result, dict):

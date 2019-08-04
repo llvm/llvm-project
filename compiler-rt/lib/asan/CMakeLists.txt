@@ -1,46 +1,51 @@
 # Build for the AddressSanitizer runtime support library.
 
 set(ASAN_SOURCES
-  asan_allocator.cc
-  asan_activation.cc
-  asan_debugging.cc
-  asan_descriptions.cc
-  asan_errors.cc
-  asan_fake_stack.cc
-  asan_flags.cc
-  asan_fuchsia.cc
-  asan_globals.cc
-  asan_globals_win.cc
-  asan_interceptors.cc
-  asan_interceptors_memintrinsics.cc
-  asan_linux.cc
-  asan_mac.cc
-  asan_malloc_linux.cc
-  asan_malloc_mac.cc
-  asan_malloc_win.cc
-  asan_memory_profile.cc
-  asan_poisoning.cc
-  asan_posix.cc
-  asan_premap_shadow.cc
-  asan_report.cc
-  asan_rtems.cc
-  asan_rtl.cc
-  asan_shadow_setup.cc
-  asan_stack.cc
-  asan_stats.cc
-  asan_suppressions.cc
-  asan_thread.cc
-  asan_win.cc)
+  asan_allocator.cpp
+  asan_activation.cpp
+  asan_debugging.cpp
+  asan_descriptions.cpp
+  asan_errors.cpp
+  asan_fake_stack.cpp
+  asan_flags.cpp
+  asan_fuchsia.cpp
+  asan_globals.cpp
+  asan_globals_win.cpp
+  asan_interceptors.cpp
+  asan_interceptors_memintrinsics.cpp
+  asan_linux.cpp
+  asan_mac.cpp
+  asan_malloc_linux.cpp
+  asan_malloc_mac.cpp
+  asan_malloc_win.cpp
+  asan_memory_profile.cpp
+  asan_poisoning.cpp
+  asan_posix.cpp
+  asan_premap_shadow.cpp
+  asan_report.cpp
+  asan_rtems.cpp
+  asan_rtl.cpp
+  asan_shadow_setup.cpp
+  asan_stack.cpp
+  asan_stats.cpp
+  asan_suppressions.cpp
+  asan_thread.cpp
+  asan_win.cpp
+  )
 
 if (NOT WIN32 AND NOT APPLE)
-  list(APPEND ASAN_SOURCES asan_interceptors_vfork.S)
+  list(APPEND ASAN_SOURCES
+    asan_interceptors_vfork.S
+    )
 endif()
 
 set(ASAN_CXX_SOURCES
-  asan_new_delete.cc)
+  asan_new_delete.cpp
+  )
 
 set(ASAN_PREINIT_SOURCES
-  asan_preinit.cc)
+  asan_preinit.cpp
+  )
 
 SET(ASAN_HEADERS
   asan_activation.h
@@ -68,7 +73,8 @@ SET(ASAN_HEADERS
   asan_stack.h
   asan_stats.h
   asan_suppressions.h
-  asan_thread.h)
+  asan_thread.h
+  )
 
 include_directories(..)
 
@@ -143,10 +149,10 @@ if(NOT APPLE)
     DEFS ${ASAN_COMMON_DEFINITIONS}
     DEPS ${ASAN_DEPS})
 
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc "")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
   add_compiler_rt_object_libraries(RTAsan_dynamic_version_script_dummy
     ARCHS ${ASAN_SUPPORTED_ARCH}
-    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
     CFLAGS ${ASAN_DYNAMIC_CFLAGS}
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     DEPS ${ASAN_DEPS})
@@ -230,7 +236,7 @@ else()
           list(APPEND VERSION_SCRIPT_FLAG -Wl,-z,gnu-version-script-compat)
       endif()
       set_property(SOURCE
-        ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
+        ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
         APPEND PROPERTY
         OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
     else()
@@ -242,7 +248,7 @@ else()
       add_compiler_rt_object_libraries(AsanWeakInterception
         ${SANITIZER_COMMON_SUPPORTED_OS}
         ARCHS ${arch}
-        SOURCES asan_win_weak_interception.cc
+        SOURCES asan_win_weak_interception.cpp
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DYNAMIC
         DEFS ${ASAN_COMMON_DEFINITIONS}
         DEPS ${ASAN_DEPS})
@@ -287,8 +293,8 @@ else()
       add_compiler_rt_object_libraries(AsanDllThunk
         ${SANITIZER_COMMON_SUPPORTED_OS}
         ARCHS ${arch}
-        SOURCES asan_globals_win.cc
-                asan_win_dll_thunk.cc
+        SOURCES asan_globals_win.cpp
+                asan_win_dll_thunk.cpp
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DLL_THUNK
         DEFS ${ASAN_COMMON_DEFINITIONS}
         DEPS ${ASAN_DEPS})
@@ -313,8 +319,8 @@ else()
       add_compiler_rt_object_libraries(AsanDynamicRuntimeThunk
         ${SANITIZER_COMMON_SUPPORTED_OS}
         ARCHS ${arch}
-        SOURCES asan_globals_win.cc
-                asan_win_dynamic_runtime_thunk.cc
+        SOURCES asan_globals_win.cpp
+                asan_win_dynamic_runtime_thunk.cpp
         CFLAGS ${ASAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
         DEFS ${ASAN_COMMON_DEFINITIONS}
         DEPS ${ASAN_DEPS})

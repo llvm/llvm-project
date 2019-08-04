@@ -341,7 +341,7 @@ static bool isSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
         !Insert->readsRegister(Reg))
       continue;
 
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    if (Register::isPhysicalRegister(Reg)) {
       // Ignore ARGUMENTS; it's just used to keep the ARGUMENT_* instructions
       // from moving down, and we've already checked for that.
       if (Reg == WebAssembly::ARGUMENTS)
@@ -437,7 +437,7 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         if (!MO.isReg())
           return false;
         unsigned DefReg = MO.getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(DefReg) ||
+        if (!Register::isVirtualRegister(DefReg) ||
             !MFI.isVRegStackified(DefReg))
           return false;
         assert(MRI.hasOneNonDBGUse(DefReg));
@@ -811,7 +811,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         assert(Op.isUse() && "explicit_uses() should only iterate over uses");
         assert(!Op.isImplicit() &&
                "explicit_uses() should only iterate over explicit operands");
-        if (TargetRegisterInfo::isPhysicalRegister(Reg))
+        if (Register::isPhysicalRegister(Reg))
           continue;
 
         // Identify the definition for this register at this point.

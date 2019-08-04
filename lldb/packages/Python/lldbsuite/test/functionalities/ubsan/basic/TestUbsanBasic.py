@@ -3,7 +3,6 @@ Tests basic UndefinedBehaviorSanitizer support (detecting an alignment error).
 """
 
 import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

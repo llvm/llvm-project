@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Some of these tests fail on PowerPC for unknown reasons.
-#ifndef __ppc__
-
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
@@ -1153,4 +1150,3 @@ TYPED_TEST(BitVectorTest, PushBack) {
   EXPECT_EQ(102U, Vec.count());
 }
 }
-#endif

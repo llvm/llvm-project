@@ -40,7 +40,7 @@ void llvm::printLivesAt(SlotIndex SI,
          << *LIS.getInstructionFromIndex(SI);
   unsigned Num = 0;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    const unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    const unsigned Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
       continue;
     const auto &LI = LIS.getInterval(Reg);
@@ -84,7 +84,7 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 
 unsigned GCNRegPressure::getRegKind(unsigned Reg,
                                     const MachineRegisterInfo &MRI) {
-  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(Register::isVirtualRegister(Reg));
   const auto RC = MRI.getRegClass(Reg);
   auto STI = static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
   return STI->isSGPRClass(RC) ?
@@ -197,8 +197,7 @@ void GCNRegPressure::print(raw_ostream &OS, const GCNSubtarget *ST) const {
 
 static LaneBitmask getDefRegMask(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) {
-  assert(MO.isDef() && MO.isReg() &&
-    TargetRegisterInfo::isVirtualRegister(MO.getReg()));
+  assert(MO.isDef() && MO.isReg() && Register::isVirtualRegister(MO.getReg()));
 
   // We don't rely on read-undef flag because in case of tentative schedule
   // tracking it isn't set correctly yet. This works correctly however since
@@ -211,8 +210,7 @@ static LaneBitmask getDefRegMask(const MachineOperand &MO,
 static LaneBitmask getUsedRegMask(const MachineOperand &MO,
                                   const MachineRegisterInfo &MRI,
                                   const LiveIntervals &LIS) {
-  assert(MO.isUse() && MO.isReg() &&
-         TargetRegisterInfo::isVirtualRegister(MO.getReg()));
+  assert(MO.isUse() && MO.isReg() && Register::isVirtualRegister(MO.getReg()));
 
   if (auto SubReg = MO.getSubReg())
     return MRI.getTargetRegisterInfo()->getSubRegIndexLaneMask(SubReg);
@@ -233,7 +231,7 @@ collectVirtualRegUses(const MachineInstr &MI, const LiveIntervals &LIS,
                       const MachineRegisterInfo &MRI) {
   SmallVector<RegisterMaskPair, 8> Res;
   for (const auto &MO : MI.operands()) {
-    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
     if (!MO.isUse() || !MO.readsReg())
       continue;
@@ -279,7 +277,7 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
                                            const MachineRegisterInfo &MRI) {
   GCNRPTracker::LiveRegSet LiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    auto Reg = TargetRegisterInfo::index2VirtReg(I);
+    auto Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
       continue;
     auto LiveMask = getLiveLaneMask(Reg, SI, LIS, MRI);
@@ -330,8 +328,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = max(AtMIPressure, MaxPressure);
 
   for (const auto &MO : MI.defs()) {
-    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()) ||
-         MO.isDead())
+    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()) || MO.isDead())
       continue;
 
     auto Reg = MO.getReg();
@@ -410,7 +407,7 @@ void GCNDownwardRPTracker::advanceToNext() {
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
     auto &LiveMask = LiveRegs[Reg];
     auto PrevMask = LiveMask;
@@ -501,7 +498,7 @@ void GCNRPTracker::printLiveRegs(raw_ostream &OS, const LiveRegSet& LiveRegs,
                                  const MachineRegisterInfo &MRI) {
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    unsigned Reg = Register::index2VirtReg(I);
     auto It = LiveRegs.find(Reg);
     if (It != LiveRegs.end() && It->second.any())
       OS << ' ' << printVRegOrUnit(Reg, TRI) << ':'

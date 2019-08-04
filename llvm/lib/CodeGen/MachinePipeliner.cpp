@@ -1515,7 +1515,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->operands())
       if (MO.isReg() && MO.isUse()) {
         unsigned Reg = MO.getReg();
-        if (TargetRegisterInfo::isVirtualRegister(Reg))
+        if (Register::isVirtualRegister(Reg))
           Uses.insert(Reg);
         else if (MRI.isAllocatable(Reg))
           for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
@@ -1526,7 +1526,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : SU->getInstr()->operands())
       if (MO.isReg() && MO.isDef() && !MO.isDead()) {
         unsigned Reg = MO.getReg();
-        if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+        if (Register::isVirtualRegister(Reg)) {
           if (!Uses.count(Reg))
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
                                                    LaneBitmask::getNone()));
@@ -2553,7 +2553,7 @@ void SwingSchedulerDAG::generatePhis(
     for (unsigned i = 0, e = BBI->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = BBI->getOperand(i);
       if (!MO.isReg() || !MO.isDef() ||
-          !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+          !Register::isVirtualRegister(MO.getReg()))
         continue;
 
       int StageScheduled = Schedule.stageScheduled(getSUnit(&*BBI));
@@ -2658,7 +2658,7 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         unsigned reg = MOI->getReg();
         // Assume physical registers are used, unless they are marked dead.
-        if (TargetRegisterInfo::isPhysicalRegister(reg)) {
+        if (Register::isPhysicalRegister(reg)) {
           used = !MOI->isDead();
           if (used)
             break;
@@ -2813,7 +2813,7 @@ void SwingSchedulerDAG::addBranches(MachineBasicBlock &PreheaderBB,
       LCMin = LC;
 
     unsigned numAdded = 0;
-    if (TargetRegisterInfo::isVirtualRegister(LC)) {
+    if (Register::isVirtualRegister(LC)) {
       Prolog->addSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (j >= LCMin) {
@@ -2962,7 +2962,7 @@ void SwingSchedulerDAG::updateInstruction(MachineInstr *NewMI, bool LastDef,
                                           ValueMapTy *VRMap) {
   for (unsigned i = 0, e = NewMI->getNumOperands(); i != e; ++i) {
     MachineOperand &MO = NewMI->getOperand(i);
-    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
     unsigned reg = MO.getReg();
     if (MO.isDef()) {
@@ -3499,7 +3499,7 @@ void SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
        ++I, ++Pos) {
     for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
       MachineOperand &MO = MI->getOperand(i);
-      if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
         continue;
 
       unsigned Reg = MO.getReg();
@@ -3676,7 +3676,7 @@ bool SMSchedule::isValidSchedule(SwingSchedulerDAG *SSD) {
     assert(StageDef != -1 && "Instruction should have been scheduled.");
     for (auto &SI : SU.Succs)
       if (SI.isAssignedRegDep())
-        if (ST.getRegisterInfo()->isPhysicalRegister(SI.getReg()))
+        if (Register::isPhysicalRegister(SI.getReg()))
           if (stageScheduled(SI.getSUnit()) != StageDef)
             return false;
   }

@@ -22,6 +22,9 @@ namespace llvm {
 class Module;
 namespace orc {
 
+/// A layer that applies a transform to emitted modules.
+/// The transform function is responsible for locking the ThreadSafeContext
+/// before operating on the module.
 class IRTransformLayer : public IRLayer {
 public:
   using TransformFunction = std::function<Expected<ThreadSafeModule>(

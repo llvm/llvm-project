@@ -39,7 +39,7 @@ v8i16 test_v8i16(v8i16 x)
   return x;
 }
 
-// CHECK: define void @test_v16i16(<16 x i16>* noalias sret %agg.result, <16 x i16>*)
+// CHECK: define void @test_v16i16(<16 x i16>* noalias sret %agg.result, <16 x i16>* %0)
 v16i16 test_v16i16(v16i16 x)
 {
   return x;

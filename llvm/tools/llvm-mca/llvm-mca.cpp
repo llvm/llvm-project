@@ -88,6 +88,10 @@ static cl::opt<int>
                      cl::desc("Syntax variant to use for output printing"),
                      cl::cat(ToolOptions), cl::init(-1));
 
+static cl::opt<bool>
+    PrintImmHex("print-imm-hex", cl::cat(ToolOptions), cl::init(false),
+                cl::desc("Prefer hex format when printing immediate values"));
+
 static cl::opt<unsigned> Iterations("iterations",
                                     cl::desc("Number of iterations to run"),
                                     cl::cat(ToolOptions), cl::init(0));
@@ -395,6 +399,9 @@ int main(int argc, char **argv) {
         << AssemblerDialect << ".\n";
     return 1;
   }
+
+  // Set the display preference for hex vs. decimal immediates.
+  IP->setPrintImmHex(PrintImmHex);
 
   std::unique_ptr<ToolOutputFile> TOF = std::move(*OF);
 

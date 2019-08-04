@@ -1,7 +1,7 @@
 # Build for the minimal undefined behavior sanitizer runtime support library.
 
 set(UBSAN_MINIMAL_SOURCES
-  ubsan_minimal_handlers.cc
+  ubsan_minimal_handlers.cpp
   )
 
 include_directories(..)

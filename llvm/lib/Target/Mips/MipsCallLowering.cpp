@@ -106,6 +106,7 @@ private:
                    Register ArgsReg, const EVT &VT) override;
 
   virtual void markPhysRegUsed(unsigned PhysReg) {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 

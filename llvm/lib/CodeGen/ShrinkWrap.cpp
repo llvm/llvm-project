@@ -281,8 +281,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
       unsigned PhysReg = MO.getReg();
       if (!PhysReg)
         continue;
-      assert(TargetRegisterInfo::isPhysicalRegister(PhysReg) &&
-             "Unallocated register?!");
+      assert(Register::isPhysicalRegister(PhysReg) && "Unallocated register?!");
       // The stack pointer is not normally described as a callee-saved register
       // in calling convention definitions, so we need to watch for it
       // separately. An SP mentioned by a call instruction, we can ignore,

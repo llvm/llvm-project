@@ -10,7 +10,7 @@
 ; CHECK:  ret i32 %add
 
 ; NONAME: @GlobalValueName
-; NONAME: @foo(i32)
+; NONAME: @foo(i32 %0)
 ; NONAME-NOT: somelabel:
 ; NONAME:  %2 = load i32, i32* @GlobalValueName
 ; NONAME:  %3 = add i32 %0, %2

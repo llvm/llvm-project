@@ -1110,12 +1110,11 @@ def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$simm16), "s_setprio $simm16">;
 let Uses = [EXEC, M0] in {
 // FIXME: Should this be mayLoad+mayStore?
 def S_SENDMSG : SOPP <0x00000010, (ins SendMsgImm:$simm16), "s_sendmsg $simm16",
-  [(AMDGPUsendmsg (i32 imm:$simm16))]
->;
+  [(int_amdgcn_s_sendmsg (i32 imm:$simm16), M0)]>;
 
 def S_SENDMSGHALT : SOPP <0x00000011, (ins SendMsgImm:$simm16), "s_sendmsghalt $simm16",
-  [(AMDGPUsendmsghalt (i32 imm:$simm16))]
->;
+  [(int_amdgcn_s_sendmsghalt (i32 imm:$simm16), M0)]>;
+
 } // End Uses = [EXEC, M0]
 
 def S_TRAP : SOPP <0x00000012, (ins i16imm:$simm16), "s_trap $simm16"> {

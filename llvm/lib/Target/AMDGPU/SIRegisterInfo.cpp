@@ -716,7 +716,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
   for (unsigned i = 0, e = NumSubRegs; i != e; ++i, Offset += EltSize) {
     unsigned SubReg = NumSubRegs == 1 ?
-      ValueReg : getSubReg(ValueReg, getSubRegFromChannel(i));
+      Register(ValueReg) : getSubReg(ValueReg, getSubRegFromChannel(i));
 
     unsigned SOffsetRegState = 0;
     unsigned SrcDstRegState = getDefRegState(!IsStore);
@@ -806,7 +806,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   const GCNSubtarget &ST =  MF->getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
-  unsigned SuperReg = MI->getOperand(0).getReg();
+  Register SuperReg = MI->getOperand(0).getReg();
   bool IsKill = MI->getOperand(0).isKill();
   const DebugLoc &DL = MI->getDebugLoc();
 
@@ -988,7 +988,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   const SIInstrInfo *TII = ST.getInstrInfo();
   const DebugLoc &DL = MI->getDebugLoc();
 
-  unsigned SuperReg = MI->getOperand(0).getReg();
+  Register SuperReg = MI->getOperand(0).getReg();
   bool SpillToSMEM = spillSGPRToSMEM();
   if (SpillToSMEM && OnlyToVGPR)
     return false;
@@ -1361,7 +1361,7 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
 // FIXME: This is very slow. It might be worth creating a map from physreg to
 // register class.
 const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
-  assert(!TargetRegisterInfo::isVirtualRegister(Reg));
+  assert(!Register::isVirtualRegister(Reg));
 
   static const TargetRegisterClass *const BaseClasses[] = {
     &AMDGPU::VGPR_32RegClass,
@@ -1796,7 +1796,7 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
 const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   unsigned Reg) const {
-  if (TargetRegisterInfo::isVirtualRegister(Reg))
+  if (Register::isVirtualRegister(Reg))
     return  MRI.getRegClass(Reg);
 
   return getPhysRegClass(Reg);
@@ -1968,7 +1968,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(unsigned Reg, unsigned SubReg,
   SlotIndex UseIdx = LIS->getInstructionIndex(Use);
   SlotIndex DefIdx;
 
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     if (!LIS->hasInterval(Reg))
       return nullptr;
     LiveInterval &LI = LIS->getInterval(Reg);

@@ -222,6 +222,7 @@ public:
   LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
+  LegalizeResult lowerUnmergeValues(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

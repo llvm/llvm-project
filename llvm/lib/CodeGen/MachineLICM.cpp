@@ -427,7 +427,7 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI,
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
-    assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
+    assert(Register::isPhysicalRegister(Reg) &&
            "Not expecting virtual register!");
 
     if (!MO.isDef()) {
@@ -853,7 +853,7 @@ MachineLICMBase::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (!MO.isReg() || MO.isImplicit())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
 
     // FIXME: It seems bad to use RegSeen only for some of these calculations.
@@ -925,9 +925,9 @@ static bool isInvariantStore(const MachineInstr &MI,
       unsigned Reg = MO.getReg();
       // If operand is a virtual register, check if it comes from a copy of a
       // physical register.
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Register::isVirtualRegister(Reg))
         Reg = TRI->lookThruCopyLike(MO.getReg(), MRI);
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Register::isVirtualRegister(Reg))
         return false;
       if (!TRI->isCallerPreservedPhysReg(Reg, *MI.getMF()))
         return false;
@@ -956,7 +956,7 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
   const MachineFunction *MF = MI.getMF();
   // Check that we are copying a constant physical register.
   unsigned CopySrcReg = MI.getOperand(1).getReg();
-  if (TargetRegisterInfo::isVirtualRegister(CopySrcReg))
+  if (Register::isVirtualRegister(CopySrcReg))
     return false;
 
   if (!TRI->isCallerPreservedPhysReg(CopySrcReg, *MF))
@@ -964,8 +964,8 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 
   unsigned CopyDstReg = MI.getOperand(0).getReg();
   // Check if any of the uses of the copy are invariant stores.
-  assert (TargetRegisterInfo::isVirtualRegister(CopyDstReg) &&
-          "copy dst is not a virtual reg");
+  assert(Register::isVirtualRegister(CopyDstReg) &&
+         "copy dst is not a virtual reg");
 
   for (MachineInstr &UseMI : MRI->use_instructions(CopyDstReg)) {
     if (UseMI.mayStore() && isInvariantStore(UseMI, TRI, MRI))
@@ -1014,7 +1014,7 @@ bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I) {
     if (Reg == 0) continue;
 
     // Don't hoist an instruction that uses or defines a physical register.
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    if (Register::isPhysicalRegister(Reg)) {
       if (MO.isUse()) {
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
@@ -1062,7 +1062,7 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI) const {
       if (!MO.isReg() || !MO.isDef())
         continue;
       unsigned Reg = MO.getReg();
-      if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      if (!Register::isVirtualRegister(Reg))
         continue;
       for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
         // A PHI may cause a copy to be inserted.
@@ -1133,7 +1133,7 @@ bool MachineLICMBase::IsCheapInstruction(MachineInstr &MI) const {
       continue;
     --NumDefs;
     unsigned Reg = DefMO.getReg();
-    if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg))
       continue;
 
     if (!TII->hasLowDefLatency(SchedModel, MI, i))
@@ -1226,7 +1226,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
     if (!MO.isReg() || MO.isImplicit())
       continue;
     unsigned Reg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+    if (!Register::isVirtualRegister(Reg))
       continue;
     if (MO.isDef() && HasHighOperandLatency(MI, i, Reg)) {
       LLVM_DEBUG(dbgs() << "Hoist High Latency: " << MI);
@@ -1378,12 +1378,12 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
 
       // Physical registers may not differ here.
       assert((!MO.isReg() || MO.getReg() == 0 ||
-              !TargetRegisterInfo::isPhysicalRegister(MO.getReg()) ||
+              !Register::isPhysicalRegister(MO.getReg()) ||
               MO.getReg() == Dup->getOperand(i).getReg()) &&
              "Instructions with different phys regs are not identical!");
 
       if (MO.isReg() && MO.isDef() &&
-          !TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
+          !Register::isPhysicalRegister(MO.getReg()))
         Defs.push_back(i);
     }
 

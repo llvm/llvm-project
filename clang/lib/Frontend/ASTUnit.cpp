@@ -2368,13 +2368,13 @@ void ASTUnit::TranslateStoredDiagnostics(
     // Rebuild the StoredDiagnostic.
     if (SD.Filename.empty())
       continue;
-    const FileEntry *FE = FileMgr.getFile(SD.Filename);
+    auto FE = FileMgr.getFile(SD.Filename);
     if (!FE)
       continue;
     SourceLocation FileLoc;
     auto ItFileID = PreambleSrcLocCache.find(SD.Filename);
     if (ItFileID == PreambleSrcLocCache.end()) {
-      FileID FID = SrcMgr.translateFile(FE);
+      FileID FID = SrcMgr.translateFile(*FE);
       FileLoc = SrcMgr.getLocForStartOfFile(FID);
       PreambleSrcLocCache[SD.Filename] = FileLoc;
     } else {

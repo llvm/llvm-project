@@ -144,7 +144,7 @@ static unsigned getMopState(const MachineOperand &MO) {
     S |= RegState::Kill;
   if (MO.isEarlyClobber())
     S |= RegState::EarlyClobber;
-  if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()) && MO.isRenamable())
+  if (Register::isPhysicalRegister(MO.getReg()) && MO.isRenamable())
     S |= RegState::Renamable;
   return S;
 }
@@ -152,7 +152,7 @@ static unsigned getMopState(const MachineOperand &MO) {
 template <typename Callable>
 void SIFormMemoryClauses::forAllLanes(unsigned Reg, LaneBitmask LaneMask,
                                       Callable Func) const {
-  if (LaneMask.all() || TargetRegisterInfo::isPhysicalRegister(Reg) ||
+  if (LaneMask.all() || Register::isPhysicalRegister(Reg) ||
       LaneMask == MRI->getMaxLaneMaskForVReg(Reg)) {
     Func(0);
     return;
@@ -227,7 +227,7 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
     if (Conflict == Map.end())
       continue;
 
-    if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg))
       return false;
 
     LaneBitmask Mask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
@@ -269,9 +269,9 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
     if (!Reg)
       continue;
 
-    LaneBitmask Mask = TargetRegisterInfo::isVirtualRegister(Reg) ?
-                         TRI->getSubRegIndexLaneMask(MO.getSubReg()) :
-                         LaneBitmask::getAll();
+    LaneBitmask Mask = Register::isVirtualRegister(Reg)
+                           ? TRI->getSubRegIndexLaneMask(MO.getSubReg())
+                           : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
     auto Loc = Map.find(Reg);
@@ -389,7 +389,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
       for (auto &&R : Defs) {
         unsigned Reg = R.first;
         Uses.erase(Reg);
-        if (TargetRegisterInfo::isPhysicalRegister(Reg))
+        if (Register::isPhysicalRegister(Reg))
           continue;
         LIS->removeInterval(Reg);
         LIS->createAndComputeVirtRegInterval(Reg);
@@ -397,7 +397,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       for (auto &&R : Uses) {
         unsigned Reg = R.first;
-        if (TargetRegisterInfo::isPhysicalRegister(Reg))
+        if (Register::isPhysicalRegister(Reg))
           continue;
         LIS->removeInterval(Reg);
         LIS->createAndComputeVirtRegInterval(Reg);

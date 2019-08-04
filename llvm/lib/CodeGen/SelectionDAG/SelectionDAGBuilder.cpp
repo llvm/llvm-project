@@ -833,7 +833,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!TargetRegisterInfo::isVirtualRegister(Regs[Part+i]) ||
+      if (!Register::isVirtualRegister(Regs[Part + i]) ||
           !RegisterVT.isInteger())
         continue;
 
@@ -948,8 +948,7 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   unsigned Flag = InlineAsm::getFlagWord(Code, Regs.size());
   if (HasMatching)
     Flag = InlineAsm::getFlagWordForMatchingOp(Flag, MatchingIdx);
-  else if (!Regs.empty() &&
-           TargetRegisterInfo::isVirtualRegister(Regs.front())) {
+  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -8050,6 +8049,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(T, SDValue());
 
+    if (T.ConstraintType == TargetLowering::C_Immediate &&
+        OpInfo.CallOperand && !isa<ConstantSDNode>(OpInfo.CallOperand))
+      // We've delayed emitting a diagnostic like the "n" constraint because
+      // inlining could cause an integer showing up.
+      return emitInlineAsmError(
+          CS, "constraint '" + Twine(T.ConstraintCode) + "' expects an "
+                  "integer constant expression");
+
     ExtraInfo.update(T);
   }
 
@@ -8134,7 +8141,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
-          (OpInfo.ConstraintType == TargetLowering::C_Other &&
+          ((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+            OpInfo.ConstraintType == TargetLowering::C_Other) &&
            OpInfo.isIndirect)) {
         unsigned ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
@@ -8148,13 +8156,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
                                                         MVT::i32));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
         break;
-      } else if ((OpInfo.ConstraintType == TargetLowering::C_Other &&
+      } else if (((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+                   OpInfo.ConstraintType == TargetLowering::C_Other) &&
                   !OpInfo.isIndirect) ||
                  OpInfo.ConstraintType == TargetLowering::C_Register ||
                  OpInfo.ConstraintType == TargetLowering::C_RegisterClass) {
         // Otherwise, this outputs to a register (directly for C_Register /
-        // C_RegisterClass, and a target-defined fashion for C_Other). Find a
-        // register that we can use.
+        // C_RegisterClass, and a target-defined fashion for
+        // C_Immediate/C_Other). Find a register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
           emitInlineAsmError(
               CS, "couldn't allocate output register for constraint '" +
@@ -8234,15 +8243,24 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       }
 
       // Treat indirect 'X' constraint as memory.
-      if (OpInfo.ConstraintType == TargetLowering::C_Other &&
+      if ((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+           OpInfo.ConstraintType == TargetLowering::C_Other) &&
           OpInfo.isIndirect)
         OpInfo.ConstraintType = TargetLowering::C_Memory;
 
-      if (OpInfo.ConstraintType == TargetLowering::C_Other) {
+      if (OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+          OpInfo.ConstraintType == TargetLowering::C_Other) {
         std::vector<SDValue> Ops;
         TLI.LowerAsmOperandForConstraint(InOperandVal, OpInfo.ConstraintCode,
                                           Ops, DAG);
         if (Ops.empty()) {
+          if (OpInfo.ConstraintType == TargetLowering::C_Immediate)
+            if (isa<ConstantSDNode>(InOperandVal)) {
+              emitInlineAsmError(CS, "value out of range for constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'");
+              return;
+            }
+
           emitInlineAsmError(CS, "invalid operand for inline asm constraint '" +
                                      Twine(OpInfo.ConstraintCode) + "'");
           return;
@@ -8279,7 +8297,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       }
 
       assert((OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
-              OpInfo.ConstraintType == TargetLowering::C_Register) &&
+              OpInfo.ConstraintType == TargetLowering::C_Register ||
+              OpInfo.ConstraintType == TargetLowering::C_Immediate) &&
              "Unknown constraint type!");
 
       // TODO: Support this.
@@ -8385,6 +8404,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         Val = OpInfo.AssignedRegs.getCopyFromRegs(
             DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
         break;
+      case TargetLowering::C_Immediate:
       case TargetLowering::C_Other:
         Val = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
                                               OpInfo, DAG);
@@ -9288,7 +9308,7 @@ SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!TargetRegisterInfo::isPhysicalRegister(Reg) && "Is a physreg");
+  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
@@ -9782,7 +9802,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // Update the SwiftErrorVRegDefMap.
     if (Res.getOpcode() == ISD::CopyFromReg && isSwiftErrorArg) {
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Register::isVirtualRegister(Reg))
         SwiftError->setCurrentVReg(FuncInfo->MBB, SwiftError->getFunctionArg(),
                                    Reg);
     }
@@ -9794,7 +9814,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // FIXME: This isn't very clean... it would be nice to make this more
       // general.
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (Register::isVirtualRegister(Reg)) {
         FuncInfo->ValueMap[&Arg] = Reg;
         continue;
       }

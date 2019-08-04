@@ -424,7 +424,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   unsigned BitWidth = IntVT.getSizeInBits();
 
   unsigned DestReg = ValueMap[PN];
-  if (!TargetRegisterInfo::isVirtualRegister(DestReg))
+  if (!Register::isVirtualRegister(DestReg))
     return;
   LiveOutRegInfo.grow(DestReg);
   LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
@@ -445,7 +445,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
     unsigned SrcReg = ValueMap[V];
-    if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+    if (!Register::isVirtualRegister(SrcReg)) {
       DestLOI.IsValid = false;
       return;
     }
@@ -480,7 +480,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
                                 "its CopyToReg node was created.");
     unsigned SrcReg = ValueMap[V];
-    if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+    if (!Register::isVirtualRegister(SrcReg)) {
       DestLOI.IsValid = false;
       return;
     }

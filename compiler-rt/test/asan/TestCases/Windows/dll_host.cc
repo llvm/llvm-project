@@ -18,11 +18,11 @@
 // Get the list of ASan wrappers imported by the DLL RTL:
 // [BEWARE: be really careful with the sed commands, as this test can be run
 //  from different environemnts with different shells and seds]
-// RUN: grep INTERCEPT_LIBRARY_FUNCTION %p/../../../../lib/asan/asan_win_dll_thunk.cc \
+// RUN: grep INTERCEPT_LIBRARY_FUNCTION %p/../../../../lib/asan/asan_win_dll_thunk.cpp \
 // RUN:  | grep -v define | sed -e s/.*(/__asan_wrap_/ -e s/).*//              \
 // RUN:  > %t.imports1
 //
-// Add functions interecepted in asan_malloc.win.cc and asan_win.cc.
+// Add functions interecepted in asan_malloc.win.cpp and asan_win.cpp.
 // RUN: grep '[I]MPORT:' %s | sed -e 's/.*[I]MPORT: //' > %t.imports2
 // IMPORT: __asan_wrap_HeapAlloc
 // IMPORT: __asan_wrap_HeapFree
@@ -42,7 +42,7 @@
 //
 // Now make sure the DLL thunk imports everything:
 // RUN: echo
-// RUN: echo "=== NOTE === If you see a mismatch below, please update asan_win_dll_thunk.cc"
+// RUN: echo "=== NOTE === If you see a mismatch below, please update asan_win_dll_thunk.cpp"
 // RUN: diff %t.imports-sorted %t.exports-sorted
 // REQUIRES: asan-static-runtime
 

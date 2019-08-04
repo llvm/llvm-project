@@ -62,13 +62,21 @@
 /// \macro LLVM_MSC_PREREQ
 /// Is the compiler MSVC of at least the specified version?
 /// The common \param version values to check for are:
-///  * 1900: Microsoft Visual Studio 2015 / 14.0
+/// * 1910: VS2017, version 15.1 & 15.2
+/// * 1911: VS2017, version 15.3 & 15.4
+/// * 1912: VS2017, version 15.5
+/// * 1913: VS2017, version 15.6
+/// * 1914: VS2017, version 15.7
+/// * 1915: VS2017, version 15.8
+/// * 1916: VS2017, version 15.9
+/// * 1920: VS2019, version 16.0
+/// * 1921: VS2019, version 16.1
 #ifdef _MSC_VER
 #define LLVM_MSC_PREREQ(version) (_MSC_VER >= (version))
 
-// We require at least MSVC 2015.
-#if !LLVM_MSC_PREREQ(1900)
-#error LLVM requires at least MSVC 2015.
+// We require at least MSVC 2017.
+#if !LLVM_MSC_PREREQ(1910)
+#error LLVM requires at least MSVC 2017.
 #endif
 
 #else

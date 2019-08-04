@@ -50,6 +50,11 @@ point to the binary.
    # When VS Code starts, press <F5>.
 ```
 
+## Contributing
+
+Please follow the exsiting code style when contributing to the extension, we
+recommend to run `npm run format` before sending a patch.
+
 ## Publish to VS Code Marketplace
 
 New changes to `clangd-vscode` are not released until a new version is published

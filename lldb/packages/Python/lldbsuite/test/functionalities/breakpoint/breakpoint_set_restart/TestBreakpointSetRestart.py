@@ -2,7 +2,6 @@
 Test inferior restart when breakpoint is set on running target.
 """
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

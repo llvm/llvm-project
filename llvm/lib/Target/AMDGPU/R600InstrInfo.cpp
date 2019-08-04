@@ -97,8 +97,8 @@ bool R600InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI) const {
   for (MachineInstr::const_mop_iterator I = MBBI->operands_begin(),
                                         E = MBBI->operands_end(); I != E; ++I) {
-    if (I->isReg() && !TargetRegisterInfo::isVirtualRegister(I->getReg()) &&
-        I->isUse() && RI.isPhysRegLiveAcrossClauses(I->getReg()))
+    if (I->isReg() && !Register::isVirtualRegister(I->getReg()) && I->isUse() &&
+        RI.isPhysRegLiveAcrossClauses(I->getReg()))
       return false;
   }
   return true;
@@ -242,8 +242,7 @@ bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
   for (MachineInstr::const_mop_iterator I = MI.operands_begin(),
                                         E = MI.operands_end();
        I != E; ++I) {
-    if (!I->isReg() || !I->isUse() ||
-        TargetRegisterInfo::isVirtualRegister(I->getReg()))
+    if (!I->isReg() || !I->isUse() || Register::isVirtualRegister(I->getReg()))
       continue;
 
     if (R600::R600_LDS_SRC_REGRegClass.contains(I->getReg()))
@@ -1193,8 +1192,7 @@ int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
   const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
   for (std::pair<unsigned, unsigned> LI : MRI.liveins()) {
     unsigned Reg = LI.first;
-    if (TargetRegisterInfo::isVirtualRegister(Reg) ||
-        !IndirectRC->contains(Reg))
+    if (Register::isVirtualRegister(Reg) || !IndirectRC->contains(Reg))
       continue;
 
     unsigned RegIndex;

@@ -87,20 +87,22 @@ public:
 private:
   static Expected<ThreadSafeModule>
   optimizeModule(ThreadSafeModule TSM, const MaterializationResponsibility &R) {
-    // Create a function pass manager.
-    auto FPM = llvm::make_unique<legacy::FunctionPassManager>(TSM.getModule());
+    TSM.withModuleDo([](Module &M) {
+      // Create a function pass manager.
+      auto FPM = llvm::make_unique<legacy::FunctionPassManager>(&M);
 
-    // Add some optimizations.
-    FPM->add(createInstructionCombiningPass());
-    FPM->add(createReassociatePass());
-    FPM->add(createGVNPass());
-    FPM->add(createCFGSimplificationPass());
-    FPM->doInitialization();
+      // Add some optimizations.
+      FPM->add(createInstructionCombiningPass());
+      FPM->add(createReassociatePass());
+      FPM->add(createGVNPass());
+      FPM->add(createCFGSimplificationPass());
+      FPM->doInitialization();
 
-    // Run the optimizations over all functions in the module being added to
-    // the JIT.
-    for (auto &F : *TSM.getModule())
-      FPM->run(F);
+      // Run the optimizations over all functions in the module being added to
+      // the JIT.
+      for (auto &F : M)
+        FPM->run(F);
+    });
 
     return TSM;
   }

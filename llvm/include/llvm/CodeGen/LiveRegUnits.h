@@ -54,7 +54,7 @@ public:
       if (!O->isReg())
         continue;
       unsigned Reg = O->getReg();
-      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+      if (!Register::isPhysicalRegister(Reg))
         continue;
       if (O->isDef()) {
         // Some architectures (e.g. AArch64 XZR/WZR) have registers that are

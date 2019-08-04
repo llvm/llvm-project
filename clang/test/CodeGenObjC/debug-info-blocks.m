@@ -13,13 +13,13 @@
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
 // doesn't accidentally step into the function).
-// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(i8*, i8*)
+// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(i8* %0, i8* %1)
 // CHECK-NOT: ret
 // CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[COPY_LINE:[0-9]+]]
 // CHECK: ret void, !dbg ![[COPY_LINE]]
-// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8*)
+// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8* %0)
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DESTROY_LINE:[0-9]+]]
 // CHECK: ret void, !dbg ![[DESTROY_LINE]]

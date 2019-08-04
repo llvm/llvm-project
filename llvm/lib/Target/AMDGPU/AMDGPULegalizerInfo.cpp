@@ -511,6 +511,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       [](const LegalityQuery &Query) {
         return std::make_pair(0, LLT::scalar(32));
       })
+    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf([=](const LegalityQuery &Query) {
         unsigned MemSize = Query.MMODescrs[0].SizeInBits;
         return (MemSize == 96) &&
@@ -591,6 +592,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAddressSpace()) {
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
+
+  getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
+    .legalFor({{S32, LocalPtr}});
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
   getActionDefinitionsBuilder(G_SELECT)
@@ -733,6 +737,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
         scalarize(1))
       .clampScalar(BigTyIdx, S32, S512)
+      .lowerFor({{S16, V2S16}})
       .widenScalarIf(
         [=](const LegalityQuery &Query) {
           const LLT &Ty = Query.Types[BigTyIdx];

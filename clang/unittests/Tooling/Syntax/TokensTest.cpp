@@ -298,6 +298,21 @@ file './input.cpp'
   spelled tokens:
     <empty>
   no mappings.
+)"},
+      // Should not crash on errors inside '#define' directives. Error is that
+      // stringification (#B) does not refer to a macro parameter.
+      {
+          R"cpp(
+a
+#define MACRO() A #B
+)cpp",
+          R"(expanded tokens:
+  a
+file './input.cpp'
+  spelled tokens:
+    a # define MACRO ( ) A # B
+  mappings:
+    ['#'_1, '<eof>'_9) => ['<eof>'_1, '<eof>'_1)
 )"}};
   for (auto &Test : TestCases)
     EXPECT_EQ(collectAndDump(Test.first), Test.second)

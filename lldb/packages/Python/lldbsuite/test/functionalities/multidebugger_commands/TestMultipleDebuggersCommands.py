@@ -5,8 +5,6 @@ Test that commands do not try and hold on to stale CommandInterpreters in a mult
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

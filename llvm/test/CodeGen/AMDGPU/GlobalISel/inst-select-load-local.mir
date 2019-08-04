@@ -123,7 +123,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_DWORDX2_]]
     ; GFX6-LABEL: name: load_local_v2s32
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
@@ -158,7 +157,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_DWORDX2_]]
     ; GFX6-LABEL: name: load_local_v2s32_align4
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
@@ -196,7 +194,7 @@ body: |
     ; GFX6-LABEL: name: load_local_v3s32
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6: [[LOAD:%[0-9]+]]:vgpr(<3 x s32>) = G_LOAD [[COPY]](p3) :: (load 12, align 4, addrspace 3)
+    ; GFX6: [[LOAD:%[0-9]+]]:{{vgpr|vreg_96}}(<3 x s32>) = G_LOAD [[COPY]](p3) :: (load 12, align 4, addrspace 3)
     ; GFX6: $vgpr0_vgpr1_vgpr2 = COPY [[LOAD]](<3 x s32>)
     ; GFX7-LABEL: name: load_local_v3s32
     ; GFX7: liveins: $vgpr0
@@ -399,7 +397,7 @@ body: |
     ; GFX6-LABEL: name: load_local_s96
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6: [[LOAD:%[0-9]+]]:vgpr(s96) = G_LOAD [[COPY]](p3) :: (load 12, align 4, addrspace 3)
+    ; GFX6: [[LOAD:%[0-9]+]]:{{vgpr|vreg_96}}(s96) = G_LOAD [[COPY]](p3) :: (load 12, align 4, addrspace 3)
     ; GFX6: $vgpr0_vgpr1_vgpr2 = COPY [[LOAD]](s96)
     ; GFX7-LABEL: name: load_local_s96
     ; GFX7: liveins: $vgpr0

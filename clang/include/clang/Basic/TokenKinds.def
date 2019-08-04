@@ -68,6 +68,9 @@
 #ifndef ANNOTATION
 #define ANNOTATION(X) TOK(annot_ ## X)
 #endif
+#ifndef PRAGMA_ANNOTATION
+#define PRAGMA_ANNOTATION(X) ANNOTATION(X)
+#endif
 
 //===----------------------------------------------------------------------===//
 // Preprocessor keywords.
@@ -729,103 +732,103 @@ ANNOTATION(decltype)     // annotation for a decltype expression,
 // Annotation for #pragma unused(...)
 // For each argument inside the parentheses the pragma handler will produce
 // one 'pragma_unused' annotation token followed by the argument token.
-ANNOTATION(pragma_unused)
+PRAGMA_ANNOTATION(pragma_unused)
 
 // Annotation for #pragma GCC visibility...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_vis)
+PRAGMA_ANNOTATION(pragma_vis)
 
 // Annotation for #pragma pack...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_pack)
+PRAGMA_ANNOTATION(pragma_pack)
 
 // Annotation for #pragma clang __debug parser_crash...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_parser_crash)
+PRAGMA_ANNOTATION(pragma_parser_crash)
 
 // Annotation for #pragma clang __debug captured...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_captured)
+PRAGMA_ANNOTATION(pragma_captured)
 
 // Annotation for #pragma clang __debug dump...
 // The lexer produces these so that the parser and semantic analysis can
 // look up and dump the operand.
-ANNOTATION(pragma_dump)
+PRAGMA_ANNOTATION(pragma_dump)
 
 // Annotation for #pragma ms_struct...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_msstruct)
+PRAGMA_ANNOTATION(pragma_msstruct)
 
 // Annotation for #pragma align...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_align)
+PRAGMA_ANNOTATION(pragma_align)
 
 // Annotation for #pragma weak id
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_weak)
+PRAGMA_ANNOTATION(pragma_weak)
 
 // Annotation for #pragma weak id = id
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_weakalias)
+PRAGMA_ANNOTATION(pragma_weakalias)
 
 // Annotation for #pragma redefine_extname...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_redefine_extname)
+PRAGMA_ANNOTATION(pragma_redefine_extname)
 
 // Annotation for #pragma STDC FP_CONTRACT...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_fp_contract)
+PRAGMA_ANNOTATION(pragma_fp_contract)
 
 // Annotation for #pragma STDC FENV_ACCESS
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_fenv_access)
+PRAGMA_ANNOTATION(pragma_fenv_access)
 
 // Annotation for #pragma pointers_to_members...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_ms_pointers_to_members)
+PRAGMA_ANNOTATION(pragma_ms_pointers_to_members)
 
 // Annotation for #pragma vtordisp...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_ms_vtordisp)
+PRAGMA_ANNOTATION(pragma_ms_vtordisp)
 
 // Annotation for all microsoft #pragmas...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_ms_pragma)
+PRAGMA_ANNOTATION(pragma_ms_pragma)
 
 // Annotation for #pragma OPENCL EXTENSION...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
-ANNOTATION(pragma_opencl_extension)
+PRAGMA_ANNOTATION(pragma_opencl_extension)
 
 // Annotations for OpenMP pragma directives - #pragma omp ...
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma omp ... directives.
-ANNOTATION(pragma_openmp)
-ANNOTATION(pragma_openmp_end)
+PRAGMA_ANNOTATION(pragma_openmp)
+PRAGMA_ANNOTATION(pragma_openmp_end)
 
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma loop ... directives.
-ANNOTATION(pragma_loop_hint)
+PRAGMA_ANNOTATION(pragma_loop_hint)
 
-ANNOTATION(pragma_fp)
+PRAGMA_ANNOTATION(pragma_fp)
 
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
-ANNOTATION(pragma_attribute)
+PRAGMA_ANNOTATION(pragma_attribute)
 
 // Annotations for module import translated from #include etc.
 ANNOTATION(module_include)
@@ -836,6 +839,7 @@ ANNOTATION(module_end)
 // into the name of a header unit.
 ANNOTATION(header_unit)
 
+#undef PRAGMA_ANNOTATION
 #undef ANNOTATION
 #undef TESTING_KEYWORD
 #undef OBJC_AT_KEYWORD

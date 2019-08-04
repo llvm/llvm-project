@@ -187,7 +187,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   unsigned Reg = DefMO.getReg();
 
   bool IsRegCR;
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+  if (Register::isVirtualRegister(Reg)) {
     const MachineRegisterInfo *MRI =
         &DefMI.getParent()->getParent()->getRegInfo();
     IsRegCR = MRI->getRegClass(Reg)->hasSuperClassEq(&PPC::CRRCRegClass) ||
@@ -1671,7 +1671,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
 
   // Look through copies unless that gets us to a physical register.
   unsigned ActualSrc = TRI->lookThruCopyLike(SrcReg, MRI);
-  if (TargetRegisterInfo::isVirtualRegister(ActualSrc))
+  if (Register::isVirtualRegister(ActualSrc))
     SrcReg = ActualSrc;
 
   // Get the unique definition of SrcReg.
@@ -2360,10 +2360,10 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       if (!MI.getOperand(i).isReg())
         continue;
       unsigned Reg = MI.getOperand(i).getReg();
-      if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      if (!Register::isVirtualRegister(Reg))
         continue;
       unsigned TrueReg = TRI->lookThruCopyLike(Reg, MRI);
-      if (TargetRegisterInfo::isVirtualRegister(TrueReg)) {
+      if (Register::isVirtualRegister(TrueReg)) {
         DefMI = MRI->getVRegDef(TrueReg);
         if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8) {
           OpNoForForwarding = i;
@@ -3619,7 +3619,7 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
       // If operand at III.ZeroIsSpecialNew is physical reg(eg: ZERO/ZERO8), no
       // need to fix up register class.
       unsigned RegToModify = MI.getOperand(III.ZeroIsSpecialNew).getReg();
-      if (TargetRegisterInfo::isVirtualRegister(RegToModify)) {
+      if (Register::isVirtualRegister(RegToModify)) {
         const TargetRegisterClass *NewRC =
           MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
           &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
@@ -3835,7 +3835,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     }
 
     // If this is a copy from another register, we recursively check source.
-    if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+    if (!Register::isVirtualRegister(SrcReg))
       return false;
     const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
     if (SrcMI != NULL)
@@ -3859,7 +3859,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     // logical operation with 16-bit immediate does not change the upper bits.
     // So, we track the operand register as we do for register copy.
     unsigned SrcReg = MI.getOperand(1).getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+    if (!Register::isVirtualRegister(SrcReg))
       return false;
     const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
     if (SrcMI != NULL)
@@ -3888,7 +3888,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     for (unsigned I = 1; I != E; I += D) {
       if (MI.getOperand(I).isReg()) {
         unsigned SrcReg = MI.getOperand(I).getReg();
-        if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+        if (!Register::isVirtualRegister(SrcReg))
           return false;
         const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
         if (SrcMI == NULL || !isSignOrZeroExtended(*SrcMI, SignExt, Depth+1))
@@ -3913,9 +3913,9 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     unsigned SrcReg1 = MI.getOperand(1).getReg();
     unsigned SrcReg2 = MI.getOperand(2).getReg();
 
-    if (!TargetRegisterInfo::isVirtualRegister(SrcReg1) ||
-        !TargetRegisterInfo::isVirtualRegister(SrcReg2))
-       return false;
+    if (!Register::isVirtualRegister(SrcReg1) ||
+        !Register::isVirtualRegister(SrcReg2))
+      return false;
 
     const MachineInstr *MISrc1 = MRI->getVRegDef(SrcReg1);
     const MachineInstr *MISrc2 = MRI->getVRegDef(SrcReg2);

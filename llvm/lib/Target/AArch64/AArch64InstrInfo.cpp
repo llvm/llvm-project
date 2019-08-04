@@ -416,7 +416,7 @@ unsigned AArch64InstrInfo::insertBranch(
 
 // Find the original register that VReg is copied from.
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
-  while (TargetRegisterInfo::isVirtualRegister(VReg)) {
+  while (Register::isVirtualRegister(VReg)) {
     const MachineInstr *DefMI = MRI.getVRegDef(VReg);
     if (!DefMI->isFullCopy())
       return VReg;
@@ -431,7 +431,7 @@ static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
 static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
                                 unsigned *NewVReg = nullptr) {
   VReg = removeCopies(MRI, VReg);
-  if (!TargetRegisterInfo::isVirtualRegister(VReg))
+  if (!Register::isVirtualRegister(VReg))
     return 0;
 
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
@@ -1072,7 +1072,7 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
            "Operand has register constraints without being a register!");
 
     unsigned Reg = MO.getReg();
-    if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    if (Register::isPhysicalRegister(Reg)) {
       if (!OpRegCstraints->contains(Reg))
         return false;
     } else if (!OpRegCstraints->hasSubClassEq(MRI->getRegClass(Reg)) &&
@@ -2350,7 +2350,7 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }
@@ -2722,7 +2722,7 @@ static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
                                     MachineMemOperand *MMO) {
   unsigned SrcReg0 = SrcReg;
   unsigned SrcReg1 = SrcReg;
-  if (TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+  if (Register::isPhysicalRegister(SrcReg)) {
     SrcReg0 = TRI.getSubReg(SrcReg, SubIdx0);
     SubIdx0 = 0;
     SrcReg1 = TRI.getSubReg(SrcReg, SubIdx1);
@@ -2761,7 +2761,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
   case 4:
     if (AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STRWui;
-      if (TargetRegisterInfo::isVirtualRegister(SrcReg))
+      if (Register::isVirtualRegister(SrcReg))
         MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::GPR32RegClass);
       else
         assert(SrcReg != AArch64::WSP);
@@ -2771,7 +2771,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
   case 8:
     if (AArch64::GPR64allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STRXui;
-      if (TargetRegisterInfo::isVirtualRegister(SrcReg))
+      if (Register::isVirtualRegister(SrcReg))
         MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::GPR64RegClass);
       else
         assert(SrcReg != AArch64::SP);
@@ -2852,7 +2852,7 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
   unsigned DestReg0 = DestReg;
   unsigned DestReg1 = DestReg;
   bool IsUndef = true;
-  if (TargetRegisterInfo::isPhysicalRegister(DestReg)) {
+  if (Register::isPhysicalRegister(DestReg)) {
     DestReg0 = TRI.getSubReg(DestReg, SubIdx0);
     SubIdx0 = 0;
     DestReg1 = TRI.getSubReg(DestReg, SubIdx1);
@@ -2892,7 +2892,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   case 4:
     if (AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDRWui;
-      if (TargetRegisterInfo::isVirtualRegister(DestReg))
+      if (Register::isVirtualRegister(DestReg))
         MF.getRegInfo().constrainRegClass(DestReg, &AArch64::GPR32RegClass);
       else
         assert(DestReg != AArch64::WSP);
@@ -2902,7 +2902,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   case 8:
     if (AArch64::GPR64allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDRXui;
-      if (TargetRegisterInfo::isVirtualRegister(DestReg))
+      if (Register::isVirtualRegister(DestReg))
         MF.getRegInfo().constrainRegClass(DestReg, &AArch64::GPR64RegClass);
       else
         assert(DestReg != AArch64::SP);
@@ -3081,13 +3081,11 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   if (MI.isFullCopy()) {
     unsigned DstReg = MI.getOperand(0).getReg();
     unsigned SrcReg = MI.getOperand(1).getReg();
-    if (SrcReg == AArch64::SP &&
-        TargetRegisterInfo::isVirtualRegister(DstReg)) {
+    if (SrcReg == AArch64::SP && Register::isVirtualRegister(DstReg)) {
       MF.getRegInfo().constrainRegClass(DstReg, &AArch64::GPR64RegClass);
       return nullptr;
     }
-    if (DstReg == AArch64::SP &&
-        TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+    if (DstReg == AArch64::SP && Register::isVirtualRegister(SrcReg)) {
       MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::GPR64RegClass);
       return nullptr;
     }
@@ -3132,9 +3130,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     // This is slightly expensive to compute for physical regs since
     // getMinimalPhysRegClass is slow.
     auto getRegClass = [&](unsigned Reg) {
-      return TargetRegisterInfo::isVirtualRegister(Reg)
-                 ? MRI.getRegClass(Reg)
-                 : TRI.getMinimalPhysRegClass(Reg);
+      return Register::isVirtualRegister(Reg) ? MRI.getRegClass(Reg)
+                                              : TRI.getMinimalPhysRegClass(Reg);
     };
 
     if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {
@@ -3159,8 +3156,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     //
     //   STRXui %xzr, %stack.0
     //
-    if (IsSpill && DstMO.isUndef() &&
-        TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+    if (IsSpill && DstMO.isUndef() && Register::isPhysicalRegister(SrcReg)) {
       assert(SrcMO.getSubReg() == 0 &&
              "Unexpected subreg on physical register");
       const TargetRegisterClass *SpillRC;
@@ -3459,7 +3455,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineInstr *MI = nullptr;
 
-  if (MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+  if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
     MI = MRI.getUniqueVRegDef(MO.getReg());
   // And it needs to be in the trace (otherwise, it won't have a depth).
   if (!MI || MI->getParent() != &MBB || (unsigned)MI->getOpcode() != CombineOpc)
@@ -3955,13 +3951,13 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
     Src2IsKill = Root.getOperand(IdxOtherOpd).isKill();
   }
 
-  if (TargetRegisterInfo::isVirtualRegister(ResultReg))
+  if (Register::isVirtualRegister(ResultReg))
     MRI.constrainRegClass(ResultReg, RC);
-  if (TargetRegisterInfo::isVirtualRegister(SrcReg0))
+  if (Register::isVirtualRegister(SrcReg0))
     MRI.constrainRegClass(SrcReg0, RC);
-  if (TargetRegisterInfo::isVirtualRegister(SrcReg1))
+  if (Register::isVirtualRegister(SrcReg1))
     MRI.constrainRegClass(SrcReg1, RC);
-  if (TargetRegisterInfo::isVirtualRegister(SrcReg2))
+  if (Register::isVirtualRegister(SrcReg2))
     MRI.constrainRegClass(SrcReg2, RC);
 
   MachineInstrBuilder MIB;
@@ -4021,13 +4017,13 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   unsigned SrcReg1 = MUL->getOperand(2).getReg();
   bool Src1IsKill = MUL->getOperand(2).isKill();
 
-  if (TargetRegisterInfo::isVirtualRegister(ResultReg))
+  if (Register::isVirtualRegister(ResultReg))
     MRI.constrainRegClass(ResultReg, RC);
-  if (TargetRegisterInfo::isVirtualRegister(SrcReg0))
+  if (Register::isVirtualRegister(SrcReg0))
     MRI.constrainRegClass(SrcReg0, RC);
-  if (TargetRegisterInfo::isVirtualRegister(SrcReg1))
+  if (Register::isVirtualRegister(SrcReg1))
     MRI.constrainRegClass(SrcReg1, RC);
-  if (TargetRegisterInfo::isVirtualRegister(VR))
+  if (Register::isVirtualRegister(VR))
     MRI.constrainRegClass(VR, RC);
 
   MachineInstrBuilder MIB =
@@ -4618,7 +4614,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   unsigned VReg = MI.getOperand(0).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(VReg))
+  if (!Register::isVirtualRegister(VReg))
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(VReg);
@@ -4654,7 +4650,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
 
     MachineOperand &MO = DefMI->getOperand(1);
     unsigned NewReg = MO.getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(NewReg))
+    if (!Register::isVirtualRegister(NewReg))
       return false;
 
     assert(!MRI->def_empty(NewReg) && "Register must be defined.");

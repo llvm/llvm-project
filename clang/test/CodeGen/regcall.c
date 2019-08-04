@@ -27,7 +27,7 @@ struct Small { int x; };
 void __regcall v3(int a, struct Small b, int c) {}
 // Win32: define dso_local x86_regcallcc void @__regcall3__v3(i32 inreg %a, i32 %b.0, i32 inreg %c)
 // Win64: define dso_local x86_regcallcc void @__regcall3__v3(i32 %a, i32 %b.coerce, i32 %c)
-// Lin32: define x86_regcallcc void @__regcall3__v3(i32 inreg %a, i32 inreg, i32 %b.0, i32 inreg %c)
+// Lin32: define x86_regcallcc void @__regcall3__v3(i32 inreg %a, i32 inreg %0, i32 %b.0, i32 inreg %c)
 // Lin64: define x86_regcallcc void @__regcall3__v3(i32 %a, i32 %b.coerce, i32 %c)
 
 struct Large { int a[5]; };
@@ -51,9 +51,9 @@ void __regcall hfa1(int a, struct HFA4 b, int c) {}
 // indirectly. Additional vector arguments can consume the rest of the SSE
 // registers.
 void __regcall hfa2(struct HFA4 a, struct HFA4 b, double c) {}
-// Win32: define dso_local x86_regcallcc void @__regcall3__hfa2(double %a.0, double %a.1, double %a.2, double %a.3, double %b.0, double %b.1, double %b.2, double %b.3, double* inreg)
+// Win32: define dso_local x86_regcallcc void @__regcall3__hfa2(double %a.0, double %a.1, double %a.2, double %a.3, double %b.0, double %b.1, double %b.2, double %b.3, double* inreg %0)
 // Win64: define dso_local x86_regcallcc void @__regcall3__hfa2(double %a.0, double %a.1, double %a.2, double %a.3, double %b.0, double %b.1, double %b.2, double %b.3, double %c)
-// Lin32: define x86_regcallcc void @__regcall3__hfa2(double %a.0, double %a.1, double %a.2, double %a.3, double %b.0, double %b.1, double %b.2, double %b.3, double* inreg)
+// Lin32: define x86_regcallcc void @__regcall3__hfa2(double %a.0, double %a.1, double %a.2, double %a.3, double %b.0, double %b.1, double %b.2, double %b.3, double* inreg %0)
 // Lin64: define x86_regcallcc void @__regcall3__hfa2(double %a.coerce0, double %a.coerce1, double %a.coerce2, double %a.coerce3, double %b.coerce0, double %b.coerce1, double %b.coerce2, double %b.coerce3, double %c)
 
 // Ensure that we pass builtin types directly while counting them against the
@@ -68,7 +68,7 @@ void __regcall hfa3(double a, double b, double c, double d, double e, struct HFA
 // Because they are not classified as homogeneous, they don't get special
 // handling to ensure alignment.
 void __regcall hfa4(struct HFA5 a) {}
-// Win32: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval(%struct.HFA5) align 4)
+// Win32: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval(%struct.HFA5) align 4 %0)
 // Win64: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* %a)
 // Lin32: define x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval(%struct.HFA5) align 4 %a)
 // Lin64: define x86_regcallcc void @__regcall3__hfa4(double %a.coerce0, double %a.coerce1, double %a.coerce2, double %a.coerce3, double %a.coerce4)
@@ -92,9 +92,9 @@ void __regcall hva1(int a, struct HVA4 b, int c) {}
 // Lin64: define x86_regcallcc void @__regcall3__hva1(i32 %a, <4 x float> %b.coerce0, <4 x float> %b.coerce1, <4 x float> %b.coerce2, <4 x float> %b.coerce3, i32 %c)
 
 void __regcall hva2(struct HVA4 a, struct HVA4 b, v4f32 c) {}
-// Win32: define dso_local x86_regcallcc void @__regcall3__hva2(<4 x float> %a.0, <4 x float> %a.1, <4 x float> %a.2, <4 x float> %a.3, <4 x float> %b.0, <4 x float> %b.1, <4 x float> %b.2, <4 x float> %b.3, <4 x float>* inreg)
+// Win32: define dso_local x86_regcallcc void @__regcall3__hva2(<4 x float> %a.0, <4 x float> %a.1, <4 x float> %a.2, <4 x float> %a.3, <4 x float> %b.0, <4 x float> %b.1, <4 x float> %b.2, <4 x float> %b.3, <4 x float>* inreg %0)
 // Win64: define dso_local x86_regcallcc void @__regcall3__hva2(<4 x float> %a.0, <4 x float> %a.1, <4 x float> %a.2, <4 x float> %a.3, <4 x float> %b.0, <4 x float> %b.1, <4 x float> %b.2, <4 x float> %b.3, <4 x float> %c)
-// Lin32: define x86_regcallcc void @__regcall3__hva2(<4 x float> %a.0, <4 x float> %a.1, <4 x float> %a.2, <4 x float> %a.3, <4 x float> %b.0, <4 x float> %b.1, <4 x float> %b.2, <4 x float> %b.3, <4 x float>* inreg)
+// Lin32: define x86_regcallcc void @__regcall3__hva2(<4 x float> %a.0, <4 x float> %a.1, <4 x float> %a.2, <4 x float> %a.3, <4 x float> %b.0, <4 x float> %b.1, <4 x float> %b.2, <4 x float> %b.3, <4 x float>* inreg %0)
 // Lin64: define x86_regcallcc void @__regcall3__hva2(<4 x float> %a.coerce0, <4 x float> %a.coerce1, <4 x float> %a.coerce2, <4 x float> %a.coerce3, <4 x float> %b.coerce0, <4 x float> %b.coerce1, <4 x float> %b.coerce2, <4 x float> %b.coerce3, <4 x float> %c)
 
 void __regcall hva3(v4f32 a, v4f32 b, v4f32 c, v4f32 d, v4f32 e, struct HVA2 f) {}

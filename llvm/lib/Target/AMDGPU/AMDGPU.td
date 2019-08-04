@@ -10,6 +10,15 @@ include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
 
+def p0 : PtrValueType<i64, 0>;
+def p1 : PtrValueType<i64, 1>;
+def p2 : PtrValueType<i32, 2>;
+def p3 : PtrValueType<i32, 3>;
+def p4 : PtrValueType<i64, 4>;
+def p5 : PtrValueType<i32, 5>;
+def p6 : PtrValueType<i32, 6>;
+
+
 class BoolToList<bit Value> {
   list<int> ret = !if(Value, [1]<int>, []<int>);
 }

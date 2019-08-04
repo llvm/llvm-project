@@ -150,15 +150,8 @@ void RegisterContextLLDB::InitializeZerothFrame() {
     UnwindLogMsg("using architectural default unwind method");
   }
 
-  // We require either a symbol or function in the symbols context to be
-  // successfully filled in or this context is of no use to us.
-  const SymbolContextItem resolve_scope =
-      eSymbolContextFunction | eSymbolContextSymbol;
-  if (pc_module_sp.get() && (pc_module_sp->ResolveSymbolContextForAddress(
-                                 m_current_pc, resolve_scope, m_sym_ctx) &
-                             resolve_scope)) {
-    m_sym_ctx_valid = true;
-  }
+  AddressRange addr_range;
+  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
 
   if (m_sym_ctx.symbol) {
     UnwindLogMsg("with pc value of 0x%" PRIx64 ", symbol name is '%s'",
@@ -171,9 +164,6 @@ void RegisterContextLLDB::InitializeZerothFrame() {
                  ", no symbol/function name is known.",
                  current_pc);
   }
-
-  AddressRange addr_range;
-  m_sym_ctx.GetAddressRange(resolve_scope, 0, false, addr_range);
 
   if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
     m_frame_type = eTrapHandlerFrame;
@@ -436,24 +426,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     return;
   }
 
-  bool resolve_tail_call_address = false; // m_current_pc can be one past the
-                                          // address range of the function...
-  // If the saved pc does not point to a function/symbol because it is beyond
-  // the bounds of the correct function and there's no symbol there, we do
-  // *not* want ResolveSymbolContextForAddress to back up the pc by 1, because
-  // then we might not find the correct unwind information later. Instead, let
-  // ResolveSymbolContextForAddress fail, and handle the case via
-  // decr_pc_and_recompute_addr_range below.
-  const SymbolContextItem resolve_scope =
-      eSymbolContextFunction | eSymbolContextSymbol;
-  uint32_t resolved_scope = pc_module_sp->ResolveSymbolContextForAddress(
-      m_current_pc, resolve_scope, m_sym_ctx, resolve_tail_call_address);
-
-  // We require either a symbol or function in the symbols context to be
-  // successfully filled in or this context is of no use to us.
-  if (resolve_scope & resolved_scope) {
-    m_sym_ctx_valid = true;
-  }
+  AddressRange addr_range;
+  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
 
   if (m_sym_ctx.symbol) {
     UnwindLogMsg("with pc value of 0x%" PRIx64 ", symbol name is '%s'", pc,
@@ -465,11 +439,6 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     UnwindLogMsg("with pc value of 0x%" PRIx64
                  ", no symbol/function name is known.",
                  pc);
-  }
-
-  AddressRange addr_range;
-  if (!m_sym_ctx.GetAddressRange(resolve_scope, 0, false, addr_range)) {
-    m_sym_ctx_valid = false;
   }
 
   bool decr_pc_and_recompute_addr_range;
@@ -512,18 +481,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     Address temporary_pc;
     temporary_pc.SetLoadAddress(pc - 1, &process->GetTarget());
     m_sym_ctx.Clear(false);
-    m_sym_ctx_valid = false;
-    SymbolContextItem resolve_scope =
-        eSymbolContextFunction | eSymbolContextSymbol;
+    m_sym_ctx_valid = temporary_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
 
-    ModuleSP temporary_module_sp = temporary_pc.GetModule();
-    if (temporary_module_sp &&
-        temporary_module_sp->ResolveSymbolContextForAddress(
-            temporary_pc, resolve_scope, m_sym_ctx) &
-            resolve_scope) {
-      if (m_sym_ctx.GetAddressRange(resolve_scope, 0, false, addr_range))
-        m_sym_ctx_valid = true;
-    }
     UnwindLogMsg("Symbol is now %s",
                  GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
   }
@@ -573,6 +532,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     active_row =
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_fast_unwind_plan_sp->GetRegisterKind();
+    PropagateTrapHandlerFlagFromUnwindPlan(m_fast_unwind_plan_sp);
     if (active_row.get() && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
@@ -585,6 +545,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     if (IsUnwindPlanValidForCurrentPC(m_full_unwind_plan_sp, valid_offset)) {
       active_row = m_full_unwind_plan_sp->GetRowForFunctionOffset(valid_offset);
       row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
+      PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
       if (active_row.get() && log) {
         StreamString active_row_strm;
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
@@ -1708,6 +1669,7 @@ bool RegisterContextLLDB::TryFallbackUnwindPlan() {
     // We've copied the fallback unwind plan into the full - now clear the
     // fallback.
     m_fallback_unwind_plan_sp.reset();
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
   }
 
   return true;
@@ -1751,11 +1713,60 @@ bool RegisterContextLLDB::ForceSwitchToFallbackUnwindPlan() {
 
     m_cfa = new_cfa;
 
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
+
     UnwindLogMsg("switched unconditionally to the fallback unwindplan %s",
                  m_full_unwind_plan_sp->GetSourceName().GetCString());
     return true;
   }
   return false;
+}
+
+void RegisterContextLLDB::PropagateTrapHandlerFlagFromUnwindPlan(
+    lldb::UnwindPlanSP unwind_plan) {
+  if (unwind_plan->GetUnwindPlanForSignalTrap() != eLazyBoolYes) {
+    // Unwind plan does not indicate trap handler.  Do nothing.  We may
+    // already be flagged as trap handler flag due to the symbol being
+    // in the trap handler symbol list, and that should take precedence.
+    return;
+  } else if (m_frame_type != eNormalFrame) {
+    // If this is already a trap handler frame, nothing to do.
+    // If this is a skip or debug or invalid frame, don't override that.
+    return;
+  }
+
+  m_frame_type = eTrapHandlerFrame;
+
+  if (m_current_offset_backed_up_one != m_current_offset) {
+    // We backed up the pc by 1 to compute the symbol context, but
+    // now need to undo that because the pc of the trap handler
+    // frame may in fact be the first instruction of a signal return
+    // trampoline, rather than the instruction after a call.  This
+    // happens on systems where the signal handler dispatch code, rather
+    // than calling the handler and being returned to, jumps to the
+    // handler after pushing the address of a return trampoline on the
+    // stack -- on these systems, when the handler returns, control will
+    // be transferred to the return trampoline, so that's the best
+    // symbol we can present in the callstack.
+    UnwindLogMsg("Resetting current offset and re-doing symbol lookup; "
+                 "old symbol was %s",
+                 GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
+    m_current_offset_backed_up_one = m_current_offset;
+
+    AddressRange addr_range;
+    m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
+
+    UnwindLogMsg("Symbol is now %s",
+                 GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
+
+    ExecutionContext exe_ctx(m_thread.shared_from_this());
+    Process *process = exe_ctx.GetProcessPtr();
+    Target *target = &process->GetTarget();
+
+    m_start_pc = addr_range.GetBaseAddress();
+    m_current_offset =
+        m_current_pc.GetLoadAddress(target) - m_start_pc.GetLoadAddress(target);
+  }
 }
 
 bool RegisterContextLLDB::ReadFrameAddress(

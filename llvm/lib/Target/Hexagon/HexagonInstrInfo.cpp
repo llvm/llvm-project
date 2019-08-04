@@ -2094,12 +2094,12 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
       if (RegA == RegB)
         return true;
 
-      if (TargetRegisterInfo::isPhysicalRegister(RegA))
+      if (Register::isPhysicalRegister(RegA))
         for (MCSubRegIterator SubRegs(RegA, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegB == *SubRegs)
             return true;
 
-      if (TargetRegisterInfo::isPhysicalRegister(RegB))
+      if (Register::isPhysicalRegister(RegB))
         for (MCSubRegIterator SubRegs(RegB, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegA == *SubRegs)
             return true;
@@ -4091,7 +4091,7 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   // Get DefIdx and UseIdx for super registers.
   const MachineOperand &DefMO = DefMI.getOperand(DefIdx);
 
-  if (DefMO.isReg() && HRI.isPhysicalRegister(DefMO.getReg())) {
+  if (DefMO.isReg() && Register::isPhysicalRegister(DefMO.getReg())) {
     if (DefMO.isImplicit()) {
       for (MCSuperRegIterator SR(DefMO.getReg(), &HRI); SR.isValid(); ++SR) {
         int Idx = DefMI.findRegisterDefOperandIdx(*SR, false, false, &HRI);

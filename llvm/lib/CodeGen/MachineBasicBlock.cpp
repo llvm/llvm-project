@@ -486,7 +486,7 @@ void MachineBasicBlock::sortUniqueLiveIns() {
 unsigned
 MachineBasicBlock::addLiveIn(MCPhysReg PhysReg, const TargetRegisterClass *RC) {
   assert(getParent() && "MBB must be inserted in function");
-  assert(TargetRegisterInfo::isPhysicalRegister(PhysReg) && "Expected physreg");
+  assert(Register::isPhysicalRegister(PhysReg) && "Expected physreg");
   assert(RC && "Register class is required");
   assert((isEHPad() || this == &getParent()->front()) &&
          "Only the entry block and landing pads can have physreg live ins");
@@ -908,7 +908,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
             !OI->isUse() || !OI->isKill() || OI->isUndef())
           continue;
         unsigned Reg = OI->getReg();
-        if (TargetRegisterInfo::isPhysicalRegister(Reg) ||
+        if (Register::isPhysicalRegister(Reg) ||
             LV->getVarInfo(Reg).removeKill(*MI)) {
           KilledRegs.push_back(Reg);
           LLVM_DEBUG(dbgs() << "Removing terminator kill: " << *MI);
@@ -1000,7 +1000,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
       for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
         if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
           continue;
-        if (TargetRegisterInfo::isVirtualRegister(Reg))
+        if (Register::isVirtualRegister(Reg))
           LV->getVarInfo(Reg).Kills.push_back(&*I);
         LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;
@@ -1049,7 +1049,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
 
     MachineRegisterInfo *MRI = &getParent()->getRegInfo();
     for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-      unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+      unsigned Reg = Register::index2VirtReg(i);
       if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
         continue;
 

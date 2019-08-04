@@ -3183,7 +3183,7 @@ SparcTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'e':
       return C_RegisterClass;
     case 'I': // SIMM13
-      return C_Other;
+      return C_Immediate;
     }
   }
 

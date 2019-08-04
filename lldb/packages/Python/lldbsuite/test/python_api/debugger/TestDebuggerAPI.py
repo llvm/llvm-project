@@ -2,7 +2,6 @@
 Test Debugger APIs.
 """
 
-import os
 import lldb
 
 from lldbsuite.test.decorators import *

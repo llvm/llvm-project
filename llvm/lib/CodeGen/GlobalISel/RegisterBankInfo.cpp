@@ -82,7 +82,7 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 const RegisterBank *
 RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+  if (Register::isPhysicalRegister(Reg))
     return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI));
 
   assert(Reg && "NoRegister does not have a register bank");
@@ -97,8 +97,7 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
 const TargetRegisterClass &
 RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
                                          const TargetRegisterInfo &TRI) const {
-  assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
-         "Reg must be a physreg");
+  assert(Register::isPhysicalRegister(Reg) && "Reg must be a physreg");
   const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
   if (RegRCIt != PhysRegMinimalRCs.end())
     return *RegRCIt->second;
@@ -489,7 +488,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
 unsigned RegisterBankInfo::getSizeInBits(Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          const TargetRegisterInfo &TRI) const {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+  if (Register::isPhysicalRegister(Reg)) {
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.

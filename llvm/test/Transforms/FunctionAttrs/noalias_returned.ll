@@ -60,8 +60,8 @@ define i8* @bar() nounwind uwtable {
   ret i8* %1
 }
 
-; CHECK: define noalias i8* @foo1(i32)
-define i8* @foo1(i32) nounwind uwtable {
+; CHECK: define noalias i8* @foo1(i32 %0)
+define i8* @foo1(i32 %0) nounwind uwtable {
   %2 = icmp eq i32 %0, 0
   br i1 %2, label %5, label %3
 
@@ -125,8 +125,8 @@ return:
 
 ; TEST 8
 
-; CHECK: define noalias i8* @test8(i32*)
-define i8* @test8(i32*) nounwind uwtable {
+; CHECK: define noalias i8* @test8(i32* %0)
+define i8* @test8(i32* %0) nounwind uwtable {
   %2 = tail call noalias i8* @malloc(i64 4)
   %3 = icmp ne i32* %0, null
   br i1 %3, label %4, label %5

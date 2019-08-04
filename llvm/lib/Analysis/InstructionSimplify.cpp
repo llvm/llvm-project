@@ -3529,6 +3529,9 @@ static const Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     //   %sel = select i1 %cmp, i32 -2147483648, i32 %add
     //
     // We can't replace %sel with %add unless we strip away the flags.
+    // TODO: This is an unusual limitation because better analysis results in
+    //       worse simplification. InstCombine can do this fold more generally
+    //       by dropping the flags. Remove this fold to save compile-time?
     if (isa<OverflowingBinaryOperator>(B))
       if (Q.IIQ.hasNoSignedWrap(B) || Q.IIQ.hasNoUnsignedWrap(B))
         return nullptr;

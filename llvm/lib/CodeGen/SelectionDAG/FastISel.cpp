@@ -174,7 +174,7 @@ static unsigned findSinkableLocalRegDef(MachineInstr &MI) {
       if (RegDef)
         return 0;
       RegDef = MO.getReg();
-    } else if (TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+    } else if (Register::isVirtualRegister(MO.getReg())) {
       // This is another use of a vreg. Don't try to sink it.
       return 0;
     }
@@ -2028,7 +2028,7 @@ unsigned FastISel::createResultReg(const TargetRegisterClass *RC) {
 
 unsigned FastISel::constrainOperandRegClass(const MCInstrDesc &II, unsigned Op,
                                             unsigned OpNum) {
-  if (TargetRegisterInfo::isVirtualRegister(Op)) {
+  if (Register::isVirtualRegister(Op)) {
     const TargetRegisterClass *RegClass =
         TII.getRegClass(II, OpNum, &TRI, *FuncInfo.MF);
     if (!MRI.constrainRegClass(Op, RegClass)) {
@@ -2236,7 +2236,7 @@ unsigned FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
 unsigned FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
                                               bool Op0IsKill, uint32_t Idx) {
   unsigned ResultReg = createResultReg(TLI.getRegClassFor(RetVT));
-  assert(TargetRegisterInfo::isVirtualRegister(Op0) &&
+  assert(Register::isVirtualRegister(Op0) &&
          "Cannot yet extract from physregs");
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));

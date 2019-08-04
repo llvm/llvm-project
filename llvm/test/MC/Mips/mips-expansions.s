@@ -50,6 +50,7 @@
 # CHECK-LE: lhu     $4, 4($4)
 
 # LW/SW and LDC1/SDC1 of symbol address, done by MipsAsmParser::expandMemInst():
+# NON-PIC code
   .set noat
   lw $10, symbol($4)
 # CHECK-LE: lui     $10, %hi(symbol)        # encoding: [A,A,0x0a,0x3c]
@@ -104,6 +105,64 @@
   sdc1 $f0, symbol
 # CHECK-LE: lui     $1, %hi(symbol)
 # CHECK-LE: sdc1    $f0, %lo(symbol)($1)
+
+# PIC code
+  .option pic2
+  .set noat
+  lw $10, symbol($4)
+# CHECK-LE: lw      $10, %got(symbol)($gp)    # encoding: [A,A,0x8a,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE-FIXME: addu    $10, $10, $4        # encoding: [0x21,0x50,0x44,0x01]
+# CHECK-LE: lw      $10, 0($10)               # encoding: [0x00,0x00,0x4a,0x8d]
+  .set at
+  sw $10, symbol($9)
+# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE-FIXME: addu    $1, $1, $9          # encoding: [0x21,0x08,0x29,0x00]
+# CHECK-LE: sw      $10, 0($1)                # encoding: [0x00,0x00,0x2a,0xac]
+
+  lw $8, 1f+8
+# CHECK-LE: lw      $8, %got(($tmp0)+8)($gp)  # encoding: [A,A,0x88,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(($tmp0)+8), kind: fixup_Mips_GOT
+# CHECK-LE: addiu   $8, $8, %lo(($tmp0)+8)    # encoding: [A,A,0x08,0x25]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %lo(($tmp0)+8), kind: fixup_Mips_LO16
+# CHECK-LE: lw      $8, 0($8)                 # encoding: [0x00,0x00,0x08,0x8d]
+  sw $8, 1f+8
+# CHECK-LE: lw      $1, %got(($tmp0)+8)($gp)  # encoding: [A,A,0x81,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(($tmp0)+8), kind: fixup_Mips_GOT
+# CHECK-LE: addiu   $1, $1, %lo(($tmp0)+8)    # encoding: [A,A,0x21,0x24]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %lo(($tmp0)+8), kind: fixup_Mips_LO16
+# CHECK-LE: sw      $8, 0($1)                 # encoding: [0x00,0x00,0x28,0xac]
+
+  lw $10, 655483($4)
+# CHECK-LE: lui     $10, 10                   # encoding: [0x0a,0x00,0x0a,0x3c]
+# CHECK-LE: addu    $10, $10, $4              # encoding: [0x21,0x50,0x44,0x01]
+# CHECK-LE: lw      $10, 123($10)             # encoding: [0x7b,0x00,0x4a,0x8d]
+  sw $10, 123456($9)
+# CHECK-LE: lui     $1, 2                     # encoding: [0x02,0x00,0x01,0x3c]
+# CHECK-LE: addu    $1, $1, $9                # encoding: [0x21,0x08,0x29,0x00]
+# CHECK-LE: sw      $10, -7616($1)            # encoding: [0x40,0xe2,0x2a,0xac]
+
+  lw $8, symbol+8
+# CHECK-LE: lw      $8, %got(symbol+8)($gp)   # encoding: [A,A,0x88,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+# CHECK-LE: addiu   $8, $8, 8                 # encoding: [0x08,0x00,0x08,0x25]
+# CHECK-LE: lw      $8, 0($8)                 # encoding: [0x00,0x00,0x08,0x8d]
+  sw $8, symbol+8
+# CHECK-LE: lw      $1, %got(symbol+8)($gp)   # encoding: [A,A,0x81,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+# CHECK-LE: addiu   $1, $1, 8                 # encoding: [0x08,0x00,0x21,0x24]
+# CHECK-LE: sw      $8, 0($1)                 # encoding: [0x00,0x00,0x28,0xac]
+
+  ldc1 $f0, symbol
+# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE: ldc1    $f0, 0($1)                # encoding: [0x00,0x00,0x20,0xd4]
+  sdc1 $f0, symbol
+# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
+# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE: sdc1    $f0, 0($1)                # encoding: [0x00,0x00,0x20,0xf4]
+  .option pic0
 
 # Test BNE with an immediate as the 2nd operand.
   bne $2, 0, 1332

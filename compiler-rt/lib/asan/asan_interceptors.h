@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// ASan-private header for asan_interceptors.cc
+// ASan-private header for asan_interceptors.cpp
 //===----------------------------------------------------------------------===//
 #ifndef ASAN_INTERCEPTORS_H
 #define ASAN_INTERCEPTORS_H

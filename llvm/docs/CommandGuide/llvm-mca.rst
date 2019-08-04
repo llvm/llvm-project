@@ -92,6 +92,11 @@ option specifies "``-``", then the output will also be sent to standard output.
  the AT&T (vic. Intel) assembly format for the code printed out by the tool in
  the analysis report.
 
+.. option:: -print-imm-hex
+
+ Prefer hex format for numeric literals in the output assembly printed as part
+ of the report.
+
 .. option:: -dispatch=<width>
 
  Specify a different dispatch width for the processor. The dispatch width

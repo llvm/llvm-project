@@ -41,7 +41,7 @@ void test6 (int x, struct test6 y)
 }
 
 // This case requires run-time realignment of the incoming struct
-// CHECK-LABEL: define void @test7(i32 signext %x, %struct.test7* byval(%struct.test7) align 16)
+// CHECK-LABEL: define void @test7(i32 signext %x, %struct.test7* byval(%struct.test7) align 16 %0)
 // CHECK: %y = alloca %struct.test7, align 32
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
 void test7 (int x, struct test7 y)

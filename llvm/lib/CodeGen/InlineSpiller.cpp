@@ -346,8 +346,7 @@ void InlineSpiller::collectRegsToSpill() {
 }
 
 bool InlineSpiller::isSibling(unsigned Reg) {
-  return TargetRegisterInfo::isVirtualRegister(Reg) &&
-           VRM.getOriginal(Reg) == Original;
+  return Register::isVirtualRegister(Reg) && VRM.getOriginal(Reg) == Original;
 }
 
 /// It is beneficial to spill to earlier place in the same BB in case
@@ -846,8 +845,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (!MO->isReg())
       continue;
     unsigned Reg = MO->getReg();
-    if (!Reg || TargetRegisterInfo::isVirtualRegister(Reg) ||
-        MRI.isReserved(Reg)) {
+    if (!Reg || Register::isVirtualRegister(Reg) || MRI.isReserved(Reg)) {
       continue;
     }
     // Skip non-Defs, including undef uses and internal reads.
@@ -1111,8 +1109,8 @@ void InlineSpiller::spillAll() {
 void InlineSpiller::spill(LiveRangeEdit &edit) {
   ++NumSpilledRanges;
   Edit = &edit;
-  assert(!TargetRegisterInfo::isStackSlot(edit.getReg())
-         && "Trying to spill a stack slot.");
+  assert(!Register::isStackSlot(edit.getReg()) &&
+         "Trying to spill a stack slot.");
   // Share a stack slot among all descendants of Original.
   Original = VRM.getOriginal(edit.getReg());
   StackSlot = VRM.getStackSlot(Original);
@@ -1459,7 +1457,7 @@ void HoistSpillHelper::hoistAllSpills() {
   LiveRangeEdit Edit(nullptr, NewVRegs, MF, LIS, &VRM, this);
 
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    unsigned Reg = Register::index2VirtReg(i);
     unsigned Original = VRM.getPreSplitReg(Reg);
     if (!MRI.def_empty(Reg))
       Virt2SiblingsMap[Original].insert(Reg);

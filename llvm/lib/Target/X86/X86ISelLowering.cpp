@@ -4190,7 +4190,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!TargetRegisterInfo::isVirtualRegister(VR))
+    if (!Register::isVirtualRegister(VR))
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -4869,15 +4869,25 @@ bool X86TargetLowering::convertSelectOfConstantsToMath(EVT VT) const {
   return true;
 }
 
-bool X86TargetLowering::decomposeMulByConstant(EVT VT, SDValue C) const {
+bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                               SDValue C) const {
   // TODO: We handle scalars using custom code, but generic combining could make
   // that unnecessary.
   APInt MulC;
   if (!ISD::isConstantSplatVector(C.getNode(), MulC))
     return false;
 
+  // Find the type this will be legalized too. Otherwise we might prematurely
+  // convert this to shl+add/sub and then still have to type legalize those ops.
+  // Another choice would be to defer the decision for illegal types until 
+  // after type legalization. But constant splat vectors of i64 can't make it
+  // through type legalization on 32-bit targets so we would need to special
+  // case vXi64.
+  while (getTypeAction(Context, VT) != TypeLegal)
+    VT = getTypeToTransformTo(Context, VT);
+
   // If vector multiply is legal, assume that's faster than shl + add/sub.
-  // TODO: Multiply is a complex op with higher latency and lower througput in
+  // TODO: Multiply is a complex op with higher latency and lower throughput in
   //       most implementations, so this check could be loosened based on type
   //       and/or a CPU attribute.
   if (isOperationLegal(ISD::MUL, VT))
@@ -7572,7 +7582,10 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 // Recurse to find a LoadSDNode source and the accumulated ByteOffest.
 static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
   if (ISD::isNON_EXTLoad(Elt.getNode())) {
-    Ld = cast<LoadSDNode>(Elt);
+    auto *BaseLd = cast<LoadSDNode>(Elt);
+    if (BaseLd->getMemOperand()->getFlags() & MachineMemOperand::MOVolatile)
+      return false;
+    Ld = BaseLd;
     ByteOffset = 0;
     return true;
   }
@@ -23301,7 +23314,9 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   // Scale must be constant.
   if (!C)
     return SDValue();
-  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl,
+                                        TLI.getPointerTy(DAG.getDataLayout()));
   EVT MaskVT = Mask.getValueType().changeVectorElementTypeToInteger();
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
   // If source is undef or we know it won't be used, use a zero vector
@@ -23328,7 +23343,9 @@ static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
   // Scale must be constant.
   if (!C)
     return SDValue();
-  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl,
+                                        TLI.getPointerTy(DAG.getDataLayout()));
   unsigned MinElts = std::min(Index.getSimpleValueType().getVectorNumElements(),
                               VT.getVectorNumElements());
   MVT MaskVT = MVT::getVectorVT(MVT::i1, MinElts);
@@ -23362,7 +23379,9 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   // Scale must be constant.
   if (!C)
     return SDValue();
-  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl,
+                                        TLI.getPointerTy(DAG.getDataLayout()));
   unsigned MinElts = std::min(Index.getSimpleValueType().getVectorNumElements(),
                               Src.getSimpleValueType().getVectorNumElements());
   MVT MaskVT = MVT::getVectorVT(MVT::i1, MinElts);
@@ -23390,7 +23409,9 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   // Scale must be constant.
   if (!C)
     return SDValue();
-  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl,
+                                        TLI.getPointerTy(DAG.getDataLayout()));
   SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
   SDValue Segment = DAG.getRegister(0, MVT::i32);
   MVT MaskVT =
@@ -34574,6 +34595,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                                KnownVec, TLO, Depth + 1))
         return true;
 
+      if (SDValue V = SimplifyMultipleUseDemandedBits(
+              Vec, DemandedVecBits, DemandedVecElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, V, Op.getOperand(1)));
+
       Known = KnownVec.zext(BitWidth, true);
       return false;
     }
@@ -34673,6 +34699,28 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
+
+SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    SelectionDAG &DAG, unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW: {
+    // If we don't demand the inserted element, return the base vector.
+    SDValue Vec = Op.getOperand(0);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    MVT VecVT = Vec.getSimpleValueType();
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements()) &&
+        !DemandedElts[CIdx->getZExtValue()])
+      return Vec;
+     break;
+  }
+  }
+
+  return TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
+      Op, DemandedBits, DemandedElts, DAG, Depth);
 }
 
 /// Check if a vector extract from a target-specific shuffle of a load can be
@@ -35877,15 +35925,26 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // TODO - Remove this once we can handle the implicit zero-extension of
-  // X86ISD::PEXTRW/X86ISD::PEXTRB in:
-  // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
-  // combineBasicSADPattern.
   if (IsPextr) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (TLI.SimplifyDemandedBits(
             SDValue(N, 0), APInt::getAllOnesValue(VT.getSizeInBits()), DCI))
       return SDValue(N, 0);
+
+    // PEXTR*(PINSR*(v, s, c), c) -> s (with implicit zext handling).
+    if ((InputVector.getOpcode() == X86ISD::PINSRB ||
+         InputVector.getOpcode() == X86ISD::PINSRW) &&
+        InputVector.getOperand(2) == EltIdx) {
+      assert(SrcVT == InputVector.getOperand(0).getValueType() &&
+             "Vector type mismatch");
+      SDValue Scl = InputVector.getOperand(1);
+      Scl = DAG.getNode(ISD::TRUNCATE, dl, SrcVT.getScalarType(), Scl);
+      return DAG.getZExtOrTrunc(Scl, dl, VT);
+    }
+
+    // TODO - Remove this once we can handle the implicit zero-extension of
+    // X86ISD::PEXTRW/X86ISD::PEXTRB in XFormVExtractWithShuffleIntoLoad,
+    // combineHorizontalPredicateResult and combineBasicSADPattern.
     return SDValue();
   }
 
@@ -44816,10 +44875,11 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'I':
     case 'J':
     case 'K':
-    case 'L':
-    case 'M':
     case 'N':
     case 'G':
+    case 'L':
+    case 'M':
+      return C_Immediate;
     case 'C':
     case 'e':
     case 'Z':

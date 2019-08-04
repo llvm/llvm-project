@@ -101,7 +101,7 @@ void test_copy_assignment_Weak(Weak *d, Weak *s) {
   *d = *s;
 }
 
-// ARM64: define internal void @__Block_byref_object_copy_(i8*, i8*)
+// ARM64: define internal void @__Block_byref_object_copy_(i8* %0, i8* %1)
 // ARM64: call void @__move_constructor_8_8_t0w4_w8(i8** %{{.*}}, i8** %{{.*}})
 
 // ARM64: define linkonce_odr hidden void @__move_constructor_8_8_t0w4_w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])

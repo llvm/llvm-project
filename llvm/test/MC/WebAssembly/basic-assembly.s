@@ -34,7 +34,7 @@ test0:
     i64.const   1234
     i32.call    something2
     i32.const   0
-    call_indirect 0
+    call_indirect (i32, f64) -> ()
     i32.const   1
     i32.add
     local.tee   0
@@ -138,7 +138,7 @@ test0:
 # CHECK-NEXT:      i64.const   1234
 # CHECK-NEXT:      i32.call    something2
 # CHECK-NEXT:      i32.const   0
-# CHECK-NEXT:      call_indirect 0
+# CHECK-NEXT:      call_indirect (i32, f64) -> ()
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      i32.add
 # CHECK-NEXT:      local.tee   0

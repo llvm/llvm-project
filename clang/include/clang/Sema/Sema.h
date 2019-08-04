@@ -11136,6 +11136,7 @@ public:
   // Emitting members of dllexported classes is delayed until the class
   // (including field initializers) is fully parsed.
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
+  SmallVector<CXXMethodDecl*, 4> DelayedDllExportMemberFunctions;
 
 private:
   class SavePendingParsedClassStateRAII {

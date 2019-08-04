@@ -64,11 +64,8 @@ void OptimizeReturned::visitCallSite(CallSite CS) {
       if (isa<Constant>(Arg))
         continue;
       // Like replaceDominatedUsesWith but using Instruction/Use dominance.
-      for (auto UI = Arg->use_begin(), UE = Arg->use_end(); UI != UE;) {
-        Use &U = *UI++;
-        if (DT->dominates(Inst, U))
-          U.set(Inst);
-      }
+      Arg->replaceUsesWithIf(Inst,
+                             [&](Use &U) { return DT->dominates(Inst, U); });
     }
 }
 

@@ -317,7 +317,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     return false;
 
   unsigned PairedPhys = 0;
-  if (TargetRegisterInfo::isPhysicalRegister(Paired)) {
+  if (Register::isPhysicalRegister(Paired)) {
     PairedPhys = Paired;
   } else if (VRM && VRM->hasPhys(Paired)) {
     PairedPhys = getPairedGPR(VRM->getPhys(Paired), Odd, this);
@@ -347,7 +347,7 @@ ARMBaseRegisterInfo::updateRegAllocHint(unsigned Reg, unsigned NewReg,
   std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(Reg);
   if ((Hint.first == (unsigned)ARMRI::RegPairOdd ||
        Hint.first == (unsigned)ARMRI::RegPairEven) &&
-      TargetRegisterInfo::isVirtualRegister(Hint.second)) {
+      Register::isVirtualRegister(Hint.second)) {
     // If 'Reg' is one of the even / odd register pair and it's now changed
     // (e.g. coalesced) into a different register. The other register of the
     // pair allocation hint must be updated to reflect the relationship
@@ -357,7 +357,7 @@ ARMBaseRegisterInfo::updateRegAllocHint(unsigned Reg, unsigned NewReg,
     // Make sure the pair has not already divorced.
     if (Hint.second == Reg) {
       MRI->setRegAllocationHint(OtherReg, Hint.first, NewReg);
-      if (TargetRegisterInfo::isVirtualRegister(NewReg))
+      if (Register::isVirtualRegister(NewReg))
         MRI->setRegAllocationHint(NewReg,
             Hint.first == (unsigned)ARMRI::RegPairOdd ? ARMRI::RegPairEven
             : ARMRI::RegPairOdd, OtherReg);

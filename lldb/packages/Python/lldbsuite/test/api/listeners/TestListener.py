@@ -4,9 +4,6 @@ Test that we can listen to modules loaded events.
 
 from __future__ import print_function
 
-import copy
-import os
-import time
 
 import lldb
 from lldbsuite.test.decorators import *

@@ -554,7 +554,7 @@ void LDVImpl::print(raw_ostream &OS) {
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
   for (unsigned i = 0, e = locations.size(); i != e; ++i)
     if (locations[i].isReg() &&
-        TargetRegisterInfo::isVirtualRegister(locations[i].getReg()))
+        Register::isVirtualRegister(locations[i].getReg()))
       LDV->mapVirtReg(locations[i].getReg(), this);
 }
 
@@ -577,7 +577,7 @@ UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
 }
 
 void LDVImpl::mapVirtReg(unsigned VirtReg, UserValue *EC) {
-  assert(TargetRegisterInfo::isVirtualRegister(VirtReg) && "Only map VirtRegs");
+  assert(Register::isVirtualRegister(VirtReg) && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
@@ -606,7 +606,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // could be removed or replaced by asserts.
   bool Discard = false;
   if (MI.getOperand(0).isReg() &&
-      TargetRegisterInfo::isVirtualRegister(MI.getOperand(0).getReg())) {
+      Register::isVirtualRegister(MI.getOperand(0).getReg())) {
     const unsigned Reg = MI.getOperand(0).getReg();
     if (!LIS->hasInterval(Reg)) {
       // The DBG_VALUE is described by a virtual register that does not have a
@@ -758,7 +758,7 @@ void UserValue::addDefsFromCopies(
   if (Kills.empty())
     return;
   // Don't track copies from physregs, there are too many uses.
-  if (!TargetRegisterInfo::isVirtualRegister(LI->reg))
+  if (!Register::isVirtualRegister(LI->reg))
     return;
 
   // Collect all the (vreg, valno) pairs that are copies of LI.
@@ -774,7 +774,7 @@ void UserValue::addDefsFromCopies(
     // arguments, and the argument registers are always call clobbered. We are
     // better off in the source register which could be a callee-saved register,
     // or it could be spilled.
-    if (!TargetRegisterInfo::isVirtualRegister(DstReg))
+    if (!Register::isVirtualRegister(DstReg))
       continue;
 
     // Is LocNo extended to reach this copy? If not, another def may be blocking
@@ -845,7 +845,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     }
 
     // Register locations are constrained to where the register value is live.
-    if (TargetRegisterInfo::isVirtualRegister(LocMO.getReg())) {
+    if (Register::isVirtualRegister(LocMO.getReg())) {
       LiveInterval *LI = nullptr;
       const VNInfo *VNI = nullptr;
       if (LIS.hasInterval(LocMO.getReg())) {
@@ -1161,10 +1161,10 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     MachineOperand Loc = locations[I];
     // Only virtual registers are rewritten.
     if (Loc.isReg() && Loc.getReg() &&
-        TargetRegisterInfo::isVirtualRegister(Loc.getReg())) {
+        Register::isVirtualRegister(Loc.getReg())) {
       unsigned VirtReg = Loc.getReg();
       if (VRM.isAssignedReg(VirtReg) &&
-          TargetRegisterInfo::isPhysicalRegister(VRM.getPhys(VirtReg))) {
+          Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {
         // This can create a %noreg operand in rare cases when the sub-register
         // index is no longer available. That means the user value is in a
         // non-existent sub-register, and %noreg is exactly what we want.
