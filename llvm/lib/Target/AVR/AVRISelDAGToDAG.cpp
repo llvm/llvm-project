@@ -251,7 +251,7 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
       RegisterSDNode *RegNode =
           cast<RegisterSDNode>(CopyFromRegOp->getOperand(1));
       Reg = RegNode->getReg();
-      CanHandleRegImmOpt &= (TargetRegisterInfo::isVirtualRegister(Reg) ||
+      CanHandleRegImmOpt &= (Register::isVirtualRegister(Reg) ||
                              AVR::PTRDISPREGSRegClass.contains(Reg));
     } else {
       CanHandleRegImmOpt = false;

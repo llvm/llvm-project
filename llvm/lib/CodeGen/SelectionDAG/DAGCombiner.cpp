@@ -7631,7 +7631,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
       EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt);
       if (VT.isVector())
         TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorNumElements());
-      if (TLI.isTruncateFree(VT, TruncVT)) {
+      if (isTypeLegal(TruncVT) && TLI.isTruncateFree(VT, TruncVT)) {
         SDLoc DL(N);
         SDValue Trunc = DAG.getZExtOrTrunc(Shl.getOperand(0), DL, TruncVT);
         SDValue ShiftC = DAG.getConstant(AddC->getAPIntValue().lshr(ShiftAmt).

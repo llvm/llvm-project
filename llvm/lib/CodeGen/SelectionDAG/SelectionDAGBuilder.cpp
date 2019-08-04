@@ -8049,6 +8049,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(T, SDValue());
 
+    if (T.ConstraintType == TargetLowering::C_Immediate &&
+        OpInfo.CallOperand && !isa<ConstantSDNode>(OpInfo.CallOperand))
+      // We've delayed emitting a diagnostic like the "n" constraint because
+      // inlining could cause an integer showing up.
+      return emitInlineAsmError(
+          CS, "constraint '" + Twine(T.ConstraintCode) + "' expects an "
+                  "integer constant expression");
+
     ExtraInfo.update(T);
   }
 
@@ -8133,7 +8141,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
-          (OpInfo.ConstraintType == TargetLowering::C_Other &&
+          ((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+            OpInfo.ConstraintType == TargetLowering::C_Other) &&
            OpInfo.isIndirect)) {
         unsigned ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
@@ -8147,13 +8156,14 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
                                                         MVT::i32));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
         break;
-      } else if ((OpInfo.ConstraintType == TargetLowering::C_Other &&
+      } else if (((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+                   OpInfo.ConstraintType == TargetLowering::C_Other) &&
                   !OpInfo.isIndirect) ||
                  OpInfo.ConstraintType == TargetLowering::C_Register ||
                  OpInfo.ConstraintType == TargetLowering::C_RegisterClass) {
         // Otherwise, this outputs to a register (directly for C_Register /
-        // C_RegisterClass, and a target-defined fashion for C_Other). Find a
-        // register that we can use.
+        // C_RegisterClass, and a target-defined fashion for
+        // C_Immediate/C_Other). Find a register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
           emitInlineAsmError(
               CS, "couldn't allocate output register for constraint '" +
@@ -8233,15 +8243,24 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       }
 
       // Treat indirect 'X' constraint as memory.
-      if (OpInfo.ConstraintType == TargetLowering::C_Other &&
+      if ((OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+           OpInfo.ConstraintType == TargetLowering::C_Other) &&
           OpInfo.isIndirect)
         OpInfo.ConstraintType = TargetLowering::C_Memory;
 
-      if (OpInfo.ConstraintType == TargetLowering::C_Other) {
+      if (OpInfo.ConstraintType == TargetLowering::C_Immediate ||
+          OpInfo.ConstraintType == TargetLowering::C_Other) {
         std::vector<SDValue> Ops;
         TLI.LowerAsmOperandForConstraint(InOperandVal, OpInfo.ConstraintCode,
                                           Ops, DAG);
         if (Ops.empty()) {
+          if (OpInfo.ConstraintType == TargetLowering::C_Immediate)
+            if (isa<ConstantSDNode>(InOperandVal)) {
+              emitInlineAsmError(CS, "value out of range for constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'");
+              return;
+            }
+
           emitInlineAsmError(CS, "invalid operand for inline asm constraint '" +
                                      Twine(OpInfo.ConstraintCode) + "'");
           return;
@@ -8278,7 +8297,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       }
 
       assert((OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
-              OpInfo.ConstraintType == TargetLowering::C_Register) &&
+              OpInfo.ConstraintType == TargetLowering::C_Register ||
+              OpInfo.ConstraintType == TargetLowering::C_Immediate) &&
              "Unknown constraint type!");
 
       // TODO: Support this.
@@ -8384,6 +8404,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         Val = OpInfo.AssignedRegs.getCopyFromRegs(
             DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
         break;
+      case TargetLowering::C_Immediate:
       case TargetLowering::C_Other:
         Val = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
                                               OpInfo, DAG);

@@ -38,11 +38,11 @@ $N:
 ; CHECK-NEXT:   ret i32 %4
 ; CHECK-NEXT: }
 
-define void @test2(i32, i32) {
+define void @test2(i32 %0, i32 %1) {
 ; entry label id still not printed on output
 2:
   ret void
 }
 
-; CHECK-LABEL: define void @test2(i32, i32) {
+; CHECK-LABEL: define void @test2(i32 %0, i32 %1) {
 ; CHECK-NEXT:    ret void

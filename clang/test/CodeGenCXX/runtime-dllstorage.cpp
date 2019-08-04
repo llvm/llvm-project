@@ -116,7 +116,7 @@ void l() {
 
 // CHECK-IA-DAG: @_ZTH1t = dso_local alias void (), void ()* @__tls_init
 // CHECK-IA-DAG: declare dso_local i32 @__gxx_personality_v0(...)
-// CHECK-IA-DAG: define linkonce_odr hidden void @__clang_call_terminate(i8*)
+// CHECK-IA-DAG: define linkonce_odr hidden void @__clang_call_terminate(i8* %0)
 
 // CHECK-DYNAMIC-IA-DAG: declare dllimport i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
 // CHECK-DYNAMIC-IA-DAG: declare dllimport i32 @__cxa_atexit(void (i8*)*, i8*, i8*)

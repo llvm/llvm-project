@@ -49,7 +49,7 @@ void test2(id x) {
   extern void test2_helper(id (^)(void));
   test2_helper(^{ return x; });
 
-// CHECK:    define linkonce_odr hidden void @__copy_helper_block_8_32s(i8*, i8*) unnamed_addr #{{[0-9]+}} {
+// CHECK:    define linkonce_odr hidden void @__copy_helper_block_8_32s(i8* %0, i8* %1) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load i8*, i8**
 // CHECK-NEXT: [[SRC:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8**
@@ -60,7 +60,7 @@ void test2(id x) {
 // CHECK-NEXT: ret void
 
 
-// CHECK:    define linkonce_odr hidden void @__destroy_helper_block_8_32s(i8*) unnamed_addr #{{[0-9]+}} {
+// CHECK:    define linkonce_odr hidden void @__destroy_helper_block_8_32s(i8* %0) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load i8*, i8**
 // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[T1]], i32 0, i32 5
@@ -141,7 +141,7 @@ void test4(void) {
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
   // CHECK: ret void
 
-  // CHECK-LABEL:    define internal void @__Block_byref_object_copy_(i8*, i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define internal void @__Block_byref_object_copy_(i8* %0, i8* %1) #{{[0-9]+}} {
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: load i8*, i8**
   // CHECK-NEXT: bitcast i8* {{%.*}} to [[BYREF_T]]*
@@ -150,7 +150,7 @@ void test4(void) {
   // CHECK-NEXT: store i8* [[T2]], i8** [[T0]]
   // CHECK-NEXT: store i8* null, i8** [[T1]]
 
-  // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_(i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_(i8* %0) #{{[0-9]+}} {
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: [[T1:%.*]] = load i8*, i8** [[T0]]
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
@@ -162,10 +162,10 @@ void test4(void) {
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
   // CHECK-NEXT: ret void
 
-  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32r(i8*, i8*) unnamed_addr #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32r(i8* %0, i8* %1) unnamed_addr #{{[0-9]+}} {
   // CHECK:      call void @_Block_object_assign(i8* {{%.*}}, i8* {{%.*}}, i32 8)
 
-  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32r(i8*) unnamed_addr #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32r(i8* %0) unnamed_addr #{{[0-9]+}} {
   // CHECK:      call void @_Block_object_dispose(i8* {{%.*}}, i32 8)
 }
 
@@ -230,14 +230,14 @@ void test6(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 48, i8* [[VARPTR2]])
   // CHECK-NEXT: ret void
 
-  // CHECK-LABEL:    define internal void @__Block_byref_object_copy_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define internal void @__Block_byref_object_copy_.{{[0-9]+}}(i8* %0, i8* %1) #{{[0-9]+}} {
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: load i8*, i8**
   // CHECK-NEXT: bitcast i8* {{%.*}} to [[BYREF_T]]*
   // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: call void @llvm.objc.moveWeak(i8** [[T0]], i8** [[T1]])
 
-  // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(i8* %0) #{{[0-9]+}} {
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[T0]])
 
@@ -277,12 +277,12 @@ void test7(void) {
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
   // CHECK: ret void
 
-  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32w(i8*, i8*) unnamed_addr #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32w(i8* %0, i8* %1) unnamed_addr #{{[0-9]+}} {
   // CHECK:      getelementptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: call void @llvm.objc.copyWeak(
 
-  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32w(i8*) unnamed_addr #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32w(i8* %0) unnamed_addr #{{[0-9]+}} {
   // CHECK:      getelementptr
   // CHECK-NEXT: call void @llvm.objc.destroyWeak(
 }
@@ -369,7 +369,7 @@ void test10a(void) {
 // We can also use _Block_object_assign/destroy with
 // BLOCK_FIELD_IS_BLOCK as long as we don't pass BLOCK_BYREF_CALLER.
 
-// CHECK-LABEL: define internal void @__Block_byref_object_copy_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
+// CHECK-LABEL: define internal void @__Block_byref_object_copy_.{{[0-9]+}}(i8* %0, i8* %1) #{{[0-9]+}} {
 // CHECK:      [[D0:%.*]] = load i8*, i8** {{%.*}}
 // CHECK-NEXT: [[D1:%.*]] = bitcast i8* [[D0]] to [[BYREF_T]]*
 // CHECK-NEXT: [[D2:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[D1]], i32 0, i32 6
@@ -383,7 +383,7 @@ void test10a(void) {
 // CHECK-NEXT: store void ()* [[T3]], void ()** [[D2]], align 8
 // CHECK: ret void
 
-// CHECK-LABEL: define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
+// CHECK-LABEL: define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(i8* %0) #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load i8*, i8** {{%.*}}
 // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to [[BYREF_T]]*
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T1]], i32 0, i32 6

@@ -874,7 +874,7 @@ unsigned AVRExpandPseudo::scavengeGPR8(MachineInstr &MI) {
   // Exclude all the registers being used by the instruction.
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
-        !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+        !Register::isVirtualRegister(MO.getReg()))
       Candidates.reset(MO.getReg());
   }
 

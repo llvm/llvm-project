@@ -163,7 +163,7 @@ void packed_arg(Packed s) {}
 
 // Test that dtors are invoked in the callee.
 void small_arg_with_dtor(SmallWithDtor s) {}
-// WIN32: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(<{ %struct.SmallWithDtor }>* inalloca) {{.*}} {
+// WIN32: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(<{ %struct.SmallWithDtor }>* inalloca %0) {{.*}} {
 // WIN32:   call x86_thiscallcc void @"??1SmallWithDtor@@QAE@XZ"
 // WIN32: }
 // WIN64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %s.coerce) {{.*}} {
@@ -240,13 +240,13 @@ void eh_cleanup_arg_with_dtor() {
 
 void small_arg_with_vftable(SmallWithVftable s) {}
 // LINUX-LABEL: define void @_Z22small_arg_with_vftable16SmallWithVftable(%struct.SmallWithVftable* %s)
-// WIN32: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(<{ %struct.SmallWithVftable }>* inalloca)
+// WIN32: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(<{ %struct.SmallWithVftable }>* inalloca %0)
 // WIN64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
 // WOA64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
 
 void medium_arg_with_copy_ctor(MediumWithCopyCtor s) {}
 // LINUX-LABEL: define void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* %s)
-// WIN32: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(<{ %struct.MediumWithCopyCtor }>* inalloca)
+// WIN32: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(<{ %struct.MediumWithCopyCtor }>* inalloca %0)
 // WIN64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 // WOA64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
@@ -347,7 +347,7 @@ struct X {
 };
 void g(X) {
 }
-// WIN32: define dso_local void @"?g@@YAXUX@@@Z"(<{ %struct.X, [3 x i8] }>* inalloca) {{.*}} {
+// WIN32: define dso_local void @"?g@@YAXUX@@@Z"(<{ %struct.X, [3 x i8] }>* inalloca %0) {{.*}} {
 // WIN32:   call x86_thiscallcc void @"??1X@@QAE@XZ"(%struct.X* {{.*}})
 // WIN32: }
 void f() {
@@ -398,7 +398,7 @@ struct NonTrivial {
   int a;
 };
 void foo(NonTrivial a, bool b) { }
-// WIN32-LABEL: define dso_local void @"?foo@test3@@YAXUNonTrivial@1@_N@Z"(<{ %"struct.test3::NonTrivial", i8, [3 x i8] }>* inalloca)
+// WIN32-LABEL: define dso_local void @"?foo@test3@@YAXUNonTrivial@1@_N@Z"(<{ %"struct.test3::NonTrivial", i8, [3 x i8] }>* inalloca %0)
 
 }
 

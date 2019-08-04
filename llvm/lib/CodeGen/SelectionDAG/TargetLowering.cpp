@@ -3873,15 +3873,17 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
   if (S == 1) {
     switch (Constraint[0]) {
     default: break;
-    case 'r': return C_RegisterClass;
+    case 'r':
+      return C_RegisterClass;
     case 'm': // memory
     case 'o': // offsetable
     case 'V': // not offsetable
       return C_Memory;
-    case 'i': // Simple Integer or Relocatable Constant
     case 'n': // Simple Integer
     case 'E': // Floating Point Constant
     case 'F': // Floating Point Constant
+      return C_Immediate;
+    case 'i': // Simple Integer or Relocatable Constant
     case 's': // Relocatable Constant
     case 'p': // Address.
     case 'X': // Allow ANY value.
@@ -4256,6 +4258,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 /// Return an integer indicating how general CT is.
 static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
   switch (CT) {
+  case TargetLowering::C_Immediate:
   case TargetLowering::C_Other:
   case TargetLowering::C_Unknown:
     return 0;
@@ -4375,11 +4378,12 @@ static void ChooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
     TargetLowering::ConstraintType CType =
       TLI.getConstraintType(OpInfo.Codes[i]);
 
-    // If this is an 'other' constraint, see if the operand is valid for it.
-    // For example, on X86 we might have an 'rI' constraint.  If the operand
-    // is an integer in the range [0..31] we want to use I (saving a load
-    // of a register), otherwise we must use 'r'.
-    if (CType == TargetLowering::C_Other && Op.getNode()) {
+    // If this is an 'other' or 'immediate' constraint, see if the operand is
+    // valid for it. For example, on X86 we might have an 'rI' constraint. If
+    // the operand is an integer in the range [0..31] we want to use I (saving a
+    // load of a register), otherwise we must use 'r'.
+    if ((CType == TargetLowering::C_Other ||
+         CType == TargetLowering::C_Immediate) && Op.getNode()) {
       assert(OpInfo.Codes[i].size() == 1 &&
              "Unhandled multi-letter 'other' constraint");
       std::vector<SDValue> ResultOps;

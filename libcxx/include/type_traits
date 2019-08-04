@@ -886,28 +886,15 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_class_v
 
 // is_function
 
-namespace __libcpp_is_function_imp
-{
-struct __dummy_type {};
-template <class _Tp> char  __test(_Tp*);
-template <class _Tp> char __test(__dummy_type);
-template <class _Tp> __two __test(...);
-template <class _Tp> _Tp&  __source(int);
-template <class _Tp> __dummy_type __source(...);
-}
-
-template <class _Tp, bool = is_class<_Tp>::value ||
-                            is_union<_Tp>::value ||
-                            is_void<_Tp>::value  ||
-                            is_reference<_Tp>::value ||
-                            __is_nullptr_t<_Tp>::value >
-struct __libcpp_is_function
-    : public integral_constant<bool, sizeof(__libcpp_is_function_imp::__test<_Tp>(__libcpp_is_function_imp::__source<_Tp>(0))) == 1>
-    {};
-template <class _Tp> struct __libcpp_is_function<_Tp, true> : public false_type {};
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_function
-    : public __libcpp_is_function<_Tp> {};
+    : public _BoolConstant<
+#ifdef __clang__
+    __is_function(_Tp)
+#else
+ !(is_reference<_Tp>::value || is_const<const _Tp>::value)
+#endif
+    > {};
+
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -915,27 +902,24 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_function_v
     = is_function<_Tp>::value;
 #endif
 
-// is_member_function_pointer
-
-// template <class _Tp> struct            __libcpp_is_member_function_pointer             : public false_type {};
-// template <class _Tp, class _Up> struct __libcpp_is_member_function_pointer<_Tp _Up::*> : public is_function<_Tp> {};
-//
-
-template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
-struct __member_pointer_traits_imp
-{  // forward declaration; specializations later
+template <class _Tp> struct __libcpp_is_member_pointer {
+  enum {
+    __is_member = false,
+    __is_func = false,
+    __is_obj = false
+  };
+};
+template <class _Tp, class _Up> struct __libcpp_is_member_pointer<_Tp _Up::*> {
+  enum {
+    __is_member = true,
+    __is_func = is_function<_Tp>::value,
+    __is_obj = !__is_func,
+  };
 };
 
 
-template <class _Tp> struct __libcpp_is_member_function_pointer
-    : public false_type {};
-
-template <class _Ret, class _Class>
-struct __libcpp_is_member_function_pointer<_Ret _Class::*>
-    : public is_function<_Ret> {};
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer
-    : public __libcpp_is_member_function_pointer<typename remove_cv<_Tp>::type>::type {};
+    : public _BoolConstant< __libcpp_is_member_pointer<typename remove_cv<_Tp>::type>::__is_func > {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -945,11 +929,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_member_function_pointer_v
 
 // is_member_pointer
 
-template <class _Tp>            struct __libcpp_is_member_pointer             : public false_type {};
-template <class _Tp, class _Up> struct __libcpp_is_member_pointer<_Tp _Up::*> : public true_type {};
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_pointer
-    : public __libcpp_is_member_pointer<typename remove_cv<_Tp>::type> {};
+ : public _BoolConstant< __libcpp_is_member_pointer<typename remove_cv<_Tp>::type>::__is_member > {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -960,8 +941,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_member_pointer_v
 // is_member_object_pointer
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_object_pointer
-    : public integral_constant<bool, is_member_pointer<_Tp>::value &&
-                                    !is_member_function_pointer<_Tp>::value> {};
+    : public _BoolConstant< __libcpp_is_member_pointer<typename remove_cv<_Tp>::type>::__is_obj >  {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -1080,16 +1060,9 @@ struct __is_referenceable : integral_constant<bool,
 
 // add_const
 
-template <class _Tp, bool = is_reference<_Tp>::value ||
-                            is_function<_Tp>::value  ||
-                            is_const<_Tp>::value     >
-struct __add_const             {typedef _LIBCPP_NODEBUG_TYPE  _Tp type;};
-
-template <class _Tp>
-struct __add_const<_Tp, false> {typedef _LIBCPP_NODEBUG_TYPE  const _Tp type;};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_const
-    {typedef _LIBCPP_NODEBUG_TYPE  typename __add_const<_Tp>::type type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_const {
+  typedef _LIBCPP_NODEBUG_TYPE const _Tp type;
+};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_const_t = typename add_const<_Tp>::type;
@@ -1097,25 +1070,18 @@ template <class _Tp> using add_const_t = typename add_const<_Tp>::type;
 
 // add_volatile
 
-template <class _Tp, bool = is_reference<_Tp>::value ||
-                            is_function<_Tp>::value  ||
-                            is_volatile<_Tp>::value  >
-struct __add_volatile             {typedef _Tp type;};
-
-template <class _Tp>
-struct __add_volatile<_Tp, false> {typedef volatile _Tp type;};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_volatile
-    {typedef _LIBCPP_NODEBUG_TYPE typename __add_volatile<_Tp>::type type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_volatile {
+  typedef _LIBCPP_NODEBUG_TYPE volatile _Tp type;
+};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_volatile_t = typename add_volatile<_Tp>::type;
 #endif
 
 // add_cv
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_cv
-    {typedef _LIBCPP_NODEBUG_TYPE typename add_const<typename add_volatile<_Tp>::type>::type type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_cv {
+  typedef _LIBCPP_NODEBUG_TYPE const volatile _Tp type;
+};
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_cv_t = typename add_cv<_Tp>::type;
@@ -2306,6 +2272,11 @@ __decay_copy(_Tp&& __t)
 {
     return _VSTD::forward<_Tp>(__t);
 }
+
+template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
+struct __member_pointer_traits_imp
+{
+};
 
 template <class _Rp, class _Class, class ..._Param>
 struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...), true, false>

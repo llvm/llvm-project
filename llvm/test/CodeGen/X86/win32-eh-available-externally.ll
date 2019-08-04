@@ -2,7 +2,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 
 ; IR-NOT: define.*__ehhandler
-; IR: define available_externally void @foo(void ()*)
+; IR: define available_externally void @foo(void ()* %0)
 ; IR-NOT: define.*__ehhandler
 
 ; No code should be emitted.

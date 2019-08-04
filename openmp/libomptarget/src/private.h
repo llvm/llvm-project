@@ -41,6 +41,24 @@ enum kmp_target_offload_kind {
 typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 extern kmp_target_offload_kind_t TargetOffloadPolicy;
 
+// This structure stores information of a mapped memory region.
+struct MapComponentInfoTy {
+  void *Base;
+  void *Begin;
+  int64_t Size;
+  int64_t Type;
+  MapComponentInfoTy() = default;
+  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type)
+      : Base(Base), Begin(Begin), Size(Size), Type(Type) {}
+};
+
+// This structure stores all components of a user-defined mapper. The number of
+// components are dynamically decided, so we utilize C++ STL vector
+// implementation here.
+struct MapperComponentsTy {
+  std::vector<MapComponentInfoTy> Components;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // implemtation for fatal messages
 ////////////////////////////////////////////////////////////////////////////////

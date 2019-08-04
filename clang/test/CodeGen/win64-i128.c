@@ -12,5 +12,5 @@ int128_t foo() { return 0; }
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
-// GNU64: define dso_local <2 x i64> @bar(i128*, i128*)
-// MSC64: define dso_local <2 x i64> @bar(i128*, i128*)
+// GNU64: define dso_local <2 x i64> @bar(i128* %0, i128* %1)
+// MSC64: define dso_local <2 x i64> @bar(i128* %0, i128* %1)

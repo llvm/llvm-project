@@ -268,10 +268,10 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB1]](float* noalias, float* noalias)
+// CHECK: define internal void [[RED_COMB1]](float* noalias %0, float* noalias %1)
 // CHECK: fsub float 2.220000e+02, %
 
-// CHECK: define internal void [[RED_INIT1]](float* noalias, float* noalias)
+// CHECK: define internal void [[RED_INIT1]](float* noalias %0, float* noalias %1)
 // CHECK: store float -1.0{{.+}}, float*
 
 // CHECK: define internal void [[RED_COMB2]](
@@ -292,7 +292,7 @@ int main() {
 //  *(Type<n>-1*)lhs[<n>-1] = ReductionOperation<n>-1(*(Type<n>-1*)lhs[<n>-1],
 //  *(Type<n>-1*)rhs[<n>-1]);
 // }
-// CHECK: define internal void [[REDUCTION_FUNC]](i8*, i8*)
+// CHECK: define internal void [[REDUCTION_FUNC]](i8* %0, i8* %1)
 // t_var_lhs = (float*)lhs[0];
 // CHECK: [[T_VAR_RHS_REF:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[RED_LIST_RHS:%.+]], i64 0, i64 0
 // CHECK: [[T_VAR_RHS_VOID:%.+]] = load i8*, i8** [[T_VAR_RHS_REF]],
@@ -485,10 +485,10 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB5]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_COMB5]](i32* noalias %0, i32* noalias %1)
 // CHECK: mul nsw i32 555, %
 
-// CHECK: define internal void [[RED_INIT5]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_INIT5]](i32* noalias %0, i32* noalias %1)
 // CHECK: store i32 888, i32* %
 
 // void reduce_func(void *lhs[<n>], void *rhs[<n>]) {
@@ -497,7 +497,7 @@ int main() {
 //  *(Type<n>-1*)lhs[<n>-1] = ReductionOperation<n>-1(*(Type<n>-1*)lhs[<n>-1],
 //  *(Type<n>-1*)rhs[<n>-1]);
 // }
-// CHECK: define internal void [[REDUCTION_FUNC]](i8*, i8*)
+// CHECK: define internal void [[REDUCTION_FUNC]](i8* %0, i8* %1)
 // arr_rhs = (int*)rhs[0];
 // CHECK: [[ARR_RHS_REF:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[RED_LIST_RHS:%.+]], i64 0, i64 0
 // CHECK: [[ARR_RHS_VOID:%.+]] = load i8*, i8** [[ARR_RHS_REF]],
@@ -687,7 +687,7 @@ int main() {
 //  *(Type<n>-1*)lhs[<n>-1] = ReductionOperation<n>-1(*(Type<n>-1*)lhs[<n>-1],
 //  *(Type<n>-1*)rhs[<n>-1]);
 // }
-// CHECK: define internal void [[REDUCTION_FUNC]](i8*, i8*)
+// CHECK: define internal void [[REDUCTION_FUNC]](i8* %0, i8* %1)
 // arr_rhs = (int*)rhs[0];
 // CHECK: [[ARR_RHS_REF:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[RED_LIST_RHS:%.+]], i64 0, i64 0
 // CHECK: [[ARR_RHS_VOID:%.+]] = load i8*, i8** [[ARR_RHS_REF]],
@@ -960,10 +960,10 @@ int main() {
 // CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB6]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_COMB6]](i32* noalias %0, i32* noalias %1)
 // CHECK: add nsw i32 1513, %
 
-// CHECK: define internal void [[RED_INIT6]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_INIT6]](i32* noalias %0, i32* noalias %1)
 // CHECK: store i32 321, i32* %
 
 // CHECK: define internal void [[RED_COMB7]](
@@ -972,10 +972,10 @@ int main() {
 // CHECK: define internal void [[RED_INIT7]](
 // CHECK: call void @_Z5init2R6BaseS1RKS_(
 
-// CHECK: define internal void [[RED_COMB8]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_COMB8]](i32* noalias %0, i32* noalias %1)
 // CHECK: sub nsw i32 47, %
 
-// CHECK: define internal void [[RED_INIT8]](i32* noalias, i32* noalias)
+// CHECK: define internal void [[RED_INIT8]](i32* noalias %0, i32* noalias %1)
 // CHECK: sdiv i32 432, %
 
 // void reduce_func(void *lhs[<n>], void *rhs[<n>]) {
@@ -984,7 +984,7 @@ int main() {
 //  *(Type<n>-1*)lhs[<n>-1] = ReductionOperation<n>-1(*(Type<n>-1*)lhs[<n>-1],
 //  *(Type<n>-1*)rhs[<n>-1]);
 // }
-// CHECK: define internal void [[REDUCTION_FUNC]](i8*, i8*)
+// CHECK: define internal void [[REDUCTION_FUNC]](i8* %0, i8* %1)
 // t_var_lhs = (i{{[0-9]+}}*)lhs[0];
 // CHECK: [[T_VAR_RHS_REF:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[RED_LIST_RHS:%.+]], i64 0, i64 0
 // CHECK: [[T_VAR_RHS_VOID:%.+]] = load i8*, i8** [[T_VAR_RHS_REF]],

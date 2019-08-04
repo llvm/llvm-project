@@ -74,8 +74,8 @@ bool __regcall operator ==(const test_class&, const test_class&){ --x; return fa
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc zeroext i1 @"??8@Yw_NABVtest_class@@0@Z"
 
 test_class __regcall operator""_test_class (unsigned long long) { ++x; return test_class{};}
-// CHECK-LIN64-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* noalias sret %agg.result, i64)
-// CHECK-LIN32-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* inreg noalias sret %agg.result, i64)
+// CHECK-LIN64-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* noalias sret %agg.result, i64 %0)
+// CHECK-LIN32-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* inreg noalias sret %agg.result, i64 %0)
 // CHECK-WIN64-DAG: ??__K_test_class@@Yw?AVtest_class@@_K@Z"
 // CHECK-WIN32-DAG: ??__K_test_class@@Yw?AVtest_class@@_K@Z"
 

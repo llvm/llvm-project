@@ -87,7 +87,7 @@ int bar(int n){
 
   //
   // Reduction function
-  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8*, i8*)
+  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
   // CHECK: [[VAR_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[VAR_RHS_VOID:%.+]] = load i8*, i8** [[VAR_RHS_REF]],
   // CHECK: [[VAR_RHS:%.+]] = bitcast i8* [[VAR_RHS_VOID]] to double*
@@ -104,7 +104,7 @@ int bar(int n){
 
   //
   // Shuffle and reduce function
-  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8*, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
   // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
   // CHECK: [[REMOTE_ELT:%.+]] = alloca double
   //
@@ -181,7 +181,7 @@ int bar(int n){
 
   //
   // Inter warp copy function
-  // CHECK: define internal void [[WARP_COPY_FN]](i8*, i32)
+  // CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
   // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
   // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
   // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
@@ -293,7 +293,7 @@ int bar(int n){
 
   //
   // Reduction function
-  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8*, i8*)
+  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
   // CHECK: [[VAR1_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[VAR1_RHS:%.+]] = load i8*, i8** [[VAR1_RHS_REF]],
   //
@@ -324,7 +324,7 @@ int bar(int n){
 
   //
   // Shuffle and reduce function
-  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8*, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
   // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
   // CHECK: [[REMOTE_ELT1:%.+]] = alloca i8
   // CHECK: [[REMOTE_ELT2:%.+]] = alloca float
@@ -423,7 +423,7 @@ int bar(int n){
 
   //
   // Inter warp copy function
-  // CHECK: define internal void [[WARP_COPY_FN]](i8*, i32)
+  // CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
   // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
   // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
   // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
@@ -590,7 +590,7 @@ int bar(int n){
 
   //
   // Reduction function
-  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8*, i8*)
+  // CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
   // CHECK: [[VAR1_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[VAR1_RHS_VOID:%.+]] = load i8*, i8** [[VAR1_RHS_REF]],
   // CHECK: [[VAR1_RHS:%.+]] = bitcast i8* [[VAR1_RHS_VOID]] to i32*
@@ -635,7 +635,7 @@ int bar(int n){
 
   //
   // Shuffle and reduce function
-  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8*, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+  // CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
   // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
   // CHECK: [[REMOTE_ELT1:%.+]] = alloca i32
   // CHECK: [[REMOTE_ELT2:%.+]] = alloca i16
@@ -736,7 +736,7 @@ int bar(int n){
 
   //
   // Inter warp copy function
-  // CHECK: define internal void [[WARP_COPY_FN]](i8*, i32)
+  // CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
   // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
   // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
   // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*

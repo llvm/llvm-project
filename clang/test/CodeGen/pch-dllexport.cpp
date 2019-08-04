@@ -83,7 +83,7 @@ template void __declspec(dllexport) explicitInstantiationDef<int>(int);
 // PCHWITHOBJ: define weak_odr dso_local dllexport void @"??$explicitInstantiationDef@H@@YAXH@Z"
 
 template void __declspec(dllexport) explicitInstantiationDefAfterDecl<int>(int);
-// PCHWITHOBJ: define weak_odr dso_local dllexport void @"??$explicitInstantiationDefAfterDecl@H@@YAXH@Z"(i32)
+// PCHWITHOBJ: define weak_odr dso_local dllexport void @"??$explicitInstantiationDefAfterDecl@H@@YAXH@Z"(i32 %0)
 
 template int __declspec(dllexport) variableTemplate<int>;
 // PCHWITHOBJVARS: @"??$variableTemplate@H@@3HA" = weak_odr dso_local dllexport global

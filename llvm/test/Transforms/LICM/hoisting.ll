@@ -126,10 +126,10 @@ ifend:                                            ; preds = %tailrecurse
   ret { i32*, i32 } %d
 }
 
-; CHECK: define i32 @hoist_bitreverse(i32)
+; CHECK: define i32 @hoist_bitreverse(i32 %0)
 ; CHECK: bitreverse
 ; CHECK: br label %header
-define i32 @hoist_bitreverse(i32)  {
+define i32 @hoist_bitreverse(i32 %0)  {
   br label %header
 
 header:

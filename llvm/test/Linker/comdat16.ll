@@ -47,7 +47,7 @@ bb11:
 ; CHECK-DAG: @a23 = alias i32 (i8*), i32 (i8*)* @f1.2{{$}}
 ; CHECK-DAG: @a24 = alias i16, bitcast (i32 (i8*)* @f1.2 to i16*)
 
-; CHECK:      define weak_odr protected i32 @f1(i8*) comdat($c1) {
+; CHECK:      define weak_odr protected i32 @f1(i8* %0) comdat($c1) {
 ; CHECK-NEXT: bb10:
 ; CHECK-NEXT:   br label %bb11{{$}}
 ; CHECK:      bb11:

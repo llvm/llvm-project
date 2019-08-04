@@ -149,7 +149,7 @@ int main() {
   return a;
 }
 
-// CHECK: void [[COPY_FUNC]](i8*, i8*)
+// CHECK: void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: store i8* %0, i8** [[DST_ADDR_REF:%.+]],
 // CHECK: store i8* %1, i8** [[SRC_ADDR_REF:%.+]],
 // CHECK: [[DST_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[DST_ADDR_REF]],
@@ -326,7 +326,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i64, i64, i64)* [[SS_MICROTASK1:@.+]] to void
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: ret void
 
 // CHECK: define internal void [[SS_MICROTASK1]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i64 {{.+}}, i64 {{.+}}, i64 {{.+}})
@@ -382,7 +382,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 24, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
 // CHECK-NEXT:  ret void
 
-// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: ret void
 
 // CHECK-LABEL: @_ZN3SSTIdEC2Ev
@@ -432,7 +432,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-LABEL: call void @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: ret void
 
 // CHECK-LABEL: @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(

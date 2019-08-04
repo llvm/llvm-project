@@ -139,7 +139,7 @@ void bar5() {
 // LINUX: ret void (i32, double)* @foo_multi.avx_sse4.2
 // LINUX: ret void (i32, double)* @foo_multi
 
-// WINDOWS: define dso_local void @foo_multi.resolver(i32, double) comdat
+// WINDOWS: define dso_local void @foo_multi.resolver(i32 %0, double %1) comdat
 // WINDOWS: and i32 %{{.*}}, 4352
 // WINDOWS: icmp eq i32 %{{.*}}, 4352
 // WINDOWS: call void @foo_multi.fma4_sse4.2(i32 %0, double %1)

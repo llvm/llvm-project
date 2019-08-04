@@ -274,30 +274,30 @@ int main() {
   }
   return a;
 }
-// CHECK: define internal i32 [[TASK_ENTRY1]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY1]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: store i32 15, i32* [[A_PTR:@.+]]
 // CHECK: [[A_VAL:%.+]] = load i32, i32* [[A_PTR]]
 // CHECK: [[A_VAL_I8:%.+]] = trunc i32 [[A_VAL]] to i8
 // CHECK: store i8 [[A_VAL_I8]], i8* %{{.+}}
 // CHECK: store i32 10, i32* %{{.+}}
 
-// CHECK: define internal i32 [[TASK_ENTRY2]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY2]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: store i32 1, i32* [[A_PTR]]
 
-// CHECK: define internal i32 [[TASK_ENTRY3]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY3]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: store i32 2, i32* [[A_PTR]]
 
-// CHECK: define internal i32 [[TASK_ENTRY4]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY4]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: store i32 3, i32* [[A_PTR]]
 
-// CHECK: define internal i32 [[TASK_ENTRY5]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY5]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: store i32 4, i32* [[A_PTR]]
 // CHECK: store i32 5, i32* [[C_PTR:%.+]], align 128
 
 // CHECK: define internal i32
 // CHECK: store i32 4, i32* [[A_PTR]]
 
-// CHECK: define internal i32 [[TASK_ENTRY6]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: define internal i32 [[TASK_ENTRY6]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
 // CHECK: switch i32 %{{.+}}, label
 // CHECK: load i32*, i32** %
 // CHECK: store i32 1, i32* %

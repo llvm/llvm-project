@@ -32,7 +32,7 @@ long double TestLD(long double x) {
   return x * x;
 }
 // GNU32: define dso_local x86_fp80 @TestLD(x86_fp80 %x)
-// GNU64: define dso_local void @TestLD(x86_fp80* noalias sret %agg.result, x86_fp80*)
+// GNU64: define dso_local void @TestLD(x86_fp80* noalias sret %agg.result, x86_fp80* %0)
 // MSC64: define dso_local double @TestLD(double %x)
 
 long double _Complex TestLDC(long double _Complex x) {

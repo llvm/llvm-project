@@ -2,14 +2,14 @@
 ; RUN: verify-uselistorder < %s
 ; PR12696
 
-define void @f1(i8 zeroext)
-; CHECK: define void @f1(i8 zeroext)
+define void @f1(i8 zeroext %0)
+; CHECK: define void @f1(i8 zeroext %0)
 {
         ret void;
 }
 
-define void @f2(i8 signext)
-; CHECK: define void @f2(i8 signext)
+define void @f2(i8 signext %0)
+; CHECK: define void @f2(i8 signext %0)
 {
         ret void;
 }
@@ -20,14 +20,14 @@ define void @f3() noreturn
         ret void;
 }
 
-define void @f4(i8 inreg)
-; CHECK: define void @f4(i8 inreg)
+define void @f4(i8 inreg %0)
+; CHECK: define void @f4(i8 inreg %0)
 {
         ret void;
 }
 
-define void @f5(i8* sret)
-; CHECK: define void @f5(i8* sret)
+define void @f5(i8* sret %0)
+; CHECK: define void @f5(i8* sret %0)
 {
         ret void;
 }
@@ -38,20 +38,20 @@ define void @f6() nounwind
         ret void;
 }
 
-define void @f7(i8* noalias)
-; CHECK: define void @f7(i8* noalias)
+define void @f7(i8* noalias %0)
+; CHECK: define void @f7(i8* noalias %0)
 {
         ret void;
 }
 
-define void @f8(i8* byval)
-; CHECK: define void @f8(i8* byval(i8))
+define void @f8(i8* byval %0)
+; CHECK: define void @f8(i8* byval(i8) %0)
 {
         ret void;
 }
 
-define void @f9(i8* nest)
-; CHECK: define void @f9(i8* nest)
+define void @f9(i8* nest %0)
+; CHECK: define void @f9(i8* nest %0)
 {
         ret void;
 }
@@ -98,14 +98,14 @@ define void @f16() sspreq
         ret void;
 }
 
-define void @f17(i8 align 4)
-; CHECK: define void @f17(i8 align 4)
+define void @f17(i8 align 4 %0)
+; CHECK: define void @f17(i8 align 4 %0)
 {
         ret void;
 }
 
-define void @f18(i8* nocapture)
-; CHECK: define void @f18(i8* nocapture)
+define void @f18(i8* nocapture %0)
+; CHECK: define void @f18(i8* nocapture %0)
 {
         ret void;
 }
@@ -214,8 +214,8 @@ define void @f35() optnone noinline
         ret void;
 }
 
-define void @f36(i8* inalloca) {
-; CHECK: define void @f36(i8* inalloca) {
+define void @f36(i8* inalloca %0) {
+; CHECK: define void @f36(i8* inalloca %0) {
         ret void
 }
 
@@ -240,8 +240,8 @@ define dereferenceable(18446744073709551606) i8* @f40(i8* dereferenceable(184467
         ret i8* %a
 }
 
-define void @f41(i8* align 32, double* align 64) {
-; CHECK: define void @f41(i8* align 32, double* align 64) {
+define void @f41(i8* align 32 %0, double* align 64 %1) {
+; CHECK: define void @f41(i8* align 32 %0, double* align 64 %1) {
         ret void
 }
 
@@ -262,13 +262,13 @@ define void @f44() argmemonly
         ret void;
 }
 
-; CHECK: define "string_attribute" void @f45(i32 "string_attribute")
-define "string_attribute" void @f45(i32 "string_attribute") {
+; CHECK: define "string_attribute" void @f45(i32 "string_attribute" %0)
+define "string_attribute" void @f45(i32 "string_attribute" %0) {
   ret void
 }
 
-; CHECK: define "string_attribute_with_value"="value" void @f46(i32 "string_attribute_with_value"="value")
-define "string_attribute_with_value"="value" void @f46(i32 "string_attribute_with_value"="value") {
+; CHECK: define "string_attribute_with_value"="value" void @f46(i32 "string_attribute_with_value"="value" %0)
+define "string_attribute_with_value"="value" void @f46(i32 "string_attribute_with_value"="value" %0) {
   ret void
 }
 
@@ -287,20 +287,20 @@ define void @f49() inaccessiblemem_or_argmemonly {
   ret void
 }
 
-; CHECK: define void @f50(i8* swiftself)
-define void @f50(i8* swiftself)
+; CHECK: define void @f50(i8* swiftself %0)
+define void @f50(i8* swiftself %0)
 {
   ret void;
 }
 
-; CHECK: define i32 @f51(i8** swifterror)
-define i32 @f51(i8** swifterror)
+; CHECK: define i32 @f51(i8** swifterror %0)
+define i32 @f51(i8** swifterror %0)
 {
   ret i32 0
 }
 
-; CHECK: define i32 @f52(i32, i8** swifterror)
-define i32 @f52(i32, i8** swifterror)
+; CHECK: define i32 @f52(i32 %0, i8** swifterror %1)
+define i32 @f52(i32 %0, i8** swifterror %1)
 {
   ret i32 0
 }
@@ -318,13 +318,13 @@ entry:
   ret float 1.0
 }
 
-; CHECK: define i8* @f54(i32) #30
-define i8* @f54(i32) allocsize(0) {
+; CHECK: define i8* @f54(i32 %0) #30
+define i8* @f54(i32 %0) allocsize(0) {
   ret i8* null
 }
 
-; CHECK: define i8* @f55(i32, i32) #31
-define i8* @f55(i32, i32) allocsize(0, 1) {
+; CHECK: define i8* @f55(i32 %0, i32 %1) #31
+define i8* @f55(i32 %0, i32 %1) allocsize(0, 1) {
   ret i8* null
 }
 

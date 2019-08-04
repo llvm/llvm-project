@@ -14,7 +14,7 @@ void foo(A a, A b, A c) {
 // Order of destruction should be left to right.
 //
 // X86-LABEL: define dso_local void @"?foo@@YAXUA@@00@Z"
-// X86:          ([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]* inalloca)
+// X86:          ([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]* inalloca %0)
 // X86: %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 0
 // X86: %[[b:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 1
 // X86: %[[c:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 2

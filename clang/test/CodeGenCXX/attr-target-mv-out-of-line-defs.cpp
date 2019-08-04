@@ -18,22 +18,22 @@ int bar() {
 
 // LINUX: @_ZN1S3fooEi.ifunc = ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
 
-// LINUX: define i32 @_ZN1S3fooEi(%struct.S* %this, i32)
+// LINUX: define i32 @_ZN1S3fooEi(%struct.S* %this, i32 %0)
 // LINUX: ret i32 2
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z"(%struct.S* %this, i32)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z"(%struct.S* %this, i32 %0)
 // WINDOWS: ret i32 2
 
-// LINUX: define i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32)
+// LINUX: define i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32 %0)
 // LINUX: ret i32 0
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %this, i32)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %this, i32 %0)
 // WINDOWS: ret i32 0
 
-// LINUX: define i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32)
+// LINUX: define i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32 %0)
 // LINUX: ret i32 1
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* %this, i32)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* %this, i32 %0)
 // WINDOWS: ret i32 1
 
 // LINUX: define i32 @_Z3barv()
@@ -50,7 +50,7 @@ int bar() {
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S*, i32) comdat
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %0, i32 %1) comdat
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"(%struct.S* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %0, i32 %1)

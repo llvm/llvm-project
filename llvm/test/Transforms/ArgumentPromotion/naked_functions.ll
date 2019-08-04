@@ -18,6 +18,6 @@ entry:
   unreachable
 }
 
-; CHECK: define internal i32 @foo(i32*)
+; CHECK: define internal i32 @foo(i32* %0)
 
 attributes #0 = { naked }

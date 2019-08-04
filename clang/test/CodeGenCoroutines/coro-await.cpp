@@ -303,7 +303,7 @@ struct std::experimental::coroutine_traits<void,double> {
 
 // Verifies that we don't crash when returning an lvalue from an await_resume()
 // expression.
-// CHECK-LABEL:  define void @_Z18AwaitReturnsLValued(double)
+// CHECK-LABEL:  define void @_Z18AwaitReturnsLValued(double %0)
 void AwaitReturnsLValue(double) {
   AwaitResumeReturnsLValue a;
   // CHECK: %[[AVAR:.+]] = alloca %struct.AwaitResumeReturnsLValue,

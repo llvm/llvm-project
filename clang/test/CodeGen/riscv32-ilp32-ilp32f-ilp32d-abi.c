@@ -184,7 +184,7 @@ struct large f_agg_large_ret(int32_t i, int8_t j) {
 
 typedef unsigned char v16i8 __attribute__((vector_size(16)));
 
-// CHECK-LABEL: define void @f_vec_large_v16i8(<16 x i8>*)
+// CHECK-LABEL: define void @f_vec_large_v16i8(<16 x i8>* %0)
 void f_vec_large_v16i8(v16i8 x) {
   x[0] = x[7];
 }
