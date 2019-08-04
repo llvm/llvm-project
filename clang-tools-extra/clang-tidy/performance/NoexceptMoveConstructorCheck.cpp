@@ -9,6 +9,7 @@
 #include "NoexceptMoveConstructorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -47,9 +48,20 @@ void NoexceptMoveConstructorCheck::check(
       return;
 
     if (!isNoexceptExceptionSpec(ProtoType->getExceptionSpecType())) {
-      diag(Decl->getLocation(), "move %0s should be marked noexcept")
+      auto Diag =
+          diag(Decl->getLocation(), "move %0s should be marked noexcept")
           << MethodType;
-      // FIXME: Add a fixit.
+      // Add FixIt hints.
+      SourceManager &SM = *Result.SourceManager;
+      assert(Decl->getNumParams() > 0);
+      SourceLocation NoexceptLoc = Decl->getParamDecl(Decl->getNumParams() - 1)
+                                       ->getSourceRange()
+                                       .getEnd();
+      if (NoexceptLoc.isValid())
+        NoexceptLoc = Lexer::findLocationAfterToken(
+            NoexceptLoc, tok::r_paren, SM, Result.Context->getLangOpts(), true);
+      if (NoexceptLoc.isValid())
+        Diag << FixItHint::CreateInsertion(NoexceptLoc, " noexcept ");
       return;
     }
 

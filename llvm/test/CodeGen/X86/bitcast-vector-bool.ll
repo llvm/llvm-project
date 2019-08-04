@@ -167,7 +167,7 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
@@ -336,7 +336,7 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 ; SSSE3-NEXT:    packsswb %xmm1, %xmm0
 ; SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
@@ -601,7 +601,7 @@ define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
 ; SSSE3-NEXT:    packsswb %xmm2, %xmm0
 ; SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al

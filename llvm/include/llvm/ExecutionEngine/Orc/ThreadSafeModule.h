@@ -38,17 +38,12 @@ private:
 public:
   // RAII based lock for ThreadSafeContext.
   class LLVM_NODISCARD Lock {
-  private:
-    using UnderlyingLock = std::lock_guard<std::recursive_mutex>;
-
   public:
-    Lock(std::shared_ptr<State> S)
-        : S(std::move(S)),
-          L(llvm::make_unique<UnderlyingLock>(this->S->Mutex)) {}
+    Lock(std::shared_ptr<State> S) : S(std::move(S)), L(this->S->Mutex) {}
 
   private:
     std::shared_ptr<State> S;
-    std::unique_ptr<UnderlyingLock> L;
+    std::unique_lock<std::recursive_mutex> L;
   };
 
   /// Construct a null context.

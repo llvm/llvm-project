@@ -974,6 +974,8 @@ def warn_pragma_missing_argument : Warning<
 def warn_pragma_invalid_argument : Warning<
   "unexpected argument '%0' to '#pragma %1'%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
 
+def err_pragma_misplaced_in_decl : Error<"this pragma cannot appear in %0 declaration">;
+
 // '#pragma clang section' related errors
 def err_pragma_expected_clang_section_name : Error<
   "expected one of [bss|data|rodata|text] section kind in '#pragma %0'">;
