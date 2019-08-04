@@ -94,7 +94,7 @@ entry:
 }
 
 ; Test a case when a function call is within try-catch, after a setjmp
-define hidden void @exception_and_longjmp() #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define hidden void @exception_and_longjmp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @exception_and_longjmp
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -185,7 +185,7 @@ entry:
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay, i32 5) #1
   unreachable
 ; CHECK: %[[ARRAYDECAY:.*]] = getelementptr inbounds
-; CHECK-NEXT: call void @emscripten_longjmp_jmpbuf(%struct.__jmp_buf_tag* %[[ARRAYDECAY]], i32 5) #1
+; CHECK-NEXT: call void @emscripten_longjmp_jmpbuf(%struct.__jmp_buf_tag* %[[ARRAYDECAY]], i32 5)
 }
 
 ; Test inline asm handling
@@ -201,6 +201,19 @@ entry:
 ; CHECK-NOT: __invoke_void
   call void asm sideeffect "", ""()
   ret void
+}
+
+; Test that the allocsize attribute is being transformed properly
+declare i8 *@allocator(i32, %struct.__jmp_buf_tag*) #3
+define hidden i8 *@allocsize() {
+; CHECK-LABEL: @allocsize
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+; CHECK: i8* @"__invoke_i8*_i32_%struct.__jmp_buf_tag*"([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
+  %alloc = call i8* @allocator(i32 20, %struct.__jmp_buf_tag* %arraydecay) #3
+  ret i8 *%alloc
 }
 
 declare void @foo()
@@ -227,3 +240,5 @@ declare void @free(i8*)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
+attributes #3 = { allocsize(0) }
+; CHECK: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }

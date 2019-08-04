@@ -432,9 +432,22 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   for (unsigned I = 0, E = CI->getNumArgOperands(); I < E; ++I)
     ArgAttributes.push_back(InvokeAL.getParamAttributes(I));
 
+  AttrBuilder FnAttrs(InvokeAL.getFnAttributes());
+  if (FnAttrs.contains(Attribute::AllocSize)) {
+    // The allocsize attribute (if any) referes to parameters by index and needs
+    // to be adjusted.
+    unsigned SizeArg;
+    Optional<unsigned> NEltArg;
+    std::tie(SizeArg, NEltArg) = FnAttrs.getAllocSizeArgs();
+    SizeArg += 1;
+    if (NEltArg.hasValue())
+      NEltArg = NEltArg.getValue() + 1;
+    FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
+  }
+
   // Reconstruct the AttributesList based on the vector we constructed.
   AttributeList NewCallAL =
-      AttributeList::get(C, InvokeAL.getFnAttributes(),
+      AttributeList::get(C, AttributeSet::get(C, FnAttrs),
                          InvokeAL.getRetAttributes(), ArgAttributes);
   NewCall->setAttributes(NewCallAL);
 

@@ -154,22 +154,31 @@ named_data:
 named_data_alt_entry:
         .quad   0
 
-# Check X86_64_RELOC_UNSIGNED / extern handling by putting the address of a
-# local named function in a pointer variable.
+# Check X86_64_RELOC_UNSIGNED / quad / extern handling by putting the address of
+# a local named function into a quad symbol.
 #
-# jitlink-check: *{8}named_func_addr = named_func
-        .globl  named_func_addr
+# jitlink-check: *{8}named_func_addr_quad = named_func
+        .globl  named_func_addr_quad
         .p2align  3
-named_func_addr:
+named_func_addr_quad:
         .quad   named_func
 
-# Check X86_64_RELOC_UNSIGNED / non-extern handling by putting the address of a
-# local anonymous function in a pointer variable.
+# Check X86_64_RELOC_UNSIGNED / long / extern handling by putting the address of
+# an external function (defined to reside in the low 4Gb) into a long symbol.
 #
-# jitlink-check: *{8}anon_func_addr = section_addr(macho_reloc.o, __text)
-        .globl  anon_func_addr
+# jitlink-check: *{4}named_func_addr_long = external_func
+        .globl  named_func_addr_long
+        .p2align  2
+named_func_addr_long:
+        .long   external_func
+
+# Check X86_64_RELOC_UNSIGNED / quad / non-extern handling by putting the
+# address of a local anonymous function into a quad symbol.
+#
+# jitlink-check: *{8}anon_func_addr_quad = section_addr(macho_reloc.o, __text)
+        .globl  anon_func_addr_quad
         .p2align  3
-anon_func_addr:
+anon_func_addr_quad:
         .quad   Lanon_func
 
 # X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend

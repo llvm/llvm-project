@@ -1313,7 +1313,8 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
                              LLVMContext::MD_dereferenceable,
                              LLVMContext::MD_dereferenceable_or_null,
                              LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group};
+                             LLVMContext::MD_access_group,
+                             LLVMContext::MD_preserve_access_index};
       combineMetadata(I1, I2, KnownIDs, true);
 
       // I1 and I2 are being combined into a single instruction.  Its debug
