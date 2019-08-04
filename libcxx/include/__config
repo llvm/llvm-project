@@ -1429,6 +1429,15 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #define _LIBCPP_UNUSED_VAR(x) ((void)(x))
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) \
+  template <class _Tag = void> \
+  _ClassName(typename _Tag::__allow_ctad) -> _ClassName<void>
+#else
+#define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) \
+   static_assert(true, "")
+#endif // _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG

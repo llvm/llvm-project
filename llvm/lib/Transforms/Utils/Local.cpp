@@ -2339,6 +2339,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind,
           MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
+      case LLVMContext::MD_preserve_access_index:
+        // Preserve !preserve.access.index in K.
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -2361,7 +2364,7 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
       LLVMContext::MD_invariant_group, LLVMContext::MD_align,
       LLVMContext::MD_dereferenceable,
       LLVMContext::MD_dereferenceable_or_null,
-      LLVMContext::MD_access_group};
+      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -2444,7 +2447,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
       LLVMContext::MD_noalias,         LLVMContext::MD_range,
       LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
       LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull,
-      LLVMContext::MD_access_group};
+      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index};
   combineMetadata(ReplInst, I, KnownIDs, false);
 }
 
