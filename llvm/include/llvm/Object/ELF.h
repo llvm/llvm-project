@@ -271,7 +271,6 @@ public:
                                         Elf_Sym_Range Symtab,
                                         ArrayRef<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(uint32_t Index) const;
-  Expected<const Elf_Shdr *> getSection(const StringRef SectionName) const;
 
   Expected<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
                                       uint32_t Index) const;
@@ -566,23 +565,6 @@ ELFFile<ELFT>::getSection(uint32_t Index) const {
   if (!TableOrErr)
     return TableOrErr.takeError();
   return object::getSection<ELFT>(*TableOrErr, Index);
-}
-
-template <class ELFT>
-Expected<const typename ELFT::Shdr *>
-ELFFile<ELFT>::getSection(const StringRef SectionName) const {
-  auto TableOrErr = sections();
-  if (!TableOrErr)
-    return TableOrErr.takeError();
-  for (auto &Sec : *TableOrErr) {
-    auto SecNameOrErr = getSectionName(&Sec);
-    if (!SecNameOrErr)
-      return SecNameOrErr.takeError();
-    if (*SecNameOrErr == SectionName)
-      return &Sec;
-  }
-  // TODO: this error is untested.
-  return createError("invalid section name");
 }
 
 template <class ELFT>
