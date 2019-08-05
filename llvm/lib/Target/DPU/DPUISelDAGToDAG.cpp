@@ -364,12 +364,12 @@ void DPUDAGToDAGISel::Select(SDNode *Node) {
     if (Node->hasOneUse()) {
       LLVM_DEBUG(dbgs() << "hasOneUse\n");
       CurDAG->SelectNodeTo(Node, Opc, VT,
-                           CurDAG->getRegister(DPU::STKP, MVT::i32), TFI);
+                           CurDAG->getRegister(DPU::R22, MVT::i32), TFI);
       return;
     } else {
       ReplaceNode(Node, CurDAG->getMachineNode(
                             Opc, SDLoc(Node), VT,
-                            CurDAG->getRegister(DPU::STKP, MVT::i32), TFI));
+                            CurDAG->getRegister(DPU::R22, MVT::i32), TFI));
       return;
     }
   } break;

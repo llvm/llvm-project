@@ -59,7 +59,7 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
-  const TargetRegisterInfo *getRegisterInfo() const override {
+  const DPURegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
   }
 

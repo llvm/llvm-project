@@ -36,10 +36,12 @@ public:
                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                    CodeGenOpt::Level &OL, bool JIT);
 
-  const TargetSubtargetInfo *
+  const DPUSubtarget *
   getSubtargetImpl(const Function &F) const override {
     return &Subtarget;
   }
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

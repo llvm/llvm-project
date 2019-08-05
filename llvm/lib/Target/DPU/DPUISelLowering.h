@@ -29,7 +29,6 @@ enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_FLAG,       // Return with a flag operand
   CALL,           // Call function
-  INTRINSIC_CALL, // Special call of RTL functions
   SetCC,          // SET to a condition
   BrCC,           // Jump and branch with condition
   BrCCi,          // Jump and branch with condition

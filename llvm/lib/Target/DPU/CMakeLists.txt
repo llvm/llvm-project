@@ -16,6 +16,7 @@ add_llvm_target(DPUCodeGen
         DPURegisterInfo.cpp
         DPUFrameLowering.cpp
         DPUTargetLowering.cpp
+        DPUMachineFunctionInfo.cpp
         DPUInstrInfo.cpp
         DPUSubtarget.cpp
         DPUISelDAGToDAG.cpp

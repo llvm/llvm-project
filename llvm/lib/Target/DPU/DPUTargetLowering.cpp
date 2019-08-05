@@ -65,14 +65,20 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   PredictableSelectIsExpensive = true;
   setJumpIsExpensive(false);
 
+  setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
+  setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
+  setLibcallName(RTLIB::SDIV_I32, "__div32");
+  setLibcallName(RTLIB::UDIV_I32, "__udiv32");
+
   // Set up the register classes.
   addRegisterClass(MVT::i32, &DPU::GP_REGRegClass);
   addRegisterClass(MVT::i64, &DPU::GP64_REGRegClass);
 
   // Compute derived properties from the register classes
-  computeRegisterProperties(STI.getRegisterInfo());
+  TRI = STI.getRegisterInfo();
+  computeRegisterProperties(TRI);
 
-  setStackPointerRegisterToSaveRestore(DPU::STKP);
+  setStackPointerRegisterToSaveRestore(DPU::R22);
 
   setBooleanContents(BooleanContent::ZeroOrOneBooleanContent);
 
@@ -150,15 +156,39 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
 
   setOperationAction(ISD::MUL, MVT::i8, Expand);
   setOperationAction(ISD::MUL, MVT::i16, Expand);
-  setOperationAction(ISD::MUL, MVT::i32, Custom);
+  setOperationAction(ISD::MUL, MVT::i32, LibCall);
+  setOperationAction(ISD::MUL, MVT::i64, LibCall);
+  setTargetDAGCombine(ISD::MUL);
 
   setOperationAction(ISD::UDIVREM, MVT::i8, Expand);
-  setOperationAction(ISD::SDIVREM, MVT::i8, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
-  setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i32, LibCall);
+  setOperationAction(ISD::UDIVREM, MVT::i64, LibCall);
 
-  setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
-  setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i8, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i32, LibCall);
+  setOperationAction(ISD::SDIVREM, MVT::i64, LibCall);
+
+  setOperationAction(ISD::SDIV, MVT::i8, Expand);
+  setOperationAction(ISD::SDIV, MVT::i16, Expand);
+  setOperationAction(ISD::SDIV, MVT::i32, Expand);
+  setOperationAction(ISD::SDIV, MVT::i64, Expand);
+
+  setOperationAction(ISD::UDIV, MVT::i8, Expand);
+  setOperationAction(ISD::UDIV, MVT::i16, Expand);
+  setOperationAction(ISD::UDIV, MVT::i32, Expand);
+  setOperationAction(ISD::UDIV, MVT::i64, Expand);
+
+  setOperationAction(ISD::SREM, MVT::i8, Expand);
+  setOperationAction(ISD::SREM, MVT::i16, Expand);
+  setOperationAction(ISD::SREM, MVT::i32, Expand);
+  setOperationAction(ISD::SREM, MVT::i64, Expand);
+
+  setOperationAction(ISD::UREM, MVT::i8, Expand);
+  setOperationAction(ISD::UREM, MVT::i16, Expand);
+  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  setOperationAction(ISD::UREM, MVT::i64, Expand);
 
   setOperationAction(ISD::CTLZ, MVT::i8, Promote);
   setOperationAction(ISD::CTLZ, MVT::i16, Promote);
@@ -178,15 +208,6 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
 
   setOperationAction(ISD::CTPOP, MVT::i8, Promote);
   setOperationAction(ISD::CTPOP, MVT::i16, Promote);
-
-  // 64x64 basic operations: use native library functions
-  setOperationAction(ISD::MUL, MVT::i64, LibCall);
-  setOperationAction(ISD::SDIV, MVT::i64, LibCall);
-  setOperationAction(ISD::UDIV, MVT::i64, LibCall);
-  setOperationAction(ISD::SREM, MVT::i64, LibCall);
-  setOperationAction(ISD::UREM, MVT::i64, LibCall);
-  setOperationAction(ISD::SDIVREM, MVT::i64, LibCall);
-  setOperationAction(ISD::UDIVREM, MVT::i64, LibCall);
 
   setOperationAction(ISD::SHL_PARTS, MVT::i1, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i8, Expand);
@@ -279,9 +300,6 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerUnsupported(Op, DAG,
                             "Dynamic allocation of stack is not supported");
 
-  case ISD::MUL:
-    return LowerMultiplication(Op, DAG);
-
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
 
@@ -354,8 +372,6 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "DPUISD::RET_FLAG";
   case DPUISD::CALL:
     return "DPUISD::CALL";
-  case DPUISD::INTRINSIC_CALL:
-    return "DPUISD::INTRINSIC_CALL";
   case DPUISD::SetCC:
     return "DPUISD::SetCC";
   case DPUISD::BrCC:
@@ -628,7 +644,7 @@ SDValue DPUTargetLowering::LowerUnsupported(SDValue Op,
 SDValue DPUTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
-  SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, DPU::STKP,
+  SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, DPU::R22,
                                         getPointerTy(DAG.getDataLayout()));
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   SDValue VAStartPtr =
@@ -835,11 +851,6 @@ DPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(DPUISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
-static bool isAnIntrinsicInvocationSymbol(const char *FunctionName) {
-  int i = strncmp(FunctionName, "__intrinsic__", strlen("__intrinsic__"));
-  return (i == 0);
-}
-
 SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
@@ -854,7 +865,6 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isVarArg = CLI.IsVarArg;
   SDLoc &dl = CLI.DL;
   SmallVector<SDValue, 12> MemOpChains;
-  bool isIntrinsicCall = false;
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   // Does not support tail call optimization.
@@ -955,7 +965,7 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else {
       assert(VA.isMemLoc());
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, dl, DPU::STKP,
+        StackPtr = DAG.getCopyFromReg(Chain, dl, DPU::R22,
                                       getPointerTy(DAG.getDataLayout()));
 
       SDValue PtrOff = DAG.getNode(
@@ -1001,16 +1011,8 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                         getPointerTy(DAG.getDataLayout()),
                                         G->getOffset(), 0);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    const char *SymbolName = E->getSymbol();
-    if (isAnIntrinsicInvocationSymbol(SymbolName)) {
-      isIntrinsicCall = true;
-      Callee =
-          DAG.getTargetExternalSymbol(SymbolName + strlen("__intrinsic"),
-                                      getPointerTy(DAG.getDataLayout()), 0);
-    } else {
-      Callee = DAG.getTargetExternalSymbol(
-          E->getSymbol(), getPointerTy(DAG.getDataLayout()), 0);
-    }
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(),
+                                         getPointerTy(DAG.getDataLayout()), 0);
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -1018,6 +1020,10 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
+
+  const uint32_t *Mask =
+      TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv);
+  Ops.push_back(DAG.getRegisterMask(Mask));
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
@@ -1027,8 +1033,7 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (InFlag.getNode())
     Ops.push_back(InFlag);
 
-  Chain = DAG.getNode(isIntrinsicCall ? DPUISD::INTRINSIC_CALL : DPUISD::CALL,
-                      CLI.DL, NodeTys, Ops);
+  Chain = DAG.getNode(DPUISD::CALL, CLI.DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -1363,16 +1368,7 @@ static bool canUseMulByConstant(SDValue firstOperand, SDValue secondOperand,
   return true;
 }
 
-/*
- * These constants do not describe the number of instructions executed, but the
- * number instructions needed in IRAM for one more multiplication.
- */
-const static unsigned int nrOfInstructionsForMul8 = 1;
-const static unsigned int nrOfInstructionsForMul16 = 7;
-const static unsigned int nrOfInstructionsForMul32 = 7;
-
-SDValue DPUTargetLowering::LowerMultiplication(SDValue Op,
-                                               SelectionDAG &DAG) const {
+static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG) {
   /*
    * Multiplications on DPU are generally slow.
    * We can still try to optimize small multiplications, and multiplications by
@@ -1380,16 +1376,22 @@ SDValue DPUTargetLowering::LowerMultiplication(SDValue Op,
    */
   SDValue firstOperand = Op.getOperand(0);
   SDValue secondOperand = Op.getOperand(1);
-  SDValue LoweredMultiplication = Op;
+  SDValue LoweredMultiplication;
   SDValue resultWithConstant;
   SDLoc dl(Op);
   EVT VT = Op->getValueType(0);
 
-  unsigned int nrOfInstructions = nrOfInstructionsForMul32;
+  /*
+   * These constants do not describe the number of instructions executed, but
+   * the number instructions needed in IRAM for one more multiplication.
+   */
+  const unsigned int nrOfInstructionsForMul8 = 1;
+  const unsigned int nrOfInstructionsForMul16 = 7;
+  const unsigned int thresholdNrOfInstructinoForConstant = 7;
+  unsigned int nrOfInstructions = UINT_MAX;
   unsigned int nrOfInstructionsWithConstant;
-  bool canUseOptimizedMultiplication, canUseMultiplicationByConstant;
 
-  canUseOptimizedMultiplication = canUseMulX(
+  bool canUseOptimizedMultiplication = canUseMulX(
       firstOperand, secondOperand, MVT::i8, MVT::i16, DPUISD::MUL8_SS,
       DPUISD::MUL8_SU, DPUISD::MUL8_UU, DAG, dl, LoweredMultiplication);
 
@@ -1405,19 +1407,29 @@ SDValue DPUTargetLowering::LowerMultiplication(SDValue Op,
     }
   }
 
-  canUseMultiplicationByConstant = canUseMulByConstant(
+  bool canUseMultiplicationByConstant = canUseMulByConstant(
       firstOperand, secondOperand, nrOfInstructionsWithConstant, DAG, dl, VT,
       resultWithConstant);
 
   // Check if it interesting to switch to the constant representation
-  // ("nrOfInstructions + 1" because we suppose we need an additional MOVE
-  // before the multiplication)
   if (canUseMultiplicationByConstant &&
-      (nrOfInstructionsWithConstant < (nrOfInstructions + 1))) {
+      (nrOfInstructionsWithConstant <= (nrOfInstructions)) &&
+      nrOfInstructionsWithConstant < thresholdNrOfInstructinoForConstant) {
+    nrOfInstructions = nrOfInstructionsWithConstant;
     LoweredMultiplication = resultWithConstant;
   }
 
   return LoweredMultiplication;
+}
+
+SDValue DPUTargetLowering::PerformDAGCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  switch (N->getOpcode()) {
+  case ISD::MUL:
+    return PerformMULCombine(SDValue(N, 0), DAG);
+  }
+  return TargetLowering::PerformDAGCombine(N, DCI);
 }
 
 SDValue DPUTargetLowering::LowerGlobalAddress(SDValue Op,
@@ -1888,95 +1900,6 @@ SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
 
 #include "MCTargetDesc/DPUAsmCondition.h"
 
-static MachineBasicBlock *EmitMul32WithCustomInserter(MachineInstr &MI,
-                                                      MachineBasicBlock *BB) {
-  // todo __mul32 should have an abstract representation
-
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction::iterator I = ++BB->getIterator();
-  MachineFunction *F = BB->getParent();
-  MachineBasicBlock *normalMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *invertedMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *callMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  F->insert(I, normalMBB);
-  F->insert(I, invertedMBB);
-  F->insert(I, callMBB);
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the new block which will contain the Phi node for the select.
-  callMBB->splice(callMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  callMBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(normalMBB);
-  BB->addSuccessor(invertedMBB);
-  normalMBB->addSuccessor(callMBB);
-  invertedMBB->addSuccessor(callMBB);
-
-  unsigned int Dest = MI.getOperand(0).getReg();
-  unsigned int Op1 = MI.getOperand(1).getReg();
-  unsigned int Op2 = MI.getOperand(2).getReg();
-
-  BuildMI(BB, dl, TII.get(DPU::JGTUrri))
-      .addReg(Op1)
-      .addReg(Op2)
-      .addMBB(invertedMBB);
-
-  BuildMI(normalMBB, dl, TII.get(DPU::MOVErr), DPU::R18).addReg(Op1);
-
-  BuildMI(normalMBB, dl, TII.get(DPU::MOVErr), DPU::R17).addReg(Op2);
-
-  BuildMI(normalMBB, dl, TII.get(DPU::JUMPi)).addMBB(callMBB);
-
-  BuildMI(invertedMBB, dl, TII.get(DPU::MOVErr), DPU::R18).addReg(Op2);
-
-  BuildMI(invertedMBB, dl, TII.get(DPU::MOVErr), DPU::R17).addReg(Op1);
-
-  BuildMI(*callMBB, callMBB->begin(), dl, TII.get(DPU::CALLri), DPU::RADD)
-      .addExternalSymbol("__mul32");
-
-  BuildMI(*callMBB, ++callMBB->begin(), dl, TII.get(DPU::MOVErr), Dest)
-      .addReg(DPU::R19);
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return callMBB;
-}
-
-static MachineBasicBlock *
-EmitDivRem32WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
-                               const char *funcName, bool selectRem,
-                               bool Op1IsImm, bool Op2IsImm) {
-  // todo __udiv32 and __sdiv32 should have an abstract representation
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-
-  unsigned int Dest = MI.getOperand(0).getReg();
-  auto Op1 = MI.getOperand(1);
-  auto Op2 = MI.getOperand(2);
-
-  if (Op1IsImm) {
-    BuildMI(*BB, MI, dl, TII.get(DPU::MOVEri), DPU::R19).addImm(Op1.getImm());
-  } else {
-    BuildMI(*BB, MI, dl, TII.get(DPU::MOVErr), DPU::R19).addReg(Op1.getReg());
-  }
-
-  if (Op2IsImm) {
-    BuildMI(*BB, MI, dl, TII.get(DPU::MOVEri), DPU::R17).addImm(Op2.getImm());
-  } else {
-    BuildMI(*BB, MI, dl, TII.get(DPU::MOVErr), DPU::R17).addReg(Op2.getReg());
-  }
-
-  BuildMI(*BB, MI, dl, TII.get(DPU::CALLri), DPU::RADD)
-      .addExternalSymbol(funcName);
-
-  unsigned int ResultReg = selectRem ? DPU::R19 : DPU::R18;
-
-  BuildMI(*BB, MI, dl, TII.get(DPU::MOVErr), Dest).addReg(ResultReg);
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
 static MachineBasicBlock *
 EmitMul16WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
                             unsigned MulLL, unsigned MulHL, unsigned MulHH) {
@@ -2003,35 +1926,47 @@ EmitMul16WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
   unsigned int Op1 = MI.getOperand(1).getReg();
   unsigned int Op2 = MI.getOperand(2).getReg();
 
-  BuildMI(BB, dl, TII.get(MulLL), DPU::R17)
+  MachineRegisterInfo &RI = F->getRegInfo();
+  unsigned RegMulLLOp1Op2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegMulHHOp1Op2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegMulHLOp1Op2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegMulHLOp2Op1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegLSL1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegLSL2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned RegLSL3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+
+  BuildMI(BB, dl, TII.get(MulLL), RegMulLLOp1Op2)
       .addReg(Op1)
       .addReg(Op2)
       .addImm(DPUAsmCondition::Small)
       .addMBB(fastMBB);
 
-  BuildMI(slowMBB, dl, TII.get(MulHL), DPU::R18).addReg(Op1).addReg(Op2);
+  BuildMI(slowMBB, dl, TII.get(MulHL), RegMulHLOp1Op2).addReg(Op1).addReg(Op2);
 
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), DPU::R17)
-      .addReg(DPU::R17)
-      .addReg(DPU::R18)
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegLSL1)
+      .addReg(RegMulLLOp1Op2)
+      .addReg(RegMulHLOp1Op2)
       .addImm(8);
 
-  BuildMI(slowMBB, dl, TII.get(MulHL), DPU::R18).addReg(Op2).addReg(Op1);
+  BuildMI(slowMBB, dl, TII.get(MulHL), RegMulHLOp2Op1).addReg(Op2).addReg(Op1);
 
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), DPU::R17)
-      .addReg(DPU::R17)
-      .addReg(DPU::R18)
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegLSL2)
+      .addReg(RegLSL1)
+      .addReg(RegMulHLOp2Op1)
       .addImm(8);
 
-  BuildMI(slowMBB, dl, TII.get(MulHH), DPU::R18).addReg(Op1).addReg(Op2);
+  BuildMI(slowMBB, dl, TII.get(MulHH), RegMulHHOp1Op2).addReg(Op1).addReg(Op2);
 
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), DPU::R17)
-      .addReg(DPU::R17)
-      .addReg(DPU::R18)
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegLSL3)
+      .addReg(RegLSL2)
+      .addReg(RegMulHHOp1Op2)
       .addImm(16);
 
-  BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::COPY), Dest)
-      .addReg(DPU::R17);
+  BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(DPU::PHI), Dest)
+      .addReg(RegMulLLOp1Op2)
+      .addMBB(BB)
+      .addReg(RegLSL3)
+      .addMBB(slowMBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return fastMBB;
@@ -3401,8 +3336,6 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
-  case DPU::MULrr:
-    return EmitMul32WithCustomInserter(MI, BB);
   case DPU::Mul16UUrr:
     return EmitMul16WithCustomInserter(MI, BB, DPU::MUL_UL_ULrrrci,
                                        DPU::MUL_UH_ULrrr, DPU::MUL_UH_UHrrr);
@@ -3412,42 +3345,6 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case DPU::Mul16SSrr:
     return EmitMul16WithCustomInserter(MI, BB, DPU::MUL_UL_ULrrrci,
                                        DPU::MUL_SH_ULrrr, DPU::MUL_SH_SHrrr);
-  case DPU::UDIVir:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", false, true,
-                                          false);
-  case DPU::UDIVri:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", false, false,
-                                          true);
-  case DPU::UDIVrr:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", false, false,
-                                          false);
-  case DPU::UREMir:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", true, true,
-                                          false);
-  case DPU::UREMri:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", true, false,
-                                          true);
-  case DPU::UREMrr:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__udiv32", true, false,
-                                          false);
-  case DPU::SDIVir:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", false, true,
-                                          false);
-  case DPU::SDIVri:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", false, false,
-                                          true);
-  case DPU::SDIVrr:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", false, false,
-                                          false);
-  case DPU::SREMir:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", true, true,
-                                          false);
-  case DPU::SREMri:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", true, false,
-                                          true);
-  case DPU::SREMrr:
-    return EmitDivRem32WithCustomInserter(MI, BB, "__sdiv32", true, false,
-                                          false);
   case DPU::SELECTrr:
     return EmitSelectWithCustomInserter(MI, BB);
   case DPU::SELECT64rr:

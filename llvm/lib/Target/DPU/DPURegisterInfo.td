@@ -46,19 +46,15 @@ def R13 : DPUReg<13, "r13">, DwarfRegNum<[13]>;
 def R14 : DPUReg<14, "r14">, DwarfRegNum<[14]>;
 def R15 : DPUReg<15, "r15">, DwarfRegNum<[15]>;
 def R16 : DPUReg<16, "r16">, DwarfRegNum<[16]>;
-// R17: reserved for internal computation and system operations... not given to the compiler
-def R17: DPUReg<17, "r17">, DwarfRegNum<[17]>;
-// D18: reserved for internal computation and system operations... not given to the compiler
+def R17 : DPUReg<17, "r17">, DwarfRegNum<[17]>;
 def R18 : DPUReg<18, "r18">, DwarfRegNum<[18]>;
 def R19 : DPUReg<19, "r19">, DwarfRegNum<[19]>;
-// RVALHI: reserved as partial part of D20, used as register to return 64 bits values
-def RVALHI : DPUReg<20, "r20">, DwarfRegNum<[20]>;
-// R21: reserved to put the functions' returned values.
-def RVAL : DPUReg<21, "r21">, DwarfRegNum<[21]>;
+def R20 : DPUReg<20, "r20">, DwarfRegNum<[20]>;
+def R21 : DPUReg<21, "r21">, DwarfRegNum<[21]>;
 // R22: reserved as the stack pointer, SP
-def STKP : DPUReg<22, "r22">, DwarfRegNum<[22]>;
+def R22 : DPUReg<22, "r22">, DwarfRegNum<[22]>;
 // R23: reserved as the return address for functions
-def RADD : DPUReg<23, "r23">, DwarfRegNum<[23]>;
+def R23 : DPUReg<23, "r23">, DwarfRegNum<[23]>;
 
 // Thread data registers, extended to 64 bits.
 let SubRegIndices = [sub_32bit, sub_32bit_hi], CoveredBySubRegs = 1 in {
@@ -70,13 +66,10 @@ let SubRegIndices = [sub_32bit, sub_32bit_hi], CoveredBySubRegs = 1 in {
   def D10 : DPUReg<10, "d10", [R11, R10]>;
   def D12 : DPUReg<12, "d12", [R13, R12]>;
   def D14 : DPUReg<14, "d14", [R15, R14]>;
-  // Note: D16 is not used, because it encloses system registers.
-  def D16: DPUReg<16, "d16", [R17, R16]>;
-  // D18: reserved for internal computation and system operations... not given to the compiler
-  def D18: DPUReg<18, "d18", [R19, R18]>;
-  // To return long values from functions
-  def RDVAL: DPUReg<20, "d20", [RVAL, RVALHI]>;
-  def RDFUN: DPUReg<22, "d22", [RADD, STKP]>;
+  def D16 : DPUReg<16, "d16", [R17, R16]>;
+  def D18 : DPUReg<18, "d18", [R19, R18]>;
+  def D20 : DPUReg<20, "d20", [R21, R20]>;
+  def D22 : DPUReg<22, "d22", [R23, R22]>;
 }
 
 // Constant registers.
@@ -99,7 +92,7 @@ def ID8:   DPUReg<31, "id8">;
 // that can be used as an instruction operand.
 // Hide the reserved registers, so that we are very sure that the compiler will
 // not do anything with them.
-def GP_REG    : RegisterClass<"DPU", [i32], 32, (add (sequence "R%u", 0, 19), RVAL, RVALHI, RADD, STKP)>;
+def GP_REG    : RegisterClass<"DPU", [i32], 32, (add (sequence "R%u", 0, 23))>;
 def GPZ_REG   : RegisterClass<"DPU", [i32], 32, (add GP_REG, ZERO)>;
 def CONST_REG : RegisterClass<"DPU", [i32], 32, (add ZERO, ONE, LNEG, MNEG)>;
 def ID_REG    : RegisterClass<"DPU", [i32], 32, (add ID, ID2, ID4, ID8)>;
@@ -108,7 +101,7 @@ def ZERO_REG  : RegisterClass<"DPU", [i32], 32, (add ZERO)>;
 
 // 64 bits registers are the combinations of 2 consecutive registers.
 def GP64_REG  : RegisterClass<"DPU", [i64], 64,
-                          (add D0, D2, D4, D6, D8, D10, D12, D14, D16, D18, RDVAL, RDFUN)>;
+                          (add D0, D2, D4, D6, D8, D10, D12, D14, D16, D18, D20, D22)>;
 
 def S0:   DPUReg<0, "s0">;
 def S1:   DPUReg<1, "s1">;

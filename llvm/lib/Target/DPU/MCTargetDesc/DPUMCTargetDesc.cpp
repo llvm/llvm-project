@@ -47,6 +47,8 @@
 #include "DPUMCAsmInfo.h"
 #include "DPUMCTargetDesc.h"
 
+#define DPU_ABI_VERSION 2
+
 using namespace llvm;
 
 static MCInstPrinter *createDPUMCInstPrinter(const Triple &T,
@@ -83,7 +85,8 @@ public:
   }
   DPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {
     MCAssembler &MCA = getStreamer().getAssembler();
-    MCA.setELFHeaderEFlags(EF_EABI_DPU_SET(MCA.getELFHeaderEFlags(), 1));
+    MCA.setELFHeaderEFlags(
+        EF_EABI_DPU_SET(MCA.getELFHeaderEFlags(), DPU_ABI_VERSION));
   }
 };
 

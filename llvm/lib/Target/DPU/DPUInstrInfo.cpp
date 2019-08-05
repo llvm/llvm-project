@@ -104,34 +104,17 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   default:
     return false;
   case DPU::RETi:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::JUMPr)).addReg(DPU::RADD);
+    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::JUMPr)).addReg(DPU::R23);
     break;
   case DPU::CALLi:
     BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::CALLri))
-        .addReg(DPU::RADD)
+        .addReg(DPU::R23)
         .add(MI.getOperand(0));
     break;
   case DPU::CALLr:
     BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::CALLrr))
-        .addReg(DPU::RADD)
+        .addReg(DPU::R23)
         .add(MI.getOperand(0));
-    break;
-  case DPU::INTRINSIC_CALL:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::MOVErr))
-        .addReg(DPU::R18)
-        .addReg(DPU::R0);
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::MOVErr))
-        .addReg(DPU::R19)
-        .addReg(DPU::R1);
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::MOVErr))
-        .addReg(DPU::R17)
-        .addReg(DPU::R2);
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::CALLri))
-        .addReg(DPU::RADD)
-        .add(MI.getOperand(0));
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::MOVErr))
-        .addReg(DPU::RVAL)
-        .addReg(DPU::R18);
     break;
   case DPU::BSWAP16:
     BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SHrir))
@@ -190,7 +173,7 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       unsigned int ResultReg = MI.getOperand(0).getReg();
       BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SUBrrif))
           .addReg(ResultReg)
-          .addReg(DPU::STKP)
+          .addReg(DPU::R22)
           .addImm(StackSize + STACK_SIZE_FOR_D22)
           .addImm(DPUAsmCondition::Condition::False);
       break;

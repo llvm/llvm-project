@@ -11,6 +11,7 @@
 #include "DPU.h"
 #include "DPUISelDAGToDAG.h"
 #include "DPUMacroFusion.h"
+#include "DPUTargetTransformInfo.h"
 #include "MCTargetDesc/DPUMCAsmInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -54,6 +55,11 @@ DPUTargetMachine::DPUTargetMachine(const Target &T, const Triple &TT,
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
+}
+
+TargetTransformInfo
+DPUTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(DPUTTIImpl(this, F));
 }
 
 namespace {

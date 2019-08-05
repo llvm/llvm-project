@@ -27,7 +27,7 @@ class DPUInstrInfo : public DPUGenInstrInfo {
 public:
   explicit DPUInstrInfo();
 
-  const TargetRegisterInfo &getRegisterInfo() const { return RI; }
+  const DPURegisterInfo &getRegisterInfo() const { return RI; }
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, unsigned SrcReg,

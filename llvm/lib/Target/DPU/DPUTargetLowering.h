@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_DPU_DPUTARGETLOWERING_H
 #define LLVM_LIB_TARGET_DPU_DPUTARGETLOWERING_H
 
+#include "DPURegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
@@ -85,6 +86,8 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
 private:
   CodeGenOpt::Level optLevel;
 
@@ -103,8 +106,6 @@ private:
 
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerMultiplication(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
                          int IntrinsicType) const;
 
@@ -118,6 +119,8 @@ private:
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  const DPURegisterInfo *TRI;
 };
 } // namespace llvm
 #endif

@@ -23,17 +23,19 @@ struct DPURegisterInfo : public DPUGenRegisterInfo {
 public:
   DPURegisterInfo();
 
-  /// Code Generation virtual methods...
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction *MF = nullptr) const override;
+
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
-  // We use a unique, function independent, frame register (which is the stack
-  // pointer).
 
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
+
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID) const override;
 };
 } // namespace llvm
 #endif

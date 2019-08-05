@@ -14,6 +14,8 @@
 #include "DPURegisterInfo.h"
 #include "DPUTargetMachine.h"
 
+#include "DPUMachineFunctionInfo.h"
+
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -36,40 +38,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dpu-reg"
 
-//===----------------------------------------------------------------------===//
-// Generic register mapping:
-// - Use a maximum of callees to reduce as much as possible the stack sizes.
-// - Assign the following reserved registers:
-//   - R23: saves the return address for a function call
-//   - R22: the stack pointer
-//   - R21: tracks the returned value of a function
-//===----------------------------------------------------------------------===//
-
-// NOTE: Order is coherent with the structure of Double Registers (R_ODD
-// contains the LSBs, R_EVEN the MSBs). Also, we want the maximum of saved
-// Double Registers to be aligned on 8 bytes (to use Store Double instruction),
-// and because the register allocator starts from R0 to R16, we need D0 to be
-// the closest Double Register from the Stack Pointer (which is defined to be
-// aligned on 8 bytes)
-static const MCPhysReg CalleeSavedRegs[] = {
-    DPU::D14, DPU::D12, DPU::D10, DPU::D8, DPU::D6,
-    DPU::D4,  DPU::D2,  DPU::D0,  0
-    /* Reserved and invisible DPU::R17r, DPU::R18r, DPU::R19r, DPU::RVALHI */
-};
-
-DPURegisterInfo::DPURegisterInfo() : DPUGenRegisterInfo(DPU::R0) {}
+DPURegisterInfo::DPURegisterInfo() : DPUGenRegisterInfo(DPU::R23) {}
 
 const MCPhysReg *
 DPURegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return CalleeSavedRegs;
+  return CSR_SaveList;
 }
 
 BitVector DPURegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  // No reserved register in a DPU thread.
   BitVector reserved = BitVector(getNumRegs());
-  reserved.set(DPU::RDFUN);
-  reserved.set(DPU::STKP);
-  reserved.set(DPU::RADD);
+  reserved.set(DPU::D22);
+  reserved.set(DPU::R22);
+  reserved.set(DPU::R23);
   reserved.set(DPU::ZERO);
   reserved.set(DPU::ONE);
   reserved.set(DPU::LNEG);
@@ -78,12 +58,6 @@ BitVector DPURegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserved.set(DPU::ID2);
   reserved.set(DPU::ID4);
   reserved.set(DPU::ID8);
-  reserved.set(DPU::R16);
-  reserved.set(DPU::R17);
-  reserved.set(DPU::R18);
-  reserved.set(DPU::R19);
-  reserved.set(DPU::D16);
-  reserved.set(DPU::D18);
   return reserved;
 }
 
@@ -98,20 +72,8 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  int StackSize = MFI.getStackSize();
-  int Offset = MFI.getObjectOffset(FrameIndex);
-  if ((FrameIndex < 0) && (Offset >= -(STACK_SIZE_FOR_D22 + StackSize))) {
-    // Call Args from DPUTargetLowering::LowerFormalArguments
-    // We couldn't add the space for D22 in the lowering without seen the stack
-    // reducing wrongly for no obvious reason. It represents the size in the
-    // stack reserved manually in DPUFrameLowering::emitPrologue.
-    Offset -= (STACK_SIZE_FOR_D22 + StackSize);
-    MFI.setObjectOffset(FrameIndex, Offset);
-  } else if (Offset >= 0) {
-    Offset -= StackSize;
-    MFI.setObjectOffset(FrameIndex, Offset);
-  }
+  DPUMachineFunctionInfo *FuncInfo= MF.getInfo<DPUMachineFunctionInfo>();
+  int Offset = FuncInfo->getOffsetFromFrameIndex(FrameIndex);
 
   LLVM_DEBUG({
       dbgs() << "DPU/Reg - eliminating frame index in instruction (index= "<< FrameIndex << ") ";
@@ -145,5 +107,11 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 unsigned DPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return DPU::STKP;
+  return DPU::R22;
+}
+
+const uint32_t *
+DPURegisterInfo::getCallPreservedMask(const MachineFunction & /*MF*/,
+                                      CallingConv::ID /*CC*/) const {
+  return CSR_RegMask;
 }

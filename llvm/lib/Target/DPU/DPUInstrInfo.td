@@ -50,7 +50,6 @@ def DPUcallseq_start    : SDNode<"ISD::CALLSEQ_START", SDT_DPUCallSeqStart, [SDN
 def DPUcallseq_end      : SDNode<"ISD::CALLSEQ_END",   SDT_DPUCallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def DPUcall             : SDNode<"DPUISD::CALL", SDT_DPUCall, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
-def DPUintrinsic_call   : SDNode<"DPUISD::INTRINSIC_CALL", SDT_DPUCall, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
 def SDT_STORE_OP : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
 def SDT_LOAD_OP : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
@@ -388,87 +387,6 @@ def Mul16SSrr: PseudoDPUInstruction<
                    >;
 }
 
-// isCall avoids hoisting instruction in the LICM
-// (see MachineInstr::isSafeToMove)
-let isCall = 1, usesCustomInserter = 1, isAsCheapAsAMove = 0, Defs = [RADD, R17, D18] in {
-def MULrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (mul i32:$ra, i32:$rb))]
-                  >;
-def UDIVrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (udiv i32:$ra, i32:$rb))]
-                  >;
-
-def UDIVri: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, i32imm:$rb),
-                  "",
-                  [(set i32:$rc, (udiv i32:$ra, (i32 imm:$rb)))]
-                  >;
-
-def UDIVir: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins i32imm:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (udiv (i32 imm:$ra), i32:$rb))]
-                  >;
-
-def SDIVrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (sdiv i32:$ra, i32:$rb))]
-                  >;
-
-def SDIVri: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, i32imm:$rb),
-                  "",
-                  [(set i32:$rc, (sdiv i32:$ra, (i32 imm:$rb)))]
-                  >;
-
-def SDIVir: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins i32imm:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (sdiv (i32 imm:$ra), i32:$rb))]
-                  >;
-
-def UREMrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (urem i32:$ra, i32:$rb))]
-                  >;
-
-def UREMri: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, i32imm:$rb),
-                  "",
-                  [(set i32:$rc, (urem i32:$ra, (i32 imm:$rb)))]
-                  >;
-
-def UREMir: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins i32imm:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (urem (i32 imm:$ra), i32:$rb))]
-                  >;
-
-def SREMrr: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (srem i32:$ra, i32:$rb))]
-                  >;
-
-def SREMri: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra, i32imm:$rb),
-                  "",
-                  [(set i32:$rc, (srem i32:$ra, (i32 imm:$rb)))]
-                  >;
-
-def SREMir: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins i32imm:$ra, GP_REG:$rb),
-                  "",
-                  [(set i32:$rc, (srem (i32 imm:$ra), i32:$rb))]
-                  >;
-}
-
 // -----------------------------------------------------------------------------
 // SELECT
 // -----------------------------------------------------------------------------
@@ -490,14 +408,14 @@ def SELECT64rr: PseudoDPUInstruction<
 // -----------------------------------------------------------------------------
 
 
-let isReturn=1, isTerminator = 1, isBarrier = 1, Uses = [RADD] in {
+let isReturn=1, isTerminator = 1, isBarrier = 1, Uses = [R23] in {
     def RETi: PseudoDPUInstruction<(outs), (ins), "", [(DPUretflag)]>;
 }
 
 // Stack adjustments will not be generated... Instead, we update the stack pointer
 // as if it was a frame pointer, by substituting these fake instructions.
 // See DPUFrameLowering.cpp::eliminateCallFramePseudoInstr.
-let Uses = [RADD], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let Uses = [R23], hasSideEffects = 1, isCodeGenOnly = 1 in {
   def ADJCALLSTACKDOWN : PseudoDPUInstruction<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                                 "// ADJCALLSTACKDOWN $amt1 $amt2",
                                 [(DPUcallseq_start i16:$amt1, i16:$amt2)]>;
@@ -523,7 +441,7 @@ def pcoffset : Operand<OtherVT> {
 // Jump and save PC
 // An invocation to call allows to save the current PC position in an arbitrary
 // register.
-let isCall=1, hasDelaySlot=0, Defs = [RVAL, RVALHI, RADD]
+let isCall=1, hasDelaySlot=0, Defs = [R23]
     in {
       def CALLi : PseudoDPUInstruction<
                   (outs), (ins i32imm:$addr),
@@ -539,23 +457,12 @@ let isCall=1, hasDelaySlot=0, Defs = [RVAL, RVALHI, RADD]
                   // this in different patterns (see below).
                   []
       >;
-      def INTRINSIC_CALL : PseudoDPUInstruction<
-                  (outs), (ins i32imm:$addr),
-                  "",
-                  // Note: not linked to DPUcall here, because we wrap
-                  // this in different patterns (see below).
-                  []
-      >;
 }
 
 def : Pat<(DPUcall tglobaladdr:$dst), (CALLi tglobaladdr:$dst)>;
 def : Pat<(DPUcall texternalsym:$dst), (CALLi texternalsym:$dst)>;
 def : Pat<(DPUcall imm:$dst), (CALLi imm:$dst)>;
 def : Pat<(DPUcall GP_REG:$addr), (CALLr GP_REG:$addr) >;
-
-def : Pat<(DPUintrinsic_call tglobaladdr:$dst), (INTRINSIC_CALL tglobaladdr:$dst)>;
-def : Pat<(DPUintrinsic_call texternalsym:$dst), (INTRINSIC_CALL texternalsym:$dst)>;
-def : Pat<(DPUintrinsic_call imm:$dst), (INTRINSIC_CALL imm:$dst)>;
 
 let isBranch = 1, isTerminator = 1, isCompare = 1, isBarrier = 0, isIndirectBranch = 0, isAsCheapAsAMove = 1 in {
 // DPUTargetLowering::LowerSetCc traps br_cc instructions to map the condition

@@ -73,21 +73,21 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (MFI.hasCalls()) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-        nullptr, MRI->getDwarfRegNum(DPU::RADD, true), -STACK_SIZE_FOR_D22));
+        nullptr, MRI->getDwarfRegNum(DPU::R23, true), -STACK_SIZE_FOR_D22));
     BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-        nullptr, MRI->getDwarfRegNum(DPU::STKP, true), 4 - STACK_SIZE_FOR_D22));
+        nullptr, MRI->getDwarfRegNum(DPU::R22, true), 4 - STACK_SIZE_FOR_D22));
     BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::STKP)
+    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::R22)
         .addImm(StackSize - STACK_SIZE_FOR_D22)
-        .addReg(DPU::RDFUN);
-    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::STKP)
-        .addReg(DPU::STKP)
+        .addReg(DPU::D22);
+    BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::R22)
+        .addReg(DPU::R22)
         .addImm(StackSize);
   }
 
@@ -126,8 +126,8 @@ void DPUFrameLowering::emitEpilogue(MachineFunction &MF,
   if (!MF.getFrameInfo().hasCalls())
     return;
 
-  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::LDrri), DPU::RDFUN)
-      .addReg(DPU::STKP)
+  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::LDrri), DPU::D22)
+      .addReg(DPU::R22)
       .addImm(-STACK_SIZE_FOR_D22);
 }
 
@@ -143,6 +143,6 @@ int DPUFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   // Because we use no register but permanently adjust the stack pointer, the
   // frame index reference is directly the frame index.
-  FrameReg = DPU::STKP;
+  FrameReg = DPU::R22;
   return MFI.getObjectOffset(FI);
 }
