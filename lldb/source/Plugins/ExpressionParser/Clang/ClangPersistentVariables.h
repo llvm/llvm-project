@@ -76,8 +76,8 @@ public:
   }
 
 private:
-  uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          ///GetNextResultName().
+  // The counter used by GetNextPersistentVariableName
+  uint32_t m_next_persistent_variable_id = 0;
 
   typedef llvm::DenseMap<const char *, clang::NamedDecl *> PersistentDeclMap;
   PersistentDeclMap
