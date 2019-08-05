@@ -13,7 +13,6 @@ add_public_tablegen_target(DPUCommonTableGen)
 
 add_llvm_target(DPUCodeGen
         DPUTargetMachine.cpp
-        DPUSelectionDAGInfo.cpp
         DPURegisterInfo.cpp
         DPUFrameLowering.cpp
         DPUTargetLowering.cpp

@@ -24,7 +24,6 @@
 
 #define GET_SUBTARGETINFO_HEADER
 #include "DPUGenSubtargetInfo.inc"
-#include "DPUSelectionDAGInfo.h"
 
 namespace llvm {
 class StringRef;
@@ -34,7 +33,7 @@ class DPUSubtarget : public DPUGenSubtargetInfo {
   DPUInstrInfo InstrInfo;
   DPUFrameLowering FrameLowering;
   DPUTargetLowering TargetLowering;
-  DPUSelectionDAGInfo TSInfo;
+  const SelectionDAGTargetInfo TSInfo;
   bool noSugar;
 
 public:

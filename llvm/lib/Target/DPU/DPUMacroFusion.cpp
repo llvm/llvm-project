@@ -19,6 +19,8 @@
 
 #include "DPUGenInstrInfo.inc"
 
+using namespace llvm;
+
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
