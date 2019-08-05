@@ -9067,39 +9067,6 @@ ClangASTContext::CreateMemberPointerType(const CompilerType &type,
   return CompilerType();
 }
 
-size_t
-ClangASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
-                                           const char *s, uint8_t *dst,
-                                           size_t dst_size) {
-  if (type) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
-    uint32_t count = 0;
-    bool is_complex = false;
-    if (IsFloatingPointType(type, count, is_complex)) {
-      // TODO: handle complex and vector types
-      if (count != 1)
-        return false;
-
-      llvm::StringRef s_sref(s);
-      llvm::APFloat ap_float(getASTContext()->getFloatTypeSemantics(qual_type),
-                             s_sref);
-
-      const uint64_t bit_size = getASTContext()->getTypeSize(qual_type);
-      const uint64_t byte_size = bit_size / 8;
-      if (dst_size >= byte_size) {
-        Scalar scalar = ap_float.bitcastToAPInt().zextOrTrunc(
-            llvm::NextPowerOf2(byte_size) * 8);
-        lldb_private::Status get_data_error;
-        if (scalar.GetAsMemoryData(dst, byte_size,
-                                   lldb_private::endian::InlHostByteOrder(),
-                                   get_data_error))
-          return byte_size;
-      }
-    }
-  }
-  return 0;
-}
-
 // Dumping types
 #define DEPTH_INCREMENT 2
 

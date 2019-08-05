@@ -376,12 +376,6 @@ public:
                            lldb::offset_t data_offset,
                            size_t data_byte_size) = 0;
 
-  // Converts "s" to a floating point value and place resulting floating point
-  // bytes in the "dst" buffer.
-  virtual size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
-                                           const char *s, uint8_t *dst,
-                                           size_t dst_size) = 0;
-
   // TODO: Determine if these methods should move to ClangASTContext.
 
   virtual bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,

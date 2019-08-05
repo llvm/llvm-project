@@ -336,13 +336,6 @@ public:
 
   bool IsMeaninglessWithoutDynamicResolution() const;
 
-  // Pointers & References
-
-  // Converts "s" to a floating point value and place resulting floating point
-  // bytes in the "dst" buffer.
-  size_t ConvertStringToFloatValue(const char *s, uint8_t *dst,
-                                   size_t dst_size) const;
-
   // Dumping types
 
 #ifndef NDEBUG
