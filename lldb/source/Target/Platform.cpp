@@ -1628,7 +1628,7 @@ Status Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
   Status error;
 
   std::error_code EC;
-  llvm::raw_fd_ostream dst(dst_file_spec.GetPath(), EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream dst(dst_file_spec.GetPath(), EC, llvm::sys::fs::OF_None);
   if (EC) {
     error.SetErrorStringWithFormat("unable to open destination file: %s",
                                    dst_file_spec.GetPath().c_str());

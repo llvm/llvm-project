@@ -148,7 +148,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
 
 void coff::writeDefFile(StringRef name) {
   std::error_code ec;
-  raw_fd_ostream os(name, ec, sys::fs::F_None);
+  raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
     fatal("cannot open " + name + ": " + ec.message());
 
