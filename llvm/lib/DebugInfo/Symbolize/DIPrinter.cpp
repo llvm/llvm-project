@@ -30,6 +30,11 @@
 namespace llvm {
 namespace symbolize {
 
+// By default, DILineInfo contains "<invalid>" for function/filename it
+// cannot fetch. We replace it to "??" to make our output closer to addr2line.
+static const char kDILineInfoBadString[] = "<invalid>";
+static const char kBadString[] = "??";
+
 // Prints source code around in the FileName the Line.
 void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
   if (PrintSourceContext <= 0)
@@ -63,16 +68,16 @@ void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
 void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   if (PrintFunctionNames) {
     std::string FunctionName = Info.FunctionName;
-    if (FunctionName == DILineInfo::BadString)
-      FunctionName = DILineInfo::Addr2LineBadString;
+    if (FunctionName == kDILineInfoBadString)
+      FunctionName = kBadString;
 
     StringRef Delimiter = PrintPretty ? " at " : "\n";
     StringRef Prefix = (PrintPretty && Inlined) ? " (inlined by) " : "";
     OS << Prefix << FunctionName << Delimiter;
   }
   std::string Filename = Info.FileName;
-  if (Filename == DILineInfo::BadString)
-    Filename = DILineInfo::Addr2LineBadString;
+  if (Filename == kDILineInfoBadString)
+    Filename = kBadString;
   else if (Basenames)
     Filename = llvm::sys::path::filename(Filename);
   if (!Verbose) {
@@ -110,8 +115,8 @@ DIPrinter &DIPrinter::operator<<(const DIInliningInfo &Info) {
 
 DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
   std::string Name = Global.Name;
-  if (Name == DILineInfo::BadString)
-    Name = DILineInfo::Addr2LineBadString;
+  if (Name == kDILineInfoBadString)
+    Name = kBadString;
   OS << Name << "\n";
   OS << Global.Start << " " << Global.Size << "\n";
   return *this;

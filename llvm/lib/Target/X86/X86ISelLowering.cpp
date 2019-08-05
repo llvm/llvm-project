@@ -11893,8 +11893,12 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
     SDValue PSHUFBMask[16];
     for (int i = 0; i < 16; ++i) {
       int Idx = Offset + (i / Scale);
-      PSHUFBMask[i] = DAG.getConstant(
-          (i % Scale == 0 && SafeOffset(Idx)) ? Idx : 0x80, DL, MVT::i8);
+      if ((i % Scale == 0 && SafeOffset(Idx))) {
+        PSHUFBMask[i] = DAG.getConstant(Idx, DL, MVT::i8);
+        continue;
+      }
+      PSHUFBMask[i] =
+          AnyExt ? DAG.getUNDEF(MVT::i8) : DAG.getConstant(0x80, DL, MVT::i8);
     }
     InputV = DAG.getBitcast(MVT::v16i8, InputV);
     return DAG.getBitcast(
@@ -34706,7 +34710,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     SelectionDAG &DAG, unsigned Depth) const {
+  int NumElts = DemandedElts.getBitWidth();
   unsigned Opc = Op.getOpcode();
+  EVT VT = Op.getValueType();
+
   switch (Opc) {
   case X86ISD::PINSRB:
   case X86ISD::PINSRW: {
@@ -34719,6 +34726,49 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       return Vec;
      break;
   }
+  }
+
+  SmallVector<int, 16> ShuffleMask;
+  SmallVector<SDValue, 2> ShuffleOps;
+  if (VT.isSimple() && VT.isVector() &&
+      resolveTargetShuffleInputs(Op, ShuffleOps, ShuffleMask, DAG, Depth)) {
+    // If all the demanded elts are from one operand and are inline,
+    // then we can use the operand directly.
+    int NumOps = ShuffleOps.size();
+    if (ShuffleMask.size() == (unsigned)NumElts &&
+        llvm::all_of(ShuffleOps, [VT](SDValue V) {
+          return VT.getSizeInBits() == V.getValueSizeInBits();
+        })) {
+
+      // Bitmask that indicates which ops have only been accessed 'inline'.
+      APInt IdentityOp = APInt::getAllOnesValue(NumOps);
+      bool AllUndef = true;
+
+      for (int i = 0; i != NumElts; ++i) {
+        int M = ShuffleMask[i];
+        if (SM_SentinelUndef == M || !DemandedElts[i])
+          continue;
+        AllUndef = false;
+        int Op = M / NumElts;
+        int Index = M % NumElts;
+        if (M < 0 || Index != i) {
+          IdentityOp.clearAllBits();
+          break;
+        }
+        IdentityOp &= APInt::getOneBitSet(NumOps, Op);
+        if (IdentityOp == 0)
+          break;
+      }
+      assert((IdentityOp == 0 || IdentityOp.countPopulation() == 1) &&
+             "Multiple identity shuffles detected");
+
+      if (AllUndef)
+        return DAG.getUNDEF(VT);
+
+      for (int i = 0; i != NumOps; ++i)
+        if (IdentityOp[i])
+          return DAG.getBitcast(VT, ShuffleOps[i]);
+    }
   }
 
   return TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
@@ -44055,23 +44105,6 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
             combineConcatVectorOps(dl, OpVT, SubVectorOps, DAG, DCI, Subtarget))
       return Fold;
 
-  // If we are inserting into both halves of the vector, the starting vector
-  // should be undef. If it isn't, make it so. Only do this if the early insert
-  // has no other uses.
-  // TODO: Should this be a generic DAG combine?
-  // TODO: Why doesn't SimplifyDemandedVectorElts catch this?
-  if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
-      Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2 &&
-      isNullConstant(Vec.getOperand(2)) && !Vec.getOperand(0).isUndef() &&
-      Vec.getOperand(1).getValueSizeInBits() == SubVecVT.getSizeInBits() &&
-      Vec.hasOneUse()) {
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
-                      Vec.getOperand(1), Vec.getOperand(2));
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec, SubVec,
-                       N->getOperand(2));
-  }
-
   // If this is a broadcast insert into an upper undef, use a larger broadcast.
   if (Vec.isUndef() && IdxVal != 0 && SubVec.getOpcode() == X86ISD::VBROADCAST)
     return DAG.getNode(X86ISD::VBROADCAST, dl, OpVT, SubVec.getOperand(0));
@@ -44367,14 +44400,12 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Combine (ext_invec (ext_invec X)) -> (ext_invec X)
   // Disabling for widening legalization for now. We can enable if we find a
   // case that needs it. Otherwise it can be deleted when we switch to
   // widening legalization.
-  if (ExperimentalVectorWideningLegalization)
-    return SDValue();
-
-  // Combine (ext_invec (ext_invec X)) -> (ext_invec X)
-  if (In.getOpcode() == N->getOpcode() &&
+  if (!ExperimentalVectorWideningLegalization &&
+      In.getOpcode() == N->getOpcode() &&
       TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getOperand(0).getValueType()))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, In.getOperand(0));
 

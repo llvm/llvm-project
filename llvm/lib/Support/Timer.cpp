@@ -68,7 +68,7 @@ std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
   // info output file before running commands which write to it.
   std::error_code EC;
   auto Result = llvm::make_unique<raw_fd_ostream>(
-      OutputFilename, EC, sys::fs::F_Append | sys::fs::F_Text);
+      OutputFilename, EC, sys::fs::OF_Append | sys::fs::OF_Text);
   if (!EC)
     return Result;
 

@@ -1205,7 +1205,7 @@ define <16 x i8> @shuffle_v16i8_00_uu_uu_uu_uu_uu_uu_uu_01_uu_uu_uu_uu_uu_uu_uu(
 ;
 ; SSSE3-LABEL: shuffle_v16i8_00_uu_uu_uu_uu_uu_uu_uu_01_uu_uu_uu_uu_uu_uu_uu:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v16i8_00_uu_uu_uu_uu_uu_uu_uu_01_uu_uu_uu_uu_uu_uu_uu:

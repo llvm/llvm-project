@@ -6414,7 +6414,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_umax:
   case Intrinsic::amdgcn_raw_buffer_atomic_and:
   case Intrinsic::amdgcn_raw_buffer_atomic_or:
-  case Intrinsic::amdgcn_raw_buffer_atomic_xor: {
+  case Intrinsic::amdgcn_raw_buffer_atomic_xor:
+  case Intrinsic::amdgcn_raw_buffer_atomic_inc:
+  case Intrinsic::amdgcn_raw_buffer_atomic_dec: {
     auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
     SDValue Ops[] = {
       Op.getOperand(0), // Chain
@@ -6463,6 +6465,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     case Intrinsic::amdgcn_raw_buffer_atomic_xor:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
       break;
+    case Intrinsic::amdgcn_raw_buffer_atomic_inc:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_INC;
+      break;
+    case Intrinsic::amdgcn_raw_buffer_atomic_dec:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_DEC;
+      break;
     default:
       llvm_unreachable("unhandled atomic opcode");
     }
@@ -6479,7 +6487,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_umax:
   case Intrinsic::amdgcn_struct_buffer_atomic_and:
   case Intrinsic::amdgcn_struct_buffer_atomic_or:
-  case Intrinsic::amdgcn_struct_buffer_atomic_xor: {
+  case Intrinsic::amdgcn_struct_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_buffer_atomic_inc:
+  case Intrinsic::amdgcn_struct_buffer_atomic_dec: {
     auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
     SDValue Ops[] = {
       Op.getOperand(0), // Chain
@@ -6527,6 +6537,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_struct_buffer_atomic_xor:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
+      break;
+    case Intrinsic::amdgcn_struct_buffer_atomic_inc:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_INC;
+      break;
+    case Intrinsic::amdgcn_struct_buffer_atomic_dec:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_DEC;
       break;
     default:
       llvm_unreachable("unhandled atomic opcode");

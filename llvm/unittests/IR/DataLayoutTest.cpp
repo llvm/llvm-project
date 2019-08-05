@@ -14,15 +14,15 @@ using namespace llvm;
 namespace {
 
 TEST(DataLayoutTest, FunctionPtrAlign) {
-  EXPECT_EQ(0U, DataLayout("").getFunctionPtrAlign());
-  EXPECT_EQ(1U, DataLayout("Fi8").getFunctionPtrAlign());
-  EXPECT_EQ(2U, DataLayout("Fi16").getFunctionPtrAlign());
-  EXPECT_EQ(4U, DataLayout("Fi32").getFunctionPtrAlign());
-  EXPECT_EQ(8U, DataLayout("Fi64").getFunctionPtrAlign());
-  EXPECT_EQ(1U, DataLayout("Fn8").getFunctionPtrAlign());
-  EXPECT_EQ(2U, DataLayout("Fn16").getFunctionPtrAlign());
-  EXPECT_EQ(4U, DataLayout("Fn32").getFunctionPtrAlign());
-  EXPECT_EQ(8U, DataLayout("Fn64").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(0), DataLayout("").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(1), DataLayout("Fi8").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(2), DataLayout("Fi16").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(4), DataLayout("Fi32").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(8), DataLayout("Fi64").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(1), DataLayout("Fn8").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(2), DataLayout("Fn16").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(4), DataLayout("Fn32").getFunctionPtrAlign());
+  EXPECT_EQ(MaybeAlign(8), DataLayout("Fn64").getFunctionPtrAlign());
   EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent, \
       DataLayout("").getFunctionPtrAlignType());
   EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent, \

@@ -485,7 +485,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       if (auto DebugLoc = DCtx.getDebugLoc())
         if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
           for (const auto &Entry : LocList->Entries)
-            VerifyLocationExpr({Entry.Loc.data(), Entry.Loc.size()});
+            VerifyLocationExpr(Entry.Loc);
     }
     break;
   }
@@ -1297,7 +1297,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
       if (const DWARFDebugLoc::LocationList *LocList =
               DebugLoc->getLocationListAtOffset(*Offset)) {
         if (any_of(LocList->Entries, [&](const DWARFDebugLoc::Entry &E) {
-              return ContainsInterestingOperators({E.Loc.data(), E.Loc.size()});
+              return ContainsInterestingOperators(E.Loc);
             }))
           return true;
       }

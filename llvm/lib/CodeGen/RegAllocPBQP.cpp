@@ -848,7 +848,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
         std::string GraphFileName = FullyQualifiedName + "." + RS.str() +
                                     ".pbqpgraph";
         std::error_code EC;
-        raw_fd_ostream OS(GraphFileName, EC, sys::fs::F_Text);
+        raw_fd_ostream OS(GraphFileName, EC, sys::fs::OF_Text);
         LLVM_DEBUG(dbgs() << "Dumping graph for round " << Round << " to \""
                           << GraphFileName << "\"\n");
         G.dump(OS);

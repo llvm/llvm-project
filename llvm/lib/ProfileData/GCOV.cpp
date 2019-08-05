@@ -706,7 +706,7 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
 
   std::error_code EC;
   auto OS =
-      llvm::make_unique<raw_fd_ostream>(CoveragePath, EC, sys::fs::F_Text);
+      llvm::make_unique<raw_fd_ostream>(CoveragePath, EC, sys::fs::OF_Text);
   if (EC) {
     errs() << EC.message() << "\n";
     return llvm::make_unique<raw_null_ostream>();

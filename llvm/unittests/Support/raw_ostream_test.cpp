@@ -339,7 +339,7 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
 TEST(raw_fd_ostreamTest, multiple_raw_fd_ostream_to_stdout) {
   std::error_code EC;
 
-  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::F_None); }
-  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::F_None); }
+  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::OF_None); }
+  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::OF_None); }
 }
 }

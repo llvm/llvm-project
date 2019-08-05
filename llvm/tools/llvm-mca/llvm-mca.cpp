@@ -222,7 +222,7 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
     OutputFilename = "-";
   std::error_code EC;
   auto Out =
-      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
+      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
   if (!EC)
     return std::move(Out);
   return EC;
