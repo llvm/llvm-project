@@ -47,7 +47,7 @@ public:
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
   ConstString GetNextPersistentVariableName(Target &target,
-  llvm::StringRef prefix) override {
+                                            llvm::StringRef prefix) override {
     llvm::SmallString<64> name;
     {
       llvm::raw_svector_ostream os(name);
