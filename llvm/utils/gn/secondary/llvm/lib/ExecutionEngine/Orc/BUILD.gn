@@ -30,6 +30,8 @@ static_library("Orc") {
     "OrcMCJITReplacement.cpp",
     "RPCUtils.cpp",
     "RTDyldObjectLinkingLayer.cpp",
+    "SpeculateAnalyses.cpp",
+    "Speculation.cpp",
     "ThreadSafeModule.cpp",
   ]
 }

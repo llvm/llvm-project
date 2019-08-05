@@ -605,29 +605,29 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
-    if (SanArgs.needsAsanRt()) {
+    if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
       SharedRuntimes.push_back("asan");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsUbsanRt()) {
+    if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
       else
         SharedRuntimes.push_back("ubsan_standalone");
     }
-    if (SanArgs.needsScudoRt()) {
+    if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("scudo_minimal");
       else
         SharedRuntimes.push_back("scudo");
     }
-    if (SanArgs.needsHwasanRt())
+    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("hwasan");
   }
 
   // The stats_client library is also statically linked into DSOs.
-  if (SanArgs.needsStatsRt())
+  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("stats_client");
 
   // Collect static runtimes.
@@ -635,32 +635,32 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     // Don't link static runtimes into DSOs or if -shared-libasan.
     return;
   }
-  if (SanArgs.needsAsanRt()) {
+  if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("asan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (SanArgs.needsHwasanRt()) {
+  if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("hwasan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("hwasan_cxx");
   }
-  if (SanArgs.needsDfsanRt())
+  if (SanArgs.needsDfsanRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("dfsan");
-  if (SanArgs.needsLsanRt())
+  if (SanArgs.needsLsanRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsMsanRt()) {
+  if (SanArgs.needsMsanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsTsanRt()) {
+  if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
-  if (SanArgs.needsUbsanRt()) {
+  if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
@@ -669,22 +669,22 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsSafeStackRt()) {
+  if (SanArgs.needsSafeStackRt() && SanArgs.linkRuntimes()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
   }
-  if (SanArgs.needsCfiRt())
+  if (SanArgs.needsCfiRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("cfi");
-  if (SanArgs.needsCfiDiagRt()) {
+  if (SanArgs.needsCfiDiagRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("cfi_diag");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
-  if (SanArgs.needsStatsRt()) {
+  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes()) {
     NonWholeStaticRuntimes.push_back("stats");
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
-  if (SanArgs.needsScudoRt()) {
+  if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("scudo_minimal");
       if (SanArgs.linkCXXRuntimes())
@@ -707,9 +707,10 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
 
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   // Inject libfuzzer dependencies.
-  if (TC.getSanitizerArgs().needsFuzzer()
-      && !Args.hasArg(options::OPT_shared)) {
+  if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
+      !Args.hasArg(options::OPT_shared)) {
 
     addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
     if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
@@ -738,7 +739,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (AddExportDynamic)
     CmdArgs.push_back("--export-dynamic");
 
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
     CmdArgs.push_back("-export-dynamic-symbol=__cfi_check");
 
