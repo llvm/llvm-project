@@ -55,8 +55,18 @@ public:
       uint32_t addr_byte_size) override;
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
-  llvm::StringRef
-  GetPersistentVariablePrefix(bool is_error) const override {
+
+  ConstString GetNextPersistentVariableName(Target &target,
+                                            llvm::StringRef prefix) override {
+    llvm::SmallString<64> name;
+    {
+      llvm::raw_svector_ostream os(name);
+      os << prefix << m_next_persistent_variable_id++;
+    }
+    return ConstString(name);
+  }
+
+  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
     return "$";
   }
 
@@ -92,11 +102,10 @@ public:
   }
 
 private:
-  uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          ///GetNextResultName().
-  uint32_t m_next_persistent_error_id;    ///< The counter used by
-                                       ///GetNextResultName() when is_error is
-                                       ///true.
+  // The counter used by GetNextPersistentVariableName
+  uint32_t m_next_persistent_variable_id = 0;
+  /// The counter used by GetNextResultName when is_error is true.
+  uint32_t m_next_persistent_error_id;
 
   typedef llvm::DenseMap<const char *, clang::TypeDecl *>
       ClangPersistentTypeMap;

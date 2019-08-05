@@ -118,9 +118,6 @@ public:
 
   FileSpec GetMainFileSpec() const;
 
-  // Get module unified section list symbol table.
-  virtual Symtab *GetSymtab();
-
   bool GetCompileOption(const char *option, std::string &value,
                         CompileUnit *cu = nullptr);
 
