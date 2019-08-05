@@ -378,10 +378,21 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
   }
 }
 
-void ClangUserExpression::UpdateLanguageForExpr(
+void ClangUserExpression::UpdateLanguageForExpr() {
+  m_expr_lang = lldb::LanguageType::eLanguageTypeUnknown;
+  if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel)
+    return;
+  if (m_in_cplusplus_method)
+    m_expr_lang = lldb::eLanguageTypeC_plus_plus;
+  else if (m_in_objectivec_method)
+    m_expr_lang = lldb::eLanguageTypeObjC;
+  else
+    m_expr_lang = lldb::eLanguageTypeC;
+}
+
+void ClangUserExpression::CreateSourceCode(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     std::vector<std::string> modules_to_import, bool for_completion) {
-  m_expr_lang = lldb::LanguageType::eLanguageTypeUnknown;
 
   std::string prefix = m_expr_prefix;
 
@@ -390,14 +401,7 @@ void ClangUserExpression::UpdateLanguageForExpr(
   } else {
     std::unique_ptr<ClangExpressionSourceCode> source_code(
         ClangExpressionSourceCode::CreateWrapped(prefix.c_str(),
-                                            m_expr_text.c_str()));
-
-    if (m_in_cplusplus_method)
-      m_expr_lang = lldb::eLanguageTypeC_plus_plus;
-    else if (m_in_objectivec_method)
-      m_expr_lang = lldb::eLanguageTypeObjC;
-    else
-      m_expr_lang = lldb::eLanguageTypeC;
+                                                 m_expr_text.c_str()));
 
     if (!source_code->GetText(m_transformed_text, m_expr_lang,
                               m_in_static_method, exe_ctx, !m_ctx_obj,
@@ -506,8 +510,8 @@ bool ClangUserExpression::PrepareForParsing(
   LLDB_LOG(log, "List of imported modules in expression: {0}",
            llvm::make_range(used_modules.begin(), used_modules.end()));
 
-  UpdateLanguageForExpr(diagnostic_manager, exe_ctx, used_modules,
-                        for_completion);
+  UpdateLanguageForExpr();
+  CreateSourceCode(diagnostic_manager, exe_ctx, used_modules, for_completion);
   return true;
 }
 
