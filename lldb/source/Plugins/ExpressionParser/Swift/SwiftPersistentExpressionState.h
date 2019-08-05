@@ -118,6 +118,16 @@ public:
   /// This returns the list of hand-loaded modules.
   HandLoadedModuleSet GetHandLoadedModules() { return m_hand_loaded_modules; }
 
+  ConstString GetNextPersistentVariableName(Target &target,
+                                            llvm::StringRef prefix) override {
+    llvm::SmallString<64> name;
+    {
+      llvm::raw_svector_ostream os(name);
+      os << prefix << m_next_persistent_variable_id++;
+    }
+    return ConstString(name);
+  }
+
 private:
   uint32_t m_next_persistent_variable_id; ///< The counter used by
                                           /// GetNextResultName().
