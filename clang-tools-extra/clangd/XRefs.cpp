@@ -716,7 +716,7 @@ static HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
         HI.Value.emplace();
         llvm::raw_string_ostream ValueOS(*HI.Value);
         Result.Val.printPretty(ValueOS, const_cast<ASTContext &>(Ctx),
-                               Var->getType());
+                               Init->getType());
       }
     }
   }
