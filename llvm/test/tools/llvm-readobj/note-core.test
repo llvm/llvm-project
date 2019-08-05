@@ -1,0 +1,28 @@
+## Test that note values are interpreted correctly for core files.
+
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-readelf --notes %t.o 2>&1 | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:         ELFCLASS64
+  Data:          ELFDATA2LSB
+  Type:          ET_CORE
+  Machine:       EM_X86_64
+Sections:
+  - Name:        .note.foo
+    Type:        SHT_NOTE
+    # Note: format is 0500000000000000<NT_FOO value>434F524500000000 repeated
+    Content:     050000000000000001000000434F524500000000050000000000000002000000434F524500000000050000000000000003000000434F524500000000050000000000000004000000434F524500000000050000000000000006000000434F524500000000
+ProgramHeaders:
+  - Type:        PT_NOTE
+    Sections:
+      - Section: .note.foo
+
+# CHECK:      Displaying notes found
+# CHECK-NEXT:   Owner                 Data size       Description
+# CHECK-NEXT:   CORE                  0x00000000      NT_PRSTATUS (prstatus structure)
+# CHECK-NEXT:   CORE                  0x00000000      NT_FPREGSET (floating point registers)
+# CHECK-NEXT:   CORE                  0x00000000      NT_PRPSINFO (prpsinfo structure)
+# CHECK-NEXT:   CORE                  0x00000000      NT_TASKSTRUCT (task structure)
+# CHECK-NEXT:   CORE                  0x00000000      NT_AUXV (auxiliary vector)
