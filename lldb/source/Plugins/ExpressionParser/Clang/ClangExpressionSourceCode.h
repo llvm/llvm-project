@@ -30,8 +30,6 @@ public:
     return new ClangExpressionSourceCode("$__lldb_expr", prefix, body, true);
   }
 
-  uint32_t GetNumBodyLines();
-
   /// Generates the source code that will evaluate the expression.
   ///
   /// \param text output parameter containing the source code string.
