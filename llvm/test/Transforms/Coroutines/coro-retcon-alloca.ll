@@ -39,7 +39,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i8*, i32 } @f.resume.0(i8* noalias nonnull, i1)
+; CHECK-LABEL: define internal { i8*, i8*, i32 } @f.resume.0(i8* noalias nonnull %0, i1 %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* %0, i64 8
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to i8**
@@ -83,7 +83,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @g.resume.0(i8* noalias nonnull, i1)
+; CHECK-LABEL: define internal { i8*, i32 } @g.resume.0(i8* noalias nonnull %0, i1 %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
@@ -132,7 +132,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @h.resume.0(i8* noalias nonnull, i1)
+; CHECK-LABEL: define internal { i8*, i32 } @h.resume.0(i8* noalias nonnull %0, i1 %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
@@ -180,7 +180,7 @@ loop2:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @i.resume.0(i8* noalias nonnull)
+; CHECK-LABEL: define internal { i8*, i32 } @i.resume.0(i8* noalias nonnull %0)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[NSLOT:%.*]] = bitcast i8* %0 to i32*
 ; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[NSLOT]], align 4
