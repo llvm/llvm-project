@@ -5,9 +5,9 @@
 define %shifttype @shift2i16(%shifttype %a, %shifttype %b) {
 entry:
   ; SSE2-LABEL: shift2i16
-  ; SSE2: cost of 4 {{.*}} shl
+  ; SSE2: cost of 32 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i16
-  ; SSE2-CODEGEN: psllq
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype %a , %b
   ret %shifttype %0
@@ -17,9 +17,9 @@ entry:
 define %shifttype4i16 @shift4i16(%shifttype4i16 %a, %shifttype4i16 %b) {
 entry:
   ; SSE2-LABEL: shift4i16
-  ; SSE2: cost of 10 {{.*}} shl
+  ; SSE2: cost of 32 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift4i16
-  ; SSE2-CODEGEN: pmuludq
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype4i16 %a , %b
   ret %shifttype4i16 %0
@@ -65,9 +65,9 @@ entry:
 define %shifttype2i32 @shift2i32(%shifttype2i32 %a, %shifttype2i32 %b) {
 entry:
   ; SSE2-LABEL: shift2i32
-  ; SSE2: cost of 4 {{.*}} shl
+  ; SSE2: cost of 10 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i32
-  ; SSE2-CODEGEN: psllq
+  ; SSE2-CODEGEN: pmuludq
 
   %0 = shl %shifttype2i32 %a , %b
   ret %shifttype2i32 %0
@@ -185,9 +185,9 @@ entry:
 define %shifttype2i8 @shift2i8(%shifttype2i8 %a, %shifttype2i8 %b) {
 entry:
   ; SSE2-LABEL: shift2i8
-  ; SSE2: cost of 4 {{.*}} shl
+  ; SSE2: cost of 26 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i8
-  ; SSE2-CODEGEN: psllq
+  ; SSE2-CODEGEN: psllw
 
   %0 = shl %shifttype2i8 %a , %b
   ret %shifttype2i8 %0
@@ -197,9 +197,9 @@ entry:
 define %shifttype4i8 @shift4i8(%shifttype4i8 %a, %shifttype4i8 %b) {
 entry:
   ; SSE2-LABEL: shift4i8
-  ; SSE2: cost of 10 {{.*}} shl
+  ; SSE2: cost of 26 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift4i8
-  ; SSE2-CODEGEN: pmuludq
+  ; SSE2-CODEGEN: psllw
 
   %0 = shl %shifttype4i8 %a , %b
   ret %shifttype4i8 %0
@@ -209,9 +209,9 @@ entry:
 define %shifttype8i8 @shift8i8(%shifttype8i8 %a, %shifttype8i8 %b) {
 entry:
   ; SSE2-LABEL: shift8i8
-  ; SSE2: cost of 32 {{.*}} shl
+  ; SSE2: cost of 26 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift8i8
-  ; SSE2-CODEGEN: pmullw
+  ; SSE2-CODEGEN: psllw
 
   %0 = shl %shifttype8i8 %a , %b
   ret %shifttype8i8 %0
@@ -249,7 +249,7 @@ entry:
   ; SSE2-LABEL: shift2i16const
   ; SSE2: cost of 1 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i16const
-  ; SSE2-CODEGEN: psllq $3
+  ; SSE2-CODEGEN: psllw $3
 
   %0 = shl %shifttypec %a , <i16 3, i16 3>
   ret %shifttypec %0
@@ -261,7 +261,7 @@ entry:
   ; SSE2-LABEL: shift4i16const
   ; SSE2: cost of 1 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift4i16const
-  ; SSE2-CODEGEN: pslld $3
+  ; SSE2-CODEGEN: psllw $3
 
   %0 = shl %shifttypec4i16 %a , <i16 3, i16 3, i16 3, i16 3>
   ret %shifttypec4i16 %0
@@ -322,7 +322,7 @@ entry:
   ; SSE2-LABEL: shift2i32c
   ; SSE2: cost of 1 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i32c
-  ; SSE2-CODEGEN: psllq $3
+  ; SSE2-CODEGEN: pslld $3
 
   %0 = shl %shifttypec2i32 %a , <i32 3, i32 3>
   ret %shifttypec2i32 %0
@@ -461,9 +461,9 @@ entry:
 define %shifttypec2i8 @shift2i8c(%shifttypec2i8 %a, %shifttypec2i8 %b) {
 entry:
   ; SSE2-LABEL: shift2i8c
-  ; SSE2: cost of 1 {{.*}} shl
+  ; SSE2: cost of 2 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift2i8c
-  ; SSE2-CODEGEN: psllq $3
+  ; SSE2-CODEGEN: psllw $3
 
   %0 = shl %shifttypec2i8 %a , <i8 3, i8 3>
   ret %shifttypec2i8 %0
@@ -473,9 +473,9 @@ entry:
 define %shifttypec4i8 @shift4i8c(%shifttypec4i8 %a, %shifttypec4i8 %b) {
 entry:
   ; SSE2-LABEL: shift4i8c
-  ; SSE2: cost of 1 {{.*}} shl
+  ; SSE2: cost of 2 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift4i8c
-  ; SSE2-CODEGEN: pslld $3
+  ; SSE2-CODEGEN: psllw $3
 
   %0 = shl %shifttypec4i8 %a , <i8 3, i8 3, i8 3, i8 3>
   ret %shifttypec4i8 %0
@@ -485,7 +485,7 @@ entry:
 define %shifttypec8i8 @shift8i8c(%shifttypec8i8 %a, %shifttypec8i8 %b) {
 entry:
   ; SSE2-LABEL: shift8i8c
-  ; SSE2: cost of 1 {{.*}} shl
+  ; SSE2: cost of 2 {{.*}} shl
   ; SSE2-CODEGEN-LABEL: shift8i8c
   ; SSE2-CODEGEN: psllw $3
 

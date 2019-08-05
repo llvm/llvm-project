@@ -51,7 +51,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
@@ -382,7 +381,12 @@ LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
   exit(1);
 }
 
-void warn(Twine Message) {
+void warn(StringRef Message) {
+  WithColor::warning(errs(), ToolName) << Message << ".\n";
+  errs().flush();
+}
+
+static void warn(Twine Message) {
   // Output order between errs() and outs() matters especially for archive
   // files where the output is per member object.
   outs().flush();
@@ -544,22 +548,17 @@ protected:
   DILineInfo OldLineInfo;
   const ObjectFile *Obj = nullptr;
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
-  // File name to file contents of source.
+  // File name to file contents of source
   std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
-  // Mark the line endings of the cached source.
+  // Mark the line endings of the cached source
   std::unordered_map<std::string, std::vector<StringRef>> LineCache;
-  // Keep track of missing sources.
-  StringSet<> MissingSources;
-  // Only emit 'no debug info' warning once.
-  bool WarnedNoDebugInfo;
 
 private:
   bool cacheSource(const DILineInfo& LineInfoFile);
 
 public:
   SourcePrinter() = default;
-  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch)
-      : Obj(Obj), WarnedNoDebugInfo(false) {
+  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
     symbolize::LLVMSymbolizer::Options SymbolizerOpts;
     SymbolizerOpts.PrintFunctions = DILineInfoSpecifier::FunctionNameKind::None;
     SymbolizerOpts.Demangle = false;
@@ -569,7 +568,6 @@ public:
   virtual ~SourcePrinter() = default;
   virtual void printSourceLine(raw_ostream &OS,
                                object::SectionedAddress Address,
-                               StringRef ObjectFilename,
                                StringRef Delimiter = "; ");
 };
 
@@ -579,11 +577,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
     Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
   } else {
     auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
-    if (!BufferOrError) {
-      if (MissingSources.insert(LineInfo.FileName).second)
-        warn("failed to find source " + LineInfo.FileName);
+    if (!BufferOrError)
       return false;
-    }
     Buffer = std::move(*BufferOrError);
   }
   // Chomp the file to get lines
@@ -604,33 +599,20 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
 
 void SourcePrinter::printSourceLine(raw_ostream &OS,
                                     object::SectionedAddress Address,
-                                    StringRef ObjectFilename,
                                     StringRef Delimiter) {
   if (!Symbolizer)
     return;
 
   DILineInfo LineInfo = DILineInfo();
   auto ExpectedLineInfo = Symbolizer->symbolizeCode(*Obj, Address);
-  std::string ErrorMessage;
   if (!ExpectedLineInfo)
-    ErrorMessage = toString(ExpectedLineInfo.takeError());
+    consumeError(ExpectedLineInfo.takeError());
   else
     LineInfo = *ExpectedLineInfo;
 
-  if (LineInfo.FileName == DILineInfo::BadString) {
-    if (!WarnedNoDebugInfo) {
-      std::string Warning =
-          "failed to parse debug information for " + ObjectFilename.str();
-      if (!ErrorMessage.empty())
-        Warning += ": " + ErrorMessage;
-      warn(Warning);
-      WarnedNoDebugInfo = true;
-    }
-    return;
-  }
-
-  if (LineInfo.Line == 0 || ((OldLineInfo.Line == LineInfo.Line) &&
-                             (OldLineInfo.FileName == LineInfo.FileName)))
+  if ((LineInfo.FileName == "<invalid>") || LineInfo.Line == 0 ||
+      ((OldLineInfo.Line == LineInfo.Line) &&
+       (OldLineInfo.FileName == LineInfo.FileName)))
     return;
 
   if (PrintLines)
@@ -641,12 +623,8 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
         return;
     auto LineBuffer = LineCache.find(LineInfo.FileName);
     if (LineBuffer != LineCache.end()) {
-      if (LineInfo.Line > LineBuffer->second.size()) {
-        warn(formatv(
-            "debug info line number {0} exceeds the number of lines in {1}",
-            LineInfo.Line, LineInfo.FileName));
+      if (LineInfo.Line > LineBuffer->second.size())
         return;
-      }
       // Vector begins at 0, line numbers are non-zero
       OS << Delimiter << LineBuffer->second[LineInfo.Line - 1] << '\n';
     }
@@ -685,10 +663,10 @@ public:
                          ArrayRef<uint8_t> Bytes,
                          object::SectionedAddress Address, raw_ostream &OS,
                          StringRef Annot, MCSubtargetInfo const &STI,
-                         SourcePrinter *SP, StringRef ObjectFilename,
+                         SourcePrinter *SP,
                          std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename);
+      SP->printSourceLine(OS, Address);
 
     size_t Start = OS.tell();
     if (!NoLeadingAddr)
@@ -729,10 +707,9 @@ public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, "");
+      SP->printSourceLine(OS, Address, "");
     if (!MI) {
       printLead(Bytes, Address.Address, OS);
       OS << " <unknown>";
@@ -769,7 +746,7 @@ public:
       OS << Separator;
       Separator = "\n";
       if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, ObjectFilename, "");
+        SP->printSourceLine(OS, Address, "");
       printLead(Bytes, Address.Address, OS);
       OS << Preamble;
       Preamble = "   ";
@@ -799,10 +776,9 @@ public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename);
+      SP->printSourceLine(OS, Address);
 
     if (MI) {
       SmallString<40> InstStr;
@@ -851,10 +827,9 @@ public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename);
+      SP->printSourceLine(OS, Address);
     if (!NoLeadingAddr)
       OS << format("%8" PRId64 ":", Address.Address / 8);
     if (!NoShowRawInsn) {
@@ -1402,10 +1377,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Size == 0)
           Size = 1;
 
-        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size),
-                      {SectionAddr + Index + VMAAdjustment, Section.getIndex()},
-                      outs(), "", *STI, &SP, Obj->getFileName(), &Rels);
+        PIP.printInst(
+            *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+            {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, outs(),
+            "", *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 

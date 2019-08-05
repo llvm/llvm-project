@@ -344,16 +344,22 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; ZEROTHRESH-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
 ; ZEROTHRESH-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
 ; ZEROTHRESH-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
-; ZEROTHRESH-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[C2]], 0
-; ZEROTHRESH-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C3]], 0
+; ZEROTHRESH-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[C2]], i32 0
+; ZEROTHRESH-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C3]], i32 1
+; ZEROTHRESH-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; ZEROTHRESH-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
 ; ZEROTHRESH-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
-; ZEROTHRESH-NEXT:    [[S2:%.*]] = select i1 [[CMP2]], float [[A2]], float [[B2]]
-; ZEROTHRESH-NEXT:    [[S3:%.*]] = select i1 [[CMP3]], float [[A3]], float [[B3]]
+; ZEROTHRESH-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> undef, float [[A2]], i32 0
+; ZEROTHRESH-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A3]], i32 1
+; ZEROTHRESH-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> undef, float [[B2]], i32 0
+; ZEROTHRESH-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[B3]], i32 1
+; ZEROTHRESH-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP5]], <2 x float> [[TMP7]]
 ; ZEROTHRESH-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[S0]], i32 0
 ; ZEROTHRESH-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[S1]], i32 1
-; ZEROTHRESH-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[S2]], i32 2
-; ZEROTHRESH-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
+; ZEROTHRESH-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
+; ZEROTHRESH-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[TMP9]], i32 2
+; ZEROTHRESH-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; ZEROTHRESH-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP10]], i32 3
 ; ZEROTHRESH-NEXT:    ret <4 x float> [[RD]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
@@ -430,18 +436,12 @@ define <2 x float> @simple_select_v2(<2 x float> %a, <2 x float> %b, <2 x i32> %
 ; CHECK-NEXT:    ret <2 x float> [[RB]]
 ;
 ; ZEROTHRESH-LABEL: @simple_select_v2(
-; ZEROTHRESH-NEXT:    [[C0:%.*]] = extractelement <2 x i32> [[C:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[C1:%.*]] = extractelement <2 x i32> [[C]], i32 1
-; ZEROTHRESH-NEXT:    [[A0:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[A1:%.*]] = extractelement <2 x float> [[A]], i32 1
-; ZEROTHRESH-NEXT:    [[B0:%.*]] = extractelement <2 x float> [[B:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[B1:%.*]] = extractelement <2 x float> [[B]], i32 1
-; ZEROTHRESH-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
-; ZEROTHRESH-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
-; ZEROTHRESH-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
-; ZEROTHRESH-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
-; ZEROTHRESH-NEXT:    [[RA:%.*]] = insertelement <2 x float> undef, float [[S0]], i32 0
-; ZEROTHRESH-NEXT:    [[RB:%.*]] = insertelement <2 x float> [[RA]], float [[S1]], i32 1
+; ZEROTHRESH-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[C:%.*]], zeroinitializer
+; ZEROTHRESH-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]
+; ZEROTHRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; ZEROTHRESH-NEXT:    [[RA:%.*]] = insertelement <2 x float> undef, float [[TMP3]], i32 0
+; ZEROTHRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; ZEROTHRESH-NEXT:    [[RB:%.*]] = insertelement <2 x float> [[RA]], float [[TMP4]], i32 1
 ; ZEROTHRESH-NEXT:    ret <2 x float> [[RB]]
 ;
   %c0 = extractelement <2 x i32> %c, i32 0

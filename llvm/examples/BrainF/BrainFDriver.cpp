@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
     }
     if (OutputFilename != "-") {
       std::error_code EC;
-      out = new raw_fd_ostream(OutputFilename, EC, sys::fs::F_None);
+      out = new raw_fd_ostream(OutputFilename, EC, sys::fs::OF_None);
     }
   }
 

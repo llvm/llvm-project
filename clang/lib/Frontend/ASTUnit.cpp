@@ -30,6 +30,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -1153,7 +1154,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
              InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
   assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
-             InputKind::LLVM_IR &&
+             Language::LLVM_IR &&
          "IR inputs not support here!");
 
   // Configure the various subsystems.
@@ -1586,7 +1587,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
              InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
   assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
-             InputKind::LLVM_IR &&
+             Language::LLVM_IR &&
          "IR inputs not support here!");
 
   // Configure the various subsystems.
@@ -2210,7 +2211,7 @@ void ASTUnit::CodeComplete(
              InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
   assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
-             InputKind::LLVM_IR &&
+             Language::LLVM_IR &&
          "IR inputs not support here!");
 
   // Use the source and file managers that we were given.
@@ -2667,17 +2668,17 @@ bool ASTUnit::isModuleFile() const {
 InputKind ASTUnit::getInputKind() const {
   auto &LangOpts = getLangOpts();
 
-  InputKind::Language Lang;
+  Language Lang;
   if (LangOpts.OpenCL)
-    Lang = InputKind::OpenCL;
+    Lang = Language::OpenCL;
   else if (LangOpts.CUDA)
-    Lang = InputKind::CUDA;
+    Lang = Language::CUDA;
   else if (LangOpts.RenderScript)
-    Lang = InputKind::RenderScript;
+    Lang = Language::RenderScript;
   else if (LangOpts.CPlusPlus)
-    Lang = LangOpts.ObjC ? InputKind::ObjCXX : InputKind::CXX;
+    Lang = LangOpts.ObjC ? Language::ObjCXX : Language::CXX;
   else
-    Lang = LangOpts.ObjC ? InputKind::ObjC : InputKind::C;
+    Lang = LangOpts.ObjC ? Language::ObjC : Language::C;
 
   InputKind::Format Fmt = InputKind::Source;
   if (LangOpts.getCompilingModule() == LangOptions::CMK_ModuleMap)

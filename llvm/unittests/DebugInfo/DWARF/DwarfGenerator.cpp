@@ -531,7 +531,7 @@ bool dwarfgen::Generator::saveFile(StringRef Path) {
   if (FileBytes.empty())
     return false;
   std::error_code EC;
-  raw_fd_ostream Strm(Path, EC, sys::fs::F_None);
+  raw_fd_ostream Strm(Path, EC, sys::fs::OF_None);
   if (EC)
     return false;
   Strm.write(FileBytes.data(), FileBytes.size());

@@ -68,17 +68,13 @@ define <2 x i8> @out_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 ; CHECK-SSE2-LABEL: out_v2i8:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v2i8:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <2 x i8> %x, %mask
   %notmask = xor <2 x i8> %mask, <i8 -1, i8 -1>
@@ -174,17 +170,13 @@ define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-SSE2-LABEL: out_v4i8:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v4i8:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <4 x i8> %x, %mask
   %notmask = xor <4 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1>
@@ -247,17 +239,13 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 ; CHECK-SSE2-LABEL: out_v4i8_undef:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v4i8_undef:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <4 x i8> %x, %mask
   %notmask = xor <4 x i8> %mask, <i8 -1, i8 -1, i8 undef, i8 -1>
@@ -300,17 +288,13 @@ define <2 x i16> @out_v2i16(<2 x i16> %x, <2 x i16> %y, <2 x i16> %mask) nounwin
 ; CHECK-SSE2-LABEL: out_v2i16:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v2i16:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <2 x i16> %x, %mask
   %notmask = xor <2 x i16> %mask, <i16 -1, i16 -1>
@@ -483,17 +467,13 @@ define <8 x i8> @out_v8i8(<8 x i8> %x, <8 x i8> %y, <8 x i8> %mask) nounwind {
 ; CHECK-SSE2-LABEL: out_v8i8:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v8i8:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <8 x i8> %x, %mask
   %notmask = xor <8 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -568,17 +548,13 @@ define <4 x i16> @out_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i16> %mask) nounwin
 ; CHECK-SSE2-LABEL: out_v4i16:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v4i16:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <4 x i16> %x, %mask
   %notmask = xor <4 x i16> %mask, <i16 -1, i16 -1, i16 -1, i16 -1>
@@ -641,17 +617,13 @@ define <4 x i16> @out_v4i16_undef(<4 x i16> %x, <4 x i16> %y, <4 x i16> %mask) n
 ; CHECK-SSE2-LABEL: out_v4i16_undef:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v4i16_undef:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <4 x i16> %x, %mask
   %notmask = xor <4 x i16> %mask, <i16 -1, i16 -1, i16 undef, i16 -1>
@@ -692,17 +664,13 @@ define <2 x i32> @out_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %mask) nounwin
 ; CHECK-SSE2-LABEL: out_v2i32:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    andps %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorps {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    andps %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    orps %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: out_v2i32:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
-; CHECK-XOP-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %mx = and <2 x i32> %x, %mask
   %notmask = xor <2 x i32> %mask, <i32 -1, i32 -1>

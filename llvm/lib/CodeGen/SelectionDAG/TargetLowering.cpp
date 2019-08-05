@@ -2215,6 +2215,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     APInt BaseElts = DemandedElts;
     BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
+
+    // If none of the base operand elements are demanded, replace it with undef.
+    if (!BaseElts && !Base.isUndef())
+      return TLO.CombineTo(Op,
+                           TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                                           TLO.DAG.getUNDEF(VT),
+                                           Op.getOperand(1),
+                                           Op.getOperand(2)));
+
     if (SimplifyDemandedVectorElts(Base, BaseElts, KnownUndef, KnownZero, TLO,
                                    Depth + 1))
       return true;

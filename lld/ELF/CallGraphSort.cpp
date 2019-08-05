@@ -227,7 +227,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 
   if (!config->printSymbolOrder.empty()) {
     std::error_code ec;
-    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::F_None);
+    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
       error("cannot open " + config->printSymbolOrder + ": " + ec.message());
       return orderMap;

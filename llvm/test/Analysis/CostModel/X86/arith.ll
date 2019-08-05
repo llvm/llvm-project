@@ -1342,36 +1342,32 @@ define i32 @mul(i32 %arg) {
 ; A <2 x i64> vector multiply is implemented using
 ; 3 PMULUDQ and 2 PADDS and 4 shifts.
 define void @mul_2i32() {
-; SSE-LABEL: 'mul_2i32'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; SSSE3-LABEL: 'mul_2i32'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A0 = mul <2 x i32> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SSE42-LABEL: 'mul_2i32'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A0 = mul <2 x i32> undef, undef
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'mul_2i32'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A0 = mul <2 x i32> undef, undef
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX512F-LABEL: 'mul_2i32'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; AVX512BW-LABEL: 'mul_2i32'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; AVX512DQ-LABEL: 'mul_2i32'
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A0 = mul <2 x i32> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX512-LABEL: 'mul_2i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A0 = mul <2 x i32> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SLM-LABEL: 'mul_2i32'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %A0 = mul <2 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %A0 = mul <2 x i32> undef, undef
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; GLM-LABEL: 'mul_2i32'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
+; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A0 = mul <2 x i32> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; BTVER2-LABEL: 'mul_2i32'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A0 = mul <2 x i32> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %A0 = mul <2 x i32> undef, undef

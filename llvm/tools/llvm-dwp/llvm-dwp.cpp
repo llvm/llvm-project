@@ -703,7 +703,7 @@ int main(int argc, char **argv) {
 
   // Create the output file.
   std::error_code EC;
-  ToolOutputFile OutFile(OutputFilename, EC, sys::fs::F_None);
+  ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_None);
   Optional<buffer_ostream> BOS;
   raw_pwrite_stream *OS;
   if (EC)

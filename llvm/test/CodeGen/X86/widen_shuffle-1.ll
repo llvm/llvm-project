@@ -89,18 +89,12 @@ entry:
 define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 ; X86-LABEL: shuf4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; X86-NEXT:    pshufb %xmm2, %xmm1
-; X86-NEXT:    pshufb %xmm2, %xmm0
-; X86-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; X64-NEXT:    pshufb %xmm2, %xmm1
-; X64-NEXT:    pshufb %xmm2, %xmm0
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq
   %vshuf = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %vshuf

@@ -1205,7 +1205,7 @@ public:
 
     std::error_code EC;
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                      sys::fs::OpenFlags::F_None);
+                      sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
     WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
@@ -1382,7 +1382,7 @@ lto::setupStatsFile(StringRef StatsFilename) {
   llvm::EnableStatistics(false);
   std::error_code EC;
   auto StatsFile =
-      llvm::make_unique<ToolOutputFile>(StatsFilename, EC, sys::fs::F_None);
+      llvm::make_unique<ToolOutputFile>(StatsFilename, EC, sys::fs::OF_None);
   if (EC)
     return errorCodeToError(EC);
 

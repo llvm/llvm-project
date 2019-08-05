@@ -2203,16 +2203,16 @@ define void @subus_v8i8(<8 x i8>* %p1, <8 x i8>* %p2) {
 define void @subus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
 ; SSE-LABEL: subus_v4i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    psubusb %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: subus_v4i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
@@ -2228,8 +2228,8 @@ define void @subus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
 define void @subus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
 ; SSE2-LABEL: subus_v2i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psubusb %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
@@ -2237,8 +2237,8 @@ define void @subus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
 ;
 ; SSSE3-LABEL: subus_v2i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSSE3-NEXT:    psubusb %xmm1, %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    movw %ax, (%rdi)
@@ -2246,16 +2246,16 @@ define void @subus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
 ;
 ; SSE41-LABEL: subus_v2i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE41-NEXT:    psubusb %xmm1, %xmm0
 ; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: subus_v2i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    retq
@@ -2296,16 +2296,16 @@ define void @subus_v4i16(<4 x i16>* %p1, <4 x i16>* %p2) {
 define void @subus_v2i16(<2 x i16>* %p1, <2 x i16>* %p2) {
 ; SSE-LABEL: subus_v2i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    psubusw %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: subus_v2i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq

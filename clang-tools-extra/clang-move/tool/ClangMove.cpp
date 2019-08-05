@@ -30,7 +30,7 @@ namespace {
 std::error_code CreateNewFile(const llvm::Twine &path) {
   int fd = 0;
   if (std::error_code ec = llvm::sys::fs::openFileForWrite(
-          path, fd, llvm::sys::fs::CD_CreateAlways, llvm::sys::fs::F_Text))
+          path, fd, llvm::sys::fs::CD_CreateAlways, llvm::sys::fs::OF_Text))
     return ec;
 
   return llvm::sys::Process::SafelyCloseFileDescriptor(fd);

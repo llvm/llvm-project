@@ -219,7 +219,7 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 LLVMBool LLVMTargetMachineEmitToFile(LLVMTargetMachineRef T, LLVMModuleRef M,
   char* Filename, LLVMCodeGenFileType codegen, char** ErrorMessage) {
   std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+  raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
   if (EC) {
     *ErrorMessage = strdup(EC.message().c_str());
     return true;

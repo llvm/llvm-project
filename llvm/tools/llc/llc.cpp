@@ -239,9 +239,9 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 
   // Open the file.
   std::error_code EC;
-  sys::fs::OpenFlags OpenFlags = sys::fs::F_None;
+  sys::fs::OpenFlags OpenFlags = sys::fs::OF_None;
   if (!Binary)
-    OpenFlags |= sys::fs::F_Text;
+    OpenFlags |= sys::fs::OF_Text;
   auto FDOut = llvm::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
@@ -480,7 +480,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;
     DwoOut = llvm::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
-                                               sys::fs::F_None);
+                                               sys::fs::OF_None);
     if (EC) {
       WithColor::error(errs(), argv[0]) << EC.message() << '\n';
       return 1;

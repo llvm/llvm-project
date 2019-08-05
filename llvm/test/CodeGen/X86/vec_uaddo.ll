@@ -47,91 +47,61 @@ define <1 x i32> @uaddo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) noun
 define <2 x i32> @uaddo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) nounwind {
 ; SSE2-LABEL: uaddo_v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    paddq %xmm1, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    movq %xmm0, (%rdi)
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-NEXT:    movq %xmm1, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: uaddo_v2i32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
-; SSSE3-NEXT:    pand %xmm2, %xmm1
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    paddq %xmm1, %xmm0
-; SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSSE3-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSSE3-NEXT:    pxor %xmm3, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSSE3-NEXT:    movq %xmm0, (%rdi)
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    paddd %xmm0, %xmm1
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm2
+; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSSE3-NEXT:    movq %xmm1, (%rdi)
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: uaddo_v2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm2, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE41-NEXT:    paddq %xmm1, %xmm0
-; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm2, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE41-NEXT:    movq %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    paddd %xmm0, %xmm1
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    movq %xmm1, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: uaddo_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vpmaxud %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; AVX1-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: uaddo_v2i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vpmaxud %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; AVX2-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: uaddo_v2i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512-NEXT:    vpmovqd %xmm0, (%rdi)
-; AVX512-NEXT:    vpcmpeqq %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vpcmpltud %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<2 x i32>, <2 x i1>} @llvm.uadd.with.overflow.v2i32(<2 x i32> %a0, <2 x i32> %a1)
   %val = extractvalue {<2 x i32>, <2 x i1>} %t, 0
@@ -922,12 +892,12 @@ define <2 x i32> @uaddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; SSE-NEXT:    pxor %xmm1, %xmm2
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE-NEXT:    pand %xmm4, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,3,3]
-; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
@@ -938,6 +908,7 @@ define <2 x i32> @uaddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm0
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX1-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -948,6 +919,7 @@ define <2 x i32> @uaddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm0
 ; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
 ;
@@ -955,9 +927,9 @@ define <2 x i32> @uaddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpltuq %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
@@ -1225,21 +1197,17 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; SSE2-NEXT:    setb %al
-; SSE2-NEXT:    movzbl %al, %r11d
+; SSE2-NEXT:    sbbl %eax, %eax
 ; SSE2-NEXT:    addq %r8, %rdi
 ; SSE2-NEXT:    adcq %r9, %rsi
-; SSE2-NEXT:    setb %al
-; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    sbbl %eax, %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    pinsrw $4, %r11d, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movq %rdx, 16(%r10)
 ; SSE2-NEXT:    movq %rdi, (%r10)
 ; SSE2-NEXT:    movq %rcx, 24(%r10)
 ; SSE2-NEXT:    movq %rsi, 8(%r10)
-; SSE2-NEXT:    psllq $63, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: uaddo_v2i128:
@@ -1247,21 +1215,17 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSSE3-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSSE3-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; SSSE3-NEXT:    setb %al
-; SSSE3-NEXT:    movzbl %al, %r11d
+; SSSE3-NEXT:    sbbl %eax, %eax
 ; SSSE3-NEXT:    addq %r8, %rdi
 ; SSSE3-NEXT:    adcq %r9, %rsi
-; SSSE3-NEXT:    setb %al
-; SSSE3-NEXT:    movzbl %al, %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    sbbl %eax, %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pinsrw $4, %r11d, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    movq %rdx, 16(%r10)
 ; SSSE3-NEXT:    movq %rdi, (%r10)
 ; SSSE3-NEXT:    movq %rcx, 24(%r10)
 ; SSSE3-NEXT:    movq %rsi, 8(%r10)
-; SSSE3-NEXT:    psllq $63, %xmm0
-; SSSE3-NEXT:    psrad $31, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: uaddo_v2i128:
@@ -1269,21 +1233,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE41-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE41-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; SSE41-NEXT:    setb %al
-; SSE41-NEXT:    movzbl %al, %r11d
+; SSE41-NEXT:    sbbl %r11d, %r11d
 ; SSE41-NEXT:    addq %r8, %rdi
 ; SSE41-NEXT:    adcq %r9, %rsi
-; SSE41-NEXT:    setb %al
-; SSE41-NEXT:    movzbl %al, %eax
+; SSE41-NEXT:    sbbl %eax, %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pinsrb $8, %r11d, %xmm0
+; SSE41-NEXT:    pinsrd $1, %r11d, %xmm0
 ; SSE41-NEXT:    movq %rdx, 16(%r10)
 ; SSE41-NEXT:    movq %rdi, (%r10)
 ; SSE41-NEXT:    movq %rcx, 24(%r10)
 ; SSE41-NEXT:    movq %rsi, 8(%r10)
-; SSE41-NEXT:    psllq $63, %xmm0
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: uaddo_v2i128:
@@ -1291,21 +1250,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX1-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; AVX1-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; AVX1-NEXT:    setb %al
-; AVX1-NEXT:    movzbl %al, %r11d
+; AVX1-NEXT:    sbbl %r11d, %r11d
 ; AVX1-NEXT:    addq %r8, %rdi
 ; AVX1-NEXT:    adcq %r9, %rsi
-; AVX1-NEXT:    setb %al
-; AVX1-NEXT:    movzbl %al, %eax
+; AVX1-NEXT:    sbbl %eax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpinsrb $8, %r11d, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $1, %r11d, %xmm0, %xmm0
 ; AVX1-NEXT:    movq %rdx, 16(%r10)
 ; AVX1-NEXT:    movq %rdi, (%r10)
 ; AVX1-NEXT:    movq %rcx, 24(%r10)
 ; AVX1-NEXT:    movq %rsi, 8(%r10)
-; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: uaddo_v2i128:
@@ -1313,21 +1267,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; AVX2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; AVX2-NEXT:    setb %al
-; AVX2-NEXT:    movzbl %al, %r11d
+; AVX2-NEXT:    sbbl %r11d, %r11d
 ; AVX2-NEXT:    addq %r8, %rdi
 ; AVX2-NEXT:    adcq %r9, %rsi
-; AVX2-NEXT:    setb %al
-; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    sbbl %eax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrb $8, %r11d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $1, %r11d, %xmm0, %xmm0
 ; AVX2-NEXT:    movq %rdx, 16(%r10)
 ; AVX2-NEXT:    movq %rdi, (%r10)
 ; AVX2-NEXT:    movq %rcx, 24(%r10)
 ; AVX2-NEXT:    movq %rsi, 8(%r10)
-; AVX2-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: uaddo_v2i128:
@@ -1344,12 +1293,12 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    andl $1, %eax
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    movq %rdx, 16(%r10)
 ; AVX512-NEXT:    movq %rdi, (%r10)
 ; AVX512-NEXT:    movq %rcx, 24(%r10)
 ; AVX512-NEXT:    movq %rsi, 8(%r10)
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %t = call {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0

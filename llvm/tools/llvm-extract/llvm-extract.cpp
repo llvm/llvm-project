@@ -350,7 +350,7 @@ int main(int argc, char **argv) {
   Passes.add(createStripDeadPrototypesPass());   // Remove dead func decls
 
   std::error_code EC;
-  ToolOutputFile Out(OutputFilename, EC, sys::fs::F_None);
+  ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_None);
   if (EC) {
     errs() << EC.message() << '\n';
     return 1;

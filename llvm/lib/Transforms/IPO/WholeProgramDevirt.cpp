@@ -771,7 +771,7 @@ bool DevirtModule::runForTesting(
     ExitOnError ExitOnErr(
         "-wholeprogramdevirt-write-summary: " + ClWriteSummary + ": ");
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::F_Text);
+    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_Text);
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);

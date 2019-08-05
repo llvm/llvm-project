@@ -1245,7 +1245,7 @@ int main() {
 
   auto Filename = "output.o";
   std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+  raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
 
   if (EC) {
     errs() << "Could not open file: " << EC.message();

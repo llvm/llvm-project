@@ -51,6 +51,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       llvm::sys::path::stem(Exec).equals_lower("ld.lld")) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rodynamic");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("separate-code");
   }
 
   if (!D.SysRoot.empty())

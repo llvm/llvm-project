@@ -1,8 +1,8 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -V %t | FileCheck %s
-
 ## Check we are able to produce a valid SHT_GNU_versym
 ## section from its description.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -V %t1 | FileCheck %s
 
 # CHECK:      Version symbols {
 # CHECK-NEXT:   Section Name: .gnu.version
@@ -89,3 +89,25 @@ DynamicSymbols:
   - Name:    f2
     Binding: STB_GLOBAL
 ...
+
+## Check we are able to set custom sh_entsize field for SHT_GNU_versym section.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf -S %t2 | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE: Section Headers:
+# ENTSIZE:   [Nr] Name         Type   Address          Off    Size   ES
+# ENTSIZE:   [ 1] .gnu.version VERSYM 0000000000000000 000180 000000 03
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_FREEBSD
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    EntSize: 0x0000000000000003
+    Entries: [ ]

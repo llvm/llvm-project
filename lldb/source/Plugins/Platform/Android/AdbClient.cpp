@@ -405,7 +405,7 @@ Status AdbClient::ShellToFile(const char *command, milliseconds timeout,
 
   const auto output_filename = output_file_spec.GetPath();
   std::error_code EC;
-  llvm::raw_fd_ostream dst(output_filename, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream dst(output_filename, EC, llvm::sys::fs::OF_None);
   if (EC)
     return Status("Unable to open local file %s", output_filename.c_str());
 
@@ -432,7 +432,7 @@ Status AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
   llvm::FileRemover local_file_remover(local_file_path);
 
   std::error_code EC;
-  llvm::raw_fd_ostream dst(local_file_path, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream dst(local_file_path, EC, llvm::sys::fs::OF_None);
   if (EC)
     return Status("Unable to open local file %s", local_file_path.c_str());
 

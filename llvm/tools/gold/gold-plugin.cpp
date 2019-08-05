@@ -886,7 +886,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   case options::OT_BC_ONLY:
     Conf.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
       std::error_code EC;
-      raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::F_None);
+      raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::OF_None);
       if (EC)
         message(LDPL_FATAL, "Failed to write the output file.");
       WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ false);
@@ -947,7 +947,7 @@ static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
   std::error_code EC;
   {
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                      sys::fs::OpenFlags::F_None);
+                      sys::fs::OpenFlags::OF_None);
     if (EC)
       message(LDPL_FATAL, "Failed to write '%s': %s",
               (NewModulePath + ".thinlto.bc").c_str(), EC.message().c_str());
@@ -960,7 +960,7 @@ static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
   }
   if (options::thinlto_emit_imports_files) {
     raw_fd_ostream OS(NewModulePath + ".imports", EC,
-                      sys::fs::OpenFlags::F_None);
+                      sys::fs::OpenFlags::OF_None);
     if (EC)
       message(LDPL_FATAL, "Failed to write '%s': %s",
               (NewModulePath + ".imports").c_str(), EC.message().c_str());
@@ -975,7 +975,7 @@ static std::unique_ptr<raw_fd_ostream> CreateLinkedObjectsFile() {
   assert(options::thinlto_index_only);
   std::error_code EC;
   auto LinkedObjectsFile = llvm::make_unique<raw_fd_ostream>(
-      options::thinlto_linked_objects_file, EC, sys::fs::OpenFlags::F_None);
+      options::thinlto_linked_objects_file, EC, sys::fs::OpenFlags::OF_None);
   if (EC)
     message(LDPL_FATAL, "Failed to create '%s': %s",
             options::thinlto_linked_objects_file.c_str(), EC.message().c_str());

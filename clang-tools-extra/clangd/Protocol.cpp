@@ -670,6 +670,15 @@ llvm::json::Value toJSON(const ApplyWorkspaceEditParams &Params) {
   return llvm::json::Object{{"edit", Params.edit}};
 }
 
+bool fromJSON(const llvm::json::Value &Response,
+              ApplyWorkspaceEditResponse &R) {
+  llvm::json::ObjectMapper O(Response);
+  if (!O || !O.map("applied", R.applied))
+    return false;
+  O.map("failureReason", R.failureReason);
+  return true;
+}
+
 bool fromJSON(const llvm::json::Value &Params, TextDocumentPositionParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&

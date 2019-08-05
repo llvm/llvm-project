@@ -66,7 +66,7 @@ using namespace llvm;
 STATISTIC(NumTailCalls, "Number of tail calls");
 
 static cl::opt<bool> ExperimentalVectorWideningLegalization(
-    "x86-experimental-vector-widening-legalization", cl::init(false),
+    "x86-experimental-vector-widening-legalization", cl::init(true),
     cl::desc("Enable an experimental vector type legalization through widening "
              "rather than promotion."),
     cl::Hidden);
@@ -4760,7 +4760,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       ScalarVT = MVT::i32;
 
     Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -4773,7 +4773,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
     break;
   }
@@ -4785,7 +4785,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -28846,8 +28846,6 @@ bool X86TargetLowering::isLegalStoreImmediate(int64_t Imm) const {
 bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;
-  if (!VT1.isSimple() || !VT2.isSimple())
-    return false;
   unsigned NumBits1 = VT1.getSizeInBits();
   unsigned NumBits2 = VT2.getSizeInBits();
   return NumBits1 > NumBits2;
@@ -40430,8 +40428,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-  if (((VT.isVector() && !VT.isFloatingPoint()) ||
-       (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit())) &&
+  if ((VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit()) &&
       isa<LoadSDNode>(St->getValue()) &&
       !cast<LoadSDNode>(St->getValue())->isVolatile() &&
       St->getChain().hasOneUse() && !St->isVolatile()) {
@@ -44105,23 +44102,6 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
             combineConcatVectorOps(dl, OpVT, SubVectorOps, DAG, DCI, Subtarget))
       return Fold;
 
-  // If we are inserting into both halves of the vector, the starting vector
-  // should be undef. If it isn't, make it so. Only do this if the early insert
-  // has no other uses.
-  // TODO: Should this be a generic DAG combine?
-  // TODO: Why doesn't SimplifyDemandedVectorElts catch this?
-  if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
-      Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2 &&
-      isNullConstant(Vec.getOperand(2)) && !Vec.getOperand(0).isUndef() &&
-      Vec.getOperand(1).getValueSizeInBits() == SubVecVT.getSizeInBits() &&
-      Vec.hasOneUse()) {
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
-                      Vec.getOperand(1), Vec.getOperand(2));
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec, SubVec,
-                       N->getOperand(2));
-  }
-
   // If this is a broadcast insert into an upper undef, use a larger broadcast.
   if (Vec.isUndef() && IdxVal != 0 && SubVec.getOpcode() == X86ISD::VBROADCAST)
     return DAG.getNode(X86ISD::VBROADCAST, dl, OpVT, SubVec.getOperand(0));
@@ -44417,14 +44397,12 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Combine (ext_invec (ext_invec X)) -> (ext_invec X)
   // Disabling for widening legalization for now. We can enable if we find a
   // case that needs it. Otherwise it can be deleted when we switch to
   // widening legalization.
-  if (ExperimentalVectorWideningLegalization)
-    return SDValue();
-
-  // Combine (ext_invec (ext_invec X)) -> (ext_invec X)
-  if (In.getOpcode() == N->getOpcode() &&
+  if (!ExperimentalVectorWideningLegalization &&
+      In.getOpcode() == N->getOpcode() &&
       TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getOperand(0).getValueType()))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, In.getOperand(0));
 

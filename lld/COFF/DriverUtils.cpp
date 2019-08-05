@@ -322,7 +322,7 @@ public:
 
     if (!contents.empty()) {
       std::error_code ec;
-      raw_fd_ostream os(path, ec, sys::fs::F_None);
+      raw_fd_ostream os(path, ec, sys::fs::OF_None);
       if (ec)
         fatal("failed to open " + path + ": " + ec.message());
       os << contents;
@@ -410,7 +410,7 @@ static std::string createManifestXmlWithExternalMt(StringRef defaultXml) {
   // Create the default manifest file as a temporary file.
   TemporaryFile Default("defaultxml", "manifest");
   std::error_code ec;
-  raw_fd_ostream os(Default.path, ec, sys::fs::F_Text);
+  raw_fd_ostream os(Default.path, ec, sys::fs::OF_Text);
   if (ec)
     fatal("failed to open " + Default.path + ": " + ec.message());
   os << defaultXml;
@@ -511,7 +511,7 @@ void createSideBySideManifest() {
   if (path == "")
     path = config->outputFile + ".manifest";
   std::error_code ec;
-  raw_fd_ostream out(path, ec, sys::fs::F_Text);
+  raw_fd_ostream out(path, ec, sys::fs::OF_Text);
   if (ec)
     fatal("failed to create manifest: " + ec.message());
   out << createManifestXml();

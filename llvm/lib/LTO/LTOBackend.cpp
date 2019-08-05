@@ -58,7 +58,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
 
   std::error_code EC;
   ResolutionFile = llvm::make_unique<raw_fd_ostream>(
-      OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::F_Text);
+      OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
     return errorCodeToError(EC);
 
@@ -83,7 +83,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
         PathPrefix = M.getModuleIdentifier() + ".";
       std::string Path = PathPrefix + PathSuffix + ".bc";
       std::error_code EC;
-      raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
+      raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
       // Because -save-temps is a debugging feature, we report the error
       // directly and exit.
       if (EC)
@@ -103,7 +103,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   CombinedIndexHook = [=](const ModuleSummaryIndex &Index) {
     std::string Path = OutputFileName + "index.bc";
     std::error_code EC;
-    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
+    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
     // Because -save-temps is a debugging feature, we report the error
     // directly and exit.
     if (EC)
@@ -111,7 +111,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
     WriteIndexToFile(Index, OS);
 
     Path = OutputFileName + "index.dot";
-    raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::F_None);
+    raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
     if (EC)
       reportOpenError(Path, EC.message());
     Index.exportToDot(OSDot);
@@ -329,7 +329,7 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
   if (!DwoFile.empty()) {
     std::error_code EC;
-    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::F_None);
+    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
       report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
   }

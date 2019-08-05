@@ -229,7 +229,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR, DataSym &Data) {
 Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeFramePointerRelSym &DefRangeFramePointerRel) {
 
-  error(IO.mapInteger(DefRangeFramePointerRel.Offset));
+  error(IO.mapObject(DefRangeFramePointerRel.Hdr.Offset));
   error(mapLocalVariableAddrRange(IO, DefRangeFramePointerRel.Range));
   error(IO.mapVectorTail(DefRangeFramePointerRel.Gaps, MapGap()));
 

@@ -813,7 +813,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   if (!ModuleSummaryDotFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::F_None);
+    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_None);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
                          ModuleSummaryDotFile + ": " + EC.message() + "\n");

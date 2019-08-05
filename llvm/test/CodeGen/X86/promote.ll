@@ -6,18 +6,19 @@ define i32 @mul_f(<4 x i8>* %A) {
 ; X86-LABEL: mul_f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    pmaddwd %xmm0, %xmm0
-; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    pmullw %xmm0, %xmm0
+; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    movd %xmm0, (%eax)
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_f:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-NEXT:    pmaddwd %xmm0, %xmm0
-; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-NEXT:    pmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; X64-NEXT:    pmullw %xmm0, %xmm0
+; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    movd %xmm0, (%rax)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
@@ -32,18 +33,16 @@ define i32 @shuff_f(<4 x i8>* %A) {
 ; X86-LABEL: shuff_f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    paddd %xmm0, %xmm0
-; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    movd %xmm0, (%eax)
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuff_f:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-NEXT:    paddd %xmm0, %xmm0
-; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    paddb %xmm0, %xmm0
 ; X64-NEXT:    movd %xmm0, (%rax)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq

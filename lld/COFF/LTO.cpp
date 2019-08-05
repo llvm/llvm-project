@@ -46,7 +46,7 @@ using namespace lld::coff;
 static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
   std::error_code ec;
   auto ret =
-      llvm::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::F_None);
+      llvm::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
   if (ec) {
     error("cannot open " + file + ": " + ec.message());
     return nullptr;

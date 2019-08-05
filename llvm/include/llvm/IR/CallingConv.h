@@ -222,6 +222,9 @@ namespace CallingConv {
     // Calling convention between AArch64 Advanced SIMD functions
     AArch64_VectorCall = 97,
 
+    /// Calling convention between AArch64 SVE functions
+    AArch64_SVE_VectorCall = 98,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

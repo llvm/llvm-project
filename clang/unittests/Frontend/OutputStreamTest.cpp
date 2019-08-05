@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/LangStandard.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -24,7 +25,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("").release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitBC;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;

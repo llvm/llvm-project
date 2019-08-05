@@ -227,7 +227,7 @@ void Symbol::parseSymbolVersion() {
   if (isDefault)
     verstr = verstr.substr(1);
 
-  for (VersionDefinition &ver : config->versionDefinitions) {
+  for (const VersionDefinition &ver : namedVersionDefs()) {
     if (ver.name != verstr)
       continue;
 

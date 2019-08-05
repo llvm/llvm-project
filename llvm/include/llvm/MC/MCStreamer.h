@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
@@ -859,6 +860,22 @@ public:
   virtual void EmitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion);
+
+  virtual void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelSym::Header DRHdr);
+
+  virtual void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeSubfieldRegisterSym::Header DRHdr);
+
+  virtual void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterSym::Header DRHdr);
+
+  virtual void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeFramePointerRelSym::Header DRHdr);
 
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void EmitCVStringTableDirective() {}

@@ -6,10 +6,8 @@
 define i8 @foo(<4 x i8>* %V) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
+; CHECK-NEXT:    movb 2(%rdi), %al
 ; CHECK-NEXT:    andb $95, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %Vp = bitcast <4 x i8>* %V to <3 x i8>*
   %V3i8 = load <3 x i8>, <3 x i8>* %Vp, align 4

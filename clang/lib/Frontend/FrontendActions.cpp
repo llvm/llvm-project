@@ -9,6 +9,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -695,7 +696,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   if (!OutputFileName.empty() && OutputFileName != "-") {
     std::error_code EC;
     OutFile.reset(new llvm::raw_fd_ostream(OutputFileName.str(), EC,
-                                           llvm::sys::fs::F_Text));
+                                           llvm::sys::fs::OF_Text));
   }
   llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
 
@@ -832,19 +833,19 @@ void PrintPreprocessedAction::ExecuteAction() {
 
 void PrintPreambleAction::ExecuteAction() {
   switch (getCurrentFileKind().getLanguage()) {
-  case InputKind::C:
-  case InputKind::CXX:
-  case InputKind::ObjC:
-  case InputKind::ObjCXX:
-  case InputKind::OpenCL:
-  case InputKind::CUDA:
-  case InputKind::HIP:
+  case Language::C:
+  case Language::CXX:
+  case Language::ObjC:
+  case Language::ObjCXX:
+  case Language::OpenCL:
+  case Language::CUDA:
+  case Language::HIP:
     break;
 
-  case InputKind::Unknown:
-  case InputKind::Asm:
-  case InputKind::LLVM_IR:
-  case InputKind::RenderScript:
+  case Language::Unknown:
+  case Language::Asm:
+  case Language::LLVM_IR:
+  case Language::RenderScript:
     // We can't do anything with these.
     return;
   }

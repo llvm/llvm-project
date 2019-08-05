@@ -7,6 +7,7 @@ define <4 x i16> @a(i32* %x1) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retl
 
@@ -40,7 +41,7 @@ define <8 x i8> @c(i32* %x1) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retl
 
