@@ -14,6 +14,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1027,14 +1028,14 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
 /// Determine the appropriate source input kind based on language
 /// options.
-static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
+static Language getLanguageFromOptions(const LangOptions &LangOpts) {
   if (LangOpts.OpenCL)
-    return InputKind::OpenCL;
+    return Language::OpenCL;
   if (LangOpts.CUDA)
-    return InputKind::CUDA;
+    return Language::CUDA;
   if (LangOpts.ObjC)
-    return LangOpts.CPlusPlus ? InputKind::ObjCXX : InputKind::ObjC;
-  return LangOpts.CPlusPlus ? InputKind::CXX : InputKind::C;
+    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 
 /// Compile a module file for the given module, using the options

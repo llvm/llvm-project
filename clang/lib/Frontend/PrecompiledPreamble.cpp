@@ -12,6 +12,7 @@
 
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -303,7 +304,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       Clang->getFrontendOpts().Inputs[0].getKind().getFormat() !=
           InputKind::Source ||
       Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() ==
-          InputKind::LLVM_IR) {
+          Language::LLVM_IR) {
     return BuildPreambleError::BadInputs;
   }
 
