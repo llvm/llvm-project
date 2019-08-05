@@ -116,6 +116,12 @@ function(add_lldb_library name)
   # headers without negatively impacting much of anything.
   if(NOT LLDB_BUILT_STANDALONE)
     add_dependencies(${name} clang-tablegen-targets)
+
+    # BEGIN Swift Mods
+	if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+      add_dependencies(${name} swift-syntax-generated-headers)
+    endif()
+    # END Swift Mods
   endif()
 
   # Add in any extra C++ compilation flags for this library.

@@ -54,6 +54,11 @@ option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Da
 
 # BEGIN SWIFT CODE
 option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+
+if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+  set(LLDB_SWIFTC ${LLVM_RUNTIME_OUTPUT_INTDIR}/swiftc CACHE STRING "Path to swift compiler")
+  set(LLDB_SWIFT_LIBS ${LLVM_LIBRARY_OUTPUT_INTDIR}/swift CACHE STRING "Path to swift libraries")
+endif()
 # END SWIFT CODE
 
 if(LLDB_BUILD_FRAMEWORK)
