@@ -370,17 +370,6 @@ public:
   ///     returned.
   virtual UUID GetUUID() = 0;
 
-  /// Gets the symbol file spec list for this object file.
-  ///
-  /// If the object file format contains a debug symbol file link, the values
-  /// will be returned in the FileSpecList.
-  ///
-  /// \return
-  ///     Returns filespeclist.
-  virtual lldb_private::FileSpecList GetDebugSymbolFilePaths() {
-    return FileSpecList();
-  }
-
   /// Gets the file spec list of libraries re-exported by this object file.
   ///
   /// If the object file format has the notion of one library re-exporting the

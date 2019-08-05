@@ -816,14 +816,10 @@ UUID ObjectFileELF::GetUUID() {
   return m_uuid;
 }
 
-lldb_private::FileSpecList ObjectFileELF::GetDebugSymbolFilePaths() {
-  FileSpecList file_spec_list;
-
-  if (!m_gnu_debuglink_file.empty()) {
-    FileSpec file_spec(m_gnu_debuglink_file);
-    file_spec_list.Append(file_spec);
-  }
-  return file_spec_list;
+llvm::Optional<FileSpec> ObjectFileELF::GetDebugLink() {
+  if (m_gnu_debuglink_file.empty())
+    return llvm::None;
+  return FileSpec(m_gnu_debuglink_file);
 }
 
 uint32_t ObjectFileELF::GetDependentModules(FileSpecList &files) {

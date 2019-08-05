@@ -85,8 +85,6 @@ public:
 
   UUID GetUUID() override { return m_uuid; }
 
-  FileSpecList GetDebugSymbolFilePaths() override { return FileSpecList(); }
-
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 
   Type CalculateType() override { return eTypeDebugInfo; }

@@ -122,7 +122,9 @@ public:
 
   lldb_private::UUID GetUUID() override;
 
-  lldb_private::FileSpecList GetDebugSymbolFilePaths() override;
+  /// Return the contents of the .gnu_debuglink section, if the object file
+  /// contains it. 
+  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 

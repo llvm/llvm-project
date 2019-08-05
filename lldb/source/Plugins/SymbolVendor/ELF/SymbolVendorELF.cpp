@@ -71,86 +71,76 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!uuid)
     return nullptr;
 
-  // Get the .gnu_debuglink file (if specified).
-  FileSpecList file_spec_list = obj_file->GetDebugSymbolFilePaths();
-
-  // If the module specified a filespec, use it first.
-  FileSpec debug_symbol_fspec(module_sp->GetSymbolFileFileSpec());
-  if (debug_symbol_fspec)
-    file_spec_list.Insert(0, debug_symbol_fspec);
+  // If the module specified a filespec, use that.
+  FileSpec fspec = module_sp->GetSymbolFileFileSpec();
+  // Otherwise, try gnu_debuglink, if one exists.
+  if (!fspec)
+    fspec = obj_file->GetDebugLink().getValueOr(FileSpec());
 
   // If we have no debug symbol files, then nothing to do.
-  if (file_spec_list.IsEmpty())
+  if (!fspec)
     return nullptr;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
 
-  for (size_t idx = 0; idx < file_spec_list.GetSize(); ++idx) {
-    ModuleSpec module_spec;
-    const FileSpec fspec = file_spec_list.GetFileSpecAtIndex(idx);
+  ModuleSpec module_spec;
 
-    module_spec.GetFileSpec() = obj_file->GetFileSpec();
-    FileSystem::Instance().Resolve(module_spec.GetFileSpec());
-    module_spec.GetSymbolFileSpec() = fspec;
-    module_spec.GetUUID() = uuid;
-    FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-    FileSpec dsym_fspec =
-        Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
-    if (dsym_fspec) {
-      DataBufferSP dsym_file_data_sp;
-      lldb::offset_t dsym_file_data_offset = 0;
-      ObjectFileSP dsym_objfile_sp =
-          ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
-                                 FileSystem::Instance().GetByteSize(dsym_fspec),
-                                 dsym_file_data_sp, dsym_file_data_offset);
-      if (dsym_objfile_sp) {
-        // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
-        // be able to figure this out consistently as the symbol file may not
-        // have stripped the code sections, etc.
-        dsym_objfile_sp->SetType(ObjectFile::eTypeDebugInfo);
+  module_spec.GetFileSpec() = obj_file->GetFileSpec();
+  FileSystem::Instance().Resolve(module_spec.GetFileSpec());
+  module_spec.GetSymbolFileSpec() = fspec;
+  module_spec.GetUUID() = uuid;
+  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+  FileSpec dsym_fspec =
+      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+  if (!dsym_fspec)
+    return nullptr;
 
-        SymbolVendorELF *symbol_vendor = new SymbolVendorELF(module_sp);
-        if (symbol_vendor) {
-          // Get the module unified section list and add our debug sections to
-          // that.
-          SectionList *module_section_list = module_sp->GetSectionList();
-          SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
+  DataBufferSP dsym_file_data_sp;
+  lldb::offset_t dsym_file_data_offset = 0;
+  ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
+      module_sp, &dsym_fspec, 0, FileSystem::Instance().GetByteSize(dsym_fspec),
+      dsym_file_data_sp, dsym_file_data_offset);
+  if (!dsym_objfile_sp)
+    return nullptr;
 
-          static const SectionType g_sections[] = {
-              eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
-              eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
-              eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
-              eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
-              eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
-              eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
-              eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
-              eSectionTypeELFSymbolTable,     eSectionTypeDWARFGNUDebugAltLink,
-          };
-          for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);
-               ++idx) {
-            SectionType section_type = g_sections[idx];
-            SectionSP section_sp(
-                objfile_section_list->FindSectionByType(section_type, true));
-            if (section_sp) {
-              SectionSP module_section_sp(
-                  module_section_list->FindSectionByType(section_type, true));
-              if (module_section_sp)
-                module_section_list->ReplaceSection(module_section_sp->GetID(),
-                                                    section_sp);
-              else
-                module_section_list->AddSection(section_sp);
-            }
-          }
+  // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
+  // be able to figure this out consistently as the symbol file may not
+  // have stripped the code sections, etc.
+  dsym_objfile_sp->SetType(ObjectFile::eTypeDebugInfo);
 
-          symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
-          return symbol_vendor;
-        }
-      }
+  SymbolVendorELF *symbol_vendor = new SymbolVendorELF(module_sp);
+
+  // Get the module unified section list and add our debug sections to
+  // that.
+  SectionList *module_section_list = module_sp->GetSectionList();
+  SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
+
+  static const SectionType g_sections[] = {
+      eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
+      eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
+      eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
+      eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
+      eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
+      eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
+      eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
+      eSectionTypeELFSymbolTable,     eSectionTypeDWARFGNUDebugAltLink,
+  };
+  for (SectionType section_type : g_sections) {
+    if (SectionSP section_sp =
+            objfile_section_list->FindSectionByType(section_type, true)) {
+      if (SectionSP module_section_sp =
+              module_section_list->FindSectionByType(section_type, true))
+        module_section_list->ReplaceSection(module_section_sp->GetID(),
+                                            section_sp);
+      else
+        module_section_list->AddSection(section_sp);
     }
   }
-  return nullptr;
+
+  symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
+  return symbol_vendor;
 }
 
 // PluginInterface protocol
