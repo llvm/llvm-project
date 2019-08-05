@@ -78,4 +78,4 @@ if not (supported_linux or supported_darwin or supported_netbsd):
 if re.search('mthumb', config.target_cflags) is not None:
   config.unsupported = True
 
-config.suffixes = ['.c', '.cc', '.cpp', '.mm']
+config.suffixes = ['.c', '.cpp', '.mm']

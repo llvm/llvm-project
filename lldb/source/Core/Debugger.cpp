@@ -1200,9 +1200,9 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     if (pos != m_log_streams.end())
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
-      llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_Text;
+      llvm::sys::fs::OpenFlags flags = llvm::sys::fs::OF_Text;
       if (log_options & LLDB_LOG_OPTION_APPEND)
-        flags |= llvm::sys::fs::F_Append;
+        flags |= llvm::sys::fs::OF_Append;
       int FD;
       if (std::error_code ec = llvm::sys::fs::openFileForWrite(
               log_file, FD, llvm::sys::fs::CD_CreateAlways, flags)) {

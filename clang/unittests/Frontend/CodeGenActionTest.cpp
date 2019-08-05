@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/Basic/LangStandard.h"
+#include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "gtest/gtest.h"
@@ -45,7 +46,7 @@ TEST(CodeGenTest, TestNullCodeGen) {
       "test.cc",
       MemoryBuffer::getMemBuffer("").release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;

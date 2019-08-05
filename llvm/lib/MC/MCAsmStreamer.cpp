@@ -254,9 +254,26 @@ public:
                                       unsigned SourceLineNum,
                                       const MCSymbol *FnStartSym,
                                       const MCSymbol *FnEndSym) override;
+
+  void PrintCVDefRangePrefix(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges);
+
   void EmitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
-      StringRef FixedSizePortion) override;
+      codeview::DefRangeRegisterRelSym::Header DRHdr) override;
+
+  void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeSubfieldRegisterSym::Header DRHdr) override;
+
+  void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterSym::Header DRHdr) override;
+
+  void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeFramePointerRelSym::Header DRHdr) override;
+
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
   void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
@@ -1376,9 +1393,8 @@ void MCAsmStreamer::EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
       PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym);
 }
 
-void MCAsmStreamer::EmitCVDefRangeDirective(
-    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
-    StringRef FixedSizePortion) {
+void MCAsmStreamer::PrintCVDefRangePrefix(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges) {
   OS << "\t.cv_def_range\t";
   for (std::pair<const MCSymbol *, const MCSymbol *> Range : Ranges) {
     OS << ' ';
@@ -1386,10 +1402,43 @@ void MCAsmStreamer::EmitCVDefRangeDirective(
     OS << ' ';
     Range.second->print(OS, MAI);
   }
-  OS << ", ";
-  PrintQuotedString(FixedSizePortion, OS);
+}
+
+void MCAsmStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelSym::Header DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", reg_rel, ";
+  OS << DRHdr.Register << ", " << DRHdr.Flags << ", "
+     << DRHdr.BasePointerOffset;
   EmitEOL();
-  this->MCStreamer::EmitCVDefRangeDirective(Ranges, FixedSizePortion);
+}
+
+void MCAsmStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeSubfieldRegisterSym::Header DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", subfield_reg, ";
+  OS << DRHdr.Register << ", " << DRHdr.OffsetInParent;
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterSym::Header DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", reg, ";
+  OS << DRHdr.Register;
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeFramePointerRelSym::Header DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", frame_ptr_rel, ";
+  OS << DRHdr.Offset;
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitCVStringTableDirective() {

@@ -1951,7 +1951,7 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
 
  if (IsOutputFile) {
    std::error_code EC;
-   llvm::raw_fd_ostream OS(MigrateDir, EC, llvm::sys::fs::F_None);
+   llvm::raw_fd_ostream OS(MigrateDir, EC, llvm::sys::fs::OF_None);
    if (EC) {
       DiagnosticsEngine &Diags = Ctx.getDiagnostics();
       Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Error, "%0"))

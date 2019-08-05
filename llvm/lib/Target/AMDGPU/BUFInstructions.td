@@ -1182,8 +1182,12 @@ let SubtargetPredicate = HasPackedD16VMem in {
 
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, f32, "BUFFER_LOAD_DWORD">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, i32, "BUFFER_LOAD_DWORD">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2i16, "BUFFER_LOAD_DWORD">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2f16, "BUFFER_LOAD_DWORD">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2f32, "BUFFER_LOAD_DWORDX2">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2i32, "BUFFER_LOAD_DWORDX2">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4i16, "BUFFER_LOAD_DWORDX2">;
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4f16, "BUFFER_LOAD_DWORDX2">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v3f32, "BUFFER_LOAD_DWORDX3">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v3i32, "BUFFER_LOAD_DWORDX3">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4f32, "BUFFER_LOAD_DWORDX4">;
@@ -1256,8 +1260,12 @@ let SubtargetPredicate = HasPackedD16VMem in {
 
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, f32, "BUFFER_STORE_DWORD">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, i32, "BUFFER_STORE_DWORD">;
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2i16, "BUFFER_STORE_DWORD">;
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2f16, "BUFFER_STORE_DWORD">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2f32, "BUFFER_STORE_DWORDX2">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2i32, "BUFFER_STORE_DWORDX2">;
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4i16, "BUFFER_STORE_DWORDX2">;
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4f16, "BUFFER_STORE_DWORDX2">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v3f32, "BUFFER_STORE_DWORDX3">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v3i32, "BUFFER_STORE_DWORDX3">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4f32, "BUFFER_STORE_DWORDX4">;
@@ -1316,6 +1324,8 @@ defm : BufferAtomicPatterns<SIbuffer_atomic_umax, i32, "BUFFER_ATOMIC_UMAX">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_and, i32, "BUFFER_ATOMIC_AND">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_or, i32, "BUFFER_ATOMIC_OR">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_xor, i32, "BUFFER_ATOMIC_XOR">;
+defm : BufferAtomicPatterns<SIbuffer_atomic_inc, i32, "BUFFER_ATOMIC_INC">;
+defm : BufferAtomicPatterns<SIbuffer_atomic_dec, i32, "BUFFER_ATOMIC_DEC">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_swap, i64, "BUFFER_ATOMIC_SWAP_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_add, i64,  "BUFFER_ATOMIC_ADD_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_sub, i64, "BUFFER_ATOMIC_SUB_X2">;
@@ -1326,6 +1336,8 @@ defm : BufferAtomicPatterns<SIbuffer_atomic_umax, i64, "BUFFER_ATOMIC_UMAX_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_and, i64, "BUFFER_ATOMIC_AND_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_or, i64, "BUFFER_ATOMIC_OR_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_xor, i64, "BUFFER_ATOMIC_XOR_X2">;
+defm : BufferAtomicPatterns<SIbuffer_atomic_inc, i64, "BUFFER_ATOMIC_INC_X2">;
+defm : BufferAtomicPatterns<SIbuffer_atomic_dec, i64, "BUFFER_ATOMIC_DEC_X2">;
 
 multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
                                        string opcode> {

@@ -4,9 +4,8 @@
 define <2 x i32> @vcast(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: vcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    psubq %xmm1, %xmm0
+; CHECK-NEXT:    movdqa (%rcx), %xmm0
+; CHECK-NEXT:    psubd (%rdx), %xmm0
 ; CHECK-NEXT:    retq
   %af = bitcast <2 x float> %a to <2 x i32>
   %bf = bitcast <2 x float> %b to <2 x i32>

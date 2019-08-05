@@ -161,7 +161,7 @@ int Compilation::ExecuteCommand(const Command &C,
       std::error_code EC;
       OwnedStream.reset(new llvm::raw_fd_ostream(
           getDriver().CCPrintOptionsFilename, EC,
-          llvm::sys::fs::F_Append | llvm::sys::fs::F_Text));
+          llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text));
       if (EC) {
         getDriver().Diag(diag::err_drv_cc_print_options_failure)
             << EC.message();

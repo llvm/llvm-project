@@ -627,3 +627,28 @@ Sections:
     Content: ""
 Symbols:
   - Name: foo
+
+## Check that we report an error if SHT_GNU_versym has invalid
+## sh_entsize value (3 instead of 2) when trying to access the entries.
+
+# RUN: yaml2obj %s --docnum=30 -o %t30
+# RUN: not llvm-readobj -V %t30 2>&1 | FileCheck --check-prefix=INVALID-VER-SHENTSIZE %s
+
+# INVALID-VER-SHENTSIZE: error: section [index 1] has invalid sh_entsize: expected 2, but got 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_FREEBSD
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    EntSize: 0x0000000000000003
+    Entries: [ ]
+## Needed to trigger creation of .dynsym.
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL

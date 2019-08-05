@@ -14489,7 +14489,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
@@ -14523,7 +14523,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.size = VT.getStoreSize();
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
@@ -14575,7 +14575,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOStore;
     return true;
   }
@@ -14608,7 +14608,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
     Info.size = VT.getStoreSize();
-    Info.align = 1;
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOStore;
     return true;
   }

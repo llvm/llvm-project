@@ -96,7 +96,7 @@ bool lld::isValidCIdentifier(StringRef s) {
 // Write the contents of the a buffer to a file
 void lld::saveBuffer(StringRef buffer, const Twine &path) {
   std::error_code ec;
-  raw_fd_ostream os(path.str(), ec, sys::fs::OpenFlags::F_None);
+  raw_fd_ostream os(path.str(), ec, sys::fs::OpenFlags::OF_None);
   if (ec)
     error("cannot create " + path + ": " + ec.message());
   os << buffer;

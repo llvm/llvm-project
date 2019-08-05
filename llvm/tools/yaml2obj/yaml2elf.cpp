@@ -796,7 +796,7 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   for (uint16_t Version : Section.Entries)
     support::endian::write<uint16_t>(OS, Version, ELFT::TargetEndianness);
 
-  SHeader.sh_entsize = 2;
+  SHeader.sh_entsize = Section.EntSize ? (uint64_t)*Section.EntSize : 2;
   SHeader.sh_size = Section.Entries.size() * SHeader.sh_entsize;
   return true;
 }

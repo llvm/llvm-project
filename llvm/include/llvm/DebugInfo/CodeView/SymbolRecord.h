@@ -520,6 +520,10 @@ class DefRangeFramePointerRelSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
+  struct Header {
+    little32_t Offset;
+  };
+
   explicit DefRangeFramePointerRelSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
   DefRangeFramePointerRelSym(uint32_t RecordOffset)
@@ -530,7 +534,7 @@ public:
     return RecordOffset + RelocationOffset;
   }
 
-  int32_t Offset;
+  Header Hdr;
   LocalVariableAddrRange Range;
   std::vector<LocalVariableAddrGap> Gaps;
 

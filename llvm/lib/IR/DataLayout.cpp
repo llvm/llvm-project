@@ -182,9 +182,9 @@ void DataLayout::reset(StringRef Desc) {
   LayoutMap = nullptr;
   BigEndian = false;
   AllocaAddrSpace = 0;
-  StackNaturalAlign = 0;
+  StackNaturalAlign.reset();
   ProgramAddrSpace = 0;
-  FunctionPtrAlign = 0;
+  FunctionPtrAlign.reset();
   TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
   ManglingMode = MM_None;
   NonIntegralAddressSpaces.clear();
@@ -378,7 +378,7 @@ void DataLayout::parseSpecifier(StringRef Desc) {
       }
       break;
     case 'S': { // Stack natural alignment.
-      StackNaturalAlign = inBytes(getInt(Tok));
+      StackNaturalAlign = MaybeAlign(inBytes(getInt(Tok)));
       break;
     }
     case 'F': {
@@ -394,7 +394,7 @@ void DataLayout::parseSpecifier(StringRef Desc) {
                            "datalayout string");
       }
       Tok = Tok.substr(1);
-      FunctionPtrAlign = inBytes(getInt(Tok));
+      FunctionPtrAlign = MaybeAlign(inBytes(getInt(Tok)));
       break;
     }
     case 'P': { // Function address space.

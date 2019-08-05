@@ -569,8 +569,9 @@ Error MinimalSymbolDumper::visitKnownRecord(
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeFramePointerRelSym &Def) {
   AutoIndent Indent(P, 7);
-  P.formatLine("offset = {0}, range = {1}", Def.Offset, formatRange(Def.Range));
-  P.formatLine("gaps = {2}", Def.Offset,
+  P.formatLine("offset = {0}, range = {1}", Def.Hdr.Offset,
+               formatRange(Def.Range));
+  P.formatLine("gaps = {2}", Def.Hdr.Offset,
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
 }

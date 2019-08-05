@@ -321,8 +321,9 @@ define <4 x i32> @shl_srl_v4i32(<4 x i32> %x) nounwind {
 define <4 x i32> @shl_zext_srl_v4i32(<4 x i16> %x) nounwind {
 ; CHECK-LABEL: shl_zext_srl_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    retq
   %srl = lshr <4 x i16> %x, <i16 2, i16 2, i16 2, i16 2>
   %zext = zext <4 x i16> %srl to <4 x i32>
@@ -334,6 +335,7 @@ define <4 x i16> @sra_trunc_srl_v4i32(<4 x i32> %x) nounwind {
 ; CHECK-LABEL: sra_trunc_srl_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $19, %xmm0
+; CHECK-NEXT:    packssdw %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %srl = lshr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   %trunc = trunc <4 x i32> %srl to <4 x i16>
@@ -344,6 +346,7 @@ define <4 x i16> @sra_trunc_srl_v4i32(<4 x i32> %x) nounwind {
 define <4 x i32> @shl_zext_shl_v4i32(<4 x i16> %x) nounwind {
 ; CHECK-LABEL: shl_zext_shl_v4i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-NEXT:    pslld $19, %xmm0
 ; CHECK-NEXT:    retq
   %shl0 = shl <4 x i16> %x, <i16 2, i16 2, i16 2, i16 2>

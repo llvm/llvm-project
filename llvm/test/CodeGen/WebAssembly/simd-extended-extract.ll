@@ -16,39 +16,56 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-; CHECK-LABEL: foo:
-
-; CHECK: i32.load8_u
-; CHECK: i32x4.splat
-; CHECK: i32.load8_u
-; CHECK: i32x4.replace_lane   1
-; CHECK: i32.load8_u
-; CHECK: i32x4.replace_lane   2
-; CHECK: i32.load8_u
-; CHECK: i32x4.replace_lane   3
-
-; CHECK: i8x16.extract_lane_s 0
-; CHECK: f64.convert_i32_s
-; CHECK: f32.demote_f64
-; CHECK: f32x4.splat
-
-; CHECK: i8x16.extract_lane_s 4
-; CHECK: f64.convert_i32_s
-; CHECK: f32.demote_f64
-; CHECK: f32x4.replace_lane   1
-
-; CHECK: i8x16.extract_lane_s 8
-; CHECK: f64.convert_i32_s
-; CHECK: f32.demote_f64
-; CHECK: f32x4.replace_lane   2
-
-; CHECK: i8x16.extract_lane_s 12
-; CHECK: f64.convert_i32_s
-; CHECK: f32.demote_f64
-; CHECK: f32x4.replace_lane   3
-
-; CHECK: v128.store
 define void @foo(<4 x i8>* %p) {
+; CHECK-LABEL: foo:
+; CHECK:         .functype foo (i32) -> ()
+; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    i32.load8_u 1
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    i32.const 3
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    local.tee
+; CHECK-NEXT:    i8x16.extract_lane_s 0
+; CHECK-NEXT:    f64.convert_i32_s
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.mul
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.add
+; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    i8x16.extract_lane_s 4
+; CHECK-NEXT:    f64.convert_i32_s
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.mul
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.add
+; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    i8x16.extract_lane_s 8
+; CHECK-NEXT:    f64.convert_i32_s
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.mul
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.add
+; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    i8x16.extract_lane_s 12
+; CHECK-NEXT:    f64.convert_i32_s
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.mul
+; CHECK-NEXT:    f64.const 0x0p0
+; CHECK-NEXT:    f64.add
+; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    return
   %1 = load <4 x i8>, <4 x i8>* %p
   %2 = sitofp <4 x i8> %1 to <4 x double>
   %3 = fmul <4 x double> zeroinitializer, %2

@@ -657,12 +657,12 @@ define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
 define <8 x i8> @_e4(i8* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: _e4:
 ; X32:       ## %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [52,52,52,52,52,52,52,52]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <52,52,52,52,52,52,52,52,u,u,u,u,u,u,u,u>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: _e4:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [52,52,52,52,52,52,52,52]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = <52,52,52,52,52,52,52,52,u,u,u,u,u,u,u,u>
 ; X64-NEXT:    retq
   %vecinit0.i = insertelement <8 x i8> undef, i8       52, i32 0
   %vecinit1.i = insertelement <8 x i8> %vecinit0.i, i8 52, i32 1

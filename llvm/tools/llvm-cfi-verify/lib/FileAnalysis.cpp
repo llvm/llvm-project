@@ -520,7 +520,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
         continue;
       }
 
-      if (LineInfo->FileName == DILineInfo::BadString)
+      if (LineInfo->FileName == "<invalid>")
         continue;
     }
 

@@ -100,7 +100,7 @@ module Clang_Frontend {
   requires cplusplus
   umbrella "Frontend"
 
-  textual header "Frontend/LangStandards.def"
+  textual header "Basic/LangStandards.def"
 
   module * { export * }
 }

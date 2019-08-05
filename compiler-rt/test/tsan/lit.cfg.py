@@ -78,7 +78,7 @@ config.substitutions.append( ('CHECK-%os', ("CHECK-" + config.host_os)))
 config.substitutions.append( ("%deflake ", os.path.join(os.path.dirname(__file__), "deflake.bash") + " "))
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.m', '.mm']
+config.suffixes = ['.c', '.cpp', '.m', '.mm']
 
 if config.host_os not in ['FreeBSD', 'Linux', 'Darwin', 'NetBSD']:
   config.unsupported = True

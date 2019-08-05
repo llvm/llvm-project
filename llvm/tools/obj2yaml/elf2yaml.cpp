@@ -176,7 +176,6 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       Y->Sections.emplace_back(*SecOrErr);
       break;
     }
-    case ELF::SHT_NULL:
     case ELF::SHT_STRTAB:
     case ELF::SHT_SYMTAB:
     case ELF::SHT_DYNSYM:
@@ -238,6 +237,18 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
         return SecOrErr.takeError();
       Y->Sections.emplace_back(*SecOrErr);
       break;
+    }
+    case ELF::SHT_NULL: {
+      // We only dump the SHT_NULL section at index 0 when it
+      // has at least one non-null field, because yaml2obj
+      // normally creates the zero section at index 0 implicitly.
+      if (&Sec == &Sections[0]) {
+        const uint8_t *Begin = reinterpret_cast<const uint8_t *>(&Sec);
+        const uint8_t *End = Begin + sizeof(Elf_Shdr);
+        if (std::find_if(Begin, End, [](uint8_t V) { return V != 0; }) == End)
+          break;
+      }
+      LLVM_FALLTHROUGH;
     }
     default: {
       Expected<ELFYAML::RawContentSection *> SecOrErr =
@@ -471,12 +482,18 @@ ELFDumper<ELFT>::dumpContentSection(const Elf_Shdr *Shdr) {
   if (Error E = dumpCommonSection(Shdr, *S))
     return std::move(E);
 
-  auto ContentOrErr = Obj.getSectionContents(Shdr);
-  if (!ContentOrErr)
-    return ContentOrErr.takeError();
-  ArrayRef<uint8_t> Content = *ContentOrErr;
-  if (!Content.empty())
-    S->Content = yaml::BinaryRef(Content);
+  unsigned SecIndex = Shdr - &Sections[0];
+  if (SecIndex != 0 || Shdr->sh_type != ELF::SHT_NULL) {
+    auto ContentOrErr = Obj.getSectionContents(Shdr);
+    if (!ContentOrErr)
+      return ContentOrErr.takeError();
+    ArrayRef<uint8_t> Content = *ContentOrErr;
+    if (!Content.empty())
+      S->Content = yaml::BinaryRef(Content);
+  } else {
+    S->Size = static_cast<llvm::yaml::Hex64>(Shdr->sh_size);
+  }
+
   if (Shdr->sh_info)
     S->Info = static_cast<llvm::yaml::Hex64>(Shdr->sh_info);
   return S.release();

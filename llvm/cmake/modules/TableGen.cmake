@@ -125,7 +125,10 @@ macro(add_tablegen target project)
 
   if(LLVM_USE_HOST_TOOLS)
     if( ${${project}_TABLEGEN} STREQUAL "${target}" )
-      build_native_tool(${target} ${project}_TABLEGEN_EXE)
+      # The NATIVE tablegen executable *must* depend on the current target one
+      # otherwise the native one won't get rebuilt when the tablgen sources
+      # change, and we end up with incorrect builds.
+      build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
       add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})

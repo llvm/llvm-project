@@ -87,7 +87,7 @@ config.substitutions.append( ("%arm_call_apsr ", \
                               build_invocation(call_apsr_flags)) )
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if not config.emulator:
   config.available_features.add('native-run')

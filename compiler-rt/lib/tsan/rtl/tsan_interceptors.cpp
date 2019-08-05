@@ -1157,7 +1157,7 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
   CondMutexUnlockCtx arg = {si, thr, pc, m};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
-  // See test/tsan/cond_cancel.cc.
+  // See test/tsan/cond_cancel.cpp.
   {
     // Enable signal delivery while the thread is blocked.
     BlockingCall bc(thr);

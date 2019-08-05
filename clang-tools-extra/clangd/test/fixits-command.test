@@ -165,10 +165,6 @@
 # CHECK-NEXT:  ]
 ---
 {"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyFix","arguments":[{"changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}]}}
-#      CHECK:  "id": 4,
-# CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": "Fix applied."
-#
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "method": "workspace/applyEdit",
@@ -206,6 +202,11 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":0,"result":{"applied":true}}
+#      CHECK:  "id": 4,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": "Fix applied."
 ---
 {"jsonrpc":"2.0","id":4,"method":"shutdown"}
 ---

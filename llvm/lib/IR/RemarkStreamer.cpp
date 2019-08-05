@@ -126,7 +126,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 
   std::error_code EC;
   auto RemarksFile =
-      llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::F_None);
+      llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::OF_None);
   // We don't use llvm::FileError here because some diagnostics want the file
   // name separately.
   if (EC)

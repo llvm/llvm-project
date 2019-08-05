@@ -524,6 +524,19 @@ private:
   /// directives parsed by this class.
   StringMap<DirectiveKind> DirectiveKindMap;
 
+  // Codeview def_range type parsing.
+  enum CVDefRangeType {
+    CVDR_DEFRANGE = 0, // Placeholder
+    CVDR_DEFRANGE_REGISTER,
+    CVDR_DEFRANGE_FRAMEPOINTER_REL,
+    CVDR_DEFRANGE_SUBFIELD_REGISTER,
+    CVDR_DEFRANGE_REGISTER_REL
+  };
+
+  /// Maps Codeview def_range types --> CVDefRangeType enum, for
+  /// Codeview def_range types parsed by this class.
+  StringMap<CVDefRangeType> CVDefRangeTypeMap;
+
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
@@ -671,6 +684,7 @@ private:
   bool parseDirectiveAddrsigSym();
 
   void initializeDirectiveKindMap();
+  void initializeCVDefRangeTypeMap();
 };
 
 } // end anonymous namespace
@@ -720,6 +734,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   PlatformParser->Initialize(*this);
   initializeDirectiveKindMap();
+  initializeCVDefRangeTypeMap();
 
   NumOfMacroInstantiations = 0;
 }
@@ -1737,6 +1752,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   StringMap<DirectiveKind>::const_iterator DirKindIt =
       DirectiveKindMap.find(IDVal);
   DirectiveKind DirKind = (DirKindIt == DirectiveKindMap.end())
+
                               ? DK_NO_DIRECTIVE
                               : DirKindIt->getValue();
   switch (DirKind) {
@@ -3825,6 +3841,13 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
   return false;
 }
 
+void AsmParser::initializeCVDefRangeTypeMap() {
+  CVDefRangeTypeMap["reg"] = CVDR_DEFRANGE_REGISTER;
+  CVDefRangeTypeMap["frame_ptr_rel"] = CVDR_DEFRANGE_FRAMEPOINTER_REL;
+  CVDefRangeTypeMap["subfield_reg"] = CVDR_DEFRANGE_SUBFIELD_REGISTER;
+  CVDefRangeTypeMap["reg_rel"] = CVDR_DEFRANGE_REGISTER_REL;
+}
+
 /// parseDirectiveCVDefRange
 /// ::= .cv_def_range RangeStart RangeEnd (GapStart GapEnd)*, bytes*
 bool AsmParser::parseDirectiveCVDefRange() {
@@ -3846,13 +3869,92 @@ bool AsmParser::parseDirectiveCVDefRange() {
     Ranges.push_back({GapStartSym, GapEndSym});
   }
 
-  std::string FixedSizePortion;
-  if (parseToken(AsmToken::Comma, "unexpected token in directive") ||
-      parseEscapedString(FixedSizePortion))
-    return true;
+  StringRef CVDefRangeTypeStr;
+  if (parseToken(
+          AsmToken::Comma,
+          "expected comma before def_range type in .cv_def_range directive") ||
+      parseIdentifier(CVDefRangeTypeStr))
+    return Error(Loc, "expected def_range type in directive");
 
-  getStreamer().EmitCVDefRangeDirective(Ranges, FixedSizePortion);
-  return false;
+  StringMap<CVDefRangeType>::const_iterator CVTypeIt =
+      CVDefRangeTypeMap.find(CVDefRangeTypeStr);
+  CVDefRangeType CVDRType = (CVTypeIt == CVDefRangeTypeMap.end())
+                                ? CVDR_DEFRANGE
+                                : CVTypeIt->getValue();
+  switch (CVDRType) {
+  case CVDR_DEFRANGE_REGISTER: {
+    int64_t DRRegister;
+    if (parseToken(AsmToken::Comma, "expected comma before register number in "
+                                    ".cv_def_range directive") ||
+        parseAbsoluteExpression(DRRegister))
+      return Error(Loc, "expected register number");
+
+    codeview::DefRangeRegisterSym::Header DRHdr;
+    DRHdr.Register = DRRegister;
+    DRHdr.MayHaveNoName = 0;
+    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  case CVDR_DEFRANGE_FRAMEPOINTER_REL: {
+    int64_t DROffset;
+    if (parseToken(AsmToken::Comma,
+                   "expected comma before offset in .cv_def_range directive") ||
+        parseAbsoluteExpression(DROffset))
+      return Error(Loc, "expected offset value");
+
+    codeview::DefRangeFramePointerRelSym::Header DRHdr;
+    DRHdr.Offset = DROffset;
+    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  case CVDR_DEFRANGE_SUBFIELD_REGISTER: {
+    int64_t DRRegister;
+    int64_t DROffsetInParent;
+    if (parseToken(AsmToken::Comma, "expected comma before register number in "
+                                    ".cv_def_range directive") ||
+        parseAbsoluteExpression(DRRegister))
+      return Error(Loc, "expected register number");
+    if (parseToken(AsmToken::Comma,
+                   "expected comma before offset in .cv_def_range directive") ||
+        parseAbsoluteExpression(DROffsetInParent))
+      return Error(Loc, "expected offset value");
+
+    codeview::DefRangeSubfieldRegisterSym::Header DRHdr;
+    DRHdr.Register = DRRegister;
+    DRHdr.MayHaveNoName = 0;
+    DRHdr.OffsetInParent = DROffsetInParent;
+    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  case CVDR_DEFRANGE_REGISTER_REL: {
+    int64_t DRRegister;
+    int64_t DRFlags;
+    int64_t DRBasePointerOffset;
+    if (parseToken(AsmToken::Comma, "expected comma before register number in "
+                                    ".cv_def_range directive") ||
+        parseAbsoluteExpression(DRRegister))
+      return Error(Loc, "expected register value");
+    if (parseToken(
+            AsmToken::Comma,
+            "expected comma before flag value in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRFlags))
+      return Error(Loc, "expected flag value");
+    if (parseToken(AsmToken::Comma, "expected comma before base pointer offset "
+                                    "in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRBasePointerOffset))
+      return Error(Loc, "expected base pointer offset value");
+
+    codeview::DefRangeRegisterRelSym::Header DRHdr;
+    DRHdr.Register = DRRegister;
+    DRHdr.Flags = DRFlags;
+    DRHdr.BasePointerOffset = DRBasePointerOffset;
+    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  default:
+    return Error(Loc, "unexpected def_range type in .cv_def_range directive");
+  }
+  return true;
 }
 
 /// parseDirectiveCVString

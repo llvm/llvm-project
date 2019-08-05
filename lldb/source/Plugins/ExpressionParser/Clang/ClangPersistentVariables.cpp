@@ -23,8 +23,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 ClangPersistentVariables::ClangPersistentVariables()
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-      m_next_persistent_variable_id(0) {}
+    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {

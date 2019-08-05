@@ -27,7 +27,7 @@ config.substitutions.append( ("%clang ", build_invocation(clang_ubsan_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(clang_ubsan_cxxflags)) )
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 # Check that the host supports UndefinedBehaviorSanitizerMinimal tests
 if config.host_os not in ['Linux', 'FreeBSD', 'NetBSD', 'Darwin', 'OpenBSD']: # TODO: Windows

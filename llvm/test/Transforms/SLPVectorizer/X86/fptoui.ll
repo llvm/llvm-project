@@ -238,44 +238,11 @@ define void @fptoui_8f64_8i16() #0 {
 ; SSE-NEXT:    store i16 [[CVT7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 7), align 2
 ; SSE-NEXT:    ret void
 ;
-; AVX256NODQ-LABEL: @fptoui_8f64_8i16(
-; AVX256NODQ-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
-; AVX256NODQ-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8
-; AVX256NODQ-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 2), align 8
-; AVX256NODQ-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 3), align 8
-; AVX256NODQ-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4), align 8
-; AVX256NODQ-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 5), align 8
-; AVX256NODQ-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 6), align 8
-; AVX256NODQ-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 7), align 8
-; AVX256NODQ-NEXT:    [[CVT0:%.*]] = fptoui double [[A0]] to i16
-; AVX256NODQ-NEXT:    [[CVT1:%.*]] = fptoui double [[A1]] to i16
-; AVX256NODQ-NEXT:    [[CVT2:%.*]] = fptoui double [[A2]] to i16
-; AVX256NODQ-NEXT:    [[CVT3:%.*]] = fptoui double [[A3]] to i16
-; AVX256NODQ-NEXT:    [[CVT4:%.*]] = fptoui double [[A4]] to i16
-; AVX256NODQ-NEXT:    [[CVT5:%.*]] = fptoui double [[A5]] to i16
-; AVX256NODQ-NEXT:    [[CVT6:%.*]] = fptoui double [[A6]] to i16
-; AVX256NODQ-NEXT:    [[CVT7:%.*]] = fptoui double [[A7]] to i16
-; AVX256NODQ-NEXT:    store i16 [[CVT0]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 0), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT1]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 1), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT2]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 2), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT3]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 3), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT4]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 4), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT5]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 5), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT6]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 6), align 2
-; AVX256NODQ-NEXT:    store i16 [[CVT7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 7), align 2
-; AVX256NODQ-NEXT:    ret void
-;
-; AVX512-LABEL: @fptoui_8f64_8i16(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
-; AVX512-NEXT:    [[TMP2:%.*]] = fptoui <8 x double> [[TMP1]] to <8 x i16>
-; AVX512-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([32 x i16]* @dst16 to <8 x i16>*), align 2
-; AVX512-NEXT:    ret void
-;
-; AVX256DQ-LABEL: @fptoui_8f64_8i16(
-; AVX256DQ-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
-; AVX256DQ-NEXT:    [[TMP2:%.*]] = fptoui <8 x double> [[TMP1]] to <8 x i16>
-; AVX256DQ-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([32 x i16]* @dst16 to <8 x i16>*), align 2
-; AVX256DQ-NEXT:    ret void
+; AVX-LABEL: @fptoui_8f64_8i16(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
+; AVX-NEXT:    [[TMP2:%.*]] = fptoui <8 x double> [[TMP1]] to <8 x i16>
+; AVX-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([32 x i16]* @dst16 to <8 x i16>*), align 2
+; AVX-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
   %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8

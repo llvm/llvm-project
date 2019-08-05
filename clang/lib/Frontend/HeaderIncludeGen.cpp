@@ -100,7 +100,8 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
   if (!OutputPath.empty()) {
     std::error_code EC;
     llvm::raw_fd_ostream *OS = new llvm::raw_fd_ostream(
-        OutputPath.str(), EC, llvm::sys::fs::F_Append | llvm::sys::fs::F_Text);
+        OutputPath.str(), EC,
+        llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text);
     if (EC) {
       PP.getDiagnostics().Report(clang::diag::warn_fe_cc_print_header_failure)
           << EC.message();

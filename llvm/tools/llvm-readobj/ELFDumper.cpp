@@ -3846,6 +3846,86 @@ static StringRef getGenericNoteTypeName(const uint32_t NT) {
   return "";
 }
 
+static StringRef getCoreNoteTypeName(const uint32_t NT) {
+  static const struct {
+    uint32_t ID;
+    const char *Name;
+  } Notes[] = {
+      {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
+      {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
+      {ELF::NT_PRPSINFO, "NT_PRPSINFO (prpsinfo structure)"},
+      {ELF::NT_TASKSTRUCT, "NT_TASKSTRUCT (task structure)"},
+      {ELF::NT_AUXV, "NT_AUXV (auxiliary vector)"},
+      {ELF::NT_PSTATUS, "NT_PSTATUS (pstatus structure)"},
+      {ELF::NT_FPREGS, "NT_FPREGS (floating point registers)"},
+      {ELF::NT_PSINFO, "NT_PSINFO (psinfo structure)"},
+      {ELF::NT_LWPSTATUS, "NT_LWPSTATUS (lwpstatus_t structure)"},
+      {ELF::NT_LWPSINFO, "NT_LWPSINFO (lwpsinfo_t structure)"},
+      {ELF::NT_WIN32PSTATUS, "NT_WIN32PSTATUS (win32_pstatus structure)"},
+
+      {ELF::NT_PPC_VMX, "NT_PPC_VMX (ppc Altivec registers)"},
+      {ELF::NT_PPC_VSX, "NT_PPC_VSX (ppc VSX registers)"},
+      {ELF::NT_PPC_TAR, "NT_PPC_TAR (ppc TAR register)"},
+      {ELF::NT_PPC_PPR, "NT_PPC_PPR (ppc PPR register)"},
+      {ELF::NT_PPC_DSCR, "NT_PPC_DSCR (ppc DSCR register)"},
+      {ELF::NT_PPC_EBB, "NT_PPC_EBB (ppc EBB registers)"},
+      {ELF::NT_PPC_PMU, "NT_PPC_PMU (ppc PMU registers)"},
+      {ELF::NT_PPC_TM_CGPR, "NT_PPC_TM_CGPR (ppc checkpointed GPR registers)"},
+      {ELF::NT_PPC_TM_CFPR,
+       "NT_PPC_TM_CFPR (ppc checkpointed floating point registers)"},
+      {ELF::NT_PPC_TM_CVMX,
+       "NT_PPC_TM_CVMX (ppc checkpointed Altivec registers)"},
+      {ELF::NT_PPC_TM_CVSX, "NT_PPC_TM_CVSX (ppc checkpointed VSX registers)"},
+      {ELF::NT_PPC_TM_SPR, "NT_PPC_TM_SPR (ppc TM special purpose registers)"},
+      {ELF::NT_PPC_TM_CTAR, "NT_PPC_TM_CTAR (ppc checkpointed TAR register)"},
+      {ELF::NT_PPC_TM_CPPR, "NT_PPC_TM_CPPR (ppc checkpointed PPR register)"},
+      {ELF::NT_PPC_TM_CDSCR,
+       "NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)"},
+
+      {ELF::NT_386_TLS, "NT_386_TLS (x86 TLS information)"},
+      {ELF::NT_386_IOPERM, "NT_386_IOPERM (x86 I/O permissions)"},
+      {ELF::NT_X86_XSTATE, "NT_X86_XSTATE (x86 XSAVE extended state)"},
+
+      {ELF::NT_S390_HIGH_GPRS,
+       "NT_S390_HIGH_GPRS (s390 upper register halves)"},
+      {ELF::NT_S390_TIMER, "NT_S390_TIMER (s390 timer register)"},
+      {ELF::NT_S390_TODCMP, "NT_S390_TODCMP (s390 TOD comparator register)"},
+      {ELF::NT_S390_TODPREG,
+       "NT_S390_TODPREG (s390 TOD programmable register)"},
+      {ELF::NT_S390_CTRS, "NT_S390_CTRS (s390 control registers)"},
+      {ELF::NT_S390_PREFIX, "NT_S390_PREFIX (s390 prefix register)"},
+      {ELF::NT_S390_LAST_BREAK,
+       "NT_S390_LAST_BREAK (s390 last breaking event address)"},
+      {ELF::NT_S390_SYSTEM_CALL,
+       "NT_S390_SYSTEM_CALL (s390 system call restart data)"},
+      {ELF::NT_S390_TDB, "NT_S390_TDB (s390 transaction diagnostic block)"},
+      {ELF::NT_S390_VXRS_LOW,
+       "NT_S390_VXRS_LOW (s390 vector registers 0-15 upper half)"},
+      {ELF::NT_S390_VXRS_HIGH,
+       "NT_S390_VXRS_HIGH (s390 vector registers 16-31)"},
+      {ELF::NT_S390_GS_CB, "NT_S390_GS_CB (s390 guarded-storage registers)"},
+      {ELF::NT_S390_GS_BC,
+       "NT_S390_GS_BC (s390 guarded-storage broadcast control)"},
+
+      {ELF::NT_ARM_VFP, "NT_ARM_VFP (arm VFP registers)"},
+      {ELF::NT_ARM_TLS, "NT_ARM_TLS (AArch TLS registers)"},
+      {ELF::NT_ARM_HW_BREAK,
+       "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
+      {ELF::NT_ARM_HW_WATCH,
+       "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
+
+      {ELF::NT_FILE, "NT_FILE (mapped files)"},
+      {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
+      {ELF::NT_SIGINFO, "NT_SIGINFO (siginfo_t data)"},
+  };
+
+  for (const auto &Note : Notes)
+    if (Note.ID == NT)
+      return Note.Name;
+
+  return "";
+}
+
 static std::string getGNUNoteTypeName(const uint32_t NT) {
   static const struct {
     uint32_t ID;
@@ -4236,7 +4316,9 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (!N.Type.empty())
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
     } else {
-      StringRef NoteType = getGenericNoteTypeName(Type);
+      StringRef NoteType = Obj->getHeader()->e_type == ELF::ET_CORE
+                               ? getCoreNoteTypeName(Type)
+                               : getGenericNoteTypeName(Type);
       if (!NoteType.empty())
         OS << NoteType;
       else
@@ -5081,7 +5163,9 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (!N.Type.empty())
         W.printString(N.Type, N.Value);
     } else {
-      StringRef NoteType = getGenericNoteTypeName(Type);
+      StringRef NoteType = Obj->getHeader()->e_type == ELF::ET_CORE
+                               ? getCoreNoteTypeName(Type)
+                               : getGenericNoteTypeName(Type);
       if (!NoteType.empty())
         W.printString("Type", NoteType);
       else

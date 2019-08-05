@@ -10,7 +10,7 @@ entry:
   ret double %sub
 }
 
-; ASM:         .cv_def_range    Ltmp1 Lfunc_end0, "A\021\200\000\000\000"
+; ASM:         .cv_def_range    Ltmp1 Lfunc_end0, reg, 128
 ; OBJ:    DefRangeRegisterSym {
 ; OBJ:      Register: ST0 (0x80)
 ; OBJ:      MayHaveNoName: 0

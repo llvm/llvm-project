@@ -650,7 +650,7 @@ void ReportRace(ThreadState *thr) {
     // and the resulting PC has kExternalPCBit set, so we pass it to
     // __tsan_symbolize_external_ex. __tsan_symbolize_external_ex is within its
     // rights to crash since the PC is completely bogus.
-    // test/tsan/double_race.cc contains a test case for this.
+    // test/tsan/double_race.cpp contains a test case for this.
     toppc = 0;
   }
   ObtainCurrentStack(thr, toppc, &traces[0], &tags[0]);

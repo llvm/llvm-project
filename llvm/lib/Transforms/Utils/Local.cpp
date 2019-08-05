@@ -1152,7 +1152,7 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Align,
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(PrefAlign))
+    if (DL.exceedsNaturalStackAlignment(llvm::Align(PrefAlign)))
       return Align;
     AI->setAlignment(PrefAlign);
     return PrefAlign;

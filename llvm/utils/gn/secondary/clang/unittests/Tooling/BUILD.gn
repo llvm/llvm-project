@@ -42,6 +42,7 @@ unittest("ToolingTests") {
     "RecursiveASTVisitorTests/ConstructExpr.cpp",
     "RecursiveASTVisitorTests/DeclRefExpr.cpp",
     "RecursiveASTVisitorTests/ImplicitCtor.cpp",
+    "RecursiveASTVisitorTests/ImplicitCtorInitializer.cpp",
     "RecursiveASTVisitorTests/InitListExprPostOrder.cpp",
     "RecursiveASTVisitorTests/InitListExprPostOrderNoQueue.cpp",
     "RecursiveASTVisitorTests/InitListExprPreOrder.cpp",

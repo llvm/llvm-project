@@ -28,10 +28,6 @@ namespace llvm {
 
 /// A format-neutral container for source line information.
 struct DILineInfo {
-  // DILineInfo contains "<invalid>" for function/filename it cannot fetch.
-  static constexpr const char *const BadString = "<invalid>";
-  // Use "??" instead of "<invalid>" to make our output closer to addr2line.
-  static constexpr const char *const Addr2LineBadString = "??";
   std::string FileName;
   std::string FunctionName;
   Optional<StringRef> Source;
@@ -42,7 +38,7 @@ struct DILineInfo {
   // DWARF-specific.
   uint32_t Discriminator = 0;
 
-  DILineInfo() : FileName(BadString), FunctionName(BadString) {}
+  DILineInfo() : FileName("<invalid>"), FunctionName("<invalid>") {}
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&
@@ -65,9 +61,9 @@ struct DILineInfo {
 
   void dump(raw_ostream &OS) {
     OS << "Line info: ";
-    if (FileName != BadString)
+    if (FileName != "<invalid>")
       OS << "file '" << FileName << "', ";
-    if (FunctionName != BadString)
+    if (FunctionName != "<invalid>")
       OS << "function '" << FunctionName << "', ";
     OS << "line " << Line << ", ";
     OS << "column " << Column << ", ";
@@ -113,7 +109,7 @@ struct DIGlobal {
   uint64_t Start = 0;
   uint64_t Size = 0;
 
-  DIGlobal() : Name(DILineInfo::BadString) {}
+  DIGlobal() : Name("<invalid>") {}
 };
 
 struct DILocal {

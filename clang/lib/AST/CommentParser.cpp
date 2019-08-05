@@ -422,6 +422,12 @@ InlineCommandComment *Parser::parseInlineCommand() {
     IC = S.actOnInlineCommand(CommandTok.getLocation(),
                               CommandTok.getEndLocation(),
                               CommandTok.getCommandID());
+
+    Diag(CommandTok.getEndLocation().getLocWithOffset(1),
+         diag::warn_doc_inline_contents_no_argument)
+        << CommandTok.is(tok::at_command)
+        << Traits.getCommandInfo(CommandTok.getCommandID())->Name
+        << SourceRange(CommandTok.getLocation(), CommandTok.getEndLocation());
   }
 
   Retokenizer.putBackLeftoverTokens();

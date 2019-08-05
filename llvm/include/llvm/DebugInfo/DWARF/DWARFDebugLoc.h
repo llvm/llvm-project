@@ -29,7 +29,7 @@ public:
     /// The ending address of the instruction range.
     uint64_t End;
     /// The location of the variable within the specified range.
-    SmallVector<char, 4> Loc;
+    SmallString<4> Loc;
   };
 
   /// A list of locations that contain one variable.

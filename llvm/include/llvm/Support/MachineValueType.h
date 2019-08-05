@@ -17,6 +17,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScalableSize.h"
 #include <cassert>
 
 namespace llvm {
@@ -252,41 +253,6 @@ namespace llvm {
     };
 
     SimpleValueType SimpleTy = INVALID_SIMPLE_VALUE_TYPE;
-
-    // A class to represent the number of elements in a vector
-    //
-    // For fixed-length vectors, the total number of elements is equal to 'Min'
-    // For scalable vectors, the total number of elements is a multiple of 'Min'
-    class ElementCount {
-    public:
-      unsigned Min;
-      bool Scalable;
-
-      ElementCount(unsigned Min, bool Scalable)
-      : Min(Min), Scalable(Scalable) {}
-
-      ElementCount operator*(unsigned RHS) {
-        return { Min * RHS, Scalable };
-      }
-
-      ElementCount& operator*=(unsigned RHS) {
-        Min *= RHS;
-        return *this;
-      }
-
-      ElementCount operator/(unsigned RHS) {
-        return { Min / RHS, Scalable };
-      }
-
-      ElementCount& operator/=(unsigned RHS) {
-        Min /= RHS;
-        return *this;
-      }
-
-      bool operator==(const ElementCount& RHS) {
-        return Min == RHS.Min && Scalable == RHS.Scalable;
-      }
-    };
 
     constexpr MVT() = default;
     constexpr MVT(SimpleValueType SVT) : SimpleTy(SVT) {}
@@ -664,7 +630,7 @@ namespace llvm {
       }
     }
 
-    MVT::ElementCount getVectorElementCount() const {
+    ElementCount getVectorElementCount() const {
       return { getVectorNumElements(), isScalableVector() };
     }
 
@@ -1054,7 +1020,7 @@ namespace llvm {
       return getVectorVT(VT, NumElements);
     }
 
-    static MVT getVectorVT(MVT VT, MVT::ElementCount EC) {
+    static MVT getVectorVT(MVT VT, ElementCount EC) {
       if (EC.Scalable)
         return getScalableVectorVT(VT, EC.Min);
       return getVectorVT(VT, EC.Min);

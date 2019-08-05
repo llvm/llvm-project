@@ -18,9 +18,21 @@
 ; 64-bit packed float vectors (v2f32) are widened to type v4f32.
 
 define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: 'test_v2i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+; SSE2-LABEL: 'test_v2i32'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; SSSE3-LABEL: 'test_v2i32'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; SSE42-LABEL: 'test_v2i32'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; AVX-LABEL: 'test_v2i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
 ;
 ; BTVER2-LABEL: 'test_v2i32'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
@@ -56,9 +68,21 @@ define <2 x float> @test_v2f32(<2 x float> %a, <2 x float> %b) {
 }
 
 define <2 x i32> @test_v2i32_2(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: 'test_v2i32_2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+; SSE2-LABEL: 'test_v2i32_2'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; SSSE3-LABEL: 'test_v2i32_2'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; SSE42-LABEL: 'test_v2i32_2'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
+;
+; AVX-LABEL: 'test_v2i32_2'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %1
 ;
 ; BTVER2-LABEL: 'test_v2i32_2'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 2, i32 1>
