@@ -194,7 +194,7 @@ endif()
 
 # Copy the clang resource directory.
 add_custom_command_target(
-    unused_var
+    copy-clang-resource-dir
     COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang/"
     OUTPUT "${lib_dir}/lldb/clang/"
     VERBATIM
@@ -202,12 +202,14 @@ add_custom_command_target(
     DEPENDS ${clang_headers_target})
 
 add_custom_command_target(
-    unused_var
+    copy-swift-resource-dir
     COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${SWIFT_RESOURCE_PATH}" "${lib_dir}/lldb/swift/"
     OUTPUT "${lib_dir}/lldb/swift/"
     VERBATIM
     ALL
     DEPENDS ${SWIFT_RESOURCE_PATH})
+
+add_dependencies(liblldb ${copy-clang-resource-dir} ${copy-swift-resource-dir})
 
 install(
   CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
