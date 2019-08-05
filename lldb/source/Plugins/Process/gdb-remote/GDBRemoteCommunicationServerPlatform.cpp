@@ -15,6 +15,7 @@
 #include <cstring>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -280,10 +281,9 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
         return true;
       }
     }
-    usleep(10000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  // check one more time after the final usleep
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end())
@@ -302,10 +302,10 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
         return true;
       }
     }
-    usleep(10000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  // check one more time after the final usleep Scope for locker
+  // check one more time after the final sleep
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end())

@@ -80,7 +80,6 @@ int vasprintf(char **ret, const char *fmt, va_list ap);
 char *strcasestr(const char *s, const char *find);
 char *realpath(const char *name, char *resolved);
 
-int usleep(uint32_t useconds);
 char *basename(char *path);
 char *dirname(char *path);
 
