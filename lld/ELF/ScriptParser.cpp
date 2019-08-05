@@ -1344,16 +1344,10 @@ void ScriptParser::readAnonymousDeclaration() {
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
-
-  for (SymbolVersion v : locals) {
-    if (v.name == "*")
-      config->defaultSymbolVersion = VER_NDX_LOCAL;
-    else
-      config->versionScriptLocals.push_back(v);
-  }
-
-  for (SymbolVersion v : globals)
-    config->versionScriptGlobals.push_back(v);
+  for (const SymbolVersion &pat : locals)
+    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
+  for (const SymbolVersion &pat : globals)
+    config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(pat);
 
   expect(";");
 }
@@ -1365,22 +1359,14 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
-
-  for (SymbolVersion v : locals) {
-    if (v.name == "*")
-      config->defaultSymbolVersion = VER_NDX_LOCAL;
-    else
-      config->versionScriptLocals.push_back(v);
-  }
+  for (const SymbolVersion &pat : locals)
+    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
 
   // Create a new version definition and add that to the global symbols.
   VersionDefinition ver;
   ver.name = verStr;
-  ver.globals = globals;
-
-  // User-defined version number starts from 2 because 0 and 1 are
-  // reserved for VER_NDX_LOCAL and VER_NDX_GLOBAL, respectively.
-  ver.id = config->versionDefinitions.size() + 2;
+  ver.patterns = globals;
+  ver.id = config->versionDefinitions.size();
   config->versionDefinitions.push_back(ver);
 
   // Each version may have a parent version. For example, "Ver2"

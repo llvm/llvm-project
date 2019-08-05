@@ -34,24 +34,22 @@ static int DebugLevel = 0;
       DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__); \
     } \
   } while (false)
+
+// Utility for retrieving and printing CUDA error string.
+#define CUDA_ERR_STRING(err) \
+  do { \
+    if (DebugLevel > 0) { \
+      const char *errStr; \
+      cuGetErrorString(err, &errStr); \
+      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", "CUDA error is: %s\n", errStr); \
+    } \
+  } while (false)
 #else // OMPTARGET_DEBUG
 #define DP(...) {}
+#define CUDA_ERR_STRING(err) {}
 #endif // OMPTARGET_DEBUG
 
 #include "../../common/elf_common.c"
-
-// Utility for retrieving and printing CUDA error string.
-#ifdef CUDA_ERROR_REPORT
-#define CUDA_ERR_STRING(err)                                                   \
-  do {                                                                         \
-    const char *errStr;                                                        \
-    cuGetErrorString(err, &errStr);                                            \
-    DP("CUDA error is: %s\n", errStr);                                         \
-  } while (0)
-#else
-#define CUDA_ERR_STRING(err)                                                   \
-  {}
-#endif
 
 /// Keep entries table per device.
 struct FuncOrGblEntryTy {

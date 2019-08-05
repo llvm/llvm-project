@@ -3,25 +3,12 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/tls-opt-gdie.s -o %tso.o
 // RUN: ld.lld -shared %tso.o -o %t.so
 // RUN: ld.lld --hash-style=sysv %t.o %t.so -o %t1
-// RUN: llvm-readobj -S -r %t1 | FileCheck --check-prefix=RELOC %s
+// RUN: llvm-readobj -S %t1 | FileCheck --check-prefix=SEC --implicit-check-not=.plt %s
+// RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
 // RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
-//RELOC:      Section {
-//RELOC:      Index:
-//RELOC:      Name: .got
-//RELOC-NEXT: Type: SHT_PROGBITS
-//RELOC-NEXT: Flags [
-//RELOC-NEXT:   SHF_ALLOC
-//RELOC-NEXT:   SHF_WRITE
-//RELOC-NEXT: ]
-//RELOC-NEXT: Address: 0x2020B0
-//RELOC-NEXT: Offset: 0x20B0
-//RELOC-NEXT: Size: 16
-//RELOC-NEXT: Link: 0
-//RELOC-NEXT: Info: 0
-//RELOC-NEXT: AddressAlignment: 8
-//RELOC-NEXT: EntrySize: 0
-//RELOC-NEXT: }
+// SEC .got PROGBITS 00000000002020b0 0020b0 000010 00 WA 0 0 8
+
 //RELOC:      Relocations [
 //RELOC-NEXT:   Section (4) .rela.dyn {
 //RELOC-NEXT:     0x2020B0 R_X86_64_TPOFF64 tlsshared0 0x0

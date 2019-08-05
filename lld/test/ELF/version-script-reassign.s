@@ -1,16 +1,20 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo '{ global: foo; };' > %tg.ver
 # RUN: echo '{ local: foo; };' > %tl.ver
-# RUN: echo '{ global: foo; local: *; };' > %tg.ver
+# RUN: echo '{ global: foo; local: *; };' > %tgl.ver
 # RUN: echo 'V1 { global: foo; };' > %t1.ver
 # RUN: echo 'V2 { global: foo; };' > %t2.ver
 # RUN: echo 'V2 { global: notexist; local: f*; };' > %t2w.ver
 
-## Note, ld.bfd errors on the two cases.
+## Note, ld.bfd errors on these cases.
 # RUN: ld.lld -shared %t.o --version-script %tl.ver --version-script %t1.ver \
 # RUN:   -o %t.so 2>&1 | FileCheck --check-prefix=LOCAL %s
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=LOCAL-SYM %s
 # RUN: ld.lld -shared %t.o --version-script %tg.ver --version-script %t1.ver \
+# RUN:   -o %t.so 2>&1 | FileCheck --check-prefix=GLOBAL %s
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=GLOBAL-SYM %s
+# RUN: ld.lld -shared %t.o --version-script %tgl.ver --version-script %t1.ver \
 # RUN:   -o %t.so 2>&1 | FileCheck --check-prefix=GLOBAL %s
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=GLOBAL-SYM %s
 
