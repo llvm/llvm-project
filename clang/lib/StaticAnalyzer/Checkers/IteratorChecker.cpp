@@ -406,13 +406,15 @@ void IteratorChecker::checkPreCall(const CallEvent &Call,
       } else if (isRandomIncrOrDecrOperator(Func->getOverloadedOperator())) {
         if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
           // Check for out-of-range incrementions and decrementions
-          if (Call.getNumArgs() >= 1) {
+          if (Call.getNumArgs() >= 1 &&
+              Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
             verifyRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                    InstCall->getCXXThisVal(),
                                    Call.getArgSVal(0));
           }
         } else {
-          if (Call.getNumArgs() >= 2) {
+          if (Call.getNumArgs() >= 2 &&
+              Call.getArgExpr(1)->getType()->isIntegralOrEnumerationType()) {
             verifyRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                    Call.getArgSVal(0), Call.getArgSVal(1));
           }
@@ -590,14 +592,16 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
       return;
     } else if (isRandomIncrOrDecrOperator(Func->getOverloadedOperator())) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        if (Call.getNumArgs() >= 1) {
+        if (Call.getNumArgs() >= 1 &&
+              Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(),
                                  InstCall->getCXXThisVal(), Call.getArgSVal(0));
           return;
         }
       } else {
-        if (Call.getNumArgs() >= 2) {
+        if (Call.getNumArgs() >= 2 &&
+              Call.getArgExpr(1)->getType()->isIntegralOrEnumerationType()) {
           handleRandomIncrOrDecr(C, Func->getOverloadedOperator(),
                                  Call.getReturnValue(), Call.getArgSVal(0),
                                  Call.getArgSVal(1));

@@ -70,6 +70,9 @@ template <typename T, typename Ptr, typename Ref> struct __vector_iterator {
     return ptr -= n;
   }
 
+  template<typename U, typename Ptr2, typename Ref2>
+  difference_type operator-(const __vector_iterator<U, Ptr2, Ref2> &rhs);
+
   Ref operator*() const { return *ptr; }
   Ptr operator->() const { return *ptr; }
 

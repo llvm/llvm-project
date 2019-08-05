@@ -236,3 +236,8 @@ void good_derived(simple_container c) {
     *i0; // no-warning
   }
 }
+
+void iter_diff(std::vector<int> &V) {
+  auto i0 = V.begin(), i1 = V.end();
+  ptrdiff_t len = i1 - i0; // no-crash
+}
