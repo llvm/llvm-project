@@ -493,23 +493,19 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         switch (sect_type) {
         case eSectionTypeData:
           if (module_sp) {
-            SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-            if (sym_vendor) {
-              Symtab *symtab = sym_vendor->GetSymtab();
-              if (symtab) {
-                const addr_t file_Addr = GetFileAddress();
-                Symbol *symbol =
-                    symtab->FindSymbolContainingFileAddress(file_Addr);
-                if (symbol) {
-                  const char *symbol_name = symbol->GetName().AsCString();
-                  if (symbol_name) {
-                    s->PutCString(symbol_name);
-                    addr_t delta =
-                        file_Addr - symbol->GetAddressRef().GetFileAddress();
-                    if (delta)
-                      s->Printf(" + %" PRIu64, delta);
-                    showed_info = true;
-                  }
+            if (Symtab *symtab = module_sp->GetSymtab()) {
+              const addr_t file_Addr = GetFileAddress();
+              Symbol *symbol =
+                  symtab->FindSymbolContainingFileAddress(file_Addr);
+              if (symbol) {
+                const char *symbol_name = symbol->GetName().AsCString();
+                if (symbol_name) {
+                  s->PutCString(symbol_name);
+                  addr_t delta =
+                      file_Addr - symbol->GetAddressRef().GetFileAddress();
+                  if (delta)
+                    s->Printf(" + %" PRIu64, delta);
+                  showed_info = true;
                 }
               }
             }
@@ -1003,10 +999,9 @@ AddressClass Address::GetAddressClass() const {
   if (module_sp) {
     ObjectFile *obj_file = module_sp->GetObjectFile();
     if (obj_file) {
-      // Give the symbol vendor a chance to add to the unified section list
-      // and to symtab from symbol file
-      if (SymbolVendor *vendor = module_sp->GetSymbolVendor())
-        vendor->GetSymtab();
+      // Give the symbol file a chance to add to the unified section list
+      // and to the symtab.
+      module_sp->GetSymtab();
       return obj_file->GetAddressClass(GetFileAddress());
     }
   }

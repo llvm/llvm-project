@@ -263,12 +263,6 @@ void SymbolVendor::Dump(Stream *s) {
     s->EOL();
     if (m_sym_file_up)
       m_sym_file_up->Dump(*s);
-    s->IndentMore();
-
-    if (Symtab *symtab = GetSymtab())
-      symtab->Dump(s, nullptr, eSortOrderNone);
-
-    s->IndentLess();
   }
 }
 
@@ -286,12 +280,6 @@ FileSpec SymbolVendor::GetMainFileSpec() const {
   }
 
   return FileSpec();
-}
-
-Symtab *SymbolVendor::GetSymtab() {
-  if (m_sym_file_up)
-    return m_sym_file_up->GetSymtab();
-  return nullptr;
 }
 
 void SymbolVendor::SectionFileAddressesChanged() {
