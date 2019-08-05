@@ -132,6 +132,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS liblldb)
   endif()
 
+  if(TARGET repl_swift)
+    list(APPEND LLDB_TEST_DEPS repl_swift)
+  endif()
+
   # Add dependencies if we test with the in-tree clang.
   # This works with standalone builds as they import the clang target.
   if(TARGET clang)
