@@ -73,7 +73,7 @@ Symbol *SymbolTable::insert(StringRef name) {
 
   sym->setName(name);
   sym->symbolKind = Symbol::PlaceholderKind;
-  sym->versionId = config->defaultSymbolVersion;
+  sym->versionId = VER_NDX_GLOBAL;
   sym->visibility = STV_DEFAULT;
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
@@ -192,7 +192,7 @@ void SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
       return "VER_NDX_LOCAL";
     if (ver == VER_NDX_GLOBAL)
       return "VER_NDX_GLOBAL";
-    return ("version '" + config->versionDefinitions[ver - 2].name + "'").str();
+    return ("version '" + config->versionDefinitions[ver].name + "'").str();
   };
 
   // Assign the version.
@@ -203,8 +203,12 @@ void SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
     if (sym->getName().contains('@'))
       continue;
 
-    if (sym->versionId == config->defaultSymbolVersion)
+    // If the version has not been assigned, verdefIndex is -1. Use an arbitrary
+    // number (0) to indicate the version has been assigned.
+    if (sym->verdefIndex == UINT32_C(-1)) {
+      sym->verdefIndex = 0;
       sym->versionId = versionId;
+    }
     if (sym->versionId == versionId)
       continue;
 
@@ -214,15 +218,14 @@ void SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
 }
 
 void SymbolTable::assignWildcardVersion(SymbolVersion ver, uint16_t versionId) {
-  if (!ver.hasWildcard)
-    return;
-
   // Exact matching takes precendence over fuzzy matching,
   // so we set a version to a symbol only if no version has been assigned
   // to the symbol. This behavior is compatible with GNU.
-  for (Symbol *b : findAllByVersion(ver))
-    if (b->versionId == config->defaultSymbolVersion)
-      b->versionId = versionId;
+  for (Symbol *sym : findAllByVersion(ver))
+    if (sym->verdefIndex == UINT32_C(-1)) {
+      sym->verdefIndex = 0;
+      sym->versionId = versionId;
+    }
 }
 
 // This function processes version scripts by updating the versionId
@@ -233,26 +236,24 @@ void SymbolTable::assignWildcardVersion(SymbolVersion ver, uint16_t versionId) {
 void SymbolTable::scanVersionScript() {
   // First, we assign versions to exact matching symbols,
   // i.e. version definitions not containing any glob meta-characters.
-  for (SymbolVersion &ver : config->versionScriptGlobals)
-    assignExactVersion(ver, VER_NDX_GLOBAL, "global");
-  for (SymbolVersion &ver : config->versionScriptLocals)
-    assignExactVersion(ver, VER_NDX_LOCAL, "local");
   for (VersionDefinition &v : config->versionDefinitions)
-    for (SymbolVersion &ver : v.globals)
-      assignExactVersion(ver, v.id, v.name);
+    for (SymbolVersion &pat : v.patterns)
+      assignExactVersion(pat, v.id, v.name);
 
-  // Next, we assign versions to fuzzy matching symbols,
-  // i.e. version definitions containing glob meta-characters.
-  for (SymbolVersion &ver : config->versionScriptGlobals)
-    assignWildcardVersion(ver, VER_NDX_GLOBAL);
-  for (SymbolVersion &ver : config->versionScriptLocals)
-    assignWildcardVersion(ver, VER_NDX_LOCAL);
-
-  // Note that because the last match takes precedence over previous matches,
-  // we iterate over the definitions in the reverse order.
+  // Next, assign versions to wildcards that are not "*". Note that because the
+  // last match takes precedence over previous matches, we iterate over the
+  // definitions in the reverse order.
   for (VersionDefinition &v : llvm::reverse(config->versionDefinitions))
-    for (SymbolVersion &ver : v.globals)
-      assignWildcardVersion(ver, v.id);
+    for (SymbolVersion &pat : v.patterns)
+      if (pat.hasWildcard && pat.name != "*")
+        assignWildcardVersion(pat, v.id);
+
+  // Then, assign versions to "*". In GNU linkers they have lower priority than
+  // other wildcards.
+  for (VersionDefinition &v : config->versionDefinitions)
+    for (SymbolVersion &pat : v.patterns)
+      if (pat.hasWildcard && pat.name == "*")
+        assignWildcardVersion(pat, v.id);
 
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
@@ -262,7 +263,7 @@ void SymbolTable::scanVersionScript() {
 
   // isPreemptible is false at this point. To correctly compute the binding of a
   // Defined (which is used by includeInDynsym()), we need to know if it is
-  // VER_NDX_LOCAL or not. If defaultSymbolVersion is VER_NDX_LOCAL, we should
-  // compute symbol versions before handling --dynamic-list.
+  // VER_NDX_LOCAL or not. Compute symbol versions before handling
+  // --dynamic-list.
   handleDynamicList();
 }

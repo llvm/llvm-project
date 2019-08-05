@@ -50,6 +50,7 @@ add_clang_library(clangBasic
   FixedPoint.cpp
   IdentifierTable.cpp
   LangOptions.cpp
+  LangStandards.cpp
   Module.cpp
   ObjCRuntime.cpp
   OpenMPKinds.cpp

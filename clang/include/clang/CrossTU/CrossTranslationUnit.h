@@ -192,12 +192,11 @@ private:
   template <typename T>
   llvm::Expected<const T *> importDefinitionImpl(const T *D, ASTUnit *Unit);
 
-  llvm::StringMap<std::unique_ptr<clang::ASTUnit>> FileASTUnitMap;
-  llvm::StringMap<clang::ASTUnit *> NameASTUnitMap;
-  llvm::StringMap<std::string> NameFileMap;
-  llvm::DenseMap<TranslationUnitDecl *, std::unique_ptr<ASTImporter>>
-      ASTUnitImporterMap;
-  CompilerInstance &CI;
+  using ImporterMapTy =
+      llvm::DenseMap<TranslationUnitDecl *, std::unique_ptr<ASTImporter>>;
+
+  ImporterMapTy ASTUnitImporterMap;
+
   ASTContext &Context;
   std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
   /// Map of imported FileID's (in "To" context) to FileID in "From" context
@@ -209,10 +208,105 @@ private:
   /// imported the FileID.
   ImportedFileIDMap ImportedFileIDs;
 
+  /// Functor for loading ASTUnits from AST-dump files.
+  class ASTFileLoader {
+  public:
+    ASTFileLoader(const CompilerInstance &CI);
+    std::unique_ptr<ASTUnit> operator()(StringRef ASTFilePath);
+
+  private:
+    const CompilerInstance &CI;
+  };
+
+  /// Storage for ASTUnits, cached access, and providing searchability are the
+  /// concerns of ASTUnitStorage class.
+  class ASTUnitStorage {
+  public:
+    ASTUnitStorage(const CompilerInstance &CI);
+    /// Loads an ASTUnit for a function.
+    ///
+    /// \param FuncitionName USR name of the function.
+    /// \param CrossTUDir Path to the directory used to store CTU related files.
+    /// \param IndexName Name of the file inside \p CrossTUDir which maps
+    /// function USR names to file paths. These files contain the corresponding
+    /// AST-dumps.
+    ///
+    /// \return An Expected instance which contains the ASTUnit pointer or the
+    /// error occured during the load.
+    llvm::Expected<ASTUnit *> getASTUnitForFunction(StringRef FunctionName,
+                                                    StringRef CrossTUDir,
+                                                    StringRef IndexName);
+    /// Identifies the path of the file which can be used to load the ASTUnit
+    /// for a given function.
+    ///
+    /// \param FuncitionName USR name of the function.
+    /// \param CrossTUDir Path to the directory used to store CTU related files.
+    /// \param IndexName Name of the file inside \p CrossTUDir which maps
+    /// function USR names to file paths. These files contain the corresponding
+    /// AST-dumps.
+    ///
+    /// \return An Expected instance containing the filepath.
+    llvm::Expected<std::string> getFileForFunction(StringRef FunctionName,
+                                                   StringRef CrossTUDir,
+                                                   StringRef IndexName);
+
+  private:
+    llvm::Error ensureCTUIndexLoaded(StringRef CrossTUDir, StringRef IndexName);
+    llvm::Expected<ASTUnit *> getASTUnitForFile(StringRef FileName);
+
+    template <typename... T> using BaseMapTy = llvm::StringMap<T...>;
+    using OwningMapTy = BaseMapTy<std::unique_ptr<clang::ASTUnit>>;
+    using NonOwningMapTy = BaseMapTy<clang::ASTUnit *>;
+
+    OwningMapTy FileASTUnitMap;
+    NonOwningMapTy NameASTUnitMap;
+
+    using IndexMapTy = BaseMapTy<std::string>;
+    IndexMapTy NameFileMap;
+
+    ASTFileLoader FileAccessor;
+  };
+
+  ASTUnitStorage ASTStorage;
+
   /// \p CTULoadTreshold should serve as an upper limit to the number of TUs
   /// imported in order to reduce the memory footprint of CTU analysis.
   const unsigned CTULoadThreshold;
+
+  /// The number successfully loaded ASTs. Used to indicate, and  - with the
+  /// appropriate threshold value - limit the  memory usage of the
+  /// CrossTranslationUnitContext.
   unsigned NumASTLoaded{0u};
+
+  /// RAII counter to signal 'threshold reached' condition, and to increment the
+  /// NumASTLoaded counter upon a successful load.
+  class LoadGuard {
+  public:
+    LoadGuard(unsigned Limit, unsigned &Counter)
+        : Counter(Counter), Enabled(Counter < Limit) {}
+    ~LoadGuard() {
+      if (StoreSuccess)
+        ++Counter;
+    }
+    /// Flag the LoadGuard instance as successful, meaning that the load
+    /// operation succeeded, and the memory footprint of the AST storage
+    /// actually increased. In this case, \p Counter should be incremented upon
+    /// destruction.
+    void storedSuccessfully() { StoreSuccess = true; }
+    /// Indicates, whether a new load operation is permitted, it is within the
+    /// threshold.
+    operator bool() const { return Enabled; }
+
+  private:
+    /// The number of ASTs actually imported. LoadGuard does not own the
+    /// counter, just uses on given to it at construction time.
+    unsigned &Counter;
+    /// Indicates whether a load operation can begin, which is equivalent to the
+    /// 'threshold not reached' condition.
+    bool Enabled;
+    /// Shows the state of the current load operation.
+    bool StoreSuccess;
+  };
 };
 
 } // namespace cross_tu

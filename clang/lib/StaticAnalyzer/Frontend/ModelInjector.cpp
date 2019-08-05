@@ -9,6 +9,7 @@
 #include "ModelInjector.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -65,7 +66,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   auto Invocation = std::make_shared<CompilerInvocation>(CI.getInvocation());
 
   FrontendOptions &FrontendOpts = Invocation->getFrontendOpts();
-  InputKind IK = InputKind::CXX; // FIXME
+  InputKind IK = Language::CXX; // FIXME
   FrontendOpts.Inputs.clear();
   FrontendOpts.Inputs.emplace_back(fileName, IK);
   FrontendOpts.DisableFree = true;
