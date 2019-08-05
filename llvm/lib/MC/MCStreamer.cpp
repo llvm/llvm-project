@@ -327,9 +327,55 @@ void MCStreamer::EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
                                                 const MCSymbol *FnStartSym,
                                                 const MCSymbol *FnEndSym) {}
 
+/// Only call this on endian-specific types like ulittle16_t and little32_t, or
+/// structs composed of them.
+template <typename T>
+static void copyBytesForDefRange(SmallString<20> &BytePrefix,
+                                 codeview::SymbolKind SymKind,
+                                 const T &DefRangeHeader) {
+  BytePrefix.resize(2 + sizeof(T));
+  codeview::ulittle16_t SymKindLE = codeview::ulittle16_t(SymKind);
+  memcpy(&BytePrefix[0], &SymKindLE, 2);
+  memcpy(&BytePrefix[2], &DefRangeHeader, sizeof(T));
+}
+
 void MCStreamer::EmitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {}
+
+void MCStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelSym::Header DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER_REL, DRHdr);
+  EmitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
+void MCStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeSubfieldRegisterSym::Header DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_SUBFIELD_REGISTER,
+                       DRHdr);
+  EmitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
+void MCStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterSym::Header DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER, DRHdr);
+  EmitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
+void MCStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeFramePointerRelSym::Header DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_FRAMEPOINTER_REL,
+                       DRHdr);
+  EmitCVDefRangeDirective(Ranges, BytePrefix);
+}
 
 void MCStreamer::EmitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
