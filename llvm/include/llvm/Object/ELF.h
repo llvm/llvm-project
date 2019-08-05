@@ -271,7 +271,6 @@ public:
                                         Elf_Sym_Range Symtab,
                                         ArrayRef<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(uint32_t Index) const;
-  Expected<const Elf_Shdr *> getSection(const StringRef SectionName) const;
 
   Expected<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
                                       uint32_t Index) const;
@@ -548,8 +547,9 @@ template <typename T>
 Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr *Section,
                                             uint32_t Entry) const {
   if (sizeof(T) != Section->sh_entsize)
-    // TODO: this error is untested.
-    return createError("invalid sh_entsize");
+    return createError("section " + getSecIndexForError(this, Section) +
+                       " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
+                       ", but got " + Twine(Section->sh_entsize));
   size_t Pos = Section->sh_offset + Entry * sizeof(T);
   if (Pos + sizeof(T) > Buf.size())
     return createError("unable to access section " +
@@ -566,23 +566,6 @@ ELFFile<ELFT>::getSection(uint32_t Index) const {
   if (!TableOrErr)
     return TableOrErr.takeError();
   return object::getSection<ELFT>(*TableOrErr, Index);
-}
-
-template <class ELFT>
-Expected<const typename ELFT::Shdr *>
-ELFFile<ELFT>::getSection(const StringRef SectionName) const {
-  auto TableOrErr = sections();
-  if (!TableOrErr)
-    return TableOrErr.takeError();
-  for (auto &Sec : *TableOrErr) {
-    auto SecNameOrErr = getSectionName(&Sec);
-    if (!SecNameOrErr)
-      return SecNameOrErr.takeError();
-    if (*SecNameOrErr == SectionName)
-      return &Sec;
-  }
-  // TODO: this error is untested.
-  return createError("invalid section name");
 }
 
 template <class ELFT>

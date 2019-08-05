@@ -32,7 +32,7 @@ else:
   extra_link_flags = []
 
 # Test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.m', '.mm', '.ll', '.test']
+config.suffixes = ['.c', '.cpp', '.m', '.mm', '.ll', '.test']
 
 # What to exclude.
 config.excludes = ['Inputs']

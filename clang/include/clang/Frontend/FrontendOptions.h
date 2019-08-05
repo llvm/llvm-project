@@ -10,15 +10,16 @@
 #define LLVM_CLANG_FRONTEND_FRONTENDOPTIONS_H
 
 #include "clang/AST/ASTDumperUtils.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
-#include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Sema/CodeCompleteOptions.h"
+#include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 
@@ -143,35 +144,11 @@ enum ActionKind {
 /// The kind of a file that we've been handed as an input.
 class InputKind {
 private:
-  unsigned Lang : 4;
+  Language Lang;
   unsigned Fmt : 3;
   unsigned Preprocessed : 1;
 
 public:
-  /// The language for the input, used to select and validate the language
-  /// standard and possible actions.
-  enum Language {
-    Unknown,
-
-    /// Assembly: we accept this only so that we can preprocess it.
-    Asm,
-
-    /// LLVM IR: we accept this so that we can run the optimizer on it,
-    /// and compile it to assembly or object code.
-    LLVM_IR,
-
-    ///@{ Languages that the frontend can parse and compile.
-    C,
-    CXX,
-    ObjC,
-    ObjCXX,
-    OpenCL,
-    CUDA,
-    RenderScript,
-    HIP,
-    ///@}
-  };
-
   /// The input file format.
   enum Format {
     Source,
@@ -179,7 +156,7 @@ public:
     Precompiled
   };
 
-  constexpr InputKind(Language L = Unknown, Format F = Source,
+  constexpr InputKind(Language L = Language::Unknown, Format F = Source,
                       bool PP = false)
       : Lang(L), Fmt(F), Preprocessed(PP) {}
 
@@ -188,10 +165,12 @@ public:
   bool isPreprocessed() const { return Preprocessed; }
 
   /// Is the input kind fully-unknown?
-  bool isUnknown() const { return Lang == Unknown && Fmt == Source; }
+  bool isUnknown() const { return Lang == Language::Unknown && Fmt == Source; }
 
   /// Is the language of the input some dialect of Objective-C?
-  bool isObjectiveC() const { return Lang == ObjC || Lang == ObjCXX; }
+  bool isObjectiveC() const {
+    return Lang == Language::ObjC || Lang == Language::ObjCXX;
+  }
 
   InputKind getPreprocessed() const {
     return InputKind(getLanguage(), getFormat(), true);
@@ -467,9 +446,9 @@ public:
         IncludeTimestamps(true), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
-  /// extension. For example, "c" would return InputKind::C.
+  /// extension. For example, "c" would return Language::C.
   ///
-  /// \return The input kind for the extension, or InputKind::Unknown if the
+  /// \return The input kind for the extension, or Language::Unknown if the
   /// extension is not recognized.
   static InputKind getInputKindForExtension(StringRef Extension);
 };

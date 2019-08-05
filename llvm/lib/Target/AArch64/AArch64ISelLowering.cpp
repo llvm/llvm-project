@@ -161,6 +161,29 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addQRTypeForNEON(MVT::v8f16);
   }
 
+  if (Subtarget->hasSVE()) {
+    // Add legal sve predicate types
+    addRegisterClass(MVT::nxv2i1, &AArch64::PPRRegClass);
+    addRegisterClass(MVT::nxv4i1, &AArch64::PPRRegClass);
+    addRegisterClass(MVT::nxv8i1, &AArch64::PPRRegClass);
+    addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
+
+    // Add legal sve data types
+    addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv8i16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv4i32, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv2i64, &AArch64::ZPRRegClass);
+
+    addRegisterClass(MVT::nxv2f16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv4f16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv8f16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv1f32, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv2f32, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv1f64, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
+  }
+
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -3139,6 +3162,11 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         RC = &AArch64::FPR64RegClass;
       else if (RegVT == MVT::f128 || RegVT.is128BitVector())
         RC = &AArch64::FPR128RegClass;
+      else if (RegVT.isScalableVector() &&
+               RegVT.getVectorElementType() == MVT::i1)
+        RC = &AArch64::PPRRegClass;
+      else if (RegVT.isScalableVector())
+        RC = &AArch64::ZPRRegClass;
       else
         llvm_unreachable("RegVT not supported by FORMAL_ARGUMENTS Lowering");
 
@@ -3154,6 +3182,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         llvm_unreachable("Unknown loc info!");
       case CCValAssign::Full:
         break;
+      case CCValAssign::Indirect:
+        assert(VA.getValVT().isScalableVector() &&
+               "Only scalable vectors can be passed indirectly");
+        llvm_unreachable("Spilling of SVE vectors not yet implemented");
       case CCValAssign::BCvt:
         ArgValue = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), ArgValue);
         break;
@@ -3194,6 +3226,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
         break;
+      case CCValAssign::Indirect:
+        assert(VA.getValVT().isScalableVector() &&
+               "Only scalable vectors can be passed indirectly");
+        llvm_unreachable("Spilling of SVE vectors not yet implemented");
       case CCValAssign::SExt:
         ExtType = ISD::SEXTLOAD;
         break;
@@ -3779,6 +3815,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     case CCValAssign::FPExt:
       Arg = DAG.getNode(ISD::FP_EXTEND, DL, VA.getLocVT(), Arg);
       break;
+    case CCValAssign::Indirect:
+      assert(VA.getValVT().isScalableVector() &&
+             "Only scalable vectors can be passed indirectly");
+      llvm_unreachable("Spilling of SVE vectors not yet implemented");
     }
 
     if (VA.isRegLoc()) {
@@ -3924,6 +3964,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &RegToPass : RegsToPass)
     Ops.push_back(DAG.getRegister(RegToPass.first,
                                   RegToPass.second.getValueType()));
+
+  // Check callee args/returns for SVE registers and set calling convention
+  // accordingly.
+  if (CallConv == CallingConv::C) {
+    bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
+      return Out.VT.isScalableVector();
+    });
+    bool CalleeInSVE = any_of(Ins, [](ISD::InputArg &In){
+      return In.VT.isScalableVector();
+    });
+
+    if (CalleeInSVE || CalleeOutSVE)
+      CallConv = CallingConv::AArch64_SVE_VectorCall;
+  }
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask;
@@ -6312,6 +6366,8 @@ static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
 
 static bool isZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
   unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts % 2 != 0)
+    return false;
   WhichResult = (M[0] == 0 ? 0 : 1);
   unsigned Idx = WhichResult * NumElts / 2;
   for (unsigned i = 0; i != NumElts; i += 2) {
@@ -8096,7 +8152,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
     Info.offset = 0;
-    Info.align = 0;
+    Info.align.reset();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
     return true;
@@ -8122,7 +8178,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
     Info.offset = 0;
-    Info.align = 0;
+    Info.align.reset();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
     return true;
@@ -8134,7 +8190,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(PtrTy->getElementType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlignment(PtrTy->getElementType());
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   }
@@ -8145,7 +8201,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(PtrTy->getElementType());
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlignment(PtrTy->getElementType());
+    Info.align = MaybeAlign(DL.getABITypeAlignment(PtrTy->getElementType()));
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   }
@@ -8155,7 +8211,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i128;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = 16;
+    Info.align = Align(16);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   case Intrinsic::aarch64_stlxp:
@@ -8164,7 +8220,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i128;
     Info.ptrVal = I.getArgOperand(2);
     Info.offset = 0;
-    Info.align = 16;
+    Info.align = Align(16);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   default:

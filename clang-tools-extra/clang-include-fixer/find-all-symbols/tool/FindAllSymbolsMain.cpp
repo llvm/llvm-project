@@ -114,7 +114,7 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
     }
   }
 
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_None);
   if (EC) {
     llvm::errs() << "Can't open '" << OutputFile << "': " << EC.message()
                  << '\n';

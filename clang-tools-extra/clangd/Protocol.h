@@ -873,6 +873,12 @@ struct ApplyWorkspaceEditParams {
 };
 llvm::json::Value toJSON(const ApplyWorkspaceEditParams &);
 
+struct ApplyWorkspaceEditResponse {
+  bool applied = true;
+  llvm::Optional<std::string> failureReason;
+};
+bool fromJSON(const llvm::json::Value &, ApplyWorkspaceEditResponse &);
+
 struct TextDocumentPositionParams {
   /// The text document.
   TextDocumentIdentifier textDocument;

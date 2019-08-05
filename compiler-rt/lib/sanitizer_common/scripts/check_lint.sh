@@ -105,7 +105,7 @@ run_lint ${MSAN_RTL_LINT_FILTER} ${MSAN_RTL}/*.cpp \
 LSAN_RTL=${COMPILER_RT}/lib/lsan
 run_lint ${LSAN_RTL_LINT_FILTER} ${LSAN_RTL}/*.cpp \
                                  ${LSAN_RTL}/*.h &
-run_lint ${LSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/lsan/*/*.cc &
+run_lint ${LSAN_LIT_TEST_LINT_FILTER} ${LIT_TESTS}/lsan/*/*.cpp &
 
 # DFSan
 DFSAN_RTL=${COMPILER_RT}/lib/dfsan

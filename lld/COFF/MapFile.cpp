@@ -92,7 +92,7 @@ void coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
     return;
 
   std::error_code ec;
-  raw_fd_ostream os(config->mapFile, ec, sys::fs::F_None);
+  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
   if (ec)
     fatal("cannot open " + config->mapFile + ": " + ec.message());
 

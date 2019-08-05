@@ -897,8 +897,8 @@ static void addDependencyInfoHelper(llvm::raw_fd_ostream *DepInfo,
 
 std::error_code MachOLinkingContext::createDependencyFile(StringRef path) {
   std::error_code ec;
-  _dependencyInfo = std::unique_ptr<llvm::raw_fd_ostream>(new
-                         llvm::raw_fd_ostream(path, ec, llvm::sys::fs::F_None));
+  _dependencyInfo = std::unique_ptr<llvm::raw_fd_ostream>(
+      new llvm::raw_fd_ostream(path, ec, llvm::sys::fs::OF_None));
   if (ec) {
     _dependencyInfo.reset();
     return ec;

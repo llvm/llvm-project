@@ -2023,7 +2023,8 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
     // Constructor initializers.
     for (auto *I : Ctor->inits()) {
-      TRY_TO(TraverseConstructorInitializer(I));
+      if (I->isWritten() || getDerived().shouldVisitImplicitCode())
+        TRY_TO(TraverseConstructorInitializer(I));
     }
   }
 

@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -120,15 +121,21 @@ namespace ISD {
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
 
-    unsigned getByValAlign() const { return (1U << ByValAlign) / 2; }
+    unsigned getByValAlign() const {
+      MaybeAlign A = decodeMaybeAlign(ByValAlign);
+      return A ? A->value() : 0;
+    }
     void setByValAlign(unsigned A) {
-      ByValAlign = Log2_32(A) + 1;
+      ByValAlign = encode(llvm::Align(A));
       assert(getByValAlign() == A && "bitfield overflow");
     }
 
-    unsigned getOrigAlign() const { return (1U << OrigAlign) / 2; }
+    unsigned getOrigAlign() const {
+      MaybeAlign A = decodeMaybeAlign(OrigAlign);
+      return A ? A->value() : 0;
+    }
     void setOrigAlign(unsigned A) {
-      OrigAlign = Log2_32(A) + 1;
+      OrigAlign = encode(llvm::Align(A));
       assert(getOrigAlign() == A && "bitfield overflow");
     }
 

@@ -396,7 +396,7 @@ template <class ELFT> static void createSyntheticSections() {
       part.verSym = make<VersionTableSection>();
       add(part.verSym);
 
-      if (!config->versionDefinitions.empty()) {
+      if (!namedVersionDefs().empty()) {
         part.verDef = make<VersionDefinitionSection>();
         add(part.verDef);
       }

@@ -350,9 +350,9 @@ SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> OS;
   if (Format == SPF_Binary || Format == SPF_Compact_Binary)
-    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::F_None));
+    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_None));
   else
-    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::F_Text));
+    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_Text));
   if (EC)
     return EC;
 

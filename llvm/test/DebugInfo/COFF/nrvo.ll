@@ -28,7 +28,7 @@
 ; ASM-NEXT:   .asciz "foo"
 ; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: .Ltmp
-; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, "B\021(\000\000\000"
+; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, frame_ptr_rel, 40
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)

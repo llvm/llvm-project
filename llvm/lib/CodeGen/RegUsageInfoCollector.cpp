@@ -142,6 +142,13 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   auto SetRegAsDefined = [&RegMask] (unsigned Reg) {
     RegMask[Reg / 32] &= ~(1u << Reg % 32);
   };
+
+  // Some targets can clobber registers "inside" a call, typically in
+  // linker-generated code.
+  for (const MCPhysReg Reg : TRI->getIntraCallClobberedRegs(&MF))
+    for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+      SetRegAsDefined(*AI);
+
   // Scan all the physical registers. When a register is defined in the current
   // function set it and all the aliasing registers as defined in the regmask.
   // FIXME: Rewrite to use regunits.

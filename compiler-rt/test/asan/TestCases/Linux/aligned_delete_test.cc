@@ -56,7 +56,7 @@ struct alignas(1024) S1024_1024 { char a[1024]; };
 
 int main(int argc, char **argv) {
   // Check the mismatched calls only, all the valid cases are verified in
-  // test/sanitizer_common/TestCases/Linux/new_delete_test.cc.
+  // test/sanitizer_common/TestCases/Linux/new_delete_test.cpp.
 
   operator delete(break_optimization(new S12_128), std::nothrow);
   // CHECK: AddressSanitizer: new-delete-type-mismatch

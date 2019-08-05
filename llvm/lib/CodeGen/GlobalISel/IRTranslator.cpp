@@ -1623,13 +1623,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
   if (TLI.getTgtMemIntrinsic(Info, CI, *MF, ID)) {
-    unsigned Align = Info.align;
-    if (Align == 0)
-      Align = DL->getABITypeAlignment(Info.memVT.getTypeForEVT(F->getContext()));
+    MaybeAlign Align = Info.align;
+    if (!Align)
+      Align = MaybeAlign(
+          DL->getABITypeAlignment(Info.memVT.getTypeForEVT(F->getContext())));
 
     uint64_t Size = Info.memVT.getStoreSize();
-    MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
-                                               Info.flags, Size, Align));
+    MIB.addMemOperand(MF->getMachineMemOperand(
+        MachinePointerInfo(Info.ptrVal), Info.flags, Size, Align->value()));
   }
 
   return true;

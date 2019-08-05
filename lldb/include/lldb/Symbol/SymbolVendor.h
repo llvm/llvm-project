@@ -118,9 +118,6 @@ public:
 
   FileSpec GetMainFileSpec() const;
 
-  // Get module unified section list symbol table.
-  virtual Symtab *GetSymtab();
-
   /// Notify the SymbolVendor that the file addresses in the Sections
   /// for this module have been changed.
   virtual void SectionFileAddressesChanged();

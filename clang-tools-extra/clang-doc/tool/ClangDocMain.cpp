@@ -269,7 +269,8 @@ int main(int argc, const char **argv) {
       return 1;
     }
     std::error_code FileErr;
-    llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr,
+                                llvm::sys::fs::OF_None);
     if (FileErr != OK) {
       llvm::errs() << "Error opening info file: " << FileErr.message() << "\n";
       continue;

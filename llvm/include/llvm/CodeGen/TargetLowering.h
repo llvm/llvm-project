@@ -48,6 +48,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -838,7 +839,7 @@ public:
     int          offset = 0;       // offset off of ptrVal
     unsigned     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
-    unsigned     align = 1;        // alignment
+    MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
     IntrinsicInfo() = default;
@@ -1244,7 +1245,7 @@ public:
         EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
       return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
-                              VTy->getNumElements());
+                              VTy->getElementCount());
     }
 
     return EVT::getEVT(Ty, AllowUnknown);

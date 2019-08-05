@@ -40,7 +40,7 @@ public:
   SBProvider(const FileSpec &directory)
       : Provider(directory),
         m_stream(directory.CopyByAppendingPathComponent("sbapi.bin").GetPath(),
-                 m_ec, llvm::sys::fs::OpenFlags::F_None),
+                 m_ec, llvm::sys::fs::OpenFlags::OF_None),
         m_serializer(m_stream) {}
 
   Serializer &GetSerializer() { return m_serializer; }

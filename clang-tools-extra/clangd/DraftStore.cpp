@@ -90,7 +90,7 @@ llvm::Expected<std::string> DraftStore::updateDraft(
       return llvm::make_error<llvm::StringError>(
           llvm::formatv("Change's rangeLength ({0}) doesn't match the "
                         "computed range length ({1}).",
-                        *Change.rangeLength, *EndIndex - *StartIndex),
+                        *Change.rangeLength, ComputedRangeLength),
           llvm::errc::invalid_argument);
 
     std::string NewContents;

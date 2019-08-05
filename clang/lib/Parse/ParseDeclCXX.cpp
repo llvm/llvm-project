@@ -3134,6 +3134,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
                                                       TagDecl);
 
   default:
+    if (tok::isPragmaAnnotation(Tok.getKind())) {
+      Diag(Tok.getLocation(), diag::err_pragma_misplaced_in_decl)
+          << DeclSpec::getSpecifierName(TagType,
+                                   Actions.getASTContext().getPrintingPolicy());
+      ConsumeAnnotationToken();
+      return nullptr;
+    }
     return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
   }
 }

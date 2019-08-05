@@ -188,7 +188,7 @@ int main(int argc, const char **argv) {
 
     if (!ExportFixes.empty()) {
       std::error_code EC;
-      llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::F_None);
+      llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::OF_None);
       if (EC) {
         llvm::errs() << "Error opening output file: " << EC.message() << '\n';
         return 1;

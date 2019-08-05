@@ -420,7 +420,7 @@ static void createCombinedModuleSummaryIndex() {
   std::error_code EC;
   assert(!OutputFilename.empty());
   raw_fd_ostream OS(OutputFilename + ".thinlto.bc", EC,
-                    sys::fs::OpenFlags::F_None);
+                    sys::fs::OpenFlags::OF_None);
   error(EC, "error opening the file '" + OutputFilename + ".thinlto.bc'");
   WriteIndexToFile(CombinedIndex, OS);
   OS.close();
@@ -510,7 +510,7 @@ static std::unique_ptr<Module> loadModuleFromInput(lto::InputFile &File,
 
 static void writeModuleToFile(Module &TheModule, StringRef Filename) {
   std::error_code EC;
-  raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
+  raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::OF_None);
   error(EC, "error opening the file '" + Filename + "'");
   maybeVerifyModule(TheModule);
   WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
@@ -581,7 +581,7 @@ private:
     if (!CombinedIndex)
       report_fatal_error("ThinLink didn't create an index");
     std::error_code EC;
-    raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
+    raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
     error(EC, "error opening the file '" + OutputFilename + "'");
     WriteIndexToFile(*CombinedIndex, OS);
   }
@@ -619,7 +619,7 @@ private:
       }
       OutputName = getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
       std::error_code EC;
-      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::OF_None);
       error(EC, "error opening the file '" + OutputName + "'");
       WriteIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
     }
@@ -802,7 +802,7 @@ private:
       }
 
       std::error_code EC;
-      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::OF_None);
       error(EC, "error opening the file '" + OutputName + "'");
       OS << std::get<0>(BinName)->getBuffer();
     }
@@ -848,7 +848,7 @@ private:
     for (unsigned BufID = 0; BufID < Binaries.size(); ++BufID) {
       auto OutputName = InputFilenames[BufID] + ".thinlto.o";
       std::error_code EC;
-      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::OF_None);
       error(EC, "error opening the file '" + OutputName + "'");
       OS << Binaries[BufID]->getBuffer();
     }
@@ -1020,7 +1020,7 @@ int main(int argc, char **argv) {
       if (Parallelism != 1)
         PartFilename += "." + utostr(I);
       std::error_code EC;
-      OSs.emplace_back(PartFilename, EC, sys::fs::F_None);
+      OSs.emplace_back(PartFilename, EC, sys::fs::OF_None);
       if (EC)
         error("error opening the file '" + PartFilename + "': " + EC.message());
       OSPtrs.push_back(&OSs.back().os());

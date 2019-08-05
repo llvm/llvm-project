@@ -9,6 +9,7 @@
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -250,7 +251,7 @@ public:
     Instance.getFrontendOpts().DisableFree = false;
     Instance.getFrontendOpts().Inputs.clear();
     Instance.getFrontendOpts().Inputs.emplace_back(
-        Filename, InputKind(InputKind::Unknown, InputKind::Precompiled));
+        Filename, InputKind(Language::Unknown, InputKind::Precompiled));
     Instance.getFrontendOpts().ModuleFiles.clear();
     Instance.getFrontendOpts().ModuleMapFiles.clear();
     // Don't recursively rewrite imports. We handle them all at the top level.

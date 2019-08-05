@@ -6,6 +6,8 @@ declare void @normal_call() readnone
 
 declare i32 @foo()
 
+declare i32 @foo_noreturn_nounwind() noreturn nounwind
+
 declare i32 @foo_noreturn() noreturn
 
 declare i32 @bar() nosync readnone
@@ -134,8 +136,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
   ret i32 %cond
 }
 
-; TEST 5 noreturn invoke instruction replaced by a call and an unreachable instruction
-; put after it.
+; TEST 5 noreturn invoke instruction with a unreachable normal successor block.
 
 ; CHECK: define i32 @invoke_noreturn(i32 %a)
 define i32 @invoke_noreturn(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -147,8 +148,44 @@ cond.true:                                        ; preds = %entry
   call void @normal_call()
   %call = invoke i32 @foo_noreturn() to label %continue
             unwind label %cleanup
-  ; CHECK: call i32 @foo_noreturn()
-  ; CHECK-NEXT unreachable
+  ; CHECK:      %call = invoke i32 @foo_noreturn()
+  ; CHECK-NEXT:         to label %continue unwind label %cleanup
+
+cond.false:                                       ; preds = %entry
+  call void @normal_call()
+  %call1 = call i32 @bar()
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.false, %continue
+  %cond = phi i32 [ %call, %continue ], [ %call1, %cond.false ]
+  ret i32 %cond
+
+continue:
+  ; CHECK:      continue:
+  ; CHECK-NEXT: unreachable
+  br label %cond.end
+
+cleanup:
+  %res = landingpad { i8*, i32 }
+  catch i8* null
+  ret i32 0
+}
+
+; TEST 4.1 noreturn invoke instruction replaced by a call and an unreachable instruction
+; put after it.
+
+; CHECK: define i32 @invoke_noreturn_nounwind(i32 %a)
+define i32 @invoke_noreturn_nounwind(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  call void @normal_call()
+  %call = invoke i32 @foo_noreturn_nounwind() to label %continue
+            unwind label %cleanup
+  ; CHECK:      call i32 @foo_noreturn_nounwind()
+  ; CHECK-NEXT: unreachable
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()
@@ -171,8 +208,8 @@ cleanup:
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
 
-; CHECK define @ub(i32)
-define void @ub(i32* ) {
+; CHECK: define void @ub(i32* %0)
+define void @ub(i32* %0) {
   %poison = sub nuw i32 0, 1           ; Results in a poison value.
   %still_poison = and i32 %poison, 0   ; 0, but also poison.
   %poison_yet_again = getelementptr i32, i32* %0, i32 %still_poison

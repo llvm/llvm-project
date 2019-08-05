@@ -100,7 +100,8 @@ public:
     if (!ClOrderFileWriteMapping.empty()) {
       std::lock_guard<std::mutex> LogLock(MappingMutex);
       std::error_code EC;
-      llvm::raw_fd_ostream OS(ClOrderFileWriteMapping, EC, llvm::sys::fs::F_Append);
+      llvm::raw_fd_ostream OS(ClOrderFileWriteMapping, EC,
+                              llvm::sys::fs::OF_Append);
       if (EC) {
         report_fatal_error(Twine("Failed to open ") + ClOrderFileWriteMapping +
                            " to save mapping file for order file instrumentation\n");

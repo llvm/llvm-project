@@ -119,7 +119,7 @@ class EmitAssemblyHelper {
   std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
     std::error_code EC;
     auto F = llvm::make_unique<llvm::ToolOutputFile>(Path, EC,
-                                                     llvm::sys::fs::F_None);
+                                                     llvm::sys::fs::OF_None);
     if (EC) {
       Diags.Report(diag::err_fe_unable_to_open_output) << Path << EC.message();
       F.reset();

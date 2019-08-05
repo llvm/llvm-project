@@ -44,7 +44,7 @@ struct SampleProfTest : ::testing::Test {
   void createWriter(SampleProfileFormat Format, StringRef Profile) {
     std::error_code EC;
     std::unique_ptr<raw_ostream> OS(
-        new raw_fd_ostream(Profile, EC, sys::fs::F_None));
+        new raw_fd_ostream(Profile, EC, sys::fs::OF_None));
     auto WriterOrErr = SampleProfileWriter::create(OS, Format);
     ASSERT_TRUE(NoError(WriterOrErr.getError()));
     Writer = std::move(WriterOrErr.get());

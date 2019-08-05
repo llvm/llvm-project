@@ -37,6 +37,7 @@ static_library("Basic") {
     "Module.cpp",
     "ObjCRuntime.cpp",
     "OpenMPKinds.cpp",
+    "LangStandards.cpp",
     "OperatorPrecedence.cpp",
     "SanitizerBlacklist.cpp",
     "SanitizerSpecialCaseList.cpp",

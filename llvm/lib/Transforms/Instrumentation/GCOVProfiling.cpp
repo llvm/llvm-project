@@ -669,7 +669,8 @@ void GCOVProfiler::emitProfileNotes() {
       continue;
 
     std::error_code EC;
-    raw_fd_ostream out(mangleName(CU, GCovFileType::GCNO), EC, sys::fs::F_None);
+    raw_fd_ostream out(mangleName(CU, GCovFileType::GCNO), EC,
+                       sys::fs::OF_None);
     if (EC) {
       Ctx->emitError(Twine("failed to open coverage notes file for writing: ") +
                      EC.message());

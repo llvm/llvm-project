@@ -1043,8 +1043,14 @@ def fsanitize_minimal_runtime : Flag<["-"], "fsanitize-minimal-runtime">,
                                         Group<f_clang_Group>;
 def fno_sanitize_minimal_runtime : Flag<["-"], "fno-sanitize-minimal-runtime">,
                                         Group<f_clang_Group>;
+def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
+                           Group<f_clang_Group>;
+def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
+                              Group<f_clang_Group>;
 def fsanitize_link_cxx_runtime : Flag<["-"], "fsanitize-link-c++-runtime">,
                                  Group<f_clang_Group>;
+def fno_sanitize_link_cxx_runtime : Flag<["-"], "fno-sanitize-link-c++-runtime">,
+                                    Group<f_clang_Group>;
 def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
                               Group<f_clang_Group>,
                               HelpText<"Enable control flow integrity (CFI) checks for cross-DSO calls.">;
@@ -2631,7 +2637,7 @@ def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
     const char *Values =
     #define LANGSTANDARD(id, name, lang, desc, features) name ","
     #define LANGSTANDARD_ALIAS(id, alias) alias ","
-    #include "clang/Frontend/LangStandards.def"
+    #include "clang/Basic/LangStandards.def"
     ;
   }]>;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,

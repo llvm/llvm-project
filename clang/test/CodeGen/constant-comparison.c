@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - 2>&1 | not grep warning
-// RUN: %clang_cc1 -emit-llvm %s -o - | grep @b | count 1
+// RUN: %clang_cc1 -fno-ident -emit-llvm %s -o - | grep @b | count 1
 
 int a, b;
 int *c1 = 1 < 2 ? &a : &b;

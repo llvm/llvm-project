@@ -1179,9 +1179,9 @@ define <2 x i65> @test_63(<2 x i64> %t) {
   ret <2 x i65> %b
 }
 
-define i64 @test_64(i32 %t) {
-; CHECK-LABEL: @test_64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 %t, 8
+define i64 @shl_zext(i32 %t) {
+; CHECK-LABEL: @shl_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[T:%.*]], 8
 ; CHECK-NEXT:    [[SHL:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[SHL]]
 ;
@@ -1191,9 +1191,28 @@ define i64 @test_64(i32 %t) {
   ret i64 %shl
 }
 
-define <2 x i64> @test_64_splat_vec(<2 x i32> %t) {
-; CHECK-LABEL: @test_64_splat_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> %t, <i32 8, i32 8>
+declare void @use(i64)
+
+define i64 @shl_zext_extra_use(i32 %t) {
+; CHECK-LABEL: @shl_zext_extra_use(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[T:%.*]], 16777215
+; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[AND]] to i64
+; CHECK-NEXT:    call void @use(i64 [[EXT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[T]], 8
+; CHECK-NEXT:    [[SHL:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[SHL]]
+;
+  %and = and i32 %t, 16777215
+  %ext = zext i32 %and to i64
+  call void @use(i64 %ext)
+  %shl = shl i64 %ext, 8
+  ret i64 %shl
+}
+
+
+define <2 x i64> @shl_zext_splat_vec(<2 x i32> %t) {
+; CHECK-LABEL: @shl_zext_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[T:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[SHL:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[SHL]]
 ;

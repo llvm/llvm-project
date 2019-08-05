@@ -133,6 +133,9 @@ private:
   /// Language Server client.
   bool ShutdownRequestReceived = false;
 
+  /// Used to indicate the ClangdLSPServer is being destroyed.
+  std::atomic<bool> IsBeingDestroyed = {false};
+
   std::mutex FixItsMutex;
   typedef std::map<clangd::Diagnostic, std::vector<Fix>, LSPDiagnosticCompare>
       DiagnosticToReplacementMap;
@@ -146,9 +149,29 @@ private:
   clangd::Transport &Transp;
   class MessageHandler;
   std::unique_ptr<MessageHandler> MsgHandler;
-  std::atomic<int> NextCallID = {0};
   std::mutex TranspWriter;
-  void call(StringRef Method, llvm::json::Value Params);
+
+  template <typename Response>
+  void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
+    // Wrap the callback with LSP conversion and error-handling.
+    auto HandleReply = [](decltype(CB) CB,
+                          llvm::Expected<llvm::json::Value> RawResponse) {
+      Response Rsp;
+      if (!RawResponse) {
+        CB(RawResponse.takeError());
+      } else if (fromJSON(*RawResponse, Rsp)) {
+        CB(std::move(Rsp));
+      } else {
+        elog("Failed to decode {0} response", *RawResponse);
+        CB(llvm::make_error<LSPError>("failed to decode reponse",
+                                      ErrorCode::InvalidParams));
+      }
+    };
+    callRaw(Method, std::move(Params),
+            Bind(std::move(HandleReply), std::move(CB)));
+  }
+  void callRaw(StringRef Method, llvm::json::Value Params,
+               Callback<llvm::json::Value> CB);
   void notify(StringRef Method, llvm::json::Value Params);
 
   const FileSystemProvider &FSProvider;

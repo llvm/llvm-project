@@ -79,7 +79,7 @@ bool BugDriver::writeProgramToFile(int FD, const Module &M) const {
 bool BugDriver::writeProgramToFile(const std::string &Filename,
                                    const Module &M) const {
   std::error_code EC;
-  ToolOutputFile Out(Filename, EC, sys::fs::F_None);
+  ToolOutputFile Out(Filename, EC, sys::fs::OF_None);
   if (!EC)
     return writeProgramToFileAux(Out, M);
   return true;

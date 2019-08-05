@@ -115,8 +115,8 @@ std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
     if (isVector())
-      return "v" + utostr(getVectorNumElements()) +
-             getVectorElementType().getEVTString();
+      return (isScalableVector() ? "nxv" : "v") + utostr(getVectorNumElements())
+             + getVectorElementType().getEVTString();
     if (isInteger())
       return "i" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
@@ -205,6 +205,48 @@ std::string EVT::getEVTString() const {
   case MVT::v2f64:   return "v2f64";
   case MVT::v4f64:   return "v4f64";
   case MVT::v8f64:   return "v8f64";
+  case MVT::nxv1i1:  return "nxv1i1";
+  case MVT::nxv2i1:  return "nxv2i1";
+  case MVT::nxv4i1:  return "nxv4i1";
+  case MVT::nxv8i1:  return "nxv8i1";
+  case MVT::nxv16i1: return "nxv16i1";
+  case MVT::nxv32i1: return "nxv32i1";
+  case MVT::nxv1i8:  return "nxv1i8";
+  case MVT::nxv2i8:  return "nxv2i8";
+  case MVT::nxv4i8:  return "nxv4i8";
+  case MVT::nxv8i8:  return "nxv8i8";
+  case MVT::nxv16i8: return "nxv16i8";
+  case MVT::nxv32i8: return "nxv32i8";
+  case MVT::nxv1i16: return "nxv1i16";
+  case MVT::nxv2i16: return "nxv2i16";
+  case MVT::nxv4i16: return "nxv4i16";
+  case MVT::nxv8i16: return "nxv8i16";
+  case MVT::nxv16i16:return "nxv16i16";
+  case MVT::nxv32i16:return "nxv32i16";
+  case MVT::nxv1i32: return "nxv1i32";
+  case MVT::nxv2i32: return "nxv2i32";
+  case MVT::nxv4i32: return "nxv4i32";
+  case MVT::nxv8i32: return "nxv8i32";
+  case MVT::nxv16i32:return "nxv16i32";
+  case MVT::nxv32i32:return "nxv32i32";
+  case MVT::nxv1i64: return "nxv1i64";
+  case MVT::nxv2i64: return "nxv2i64";
+  case MVT::nxv4i64: return "nxv4i64";
+  case MVT::nxv8i64: return "nxv8i64";
+  case MVT::nxv16i64:return "nxv16i64";
+  case MVT::nxv32i64:return "nxv32i64";
+  case MVT::nxv2f16: return "nxv2f16";
+  case MVT::nxv4f16: return "nxv4f16";
+  case MVT::nxv8f16: return "nxv8f16";
+  case MVT::nxv1f32: return "nxv1f32";
+  case MVT::nxv2f32: return "nxv2f32";
+  case MVT::nxv4f32: return "nxv4f32";
+  case MVT::nxv8f32: return "nxv8f32";
+  case MVT::nxv16f32:return "nxv16f32";
+  case MVT::nxv1f64: return "nxv1f64";
+  case MVT::nxv2f64: return "nxv2f64";
+  case MVT::nxv4f64: return "nxv4f64";
+  case MVT::nxv8f64: return "nxv8f64";
   case MVT::Metadata:return "Metadata";
   case MVT::Untyped: return "Untyped";
   case MVT::exnref : return "exnref";
@@ -302,8 +344,92 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v2f64:   return VectorType::get(Type::getDoubleTy(Context), 2);
   case MVT::v4f64:   return VectorType::get(Type::getDoubleTy(Context), 4);
   case MVT::v8f64:   return VectorType::get(Type::getDoubleTy(Context), 8);
+  case MVT::nxv1i1:  
+    return VectorType::get(Type::getInt1Ty(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2i1:  
+    return VectorType::get(Type::getInt1Ty(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4i1:  
+    return VectorType::get(Type::getInt1Ty(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8i1:  
+    return VectorType::get(Type::getInt1Ty(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16i1: 
+    return VectorType::get(Type::getInt1Ty(Context), 16, /*Scalable=*/ true);
+  case MVT::nxv32i1: 
+    return VectorType::get(Type::getInt1Ty(Context), 32, /*Scalable=*/ true);
+  case MVT::nxv1i8:  
+    return VectorType::get(Type::getInt8Ty(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2i8:  
+    return VectorType::get(Type::getInt8Ty(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4i8:  
+    return VectorType::get(Type::getInt8Ty(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8i8:  
+    return VectorType::get(Type::getInt8Ty(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16i8: 
+    return VectorType::get(Type::getInt8Ty(Context), 16, /*Scalable=*/ true);
+  case MVT::nxv32i8: 
+    return VectorType::get(Type::getInt8Ty(Context), 32, /*Scalable=*/ true);
+  case MVT::nxv1i16: 
+    return VectorType::get(Type::getInt16Ty(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2i16: 
+    return VectorType::get(Type::getInt16Ty(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4i16: 
+    return VectorType::get(Type::getInt16Ty(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8i16: 
+    return VectorType::get(Type::getInt16Ty(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16i16:
+    return VectorType::get(Type::getInt16Ty(Context), 16, /*Scalable=*/ true);
+  case MVT::nxv32i16:
+    return VectorType::get(Type::getInt16Ty(Context), 32, /*Scalable=*/ true);
+  case MVT::nxv1i32: 
+    return VectorType::get(Type::getInt32Ty(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2i32: 
+    return VectorType::get(Type::getInt32Ty(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4i32: 
+    return VectorType::get(Type::getInt32Ty(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8i32: 
+    return VectorType::get(Type::getInt32Ty(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16i32:
+    return VectorType::get(Type::getInt32Ty(Context), 16,/*Scalable=*/ true);
+  case MVT::nxv32i32:
+    return VectorType::get(Type::getInt32Ty(Context), 32,/*Scalable=*/ true);
+  case MVT::nxv1i64: 
+    return VectorType::get(Type::getInt64Ty(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2i64: 
+    return VectorType::get(Type::getInt64Ty(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4i64: 
+    return VectorType::get(Type::getInt64Ty(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8i64: 
+    return VectorType::get(Type::getInt64Ty(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16i64:
+    return VectorType::get(Type::getInt64Ty(Context), 16, /*Scalable=*/ true);
+  case MVT::nxv32i64:
+    return VectorType::get(Type::getInt64Ty(Context), 32, /*Scalable=*/ true);
+  case MVT::nxv2f16: 
+    return VectorType::get(Type::getHalfTy(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4f16: 
+    return VectorType::get(Type::getHalfTy(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8f16: 
+    return VectorType::get(Type::getHalfTy(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv1f32: 
+    return VectorType::get(Type::getFloatTy(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2f32: 
+    return VectorType::get(Type::getFloatTy(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4f32: 
+    return VectorType::get(Type::getFloatTy(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8f32: 
+    return VectorType::get(Type::getFloatTy(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv16f32:
+    return VectorType::get(Type::getFloatTy(Context), 16, /*Scalable=*/ true);
+  case MVT::nxv1f64: 
+    return VectorType::get(Type::getDoubleTy(Context), 1, /*Scalable=*/ true);
+  case MVT::nxv2f64: 
+    return VectorType::get(Type::getDoubleTy(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4f64: 
+    return VectorType::get(Type::getDoubleTy(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8f64: 
+    return VectorType::get(Type::getDoubleTy(Context), 8, /*Scalable=*/ true);
   case MVT::Metadata: return Type::getMetadataTy(Context);
- }
+  }
 }
 
 /// Return the value type corresponding to the specified type.  This returns all
@@ -329,7 +455,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::VectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     return getVectorVT(
-      getVT(VTy->getElementType(), false), VTy->getNumElements());
+      getVT(VTy->getElementType(), /*HandleUnknown=*/ false),
+            VTy->getElementCount());
   }
   }
 }
@@ -345,8 +472,9 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::VectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
-    return getVectorVT(Ty->getContext(), getEVT(VTy->getElementType(), false),
-                       VTy->getNumElements());
+    return getVectorVT(Ty->getContext(),
+                       getEVT(VTy->getElementType(), /*HandleUnknown=*/ false),
+                       VTy->getElementCount());
   }
   }
 }

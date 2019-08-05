@@ -359,7 +359,9 @@ opt<OffsetEncoding> ForceOffsetEncoding{
     values(
         clEnumValN(OffsetEncoding::UTF8, "utf-8", "Offsets are in UTF-8 bytes"),
         clEnumValN(OffsetEncoding::UTF16, "utf-16",
-                   "Offsets are in UTF-16 code units")),
+                   "Offsets are in UTF-16 code units"),
+        clEnumValN(OffsetEncoding::UTF32, "utf-32",
+                   "Offsets are in unicode codepoints")),
     init(OffsetEncoding::UnsupportedEncoding),
 };
 

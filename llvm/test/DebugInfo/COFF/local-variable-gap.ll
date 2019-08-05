@@ -62,7 +62,7 @@
 ; ASM:         .long   116                     # TypeIndex
 ; ASM:         .short  0                       # Flags
 ; ASM:         .asciz  "p"
-; ASM:         .cv_def_range    [[p_b1]] [[p_e1]] [[p_b2]] .Lfunc_end0, "A\021\027\000\000\000"
+; ASM:         .cv_def_range    [[p_b1]] [[p_e1]] [[p_b2]] .Lfunc_end0, reg, 23
 ; ASM:         .short  2                       # Record length
 ; ASM:         .short  4431                    # Record kind: S_PROC_ID_END
 

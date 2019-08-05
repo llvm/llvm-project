@@ -681,11 +681,13 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
   unsigned Align = 0;
   if (auto *GO = dyn_cast<GlobalObject>(this)) {
     if (isa<Function>(GO)) {
+      MaybeAlign FunctionPtrAlign = DL.getFunctionPtrAlign();
+      unsigned Align = FunctionPtrAlign ? FunctionPtrAlign->value() : 0;
       switch (DL.getFunctionPtrAlignType()) {
       case DataLayout::FunctionPtrAlignType::Independent:
-        return DL.getFunctionPtrAlign();
+        return Align;
       case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(DL.getFunctionPtrAlign(), GO->getAlignment());
+        return std::max(Align, GO->getAlignment());
       }
     }
     Align = GO->getAlignment();

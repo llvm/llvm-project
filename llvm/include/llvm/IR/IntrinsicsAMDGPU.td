@@ -837,9 +837,6 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   defm int_amdgcn_image_atomic_and : AMDGPUImageDimAtomic<"ATOMIC_AND">;
   defm int_amdgcn_image_atomic_or : AMDGPUImageDimAtomic<"ATOMIC_OR">;
   defm int_amdgcn_image_atomic_xor : AMDGPUImageDimAtomic<"ATOMIC_XOR">;
-
-  // TODO: INC/DEC are weird: they seem to have a vdata argument in hardware,
-  //       even though it clearly shouldn't be needed
   defm int_amdgcn_image_atomic_inc : AMDGPUImageDimAtomic<"ATOMIC_INC">;
   defm int_amdgcn_image_atomic_dec : AMDGPUImageDimAtomic<"ATOMIC_DEC">;
 
@@ -963,6 +960,8 @@ def int_amdgcn_raw_buffer_atomic_umax : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_and : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_or : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_inc : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_dec : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -994,6 +993,8 @@ def int_amdgcn_struct_buffer_atomic_umax : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_and : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_or : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_xor : AMDGPUStructBufferAtomic;
+def int_amdgcn_struct_buffer_atomic_inc : AMDGPUStructBufferAtomic;
+def int_amdgcn_struct_buffer_atomic_dec : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)

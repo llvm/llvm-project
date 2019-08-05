@@ -130,7 +130,7 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
 ASM_FUNCTION_WASM32_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
     r'(?P<body>.*?)\n'
-    r'.Lfunc_end[0-9]+:\n',
+    r'^\s*(\.Lfunc_end[0-9]+:\n|end_function)',
     flags=(re.M | re.S))
 
 

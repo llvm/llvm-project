@@ -46,7 +46,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
-    SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero;
+    SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
+    SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
@@ -824,9 +825,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     SafeStackRuntime = !TC.getTriple().isOSFuchsia();
   }
 
+  LinkRuntimes =
+      Args.hasFlag(options::OPT_fsanitize_link_runtime,
+                   options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
+
   // Parse -link-cxx-sanitizer flag.
-  LinkCXXRuntimes =
-      Args.hasArg(options::OPT_fsanitize_link_cxx_runtime) || D.CCCIsCXX();
+  LinkCXXRuntimes = Args.hasArg(options::OPT_fsanitize_link_cxx_runtime,
+                                options::OPT_fno_sanitize_link_cxx_runtime,
+                                LinkCXXRuntimes) ||
+                    D.CCCIsCXX();
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
