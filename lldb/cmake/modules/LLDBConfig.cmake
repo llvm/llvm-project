@@ -1,34 +1,6 @@
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
 
-# BEGIN Swift Mods
-# We want this in a cmake cache
-list(APPEND swift_lldb_framework_tools
-  darwin-debug
-  lldb-argdumper
-  lldb-server
-  repl_swift
-)
-
-set(LLVM_EXTERNALIZE_DEBUGINFO OFF CACHE BOOL "" FORCE)
-set(LLVM_TARGETS_TO_BUILD      X86;ARM;AArch64 CACHE STRING "" FORCE)
-
-set(LLDB_VERSION_MAJOR   992 CACHE STRING "" FORCE)
-set(LLDB_VERSION_MINOR   8   CACHE STRING "" FORCE)
-set(LLDB_VERSION_PATCH   1   CACHE STRING "" FORCE)
-set(LLDB_VERSION_SUFFIX  svn CACHE STRING "" FORCE)
-
-if(APPLE)
-  set(LLDB_USE_SYSTEM_DEBUGSERVER ON CACHE BOOL "")
-  set(LLDB_BUILD_FRAMEWORK ON CACHE BOOL "")
-  set(LLDB_FRAMEWORK_TOOLS ${swift_lldb_framework_tools} CACHE STRING "")
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(LLDB_ALLOW_STATIC_BINDINGS ON CACHE BOOL "" FORCE)
-endif()
-# END Swift Mods
-
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(LLDB_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
