@@ -6,7 +6,7 @@
 # RUN: llvm-readelf -x .got2 %t | FileCheck --check-prefix=HEX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RELOC:      .rela.plt {
+# RELOC:      .rela.dyn {
 # RELOC-NEXT:   0x10020004 R_PPC_IRELATIVE - 0x10010000
 # RELOC-NEXT: }
 

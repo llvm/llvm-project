@@ -179,8 +179,8 @@ public:
     FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
 
     std::error_code EC;
-    m_stream_up = llvm::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
-                                                    sys::fs::OpenFlags::F_Text);
+    m_stream_up = llvm::make_unique<raw_fd_ostream>(
+        history_file.GetPath(), EC, sys::fs::OpenFlags::OF_Text);
     return m_stream_up.get();
   }
 

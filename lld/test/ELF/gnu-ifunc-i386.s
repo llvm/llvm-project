@@ -7,7 +7,7 @@
 // CHECK:      Sections [
 // CHECK:       Section {
 // CHECK:       Index: 1
-// CHECK-NEXT:  Name: .rel.plt
+// CHECK-NEXT:  Name: .rel.dyn
 // CHECK-NEXT:  Type: SHT_REL
 // CHECK-NEXT:  Flags [
 // CHECK-NEXT:    SHF_ALLOC
@@ -21,7 +21,7 @@
 // CHECK-NEXT:  EntrySize: 8
 // CHECK-NEXT: }
 // CHECK:     Relocations [
-// CHECK-NEXT:   Section ({{.*}}) .rel.plt {
+// CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
 // CHECK-NEXT:     0x402000 R_386_IRELATIVE
 // CHECK-NEXT:     0x402004 R_386_IRELATIVE
 // CHECK-NEXT:   }
@@ -46,7 +46,7 @@
 // CHECK-NEXT:   Other [
 // CHECK-NEXT:     STV_HIDDEN
 // CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .rel.plt
+// CHECK-NEXT:   Section: .rel.dyn
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: __rel_iplt_start
@@ -57,7 +57,7 @@
 // CHECK-NEXT:   Other [
 // CHECK-NEXT:     STV_HIDDEN
 // CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .rel.plt
+// CHECK-NEXT:   Section: .rel.dyn
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: _start

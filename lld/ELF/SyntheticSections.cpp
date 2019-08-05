@@ -1218,6 +1218,25 @@ void DynamicSection<ELFT>::addSym(int32_t tag, Symbol *sym) {
   entries.push_back({tag, [=] { return sym->getVA(); }});
 }
 
+// The output section .rela.dyn may include these synthetic sections:
+//
+// - part.relaDyn
+// - in.relaIplt: this is included if in.relaIplt is named .rela.dyn
+// - in.relaPlt: this is included if a linker script places .rela.plt inside
+//   .rela.dyn
+//
+// DT_RELASZ is the total size of the included sections.
+static std::function<uint64_t()> addRelaSz(RelocationBaseSection *relaDyn) {
+  return [=]() {
+    size_t size = relaDyn->getSize();
+    if (in.relaIplt->getParent() == relaDyn->getParent())
+      size += in.relaIplt->getSize();
+    if (in.relaPlt->getParent() == relaDyn->getParent())
+      size += in.relaPlt->getSize();
+    return size;
+  };
+}
+
 // A Linker script may assign the RELA relocation sections to the same
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
@@ -1306,9 +1325,11 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (OutputSection *sec = part.dynStrTab->getParent())
     this->link = sec->sectionIndex;
 
-  if (part.relaDyn->isNeeded()) {
+  if (part.relaDyn->isNeeded() ||
+      (in.relaIplt->isNeeded() &&
+       part.relaDyn->getParent() == in.relaIplt->getParent())) {
     addInSec(part.relaDyn->dynamicTag, part.relaDyn);
-    addSize(part.relaDyn->sizeDynamicTag, part.relaDyn->getParent());
+    entries.push_back({part.relaDyn->sizeDynamicTag, addRelaSz(part.relaDyn)});
 
     bool isRela = config->isRela;
     addInt(isRela ? DT_RELAENT : DT_RELENT,
