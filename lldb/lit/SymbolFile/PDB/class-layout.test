@@ -13,7 +13,7 @@ RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=FRI
 RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=CLASS %s
 
 CHECK: Module [[MOD:.*]]
-CHECK: {{^[0-9A-F]+}}: SymbolVendor pdb ([[MOD]])
+CHECK: SymbolFile pdb ([[MOD]])
 CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\ClassLayoutTest.cpp'
 
 ENUM:  name = "Enum", size = 4,  decl = ClassLayoutTest.cpp:5
