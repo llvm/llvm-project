@@ -49,7 +49,7 @@ if(APPLE)
 
   if(LLDB_BUILD_FRAMEWORK)
     get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-    set(lldb_buildtree {framework_build_dir}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/Swift/macosx)
+    set(lldb_buildtree ${framework_build_dir}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/Swift/macosx)
     set(lldb_installtree Swift/macosx) # repl_swift is installed to framework Resources
   endif()
 
