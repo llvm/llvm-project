@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/BackendUtil.h"
@@ -1014,7 +1015,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
 void CodeGenAction::ExecuteAction() {
   // If this is an IR file, we have to treat it specially.
-  if (getCurrentFileKind().getLanguage() == InputKind::LLVM_IR) {
+  if (getCurrentFileKind().getLanguage() == Language::LLVM_IR) {
     BackendAction BA = static_cast<BackendAction>(Act);
     CompilerInstance &CI = getCompilerInstance();
     std::unique_ptr<raw_pwrite_stream> OS =

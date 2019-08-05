@@ -19,7 +19,7 @@ config.substitutions.append( ("%clang_dfsan ", build_invocation(clang_dfsan_cfla
 config.substitutions.append( ("%clangxx_dfsan ", build_invocation(clang_dfsan_cxxflags)) )
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 # DataFlowSanitizer tests are currently supported on Linux only.
 if config.host_os not in ['Linux']:

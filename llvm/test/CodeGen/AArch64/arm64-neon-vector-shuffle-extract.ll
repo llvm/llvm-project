@@ -31,3 +31,29 @@ define <4 x i32> @widen_shuffles_reduced(<3 x i32> %x, <3 x i32> %y) {
   %s3 = shufflevector <3 x i32> %y, <3 x i32> %x, <4 x i32> <i32 1, i32 4, i32 3, i32 0>
   ret <4 x i32> %s3
 }
+
+define void @zip_mask_check(<3 x float>* %p1, <3 x float>* %p2, i32* %p3) {
+; CHECK-LABEL: zip_mask_check:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    str s0, [x2]
+; CHECK-NEXT:    ret
+  %tmp3 = load <3 x float>, <3 x float>* %p1, align 16
+  %tmp4 = load <3 x float>, <3 x float>* %p2, align 4
+  %tmp5 = shufflevector <3 x float> %tmp3, <3 x float> %tmp4, <4 x i32> <i32 1, i32 4, i32 undef, i32 undef>
+  %tmp6 = shufflevector <4 x float> %tmp5, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 5, i32 undef>
+  %tmp7 = shufflevector <4 x float> %tmp6, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+  %tmp8 = call <4 x float> @llvm.fma.v4f32(<4 x float> %tmp7, <4 x float> undef, <4 x float> undef)
+  %tmp9 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> %tmp8)
+  %tmp10 = shufflevector <4 x float> %tmp9, <4 x float> undef, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp11 = bitcast <16 x float> %tmp10 to <16 x i32>
+  %tmp12 = extractelement <16 x i32> %tmp11, i32 0
+  store i32 %tmp12, i32* %p3, align 4
+  ret void
+}
+
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #1

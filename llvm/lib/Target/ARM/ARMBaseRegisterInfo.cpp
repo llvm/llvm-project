@@ -174,6 +174,12 @@ ARMBaseRegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,
                               : CSR_AAPCS_ThisReturn_RegMask;
 }
 
+ArrayRef<MCPhysReg> ARMBaseRegisterInfo::getIntraCallClobberedRegs(
+    const MachineFunction *MF) const {
+  static const MCPhysReg IntraCallClobberedRegs[] = {ARM::R12};
+  return ArrayRef<MCPhysReg>(IntraCallClobberedRegs);
+}
+
 BitVector ARMBaseRegisterInfo::
 getReservedRegs(const MachineFunction &MF) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();

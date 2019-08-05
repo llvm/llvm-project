@@ -65,7 +65,8 @@
 
   attributes #0 = { convergent nounwind }
 
-  define amdgpu_kernel void @merge_mmos() { ret void }
+  define amdgpu_kernel void @merge_mmos(i32 addrspace(1)* %ptr_addr1) { ret void }
+
 ...
 ---
 name:            mem_dependency
@@ -170,6 +171,8 @@ body:             |
 # CHECK: S_BUFFER_LOAD_DWORDX2_IMM %0, 0, 0, 0 :: (dereferenceable invariant load 8, align 4)
 # CHECK: BUFFER_LOAD_DWORDX2_OFFSET %0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 8, align 4)
 # CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 4)
+# CHECK: BUFFER_LOAD_DWORDX2_OFFSET %0, 0, 64, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 8 from %ir.ptr_addr1 + 64, align 4
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 64, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into %ir.ptr_addr1 + 64, align 4
 name: merge_mmos
 tracksRegLiveness: true
 body: |
@@ -183,6 +186,11 @@ body: |
     %4:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %0, 0, 4, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4)
     BUFFER_STORE_DWORD_OFFSET_exact %3, %0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4)
     BUFFER_STORE_DWORD_OFFSET_exact %4, %0, 0, 4, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4)
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %0, 0, 64, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from %ir.ptr_addr1 + 64)
+    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %0, 0, 68, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from %ir.ptr_addr1 + 68)
+    BUFFER_STORE_DWORD_OFFSET_exact %5, %0, 0, 64, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into %ir.ptr_addr1 + 64)
+    BUFFER_STORE_DWORD_OFFSET_exact %6, %0, 0, 68, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into %ir.ptr_addr1 + 68)
+
     S_ENDPGM 0
 
 ...

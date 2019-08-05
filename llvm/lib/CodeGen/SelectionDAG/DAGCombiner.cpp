@@ -7619,7 +7619,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // We convert trunc/ext to opposing shifts in IR, but casts may be cheaper.
   //   sra (add (shl X, N1C), AddC), N1C -->
   //   sext (add (trunc X to (width - N1C)), AddC')
-  if (!LegalOperations && N0.getOpcode() == ISD::ADD && N0.hasOneUse() && N1C &&
+  if (!LegalTypes && N0.getOpcode() == ISD::ADD && N0.hasOneUse() && N1C &&
       N0.getOperand(0).getOpcode() == ISD::SHL &&
       N0.getOperand(0).getOperand(1) == N1 && N0.getOperand(0).hasOneUse()) {
     if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
@@ -7631,7 +7631,12 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
       EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt);
       if (VT.isVector())
         TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorNumElements());
-      if (isTypeLegal(TruncVT) && TLI.isTruncateFree(VT, TruncVT)) {
+
+      // TODO: The simple type check probably belongs in the default hook
+      //       implementation and/or target-specific overrides (because
+      //       non-simple types likely require masking when legalized), but that
+      //       restriction may conflict with other transforms.
+      if (TruncVT.isSimple() && TLI.isTruncateFree(VT, TruncVT)) {
         SDLoc DL(N);
         SDValue Trunc = DAG.getZExtOrTrunc(Shl.getOperand(0), DL, TruncVT);
         SDValue ShiftC = DAG.getConstant(AddC->getAPIntValue().lshr(ShiftAmt).

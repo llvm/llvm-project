@@ -145,7 +145,7 @@ void elf::writeMapFile() {
 
   // Open a map file for writing.
   std::error_code ec;
-  raw_fd_ostream os(config->mapFile, ec, sys::fs::F_None);
+  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
   if (ec) {
     error("cannot open " + config->mapFile + ": " + ec.message());
     return;

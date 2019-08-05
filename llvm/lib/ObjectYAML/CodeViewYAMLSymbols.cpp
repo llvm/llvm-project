@@ -391,7 +391,7 @@ template <> void SymbolRecordImpl<DefRangeRegisterSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<DefRangeFramePointerRelSym>::map(IO &IO) {
-  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Offset", Symbol.Hdr.Offset);
   IO.mapRequired("Range", Symbol.Range);
   IO.mapRequired("Gaps", Symbol.Gaps);
 }

@@ -362,7 +362,7 @@ define <4 x float> @test25(<4 x float> %a0) {
 define <4 x i8> @test_crash(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: test_crash:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
   %shuf1 = shufflevector <4 x i8> %a, <4 x i8> zeroinitializer, <4 x i32><i32 4, i32 4, i32 2, i32 3>
   %shuf2 = shufflevector <4 x i8> %b, <4 x i8> zeroinitializer, <4 x i32><i32 0, i32 1, i32 4, i32 4>

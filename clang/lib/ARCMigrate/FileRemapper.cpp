@@ -121,7 +121,7 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
 
   std::error_code EC;
   std::string infoFile = outputPath;
-  llvm::raw_fd_ostream infoOut(infoFile, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream infoOut(infoFile, EC, llvm::sys::fs::OF_None);
   if (EC)
     return report(EC.message(), Diag);
 
@@ -177,7 +177,7 @@ bool FileRemapper::overwriteOriginal(DiagnosticsEngine &Diag,
                     Diag);
 
     std::error_code EC;
-    llvm::raw_fd_ostream Out(origFE->getName(), EC, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream Out(origFE->getName(), EC, llvm::sys::fs::OF_None);
     if (EC)
       return report(EC.message(), Diag);
 

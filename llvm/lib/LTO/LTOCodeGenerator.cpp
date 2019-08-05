@@ -229,7 +229,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
   // create output file
   std::error_code EC;
-  ToolOutputFile Out(Path, EC, sys::fs::F_None);
+  ToolOutputFile Out(Path, EC, sys::fs::OF_None);
   if (EC) {
     std::string ErrMsg = "could not open bitcode file for writing: ";
     ErrMsg += Path.str() + ": " + EC.message();

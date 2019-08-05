@@ -335,7 +335,7 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   // file can become large very quickly, so decoding into JSON to append a run
   // may be an expensive operation.
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::F_Text);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
   if (EC) {
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;

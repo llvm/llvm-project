@@ -44,10 +44,10 @@ FileHeader:
 ## is unable to dump such headers.
 
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: od -t x1 -v -j 0x3a -N 1 %t3 | FileCheck %s --check-prefix=NEWSIZE
-# RUN: od -t x1 -v -j 0x3a -N 1 %t2 | FileCheck %s --check-prefix=OLDSIZE
-# NEWSIZE: 0000072 01
-# OLDSIZE: 0000072 40
+# RUN: od -A n -t x1 -v -j 0x3a -N 1 %t3 | FileCheck %s --check-prefix=NEWSIZE
+# RUN: od -A n -t x1 -v -j 0x3a -N 1 %t2 | FileCheck %s --check-prefix=OLDSIZE
+# NEWSIZE: 01
+# OLDSIZE: 40
 
 --- !ELF
 FileHeader:

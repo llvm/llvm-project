@@ -1350,7 +1350,7 @@ void tools::AddOpenMPLinkerScript(const ToolChain &TC, Compilation &C,
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Lksf(LKS, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream Lksf(LKS, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
     C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
@@ -1458,7 +1458,7 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Lksf(LKS, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream Lksf(LKS, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
     C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();

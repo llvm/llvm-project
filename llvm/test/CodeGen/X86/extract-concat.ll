@@ -5,9 +5,14 @@ define void @foo(<4 x float> %in, <4 x i8>* %out) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    pextrb $8, %xmm0, %eax
+; CHECK-NEXT:    pextrb $4, %xmm0, %ecx
+; CHECK-NEXT:    pextrb $0, %xmm0, %edx
+; CHECK-NEXT:    movd %edx, %xmm0
+; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0
+; CHECK-NEXT:    pinsrb $2, %eax, %xmm0
 ; CHECK-NEXT:    movl $255, %eax
-; CHECK-NEXT:    pinsrd $3, %eax, %xmm0
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    pinsrb $3, %eax, %xmm0
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %t0 = fptosi <4 x float> %in to <4 x i32>

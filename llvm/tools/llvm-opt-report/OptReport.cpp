@@ -242,8 +242,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
 
 static bool writeReport(LocationInfoTy &LocationInfo) {
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFileName, EC,
-              llvm::sys::fs::F_Text);
+  llvm::raw_fd_ostream OS(OutputFileName, EC, llvm::sys::fs::OF_Text);
   if (EC) {
     WithColor::error() << "Can't open file " << OutputFileName << ": "
                        << EC.message() << "\n";

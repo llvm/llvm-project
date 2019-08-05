@@ -117,7 +117,7 @@ define <2 x i32*> @BITCAST1(<2 x i8*>* %p) nounwind {
 ; CHECK-LABEL: BITCAST1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
 entry:
   %G = load <2 x i8*>, <2 x i8*>* %p

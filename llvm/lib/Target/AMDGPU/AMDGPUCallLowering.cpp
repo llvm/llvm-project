@@ -555,10 +555,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (CC == CallingConv::AMDGPU_KERNEL)
     return lowerFormalArgumentsKernel(MIRBuilder, F, VRegs);
 
-  // AMDGPU_GS and AMDGP_HS are not supported yet.
-  if (CC == CallingConv::AMDGPU_GS || CC == CallingConv::AMDGPU_HS)
-    return false;
-
   const bool IsShader = AMDGPU::isShader(CC);
   const bool IsEntryFunc = AMDGPU::isEntryFunctionCC(CC);
 

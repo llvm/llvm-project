@@ -200,6 +200,78 @@ main_body:
   ret float %val
 }
 
+;CHECK-LABEL: {{^}}struct_buffer_load_f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_ushort [[VAL:v[0-9]+]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b16 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_f16(<4 x i32> inreg %rsrc, half addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store half %val, half addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_v2f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dword [[VAL:v[0-9]+]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b32 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_v2f16(<4 x i32> inreg %rsrc, <2 x half> addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store <2 x half> %val, <2 x half> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_v4f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b64 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_v4f16(<4 x i32> inreg %rsrc, <4 x half> addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store <4 x half> %val, <4 x half> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_i16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_ushort [[VAL:v[0-9]+]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b16 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_i16(<4 x i32> inreg %rsrc, i16 addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store i16 %val, i16 addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_v2i16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dword [[VAL:v[0-9]+]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b32 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_v2i16(<4 x i32> inreg %rsrc, <2 x i16> addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call <2 x i16> @llvm.amdgcn.struct.buffer.load.v2i16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store <2 x i16> %val, <2 x i16> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_v4i16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], v1, s[0:3], 0 idxen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b64 v0, [[VAL]]
+define amdgpu_ps void @struct_buffer_load_v4i16(<4 x i32> inreg %rsrc, <4 x i16> addrspace(3)* %ptr, i32 %idx) {
+main_body:
+  %val = call <4 x i16> @llvm.amdgcn.struct.buffer.load.v4i16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
+  store <4 x i16> %val, <4 x i16> addrspace(3)* %ptr
+  ret void
+}
+
 declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #0
@@ -208,6 +280,13 @@ declare <2 x i32> @llvm.amdgcn.struct.buffer.load.v2i32(<4 x i32>, i32, i32, i32
 declare <4 x i32> @llvm.amdgcn.struct.buffer.load.v4i32(<4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32) #0
+
+declare half @llvm.amdgcn.struct.buffer.load.f16(<4 x i32>, i32, i32, i32, i32) #0
+declare <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32>, i32, i32, i32, i32) #0
+declare <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32>, i32, i32, i32, i32) #0
+
 declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32) #0
+declare <2 x i16> @llvm.amdgcn.struct.buffer.load.v2i16(<4 x i32>, i32, i32, i32, i32) #0
+declare <4 x i16> @llvm.amdgcn.struct.buffer.load.v4i16(<4 x i32>, i32, i32, i32, i32) #0
 
 attributes #0 = { nounwind readonly }

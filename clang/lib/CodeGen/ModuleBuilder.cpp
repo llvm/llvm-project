@@ -232,6 +232,9 @@ namespace {
           if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Member)) {
             if (Ctx->DeclMustBeEmitted(DRD))
               Builder->EmitGlobal(DRD);
+          } else if (auto *DMD = dyn_cast<OMPDeclareMapperDecl>(Member)) {
+            if (Ctx->DeclMustBeEmitted(DMD))
+              Builder->EmitGlobal(DMD);
           }
         }
       }

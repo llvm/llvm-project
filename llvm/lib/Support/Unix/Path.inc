@@ -887,9 +887,9 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
   else if (Access == (FA_Read | FA_Write))
     Result |= O_RDWR;
 
-  // This is for compatibility with old code that assumed F_Append implied
+  // This is for compatibility with old code that assumed OF_Append implied
   // would open an existing file.  See Windows/Path.inc for a longer comment.
-  if (Flags & F_Append)
+  if (Flags & OF_Append)
     Disp = CD_OpenAlways;
 
   if (Disp == CD_CreateNew) {
@@ -904,7 +904,7 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
     // Nothing special, just don't add O_CREAT and we get these semantics.
   }
 
-  if (Flags & F_Append)
+  if (Flags & OF_Append)
     Result |= O_APPEND;
 
 #ifdef O_CLOEXEC

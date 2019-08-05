@@ -165,7 +165,7 @@ GlobalSSEC:                             # @GlobalSSEC
 	.short	1                       # Flags
 	.asciz	"argc"
 .Ltmp13:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\004\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 4
 	.short	.Ltmp15-.Ltmp14         # Record length
 .Ltmp14:
 	.short	4414                    # Record kind: S_LOCAL
@@ -173,7 +173,7 @@ GlobalSSEC:                             # @GlobalSSEC
 	.short	1                       # Flags
 	.asciz	"argv"
 .Ltmp15:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\b\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 8
 	.short	2                       # Record length
 	.short	4431                    # Record kind: S_PROC_ID_END
 .Ltmp7:

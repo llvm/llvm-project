@@ -569,7 +569,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = 4;
+    Info.align = Align(4);
     // atomic.notify instruction does not really load the memory specified with
     // this argument, but MachineMemOperand should either be load or store, so
     // we set this to a load.
@@ -583,7 +583,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = 4;
+    Info.align = Align(4);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
   case Intrinsic::wasm_atomic_wait_i64:
@@ -591,7 +591,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i64;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = 8;
+    Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
   default:

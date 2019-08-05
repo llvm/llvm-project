@@ -231,6 +231,8 @@ void SymbolFile::SectionFileAddressesChanged() {
 }
 
 void SymbolFile::Dump(Stream &s) {
+  s.Format("SymbolFile {0} ({1})\n", GetPluginName(),
+           GetMainObjectFile()->GetFileSpec());
   s.PutCString("Types:\n");
   m_type_list.Dump(&s, /*show_context*/ false);
   s.PutChar('\n');
@@ -244,6 +246,9 @@ void SymbolFile::Dump(Stream &s) {
     }
   }
   s.PutChar('\n');
+
+  if (Symtab *symtab = GetSymtab())
+    symtab->Dump(&s, nullptr, eSortOrderNone);
 }
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;

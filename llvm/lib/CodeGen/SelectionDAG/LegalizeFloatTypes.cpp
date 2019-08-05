@@ -2002,6 +2002,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
              dbgs() << "\n");
   SDValue R = SDValue();
 
+  // See if the target wants to custom expand this node.
+  if (CustomLowerNode(N, N->getValueType(ResNo), true)) {
+    LLVM_DEBUG(dbgs() << "Node has been custom expanded, done\n");
+    return;
+  }
+
   switch (N->getOpcode()) {
     // These opcodes cannot appear if promotion of FP16 is done in the backend
     // instead of Clang

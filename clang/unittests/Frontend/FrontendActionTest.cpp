@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -84,7 +85,7 @@ TEST(ASTFrontendAction, Sanity) {
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
   invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -104,7 +105,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
   invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -131,7 +132,7 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
       "};\n"
       "B<char> c() { return B<char>(); }\n").release());
   invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -177,7 +178,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
@@ -238,7 +239,7 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
                                             "int main() { foo(); }")
                      .release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", InputKind::CXX));
+      FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
@@ -270,7 +271,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
         "test.h",
         MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
     Invocation->getFrontendOpts().Inputs.push_back(
-        FrontendInputFile("test.h", InputKind::C));
+        FrontendInputFile("test.h", Language::C));
     Invocation->getFrontendOpts().OutputFile = StringRef(PCHFilename);
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";

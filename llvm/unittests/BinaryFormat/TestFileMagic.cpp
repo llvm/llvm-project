@@ -123,7 +123,7 @@ TEST_F(MagicTest, Magic) {
     SmallString<128> file_pathname(TestDirectory);
     llvm::sys::path::append(file_pathname, i->filename);
     std::error_code EC;
-    raw_fd_ostream file(file_pathname, EC, sys::fs::F_None);
+    raw_fd_ostream file(file_pathname, EC, sys::fs::OF_None);
     ASSERT_FALSE(file.has_error());
     StringRef magic(i->magic_str, i->magic_str_len);
     file << magic;

@@ -313,7 +313,12 @@ static MachineMemOperand *combineKnownAdjacentMMOs(MachineFunction &MF,
                                                    const MachineMemOperand *B) {
   unsigned MinOffset = std::min(A->getOffset(), B->getOffset());
   unsigned Size = A->getSize() + B->getSize();
-  return MF.getMachineMemOperand(A, MinOffset, Size);
+  // This function adds the offset parameter to the existing offset for A,
+  // so we pass 0 here as the offset and then manually set it to the correct
+  // value after the call.
+  MachineMemOperand *MMO = MF.getMachineMemOperand(A, 0, Size);
+  MMO->setOffset(MinOffset);
+  return MMO;
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI) {

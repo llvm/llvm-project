@@ -779,7 +779,7 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
   if (!OS) {
     std::error_code EC;
     auto NewOS = llvm::make_unique<raw_fd_ostream>(
-        StringRef(SecureLogFile), EC, sys::fs::F_Append | sys::fs::F_Text);
+        StringRef(SecureLogFile), EC, sys::fs::OF_Append | sys::fs::OF_Text);
     if (EC)
        return Error(IDLoc, Twine("can't open secure log file: ") +
                                SecureLogFile + " (" + EC.message() + ")");

@@ -6,6 +6,12 @@ def h : Flag<["-"], "h">, Alias<help>;
 def version : Flag<["-", "--"], "version">,
               HelpText<"Print the version and exit.">;
 
+def segalign
+    : MultiArg<["-", "--"], "segalign", 2>,
+      HelpText<"Specifies the segment alignment for the specified "
+               "architecture when creating a universal binary file. The "
+               "alignment is a hexadecimal number that is a power of 2.">;
+
 def action_group : OptionGroup<"action group">;
 
 def verify_arch

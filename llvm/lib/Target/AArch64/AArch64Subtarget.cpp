@@ -125,7 +125,9 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case NeoverseE1:
+    break;
   case NeoverseN1:
+    PrefFunctionAlignment = 4;
     break;
   case Saphira:
     MaxInterleaveFactor = 4;

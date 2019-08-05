@@ -359,7 +359,7 @@ subdirectories = %s
         root_entries = set(e[0] for e in entries)
         for _,_,deps,_ in entries:
             root_entries -= set(deps)
-        entries.append(('all', None, root_entries, True))
+        entries.append(('all', None, sorted(root_entries), True))
 
         entries.sort()
 

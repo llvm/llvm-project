@@ -58,25 +58,25 @@
 
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "p"
-; ASM:         .cv_def_range    .Lfunc_begin0 [[p_ecx_esi]], "A\021\022\000\000\000"
-; ASM:         .cv_def_range    [[p_ecx_esi]] [[func_end]], "A\021\027\000\000\000"
+; ASM:         .cv_def_range    .Lfunc_begin0 [[p_ecx_esi]], reg, 18
+; ASM:         .cv_def_range    [[p_ecx_esi]] [[func_end]], reg, 23
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
-; ASM:         .cv_def_range    [[after_getint]] [[after_je]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_getint]] [[after_je]], reg, 17
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "a"
-; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], reg, 17
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
-; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], reg, 17
 
 ; ASM:         .short  4429                    # Record kind: S_INLINESITE
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "a"
-; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], reg, 17
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
-; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], reg, 17
 ; ASM:         .short  4430                    # Record kind: S_INLINESITE_END
 
 ; OBJ: Subsection [

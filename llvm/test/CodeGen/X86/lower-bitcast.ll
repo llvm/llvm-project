@@ -9,9 +9,7 @@
 define double @test1(double %A) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test1:
@@ -68,9 +66,7 @@ define i64 @test4(i64 %A) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
 ;
@@ -108,9 +104,7 @@ define double @test5(double %A) {
 define double @test6(double %A) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-NEXT:    paddw {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test6:
@@ -147,9 +141,7 @@ define double @test7(double %A, double %B) {
 define double @test8(double %A) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    paddb {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test8:

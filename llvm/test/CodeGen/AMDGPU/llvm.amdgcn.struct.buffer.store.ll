@@ -121,16 +121,59 @@ main_body:
   ret void
 }
 
-;CHECK-LABEL: {{^}}struct_buffer_store_short:
+;CHECK-LABEL: {{^}}struct_buffer_store_f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: v_cvt_f16_f32_e32 v{{[0-9]}}, v{{[0-9]}}
+;CHECK-NEXT: buffer_store_short v{{[0-9]}}, v{{[0-9]}}, s[0:3], 0 idxen
+;CHECK-NEXT: s_endpgm
+define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1, i32 %index) {
+  %v2 = fptrunc float %v1 to half
+  call void @llvm.amdgcn.struct.buffer.store.f16(half %v2, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_v2f16:
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_dword v0, {{v[0-9]+}}, s[0:3], 0 idxen
+define amdgpu_ps void @struct_buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x half> %v1, i32 %index) {
+  call void @llvm.amdgcn.struct.buffer.store.v2f16(<2 x half> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_v4f16:
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_dwordx2 v[0:1], {{v[0-9]+}}, s[0:3], 0 idxen
+define amdgpu_ps void @struct_buffer_store_v4f16(<4 x i32> inreg %rsrc, <4 x half> %v1, i32 %index) {
+  call void @llvm.amdgcn.struct.buffer.store.v4f16(<4 x half> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_i16:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: v_cvt_u32_f32_e32 v{{[0-9]}}, v{{[0-9]}}
 ;CHECK-NEXT: buffer_store_short v{{[0-9]}}, v{{[0-9]}}, s[0:3], 0 idxen
 ;CHECK-NEXT: s_endpgm
-define amdgpu_ps void @struct_buffer_store_short(<4 x i32> inreg %rsrc, float %v1, i32 %index) {
+define amdgpu_ps void @struct_buffer_store_i16(<4 x i32> inreg %rsrc, float %v1, i32 %index) {
 main_body:
   %v2 = fptoui float %v1 to i32
   %v3 = trunc i32 %v2 to i16
   call void @llvm.amdgcn.struct.buffer.store.i16(i16 %v3, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_vif16:
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_dword v0, {{v[0-9]+}}, s[0:3], 0 idxen
+define amdgpu_ps void @struct_buffer_store_vif16(<4 x i32> inreg %rsrc, <2 x i16> %v1, i32 %index) {
+  call void @llvm.amdgcn.struct.buffer.store.v2i16(<2 x i16> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_v4i16:
+;CHECK-NEXT: %bb.
+;CHECK: buffer_store_dwordx2 v[0:1], {{v[0-9]+}}, s[0:3], 0 idxen
+define amdgpu_ps void @struct_buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16> %v1, i32 %index) {
+  call void @llvm.amdgcn.struct.buffer.store.v4i16(<4 x i16> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -143,6 +186,12 @@ declare void @llvm.amdgcn.struct.buffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #1
 declare void @llvm.amdgcn.struct.buffer.store.i8(i8, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.i16(i16, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.v2i16(<2 x i16>, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.v4i16(<4 x i16>, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.f16(half, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32) #0
+
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

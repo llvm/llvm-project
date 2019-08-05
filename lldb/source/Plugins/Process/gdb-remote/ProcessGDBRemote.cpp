@@ -179,8 +179,8 @@ public:
     FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
 
     std::error_code EC;
-    m_stream_up = llvm::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
-                                                    sys::fs::OpenFlags::F_Text);
+    m_stream_up = llvm::make_unique<raw_fd_ostream>(
+        history_file.GetPath(), EC, sys::fs::OpenFlags::OF_Text);
     return m_stream_up.get();
   }
 
@@ -1032,7 +1032,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
         if (retry_count >= max_retry_count)
           break;
 
-        usleep(100000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
     }
   }
@@ -3591,7 +3591,8 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
   // Sleep for a half a second to make sure our inferior process has time to
   // set its exit status before we set it incorrectly when both the debugserver
   // and the inferior process shut down.
-  usleep(500000);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
   // If our process hasn't yet exited, debugserver might have died. If the
   // process did exit, then we are reaping it.
   const StateType state = process_sp->GetState();

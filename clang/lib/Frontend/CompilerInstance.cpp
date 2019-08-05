@@ -13,6 +13,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
@@ -216,7 +217,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
     // Create the output stream.
     auto FileOS = llvm::make_unique<llvm::raw_fd_ostream>(
         DiagOpts->DiagnosticLogFile, EC,
-        llvm::sys::fs::F_Append | llvm::sys::fs::F_Text);
+        llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text);
     if (EC) {
       Diags.Report(diag::warn_fe_cc_log_diagnostics_failure)
           << DiagOpts->DiagnosticLogFile << EC.message();
@@ -775,7 +776,7 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
     OSFile = OutFile;
     OS.reset(new llvm::raw_fd_ostream(
         OSFile, Error,
-        (Binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text)));
+        (Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text)));
     if (Error)
       return nullptr;
   }
@@ -987,8 +988,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   StringRef StatsFile = getFrontendOpts().StatsFile;
   if (!StatsFile.empty()) {
     std::error_code EC;
-    auto StatS = llvm::make_unique<llvm::raw_fd_ostream>(StatsFile, EC,
-                                                         llvm::sys::fs::F_Text);
+    auto StatS = llvm::make_unique<llvm::raw_fd_ostream>(
+        StatsFile, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       getDiagnostics().Report(diag::warn_fe_unable_to_open_stats_file)
           << StatsFile << EC.message();
@@ -1002,14 +1003,14 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
 /// Determine the appropriate source input kind based on language
 /// options.
-static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
+static Language getLanguageFromOptions(const LangOptions &LangOpts) {
   if (LangOpts.OpenCL)
-    return InputKind::OpenCL;
+    return Language::OpenCL;
   if (LangOpts.CUDA)
-    return InputKind::CUDA;
+    return Language::CUDA;
   if (LangOpts.ObjC)
-    return LangOpts.CPlusPlus ? InputKind::ObjCXX : InputKind::ObjC;
-  return LangOpts.CPlusPlus ? InputKind::CXX : InputKind::C;
+    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 
 /// Compile a module file for the given module, using the options
@@ -1370,7 +1371,7 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
 /// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;
-  llvm::raw_fd_ostream Out(TimestampFile.str(), EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream Out(TimestampFile.str(), EC, llvm::sys::fs::OF_None);
 }
 
 /// Prune the module cache of modules that haven't been accessed in

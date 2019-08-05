@@ -46,7 +46,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
-    SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero;
+    SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
+    SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
