@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 #include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
@@ -38,14 +39,16 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
     asprintf(&result, "%s%s", PathToSDK, Path);
     return result;
   }
+  const std::string SysRoot(getDriver().SysRoot);
   const std::string InstalledDir(getDriver().getInstalledDir());
   const std::string UpmemDir(InstalledDir + "/../share/upmem");
-  if (getVFS().exists(UpmemDir)) {
+  if (!SysRoot.empty()) {
+    PathToSDK = strdup(SysRoot.c_str());
+  } else if (getVFS().exists(UpmemDir)) {
     PathToSDK = strdup((InstalledDir + "/../..").c_str());
-    asprintf(&result, "%s%s", PathToSDK, Path);
-    return result;
+  } else {
+    PathToSDK = strdup(Path);
   }
-  PathToSDK = strdup(getenv("UPMEM_HOME"));
   asprintf(&result, "%s%s", PathToSDK, Path);
   return result;
 }
