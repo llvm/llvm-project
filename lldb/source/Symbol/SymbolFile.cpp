@@ -244,6 +244,9 @@ void SymbolFile::Dump(Stream &s) {
     }
   }
   s.PutChar('\n');
+
+  if (Symtab *symtab = GetSymtab())
+    symtab->Dump(&s, nullptr, eSortOrderNone);
 }
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;

@@ -17,9 +17,9 @@ namespace clang {
 namespace driver {
 namespace tools {
 namespace fuchsia {
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("fuchsia::Linker", "ld.lld", TC) {}
+  Linker(const ToolChain &TC) : Tool("fuchsia::Linker", "ld.lld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

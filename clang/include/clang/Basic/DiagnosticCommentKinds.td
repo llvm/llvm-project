@@ -153,6 +153,12 @@ def warn_doc_deprecated_not_sync : Warning<
 def note_add_deprecation_attr : Note<
   "add a deprecation attribute to the declaration to silence this warning">;
 
+// inline contents commands
+
+def warn_doc_inline_contents_no_argument : Warning<
+  "'%select{\\|@}0%1' command does not have an argument">,
+  InGroup<Documentation>, DefaultIgnore;
+
 // verbatim block commands
 
 def warn_verbatim_block_end_without_start : Warning<

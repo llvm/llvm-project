@@ -51,11 +51,11 @@ void vector_literals_valid() {
   //CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %a
   int4 a = (int4)(1);
 
-  //CHECK: load <4 x i32>, <4 x i32>* %a, align 16
+  //CHECK: load <4 x i32>, <4 x i32>* %a
   //CHECK: shufflevector <4 x i32> %{{[0-9]+}}, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
   //CHECK: shufflevector <2 x i32> %{{[0-9]+}}, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   //CHECK: shufflevector <8 x i32> <i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, <8 x i32> %{{.+}}, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
-  //CHECK: load <4 x i32>, <4 x i32>* %a, align 16
+  //CHECK: load <4 x i32>, <4 x i32>* %a
   //CHECK: shufflevector <4 x i32> %{{[0-9]+}}, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   //CHECK: shufflevector <8 x i32> %{{.+}}, <8 x i32> %{{.+}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   int8 b = (int8)(1, 2, a.xy, a);

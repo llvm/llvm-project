@@ -1447,15 +1447,11 @@ static size_t DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list) {
 
 static void DumpModuleSymtab(CommandInterpreter &interpreter, Stream &strm,
                              Module *module, SortOrder sort_order) {
-  if (module) {
-    SymbolVendor *sym_vendor = module->GetSymbolVendor();
-    if (sym_vendor) {
-      Symtab *symtab = sym_vendor->GetSymtab();
-      if (symtab)
-        symtab->Dump(&strm, interpreter.GetExecutionContext().GetTargetPtr(),
-                     sort_order);
-    }
-  }
+  if (!module)
+    return;
+  if (Symtab *symtab = module->GetSymtab())
+    symtab->Dump(&strm, interpreter.GetExecutionContext().GetTargetPtr(),
+                 sort_order);
 }
 
 static void DumpModuleSections(CommandInterpreter &interpreter, Stream &strm,
@@ -1561,47 +1557,44 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
                                      Stream &strm, Module *module,
                                      const char *name, bool name_is_regex,
                                      bool verbose) {
-  if (module) {
-    SymbolContext sc;
+  if (!module)
+    return 0;
 
-    SymbolVendor *sym_vendor = module->GetSymbolVendor();
-    if (sym_vendor) {
-      Symtab *symtab = sym_vendor->GetSymtab();
-      if (symtab) {
-        std::vector<uint32_t> match_indexes;
-        ConstString symbol_name(name);
-        uint32_t num_matches = 0;
-        if (name_is_regex) {
-          RegularExpression name_regexp(symbol_name.GetStringRef());
-          num_matches = symtab->AppendSymbolIndexesMatchingRegExAndType(
-              name_regexp, eSymbolTypeAny, match_indexes);
-        } else {
-          num_matches =
-              symtab->AppendSymbolIndexesWithName(symbol_name, match_indexes);
-        }
+  Symtab *symtab = module->GetSymtab();
+  if (!symtab)
+    return 0;
 
-        if (num_matches > 0) {
-          strm.Indent();
-          strm.Printf("%u symbols match %s'%s' in ", num_matches,
-                      name_is_regex ? "the regular expression " : "", name);
-          DumpFullpath(strm, &module->GetFileSpec(), 0);
-          strm.PutCString(":\n");
-          strm.IndentMore();
-          for (uint32_t i = 0; i < num_matches; ++i) {
-            Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
-            if (symbol && symbol->ValueIsAddress()) {
-              DumpAddress(interpreter.GetExecutionContext()
-                              .GetBestExecutionContextScope(),
-                          symbol->GetAddressRef(), verbose, strm);
-            }
-          }
-          strm.IndentLess();
-          return num_matches;
-        }
+  SymbolContext sc;
+  std::vector<uint32_t> match_indexes;
+  ConstString symbol_name(name);
+  uint32_t num_matches = 0;
+  if (name_is_regex) {
+    RegularExpression name_regexp(symbol_name.GetStringRef());
+    num_matches = symtab->AppendSymbolIndexesMatchingRegExAndType(
+        name_regexp, eSymbolTypeAny, match_indexes);
+  } else {
+    num_matches =
+        symtab->AppendSymbolIndexesWithName(symbol_name, match_indexes);
+  }
+
+  if (num_matches > 0) {
+    strm.Indent();
+    strm.Printf("%u symbols match %s'%s' in ", num_matches,
+                name_is_regex ? "the regular expression " : "", name);
+    DumpFullpath(strm, &module->GetFileSpec(), 0);
+    strm.PutCString(":\n");
+    strm.IndentMore();
+    for (uint32_t i = 0; i < num_matches; ++i) {
+      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
+      if (symbol && symbol->ValueIsAddress()) {
+        DumpAddress(
+            interpreter.GetExecutionContext().GetBestExecutionContextScope(),
+            symbol->GetAddressRef(), verbose, strm);
       }
     }
+    strm.IndentLess();
   }
-  return 0;
+  return num_matches;
 }
 
 static void DumpSymbolContextList(ExecutionContextScope *exe_scope,

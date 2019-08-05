@@ -695,7 +695,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   if (!OutputFileName.empty() && OutputFileName != "-") {
     std::error_code EC;
     OutFile.reset(new llvm::raw_fd_ostream(OutputFileName.str(), EC,
-                                           llvm::sys::fs::F_Text));
+                                           llvm::sys::fs::OF_Text));
   }
   llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
 

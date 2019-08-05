@@ -16,7 +16,7 @@
 // CHECK: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
 // CHECK: "-fno-common"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic" "-z" "separate-code"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

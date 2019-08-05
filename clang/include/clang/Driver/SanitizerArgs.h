@@ -41,6 +41,7 @@ class SanitizerArgs {
   bool AsanInvalidPointerCmp = false;
   bool AsanInvalidPointerSub = false;
   std::string HwasanAbi;
+  bool LinkRuntimes = true;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
   bool SafeStackRuntime = false;
@@ -59,7 +60,9 @@ class SanitizerArgs {
   bool needsSharedRt() const { return SharedRuntime; }
 
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
-  bool needsHwasanRt() const { return Sanitizers.has(SanitizerKind::HWAddress); }
+  bool needsHwasanRt() const {
+    return Sanitizers.has(SanitizerKind::HWAddress);
+  }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
@@ -80,6 +83,7 @@ class SanitizerArgs {
   bool requiresPIE() const;
   bool needsUnwindTables() const;
   bool needsLTO() const;
+  bool linkRuntimes() const { return LinkRuntimes; }
   bool linkCXXRuntimes() const { return LinkCXXRuntimes; }
   bool hasCrossDsoCfi() const { return CfiCrossDso; }
   bool hasAnySanitizer() const { return !Sanitizers.empty(); }

@@ -290,11 +290,8 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
 }
 
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
-  if (module_sp) {
-    SymbolVendor *symbols = module_sp->GetSymbolVendor();
-    if (symbols)
-      return symbols->GetSymtab();
-  }
+  if (module_sp)
+    return module_sp->GetSymtab();
   return nullptr;
 }
 
@@ -302,11 +299,8 @@ size_t SBModule::GetNumSymbols() {
   LLDB_RECORD_METHOD_NO_ARGS(size_t, SBModule, GetNumSymbols);
 
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    Symtab *symtab = GetUnifiedSymbolTable(module_sp);
-    if (symtab)
-      return symtab->GetNumSymbols();
-  }
+  if (Symtab *symtab = GetUnifiedSymbolTable(module_sp))
+    return symtab->GetNumSymbols();
   return 0;
 }
 

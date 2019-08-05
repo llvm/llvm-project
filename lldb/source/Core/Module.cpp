@@ -1061,6 +1061,12 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   return nullptr;
 }
 
+Symtab *Module::GetSymtab() {
+  if (SymbolFile *symbols = GetSymbolFile())
+    return symbols->GetSymtab();
+  return nullptr;
+}
+
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
                                       ConstString object_name) {
   // Container objects whose paths do not specify a file directly can call this
@@ -1231,9 +1237,8 @@ void Module::Dump(Stream *s) {
   if (objfile)
     objfile->Dump(s);
 
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
-    symbols->Dump(s);
+  if (SymbolFile *symbols = GetSymbolFile())
+    symbols->Dump(*s);
 
   s->IndentLess();
 }
@@ -1309,13 +1314,9 @@ const Symbol *Module::FindFirstSymbolWithNameAndType(ConstString name,
   Timer scoped_timer(
       func_cat, "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
       name.AsCString(), symbol_type);
-  SymbolVendor *sym_vendor = GetSymbolVendor();
-  if (sym_vendor) {
-    Symtab *symtab = sym_vendor->GetSymtab();
-    if (symtab)
-      return symtab->FindFirstSymbolWithNameAndType(
-          name, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny);
-  }
+  if (Symtab *symtab = GetSymtab())
+    return symtab->FindFirstSymbolWithNameAndType(
+        name, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny);
   return nullptr;
 }
 void Module::SymbolIndicesToSymbolContextList(
@@ -1343,12 +1344,8 @@ size_t Module::FindFunctionSymbols(ConstString name,
   Timer scoped_timer(func_cat,
                      "Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                      name.AsCString(), name_type_mask);
-  SymbolVendor *sym_vendor = GetSymbolVendor();
-  if (sym_vendor) {
-    Symtab *symtab = sym_vendor->GetSymtab();
-    if (symtab)
-      return symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
-  }
+  if (Symtab *symtab = GetSymtab())
+    return symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
   return 0;
 }
 
@@ -1363,14 +1360,10 @@ size_t Module::FindSymbolsWithNameAndType(ConstString name,
       func_cat, "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
       name.AsCString(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
-  SymbolVendor *sym_vendor = GetSymbolVendor();
-  if (sym_vendor) {
-    Symtab *symtab = sym_vendor->GetSymtab();
-    if (symtab) {
-      std::vector<uint32_t> symbol_indexes;
-      symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes);
-      SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
-    }
+  if (Symtab *symtab = GetSymtab()) {
+    std::vector<uint32_t> symbol_indexes;
+    symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes);
+    SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
   }
   return sc_list.GetSize() - initial_size;
 }
@@ -1387,16 +1380,12 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
       "Module::FindSymbolsMatchingRegExAndType (regex = %s, type = %i)",
       regex.GetText().str().c_str(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
-  SymbolVendor *sym_vendor = GetSymbolVendor();
-  if (sym_vendor) {
-    Symtab *symtab = sym_vendor->GetSymtab();
-    if (symtab) {
-      std::vector<uint32_t> symbol_indexes;
-      symtab->FindAllSymbolsMatchingRexExAndType(
-          regex, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny,
-          symbol_indexes);
-      SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
-    }
+  if (Symtab *symtab = GetSymtab()) {
+    std::vector<uint32_t> symbol_indexes;
+    symtab->FindAllSymbolsMatchingRexExAndType(
+        regex, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny,
+        symbol_indexes);
+    SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
   }
   return sc_list.GetSize() - initial_size;
 }
