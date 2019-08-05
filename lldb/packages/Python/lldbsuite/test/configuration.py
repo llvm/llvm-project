@@ -12,6 +12,7 @@ from __future__ import print_function
 
 # System modules
 import os
+import platform
 
 
 # Third-party modules
