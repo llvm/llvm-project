@@ -6,22 +6,29 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    movl $255, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-NEXT:    shll $8, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    movl $65280, %eax # imm = 0xFF00
+; SSE2-NEXT:    orl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
 ; SSE2-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: foo:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE41-NEXT:    pextrb $8, %xmm0, %eax
+; SSE41-NEXT:    pextrb $4, %xmm0, %ecx
+; SSE41-NEXT:    pextrb $0, %xmm0, %edx
+; SSE41-NEXT:    movd %edx, %xmm0
+; SSE41-NEXT:    pinsrb $1, %ecx, %xmm0
+; SSE41-NEXT:    pinsrb $2, %eax, %xmm0
 ; SSE41-NEXT:    movl $255, %eax
-; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE41-NEXT:    movd %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
   %t0 = fptoui <3 x float> %in to <3 x i8>

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/ScalableSize.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -46,12 +48,12 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   EVT Vnx4i32 = EVT::getVectorVT(Ctx, MVT::i32, 4, /*Scalable=*/true);
   ASSERT_TRUE(Vnx4i32.isScalableVector());
 
-  // Create with separate MVT::ElementCount
-  auto EltCnt = MVT::ElementCount(2, true);
+  // Create with separate llvm::ElementCount
+  auto EltCnt = ElementCount(2, true);
   EVT Vnx2i32 = EVT::getVectorVT(Ctx, MVT::i32, EltCnt);
   ASSERT_TRUE(Vnx2i32.isScalableVector());
 
-  // Create with inline MVT::ElementCount
+  // Create with inline llvm::ElementCount
   EVT Vnx2i64 = EVT::getVectorVT(Ctx, MVT::i64, {2, true});
   ASSERT_TRUE(Vnx2i64.isScalableVector());
 
@@ -67,7 +69,7 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   EVT Vnx2f64 = EVT::getVectorVT(Ctx, MVT::f64, {2, true});
   EXPECT_EQ(Vnx2f64.changeTypeToInteger(), Vnx2i64);
 
-  // Check fields inside MVT::ElementCount
+  // Check fields inside llvm::ElementCount
   EltCnt = Vnx4i32.getVectorElementCount();
   EXPECT_EQ(EltCnt.Min, 4U);
   ASSERT_TRUE(EltCnt.Scalable);
@@ -78,10 +80,44 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   EVT V4f64 = EVT::getVectorVT(Ctx, MVT::f64, {4, false});
   ASSERT_FALSE(V4f64.isScalableVector());
 
-  // Check that MVT::ElementCount works for fixed-length types.
+  // Check that llvm::ElementCount works for fixed-length types.
   EltCnt = V8i32.getVectorElementCount();
   EXPECT_EQ(EltCnt.Min, 8U);
   ASSERT_FALSE(EltCnt.Scalable);
 }
 
+TEST(ScalableVectorMVTsTest, IRToVTTranslation) {
+  LLVMContext Ctx;
+
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+  VectorType *ScV8Int64Ty = VectorType::get(Int64Ty, {8, true});
+
+  // Check that we can map a scalable IR type to an MVT 
+  MVT Mnxv8i64 = MVT::getVT(ScV8Int64Ty);
+  ASSERT_TRUE(Mnxv8i64.isScalableVector());
+  ASSERT_EQ(ScV8Int64Ty->getElementCount(), Mnxv8i64.getVectorElementCount());
+  ASSERT_EQ(MVT::getVT(ScV8Int64Ty->getElementType()),
+            Mnxv8i64.getScalarType());
+
+  // Check that we can map a scalable IR type to an EVT
+  EVT Enxv8i64 = EVT::getEVT(ScV8Int64Ty);
+  ASSERT_TRUE(Enxv8i64.isScalableVector());
+  ASSERT_EQ(ScV8Int64Ty->getElementCount(), Enxv8i64.getVectorElementCount());
+  ASSERT_EQ(EVT::getEVT(ScV8Int64Ty->getElementType()),
+            Enxv8i64.getScalarType());
 }
+
+TEST(ScalableVectorMVTsTest, VTToIRTranslation) {
+  LLVMContext Ctx;
+
+  EVT Enxv4f64 = EVT::getVectorVT(Ctx, MVT::f64, {4, true});
+
+  Type *Ty = Enxv4f64.getTypeForEVT(Ctx);
+  VectorType *ScV4Float64Ty = cast<VectorType>(Ty);
+  ASSERT_TRUE(ScV4Float64Ty->isScalable());
+  ASSERT_EQ(Enxv4f64.getVectorElementCount(), ScV4Float64Ty->getElementCount());
+  ASSERT_EQ(Enxv4f64.getScalarType().getTypeForEVT(Ctx),
+            ScV4Float64Ty->getElementType());
+}
+
+} // end anonymous namespace

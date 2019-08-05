@@ -37,7 +37,6 @@ static_library("Frontend") {
     "InitHeaderSearch.cpp",
     "InitPreprocessor.cpp",
     "InterfaceStubFunctionsConsumer.cpp",
-    "LangStandards.cpp",
     "LayoutOverrideSource.cpp",
     "LogDiagnosticPrinter.cpp",
     "ModuleDependencyCollector.cpp",

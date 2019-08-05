@@ -298,13 +298,13 @@ main_body:
   ret float %val
 }
 
-;CHECK-LABEL: {{^}}raw_buffer_load_ushort:
+;CHECK-LABEL: {{^}}raw_buffer_load_i16:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_ushort v{{[0-9]}}, off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK-NEXT: v_cvt_f32_u32_e32 v0, v0
 ;CHECK-NEXT: ; return to shader part epilog
-define amdgpu_ps float @raw_buffer_load_ushort(<4 x i32> inreg %rsrc) {
+define amdgpu_ps float @raw_buffer_load_i16(<4 x i32> inreg %rsrc) {
 main_body:
   %tmp = call i16 @llvm.amdgcn.raw.buffer.load.i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
   %tmp2 = zext i16 %tmp to i32
@@ -340,6 +340,66 @@ main_body:
   ret float %val
 }
 
+;CHECK-LABEL: {{^}}raw_buffer_load_f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_ushort [[VAL:v[0-9]+]], off, s[0:3], 0
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b16 v0, [[VAL]]
+define amdgpu_ps void @raw_buffer_load_f16(<4 x i32> inreg %rsrc, half addrspace(3)* %ptr) {
+main_body:
+  %val = call half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  store half %val, half addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}raw_buffer_load_v2f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dword [[VAL:v[0-9]+]], off, s[0:3], 0
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b32 v0, [[VAL]]
+define amdgpu_ps void @raw_buffer_load_v2f16(<4 x i32> inreg %rsrc, <2 x half> addrspace(3)* %ptr) {
+main_body:
+  %val = call <2 x half> @llvm.amdgcn.raw.buffer.load.v2f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  store <2 x half> %val, <2 x half> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}raw_buffer_load_v4f16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], off, s[0:3], 0
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b64 v0, [[VAL]]
+define amdgpu_ps void @raw_buffer_load_v4f16(<4 x i32> inreg %rsrc, <4 x half> addrspace(3)* %ptr) {
+main_body:
+  %val = call <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  store <4 x half> %val, <4 x half> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}raw_buffer_load_v2i16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dword [[VAL:v[0-9]+]], off, s[0:3], 0
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b32 v0, [[VAL]]
+define amdgpu_ps void @raw_buffer_load_v2i16(<4 x i32> inreg %rsrc, <2 x i16> addrspace(3)* %ptr) {
+main_body:
+  %val = call <2 x i16> @llvm.amdgcn.raw.buffer.load.v2i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  store <2 x i16> %val, <2 x i16> addrspace(3)* %ptr
+  ret void
+}
+
+;CHECK-LABEL: {{^}}raw_buffer_load_v4i16:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], off, s[0:3], 0
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK: ds_write_b64 v0, [[VAL]]
+define amdgpu_ps void @raw_buffer_load_v4i16(<4 x i32> inreg %rsrc, <4 x i16> addrspace(3)* %ptr) {
+main_body:
+  %val = call <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  store <4 x i16> %val, <4 x i16> addrspace(3)* %ptr
+  ret void
+}
+
 declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32>, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
@@ -349,5 +409,10 @@ declare <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32(<4 x i32>, i32, i32, i32) #
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare i8 @llvm.amdgcn.raw.buffer.load.i8(<4 x i32>, i32, i32, i32) #0
 declare i16 @llvm.amdgcn.raw.buffer.load.i16(<4 x i32>, i32, i32, i32) #0
+declare <2 x i16> @llvm.amdgcn.raw.buffer.load.v2i16(<4 x i32>, i32, i32, i32) #0
+declare <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16(<4 x i32>, i32, i32, i32) #0
+declare half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32>, i32, i32, i32) #0
+declare <2 x half> @llvm.amdgcn.raw.buffer.load.v2f16(<4 x i32>, i32, i32, i32) #0
+declare <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32>, i32, i32, i32) #0
 
 attributes #0 = { nounwind readonly }

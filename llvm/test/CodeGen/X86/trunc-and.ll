@@ -24,3 +24,27 @@ define i16 @PR40793(<8 x i16> %t1) {
 
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
+; This would infinite loop by trying to truncate and any_extend.
+
+%struct.anon = type { [9 x i8], [3 x i8] }
+
+@b = common local_unnamed_addr global %struct.anon zeroinitializer, align 4
+
+define i32 @d() {
+; CHECK-LABEL: d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl b+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    andl $7, %ecx
+; CHECK-NEXT:    movl $d, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %bf.load = load i72, i72* bitcast (%struct.anon* @b to i72*), align 4
+  %bf.lshr = lshr i72 %bf.load, 64
+  %t0 = trunc i72 %bf.lshr to i64
+  %bf.cast = and i64 %t0, 7
+  %add.ptr = getelementptr i8, i8* bitcast (i32 ()* @d to i8*), i64 %bf.cast
+  %t1 = ptrtoint i8* %add.ptr to i64
+  %t2 = trunc i64 %t1 to i32
+  ret i32 %t2
+}

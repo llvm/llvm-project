@@ -315,10 +315,10 @@ define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 ; SSE-LABEL: 'sitofp4'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -359,7 +359,7 @@ define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 define void @sitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 ; SSE-LABEL: 'sitofp8'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -390,9 +390,9 @@ define void @uitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = uitofp <4 x i1> %a to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %A2 = uitofp <4 x i1> %a to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <4 x i8> %b to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %B2 = uitofp <4 x i8> %b to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = uitofp <4 x i16> %c to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %C2 = uitofp <4 x i16> %c to <4 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %B2 = uitofp <4 x i8> %b to <4 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = uitofp <4 x i16> %c to <4 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = uitofp <4 x i16> %c to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = uitofp <4 x i32> %d to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %D2 = uitofp <4 x i32> %d to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -433,7 +433,7 @@ define void @uitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 ; SSE-LABEL: 'uitofp8'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void

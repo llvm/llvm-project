@@ -591,11 +591,12 @@ for Flavor in $Flavors ; do
         for p2 in `find $llvmCore_phase2_objdir -name '*.o'` ; do
             p3=`echo $p2 | sed -e 's,Phase2,Phase3,'`
             # Substitute 'Phase2' for 'Phase3' in the Phase 2 object file in
-            # case there are build paths in the debug info. On some systems,
-            # sed adds a newline to the output, so pass $p3 through sed too.
+            # case there are build paths in the debug info. Do the same sub-
+            # stitution on both files in case the string occurrs naturally.
             if ! cmp -s \
                 <(env LC_CTYPE=C sed -e 's,Phase2,Phase3,g' -e 's,Phase1,Phase2,g' $p2) \
-                <(env LC_CTYPE=C sed -e '' $p3) 16 16; then
+                <(env LC_CTYPE=C sed -e 's,Phase2,Phase3,g' -e 's,Phase1,Phase2,g' $p3) \
+                16 16; then
                 echo "file `basename $p2` differs between phase 2 and phase 3"
             fi
         done

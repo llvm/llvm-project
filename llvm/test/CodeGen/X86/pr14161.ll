@@ -7,7 +7,6 @@ define <2 x i16> @good(<4 x i32>*, <4 x i8>*) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa (%rdi), %xmm0
 ; CHECK-NEXT:    pminud {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pmovzxwq %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %2 = load <4 x i32>, <4 x i32>* %0, align 16
@@ -27,7 +26,6 @@ define <2 x i16> @bad(<4 x i32>*, <4 x i8>*) {
 ; CHECK-NEXT:    movdqa (%rdi), %xmm0
 ; CHECK-NEXT:    pminud {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NEXT:    retq
 entry:
   %2 = load <4 x i32>, <4 x i32>* %0, align 16

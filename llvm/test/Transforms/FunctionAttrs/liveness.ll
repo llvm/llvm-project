@@ -184,8 +184,13 @@ cond.true:                                        ; preds = %entry
   call void @normal_call()
   %call = invoke i32 @foo_noreturn_nounwind() to label %continue
             unwind label %cleanup
-  ; CHECK:      call i32 @foo_noreturn_nounwind()
+  ; CHECK:      call void @normal_call()
+  ; CHECK-NEXT: call i32 @foo_noreturn_nounwind()
   ; CHECK-NEXT: unreachable
+
+  ; We keep the invoke around as other attributes might have references to it.
+  ; CHECK:       cond.true.split:                                  ; No predecessors!
+  ; CHECK-NEXT:      invoke i32 @foo_noreturn_nounwind()
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()

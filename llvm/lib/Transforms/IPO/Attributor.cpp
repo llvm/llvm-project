@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1563,6 +1564,12 @@ struct AAIsDeadFunction : AAIsDead, BooleanState {
            "Attempted to manifest an invalid state!");
 
     ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
+    const Function &F = getAnchorScope();
+
+    // Flag to determine if we can change an invoke to a call assuming the callee
+    // is nounwind. This is not possible if the personality of the function allows
+    // to catch asynchronous exceptions.
+    bool Invoke2CallAllowed = !mayCatchAsynchronousExceptions(F);
 
     for (const Instruction *NRC : NoReturnCalls) {
       Instruction *I = const_cast<Instruction *>(NRC);
@@ -1570,24 +1577,41 @@ struct AAIsDeadFunction : AAIsDead, BooleanState {
       Instruction *SplitPos = I->getNextNode();
 
       if (auto *II = dyn_cast<InvokeInst>(I)) {
+        // If we keep the invoke the split position is at the beginning of the
+        // normal desitination block (it invokes a noreturn function after all).
+        BasicBlock *NormalDestBB = II->getNormalDest();
+        SplitPos = &NormalDestBB->front();
+
         /// Invoke is replaced with a call and unreachable is placed after it if
         /// the callee is nounwind and noreturn. Otherwise, we keep the invoke
         /// and only place an unreachable in the normal successor.
-        if (Function *Callee = II->getCalledFunction()) {
-          auto *AANoUnw = A.getAAFor<AANoUnwind>(*this, *Callee);
-          if (Callee->hasFnAttribute(Attribute::NoUnwind) ||
-              (AANoUnw && AANoUnw->isAssumedNoUnwind())) {
-            LLVM_DEBUG(dbgs() << "[AAIsDead] Replace invoke with call inst\n");
-            changeToCall(II);
-            changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
-            continue;
+        if (Invoke2CallAllowed) {
+          if (Function *Callee = II->getCalledFunction()) {
+            auto *AANoUnw = A.getAAFor<AANoUnwind>(*this, *Callee);
+            if (Callee->hasFnAttribute(Attribute::NoUnwind) ||
+                (AANoUnw && AANoUnw->isAssumedNoUnwind())) {
+              LLVM_DEBUG(dbgs()
+                         << "[AAIsDead] Replace invoke with call inst\n");
+              // We do not need an invoke (II) but instead want a call followed
+              // by an unreachable. However, we do not remove II as other
+              // abstract attributes might have it cached as part of their
+              // results. Given that we modify the CFG anyway, we simply keep II
+              // around but in a new dead block. To avoid II being live through
+              // a different edge we have to ensure the block we place it in is
+              // only reached from the current block of II and then not reached
+              // at all when we insert the unreachable.
+              SplitBlockPredecessors(NormalDestBB, {BB}, ".i2c");
+              CallInst *CI = createCallMatchingInvoke(II);
+              CI->insertBefore(II);
+              CI->takeName(II);
+              II->replaceAllUsesWith(CI);
+              SplitPos = CI->getNextNode();
+            }
           }
         }
-
-        BB = II->getNormalDest();
-        SplitPos = &BB->front();
       }
 
+      BB = SplitPos->getParent();
       SplitBlock(BB, SplitPos);
       changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
       HasChanged = ChangeStatus::CHANGED;
@@ -1639,6 +1663,11 @@ struct AAIsDeadFunction : AAIsDead, BooleanState {
   /// Check if instruction is after noreturn call, in other words, assumed dead.
   bool isAfterNoReturn(const Instruction *I) const;
 
+  /// Determine if \p F might catch asynchronous exceptions.
+  static bool mayCatchAsynchronousExceptions(const Function &F) {
+    return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
+  }
+
   /// Collection of to be explored paths.
   SmallSetVector<const Instruction *, 8> ToBeExploredPaths;
 
@@ -1662,6 +1691,12 @@ bool AAIsDeadFunction::isAfterNoReturn(const Instruction *I) const {
 const Instruction *AAIsDeadFunction::findNextNoReturn(Attributor &A,
                                                       const Instruction *I) {
   const BasicBlock *BB = I->getParent();
+  const Function &F = *BB->getParent();
+
+  // Flag to determine if we can change an invoke to a call assuming the callee
+  // is nounwind. This is not possible if the personality of the function allows
+  // to catch asynchronous exceptions.
+  bool Invoke2CallAllowed = !mayCatchAsynchronousExceptions(F);
 
   // TODO: We should have a function that determines if an "edge" is dead.
   //       Edges could be from an instruction to the next or from a terminator
@@ -1678,7 +1713,8 @@ const Instruction *AAIsDeadFunction::findNextNoReturn(Attributor &A,
       if (auto *Invoke = dyn_cast<InvokeInst>(I)) {
         // Use nounwind to justify the unwind block is dead as well.
         auto *AANoUnw = A.getAAFor<AANoUnwind>(*this, *Invoke);
-        if (!AANoUnw || !AANoUnw->isAssumedNoUnwind()) {
+        if (!Invoke2CallAllowed ||
+            (!AANoUnw || !AANoUnw->isAssumedNoUnwind())) {
           AssumedLiveBlocks.insert(Invoke->getUnwindDest());
           ToBeExploredPaths.insert(&Invoke->getUnwindDest()->front());
         }

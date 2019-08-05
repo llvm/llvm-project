@@ -618,6 +618,19 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
+AArch64TTIImpl::TTI::MemCmpExpansionOptions
+AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  Options.AllowOverlappingLoads = !ST->requiresStrictAlign();
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  // TODO: Though vector loads usually perform well on AArch64, in some targets
+  // they may wake up the FP unit, which raises the power consumption.  Perhaps
+  // they could be used with no holds barred (-O3).
+  Options.LoadSizes = {8, 4, 2, 1};
+  return Options;
+}
+
 int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                     unsigned Alignment, unsigned AddressSpace,
                                     const Instruction *I) {

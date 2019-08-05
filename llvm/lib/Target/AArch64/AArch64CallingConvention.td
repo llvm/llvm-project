@@ -70,6 +70,18 @@ def CC_AArch64_AAPCS : CallingConv<[
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv1f32, nxv2f32, nxv4f32, nxv1f64, nxv2f64],
+           CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv1f32, nxv2f32, nxv4f32, nxv1f64, nxv2f64],
+           CCPassIndirect<i64>>,
+
+  CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+           CCAssignToReg<[P0, P1, P2, P3]>>,
+  CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+           CCPassIndirect<i64>>,
+
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
@@ -135,7 +147,14 @@ def RetCC_AArch64_AAPCS : CallingConv<[
       CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                               [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
-      CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>
+      CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv1f32, nxv2f32, nxv4f32, nxv1f64, nxv2f64],
+           CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
+
+  CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+           CCAssignToReg<[P0, P1, P2, P3]>>
 ]>;
 
 // Vararg functions on windows pass floats in integer registers
@@ -324,6 +343,13 @@ def CSR_Win_AArch64_AAPCS : CalleeSavedRegs<(add FP, LR, X19, X20, X21, X22,
 def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
                                           X23, X24, X25, X26, X27, X28,
                                           (sequence "Q%u", 8, 23))>;
+
+// Functions taking SVE arguments or returning an SVE type
+// must (additionally) preserve full Z8-Z23 and predicate registers P4-P15
+def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+                                               X23, X24, X25, X26, X27, X28,
+                                               (sequence "Z%u", 8, 23),
+                                               (sequence "P%u", 4, 15))>;
 
 // Constructors and destructors return 'this' in the iOS 64-bit C++ ABI; since
 // 'this' and the pointer return value are both passed in X0 in these cases,

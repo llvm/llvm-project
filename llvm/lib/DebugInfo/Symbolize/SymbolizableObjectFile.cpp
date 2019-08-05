@@ -43,10 +43,11 @@ getDILineInfoSpecifier(FunctionNameKind FNKind) {
 
 ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
 SymbolizableObjectFile::create(const object::ObjectFile *Obj,
-                               std::unique_ptr<DIContext> DICtx) {
+                               std::unique_ptr<DIContext> DICtx,
+                               bool UntagAddresses) {
   assert(DICtx);
   std::unique_ptr<SymbolizableObjectFile> res(
-      new SymbolizableObjectFile(Obj, std::move(DICtx)));
+      new SymbolizableObjectFile(Obj, std::move(DICtx), UntagAddresses));
   std::unique_ptr<DataExtractor> OpdExtractor;
   uint64_t OpdAddress = 0;
   // Find the .opd (function descriptor) section if any, for big-endian
@@ -103,8 +104,10 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
 }
 
 SymbolizableObjectFile::SymbolizableObjectFile(const ObjectFile *Obj,
-                                               std::unique_ptr<DIContext> DICtx)
-    : Module(Obj), DebugInfoContext(std::move(DICtx)) {}
+                                               std::unique_ptr<DIContext> DICtx,
+                                               bool UntagAddresses)
+    : Module(Obj), DebugInfoContext(std::move(DICtx)),
+      UntagAddresses(UntagAddresses) {}
 
 namespace {
 
@@ -172,6 +175,11 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   if (!SymbolAddressOrErr)
     return errorToErrorCode(SymbolAddressOrErr.takeError());
   uint64_t SymbolAddress = *SymbolAddressOrErr;
+  if (UntagAddresses) {
+    // For kernel addresses, bits 56-63 need to be set, so we sign extend bit 55
+    // into bits 56-63 instead of masking them out.
+    SymbolAddress = (int64_t(SymbolAddress) << 8) >> 8;
+  }
   if (OpdExtractor) {
     // For big-endian PowerPC64 ELF, symbols in the .opd section refer to
     // function descriptors. The first word of the descriptor is a pointer to

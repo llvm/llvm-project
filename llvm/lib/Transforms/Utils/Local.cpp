@@ -1933,18 +1933,24 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
   return NumInstrsRemoved;
 }
 
-/// changeToCall - Convert the specified invoke into a normal call.
-void llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
-  SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
+CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
+  SmallVector<Value *, 8> Args(II->arg_begin(), II->arg_end());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
-  CallInst *NewCall = CallInst::Create(
-      II->getFunctionType(), II->getCalledValue(), Args, OpBundles, "", II);
-  NewCall->takeName(II);
+  CallInst *NewCall = CallInst::Create(II->getFunctionType(),
+                                       II->getCalledValue(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
   NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
+  return NewCall;
+}
+
+/// changeToCall - Convert the specified invoke into a normal call.
+void llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
+  CallInst *NewCall = createCallMatchingInvoke(II);
+  NewCall->takeName(II);
+  NewCall->insertBefore(II);
   II->replaceAllUsesWith(NewCall);
 
   // Follow the call by a branch to the normal destination.

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
@@ -94,6 +95,7 @@ struct Config {
   SmallVector<std::string, 1> InputFiles;
   SmallVector<std::string, 1> VerifyArchList;
   SmallVector<Replacement, 1> Replacements;
+  StringMap<const uint32_t> SegmentAlignments;
   std::string ThinArchType;
   std::string OutputFile;
   LipoAction ActionToPerform;
@@ -161,6 +163,36 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
 
   if (InputArgs.hasArg(LIPO_output))
     C.OutputFile = InputArgs.getLastArgValue(LIPO_output);
+
+  for (auto Segalign : InputArgs.filtered(LIPO_segalign)) {
+    if (!Segalign->getValue(1))
+      reportError("segalign is missing an argument: expects -segalign "
+                  "arch_type alignment_value");
+
+    validateArchitectureName(Segalign->getValue(0));
+
+    uint32_t AlignmentValue;
+    if (!to_integer<uint32_t>(Segalign->getValue(1), AlignmentValue, 16))
+      reportError("argument to -segalign <arch_type> " +
+                  Twine(Segalign->getValue(1)) +
+                  " (hex) is not a proper hexadecimal number");
+    if (!isPowerOf2_32(AlignmentValue))
+      reportError("argument to -segalign <arch_type> " +
+                  Twine(Segalign->getValue(1)) +
+                  " (hex) must be a non-zero power of two");
+    if (Log2_32(AlignmentValue) > MachOUniversalBinary::MaxSectionAlignment)
+      reportError(
+          "argument to -segalign <arch_type> " + Twine(Segalign->getValue(1)) +
+          " (hex) must be less than or equal to the maximum section align 2^" +
+          Twine(MachOUniversalBinary::MaxSectionAlignment));
+    auto Entry = C.SegmentAlignments.try_emplace(Segalign->getValue(0),
+                                                 Log2_32(AlignmentValue));
+    if (!Entry.second)
+      reportError("-segalign " + Twine(Segalign->getValue(0)) +
+                  " <alignment_value> specified multiple times: " +
+                  Twine(1 << Entry.first->second) + ", " +
+                  Twine(AlignmentValue));
+  }
 
   SmallVector<opt::Arg *, 1> ActionArgs(InputArgs.filtered(LIPO_action_group));
   if (ActionArgs.empty())
@@ -474,10 +506,36 @@ static bool compareSlices(const Slice &Lhs, const Slice &Rhs) {
   return Lhs.Alignment < Rhs.Alignment;
 }
 
+template <typename Range>
+static void
+updateSegmentAlignments(Range &Slices,
+                        const StringMap<const uint32_t> &Alignments) {
+  for (auto &Slice : Slices) {
+    auto Alignment = Alignments.find(getArchString(*Slice.ObjectFile));
+    if (Alignment != Alignments.end())
+      Slice.Alignment = Alignment->second;
+  }
+}
+
+static void checkUnusedAlignments(ArrayRef<Slice> Slices,
+                                  const StringMap<const uint32_t> &Alignments) {
+  auto HasArch = [&](StringRef Arch) {
+    return llvm::find_if(Slices, [Arch](Slice S) {
+             return getArchString(*S.ObjectFile) == Arch;
+           }) != Slices.end();
+  };
+  for (StringRef Arch : Alignments.keys())
+    if (!HasArch(Arch))
+      reportError("-segalign " + Arch +
+                  " <value> specified but resulting fat file does not contain "
+                  "that architecture ");
+}
+
 // Updates vector ExtractedObjects with the MachOObjectFiles extracted from
 // Universal Binary files to transfer ownership.
 static SmallVector<Slice, 2> buildSlices(
     ArrayRef<OwningBinary<Binary>> InputBinaries,
+    const StringMap<const uint32_t> &Alignments,
     SmallVectorImpl<std::unique_ptr<MachOObjectFile>> &ExtractedObjects) {
   SmallVector<Slice, 2> Slices;
   for (auto &IB : InputBinaries) {
@@ -497,6 +555,7 @@ static SmallVector<Slice, 2> buildSlices(
       llvm_unreachable("Unexpected binary format");
     }
   }
+  updateSegmentAlignments(Slices, Alignments);
   return Slices;
 }
 
@@ -576,13 +635,16 @@ static void createUniversalBinary(SmallVectorImpl<Slice> &Slices,
 
 LLVM_ATTRIBUTE_NORETURN
 static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                                  const StringMap<const uint32_t> &Alignments,
                                   StringRef OutputFileName) {
   assert(InputBinaries.size() >= 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Create expects a single output file");
 
   SmallVector<std::unique_ptr<MachOObjectFile>, 1> ExtractedObjects;
-  SmallVector<Slice, 1> Slices = buildSlices(InputBinaries, ExtractedObjects);
+  SmallVector<Slice, 1> Slices =
+      buildSlices(InputBinaries, Alignments, ExtractedObjects);
   checkArchDuplicates(Slices);
+  checkUnusedAlignments(Slices, Alignments);
   createUniversalBinary(Slices, OutputFileName);
 
   exit(EXIT_SUCCESS);
@@ -590,6 +652,7 @@ static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
 
 static StringMap<Slice>
 buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
+                       const StringMap<const uint32_t> &Alignments,
                        ArrayRef<Replacement> Replacements) {
   assert(ReplacementBinaries.size() == Replacements.size() &&
          "Number of replacment binaries does not match the number of "
@@ -620,11 +683,15 @@ buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
                   Entry.first->second.ObjectFile->getFileName() + ", " +
                   O->getFileName());
   }
+  auto SlicesMapRange = map_range(
+      Slices, [](StringMapEntry<Slice> &E) -> Slice & { return E.getValue(); });
+  updateSegmentAlignments(SlicesMapRange, Alignments);
   return Slices;
 }
 
 LLVM_ATTRIBUTE_NORETURN
 static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                          const StringMap<const uint32_t> &Alignments,
                           StringRef OutputFileName,
                           ArrayRef<Replacement> Replacements) {
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
@@ -642,9 +709,10 @@ static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
       readInputBinaries(ReplacementFiles);
 
   StringMap<Slice> ReplacementSlices =
-      buildReplacementSlices(ReplacementBinaries, Replacements);
+      buildReplacementSlices(ReplacementBinaries, Alignments, Replacements);
   SmallVector<std::unique_ptr<MachOObjectFile>, 2> ExtractedObjects;
-  SmallVector<Slice, 2> Slices = buildSlices(InputBinaries, ExtractedObjects);
+  SmallVector<Slice, 2> Slices =
+      buildSlices(InputBinaries, Alignments, ExtractedObjects);
 
   for (auto &Slice : Slices) {
     auto It = ReplacementSlices.find(getArchString(*Slice.ObjectFile));
@@ -659,6 +727,8 @@ static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
                 " <file_name> specified but fat file: " +
                 InputBinaries.front().getBinary()->getFileName() +
                 " does not contain that architecture");
+
+  checkUnusedAlignments(Slices, Alignments);
   createUniversalBinary(Slices, OutputFileName);
   exit(EXIT_SUCCESS);
 }
@@ -683,10 +753,11 @@ int main(int argc, char **argv) {
     extractSlice(InputBinaries, C.ThinArchType, C.OutputFile);
     break;
   case LipoAction::CreateUniversal:
-    createUniversalBinary(InputBinaries, C.OutputFile);
+    createUniversalBinary(InputBinaries, C.SegmentAlignments, C.OutputFile);
     break;
   case LipoAction::ReplaceArch:
-    replaceSlices(InputBinaries, C.OutputFile, C.Replacements);
+    replaceSlices(InputBinaries, C.SegmentAlignments, C.OutputFile,
+                  C.Replacements);
     break;
   }
   return EXIT_SUCCESS;

@@ -145,18 +145,8 @@ define i32 @load_partial_illegal_type() {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,0,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movl $2, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -164,7 +154,8 @@ define i32 @load_partial_illegal_type() {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSSE3-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    retq
 ;
@@ -172,10 +163,8 @@ define i32 @load_partial_illegal_type() {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,1],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    movl $2, %eax
-; SSE41-NEXT:    pinsrd $2, %eax, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    pinsrb $2, %eax, %xmm0
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    retq
 ;
@@ -183,10 +172,8 @@ define i32 @load_partial_illegal_type() {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzwl {{.*}}(%rip), %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,1],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    movl $2, %eax
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %1 = load <2 x i8>, <2 x i8>* bitcast (i8* @h to <2 x i8>*), align 1

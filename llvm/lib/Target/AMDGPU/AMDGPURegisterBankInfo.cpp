@@ -192,7 +192,8 @@ AMDGPURegisterBankInfo::addMappingFromTable(
     Operands[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeI);
   }
 
-  unsigned MappingID = 0;
+  // getInstrMapping's default mapping uses ID 1, so start at 2.
+  unsigned MappingID = 2;
   for (const auto &Entry : Table) {
     for (unsigned I = 0; I < NumOps; ++I) {
       int OpIdx = RegSrcOpIdx[I];
@@ -337,6 +338,17 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
 
   InstructionMappings AltMappings;
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FRAME_INDEX:
+  case TargetOpcode::G_GLOBAL_VALUE: {
+    static const OpRegBankEntry<1> Table[2] = {
+      { { AMDGPU::VGPRRegBankID }, 1 },
+      { { AMDGPU::SGPRRegBankID }, 1 }
+    };
+
+    return addMappingFromTable<1>(MI, MRI, { 0 }, Table);
+  }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR: {

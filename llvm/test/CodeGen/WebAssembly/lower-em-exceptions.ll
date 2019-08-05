@@ -16,7 +16,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(void (i32)* @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
@@ -72,7 +72,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(void (i32)* @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
@@ -123,7 +123,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: %0 = call noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
+; CHECK-NEXT: %0 = call cc{{.*}} noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont

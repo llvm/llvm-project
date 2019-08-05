@@ -1,0 +1,61 @@
+## Test that note values are interpreted correctly for core files.
+
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
+
+--- !ELF
+FileHeader:
+  Class:         ELFCLASS64
+  Data:          ELFDATA2LSB
+  Type:          ET_CORE
+  Machine:       EM_X86_64
+Sections:
+  - Name:        .note.foo
+    Type:        SHT_NOTE
+    # Note: format is 0500000000000000<NT_FOO value>434F524500000000 repeated
+    Content:     050000000000000001000000434F524500000000050000000000000002000000434F524500000000050000000000000003000000434F524500000000050000000000000004000000434F524500000000050000000000000006000000434F524500000000
+ProgramHeaders:
+  - Type:        PT_NOTE
+    Sections:
+      - Section: .note.foo
+
+# GNU:      Displaying notes found
+# GNU-NEXT:   Owner                 Data size       Description
+# GNU-NEXT:   CORE                  0x00000000      NT_PRSTATUS (prstatus structure)
+# GNU-NEXT:   CORE                  0x00000000      NT_FPREGSET (floating point registers)
+# GNU-NEXT:   CORE                  0x00000000      NT_PRPSINFO (prpsinfo structure)
+# GNU-NEXT:   CORE                  0x00000000      NT_TASKSTRUCT (task structure)
+# GNU-NEXT:   CORE                  0x00000000      NT_AUXV (auxiliary vector)
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Offset:
+# LLVM-NEXT:     Size:
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_PRSTATUS (prstatus structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_FPREGSET (floating point registers)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_PRPSINFO (prpsinfo structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_TASKSTRUCT (task structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_AUXV (auxiliary vector)
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
