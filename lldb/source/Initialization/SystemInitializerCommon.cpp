@@ -25,6 +25,7 @@
 #if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 #include "lldb/Host/windows/windows.h"
+#include <crtdbg.h>
 #endif
 
 #include "llvm/Support/TargetSelect.h"
