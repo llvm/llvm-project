@@ -118,7 +118,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
               "an XRay sled entry in ELF64."),
         std::make_error_code(std::errc::executable_format_error));
 
-  auto RelocateOrElse = [&](uint32_t Offset, uint64_t Address) {
+  auto RelocateOrElse = [&](uint64_t Offset, uint64_t Address) {
     if (!Address) {
       uint64_t A = I->getAddress() + C - Contents.bytes_begin() + Offset;
       RelocMap::const_iterator R = Relocs.find(A);
@@ -136,10 +136,10 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         8);
     Sleds.push_back({});
     auto &Entry = Sleds.back();
-    uint32_t OffsetPtr = 0;
-    uint32_t AddrOff = OffsetPtr;
+    uint64_t OffsetPtr = 0;
+    uint64_t AddrOff = OffsetPtr;
     Entry.Address = RelocateOrElse(AddrOff, Extractor.getU64(&OffsetPtr));
-    uint32_t FuncOff = OffsetPtr;
+    uint64_t FuncOff = OffsetPtr;
     Entry.Function = RelocateOrElse(FuncOff, Extractor.getU64(&OffsetPtr));
     auto Kind = Extractor.getU8(&OffsetPtr);
     static constexpr SledEntry::FunctionKinds Kinds[] = {

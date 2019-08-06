@@ -119,7 +119,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
       ELFT::Is64Bits ? 8 : 4);
 
   DictScope D(W, "Header");
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
 
   auto Version = DE.getU8(&Offset);
   W.printNumber("version", Version);

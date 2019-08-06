@@ -112,7 +112,7 @@ void DWARFGdbIndex::dump(raw_ostream &OS) {
 }
 
 bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
 
   // Only version 7 is supported at this moment.
   Version = Data.getU32(&Offset);

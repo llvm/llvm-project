@@ -67,7 +67,7 @@ DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
 void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
-    OS << format("0x%8.8x: ", L.Offset);
+    OS << format("0x%8.8" PRIx64 ": ", L.Offset);
     L.dump(OS, IsLittleEndian, AddressSize, MRI, nullptr, 0, 12);
     OS << "\n\n";
   };
@@ -84,7 +84,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
 }
 
 Optional<DWARFDebugLoc::LocationList>
-DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
+DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, uint64_t *Offset) {
   LocationList LL;
   LL.Offset = *Offset;
 
@@ -132,7 +132,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   while (data.isValidOffset(Offset + data.getAddressSize() - 1)) {
     if (auto LL = parseOneLocationList(data, &Offset))
       Locations.push_back(std::move(*LL));
@@ -144,7 +144,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
 }
 
 Optional<DWARFDebugLoclists::LocationList>
-DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
+DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, uint64_t *Offset,
                                          unsigned Version) {
   LocationList LL;
   LL.Offset = *Offset;
@@ -201,7 +201,7 @@ void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   while (data.isValidOffset(Offset)) {
     if (auto LL = parseOneLocationList(data, &Offset, Version))
       Locations.push_back(std::move(*LL));
@@ -261,7 +261,7 @@ void DWARFDebugLoclists::dump(raw_ostream &OS, uint64_t BaseAddr,
                               const MCRegisterInfo *MRI,
                               Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
-    OS << format("0x%8.8x: ", L.Offset);
+    OS << format("0x%8.8" PRIx64 ": ", L.Offset);
     L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, nullptr, /*Indent=*/12);
     OS << "\n\n";
   };

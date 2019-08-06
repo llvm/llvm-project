@@ -117,7 +117,7 @@ static uint8_t getRefAddrSize(uint8_t AddrSize, uint16_t Version) {
 }
 
 bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
-                                         uint8_t AddressSize, uint32_t Offset) {
+                                         uint8_t AddressSize, uint64_t Offset) {
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
@@ -261,7 +261,7 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
     if (Size == Operation::BaseTypeRef && U) {
       auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
       if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
-        OS << format(" (0x%08x)", U->getOffset() + Operands[Operand]);
+        OS << format(" (0x%08" PRIx64 ")", U->getOffset() + Operands[Operand]);
         if (auto Name = Die.find(dwarf::DW_AT_name))
           OS << " \"" << Name->getAsCString() << "\"";
       } else {
@@ -269,7 +269,7 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
                      Operands[Operand]);
       }
     } else if (Size == Operation::SizeBlock) {
-      uint32_t Offset = Operands[Operand];
+      uint64_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
         OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
     } else {
@@ -286,7 +286,7 @@ void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
                             DWARFUnit *U, bool IsEH) const {
   for (auto &Op : *this) {
     if (!Op.print(OS, this, RegInfo, U, IsEH)) {
-      uint32_t FailOffset = Op.getEndOffset();
+      uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < Data.getData().size())
         OS << format(" %02x", Data.getU8(&FailOffset));
       return;

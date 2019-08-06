@@ -27,7 +27,7 @@ public:
 class FileBasedRecordProducer : public RecordProducer {
   const XRayFileHeader &Header;
   DataExtractor &E;
-  uint32_t &OffsetPtr;
+  uint64_t &OffsetPtr;
   uint32_t CurrentBufferBytes = 0;
 
   // Helper function which gets the next record by speculatively reading through
@@ -36,7 +36,7 @@ class FileBasedRecordProducer : public RecordProducer {
 
 public:
   FileBasedRecordProducer(const XRayFileHeader &FH, DataExtractor &DE,
-                          uint32_t &OP)
+                          uint64_t &OP)
       : Header(FH), E(DE), OffsetPtr(OP) {}
 
   /// This producer encapsulates the logic for loading a File-backed

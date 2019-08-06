@@ -50,7 +50,7 @@ static CommandRegistration Unused(&Dump, []() -> Error {
       Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
 
   DataExtractor DE(StringRef(MappedFile.data(), MappedFile.size()), true, 8);
-  uint32_t OffsetPtr = 0;
+  uint64_t OffsetPtr = 0;
 
   auto FileHeaderOrError = readBinaryFormatHeader(DE, OffsetPtr);
   if (!FileHeaderOrError)

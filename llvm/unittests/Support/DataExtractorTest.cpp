@@ -17,7 +17,7 @@ template <typename T>
 class DataExtractorTest : public ::testing::Test { };
 
 // Test DataExtractor with both types which can be used for offsets.
-typedef ::testing::Types<uint32_t, uint64_t> TestTypes;
+typedef ::testing::Types</*uint32_t, */uint64_t> TestTypes;
 TYPED_TEST_CASE(DataExtractorTest, TestTypes);
 
 const char numberData[] = "\x80\x90\xFF\xFF\x80\x00\x00\x00";

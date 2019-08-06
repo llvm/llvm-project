@@ -105,10 +105,10 @@ namespace dsymutil {
 
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
-static CompileUnit *getUnitForOffset(const UnitListTy &Units, unsigned Offset) {
+static CompileUnit *getUnitForOffset(const UnitListTy &Units, uint64_t Offset) {
   auto CU = std::upper_bound(
       Units.begin(), Units.end(), Offset,
-      [](uint32_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
+      [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
         return LHS < RHS->getOrigUnit().getNextUnitOffset();
       });
   return CU != Units.end() ? CU->get() : nullptr;
@@ -469,9 +469,9 @@ void DwarfLinker::RelocationManager::findValidRelocsMachO(
                            DMO);
       continue;
     }
-    uint32_t Offset = Offset64;
+    uint64_t OffsetCopy = Offset64;
     // Mach-o uses REL relocations, the addend is at the relocation offset.
-    uint64_t Addend = Data.getUnsigned(&Offset, RelocSize);
+    uint64_t Addend = Data.getUnsigned(&OffsetCopy, RelocSize);
     uint64_t SymAddress;
     int64_t SymOffset;
 
@@ -554,7 +554,7 @@ bool DwarfLinker::RelocationManager::findValidRelocsInDebugInfo(
 /// order because it never looks back at relocations it already 'went past'.
 /// \returns true and sets Info.InDebugMap if it is the case.
 bool DwarfLinker::RelocationManager::hasValidRelocation(
-    uint32_t StartOffset, uint32_t EndOffset, CompileUnit::DIEInfo &Info) {
+    uint64_t StartOffset, uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
   assert(NextValidReloc == 0 ||
          StartOffset > ValidRelocs[NextValidReloc - 1].Offset);
   if (NextValidReloc >= ValidRelocs.size())
@@ -595,16 +595,16 @@ bool DwarfLinker::RelocationManager::hasValidRelocation(
 /// supposed to point to the position of the first attribute described
 /// by \p Abbrev.
 /// \return [StartOffset, EndOffset) as a pair.
-static std::pair<uint32_t, uint32_t>
+static std::pair<uint64_t, uint64_t>
 getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
-                    unsigned Offset, const DWARFUnit &Unit) {
+                    uint64_t Offset, const DWARFUnit &Unit) {
   DataExtractor Data = Unit.getDebugInfoExtractor();
 
   for (unsigned i = 0; i < Idx; ++i)
     DWARFFormValue::skipValue(Abbrev->getFormByIndex(i), Data, &Offset,
                               Unit.getFormParams());
 
-  uint32_t End = Offset;
+  uint64_t End = Offset;
   DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End,
                             Unit.getFormParams());
 
@@ -632,9 +632,9 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
   if (!LocationIdx)
     return Flags;
 
-  uint32_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
   const DWARFUnit &OrigUnit = Unit.getOrigUnit();
-  uint32_t LocationOffset, LocationEndOffset;
+  uint64_t LocationOffset, LocationEndOffset;
   std::tie(LocationOffset, LocationEndOffset) =
       getAttributeOffsets(Abbrev, *LocationIdx, Offset, OrigUnit);
 
@@ -671,9 +671,9 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
   if (!LowPcIdx)
     return Flags;
 
-  uint32_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
-  uint32_t LowPcOffset, LowPcEndOffset;
+  uint64_t LowPcOffset, LowPcEndOffset;
   std::tie(LowPcOffset, LowPcEndOffset) =
       getAttributeOffsets(Abbrev, *LowPcIdx, Offset, OrigUnit);
 
@@ -784,7 +784,7 @@ void DwarfLinker::keepDIEAndDependencies(
   // attributes as kept.
   DWARFDataExtractor Data = Unit.getDebugInfoExtractor();
   const auto *Abbrev = Die.getAbbreviationDeclarationPtr();
-  uint32_t Offset = Die.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t Offset = Die.getOffset() + getULEB128Size(Abbrev->getCode());
 
   // Mark all DIEs referenced through attributes as kept.
   for (const auto &AttrSpec : Abbrev->attributes()) {
@@ -1029,7 +1029,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DebugMapObject &DMO,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint32_t Ref = *Val.getAsReference();
+  uint64_t Ref = *Val.getAsReference();
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
   DeclContext *Ctxt = nullptr;
@@ -1100,7 +1100,7 @@ void DwarfLinker::DIECloner::cloneExpression(
     CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
-  uint32_t OpOffset = 0;
+  uint64_t OpOffset = 0;
   for (auto &Op : Expression) {
     auto Description = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
@@ -1385,7 +1385,7 @@ unsigned DwarfLinker::DIECloner::cloneAttribute(
 ///
 /// \returns whether any reloc has been applied.
 bool DwarfLinker::RelocationManager::applyValidRelocs(
-    MutableArrayRef<char> Data, uint32_t BaseOffset, bool IsLittleEndian) {
+    MutableArrayRef<char> Data, uint64_t BaseOffset, bool IsLittleEndian) {
   assert((NextValidReloc == 0 ||
           BaseOffset > ValidRelocs[NextValidReloc - 1].Offset) &&
          "BaseOffset should only be increasing.");
@@ -1503,7 +1503,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   if (!Unit.getInfo(Idx).Keep)
     return nullptr;
 
-  uint32_t Offset = InputDIE.getOffset();
+  uint64_t Offset = InputDIE.getOffset();
   assert(!(Die && Info.Clone) && "Can't supply a DIE and a cloned DIE");
   if (!Die) {
     // The DIE might have been already created by a forward reference
@@ -1530,7 +1530,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   // Point to the next DIE (generally there is always at least a NULL
   // entry after the current one). If this is a lone
   // DW_TAG_compile_unit without any children, point to the next unit.
-  uint32_t NextOffset = (Idx + 1 < U.getNumDIEs())
+  uint64_t NextOffset = (Idx + 1 < U.getNumDIEs())
                             ? U.getDIEAtIndex(Idx + 1).getOffset()
                             : U.getNextUnitOffset();
   AttributesInfo AttrInfo;
@@ -1595,7 +1595,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
     }
 
     DWARFFormValue Val(AttrSpec.Form);
-    uint32_t AttrSize = Offset;
+    uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
     AttrSize = Offset - AttrSize;
 
@@ -1712,7 +1712,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
     UnitPcOffset = int64_t(OrigLowPc) - Unit.getLowPc();
 
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
-    uint32_t Offset = RangeAttribute.get();
+    uint64_t Offset = RangeAttribute.get();
     RangeAttribute.set(Streamer->getRangesSectionSize());
     if (Error E = RangeList.extract(RangeExtractor, &Offset)) {
       llvm::consumeError(std::move(E));
@@ -1815,7 +1815,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
 
   // Parse the original line info for the unit.
   DWARFDebugLine::LineTable LineTable;
-  uint32_t StmtOffset = *StmtList;
+  uint64_t StmtOffset = *StmtList;
   DWARFDataExtractor LineExtractor(
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
@@ -2010,14 +2010,14 @@ void DwarfLinker::patchFrameInfoForObject(const DebugMapObject &DMO,
     return;
 
   DataExtractor Data(FrameData, OrigDwarf.isLittleEndian(), 0);
-  uint32_t InputOffset = 0;
+  uint64_t InputOffset = 0;
 
   // Store the data of the CIEs defined in this object, keyed by their
   // offsets.
-  DenseMap<uint32_t, StringRef> LocalCIES;
+  DenseMap<uint64_t, StringRef> LocalCIES;
 
   while (Data.isValidOffset(InputOffset)) {
-    uint32_t EntryOffset = InputOffset;
+    uint64_t EntryOffset = InputOffset;
     uint32_t InitialLength = Data.getU32(&InputOffset);
     if (InitialLength == 0xFFFFFFFF)
       return reportWarning("Dwarf64 bits no supported", DMO);

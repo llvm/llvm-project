@@ -23,7 +23,7 @@ namespace llvm {
 /// attributes in a DWARFDie.
 struct DWARFAttribute {
   /// The debug info/types offset for this attribute.
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   /// The debug info/types section byte size of the data for this attribute.
   uint32_t ByteSize = 0;
   /// The attribute enumeration of this attribute.
