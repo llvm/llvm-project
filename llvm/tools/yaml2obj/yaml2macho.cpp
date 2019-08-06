@@ -11,10 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "yaml2obj.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
-#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -263,7 +263,8 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
 }
 
 static bool isVirtualSection(uint8_t type) {
-  return (type == MachO::S_ZEROFILL || type == MachO::S_GB_ZEROFILL ||
+  return (type == MachO::S_ZEROFILL ||
+          type == MachO::S_GB_ZEROFILL ||
           type == MachO::S_THREAD_LOCAL_ZEROFILL);
 }
 
@@ -275,8 +276,7 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
     case MachO::LC_SEGMENT_64:
       uint64_t segOff = is64Bit ? LC.Data.segment_command_64_data.fileoff
                                 : LC.Data.segment_command_data.fileoff;
-      if (0 ==
-          strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
+      if (0 == strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
         FoundLinkEditSeg = true;
         if (auto Err = writeLinkEditData(OS))
           return Err;
@@ -592,10 +592,7 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 
 } // end anonymous namespace
 
-namespace llvm {
-namespace yaml {
-
-int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out) {
+int yaml2macho(yaml::YamlObjectFile &Doc, raw_ostream &Out) {
   UniversalWriter Writer(Doc);
   if (auto Err = Writer.writeMachO(Out)) {
     errs() << toString(std::move(Err));
@@ -603,6 +600,3 @@ int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out) {
   }
   return 0;
 }
-
-} // namespace yaml
-} // namespace llvm
