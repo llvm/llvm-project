@@ -16,6 +16,7 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#include <link.h>
 
 extern "C" {
 
@@ -24,6 +25,14 @@ void __hwasan_init_static();
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_init();
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_library_loaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                             ElfW(Half) phnum);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_library_unloaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                               ElfW(Half) phnum);
 
 using __sanitizer::uptr;
 using __sanitizer::sptr;
