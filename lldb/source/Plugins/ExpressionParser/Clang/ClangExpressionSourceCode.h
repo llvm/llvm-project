@@ -25,9 +25,9 @@ class ClangExpressionSourceCode : public ExpressionSourceCode {
 public:
   static const char *g_expression_prefix;
 
-  static ClangExpressionSourceCode *CreateWrapped(const char *prefix,
-                                             const char *body) {
-    return new ClangExpressionSourceCode("$__lldb_expr", prefix, body, true);
+  static ClangExpressionSourceCode *CreateWrapped(llvm::StringRef prefix,
+                                                  llvm::StringRef body) {
+    return new ClangExpressionSourceCode("$__lldb_expr", prefix, body, Wrap);
   }
 
   /// Generates the source code that will evaluate the expression.
@@ -59,9 +59,9 @@ public:
                                     size_t &start_loc, size_t &end_loc);
 
 protected:
-  ClangExpressionSourceCode(const char *name, const char *prefix, const char *body,
-                       bool wrap) :
-      ExpressionSourceCode(name, prefix, body, wrap) {}
+  ClangExpressionSourceCode(llvm::StringRef name, llvm::StringRef prefix,
+                            llvm::StringRef body, Wrapping wrap)
+      : ExpressionSourceCode(name, prefix, body, wrap) {}
 };
 
 } // namespace lldb_private

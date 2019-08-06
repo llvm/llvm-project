@@ -17,20 +17,27 @@
 namespace lldb_private {
 
 class ExpressionSourceCode {
+protected:
+  enum Wrapping : bool {
+    Wrap = true,
+    NoWrap = false,
+  };
+
 public:
-  bool NeedsWrapping() const { return m_wrap; }
+  bool NeedsWrapping() const { return m_wrap == Wrap; }
 
   const char *GetName() const { return m_name.c_str(); }
 
 protected:
-  ExpressionSourceCode(const char *name, const char *prefix, const char *body,
-                       bool wrap)
-      : m_name(name), m_prefix(prefix), m_body(body), m_wrap(wrap) {}
+  ExpressionSourceCode(llvm::StringRef name, llvm::StringRef prefix,
+                       llvm::StringRef body, Wrapping wrap)
+      : m_name(name.str()), m_prefix(prefix.str()), m_body(body.str()),
+        m_wrap(wrap) {}
 
   std::string m_name;
   std::string m_prefix;
   std::string m_body;
-  bool m_wrap;
+  Wrapping m_wrap;
 };
 
 } // namespace lldb_private
