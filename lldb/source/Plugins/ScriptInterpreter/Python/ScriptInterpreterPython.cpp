@@ -448,9 +448,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_sys_module_dict(PyInitialValue::Invalid), m_run_one_line_function(),
       m_run_one_line_str_global(),
       m_dictionary_name(m_debugger.GetInstanceName().AsCString()),
-      m_terminal_state(), m_active_io_handler(eIOHandlerNone),
-      m_session_is_active(false), m_pty_slave_is_open(false),
-      m_valid_session(true), m_lock_count(0), m_command_thread_state(nullptr) {
+      m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
+      m_pty_slave_is_open(false), m_valid_session(true), m_lock_count(0),
+      m_command_thread_state(nullptr) {
   InitializePrivate();
 
   m_dictionary_name.append("_dict");
@@ -610,22 +610,6 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
 }
 
 void ScriptInterpreterPythonImpl::ResetOutputFileHandle(FILE *fh) {}
-
-void ScriptInterpreterPythonImpl::SaveTerminalState(int fd) {
-  // Python mucks with the terminal state of STDIN. If we can possibly avoid
-  // this by setting the file handles up correctly prior to entering the
-  // interpreter we should. For now we save and restore the terminal state on
-  // the input file handle.
-  m_terminal_state.Save(fd, false);
-}
-
-void ScriptInterpreterPythonImpl::RestoreTerminalState() {
-  // Python mucks with the terminal state of STDIN. If we can possibly avoid
-  // this by setting the file handles up correctly prior to entering the
-  // interpreter we should. For now we save and restore the terminal state on
-  // the input file handle.
-  m_terminal_state.Restore();
-}
 
 void ScriptInterpreterPythonImpl::LeaveSession() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));

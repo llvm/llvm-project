@@ -1,16 +1,16 @@
 # IR based instrumentation
-RUN: %clangxx_pgogen -O2  -c -o %t.1.o  %S/Inputs/instrprof-icall-promo_1.cc 
-RUN: %clangxx_pgogen -O2 -c -o %t.2.o  %S/Inputs/instrprof-icall-promo_2.cc 
+RUN: %clangxx_pgogen -O2  -c -o %t.1.o  %S/Inputs/instrprof-icall-promo_1.cpp
+RUN: %clangxx_pgogen -O2 -c -o %t.2.o  %S/Inputs/instrprof-icall-promo_2.cpp
 
 RUN: %clangxx_pgogen -O2 %t.2.o %t.1.o -o %t.gen.1
 RUN: env LLVM_PROFILE_FILE=%t-icall.profraw %run %t.gen.1
 RUN: llvm-profdata merge -o %t-icall.profdata %t-icall.profraw
-RUN: %clangxx_profuse=%t-icall.profdata -O2 -Rpass=pgo-icall-prom  -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cc  2>&1 | FileCheck %s
+RUN: %clangxx_profuse=%t-icall.profdata -O2 -Rpass=pgo-icall-prom  -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cpp 2>&1 | FileCheck %s
 
 RUN: %clangxx_pgogen -O2 %t.1.o %t.2.o -o %t.gen.2
 RUN: env LLVM_PROFILE_FILE=%t-icall2.profraw %run %t.gen.2
 RUN: llvm-profdata merge -o %t-icall2.profdata %t-icall2.profraw
-RUN: %clangxx_profuse=%t-icall2.profdata -O2 -Rpass=pgo-icall-prom  -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cc  2>&1 | FileCheck %s
+RUN: %clangxx_profuse=%t-icall2.profdata -O2 -Rpass=pgo-icall-prom  -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cpp 2>&1 | FileCheck %s
 
 FIXME: Relies on vtable layout
 XFAIL: msvc

@@ -543,7 +543,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_BMI);
   if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVX)
     setFeature(FEATURE_AVX2);
-  if (HasLeaf7 && ((EBX >> 9) & 1))
+  if (HasLeaf7 && ((EBX >> 8) & 1))
     setFeature(FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512F);

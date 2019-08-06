@@ -13,7 +13,7 @@ shared_libscudo = os.path.join(config.compiler_rt_libdir, "libclang_rt.scudo%s.s
 shared_minlibscudo = os.path.join(config.compiler_rt_libdir, "libclang_rt.scudo_minimal-%s.so" % config.target_arch)
 
 # Test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.test']
+config.suffixes = ['.c', '.cpp', '.test']
 
 # C & CXX flags.
 c_flags = ([config.target_cflags] +

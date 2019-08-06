@@ -65,7 +65,7 @@ config.substitutions.append( ("%clangxx ", build_invocation(clang_ubsan_cxxflags
 config.substitutions.append( ("%gmlt ", " ".join(config.debug_info_flags) + " ") )
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 # Check that the host supports UndefinedBehaviorSanitizer tests
 if config.host_os not in ['Linux', 'Darwin', 'FreeBSD', 'Windows', 'NetBSD', 'SunOS', 'OpenBSD']:

@@ -210,7 +210,7 @@ if config.host_os == 'Windows' and config.asan_dynamic:
                                              os.environ.get('PATH', '')])
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os == 'Darwin':
   config.suffixes.append('.mm')

@@ -30,7 +30,7 @@ config.substitutions.append(('%env_hwasan_opts=',
                              'env HWASAN_OPTIONS=' + default_hwasan_opts_str))
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['Linux', 'Android']:
   config.unsupported = True

@@ -68,9 +68,11 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
             SANITIZER_MADVISE_DONTNEED);
 }
 
-bool NoHugePagesInRegion(uptr addr, uptr size) {
+bool SetShadowRegionHugePageMode(uptr addr, uptr size) {
 #ifdef MADV_NOHUGEPAGE  // May not be defined on old systems.
-  return madvise((char *)addr, size, MADV_NOHUGEPAGE) == 0;
+  if (common_flags()->no_huge_pages_for_shadow)
+    return madvise((char *)addr, size, MADV_NOHUGEPAGE) == 0;
+  return true;
 #else
   return true;
 #endif  // MADV_NOHUGEPAGE
