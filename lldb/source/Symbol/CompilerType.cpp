@@ -523,14 +523,6 @@ CompilerType CompilerType::GetUnboundType() const {
   return CompilerType();
 }
 
-// CompilerType
-// CompilerType::RemoveFastQualifiers () const
-//{
-//    if (IsValid())
-//        return m_type_system->RemoveFastQualifiers(m_type);
-//    return CompilerType();
-//}
-
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 //----------------------------------------------------------------------
