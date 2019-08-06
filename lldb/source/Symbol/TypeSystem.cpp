@@ -125,10 +125,6 @@ LazyBool TypeSystem::ShouldPrintAsOneLiner(void *type, ValueObject *valobj) {
   return eLazyBoolCalculate;
 }
 
-bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
-  return false;
-}
-
 ConstString TypeSystem::DeclGetMangledName(void *opaque_decl) {
   return ConstString();
 }

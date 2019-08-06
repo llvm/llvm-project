@@ -376,12 +376,6 @@ public:
                            lldb::offset_t data_offset,
                            size_t data_byte_size) = 0;
 
-  // Converts "s" to a floating point value and place resulting floating point
-  // bytes in the "dst" buffer.
-  virtual size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
-                                           const char *s, uint8_t *dst,
-                                           size_t dst_size) = 0;
-
   // TODO: Determine if these methods should move to ClangASTContext.
 
   virtual bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
@@ -459,20 +453,6 @@ public:
   virtual CompilerType GetTypeForFormatters(void *type);
 
   virtual LazyBool ShouldPrintAsOneLiner(void *type, ValueObject *valobj);
-
-  // Type systems can have types that are placeholder types, which are meant to
-  // indicate the presence of a type, but offer no actual information about
-  // said types, and leave the burden of actually figuring type information out
-  // to dynamic type resolution. For instance a language with a generics
-  // system, can use placeholder types to indicate "type argument goes here",
-  // without promising uniqueness of the placeholder, nor attaching any
-  // actually idenfiable information to said placeholder. This API allows type
-  // systems to tell LLDB when such a type has been encountered In response,
-  // the debugger can react by not using this type as a cache entry in any
-  // type-specific way For instance, LLDB will currently not cache any
-  // formatters that are discovered on such a type as attributable to the
-  // meaningless type itself, instead preferring to use the dynamic type
-  virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
 protected:
   const LLVMCastKind m_kind; // Support for llvm casting

@@ -709,12 +709,6 @@ LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   return eLazyBoolCalculate;
 }
 
-bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
-  if (IsValid())
-    return m_type_system->IsMeaninglessWithoutDynamicResolution(m_type);
-  return false;
-}
-
 // Get the index of the child of "clang_type" whose name matches. This function
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
@@ -727,13 +721,6 @@ CompilerType::GetIndexOfChildWithName(const char *name,
                                                   omit_empty_base_classes);
   }
   return UINT32_MAX;
-}
-
-size_t CompilerType::ConvertStringToFloatValue(const char *s, uint8_t *dst,
-                                               size_t dst_size) const {
-  if (IsValid())
-    return m_type_system->ConvertStringToFloatValue(m_type, s, dst, dst_size);
-  return 0;
 }
 
 // Dumping types
