@@ -19,12 +19,12 @@ public:
 
   static SwiftExpressionSourceCode *CreateWrapped(const char *prefix,
                                              const char *body) {
-    return new SwiftExpressionSourceCode("$__lldb_expr", prefix, body, true);
+    return new SwiftExpressionSourceCode("$__lldb_expr", prefix, body, Wrap);
   }
 
   static SwiftExpressionSourceCode *CreateUnwrapped(const char *name,
                                                const char *body) {
-    return new SwiftExpressionSourceCode(name, "", body, false);
+    return new SwiftExpressionSourceCode(name, "", body, NoWrap);
   }
 
   // Given a string returned by GetText, find the beginning and end of the body
@@ -47,7 +47,7 @@ public:
 
 private:
   SwiftExpressionSourceCode(const char *name, const char *prefix, const char *body,
-                       bool wrap)
+                       Wrapping wrap)
       : ExpressionSourceCode(name, prefix, body, wrap) {}
   uint32_t m_num_body_lines = 0;
 };
