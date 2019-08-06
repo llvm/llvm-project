@@ -6044,14 +6044,15 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-uint64_t SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
-  if (type) {
-    const swift::irgen::FixedTypeInfo *fixed_type_info =
-        GetSwiftFixedTypeInfo(type);
-    if (fixed_type_info)
-      return fixed_type_info->getFixedStride().getValue();
-  }
-  return 0;
+llvm::Optional<uint64_t>
+SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return {};
+  const swift::irgen::FixedTypeInfo *fixed_type_info =
+      GetSwiftFixedTypeInfo(type);
+  if (!fixed_type_info)
+    return {};
+  return fixed_type_info->getFixedStride().getValue();
 }
 
 size_t SwiftASTContext::GetTypeBitAlign(void *type) {
