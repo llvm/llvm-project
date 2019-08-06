@@ -33,7 +33,7 @@ config.substitutions.append( ("%clangxx_msan ", build_invocation(clang_msan_cxxf
 config.substitutions.append( ("%clang_kmsan ", build_invocation(clang_kmsan_cflags)) )
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['Linux', 'NetBSD', 'FreeBSD']:
   config.unsupported = True

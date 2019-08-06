@@ -9,7 +9,7 @@ config.name = 'SafeStack'
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.m', '.mm', '.ll', '.test']
+config.suffixes = ['.c', '.cpp', '.m', '.mm', '.ll', '.test']
 
 # Add clang substitutions.
 config.substitutions.append( ("%clang_nosafestack ", config.clang + " -O0 -fno-sanitize=safe-stack ") )

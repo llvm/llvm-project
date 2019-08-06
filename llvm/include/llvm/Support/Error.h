@@ -1170,7 +1170,7 @@ inline Error createStringError(std::error_code EC, char const *Fmt,
 
 Error createStringError(std::error_code EC, char const *Msg);
 
-static inline Error createStringError(std::error_code EC, const Twine &S) {
+inline Error createStringError(std::error_code EC, const Twine &S) {
   return createStringError(EC, S.str().c_str());
 }
 

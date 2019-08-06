@@ -56,9 +56,12 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
     case Intrinsic::memset: {
+      // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
+      // heuristics decide.
+      unsigned MaxLen = EnableOpt ? 0 : 32;
       // Try to inline memcpy type calls if optimizations are enabled.
-      return (EnableOpt && !EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI)
-                                           : false;
+      return (!EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI, MaxLen)
+                              : false;
     }
     default:
       break;

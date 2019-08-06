@@ -75,7 +75,10 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
     ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
 
-  return ObjLinkingLayer;
+  // FIXME: Explicit conversion to std::unique_ptr<ObjectLayer> added to silence
+  //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
+  //        just return ObjLinkingLayer) once those bots are upgraded.
+  return std::unique_ptr<ObjectLayer>(std::move(ObjLinkingLayer));
 }
 
 Expected<IRCompileLayer::CompileFunction>

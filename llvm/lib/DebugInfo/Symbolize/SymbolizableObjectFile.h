@@ -31,7 +31,8 @@ namespace symbolize {
 class SymbolizableObjectFile : public SymbolizableModule {
 public:
   static ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
-  create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx);
+  create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx,
+         bool UntagAddresses);
 
   DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
                            FunctionNameKind FNKind,
@@ -70,6 +71,7 @@ private:
 
   const object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
+  bool UntagAddresses;
 
   struct SymbolDesc {
     uint64_t Addr;
@@ -85,7 +87,8 @@ private:
   std::vector<std::pair<SymbolDesc, StringRef>> Objects;
 
   SymbolizableObjectFile(const object::ObjectFile *Obj,
-                         std::unique_ptr<DIContext> DICtx);
+                         std::unique_ptr<DIContext> DICtx,
+                         bool UntagAddresses);
 };
 
 } // end namespace symbolize

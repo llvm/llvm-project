@@ -996,17 +996,17 @@ In addition to the traditional ``-W`` flags, one can enable **all** diagnostics
 by passing :option:`-Weverything`. This works as expected with
 :option:`-Werror`, and also includes the warnings from :option:`-pedantic`. Some
 diagnostics contradict each other, therefore, users of :option:`-Weverything`
-often disable many diagnostics such as :option:`-Wno-c++98-compat`
-:option:`-Wno-c++-compat` because they contradict recent C++ standards.
+often disable many diagnostics such as `-Wno-c++98-compat` and `-Wno-c++-compat`
+because they contradict recent C++ standards.
 
 Since :option:`-Weverything` enables every diagnostic, we generally don't
-recommend using it. :option:`-Wall` :option:`-Wextra` are a better choice for
-most projects. Using :option:`-Weverything` means that updating your compiler is
-more difficult because you're exposed to experimental diagnostics which might be
-of lower quality than the default ones. If you do use :option:`-Weverything`
-then we advise that you address all new compiler diagnostics as they get added
-to Clang, either by fixing everything they find or explicitly disabling that
-diagnostic with its corresponding `Wno-` option.
+recommend using it. `-Wall` `-Wextra` are a better choice for most projects.
+Using :option:`-Weverything` means that updating your compiler is more difficult
+because you're exposed to experimental diagnostics which might be of lower
+quality than the default ones. If you do use :option:`-Weverything` then we
+advise that you address all new compiler diagnostics as they get added to Clang,
+either by fixing everything they find or explicitly disabling that diagnostic
+with its corresponding `Wno-` option.
 
 Note that when combined with :option:`-w` (which disables all warnings),
 disabling all warnings wins.

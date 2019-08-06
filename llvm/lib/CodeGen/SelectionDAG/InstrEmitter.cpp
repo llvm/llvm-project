@@ -927,12 +927,12 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   //
   // Collect all the used physreg defs, and make sure that any unused physreg
   // defs are marked as dead.
-  SmallVector<unsigned, 8> UsedRegs;
+  SmallVector<Register, 8> UsedRegs;
 
   // Additional results must be physical register defs.
   if (HasPhysRegOuts) {
     for (unsigned i = NumDefs; i < NumResults; ++i) {
-      unsigned Reg = II.getImplicitDefs()[i - NumDefs];
+      Register Reg = II.getImplicitDefs()[i - NumDefs];
       if (!Node->hasAnyUseOfValue(i))
         continue;
       // This implicitly defined physreg has a use.
@@ -959,8 +959,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       // direct RegisterSDNode operands.
       for (unsigned i = 0, e = F->getNumOperands(); i != e; ++i)
         if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(F->getOperand(i))) {
-          unsigned Reg = R->getReg();
-          if (Register::isPhysicalRegister(Reg))
+          Register Reg = R->getReg();
+          if (Reg.isPhysical())
             UsedRegs.push_back(Reg);
         }
     }
@@ -1136,7 +1136,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // then remove the early-clobber flag.
     for (unsigned Reg : ECRegs) {
       if (MIB->readsRegister(Reg, TRI)) {
-        MachineOperand *MO = 
+        MachineOperand *MO =
             MIB->findRegisterDefOperand(Reg, false, false, TRI);
         assert(MO && "No def operand for clobbered register?");
         MO->setIsEarlyClobber(false);

@@ -176,10 +176,11 @@ private:
                     DiagnosticManager &diagnostic_manager) override;
 
   std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
-  void UpdateLanguageForExpr(DiagnosticManager &diagnostic_manager,
-                             ExecutionContext &exe_ctx,
-                             std::vector<std::string> modules_to_import,
-                             bool for_completion);
+  void CreateSourceCode(DiagnosticManager &diagnostic_manager,
+                        ExecutionContext &exe_ctx,
+                        std::vector<std::string> modules_to_import,
+                        bool for_completion);
+  void UpdateLanguageForExpr();
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,

@@ -211,8 +211,7 @@ void InitThreads() {
 
 static void MadviseShadowRegion(uptr beg, uptr end) {
   uptr size = end - beg + 1;
-  if (common_flags()->no_huge_pages_for_shadow)
-    NoHugePagesInRegion(beg, size);
+  SetShadowRegionHugePageMode(beg, size);
   if (common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(beg, size);
 }

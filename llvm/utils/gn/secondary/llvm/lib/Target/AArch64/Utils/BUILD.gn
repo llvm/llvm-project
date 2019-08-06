@@ -1,5 +1,6 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+# Generates AArch64GenSystemOperands.inc
 tablegen("AArch64GenSystemOperands") {
   visibility = [ ":Utils" ]
   args = [ "-gen-searchable-tables" ]

@@ -879,12 +879,6 @@ public:
   static CompilerType CreateMemberPointerType(const CompilerType &type,
                                               const CompilerType &pointee_type);
 
-  // Converts "s" to a floating point value and place resulting floating point
-  // bytes in the "dst" buffer.
-  size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
-                                   const char *s, uint8_t *dst,
-                                   size_t dst_size) override;
-
   // Dumping types
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.

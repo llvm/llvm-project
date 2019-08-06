@@ -34,9 +34,11 @@
 #include <sanitizer/allocator_interface.h>
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 int main(int argc, char **argv) {
   assert(argc <= 3);
-  bool test_size_max = argc == 3 && !strcmp(argv[2], "max");
+  bool test_size_max = argc == 3 && !untag_strcmp(argv[2], "max");
 
   static const size_t kMaxAllowedMallocSize = 1ULL << 40;
   static const size_t kChunkHeaderSize = 16;
@@ -44,28 +46,28 @@ int main(int argc, char **argv) {
   size_t MallocSize = test_size_max ? std::numeric_limits<size_t>::max()
                                     : kMaxAllowedMallocSize;
 
-  if (!strcmp(argv[1], "malloc")) {
+  if (!untag_strcmp(argv[1], "malloc")) {
     void *p = malloc(MallocSize);
     assert(!p);
     p = malloc(kMaxAllowedMallocSize - kChunkHeaderSize);
     assert(!p);
-  } else if (!strcmp(argv[1], "calloc")) {
+  } else if (!untag_strcmp(argv[1], "calloc")) {
     // Trigger an overflow in calloc.
     size_t size = std::numeric_limits<size_t>::max();
     void *p = calloc((size / 0x1000) + 1, 0x1000);
     assert(!p);
-  } else if (!strcmp(argv[1], "reallocarray")) {
+  } else if (!untag_strcmp(argv[1], "reallocarray")) {
     // Trigger an overflow in reallocarray.
     size_t size = std::numeric_limits<size_t>::max();
     void *p = __sanitizer_reallocarray(nullptr, (size / 0x1000) + 1, 0x1000);
     assert(!p);
-  } else if (!strcmp(argv[1], "new")) {
+  } else if (!untag_strcmp(argv[1], "new")) {
     void *p = operator new(MallocSize);
     assert(!p);
-  } else if (!strcmp(argv[1], "new-nothrow")) {
+  } else if (!untag_strcmp(argv[1], "new-nothrow")) {
     void *p = operator new(MallocSize, std::nothrow);
     assert(!p);
-  } else if (!strcmp(argv[1], "usable")) {
+  } else if (!untag_strcmp(argv[1], "usable")) {
     // Playing with the actual usable size of a chunk.
     void *p = malloc(1007);
     assert(p);

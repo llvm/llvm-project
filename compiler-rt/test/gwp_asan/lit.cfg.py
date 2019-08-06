@@ -9,7 +9,7 @@ config.name = 'GWP-ASan' + config.name_suffix
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.test']
+config.suffixes = ['.c', '.cpp', '.test']
 
 # C & CXX flags.
 c_flags = ([config.target_cflags])

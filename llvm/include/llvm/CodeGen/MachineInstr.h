@@ -1140,7 +1140,7 @@ public:
   /// is a read of a super-register.
   /// This does not count partial redefines of virtual registers as reads:
   ///   %reg1024:6 = OP.
-  bool readsRegister(unsigned Reg,
+  bool readsRegister(Register Reg,
                      const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterUseOperandIdx(Reg, false, TRI) != -1;
   }
@@ -1148,20 +1148,20 @@ public:
   /// Return true if the MachineInstr reads the specified virtual register.
   /// Take into account that a partial define is a
   /// read-modify-write operation.
-  bool readsVirtualRegister(unsigned Reg) const {
+  bool readsVirtualRegister(Register Reg) const {
     return readsWritesVirtualRegister(Reg).first;
   }
 
   /// Return a pair of bools (reads, writes) indicating if this instruction
   /// reads or writes Reg. This also considers partial defines.
   /// If Ops is not null, all operand indices for Reg are added.
-  std::pair<bool,bool> readsWritesVirtualRegister(unsigned Reg,
+  std::pair<bool,bool> readsWritesVirtualRegister(Register Reg,
                                 SmallVectorImpl<unsigned> *Ops = nullptr) const;
 
   /// Return true if the MachineInstr kills the specified register.
   /// If TargetRegisterInfo is passed, then it also checks if there is
   /// a kill of a super-register.
-  bool killsRegister(unsigned Reg,
+  bool killsRegister(Register Reg,
                      const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterUseOperandIdx(Reg, true, TRI) != -1;
   }
@@ -1170,7 +1170,7 @@ public:
   /// If TargetRegisterInfo is passed, then it also checks
   /// if there is a def of a super-register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
-  bool definesRegister(unsigned Reg,
+  bool definesRegister(Register Reg,
                        const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterDefOperandIdx(Reg, false, false, TRI) != -1;
   }
@@ -1178,38 +1178,38 @@ public:
   /// Return true if the MachineInstr modifies (fully define or partially
   /// define) the specified register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
-  bool modifiesRegister(unsigned Reg, const TargetRegisterInfo *TRI) const {
+  bool modifiesRegister(Register Reg, const TargetRegisterInfo *TRI) const {
     return findRegisterDefOperandIdx(Reg, false, true, TRI) != -1;
   }
 
   /// Returns true if the register is dead in this machine instruction.
   /// If TargetRegisterInfo is passed, then it also checks
   /// if there is a dead def of a super-register.
-  bool registerDefIsDead(unsigned Reg,
+  bool registerDefIsDead(Register Reg,
                          const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterDefOperandIdx(Reg, true, false, TRI) != -1;
   }
 
   /// Returns true if the MachineInstr has an implicit-use operand of exactly
   /// the given register (not considering sub/super-registers).
-  bool hasRegisterImplicitUseOperand(unsigned Reg) const;
+  bool hasRegisterImplicitUseOperand(Register Reg) const;
 
   /// Returns the operand index that is a use of the specific register or -1
   /// if it is not found. It further tightens the search criteria to a use
   /// that kills the register if isKill is true.
-  int findRegisterUseOperandIdx(unsigned Reg, bool isKill = false,
+  int findRegisterUseOperandIdx(Register Reg, bool isKill = false,
                                 const TargetRegisterInfo *TRI = nullptr) const;
 
   /// Wrapper for findRegisterUseOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
-  MachineOperand *findRegisterUseOperand(unsigned Reg, bool isKill = false,
+  MachineOperand *findRegisterUseOperand(Register Reg, bool isKill = false,
                                       const TargetRegisterInfo *TRI = nullptr) {
     int Idx = findRegisterUseOperandIdx(Reg, isKill, TRI);
     return (Idx == -1) ? nullptr : &getOperand(Idx);
   }
 
   const MachineOperand *findRegisterUseOperand(
-    unsigned Reg, bool isKill = false,
+    Register Reg, bool isKill = false,
     const TargetRegisterInfo *TRI = nullptr) const {
     return const_cast<MachineInstr *>(this)->
       findRegisterUseOperand(Reg, isKill, TRI);
@@ -1221,14 +1221,14 @@ public:
   /// overlap the specified register. If TargetRegisterInfo is non-null,
   /// then it also checks if there is a def of a super-register.
   /// This may also return a register mask operand when Overlap is true.
-  int findRegisterDefOperandIdx(unsigned Reg,
+  int findRegisterDefOperandIdx(Register Reg,
                                 bool isDead = false, bool Overlap = false,
                                 const TargetRegisterInfo *TRI = nullptr) const;
 
   /// Wrapper for findRegisterDefOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
   MachineOperand *
-  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+  findRegisterDefOperand(Register Reg, bool isDead = false,
                          bool Overlap = false,
                          const TargetRegisterInfo *TRI = nullptr) {
     int Idx = findRegisterDefOperandIdx(Reg, isDead, Overlap, TRI);
@@ -1236,7 +1236,7 @@ public:
   }
 
   const MachineOperand *
-  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+  findRegisterDefOperand(Register Reg, bool isDead = false,
                          bool Overlap = false,
                          const TargetRegisterInfo *TRI = nullptr) const {
     return const_cast<MachineInstr *>(this)->findRegisterDefOperand(
@@ -1283,7 +1283,7 @@ public:
   ///
   /// \pre CurRC must not be NULL.
   const TargetRegisterClass *getRegClassConstraintEffectForVReg(
-      unsigned Reg, const TargetRegisterClass *CurRC,
+      Register Reg, const TargetRegisterClass *CurRC,
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
       bool ExploreBundle = false) const;
 
@@ -1346,39 +1346,39 @@ public:
 
   /// Replace all occurrences of FromReg with ToReg:SubIdx,
   /// properly composing subreg indices where necessary.
-  void substituteRegister(unsigned FromReg, unsigned ToReg, unsigned SubIdx,
+  void substituteRegister(Register FromReg, Register ToReg, unsigned SubIdx,
                           const TargetRegisterInfo &RegInfo);
 
   /// We have determined MI kills a register. Look for the
   /// operand that uses it and mark it as IsKill. If AddIfNotFound is true,
   /// add a implicit operand if it's not found. Returns true if the operand
   /// exists / is added.
-  bool addRegisterKilled(unsigned IncomingReg,
+  bool addRegisterKilled(Register IncomingReg,
                          const TargetRegisterInfo *RegInfo,
                          bool AddIfNotFound = false);
 
   /// Clear all kill flags affecting Reg.  If RegInfo is provided, this includes
   /// all aliasing registers.
-  void clearRegisterKills(unsigned Reg, const TargetRegisterInfo *RegInfo);
+  void clearRegisterKills(Register Reg, const TargetRegisterInfo *RegInfo);
 
   /// We have determined MI defined a register without a use.
   /// Look for the operand that defines it and mark it as IsDead. If
   /// AddIfNotFound is true, add a implicit operand if it's not found. Returns
   /// true if the operand exists / is added.
-  bool addRegisterDead(unsigned Reg, const TargetRegisterInfo *RegInfo,
+  bool addRegisterDead(Register Reg, const TargetRegisterInfo *RegInfo,
                        bool AddIfNotFound = false);
 
   /// Clear all dead flags on operands defining register @p Reg.
-  void clearRegisterDeads(unsigned Reg);
+  void clearRegisterDeads(Register Reg);
 
   /// Mark all subregister defs of register @p Reg with the undef flag.
   /// This function is used when we determined to have a subregister def in an
   /// otherwise undefined super register.
-  void setRegisterDefReadUndef(unsigned Reg, bool IsUndef = true);
+  void setRegisterDefReadUndef(Register Reg, bool IsUndef = true);
 
   /// We have determined MI defines a register. Make sure there is an operand
   /// defining Reg.
-  void addRegisterDefined(unsigned Reg,
+  void addRegisterDefined(Register Reg,
                           const TargetRegisterInfo *RegInfo = nullptr);
 
   /// Mark every physreg used by this instruction as
@@ -1386,7 +1386,7 @@ public:
   ///
   /// On instructions with register mask operands, also add implicit-def
   /// operands for all registers in UsedRegs.
-  void setPhysRegsDeadExcept(ArrayRef<unsigned> UsedRegs,
+  void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
                              const TargetRegisterInfo &TRI);
 
   /// Return true if it is safe to move this instruction. If
@@ -1605,7 +1605,7 @@ public:
 
   /// Find all DBG_VALUEs immediately following this instruction that point
   /// to a register def in this instruction and point them to \p Reg instead.
-  void changeDebugValuesDefReg(unsigned Reg);
+  void changeDebugValuesDefReg(Register Reg);
 
   /// Returns the Intrinsic::ID for this instruction.
   /// \pre Must have an intrinsic ID operand.
@@ -1636,7 +1636,7 @@ private:
   /// this MI and the given operand index \p OpIdx.
   /// If the related operand does not constrained Reg, this returns CurRC.
   const TargetRegisterClass *getRegClassConstraintEffectForVRegImpl(
-      unsigned OpIdx, unsigned Reg, const TargetRegisterClass *CurRC,
+      unsigned OpIdx, Register Reg, const TargetRegisterClass *CurRC,
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI) const;
 };
 

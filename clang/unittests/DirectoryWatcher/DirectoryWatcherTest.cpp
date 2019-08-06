@@ -132,8 +132,10 @@ struct VerifyingConsumer {
     } else {
       ExpectedInitial.erase(It);
     }
-    if (result())
+    if (result()) {
+      L.unlock();
       ResultIsReady.notify_one();
+    }
   }
 
   void consumeNonInitial(DirectoryWatcher::Event E) {
@@ -151,8 +153,10 @@ struct VerifyingConsumer {
     } else {
       ExpectedNonInitial.erase(It);
     }
-    if (result())
+    if (result()) {
+      L.unlock();
       ResultIsReady.notify_one();
+    }
   }
 
   // This method is used by DirectoryWatcher.

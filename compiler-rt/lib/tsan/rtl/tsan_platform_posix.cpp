@@ -30,14 +30,13 @@ static const char kShadowMemoryMappingHint[] =
     "TSAN_OPTIONS=%s=0\n";
 
 static void NoHugePagesInShadow(uptr addr, uptr size) {
-  if (common_flags()->no_huge_pages_for_shadow)
-    if (!NoHugePagesInRegion(addr, size)) {
-      Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
-             "MADV_NOHUGEPAGE", errno);
-      Printf(kShadowMemoryMappingHint, "MADV_NOHUGEPAGE",
-             "no_huge_pages_for_shadow");
-      Die();
-    }
+  if (!SetShadowRegionHugePageMode(addr, size)) {
+    Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
+        "MADV_NOHUGEPAGE", errno);
+    Printf(kShadowMemoryMappingHint, "MADV_NOHUGEPAGE",
+        "no_huge_pages_for_shadow");
+    Die();
+  }
 }
 
 static void DontDumpShadow(uptr addr, uptr size) {
