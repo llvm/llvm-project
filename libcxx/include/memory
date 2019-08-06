@@ -5591,7 +5591,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
-#   include <pstl/internal/glue_memory_impl.h>
+#   include <__pstl_memory>
 #endif
 
 #endif  // _LIBCPP_MEMORY
