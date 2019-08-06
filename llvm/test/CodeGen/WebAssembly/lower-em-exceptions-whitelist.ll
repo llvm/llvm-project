@@ -38,7 +38,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, i32*
-; CHECK-NEXT: call void @__invoke_void(void ()* @foo)
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void(void ()* @foo)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont

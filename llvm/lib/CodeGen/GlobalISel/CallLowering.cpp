@@ -183,7 +183,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     MVT CurVT = MVT::getVT(Args[i].Ty);
     if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i], CCInfo)) {
       // Try to use the register type if we couldn't assign the VT.
-      if (!Handler.isArgumentHandler() || !CurVT.isValid())
+      if (!Handler.isIncomingArgumentHandler() || !CurVT.isValid())
         return false;
       CurVT = TLI->getRegisterTypeForCallingConv(
           F.getContext(), F.getCallingConv(), EVT(CurVT));
@@ -212,7 +212,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     if (VA.isRegLoc()) {
       MVT OrigVT = MVT::getVT(Args[i].Ty);
       MVT VAVT = VA.getValVT();
-      if (Handler.isArgumentHandler() && VAVT != OrigVT) {
+      if (Handler.isIncomingArgumentHandler() && VAVT != OrigVT) {
         if (VAVT.getSizeInBits() < OrigVT.getSizeInBits())
           return false; // Can't handle this type of arg yet.
         const LLT VATy(VAVT);

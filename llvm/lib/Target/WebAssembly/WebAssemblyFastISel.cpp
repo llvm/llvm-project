@@ -1141,14 +1141,14 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
     return true;
   }
 
-  unsigned Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
+  Register Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
                                         In, I->getOperand(0)->hasOneUse());
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
   --Iter;
   assert(Iter->isBitcast());
-  Iter->setPhysRegsDeadExcept(ArrayRef<unsigned>(), TRI);
+  Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
   updateValueMap(I, Reg);
   return true;
 }

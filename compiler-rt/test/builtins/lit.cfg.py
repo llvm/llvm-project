@@ -9,7 +9,7 @@ config.name = 'Builtins'
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp', '.m', '.mm']
+config.suffixes = ['.c', '.cpp', '.m', '.mm']
 
 # Define %clang and %clangxx substitutions to use in test RUN lines.
 config.substitutions.append( ("%clang ", " " + config.clang + " ") )

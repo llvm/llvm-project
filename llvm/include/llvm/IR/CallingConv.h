@@ -225,6 +225,11 @@ namespace CallingConv {
     /// Calling convention between AArch64 SVE functions
     AArch64_SVE_VectorCall = 98,
 
+    /// Calling convention for emscripten __invoke_* functions. The first
+    /// argument is required to be the function ptr being indirectly called.
+    /// The remainder matches the regular calling convention.
+    WASM_EmscriptenInvoke = 99,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

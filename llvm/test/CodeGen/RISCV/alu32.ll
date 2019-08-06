@@ -153,7 +153,7 @@ define i32 @add(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: add:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, %b
   ret i32 %1
@@ -167,7 +167,7 @@ define i32 @sub(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: sub:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = sub i32 %a, %b
   ret i32 %1

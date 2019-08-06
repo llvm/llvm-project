@@ -160,6 +160,11 @@ OPTIONS
 
  Display contents of the stackmap section.
 
+.. option:: --stack-sizes
+
+ Display the contents of the stack sizes section(s), i.e. pairs of function
+ names and the size of their stack frames.
+
 .. option:: --string-dump=<section[,section,...]>, -p
 
  Display the specified section(s) as a list of strings. ``section`` may be a

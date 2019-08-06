@@ -13,7 +13,7 @@ define i32 @foo1() {
 ; TEST 2
 ; CHECK: Function Attrs: nounwind readnone
 ; CHECK-NEXT: define i32 @scc1_foo()
-; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
+; ATTRIBUTOR: Function Attrs: nofree noreturn nosync nounwind
 ; ATTRIBUTOR-NEXT: define i32 @scc1_foo()
 define i32 @scc1_foo() {
   %1 = call i32 @scc1_bar()
@@ -24,7 +24,7 @@ define i32 @scc1_foo() {
 ; TEST 3
 ; CHECK: Function Attrs: nounwind readnone
 ; CHECK-NEXT: define i32 @scc1_bar()
-; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
+; ATTRIBUTOR: Function Attrs: nofree noreturn nosync nounwind
 ; ATTRIBUTOR-NEXT: define i32 @scc1_bar()
 define i32 @scc1_bar() {
   %1 = call i32 @scc1_foo()

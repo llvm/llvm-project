@@ -180,13 +180,12 @@ define void @call_might_sync() nounwind uwtable noinline {
   ret void
 }
 
-; TEST 11 - negative, should not deduce nosync
-; volatile operation in same scc. Call volatile_load defined in TEST 8.
+; TEST 11 - positive, should deduce nosync
+; volatile operation in same scc but dead. Call volatile_load defined in TEST 8.
 
 ; FNATTR: Function Attrs: nofree noinline nounwind uwtable
 ; FNATTR-NEXT: define i32 @scc1(i32* %0)
-; ATTRIBUTOR: Function Attrs: nofree noinline nounwind uwtable
-; ATTRIBUTOR-NOT: nosync
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define i32 @scc1(i32* %0)
 define i32 @scc1(i32* %0) noinline nounwind uwtable {
   tail call void @scc2(i32* %0);
@@ -196,8 +195,7 @@ define i32 @scc1(i32* %0) noinline nounwind uwtable {
 
 ; FNATTR: Function Attrs: nofree noinline nounwind uwtable
 ; FNATTR-NEXT: define void @scc2(i32* %0)
-; ATTRIBUTOR: Function Attrs: nofree noinline nounwind uwtable
-; ATTRIBUTOR-NOT: nosync
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define void @scc2(i32* %0)
 define void @scc2(i32* %0) noinline nounwind uwtable {
   tail call i32 @scc1(i32* %0);

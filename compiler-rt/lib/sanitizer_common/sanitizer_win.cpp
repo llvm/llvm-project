@@ -329,7 +329,7 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   // FIXME: add madvise-analog when we move to 64-bits.
 }
 
-bool NoHugePagesInRegion(uptr addr, uptr size) {
+bool SetShadowRegionHugePageMode(uptr addr, uptr size) {
   // FIXME: probably similar to ReleaseMemoryToOS.
   return true;
 }

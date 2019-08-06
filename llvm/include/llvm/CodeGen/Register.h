@@ -113,6 +113,22 @@ public:
   bool isValid() const {
     return Reg != 0;
   }
+
+  /// Comparisons between register objects
+  bool operator==(const Register &Other) const { return Reg == Other.Reg; }
+  bool operator!=(const Register &Other) const { return Reg != Other.Reg; }
+
+  /// Comparisons against register constants. E.g.
+  /// * R == AArch64::WZR
+  /// * R == 0
+  /// * R == VirtRegMap::NO_PHYS_REG
+  bool operator==(unsigned Other) const { return Reg == Other; }
+  bool operator!=(unsigned Other) const { return Reg != Other; }
+  bool operator==(int Other) const { return Reg == unsigned(Other); }
+  bool operator!=(int Other) const { return Reg != unsigned(Other); }
+  // MSVC requires that we explicitly declare these two as well.
+  bool operator==(MCPhysReg Other) const { return Reg == unsigned(Other); }
+  bool operator!=(MCPhysReg Other) const { return Reg != unsigned(Other); }
 };
 
 // Provide DenseMapInfo for Register

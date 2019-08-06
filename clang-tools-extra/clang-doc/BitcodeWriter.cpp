@@ -172,6 +172,8 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
           {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
           {REFERENCE_PATH, {"Path", &StringAbbrev}},
+          {REFERENCE_IS_IN_GLOBAL_NAMESPACE,
+           {"IsInGlobalNamespace", &BoolAbbrev}},
           {REFERENCE_FIELD, {"Field", &IntAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
@@ -215,7 +217,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_TYPE, REFERENCE_PATH,
-          REFERENCE_FIELD}}};
+          REFERENCE_IS_IN_GLOBAL_NAMESPACE, REFERENCE_FIELD}}};
 
 // AbbreviationMap
 
@@ -387,6 +389,7 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord(R.Name, REFERENCE_NAME);
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
+  emitRecord(R.IsInGlobalNamespace, REFERENCE_IS_IN_GLOBAL_NAMESPACE);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
 }
 

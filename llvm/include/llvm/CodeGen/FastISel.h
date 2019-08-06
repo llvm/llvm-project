@@ -93,9 +93,9 @@ public:
 
     SmallVector<Value *, 16> OutVals;
     SmallVector<ISD::ArgFlagsTy, 16> OutFlags;
-    SmallVector<unsigned, 16> OutRegs;
+    SmallVector<Register, 16> OutRegs;
     SmallVector<ISD::InputArg, 4> Ins;
-    SmallVector<unsigned, 4> InRegs;
+    SmallVector<Register, 4> InRegs;
 
     CallLoweringInfo()
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
