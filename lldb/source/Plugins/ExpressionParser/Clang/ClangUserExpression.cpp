@@ -645,12 +645,10 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       register_execution_unit = true;
     }
 
-    if (register_execution_unit) {
-      llvm::cast<PersistentExpressionState>(
-          exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
-              m_language))
+    if (register_execution_unit)
+      exe_ctx.GetTargetPtr()
+          ->GetPersistentExpressionStateForLanguage(m_language)
           ->RegisterExecutionUnit(m_execution_unit_sp);
-    }
   }
 
   if (generate_debug_info) {
