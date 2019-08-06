@@ -28,7 +28,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/Language.h"
@@ -148,8 +148,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   die.GetDeclContext(decl_context);
   TypeMap dwo_types;
 
-  if (!dwo_module_sp->GetSymbolVendor()->FindTypes(decl_context, true,
-                                                   dwo_types)) {
+  if (!dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, true,
+                                                 dwo_types)) {
     if (!IsClangModuleFwdDecl(die))
       return TypeSP();
 
@@ -159,8 +159,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
     for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
-      SymbolVendor *sym_vendor = name_module.second->GetSymbolVendor();
-      if (sym_vendor->FindTypes(decl_context, true, dwo_types))
+      if (name_module.second->GetSymbolFile()->FindTypes(decl_context, true,
+                                                         dwo_types))
         break;
     }
   }

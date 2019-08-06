@@ -16,7 +16,6 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
@@ -281,7 +280,7 @@ Block &Function::GetBlock(bool can_create) {
   if (!m_block.BlockInfoHasBeenParsed() && can_create) {
     ModuleSP module_sp = CalculateSymbolContextModule();
     if (module_sp) {
-      module_sp->GetSymbolVendor()->ParseBlocksRecursive(*this);
+      module_sp->GetSymbolFile()->ParseBlocksRecursive(*this);
     } else {
       Host::SystemLog(Host::eSystemLogError,
                       "error: unable to find module "

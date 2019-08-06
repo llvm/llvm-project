@@ -20,7 +20,6 @@
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -366,7 +365,7 @@ size_t SBModule::GetNumSections() {
   ModuleSP module_sp(GetSP());
   if (module_sp) {
     // Give the symbol vendor a chance to add to the unified section list.
-    module_sp->GetSymbolVendor();
+    module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list)
       return section_list->GetSize();
@@ -382,7 +381,7 @@ SBSection SBModule::GetSectionAtIndex(size_t idx) {
   ModuleSP module_sp(GetSP());
   if (module_sp) {
     // Give the symbol vendor a chance to add to the unified section list.
-    module_sp->GetSymbolVendor();
+    module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
 
     if (section_list)
@@ -536,9 +535,8 @@ lldb::SBType SBModule::GetTypeByID(lldb::user_id_t uid) {
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    SymbolVendor *vendor = module_sp->GetSymbolVendor();
-    if (vendor) {
-      Type *type_ptr = vendor->ResolveTypeUID(uid);
+    if (SymbolFile *symfile = module_sp->GetSymbolFile()) {
+      Type *type_ptr = symfile->ResolveTypeUID(uid);
       if (type_ptr)
         return LLDB_RECORD_RESULT(SBType(type_ptr->shared_from_this()));
     }
@@ -555,13 +553,13 @@ lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
   ModuleSP module_sp(GetSP());
   if (!module_sp)
     return LLDB_RECORD_RESULT(sb_type_list);
-  SymbolVendor *vendor = module_sp->GetSymbolVendor();
-  if (!vendor)
+  SymbolFile *symfile = module_sp->GetSymbolFile();
+  if (!symfile)
     return LLDB_RECORD_RESULT(sb_type_list);
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
-  vendor->GetTypes(nullptr, type_class, type_list);
+  symfile->GetTypes(nullptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
   return LLDB_RECORD_RESULT(sb_type_list);
 }
@@ -575,7 +573,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
   ModuleSP module_sp(GetSP());
   if (sect_name && module_sp) {
     // Give the symbol vendor a chance to add to the unified section list.
-    module_sp->GetSymbolVendor();
+    module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list) {
       ConstString const_sect_name(sect_name);
@@ -657,9 +655,8 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
   lldb::SBFileSpec sb_file_spec;
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    SymbolVendor *symbol_vendor_ptr = module_sp->GetSymbolVendor();
-    if (symbol_vendor_ptr)
-      sb_file_spec.SetFileSpec(symbol_vendor_ptr->GetMainFileSpec());
+    if (SymbolFile *symfile = module_sp->GetSymbolFile())
+      sb_file_spec.SetFileSpec(symfile->GetObjectFile()->GetFileSpec());
   }
   return LLDB_RECORD_RESULT(sb_file_spec);
 }

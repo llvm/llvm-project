@@ -14,7 +14,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 
@@ -138,13 +138,13 @@ lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
   if (!module_sp)
     return LLDB_RECORD_RESULT(sb_type_list);
 
-  SymbolVendor *vendor = module_sp->GetSymbolVendor();
-  if (!vendor)
+  SymbolFile *symfile = module_sp->GetSymbolFile();
+  if (!symfile)
     return LLDB_RECORD_RESULT(sb_type_list);
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
-  vendor->GetTypes(m_opaque_ptr, type_class, type_list);
+  symfile->GetTypes(m_opaque_ptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
   return LLDB_RECORD_RESULT(sb_type_list);
 }

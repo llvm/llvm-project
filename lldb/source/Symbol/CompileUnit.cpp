@@ -9,7 +9,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 
@@ -173,10 +173,8 @@ lldb::LanguageType CompileUnit::GetLanguage() {
   if (m_language == eLanguageTypeUnknown) {
     if (m_flags.IsClear(flagsParsedLanguage)) {
       m_flags.Set(flagsParsedLanguage);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        m_language = symbol_vendor->ParseLanguage(*this);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        m_language = symfile->ParseLanguage(*this);
     }
   }
   return m_language;
@@ -186,9 +184,8 @@ LineTable *CompileUnit::GetLineTable() {
   if (m_line_table_up == nullptr) {
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor)
-        symbol_vendor->ParseLineTable(*this);
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseLineTable(*this);
     }
   }
   return m_line_table_up.get();
@@ -206,10 +203,8 @@ DebugMacros *CompileUnit::GetDebugMacros() {
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {
       m_flags.Set(flagsParsedDebugMacros);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        symbol_vendor->ParseDebugMacros(*this);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseDebugMacros(*this);
     }
   }
 
@@ -229,7 +224,7 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
     SymbolContext sc;
     CalculateSymbolContext(&sc);
     assert(sc.module_sp);
-    sc.module_sp->GetSymbolVendor()->ParseVariablesForContext(sc);
+    sc.module_sp->GetSymbolFile()->ParseVariablesForContext(sc);
   }
 
   return m_variables;
@@ -372,8 +367,8 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
 bool CompileUnit::GetIsOptimized() {
   if (m_is_optimized == eLazyBoolCalculate) {
     m_is_optimized = eLazyBoolNo;
-    if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor()) {
-      if (symbol_vendor->ParseIsOptimized(*this))
+    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
+      if (symfile->ParseIsOptimized(*this))
         m_is_optimized = eLazyBoolYes;
     }
   }
@@ -388,10 +383,10 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   if (m_imported_modules.empty() &&
       m_flags.IsClear(flagsParsedImportedModules)) {
     m_flags.Set(flagsParsedImportedModules);
-    if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor()) {
+    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
       SymbolContext sc;
       CalculateSymbolContext(&sc);
-      symbol_vendor->ParseImportedModules(sc, m_imported_modules);
+      symfile->ParseImportedModules(sc, m_imported_modules);
     }
   }
   return m_imported_modules;
@@ -401,10 +396,8 @@ const FileSpecList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {
       m_flags.Set(flagsParsedSupportFiles);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        symbol_vendor->ParseSupportFiles(*this, m_support_files);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseSupportFiles(*this, m_support_files);
     }
   }
   return m_support_files;
