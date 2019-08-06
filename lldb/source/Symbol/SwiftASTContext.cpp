@@ -844,6 +844,8 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
     m_dependency_tracker = llvm::make_unique<swift::DependencyTracker>(
         true, fp.GetFileCollector());
   }
+  // rdar://53971116
+  m_compiler_invocation_ap->disableASTScopeLookup();
 
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(GetClangModulesCacheProperty());
@@ -863,6 +865,9 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     : TypeSystem(rhs.getKind()),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_description(rhs.m_description) {
+  // rdar://53971116
+  m_compiler_invocation_ap->disableASTScopeLookup();
+
   if (rhs.m_compiler_invocation_ap) {
     SetTriple(rhs.GetTriple());
     llvm::StringRef module_cache_path =
