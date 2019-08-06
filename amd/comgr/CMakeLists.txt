@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.2.0)
 
-include (GNUInstallDirs)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Build ROCM-Compiler-Support with ccache if the package is present.
 set(ROCM_COMPILER_SUPPORT_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
@@ -13,7 +14,19 @@ if(ROCM_COMPILER_SUPPORT_CCACHE_BUILD)
   endif()
 endif()
 
-project(code_object_manager)
+project(amd_comgr)
+
+set(PROJECT_VERSION_MAJOR "1")
+set(PROJECT_VERSION_MINOR "3")
+set(PROJECT_VERSION_PATCH "0")
+set(PROJECT_VERSION
+  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+
+find_package(ROCM PATHS "/opt/rocm")
+if (ROCM_FOUND)
+  include(ROCMSetupVersion)
+  rocm_setup_version(VERSION "${PROJECT_VERSION}")
+endif()
 
 find_package(Clang REQUIRED CONFIG)
 add_definitions(${LLVM_DEFINITIONS})
@@ -107,6 +120,9 @@ if (NOT AMDDeviceLibs_FOUND)
   file(GLOB DEVICE_LIBS_SRC "src/comgr-device-libs.cpp")
   list(REMOVE_ITEM SOURCES ${DEVICE_LIBS_SRC})
 endif()
+configure_file("include/amd_comgr.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
+  @ONLY)
 add_library(amd_comgr SHARED ${SOURCES})
 
 if (AMDDeviceLibs_FOUND)
@@ -119,7 +135,9 @@ endif()
 set_target_properties(amd_comgr PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED Yes
-  CXX_EXTENSIONS No)
+  CXX_EXTENSIONS No
+  SOVERSION "${PROJECT_VERSION_MAJOR}"
+  VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 target_compile_options(amd_comgr
   PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}")
 target_compile_definitions(amd_comgr
@@ -131,24 +149,30 @@ target_include_directories(amd_comgr
 
 set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
 set(AMD_COMGR_TARGETS_NAME amd_comgr-targets.cmake)
+set(AMD_COMGR_VERSION_NAME amd_comgr-config-version.cmake)
 set(AMD_COMGR_PACKAGE_PREFIX lib/cmake/amd_comgr)
 
 # Generate the build-tree package.
 set(AMD_COMGR_PREFIX_CODE)
 set(AMD_COMGR_TARGETS_PATH
   "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+set(AMD_COMGR_VERSION_PATH
+  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_VERSION_NAME}")
 export(TARGETS amd_comgr
   FILE "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
   "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_CONFIG_NAME}"
   @ONLY)
+write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
+  VERSION "${PROJECT_VERSION}"
+  COMPATIBILITY SameMajorVersion)
 
 install(TARGETS amd_comgr
   EXPORT amd_comgr_export
   DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
-  "include/amd_comgr.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(FILES
@@ -177,6 +201,9 @@ install(FILES
 install(EXPORT amd_comgr_export
   DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
   FILE "${AMD_COMGR_TARGETS_NAME}")
+install(FILES
+  "${AMD_COMGR_VERSION_PATH}"
+  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}")
 
 set(CLANG_LIBS
   clangFrontendTool)
@@ -211,11 +238,12 @@ add_subdirectory(test)
 # Add packaging directives for amd_comgr
 set(CPACK_PACKAGE_NAME comgr)
 set(CPACK_PACKAGE_VENDOR "AMD")
-set(CPACK_PACKAGE_VERSION_MAJOR 1)
-set(CPACK_PACKAGE_VERSION_MINOR 3)
-set(CPACK_PACKAGE_VERSION_PATCH 0)
-set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian package specific variables
