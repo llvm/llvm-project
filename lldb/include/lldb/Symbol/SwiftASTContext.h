@@ -682,11 +682,6 @@ public:
                    const DataExtractor &data, lldb::offset_t data_offset,
                    size_t data_byte_size) override;
 
-  // Converts "s" to a floating point value and place resulting floating
-  // point bytes in the "dst" buffer.
-  size_t ConvertStringToFloatValue(void *type, const char *s, uint8_t *dst,
-                                   size_t dst_size) override;
-
   //----------------------------------------------------------------------
   // TODO: Determine if these methods should move to ClangASTContext.
   //----------------------------------------------------------------------

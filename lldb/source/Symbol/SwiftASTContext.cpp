@@ -7908,12 +7908,6 @@ void SwiftASTContext::DumpSummary(void *type, ExecutionContext *exe_ctx,
                                   lldb::offset_t data_byte_offset,
                                   size_t data_byte_size) {}
 
-size_t SwiftASTContext::ConvertStringToFloatValue(void *type, const char *s,
-                                                  uint8_t *dst,
-                                                  size_t dst_size) {
-  return 0;
-}
-
 void SwiftASTContext::DumpTypeDescription(void *type) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, &s);
