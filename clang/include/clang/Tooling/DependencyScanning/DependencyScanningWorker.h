@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_WORKER_H
 
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -21,6 +22,9 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
+class DependencyScanningService;
+class DependencyScanningWorkerFilesystem;
+
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
 ///
@@ -29,7 +33,7 @@ namespace dependencies {
 /// using the regular processing run.
 class DependencyScanningWorker {
 public:
-  DependencyScanningWorker();
+  DependencyScanningWorker(DependencyScanningService &Service);
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -45,10 +49,11 @@ private:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;
   /// The file system that is used by each worker when scanning for
   /// dependencies. This filesystem persists accross multiple compiler
   /// invocations.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> WorkerFS;
+  llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 };
 
 } // end namespace dependencies
