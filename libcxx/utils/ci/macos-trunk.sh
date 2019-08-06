@@ -4,7 +4,7 @@ set -ue
 
 function usage() {
   cat <<EOM
-$(basename ${0}) [-h|--help] --libcxx-root <LIBCXX-ROOT> --libcxxabi-root <LIBCXXABI-ROOT> --std <STD> --arch <ARCHITECTURE> [--lit-args <ARGS...>]
+$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> [--lit-args <ARGS...>]
 
 This script is used to continually test libc++ and libc++abi trunk on MacOS.
 
