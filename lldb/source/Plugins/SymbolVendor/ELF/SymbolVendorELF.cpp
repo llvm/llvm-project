@@ -71,15 +71,16 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!uuid)
     return nullptr;
 
+  // If the main object file already contains debug info, then we are done.
+  if (obj_file->GetSectionList()->FindSectionByType(
+          lldb::eSectionTypeDWARFDebugInfo, true))
+    return nullptr;
+
   // If the module specified a filespec, use that.
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
     fspec = obj_file->GetDebugLink().getValueOr(FileSpec());
-
-  // If we have no debug symbol files, then nothing to do.
-  if (!fspec)
-    return nullptr;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
