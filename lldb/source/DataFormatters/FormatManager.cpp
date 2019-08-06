@@ -183,15 +183,13 @@ void FormatManager::GetPossibleMatches(
     reason |= lldb_private::eFormatterChoiceCriterionStrippedBitField;
   }
 
-  if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
-    entries.push_back(
-        {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
+  entries.push_back(
+      {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
-    ConstString display_type_name(compiler_type.GetDisplayTypeName());
-    if (display_type_name != type_name)
-      entries.push_back({display_type_name, reason, did_strip_ptr,
-                         did_strip_ref, did_strip_typedef});
-  }
+  ConstString display_type_name(compiler_type.GetDisplayTypeName());
+  if (display_type_name != type_name)
+    entries.push_back({display_type_name, reason, did_strip_ptr, did_strip_ref,
+                       did_strip_typedef});
 
   for (bool is_rvalue_ref = true, j = true;
        j && compiler_type.IsReferenceType(nullptr, &is_rvalue_ref); j = false) {
@@ -565,10 +563,8 @@ ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
                                            lldb::DynamicValueType use_dynamic) {
   ValueObjectSP valobj_sp = valobj.GetQualifiedRepresentationIfAvailable(
       use_dynamic, valobj.IsSynthetic());
-  if (valobj_sp && valobj_sp->GetCompilerType().IsValid()) {
-    if (!valobj_sp->GetCompilerType().IsMeaninglessWithoutDynamicResolution())
-      return valobj_sp->GetQualifiedTypeName();
-  }
+  if (valobj_sp && valobj_sp->GetCompilerType().IsValid())
+    return valobj_sp->GetQualifiedTypeName();
   return ConstString();
 }
 

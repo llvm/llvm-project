@@ -334,8 +334,6 @@ public:
 
   LazyBool ShouldPrintAsOneLiner(ValueObject *valobj) const;
 
-  bool IsMeaninglessWithoutDynamicResolution() const;
-
   // Dumping types
 
 #ifndef NDEBUG
