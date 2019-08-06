@@ -1712,6 +1712,8 @@ class VMAddressProvider {
   VMMap Segments = VMMap(Alloc);
   VMMap Sections = VMMap(Alloc);
   lldb_private::Log *Log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+  size_t SegmentCount = 0;
+  std::string SegmentName;
 
   VMRange GetVMRange(const ELFSectionHeader &H) {
     addr_t Address = H.sh_addr;
@@ -1726,18 +1728,23 @@ class VMAddressProvider {
   }
 
 public:
-  VMAddressProvider(ObjectFile::Type Type) : ObjectType(Type) {}
+  VMAddressProvider(ObjectFile::Type Type, llvm::StringRef SegmentName)
+      : ObjectType(Type), SegmentName(SegmentName) {}
+
+  std::string GetNextSegmentName() const {
+    return llvm::formatv("{0}[{1}]", SegmentName, SegmentCount).str();
+  }
 
   llvm::Optional<VMRange> GetAddressInfo(const ELFProgramHeader &H) {
     if (H.p_memsz == 0) {
-      LLDB_LOG(Log,
-               "Ignoring zero-sized PT_LOAD segment. Corrupt object file?");
+      LLDB_LOG(Log, "Ignoring zero-sized {0} segment. Corrupt object file?",
+               SegmentName);
       return llvm::None;
     }
 
     if (Segments.overlaps(H.p_vaddr, H.p_vaddr + H.p_memsz)) {
-      LLDB_LOG(Log,
-               "Ignoring overlapping PT_LOAD segment. Corrupt object file?");
+      LLDB_LOG(Log, "Ignoring overlapping {0} segment. Corrupt object file?",
+               SegmentName);
       return llvm::None;
     }
     return VMRange(H.p_vaddr, H.p_memsz);
@@ -1772,6 +1779,7 @@ public:
 
   void AddSegment(const VMRange &Range, SectionSP Seg) {
     Segments.insert(Range.GetRangeBase(), Range.GetRangeEnd(), std::move(Seg));
+    ++SegmentCount;
   }
 
   void AddSection(SectionAddressInfo Info, SectionSP Sect) {
@@ -1790,28 +1798,31 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     return;
 
   m_sections_up = llvm::make_unique<SectionList>();
-  VMAddressProvider address_provider(GetType());
+  VMAddressProvider regular_provider(GetType(), "PT_LOAD");
+  VMAddressProvider tls_provider(GetType(), "PT_TLS");
 
-  size_t LoadID = 0;
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &PHdr = EnumPHdr.value();
-    if (PHdr.p_type != PT_LOAD)
+    if (PHdr.p_type != PT_LOAD && PHdr.p_type != PT_TLS)
       continue;
 
-    auto InfoOr = address_provider.GetAddressInfo(PHdr);
+    VMAddressProvider &provider =
+        PHdr.p_type == PT_TLS ? tls_provider : regular_provider;
+    auto InfoOr = provider.GetAddressInfo(PHdr);
     if (!InfoOr)
       continue;
 
-    ConstString Name(("PT_LOAD[" + llvm::Twine(LoadID++) + "]").str());
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
-        GetModule(), this, SegmentID(EnumPHdr.index()), Name,
-        eSectionTypeContainer, InfoOr->GetRangeBase(), InfoOr->GetByteSize(),
-        PHdr.p_offset, PHdr.p_filesz, Log2Align, /*flags*/ 0);
+        GetModule(), this, SegmentID(EnumPHdr.index()),
+        ConstString(provider.GetNextSegmentName()), eSectionTypeContainer,
+        InfoOr->GetRangeBase(), InfoOr->GetByteSize(), PHdr.p_offset,
+        PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
+    Segment->SetIsThreadSpecific(PHdr.p_type == PT_TLS);
     m_sections_up->AddSection(Segment);
 
-    address_provider.AddSegment(*InfoOr, std::move(Segment));
+    provider.AddSegment(*InfoOr, std::move(Segment));
   }
 
   ParseSectionHeaders();
@@ -1826,7 +1837,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
-    auto InfoOr = address_provider.GetAddressInfo(header);
+    VMAddressProvider &provider =
+        header.sh_flags & SHF_TLS ? tls_provider : regular_provider;
+    auto InfoOr = provider.GetAddressInfo(header);
     if (!InfoOr)
       continue;
 
@@ -1857,7 +1870,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
     (InfoOr->Segment ? InfoOr->Segment->GetChildren() : *m_sections_up)
         .AddSection(section_sp);
-    address_provider.AddSection(std::move(*InfoOr), std::move(section_sp));
+    provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
   // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
