@@ -957,8 +957,6 @@ public:
   void SetBackground(int color_pair_idx) {
     ::wbkgd(m_window, COLOR_PAIR(color_pair_idx));
   }
-  void UnderlineOn() { AttributeOn(A_UNDERLINE); }
-  void UnderlineOff() { AttributeOff(A_UNDERLINE); }
 
   void PutCStringTruncated(const char *s, int right_pad) {
     int bytes_left = GetWidth() - GetCursorX();
@@ -1210,19 +1208,6 @@ public:
     return eKeyNotHandled;
   }
 
-  bool SetActiveWindow(Window *window) {
-    const size_t num_subwindows = m_subwindows.size();
-    for (size_t i = 0; i < num_subwindows; ++i) {
-      if (m_subwindows[i].get() == window) {
-        m_prev_active_window_idx = m_curr_active_window_idx;
-        ::top_panel(window->m_panel);
-        m_curr_active_window_idx = i;
-        return true;
-      }
-    }
-    return false;
-  }
-
   WindowSP GetActiveWindow() {
     if (!m_subwindows.empty()) {
       if (m_curr_active_window_idx >= m_subwindows.size()) {
@@ -1406,8 +1391,6 @@ public:
   void SetStartingColumn(int col) { m_start_col = col; }
 
   int GetKeyValue() const { return m_key_value; }
-
-  void SetKeyValue(int key_value) { m_key_value = key_value; }
 
   std::string &GetName() { return m_name; }
 

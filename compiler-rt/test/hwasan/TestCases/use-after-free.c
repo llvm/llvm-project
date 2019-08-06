@@ -11,12 +11,14 @@
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 int main() {
   __hwasan_enable_allocator_tagging();
   char * volatile x = (char*)malloc(10);
   free(x);
   __hwasan_disable_allocator_tagging();
-  fprintf(stderr, "Going to do a %s\n", ISREAD ? "READ" : "WRITE");
+  untag_fprintf(stderr, ISREAD ? "Going to do a READ\n" : "Going to do a WRITE\n");
   // CHECK: Going to do a [[TYPE:[A-Z]*]]
   int r = 0;
   if (ISREAD) r = x[5]; else x[5] = 42;  // should be on the same line.

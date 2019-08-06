@@ -418,8 +418,8 @@ Expected<SymbolizableModule *>
 LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
                                  std::unique_ptr<DIContext> Context,
                                  StringRef ModuleName) {
-  auto InfoOrErr =
-      SymbolizableObjectFile::create(Obj, std::move(Context));
+  auto InfoOrErr = SymbolizableObjectFile::create(Obj, std::move(Context),
+                                                  Opts.UntagAddresses);
   std::unique_ptr<SymbolizableModule> SymMod;
   if (InfoOrErr)
     SymMod = std::move(*InfoOrErr);

@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT: phi i32 [ 0, %entry ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[ARRAYDECAY1:.*]] = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %[[BUF]], i32 0, i32 0
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call void @"__invoke_void_%struct.__jmp_buf_tag*_i32"(void (%struct.__jmp_buf_tag*, i32)* @emscripten_longjmp_jmpbuf, %struct.__jmp_buf_tag* %[[ARRAYDECAY1]], i32 1)
+; CHECK-NEXT: call cc{{.*}} void @"__invoke_void_%struct.__jmp_buf_tag*_i32"(void (%struct.__jmp_buf_tag*, i32)* @emscripten_longjmp_jmpbuf, %struct.__jmp_buf_tag* %[[ARRAYDECAY1]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
@@ -85,7 +85,7 @@ entry:
 ; CHECK: %[[SETJMP_TABLE:.*]] = call i32* @saveSetjmp(
 
 ; CHECK: entry.split:
-; CHECK: call void @__invoke_void(void ()* @foo)
+; CHECK: @__invoke_void(void ()* @foo)
 
 ; CHECK: entry.split.split:
 ; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %[[SETJMP_TABLE]] to i8*
@@ -105,7 +105,7 @@ entry:
 
 ; CHECK: entry.split:
 ; CHECK: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call void @__invoke_void(void ()* @foo)
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void(void ()* @foo)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %[[CMP0:.*]] = icmp ne i32 %[[__THREW__VAL]], 0
@@ -211,7 +211,7 @@ entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
-; CHECK: i8* @"__invoke_i8*_i32_%struct.__jmp_buf_tag*"([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
+; CHECK: call cc{{.*}} i8* @"__invoke_i8*_i32_%struct.__jmp_buf_tag*"([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
   %alloc = call i8* @allocator(i32 20, %struct.__jmp_buf_tag* %arraydecay) #3
   ret i8 *%alloc
 }

@@ -100,6 +100,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
 
   if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::ADD, MVT::i32, Custom);
+    setOperationAction(ISD::SUB, MVT::i32, Custom);
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
@@ -116,6 +118,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.is64Bit() && Subtarget.hasStdExtM()) {
+    setOperationAction(ISD::MUL, MVT::i32, Custom);
     setOperationAction(ISD::SDIV, MVT::i32, Custom);
     setOperationAction(ISD::UDIV, MVT::i32, Custom);
     setOperationAction(ISD::UREM, MVT::i32, Custom);
@@ -834,6 +837,18 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
+// Converts the given 32-bit operation to a i64 operation with signed extension
+// semantic to reduce the signed extension instructions.
+static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewWOp = DAG.getNode(N->getOpcode(), DL, MVT::i64, NewOp0, NewOp1);
+  SDValue NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewWOp,
+                               DAG.getValueType(MVT::i32));
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+}
+
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                              SmallVectorImpl<SDValue> &Results,
                                              SelectionDAG &DAG) const {
@@ -854,6 +869,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(RCW.getValue(2));
     break;
   }
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    if (N->getOperand(1).getOpcode() == ISD::Constant)
+      return;
+    Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
+    break;
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:

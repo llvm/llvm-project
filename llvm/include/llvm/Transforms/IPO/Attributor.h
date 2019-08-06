@@ -60,13 +60,12 @@
 // manifest their result in the IR for passes to come.
 //
 // Attribute manifestation is not mandatory. If desired, there is support to
-// generate a single LLVM-IR attribute already in the AbstractAttribute base
-// class. In the simplest case, a subclass overloads
-// `AbstractAttribute::getManifestPosition()` and
-// `AbstractAttribute::getAttrKind()` to return the appropriate values. The
-// Attributor manifestation framework will then create and place a new attribute
-// if it is allowed to do so (based on the abstract state). Other use cases can
-// be achieved by overloading other abstract attribute methods.
+// generate a single or multiple LLVM-IR attributes already in the helper struct
+// IRAttribute. In the simplest case, a subclass inherits from IRAttribute with
+// a proper Attribute::AttrKind as template parameter. The Attributor
+// manifestation framework will then create and place a new attribute if it is
+// allowed to do so (based on the abstract state). Other use cases can be
+// achieved by overloading AbstractAttribute or IRAttribute methods.
 //
 //
 // The "mechanics" of adding a new "abstract attribute":
@@ -156,7 +155,7 @@ struct Attributor {
   /// as the Attributor is not destroyed (it owns the attributes now).
   ///
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
-  ChangeStatus run();
+  ChangeStatus run(InformationCache &InfoCache);
 
   /// Lookup an abstract attribute of type \p AAType anchored at value \p V and
   /// argument number \p ArgNo. If no attribute is found and \p V is a call base
@@ -176,8 +175,6 @@ struct Attributor {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
-    assert(AAType::ID != Attribute::None &&
-           "Cannot lookup generic abstract attributes!");
 
     // Determine the argument number automatically for llvm::Arguments if none
     // is set. Do not override a given one as it could be a use of the argument
@@ -198,7 +195,7 @@ struct Attributor {
     // registering a dependence of QueryingAA on the one returned attribute.
     const auto &KindToAbstractAttributeMap = AAMap.lookup({&V, ArgNo});
     if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMap.lookup(AAType::ID))) {
+            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
       // Do not return an attribute with an invalid state. This minimizes checks
       // at the calls sites and allows the fallback below to kick in.
       if (AA->getState().isValidState()) {
@@ -225,7 +222,7 @@ struct Attributor {
   /// Attributes are identified by
   ///  (1) their anchored value (see AA.getAnchoredValue()),
   ///  (2) their argument number (\p ArgNo, or Argument::getArgNo()), and
-  ///  (3) their default attribute kind (see AAType::ID).
+  ///  (3) the address of their static member (see AAType::ID).
   template <typename AAType> AAType &registerAA(AAType &AA, int ArgNo = -1) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot register an attribute with a type not derived from "
@@ -235,14 +232,14 @@ struct Attributor {
     // lookup the attribute together with AAType::ID. If passed an argument,
     // use its argument number but do not override a given one as it could be a
     // use of the argument at a call site.
-    Value &AnchoredVal = AA.getAnchoredValue();
+    Value &AnchorVal = AA.getIRPosition().getAnchorValue();
     if (ArgNo == -1)
-      if (auto *Arg = dyn_cast<Argument>(&AnchoredVal))
+      if (auto *Arg = dyn_cast<Argument>(&AnchorVal))
         ArgNo = Arg->getArgNo();
 
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
-    AAMap[{&AnchoredVal, ArgNo}][AAType::ID] = &AA;
+    AAMap[{&AnchorVal, ArgNo}][&AAType::ID] = &AA;
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -261,7 +258,7 @@ struct Attributor {
   /// various places.
   void identifyDefaultAbstractAttributes(
       Function &F, InformationCache &InfoCache,
-      DenseSet</* Attribute::AttrKind */ unsigned> *Whitelist = nullptr);
+      DenseSet<const char *> *Whitelist = nullptr);
 
   /// Check \p Pred on all function call sites.
   ///
@@ -269,7 +266,29 @@ struct Attributor {
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
   bool checkForAllCallSites(Function &F, std::function<bool(CallSite)> &Pred,
-                            bool RequireAllCallSites, AbstractAttribute &AA);
+                            AbstractAttribute &QueryingAA,
+                            bool RequireAllCallSites);
+
+  /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
+  ///
+  /// This method will evaluate \p Pred on all instructions with an opcode
+  /// present in \p Opcode and return true if \p Pred holds on all of them.
+  bool checkForAllInstructions(
+      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
+      AbstractAttribute &QueryingAA, InformationCache &InfoCache,
+      const ArrayRef<unsigned> &Opcodes);
+
+  /// Check \p Pred on all call-like instructions (=CallBased derived).
+  ///
+  /// See checkForAllCallLikeInstructions(...) for more information.
+  bool checkForAllCallLikeInstructions(
+      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
+      AbstractAttribute &QueryingAA, InformationCache &InfoCache) {
+    return checkForAllInstructions(F, Pred, QueryingAA, InfoCache,
+                                   {(unsigned)Instruction::Invoke,
+                                    (unsigned)Instruction::CallBr,
+                                    (unsigned)Instruction::Call});
+  }
 
 private:
   /// The set of all abstract attributes.
@@ -279,10 +298,11 @@ private:
   ///}
 
   /// A nested map to lookup abstract attributes based on the anchored value and
-  /// an argument positions (or -1) on the outer level, and attribute kinds
-  /// (Attribute::AttrKind) on the inner level.
+  /// an argument positions (or -1) on the outer level, and the addresses of the
+  /// static member (AAType::ID) on the inner level.
   ///{
-  using KindToAbstractAttributeMap = DenseMap<unsigned, AbstractAttribute *>;
+  using KindToAbstractAttributeMap =
+      DenseMap<const char *, AbstractAttribute *>;
   DenseMap<std::pair<const Value *, int>, KindToAbstractAttributeMap> AAMap;
   ///}
 
@@ -313,7 +333,7 @@ struct InformationCache {
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
-  OpcodeInstMapTy &getOpcodeInstMapForFunction(Function &F) {
+  OpcodeInstMapTy &getOpcodeInstMapForFunction(const Function &F) {
     return FuncInstOpcodeMap[&F];
   }
 
@@ -321,16 +341,16 @@ struct InformationCache {
   using InstructionVectorTy = std::vector<Instruction *>;
 
   /// Return the instructions in \p F that may read or write memory.
-  InstructionVectorTy &getReadOrWriteInstsForFunction(Function &F) {
+  InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
     return FuncRWInstsMap[&F];
   }
 
 private:
   /// A map type from functions to opcode to instruction maps.
-  using FuncInstOpcodeMapTy = DenseMap<Function *, OpcodeInstMapTy>;
+  using FuncInstOpcodeMapTy = DenseMap<const Function *, OpcodeInstMapTy>;
 
   /// A map type from functions to their read or write instructions.
-  using FuncRWInstsMapTy = DenseMap<Function *, InstructionVectorTy>;
+  using FuncRWInstsMapTy = DenseMap<const Function *, InstructionVectorTy>;
 
   /// A nested map that remembers all instructions in a function with a certain
   /// instruction opcode (Instruction::getOpcode()).
@@ -499,6 +519,172 @@ struct BooleanState : public IntegerState {
   BooleanState() : IntegerState(1){};
 };
 
+/// Struct to encode the position in the LLVM-IR with regards to the associated
+/// value but also the attribute lists.
+struct IRPosition {
+
+  /// The positions attributes can be manifested in.
+  enum Kind {
+    IRP_FUNCTION = AttributeList::FunctionIndex, ///< An attribute for a
+                                                 ///< function as a whole.
+    IRP_RETURNED = AttributeList::ReturnIndex,   ///< An attribute for the
+                                                 ///< function return value.
+    IRP_ARGUMENT,           ///< An attribute for a function argument.
+    IRP_CALL_SITE_ARGUMENT, ///< An attribute for a call site argument.
+  };
+
+  /// Create an IRPosition for an argument.
+  explicit IRPosition(Argument &Arg) : IRPosition(&Arg, Arg, Arg.getArgNo()) {}
+
+  /// Create an IRPosition for a function return or function body position.
+  ///
+  /// \param Fn The value this abstract attributes is anchored at and
+  ///            associated with.
+  /// \param PK  The kind of attribute position, can not be a (call site)
+  ///            argument.
+  explicit IRPosition(Function &Fn, Kind PK)
+      : AssociatedVal(&Fn), AnchorVal(Fn), AttributeIdx(PK) {
+    assert((PK == IRP_RETURNED || PK == IRP_FUNCTION) &&
+           "Expected non-argument position!");
+  }
+
+  /// An abstract attribute associated with \p AssociatedVal and anchored at
+  /// \p AnchorVal.
+  ///
+  /// \param AssociatedVal The value this abstract attribute is associated with.
+  /// \param AnchorVal The value this abstract attributes is anchored at.
+  /// \param ArgumentNo The index in the attribute list, encodes also the
+  ///                     argument number if this is one.
+  explicit IRPosition(Value *AssociatedVal, Value &AnchorVal,
+                      unsigned ArgumentNo)
+      : AssociatedVal(AssociatedVal), AnchorVal(AnchorVal),
+        AttributeIdx(ArgumentNo + AttributeList::FirstArgIndex) {
+    assert(((isa<CallBase>(&AnchorVal) &&
+             cast<CallBase>(&AnchorVal)->arg_size() > ArgumentNo) ||
+            (isa<Argument>(AnchorVal) &&
+             cast<Argument>(AnchorVal).getArgNo() == ArgumentNo)) &&
+           "Expected a valid argument index!");
+  }
+
+#define IRPositionConstructorForward(NAME, BASE)                               \
+  explicit NAME(Argument &Arg) : BASE(Arg) {}                                  \
+  explicit NAME(Function &Fn, IRPosition::Kind PK) : BASE(Fn, PK) {}           \
+  NAME(Value *AssociatedVal, Value &AnchorVal, unsigned ArgumentNo)            \
+      : BASE(AssociatedVal, AnchorVal, ArgumentNo) {}
+
+  IRPosition(const IRPosition &AAP)
+      : IRPosition(AAP.AssociatedVal, AAP.AnchorVal, AAP.AttributeIdx) {}
+
+  /// Virtual destructor.
+  virtual ~IRPosition() {}
+
+  /// Return the value this abstract attribute is anchored with.
+  ///
+  /// The anchored value might not be the associated value if the latter is not
+  /// sufficient to determine where arguments will be manifested. This is mostly
+  /// the case for call site arguments as the value is not sufficient to
+  /// pinpoint them. Instead, we can use the call site as an anchor.
+  ///
+  ///{
+  Value &getAnchorValue() { return AnchorVal; }
+  const Value &getAnchorValue() const { return AnchorVal; }
+  ///}
+
+  /// Return the llvm::Function surrounding the anchored value.
+  ///
+  ///{
+  Function &getAnchorScope() {
+    Value &V = getAnchorValue();
+    if (isa<Function>(V))
+      return cast<Function>(V);
+    if (isa<Argument>(V))
+      return *cast<Argument>(V).getParent();
+    if (isa<Instruction>(V))
+      return *cast<Instruction>(V).getFunction();
+    llvm_unreachable("No scope for anchored value found!");
+  }
+  const Function &getAnchorScope() const {
+    return const_cast<IRPosition *>(this)->getAnchorScope();
+  }
+  ///}
+
+  /// Return the value this abstract attribute is associated with.
+  ///
+  /// The abstract state usually represents this value.
+  ///
+  ///{
+  Value *getAssociatedValue() { return AssociatedVal; }
+  const Value *getAssociatedValue() const { return AssociatedVal; }
+  ///}
+
+  /// Return the argument number of the associated value if it is an argument or
+  /// call site argument, otherwise a negative value.
+  int getArgNo() const { return AttributeIdx - AttributeList::FirstArgIndex; }
+
+  /// Return the position this abstract state is manifested in.
+  Kind getPositionKind() const {
+    if (getArgNo() >= 0) {
+      if (isa<CallBase>(getAnchorValue()))
+        return IRP_CALL_SITE_ARGUMENT;
+      assert((isa<Argument>(getAnchorValue()) ||
+              isa_and_nonnull<Argument>(getAssociatedValue()) ||
+              (!getAssociatedValue() && isa<Function>(getAnchorValue()))) &&
+             "Expected argument or call base due to argument number!");
+      return IRP_ARGUMENT;
+    }
+    return (Kind)AttributeIdx;
+  }
+
+  /// Return the index in the attribute list for this position.
+  int getAttrIdx() const { return AttributeIdx; }
+
+  /// Change the associated value.
+  void setAssociatedValue(Value *V) { AssociatedVal = V; }
+
+  /// Change the associated attribue list position.
+  void setAttributeIdx(int AttrIdx) { AttributeIdx = AttrIdx; }
+
+protected:
+  /// The value this abstract attribute is associated with.
+  Value *AssociatedVal;
+
+  /// The value this abstract attribute is anchored at.
+  Value &AnchorVal;
+
+  /// The index in the attribute list.
+  int AttributeIdx;
+};
+
+/// Helper class that provides common functionality to manifest IR attributes.
+template <Attribute::AttrKind AK, typename Base>
+struct IRAttribute : public IRPosition, public Base {
+
+  /// Constructors for the IRPosition.
+  ///
+  ///{
+  IRPositionConstructorForward(IRAttribute, IRPosition);
+  ///}
+
+  /// See AbstractAttribute::manifest(...).
+  virtual ChangeStatus manifest(Attributor &A);
+
+  /// Return the kind that identifies the abstract attribute implementation.
+  Attribute::AttrKind getAttrKind() const { return AK; }
+
+  /// Return the deduced attributes in \p Attrs.
+  virtual void getDeducedAttributes(LLVMContext &Ctx,
+                                    SmallVectorImpl<Attribute> &Attrs) const {
+    Attrs.emplace_back(Attribute::get(Ctx, getAttrKind()));
+  }
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
+};
+
 /// Base struct for all "concrete attribute" deductions.
 ///
 /// The abstract attribute is a minimal interface that allows the Attributor to
@@ -544,29 +730,6 @@ struct BooleanState : public IntegerState {
 ///       described in the file comment.
 struct AbstractAttribute {
 
-  /// The positions attributes can be manifested in.
-  enum ManifestPosition {
-    MP_ARGUMENT,           ///< An attribute for a function argument.
-    MP_CALL_SITE_ARGUMENT, ///< An attribute for a call site argument.
-    MP_FUNCTION,           ///< An attribute for a function as a whole.
-    MP_RETURNED,           ///< An attribute for the function return value.
-  };
-
-  /// An abstract attribute associated with \p AssociatedVal and anchored at
-  /// \p AnchoredVal.
-  ///
-  /// \param AssociatedVal The value this abstract attribute is associated with.
-  /// \param AnchoredVal The value this abstract attributes is anchored at.
-  /// \param InfoCache Cached information accessible to the abstract attribute.
-  AbstractAttribute(Value *AssociatedVal, Value &AnchoredVal,
-                    InformationCache &InfoCache)
-      : AssociatedVal(AssociatedVal), AnchoredVal(AnchoredVal),
-        InfoCache(InfoCache) {}
-
-  /// An abstract attribute associated with and anchored at \p V.
-  AbstractAttribute(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(&V, V, InfoCache) {}
-
   /// Virtual destructor.
   virtual ~AbstractAttribute() {}
 
@@ -578,50 +741,13 @@ struct AbstractAttribute {
   ///  - perform any work that is not going to change over time, e.g., determine
   ///    a subset of the IR, or attributes in-flight, that have to be looked at
   ///    in the `updateImpl` method.
-  virtual void initialize(Attributor &A) {}
+  virtual void initialize(Attributor &A, InformationCache &InfoCache) {}
 
   /// Return the internal abstract state for inspection.
   virtual const AbstractState &getState() const = 0;
 
-  /// Return the value this abstract attribute is anchored with.
-  ///
-  /// The anchored value might not be the associated value if the latter is not
-  /// sufficient to determine where arguments will be manifested. This is mostly
-  /// the case for call site arguments as the value is not sufficient to
-  /// pinpoint them. Instead, we can use the call site as an anchor.
-  ///
-  ///{
-  Value &getAnchoredValue() { return AnchoredVal; }
-  const Value &getAnchoredValue() const { return AnchoredVal; }
-  ///}
-
-  /// Return the llvm::Function surrounding the anchored value.
-  ///
-  ///{
-  Function &getAnchorScope();
-  const Function &getAnchorScope() const;
-  ///}
-
-  /// Return the value this abstract attribute is associated with.
-  ///
-  /// The abstract state usually represents this value.
-  ///
-  ///{
-  virtual Value *getAssociatedValue() { return AssociatedVal; }
-  virtual const Value *getAssociatedValue() const { return AssociatedVal; }
-  ///}
-
-  /// Return the position this abstract state is manifested in.
-  virtual ManifestPosition getManifestPosition() const = 0;
-
-  /// Return the kind that identifies the abstract attribute implementation.
-  virtual Attribute::AttrKind getAttrKind() const = 0;
-
-  /// Return the deduced attributes in \p Attrs.
-  virtual void getDeducedAttributes(SmallVectorImpl<Attribute> &Attrs) const {
-    LLVMContext &Ctx = AnchoredVal.getContext();
-    Attrs.emplace_back(Attribute::get(Ctx, getAttrKind()));
-  }
+  /// Return an IR position, see struct IRPosition.
+  virtual const IRPosition &getIRPosition() const = 0;
 
   /// Helper functions, for debug purposes only.
   ///{
@@ -642,13 +768,17 @@ protected:
   /// otherwise it delegates to `AbstractAttribute::updateImpl`.
   ///
   /// \Return CHANGED if the internal state changed, otherwise UNCHANGED.
-  ChangeStatus update(Attributor &A);
+  ChangeStatus update(Attributor &A, InformationCache &InfoCache);
 
   /// Hook for the Attributor to trigger the manifestation of the information
   /// represented by the abstract attribute in the LLVM-IR.
   ///
   /// \Return CHANGED if the IR was altered, otherwise UNCHANGED.
-  virtual ChangeStatus manifest(Attributor &A);
+  virtual ChangeStatus manifest(Attributor &A) {
+    return ChangeStatus::UNCHANGED;
+  }
+  /// Return an IR position, see struct IRPosition.
+  virtual IRPosition &getIRPosition() = 0;
 
   /// Return the internal abstract state for careful modification.
   virtual AbstractState &getState() = 0;
@@ -660,16 +790,8 @@ protected:
   /// the current information is still valid or adjust it otherwise.
   ///
   /// \Return CHANGED if the internal state changed, otherwise UNCHANGED.
-  virtual ChangeStatus updateImpl(Attributor &A) = 0;
-
-  /// The value this abstract attribute is associated with.
-  Value *AssociatedVal;
-
-  /// The value this abstract attribute is anchored at.
-  Value &AnchoredVal;
-
-  /// The information cache accessible to this abstract attribute.
-  InformationCache &InfoCache;
+  virtual ChangeStatus updateImpl(Attributor &A,
+                                  InformationCache &InfoCache) = 0;
 };
 
 /// Forward declarations of output streams for debug purposes.
@@ -677,7 +799,8 @@ protected:
 ///{
 raw_ostream &operator<<(raw_ostream &OS, const AbstractAttribute &AA);
 raw_ostream &operator<<(raw_ostream &OS, ChangeStatus S);
-raw_ostream &operator<<(raw_ostream &OS, AbstractAttribute::ManifestPosition);
+raw_ostream &operator<<(raw_ostream &OS, IRPosition::Kind);
+raw_ostream &operator<<(raw_ostream &OS, const IRPosition &);
 raw_ostream &operator<<(raw_ostream &OS, const AbstractState &State);
 ///}
 
@@ -692,10 +815,9 @@ Pass *createAttributorLegacyPass();
 /// ----------------------------------------------------------------------------
 
 /// An abstract attribute for the returned values of a function.
-struct AAReturnedValues : public AbstractAttribute {
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AAReturnedValues(Function &F, InformationCache &InfoCache)
-      : AbstractAttribute(F, InfoCache) {}
+struct AAReturnedValues
+    : public IRAttribute<Attribute::Returned, AbstractAttribute> {
+  IRPositionConstructorForward(AAReturnedValues, IRAttribute);
 
   /// Check \p Pred on all returned values.
   ///
@@ -706,59 +828,39 @@ struct AAReturnedValues : public AbstractAttribute {
       std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> &Pred)
       const = 0;
 
-  /// See AbstractAttribute::getAttrKind()
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::Returned;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
-struct AANoUnwind : public AbstractAttribute {
-  /// An abstract interface for all nosync attributes.
-  AANoUnwind(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::getAttrKind()/
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  static constexpr Attribute::AttrKind ID = Attribute::NoUnwind;
+struct AANoUnwind : public IRAttribute<Attribute::NoUnwind, AbstractAttribute> {
+  IRPositionConstructorForward(AANoUnwind, IRAttribute);
 
   /// Returns true if nounwind is assumed.
   virtual bool isAssumedNoUnwind() const = 0;
 
   /// Returns true if nounwind is known.
   virtual bool isKnownNoUnwind() const = 0;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
-struct AANoSync : public AbstractAttribute {
-  /// An abstract interface for all nosync attributes.
-  AANoSync(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  static constexpr Attribute::AttrKind ID =
-      Attribute::AttrKind(Attribute::NoSync);
+struct AANoSync : public IRAttribute<Attribute::NoSync, AbstractAttribute> {
+  IRPositionConstructorForward(AANoSync, IRAttribute);
 
   /// Returns true if "nosync" is assumed.
   virtual bool isAssumedNoSync() const = 0;
 
   /// Returns true if "nosync" is known.
   virtual bool isKnownNoSync() const = 0;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for all nonnull attributes.
-struct AANonNull : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AANonNull(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AANonNull(Value *AssociatedVal, Value &AnchoredValue,
-            InformationCache &InfoCache)
-      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
+struct AANonNull : public IRAttribute<Attribute::NonNull, AbstractAttribute> {
+  IRPositionConstructorForward(AANonNull, IRAttribute);
 
   /// Return true if we assume that the underlying value is nonnull.
   virtual bool isAssumedNonNull() const = 0;
@@ -766,24 +868,14 @@ struct AANonNull : public AbstractAttribute {
   /// Return true if we know that underlying value is nonnull.
   virtual bool isKnownNonNull() const = 0;
 
-  /// See AbastractState::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::NonNull;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract attribute for norecurse.
-struct AANoRecurse : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AANoRecurse(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::getAttrKind()
-  virtual Attribute::AttrKind getAttrKind() const override {
-    return Attribute::NoRecurse;
-  }
+struct AANoRecurse
+    : public IRAttribute<Attribute::NoRecurse, AbstractAttribute> {
+  IRPositionConstructorForward(AANoRecurse, IRAttribute);
 
   /// Return true if "norecurse" is known.
   virtual bool isKnownNoRecurse() const = 0;
@@ -791,21 +883,14 @@ struct AANoRecurse : public AbstractAttribute {
   /// Return true if "norecurse" is assumed.
   virtual bool isAssumedNoRecurse() const = 0;
 
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::NoRecurse;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract attribute for willreturn.
-struct AAWillReturn : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AAWillReturn(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::getAttrKind()
-  virtual Attribute::AttrKind getAttrKind() const override {
-    return Attribute::WillReturn;
-  }
+struct AAWillReturn
+    : public IRAttribute<Attribute::WillReturn, AbstractAttribute> {
+  IRPositionConstructorForward(AAWillReturn, IRAttribute);
 
   /// Return true if "willreturn" is known.
   virtual bool isKnownWillReturn() const = 0;
@@ -813,16 +898,13 @@ struct AAWillReturn : public AbstractAttribute {
   /// Return true if "willreturn" is assumed.
   virtual bool isAssumedWillReturn() const = 0;
 
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::WillReturn;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for all noalias attributes.
-struct AANoAlias : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AANoAlias(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
+struct AANoAlias : public IRAttribute<Attribute::NoAlias, AbstractAttribute> {
+  IRPositionConstructorForward(AANoAlias, IRAttribute);
 
   /// Return true if we assume that the underlying value is alias.
   virtual bool isAssumedNoAlias() const = 0;
@@ -830,19 +912,27 @@ struct AANoAlias : public AbstractAttribute {
   /// Return true if we know that underlying value is noalias.
   virtual bool isKnownNoAlias() const = 0;
 
-  /// See AbastractState::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override { return ID; }
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
 
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::NoAlias;
+/// An AbstractAttribute for nofree.
+struct AANoFree : public IRAttribute<Attribute::NoFree, AbstractAttribute> {
+  IRPositionConstructorForward(AANoFree, IRAttribute);
+
+  /// Return true if "nofree" is known.
+  virtual bool isKnownNoFree() const = 0;
+
+  /// Return true if "nofree" is assumed.
+  virtual bool isAssumedNoFree() const = 0;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An AbstractAttribute for noreturn.
-struct AANoReturn : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AANoReturn(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
+struct AANoReturn : public IRAttribute<Attribute::NoReturn, AbstractAttribute> {
+  IRPositionConstructorForward(AANoReturn, IRAttribute);
 
   /// Return true if the underlying object is known to never return.
   virtual bool isKnownNoReturn() const = 0;
@@ -850,25 +940,13 @@ struct AANoReturn : public AbstractAttribute {
   /// Return true if the underlying object is assumed to never return.
   virtual bool isAssumedNoReturn() const = 0;
 
-  /// See AbstractAttribute::getAttrKind()
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::NoReturn;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for liveness abstract attribute.
-struct AAIsDead : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AAIsDead(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::getAttrKind()
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  static constexpr Attribute::AttrKind ID =
-      Attribute::AttrKind(Attribute::EndAttrKinds + 1);
+struct AAIsDead : public AbstractAttribute, public IRPosition {
+  IRPositionConstructorForward(AAIsDead, IRPosition);
 
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
@@ -886,7 +964,7 @@ struct AAIsDead : public AbstractAttribute {
   /// of instructions is live.
   template <typename T> bool isLiveInstSet(T begin, T end) const {
     for (const auto &I : llvm::make_range(begin, end)) {
-      assert(I->getFunction() == &getAnchorScope() &&
+      assert(I->getFunction() == &getIRPosition().getAnchorScope() &&
              "Instruction must be in the same anchor scope function.");
 
       if (!isAssumedDead(I))
@@ -895,19 +973,22 @@ struct AAIsDead : public AbstractAttribute {
 
     return false;
   }
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for all dereferenceable attribute.
-struct AADereferenceable : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AADereferenceable(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AADereferenceable(Value *AssociatedVal, Value &AnchoredValue,
-                    InformationCache &InfoCache)
-      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
+struct AADereferenceable
+    : public IRAttribute<Attribute::Dereferenceable, AbstractAttribute> {
+  IRPositionConstructorForward(AADereferenceable, IRAttribute);
 
   /// Return true if we assume that the underlying value is nonnull.
   virtual bool isAssumedNonNull() const = 0;
@@ -929,27 +1010,13 @@ struct AADereferenceable : public AbstractAttribute {
   /// Return known dereferenceable bytes.
   virtual uint32_t getKnownDereferenceableBytes() const = 0;
 
-  /// See AbastractState::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override { return ID; }
-
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::Dereferenceable;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for all align attributes.
-struct AAAlign : public AbstractAttribute {
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AAAlign(Value &V, InformationCache &InfoCache)
-      : AbstractAttribute(V, InfoCache) {}
-
-  /// See AbstractAttribute::AbstractAttribute(...).
-  AAAlign(Value *AssociatedVal, Value &AnchoredValue,
-          InformationCache &InfoCache)
-      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
-
-  /// See AbastractState::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override { return ID; }
+struct AAAlign : public IRAttribute<Attribute::Alignment, AbstractAttribute> {
+  IRPositionConstructorForward(AAAlign, IRAttribute);
 
   /// Return assumed alignment.
   virtual unsigned getAssumedAlign() const = 0;
@@ -957,8 +1024,8 @@ struct AAAlign : public AbstractAttribute {
   /// Return known alignemnt.
   virtual unsigned getKnownAlign() const = 0;
 
-  /// The identifier used by the Attributor for this class of attributes.
-  static constexpr Attribute::AttrKind ID = Attribute::Alignment;
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 } // end namespace llvm

@@ -1,5 +1,6 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+# Generates ARMGenSystemRegister.inc
 tablegen("ARMGenSystemRegister") {
   visibility = [ ":Utils" ]
   args = [ "-gen-searchable-tables" ]

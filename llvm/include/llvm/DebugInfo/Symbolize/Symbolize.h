@@ -39,6 +39,7 @@ public:
     bool UseSymbolTable = true;
     bool Demangle = true;
     bool RelativeAddresses = false;
+    bool UntagAddresses = false;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;

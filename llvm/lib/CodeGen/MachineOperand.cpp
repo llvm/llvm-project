@@ -49,7 +49,7 @@ static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
       getMFIfAvailable(const_cast<const MachineOperand &>(MO)));
 }
 
-void MachineOperand::setReg(unsigned Reg) {
+void MachineOperand::setReg(Register Reg) {
   if (getReg() == Reg)
     return; // No change.
 
@@ -71,9 +71,9 @@ void MachineOperand::setReg(unsigned Reg) {
   SmallContents.RegNo = Reg;
 }
 
-void MachineOperand::substVirtReg(unsigned Reg, unsigned SubIdx,
+void MachineOperand::substVirtReg(Register Reg, unsigned SubIdx,
                                   const TargetRegisterInfo &TRI) {
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   if (SubIdx && getSubReg())
     SubIdx = TRI.composeSubRegIndices(SubIdx, getSubReg());
   setReg(Reg);
@@ -81,8 +81,8 @@ void MachineOperand::substVirtReg(unsigned Reg, unsigned SubIdx,
     setSubReg(SubIdx);
 }
 
-void MachineOperand::substPhysReg(unsigned Reg, const TargetRegisterInfo &TRI) {
-  assert(Register::isPhysicalRegister(Reg));
+void MachineOperand::substPhysReg(MCRegister Reg, const TargetRegisterInfo &TRI) {
+  assert(Reg.isPhysical());
   if (getSubReg()) {
     Reg = TRI.getSubReg(Reg, getSubReg());
     // Note that getSubReg() may return 0 if the sub-register doesn't exist.
@@ -230,7 +230,7 @@ void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
 /// ChangeToRegister - Replace this operand with a new register operand of
 /// the specified value.  If an operand is known to be an register already,
 /// the setReg method should be used.
-void MachineOperand::ChangeToRegister(unsigned Reg, bool isDef, bool isImp,
+void MachineOperand::ChangeToRegister(Register Reg, bool isDef, bool isImp,
                                       bool isKill, bool isDead, bool isUndef,
                                       bool isDebug) {
   MachineRegisterInfo *RegInfo = nullptr;

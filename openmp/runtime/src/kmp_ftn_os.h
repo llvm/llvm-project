@@ -633,5 +633,25 @@
   GOMP_loop_ull_doacross_guided_start
 #define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_RUNTIME_START                      \
   GOMP_loop_ull_doacross_runtime_start
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_DYNAMIC_NEXT                       \
+  GOMP_loop_nonmonotonic_dynamic_next
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_DYNAMIC_START                      \
+  GOMP_loop_nonmonotonic_dynamic_start
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_GUIDED_NEXT                        \
+  GOMP_loop_nonmonotonic_guided_next
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_GUIDED_START                       \
+  GOMP_loop_nonmonotonic_guided_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_DYNAMIC_NEXT                   \
+  GOMP_loop_ull_nonmonotonic_dynamic_next
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_DYNAMIC_START                  \
+  GOMP_loop_ull_nonmonotonic_dynamic_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_GUIDED_NEXT                    \
+  GOMP_loop_ull_nonmonotonic_guided_next
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_GUIDED_START                   \
+  GOMP_loop_ull_nonmonotonic_guided_start
+#define KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_DYNAMIC                   \
+  GOMP_parallel_loop_nonmonotonic_dynamic
+#define KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_GUIDED                    \
+  GOMP_parallel_loop_nonmonotonic_guided
 
 #endif /* KMP_FTN_OS_H */

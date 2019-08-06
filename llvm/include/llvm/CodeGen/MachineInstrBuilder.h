@@ -85,7 +85,7 @@ public:
   Register getReg(unsigned Idx) const { return MI->getOperand(Idx).getReg(); }
 
   /// Add a new virtual register operand.
-  const MachineInstrBuilder &addReg(unsigned RegNo, unsigned flags = 0,
+  const MachineInstrBuilder &addReg(Register RegNo, unsigned flags = 0,
                                     unsigned SubReg = 0) const {
     assert((flags & 0x1) == 0 &&
            "Passing in 'true' to addReg is forbidden! Use enums instead.");
@@ -104,14 +104,14 @@ public:
   }
 
   /// Add a virtual register definition operand.
-  const MachineInstrBuilder &addDef(unsigned RegNo, unsigned Flags = 0,
+  const MachineInstrBuilder &addDef(Register RegNo, unsigned Flags = 0,
                                     unsigned SubReg = 0) const {
     return addReg(RegNo, Flags | RegState::Define, SubReg);
   }
 
   /// Add a virtual register use operand. It is an error for Flags to contain
   /// `RegState::Define` when calling this function.
-  const MachineInstrBuilder &addUse(unsigned RegNo, unsigned Flags = 0,
+  const MachineInstrBuilder &addUse(Register RegNo, unsigned Flags = 0,
                                     unsigned SubReg = 0) const {
     assert(!(Flags & RegState::Define) &&
            "Misleading addUse defines register, use addReg instead.");
@@ -316,7 +316,7 @@ inline MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 /// This version of the builder sets up the first operand as a
 /// destination virtual register.
 inline MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
-                                   const MCInstrDesc &MCID, unsigned DestReg) {
+                                   const MCInstrDesc &MCID, Register DestReg) {
   return MachineInstrBuilder(MF, MF.CreateMachineInstr(MCID, DL))
            .addReg(DestReg, RegState::Define);
 }
@@ -327,7 +327,7 @@ inline MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
-                                   unsigned DestReg) {
+                                   Register DestReg) {
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, DL);
   BB.insert(I, MI);
@@ -343,7 +343,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                                    MachineBasicBlock::instr_iterator I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
-                                   unsigned DestReg) {
+                                   Register DestReg) {
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, DL);
   BB.insert(I, MI);
@@ -352,7 +352,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
-                                   unsigned DestReg) {
+                                   Register DestReg) {
   // Calling the overload for instr_iterator is always correct.  However, the
   // definition is not available in headers, so inline the check.
   if (I.isInsideBundle())
@@ -362,7 +362,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr *I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
-                                   unsigned DestReg) {
+                                   Register DestReg) {
   return BuildMI(BB, *I, DL, MCID, DestReg);
 }
 
@@ -416,7 +416,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB, const DebugLoc &DL,
 /// end of the given MachineBasicBlock, and sets up the first operand as a
 /// destination virtual register.
 inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB, const DebugLoc &DL,
-                                   const MCInstrDesc &MCID, unsigned DestReg) {
+                                   const MCInstrDesc &MCID, Register DestReg) {
   return BuildMI(*BB, BB->end(), DL, MCID, DestReg);
 }
 
@@ -426,7 +426,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB, const DebugLoc &DL,
 /// second operand is an immediate.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, const MDNode *Variable,
+                            Register Reg, const MDNode *Variable,
                             const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
@@ -442,7 +442,7 @@ MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, const MDNode *Variable,
+                            Register Reg, const MDNode *Variable,
                             const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic

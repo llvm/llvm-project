@@ -63,7 +63,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, 
 ; RV64I-NEXT:    add a0, a0, a5
 ; RV64I-NEXT:    add a0, a0, a6
 ; RV64I-NEXT:    lw a1, 8(sp)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
   %a_ext = zext i8 %a to i32
   %b_ext = zext i16 %b to i32

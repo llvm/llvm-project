@@ -21,6 +21,7 @@ if (llvm_targets_to_build == "host") {
   # FIXME: Port the remaining targets.
   llvm_targets_to_build = [
     "AArch64",
+    "AMDGPU",
     "ARM",
     "BPF",
     "Hexagon",
@@ -46,6 +47,8 @@ llvm_build_X86 = false
 foreach(target, llvm_targets_to_build) {
   if (target == "AArch64") {
     llvm_build_AArch64 = true
+  } else if (target == "AMDGPU") {
+    # Nothing to do.
   } else if (target == "ARM") {
     llvm_build_ARM = true
   } else if (target == "BPF") {

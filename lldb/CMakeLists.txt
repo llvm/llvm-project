@@ -209,10 +209,7 @@ if (NOT LLDB_DISABLE_PYTHON)
         DEPENDS ${lldb_scripts_dir}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
 
-    if (TARGET readline)
-      set(readline_dep readline)
-    endif()
-    add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper ${readline_dep})
+    add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
     set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
 
     # Ensure we do the python post-build step when building lldb.

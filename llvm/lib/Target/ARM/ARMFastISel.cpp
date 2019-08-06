@@ -219,15 +219,15 @@ class ARMFastISel final : public FastISel {
                                   bool Return,
                                   bool isVarArg);
     bool ProcessCallArgs(SmallVectorImpl<Value*> &Args,
-                         SmallVectorImpl<unsigned> &ArgRegs,
+                         SmallVectorImpl<Register> &ArgRegs,
                          SmallVectorImpl<MVT> &ArgVTs,
                          SmallVectorImpl<ISD::ArgFlagsTy> &ArgFlags,
-                         SmallVectorImpl<unsigned> &RegArgs,
+                         SmallVectorImpl<Register> &RegArgs,
                          CallingConv::ID CC,
                          unsigned &NumBytes,
                          bool isVarArg);
     unsigned getLibcallReg(const Twine &Name);
-    bool FinishCall(MVT RetVT, SmallVectorImpl<unsigned> &UsedRegs,
+    bool FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
                     const Instruction *I, CallingConv::ID CC,
                     unsigned &NumBytes, bool isVarArg);
     bool ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call);
@@ -301,7 +301,7 @@ ARMFastISel::AddOptionalDefs(const MachineInstrBuilder &MIB) {
 unsigned ARMFastISel::fastEmitInst_r(unsigned MachineInstOpcode,
                                      const TargetRegisterClass *RC,
                                      unsigned Op0, bool Op0IsKill) {
-  unsigned ResultReg = createResultReg(RC);
+  Register ResultReg = createResultReg(RC);
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   // Make sure the input operand is sufficiently constrained to be legal
@@ -1893,10 +1893,10 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
 }
 
 bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
-                                  SmallVectorImpl<unsigned> &ArgRegs,
+                                  SmallVectorImpl<Register> &ArgRegs,
                                   SmallVectorImpl<MVT> &ArgVTs,
                                   SmallVectorImpl<ISD::ArgFlagsTy> &ArgFlags,
-                                  SmallVectorImpl<unsigned> &RegArgs,
+                                  SmallVectorImpl<Register> &RegArgs,
                                   CallingConv::ID CC,
                                   unsigned &NumBytes,
                                   bool isVarArg) {
@@ -1960,7 +1960,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     const Value *ArgVal = Args[VA.getValNo()];
-    unsigned Arg = ArgRegs[VA.getValNo()];
+    Register Arg = ArgRegs[VA.getValNo()];
     MVT ArgVT = ArgVTs[VA.getValNo()];
 
     assert((!ArgVT.isVector() && ArgVT.getSizeInBits() <= 64) &&
@@ -2039,7 +2039,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
   return true;
 }
 
-bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<unsigned> &UsedRegs,
+bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
                              const Instruction *I, CallingConv::ID CC,
                              unsigned &NumBytes, bool isVarArg) {
   // Issue CALLSEQ_END
@@ -2060,7 +2060,7 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<unsigned> &UsedRegs,
       // double fp reg we want.
       MVT DestVT = RVLocs[0].getValVT();
       const TargetRegisterClass* DstRC = TLI.getRegClassFor(DestVT);
-      unsigned ResultReg = createResultReg(DstRC);
+      Register ResultReg = createResultReg(DstRC);
       AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                               TII.get(ARM::VMOVDRR), ResultReg)
                       .addReg(RVLocs[0].getLocReg())
@@ -2081,7 +2081,7 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<unsigned> &UsedRegs,
 
       const TargetRegisterClass* DstRC = TLI.getRegClassFor(CopyVT);
 
-      unsigned ResultReg = createResultReg(DstRC);
+      Register ResultReg = createResultReg(DstRC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY),
               ResultReg).addReg(RVLocs[0].getLocReg());
@@ -2231,7 +2231,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
 
   // Set up the argument vectors.
   SmallVector<Value*, 8> Args;
-  SmallVector<unsigned, 8> ArgRegs;
+  SmallVector<Register, 8> ArgRegs;
   SmallVector<MVT, 8> ArgVTs;
   SmallVector<ISD::ArgFlagsTy, 8> ArgFlags;
   Args.reserve(I->getNumOperands());
@@ -2257,13 +2257,13 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   }
 
   // Handle the arguments now that we've gotten them.
-  SmallVector<unsigned, 4> RegArgs;
+  SmallVector<Register, 4> RegArgs;
   unsigned NumBytes;
   if (!ProcessCallArgs(Args, ArgRegs, ArgVTs, ArgFlags,
                        RegArgs, CC, NumBytes, false))
     return false;
 
-  unsigned CalleeReg = 0;
+  Register CalleeReg;
   if (Subtarget->genLongCalls()) {
     CalleeReg = getLibcallReg(TLI.getLibcallName(Call));
     if (CalleeReg == 0) return false;
@@ -2282,7 +2282,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
     MIB.addExternalSymbol(TLI.getLibcallName(Call));
 
   // Add implicit physical register uses to the call.
-  for (unsigned R : RegArgs)
+  for (Register R : RegArgs)
     MIB.addReg(R, RegState::Implicit);
 
   // Add a register mask with the call-preserved registers.
@@ -2290,7 +2290,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   MIB.addRegMask(TRI.getCallPreservedMask(*FuncInfo.MF, CC));
 
   // Finish off the call including any return values.
-  SmallVector<unsigned, 4> UsedRegs;
+  SmallVector<Register, 4> UsedRegs;
   if (!FinishCall(RetVT, UsedRegs, I, CC, NumBytes, false)) return false;
 
   // Set all unused physreg defs as dead.
@@ -2340,7 +2340,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
 
   // Set up the argument vectors.
   SmallVector<Value*, 8> Args;
-  SmallVector<unsigned, 8> ArgRegs;
+  SmallVector<Register, 8> ArgRegs;
   SmallVector<MVT, 8> ArgVTs;
   SmallVector<ISD::ArgFlagsTy, 8> ArgFlags;
   unsigned arg_size = CS.arg_size();
@@ -2377,8 +2377,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
         ArgVT != MVT::i1)
       return false;
 
-    unsigned Arg = getRegForValue(*i);
-    if (Arg == 0)
+    Register Arg = getRegForValue(*i);
+    if (!Arg.isValid())
       return false;
 
     unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
@@ -2391,7 +2391,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   }
 
   // Handle the arguments now that we've gotten them.
-  SmallVector<unsigned, 4> RegArgs;
+  SmallVector<Register, 4> RegArgs;
   unsigned NumBytes;
   if (!ProcessCallArgs(Args, ArgRegs, ArgVTs, ArgFlags,
                        RegArgs, CC, NumBytes, isVarArg))
@@ -2401,7 +2401,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   const GlobalValue *GV = dyn_cast<GlobalValue>(Callee);
   if (!GV || Subtarget->genLongCalls()) UseReg = true;
 
-  unsigned CalleeReg = 0;
+  Register CalleeReg;
   if (UseReg) {
     if (IntrMemName)
       CalleeReg = getLibcallReg(IntrMemName);
@@ -2427,7 +2427,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
     MIB.addExternalSymbol(IntrMemName, 0);
 
   // Add implicit physical register uses to the call.
-  for (unsigned R : RegArgs)
+  for (Register R : RegArgs)
     MIB.addReg(R, RegState::Implicit);
 
   // Add a register mask with the call-preserved registers.
@@ -2435,7 +2435,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   MIB.addRegMask(TRI.getCallPreservedMask(*FuncInfo.MF, CC));
 
   // Finish off the call including any return values.
-  SmallVector<unsigned, 4> UsedRegs;
+  SmallVector<Register, 4> UsedRegs;
   if (!FinishCall(RetVT, UsedRegs, I, CC, NumBytes, isVarArg))
     return false;
 

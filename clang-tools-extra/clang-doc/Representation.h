@@ -114,11 +114,17 @@ struct CommentInfo {
 struct Reference {
   Reference() = default;
   Reference(llvm::StringRef Name) : Name(Name) {}
-  Reference(llvm::StringRef Name, StringRef Path) : Name(Name), Path(Path) {}
+  // An empty path means the info is in the global namespace because the path is
+  // a composite of the parent namespaces.
+  Reference(llvm::StringRef Name, StringRef Path)
+      : Name(Name), Path(Path), IsInGlobalNamespace(Path.empty()) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT)
       : USR(USR), Name(Name), RefType(IT) {}
+  // An empty path means the info is in the global namespace because the path is
+  // a composite of the parent namespaces.
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
-      : USR(USR), Name(Name), RefType(IT), Path(Path) {}
+      : USR(USR), Name(Name), RefType(IT), Path(Path),
+        IsInGlobalNamespace(Path.empty()) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, RefType) ==
@@ -130,8 +136,12 @@ struct Reference {
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
                                            // Reference (namespace, record,
                                            // function, enum, default).
-  llvm::SmallString<128> Path; // Path of directory where the clang-doc
-                               // generated file will be saved
+  // Path of directory where the clang-doc generated file will be saved
+  // (possibly unresolved)
+  llvm::SmallString<128> Path;
+  // Indicates if the info's parent is the global namespace, or if the info is
+  // the global namespace
+  bool IsInGlobalNamespace = false;
 };
 
 // A base struct for TypeInfos

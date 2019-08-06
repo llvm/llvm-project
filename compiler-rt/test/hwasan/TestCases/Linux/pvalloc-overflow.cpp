@@ -18,6 +18,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../utils.h"
+
 int main(int argc, char *argv[]) {
   assert(argc == 2);
   const char *action = argv[1];
@@ -25,15 +27,15 @@ int main(int argc, char *argv[]) {
   const size_t page_size = sysconf(_SC_PAGESIZE);
 
   void *p = nullptr;
-  if (!strcmp(action, "m1")) {
+  if (!untag_strcmp(action, "m1")) {
     p = pvalloc((uintptr_t)-1);
-  } else if (!strcmp(action, "psm1")) {
+  } else if (!untag_strcmp(action, "psm1")) {
     p = pvalloc((uintptr_t)-(page_size - 1));
   } else {
     assert(0);
   }
 
-  fprintf(stderr, "errno: %d\n", errno);
+  untag_fprintf(stderr, "errno: %d\n", errno);
 
   return p != nullptr;
 }

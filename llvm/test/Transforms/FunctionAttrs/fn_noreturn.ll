@@ -1,26 +1,18 @@
 ; RUN: opt -functionattrs -attributor -attributor-disable=false -S < %s | FileCheck %s
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-verify=true -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-return" function attribute.
 ; We use FIXME's to indicate problems and missing attributes.
-;
-; TEST 1: singleton SCC void return type
-; TEST 2: singleton SCC int return type with a lot of recursive calls
-; TEST 3: endless loop, no return instruction
-; TEST 4: endless loop, dead return instruction
-; TEST 5: all paths contain a no-return function call
-;
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 
-; TEST 1
+; TEST 1, singleton SCC void return type
 ;
 ; void srec0() {
 ;   return srec0();
 ; }
 ;
-; FIXME: no-return missing
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; CHECK: define void @srec0()
 ;
 define void @srec0() #0 {
@@ -30,14 +22,13 @@ entry:
 }
 
 
-; TEST 2
+; TEST 2: singleton SCC int return type with a lot of recursive calls
 ;
 ; int srec16(int a) {
 ;   return srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(srec16(a))))))))))))))));
 ; }
 ;
-; FIXME: no-return missing
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; CHECK: define i32 @srec16(i32 %a)
 ;
 define i32 @srec16(i32 %a) #0 {
@@ -58,18 +49,20 @@ entry:
   %call13 = call i32 @srec16(i32 %call12)
   %call14 = call i32 @srec16(i32 %call13)
   %call15 = call i32 @srec16(i32 %call14)
+  br label %exit
+
+exit:
   ret i32 %call15
 }
 
 
-; TEST 3
+; TEST 3: endless loop, no return instruction
 ;
 ; int endless_loop(int a) {
 ;   while (1);
 ; }
 ;
-; FIXME: no-return missing
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; CHECK: define i32 @endless_loop(i32 %a)
 ;
 define i32 @endless_loop(i32 %a) #0 {
@@ -81,15 +74,15 @@ while.body:                                       ; preds = %entry, %while.body
 }
 
 
-; TEST 4
+; TEST 4: endless loop, dead return instruction
 ;
 ; int endless_loop(int a) {
 ;   while (1);
 ;   return a;
 ; }
 ;
-; FIXME: no-return missing
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; FIXME: no-return missing (D65243 should fix this)
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; CHECK: define i32 @dead_return(i32 returned %a)
 ;
 define i32 @dead_return(i32 %a) #0 {
@@ -104,14 +97,13 @@ return:                                           ; No predecessors!
 }
 
 
-; TEST 5
+; TEST 5: all paths contain a no-return function call
 ;
 ; int multiple_noreturn_calls(int a) {
 ;   return a == 0 ? endless_loop(a) : srec16(a);
 ; }
 ;
-; FIXME: no-return missing
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; CHECK: define i32 @multiple_noreturn_calls(i32 %a)
 ;
 define i32 @multiple_noreturn_calls(i32 %a) #0 {

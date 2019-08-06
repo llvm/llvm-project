@@ -125,24 +125,28 @@ define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @mutual_recursion1()
+; FNATTR-NEXT: define void @mutual_recursion1(i1 %c)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
-; ATTRIBUTOR-NEXT: define void @mutual_recursion1()
-define void @mutual_recursion1() #0 {
-  call void @mutual_recursion2()
+; ATTRIBUTOR-NEXT: define void @mutual_recursion1(i1 %c)
+define void @mutual_recursion1(i1 %c) #0 {
+  br i1 %c, label %rec, label %end
+rec:
+  call void @mutual_recursion2(i1 %c)
+  br label %end
+end:
   ret void
 }
 
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NOT: willreturn
-; FNATTR-NEXT: define void @mutual_recursion2()
+; FNATTR-NEXT: define void @mutual_recursion2(i1 %c)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
-; ATTRIBUTOR-NEXT: define void @mutual_recursion2()
-define void @mutual_recursion2() #0 {
-  call void @mutual_recursion1()
+; ATTRIBUTOR-NEXT: define void @mutual_recursion2(i1 %c)
+define void @mutual_recursion2(i1 %c) #0 {
+  call void @mutual_recursion1(i1 %c)
   ret void
 }
 
@@ -158,7 +162,7 @@ declare void @exit(i32 %0) local_unnamed_addr noreturn
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @only_exit()
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @only_exit() local_unnamed_addr
 define void @only_exit() local_unnamed_addr #0 {
@@ -283,7 +287,7 @@ define void @f2() #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @call_will_return_but_has_loop()
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @call_will_return_but_has_loop()
 define void @call_will_return_but_has_loop() #0 {
@@ -499,7 +503,7 @@ unreachable_label:
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @unreachable_exit_negative1()
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_negative1()
 define void @unreachable_exit_negative1() #0 {
@@ -514,7 +518,7 @@ unreachable_label:
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @unreachable_exit_negative2()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @unreachable_exit_negative2()
 define void @unreachable_exit_negative2() #0 {
@@ -539,7 +543,7 @@ declare void @llvm.eh.sjlj.longjmp(i8*)
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #3 {
-; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline noreturn nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr
 define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {

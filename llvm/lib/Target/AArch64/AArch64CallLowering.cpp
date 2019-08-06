@@ -99,7 +99,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 
-  bool isArgumentHandler() const override { return true; }
+  bool isIncomingArgumentHandler() const override { return true; }
 
   uint64_t StackUsed;
 };
