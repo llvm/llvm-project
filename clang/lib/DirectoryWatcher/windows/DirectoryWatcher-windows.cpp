@@ -40,9 +40,11 @@ public:
 };
 } // namespace
 
-std::unique_ptr<DirectoryWatcher> clang::DirectoryWatcher::create(
+llvm::Expected<std::unique_ptr<DirectoryWatcher>>
+clang::DirectoryWatcher::create(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     bool WaitForInitialSync) {
-    return nullptr;
+  return llvm::Expected<std::unique_ptr<DirectoryWatcher>>(
+      llvm::errorCodeToError(std::make_error_code(std::errc::not_supported)));
 }
