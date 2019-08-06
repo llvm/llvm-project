@@ -137,13 +137,14 @@ bool IndexDataStoreImpl::startEventListening(bool waitInitialSync, std::string &
     }
   };
 
-  DirWatcher = DirectoryWatcher::create(UnitPath.str(), OnUnitsChange,
-                                        waitInitialSync);
-  if (!DirWatcher) {
-    Error = "failed to create directory watcher";
-    return true;
+  llvm::Expected<std::unique_ptr<DirectoryWatcher>> ExpectedDirWatcher =
+      DirectoryWatcher::create(UnitPath.str(), OnUnitsChange, waitInitialSync);
+  if (!ExpectedDirWatcher) {
+      Error = llvm::toString(ExpectedDirWatcher.takeError());
+      return true;
   }
 
+  DirWatcher = std::move(ExpectedDirWatcher.get());
   return false;
 }
 
