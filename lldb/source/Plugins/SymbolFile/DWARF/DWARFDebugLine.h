@@ -206,9 +206,6 @@ public:
                       DWARFUnit *dwarf_cu);
   static void Parse(const lldb_private::DWARFDataExtractor &debug_line_data,
                     DWARFDebugLine::State::Callback callback, void *userData);
-  //  static void AppendLineTableData(const DWARFDebugLine::Prologue* prologue,
-  //  const DWARFDebugLine::Row::collection& state_coll, const uint32_t
-  //  addr_size, BinaryStreamBuf &debug_line_data);
 
   DWARFDebugLine() : m_lineTableMap() {}
 
