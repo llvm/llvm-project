@@ -68,7 +68,7 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
     : m_metadata_ptr(LLDB_INVALID_ADDRESS),
       m_reserved_word(LLDB_INVALID_ADDRESS), m_size(0), m_capacity(0),
       m_first_elem_ptr(LLDB_INVALID_ADDRESS), m_elem_type(elem_type),
-      m_element_size(0), m_element_stride(elem_type.GetByteStride()),
+      m_element_size(0), m_element_stride(0),
       m_exe_ctx_ref(valobj.GetExecutionContextRef()) {
   if (native_ptr == LLDB_INVALID_ADDRESS)
     return;
@@ -84,9 +84,13 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
   ProcessSP process_sp(m_exe_ctx_ref.GetProcessSP());
   if (!process_sp)
     return;
+  auto element_stride = m_elem_type.GetByteStride();
   auto opt_size = elem_type.GetByteSize(process_sp.get());
   if (opt_size)
     m_element_size = *opt_size;
+  auto opt_stride = elem_type.GetByteStride();
+  if (opt_stride)
+    m_element_stride = *opt_stride;
   size_t ptr_size = process_sp->GetAddressByteSize();
   Status error;
   lldb::addr_t next_read = native_ptr;
@@ -194,7 +198,7 @@ SwiftArraySliceBufferHandler::GetElementAtIndex(size_t idx) {
 SwiftArraySliceBufferHandler::SwiftArraySliceBufferHandler(
     ValueObject &valobj, CompilerType elem_type)
     : m_size(0), m_first_elem_ptr(LLDB_INVALID_ADDRESS), m_elem_type(elem_type),
-      m_element_size(0), m_element_stride(elem_type.GetByteStride()),
+      m_element_size(0), m_element_stride(0),
       m_exe_ctx_ref(valobj.GetExecutionContextRef()), m_native_buffer(false),
       m_start_index(0) {
   static ConstString g_start("subscriptBaseAddress");
@@ -210,6 +214,10 @@ SwiftArraySliceBufferHandler::SwiftArraySliceBufferHandler(
   auto opt_size = elem_type.GetByteSize(process_sp.get());
   if (opt_size)
     m_element_size = *opt_size;
+
+  auto opt_stride = elem_type.GetByteStride();
+  if (opt_stride)
+    m_element_stride = *opt_stride;
 
   ValueObjectSP value_sp(valobj.GetChildAtNamePath({g_start, g__rawValue}));
   if (!value_sp)
