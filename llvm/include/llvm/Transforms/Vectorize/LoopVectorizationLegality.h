@@ -33,18 +33,6 @@
 
 namespace llvm {
 
-/// Create an analysis remark that explains why vectorization failed
-///
-/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
-/// RemarkName is the identifier for the remark.  If \p I is passed it is an
-/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark.  \return the remark object that can be
-/// streamed to.
-OptimizationRemarkAnalysis createLVMissedAnalysis(const char *PassName,
-                                                  StringRef RemarkName,
-                                                  Loop *TheLoop,
-                                                  Instruction *I = nullptr);
-
 /// Utility class for getting and setting loop vectorizer hints in the form
 /// of loop metadata.
 /// This class keeps a number of loop annotations locally (as member variables)
@@ -386,14 +374,6 @@ private:
     // masked access.
     return LAI ? &LAI->getSymbolicStrides() : nullptr;
   }
-
-  /// Reports a vectorization illegality: print \p DebugMsg for debugging
-  /// purposes along with the corresponding optimization remark \p RemarkName.
-  /// If \p I is passed it is an instruction that prevents vectorization.
-  /// Otherwise the loop is used for the location of the remark.
-  void reportVectorizationFailure(const StringRef DebugMsg,
-      const StringRef OREMsg, const StringRef ORETag,
-      Instruction *I = nullptr) const;
 
   /// The loop that we evaluate.
   Loop *TheLoop;

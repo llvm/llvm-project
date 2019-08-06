@@ -369,6 +369,9 @@ enum NodeType : unsigned {
   // result bit per item in the wavefront.
   SETCC,
   SETREG,
+
+  DENORM_MODE,
+
   // FP ops with input and output chain.
   FMA_W_CHAIN,
   FMUL_W_CHAIN,

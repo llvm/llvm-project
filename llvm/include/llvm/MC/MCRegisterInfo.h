@@ -25,10 +25,6 @@
 
 namespace llvm {
 
-/// An unsigned integer type large enough to represent all physical registers,
-/// but not necessarily virtual registers.
-using MCPhysReg = uint16_t;
-
 /// MCRegisterClass - Base class of TargetRegisterClass.
 class MCRegisterClass {
 public:

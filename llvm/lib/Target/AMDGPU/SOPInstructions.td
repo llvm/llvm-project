@@ -1168,7 +1168,10 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_ROUND_MODE :
     SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
   def S_DENORM_MODE :
-    SOPP<0x025, (ins s16imm:$simm16), "s_denorm_mode $simm16">;
+    SOPP<0x025, (ins i32imm:$simm16), "s_denorm_mode $simm16",
+    [(SIdenorm_mode (i32 timm:$simm16))]> {
+      let hasSideEffects = 1;
+    }
   def S_TTRACEDATA_IMM :
     SOPP<0x028, (ins s16imm:$simm16), "s_ttracedata_imm $simm16">;
 } // End SubtargetPredicate = isGFX10Plus

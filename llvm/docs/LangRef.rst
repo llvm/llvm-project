@@ -1480,8 +1480,9 @@ example:
     target-specific ABI normally permits it.
 ``noreturn``
     This function attribute indicates that the function never returns
-    normally. This produces undefined behavior at runtime if the
-    function ever does dynamically return.
+    normally, hence through a return instruction. This produces undefined
+    behavior at runtime if the function ever does dynamically return. Annotated
+    functions may still raise an exception, i.a., ``nounwind`` is not implied.
 ``norecurse``
     This function attribute indicates that the function does not call itself
     either directly or indirectly down any possible call path. This produces

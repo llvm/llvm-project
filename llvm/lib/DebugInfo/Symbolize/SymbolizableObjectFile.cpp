@@ -178,6 +178,7 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   if (UntagAddresses) {
     // For kernel addresses, bits 56-63 need to be set, so we sign extend bit 55
     // into bits 56-63 instead of masking them out.
+    SymbolAddress &= (1ull << 56) - 1;
     SymbolAddress = (int64_t(SymbolAddress) << 8) >> 8;
   }
   if (OpdExtractor) {

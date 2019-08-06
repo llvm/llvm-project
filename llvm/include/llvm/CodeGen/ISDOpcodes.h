@@ -958,6 +958,23 @@ namespace ISD {
   static const int LAST_INDEXED_MODE = POST_DEC + 1;
 
   //===--------------------------------------------------------------------===//
+  /// MemIndexType enum - This enum defines how to interpret MGATHER/SCATTER's
+  /// index parameter when calculating addresses.
+  ///
+  /// SIGNED_SCALED     Addr = Base + ((signed)Index * sizeof(element))
+  /// SIGNED_UNSCALED   Addr = Base + (signed)Index
+  /// UNSIGNED_SCALED   Addr = Base + ((unsigned)Index * sizeof(element))
+  /// UNSIGNED_UNSCALED Addr = Base + (unsigned)Index
+  enum MemIndexType {
+    SIGNED_SCALED = 0,
+    SIGNED_UNSCALED,
+    UNSIGNED_SCALED,
+    UNSIGNED_UNSCALED
+  };
+
+  static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
+
+  //===--------------------------------------------------------------------===//
   /// LoadExtType enum - This enum defines the three variants of LOADEXT
   /// (load with extension).
   ///

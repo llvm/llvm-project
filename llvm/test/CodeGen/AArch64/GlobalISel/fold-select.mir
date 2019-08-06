@@ -21,9 +21,9 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVwzr:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY1]], 0, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVwzr]], [[COPY1]], 0, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -50,9 +50,9 @@ body:             |
     ; CHECK: liveins: $s0, $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVwzr:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: FCMPSri [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY]], 0, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVwzr]], [[COPY]], 0, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr(s32) = COPY $w1

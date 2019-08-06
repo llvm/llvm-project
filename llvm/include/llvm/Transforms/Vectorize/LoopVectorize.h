@@ -155,6 +155,14 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   bool processLoop(Loop *L);
 };
 
+/// Reports a vectorization failure: print \p DebugMsg for debugging
+/// purposes along with the corresponding optimization remark \p RemarkName.
+/// If \p I is passed, it is an instruction that prevents vectorization.
+/// Otherwise, the loop \p TheLoop is used for the location of the remark.
+void reportVectorizationFailure(const StringRef DebugMsg,
+    const StringRef OREMsg, const StringRef ORETag,
+    OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H

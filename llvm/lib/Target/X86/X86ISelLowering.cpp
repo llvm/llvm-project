@@ -27071,7 +27071,7 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
                        DAG.getConstant(0, dl, MVT::v2i1));
     SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), N->getMemoryVT(), dl,
-                                Ops, N->getMemOperand());
+                                Ops, N->getMemOperand(), N->getIndexType());
   }
 
   MVT IndexVT = Index.getSimpleValueType();
@@ -28297,7 +28297,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                           Gather->getBasePtr(), Index, Gather->getScale() };
         SDValue Res = DAG.getMaskedGather(DAG.getVTList(MVT::v4i32, MVT::Other),
                                           Gather->getMemoryVT(), dl, Ops,
-                                          Gather->getMemOperand());
+                                          Gather->getMemOperand(),
+                                          Gather->getIndexType());
         SDValue Chain = Res.getValue(1);
         if (getTypeAction(*DAG.getContext(), MVT::v2i32) != TypeWidenVector)
           Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,

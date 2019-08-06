@@ -590,7 +590,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
                    N->getIndex(), N->getScale() };
   SDValue Res = DAG.getMaskedGather(DAG.getVTList(NVT, MVT::Other),
                                     N->getMemoryVT(), dl, Ops,
-                                    N->getMemOperand());
+                                    N->getMemOperand(), N->getIndexType());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -1454,8 +1454,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
     EVT DataVT = N->getValueType(0);
     NewOps[OpNo] = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
   } else if (OpNo == 4) {
-    // Need to sign extend the index since the bits will likely be used.
-    NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+    // The Index
+    if (N->isIndexSigned())
+      // Need to sign extend the index since the bits will likely be used.
+      NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+    else
+      NewOps[OpNo] = ZExtPromotedInteger(N->getOperand(OpNo));
   } else
     NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
 
@@ -1470,8 +1474,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
     EVT DataVT = N->getValue().getValueType();
     NewOps[OpNo] = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
   } else if (OpNo == 4) {
-    // Need to sign extend the index since the bits will likely be used.
-    NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+    // The Index
+    if (N->isIndexSigned())
+      // Need to sign extend the index since the bits will likely be used.
+      NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+    else
+      NewOps[OpNo] = ZExtPromotedInteger(N->getOperand(OpNo));
   } else
     NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);

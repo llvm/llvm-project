@@ -21,16 +21,20 @@ define i8* @test2(i8* nonnull %p) {
 
 ; Given an SCC where one of the functions can not be marked nonnull,
 ; can we still mark the other one which is trivially nonnull
-define i8* @scc_binder() {
+define i8* @scc_binder(i1 %c) {
 ; FNATTR: define i8* @scc_binder
 ; ATTRIBUTOR: define noalias i8* @scc_binder
-  call i8* @test3()
+  br i1 %c, label %rec, label %end
+rec:
+  call i8* @test3(i1 %c)
+  br label %end
+end:
   ret i8* null
 }
 
-define i8* @test3() {
+define i8* @test3(i1 %c) {
 ; BOTH: define nonnull i8* @test3
-  call i8* @scc_binder()
+  call i8* @scc_binder(i1 %c)
   %ret = call i8* @ret_nonnull()
   ret i8* %ret
 }
@@ -54,17 +58,21 @@ define i8* @test4() {
 
 ; Given a mutual recursive set of functions which *can* return null
 ; make sure we haven't marked them as nonnull.
-define i8* @test5_helper() {
+define i8* @test5_helper(i1 %c) {
 ; FNATTR: define noalias i8* @test5_helper
 ; ATTRIBUTOR: define noalias i8* @test5_helper
-  %ret = call i8* @test5()
+  br i1 %c, label %rec, label %end
+rec:
+  %ret = call i8* @test5(i1 %c)
+  br label %end
+end:
   ret i8* null
 }
 
-define i8* @test5() {
+define i8* @test5(i1 %c) {
 ; FNATTR: define noalias i8* @test5
 ; ATTRIBUTOR: define noalias i8* @test5
-  %ret = call i8* @test5_helper()
+  %ret = call i8* @test5_helper(i1 %c)
   ret i8* %ret
 }
 

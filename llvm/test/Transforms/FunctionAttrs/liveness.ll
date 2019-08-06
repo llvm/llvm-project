@@ -26,7 +26,7 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 }
 ; TEST 1: Only first block is live.
 
-; CHECK: Function Attrs: nofree nosync nounwind
+; CHECK: Function Attrs: nofree noreturn nosync nounwind
 ; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:

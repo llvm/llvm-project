@@ -1,26 +1,22 @@
+## Check we can set different bindings for symbols.
+
 # RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
+
 !ELF
 FileHeader:
-  Class: ELFCLASS64
-  Data: ELFDATA2LSB
-  Type: ET_REL
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
   Machine: EM_X86_64
-Sections:
-  - Name: .data
-    Type: SHT_PROGBITS
-    Flags: [ SHF_ALLOC, SHF_WRITE ]
-    Content: "DEADBEEF"
 Symbols:
   - Name:    local_symbol
     Type:    STT_OBJECT
-    Section: .data
+    Binding: STB_LOCAL
   - Name:    global_symbol
     Type:    STT_OBJECT
-    Section: .data
     Binding: STB_GLOBAL
   - Name:    weak_symbol
     Type:    STT_OBJECT
-    Section: .data
     Binding: STB_WEAK
 
 # CHECK: Symbol {

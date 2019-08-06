@@ -99,7 +99,8 @@ TEST(GlobalTest, AlignDeath) {
                          Constant::getAllOnesValue(Int32Ty), "var", nullptr,
                          GlobalVariable::NotThreadLocal, 1);
 
-  EXPECT_DEATH(Var->setAlignment(536870913U), "Alignment is not a power of 2");
+  EXPECT_DEATH(Var->setAlignment(536870913U),
+               "Alignment is neither 0 nor a power of 2");
   EXPECT_DEATH(Var->setAlignment(1073741824U),
                "Alignment is greater than MaximumAlignment");
 }

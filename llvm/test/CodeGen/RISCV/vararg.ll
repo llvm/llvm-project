@@ -1320,7 +1320,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    add a1, a1, s0
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    add a1, a1, a2
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    add a0, a1, a0
+; LP64-LP64F-LP64D-FPELIM-NEXT:    addw a0, a1, a0
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld s0, 16(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld ra, 24(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi sp, sp, 96
@@ -1364,7 +1364,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    add a1, a1, s1
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    add a1, a1, a2
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    add a0, a1, a0
+; LP64-LP64F-LP64D-WITHFP-NEXT:    addw a0, a1, a0
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s1, 24(sp)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 32(sp)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 40(sp)
