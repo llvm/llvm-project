@@ -14,5 +14,5 @@
 
 // CHECK: clang-scan-deps dependency
 // CHECK-NEXT: header_stat_before_open.m
-// CHECK-NEXT: Inputs/frameworks/Framework.framework/Headers/Framework.h
-// CHECK-NEXT: Inputs/frameworks/Framework.framework/PrivateHeaders/PrivateHeader.h
+// CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}Headers{{/|\\}}Framework.h
+// CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}PrivateHeaders{{/|\\}}PrivateHeader.h
