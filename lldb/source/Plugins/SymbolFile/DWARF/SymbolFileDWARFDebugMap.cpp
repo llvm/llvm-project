@@ -777,7 +777,7 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
             Address oso_so_addr;
             if (oso_module->ResolveFileAddress(oso_file_addr, oso_so_addr)) {
               resolved_flags |=
-                  oso_module->GetSymbolVendor()->ResolveSymbolContext(
+                  oso_module->GetSymbolFile()->ResolveSymbolContext(
                       oso_so_addr, resolve_scope, sc);
             }
           }
@@ -1406,8 +1406,8 @@ bool SymbolFileDWARFDebugMap::LinkOSOAddress(Address &addr) {
   if (addr_module == exe_module)
     return true; // Address is already in terms of the main executable module
 
-  CompileUnitInfo *cu_info = GetCompileUnitInfo(GetSymbolFileAsSymbolFileDWARF(
-      addr_module->GetSymbolVendor()->GetSymbolFile()));
+  CompileUnitInfo *cu_info = GetCompileUnitInfo(
+      GetSymbolFileAsSymbolFileDWARF(addr_module->GetSymbolFile()));
   if (cu_info) {
     const lldb::addr_t oso_file_addr = addr.GetFileAddress();
     const FileRangeMap::Entry *oso_range_entry =

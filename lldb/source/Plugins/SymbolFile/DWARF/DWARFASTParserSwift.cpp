@@ -280,8 +280,8 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
     for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
-      SymbolFile *sym_file = name_module.second->GetSymbolFile();
-      if (sym_file->FindTypes(decl_context, true, clang_types))
+      if (name_module.second->GetSymbolFile()->FindTypes(decl_context, true,
+                                                         clang_types))
         return;
     }
 

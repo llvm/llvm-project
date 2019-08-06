@@ -18,7 +18,6 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
@@ -818,11 +817,8 @@ void ClangASTSource::FindExternalVisibleDecls(
   if (module_sp && namespace_decl) {
     CompilerDeclContext found_namespace_decl;
 
-    SymbolVendor *symbol_vendor = module_sp->GetSymbolVendor();
-
-    if (symbol_vendor) {
-      found_namespace_decl =
-          symbol_vendor->FindNamespace(name, &namespace_decl);
+    if (SymbolFile *symbol_file = module_sp->GetSymbolFile()) {
+      found_namespace_decl = symbol_file->FindNamespace(name, &namespace_decl);
 
       if (found_namespace_decl) {
         context.m_namespace_map->push_back(
@@ -846,13 +842,12 @@ void ClangASTSource::FindExternalVisibleDecls(
 
       CompilerDeclContext found_namespace_decl;
 
-      SymbolVendor *symbol_vendor = image->GetSymbolVendor();
+      SymbolFile *symbol_file = image->GetSymbolFile();
 
-      if (!symbol_vendor)
+      if (!symbol_file)
         continue;
 
-      found_namespace_decl =
-          symbol_vendor->FindNamespace(name, &namespace_decl);
+      found_namespace_decl = symbol_file->FindNamespace(name, &namespace_decl);
 
       if (found_namespace_decl) {
         context.m_namespace_map->push_back(
@@ -1888,13 +1883,13 @@ void ClangASTSource::CompleteNamespaceMap(
       lldb::ModuleSP module_sp = i->first;
       CompilerDeclContext module_parent_namespace_decl = i->second;
 
-      SymbolVendor *symbol_vendor = module_sp->GetSymbolVendor();
+      SymbolFile *symbol_file = module_sp->GetSymbolFile();
 
-      if (!symbol_vendor)
+      if (!symbol_file)
         continue;
 
       found_namespace_decl =
-          symbol_vendor->FindNamespace(name, &module_parent_namespace_decl);
+          symbol_file->FindNamespace(name, &module_parent_namespace_decl);
 
       if (!found_namespace_decl)
         continue;
@@ -1920,13 +1915,13 @@ void ClangASTSource::CompleteNamespaceMap(
 
       CompilerDeclContext found_namespace_decl;
 
-      SymbolVendor *symbol_vendor = image->GetSymbolVendor();
+      SymbolFile *symbol_file = image->GetSymbolFile();
 
-      if (!symbol_vendor)
+      if (!symbol_file)
         continue;
 
       found_namespace_decl =
-          symbol_vendor->FindNamespace(name, &null_namespace_decl);
+          symbol_file->FindNamespace(name, &null_namespace_decl);
 
       if (!found_namespace_decl)
         continue;
