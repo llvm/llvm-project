@@ -49,7 +49,7 @@ endif
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 $(EXE) : $(OBJECTS)
-	clang $(OBJECTS) $(LDFLAGS) -o "$(EXE)"
+	dpu-upmem-dpurte-clang $(OBJECTS) $(LDFLAGS) -o "$(EXE)"
 
 %.o: %.c
-	clang $(CFLAGS) $< -c -o $@
+	dpu-upmem-dpurte-clang $(CFLAGS) $< -c -o $@
