@@ -513,14 +513,6 @@ CompilerType CompilerType::GetUnboundType() const {
   return CompilerType();
 }
 
-// CompilerType
-// CompilerType::RemoveFastQualifiers () const
-//{
-//    if (IsValid())
-//        return m_type_system->RemoveFastQualifiers(m_type);
-//    return CompilerType();
-//}
-
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 
@@ -546,10 +538,10 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-uint64_t CompilerType::GetByteStride() const {
+llvm::Optional<uint64_t> CompilerType::GetByteStride() const {
   if (IsValid())
     return m_type_system->GetByteStride(m_type);
-  return 0;
+  return {};
 }
 
 uint64_t CompilerType::GetAlignedBitSize() const { return 0; }

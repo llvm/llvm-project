@@ -578,7 +578,8 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
-  uint64_t GetByteStride(lldb::opaque_compiler_type_t type) override;
+  llvm::Optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type) override;
 
   lldb::Encoding GetEncoding(void *type, uint64_t &count) override;
 

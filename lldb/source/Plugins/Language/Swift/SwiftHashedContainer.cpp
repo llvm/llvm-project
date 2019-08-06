@@ -404,23 +404,13 @@ HashedCollectionConfig::CreateCocoaHandler(ValueObjectSP storage_sp) const {
 //===----------------------------------------------------------------------===//
 
 NativeHashedStorageHandler::NativeHashedStorageHandler(
-  ValueObjectSP nativeStorage_sp,
-  CompilerType key_type,
-  CompilerType value_type
-) : m_storage(nativeStorage_sp.get()),
-    m_process(nullptr),
-    m_ptr_size(0),
-    m_count(0),
-    m_scale(0),
-    m_metadata_ptr(LLDB_INVALID_ADDRESS),
-    m_keys_ptr(LLDB_INVALID_ADDRESS),
-    m_values_ptr(LLDB_INVALID_ADDRESS),
-    m_element_type(),
-    m_key_stride(key_type.GetByteStride()),
-    m_value_stride(0),
-    m_key_stride_padded(m_key_stride),
-    m_occupiedBuckets(),
-    m_failedToGetBuckets(false) {
+    ValueObjectSP nativeStorage_sp, CompilerType key_type,
+    CompilerType value_type)
+    : m_storage(nativeStorage_sp.get()), m_process(nullptr), m_ptr_size(0),
+      m_count(0), m_scale(0), m_metadata_ptr(LLDB_INVALID_ADDRESS),
+      m_keys_ptr(LLDB_INVALID_ADDRESS), m_values_ptr(LLDB_INVALID_ADDRESS),
+      m_element_type(), m_key_stride(), m_value_stride(0),
+      m_key_stride_padded(), m_occupiedBuckets(), m_failedToGetBuckets(false) {
   static ConstString g__count("_count");
   static ConstString g__scale("_scale");
   static ConstString g__rawElements("_rawElements");
@@ -442,8 +432,15 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (!m_process)
     return;
 
+  auto key_stride = key_type.GetByteStride();
+  if (key_stride) {
+    m_key_stride = *key_stride;
+    m_key_stride_padded = *key_stride;
+  }
+
   if (value_type) {
-    m_value_stride = value_type.GetByteStride();
+    auto value_type_stride = value_type.GetByteStride();
+    m_value_stride = value_type_stride ? *value_type_stride : 0;
     if (SwiftASTContext *swift_ast =
             llvm::dyn_cast_or_null<SwiftASTContext>(key_type.GetTypeSystem())) {
       auto scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
@@ -458,7 +455,10 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       m_element_type = swift_ast->CreateTupleType(tuple_elements);
       auto *swift_type = reinterpret_cast<::swift::TypeBase *>(
           m_element_type.GetCanonicalType().GetOpaqueQualType());
-      m_key_stride_padded = m_element_type.GetByteStride() - m_value_stride;
+      auto element_stride = m_element_type.GetByteStride();
+      if (element_stride) {
+        m_key_stride_padded = *element_stride - m_value_stride;
+      }
       uint64_t offset = m_key_stride_padded;
       if (llvm::isa<::swift::TupleType>(swift_type)) {
         auto &remote_ast = runtime->GetRemoteASTContext(*scratch_ctx);

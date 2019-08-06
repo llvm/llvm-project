@@ -514,9 +514,13 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
     static_type = runtime->DoArchetypeBindingForType(*frame_sp, static_type);
   }
 
+  auto stride = 0;
+  auto opt_stride = static_type.GetByteStride();
+  if (opt_stride)
+    stride = *opt_stride;
+
   lldb::addr_t copy_location = process->AllocateMemory(
-      static_type.GetByteStride(), ePermissionsReadable | ePermissionsWritable,
-      error);
+      stride, ePermissionsReadable | ePermissionsWritable, error);
   if (copy_location == LLDB_INVALID_ADDRESS) {
     if (log)
       log->Printf("[GetObjectDescription_ObjectCopy] copy_location invalid");
