@@ -283,7 +283,7 @@ private:
   class LoadGuard {
   public:
     LoadGuard(unsigned Limit, unsigned &Counter)
-        : Counter(Counter), Enabled(Counter < Limit) {}
+        : Counter(Counter), Enabled(Counter < Limit), StoreSuccess(false) {}
     ~LoadGuard() {
       if (StoreSuccess)
         ++Counter;

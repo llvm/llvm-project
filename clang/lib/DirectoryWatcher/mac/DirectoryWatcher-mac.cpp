@@ -11,16 +11,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <CoreServices/CoreServices.h>
 
 using namespace llvm;
 using namespace clang;
 
-static FSEventStreamRef createFSEventStream(
-    StringRef Path,
-    std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)>,
-    dispatch_queue_t);
 static void stopFSEventStream(FSEventStreamRef);
 
 namespace {
@@ -153,8 +150,7 @@ FSEventStreamRef createFSEventStream(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     dispatch_queue_t Queue) {
-  if (Path.empty())
-    return nullptr;
+  assert(!Path.empty() && "Path.empty()");
 
   CFMutableArrayRef PathsToWatch = [&]() {
     CFMutableArrayRef PathsToWatch =
@@ -205,20 +201,16 @@ void stopFSEventStream(FSEventStreamRef EventStream) {
   FSEventStreamRelease(EventStream);
 }
 
-std::unique_ptr<DirectoryWatcher> clang::DirectoryWatcher::create(
+llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::create(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     bool WaitForInitialSync) {
   dispatch_queue_t Queue =
       dispatch_queue_create("DirectoryWatcher", DISPATCH_QUEUE_SERIAL);
 
-  if (Path.empty())
-    return nullptr;
-
+  assert(!Path.empty() && "Path.empty()");
   auto EventStream = createFSEventStream(Path, Receiver, Queue);
-  if (!EventStream) {
-    return nullptr;
-  }
+  assert(EventStream && "EventStream expected to be non-null");
 
   std::unique_ptr<DirectoryWatcher> Result =
       llvm::make_unique<DirectoryWatcherMac>(EventStream, Receiver, Path);
