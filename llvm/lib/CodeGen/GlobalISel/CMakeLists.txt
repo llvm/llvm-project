@@ -1,5 +1,6 @@
 add_llvm_library(LLVMGlobalISel
         CSEInfo.cpp
+        GISelKnownBits.cpp
         CSEMIRBuilder.cpp
         CallLowering.cpp
         GlobalISel.cpp

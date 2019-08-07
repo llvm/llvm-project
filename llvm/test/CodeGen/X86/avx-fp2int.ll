@@ -7,7 +7,6 @@ define <4 x i8> @test1(<4 x double> %d) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
   %c = fptoui <4 x double> %d to <4 x i8>
@@ -17,7 +16,6 @@ define <4 x i8> @test2(<4 x double> %d) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
   %c = fptosi <4 x double> %d to <4 x i8>

@@ -44,10 +44,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVwzr:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: $wzr = ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 1, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVwzr]], 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -76,7 +76,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: $wzr = ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 1, implicit $nzcv
@@ -108,7 +108,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[MOVi32imm]], [[COPY1]], implicit-def $nzcv
     ; CHECK: $wzr = SUBSWrr [[COPY]], [[SUBSWrr]], implicit-def $nzcv
@@ -141,7 +141,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[MOVi32imm]], [[COPY]], implicit-def $nzcv
     ; CHECK: $wzr = SUBSWrr [[SUBSWrr]], [[COPY1]], implicit-def $nzcv
@@ -174,7 +174,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: $xzr = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 1, implicit $nzcv
@@ -206,7 +206,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: $xzr = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 1, implicit $nzcv
@@ -238,7 +238,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[MOVi64imm]], [[COPY1]], implicit-def $nzcv
     ; CHECK: $xzr = SUBSXrr [[COPY]], [[SUBSXrr]], implicit-def $nzcv
@@ -271,7 +271,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[MOVi64imm]], [[COPY]], implicit-def $nzcv
     ; CHECK: $xzr = SUBSXrr [[SUBSXrr]], [[COPY1]], implicit-def $nzcv
@@ -302,7 +302,7 @@ body:             |
     ; CHECK-LABEL: name: tst_s32
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: $wzr = ANDSWrr [[MOVi32imm]], [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 0, implicit $nzcv
@@ -333,7 +333,7 @@ body:             |
     ; CHECK-LABEL: name: tst_s64
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: $xzr = ANDSXrr [[MOVi64imm]], [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 0, implicit $nzcv
@@ -364,7 +364,7 @@ body:             |
     ; CHECK-LABEL: name: no_tst_unsigned_compare
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[MOVi32imm]], [[COPY]]
     ; CHECK: $wzr = SUBSWri [[ANDWrr]], 0, 0, implicit-def $nzcv
@@ -396,7 +396,7 @@ body:             |
     ; CHECK-LABEL: name: no_tst_nonzero
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[MOVi32imm]], [[COPY]]
     ; CHECK: $wzr = SUBSWri [[ANDWrr]], 42, 0, implicit-def $nzcv

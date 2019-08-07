@@ -19,7 +19,7 @@ body:             |
 
     ; CHECK-LABEL: name: cmpxchg_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[CMP:%[0-9]+]]:gpr32 = MOVi32imm 0
+    ; CHECK: [[CMP:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[RES:%[0-9]+]]:gpr32 = CASW [[CMP]], [[CST]], [[COPY]] :: (load store monotonic 4 on %ir.addr)
     ; CHECK: $w0 = COPY [[RES]]
@@ -41,7 +41,7 @@ body:             |
 
     ; CHECK-LABEL: name: cmpxchg_i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[CMP:%[0-9]+]]:gpr64 = MOVi64imm 0
+    ; CHECK: [[CMP:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK: [[CST:%[0-9]+]]:gpr64 = MOVi64imm 1
     ; CHECK: [[RES:%[0-9]+]]:gpr64 = CASX [[CMP]], [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
     ; CHECK: $x0 = COPY [[RES]]

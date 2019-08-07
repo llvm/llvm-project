@@ -70,7 +70,7 @@ public:
   static DWARFFormValue createFromBlockValue(dwarf::Form F,
                                              ArrayRef<uint8_t> D);
   static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
-                                       uint32_t *OffsetPtr);
+                                       uint64_t *OffsetPtr);
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
@@ -87,12 +87,12 @@ public:
   /// in \p FormParams is needed to interpret some forms. The optional
   /// \p Context and \p Unit allows extracting information if the form refers
   /// to other sections (e.g., .debug_str).
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+  bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams,
                     const DWARFContext *Context = nullptr,
                     const DWARFUnit *Unit = nullptr);
 
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+  bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams, const DWARFUnit *U) {
     return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
   }
@@ -128,7 +128,7 @@ public:
   /// \param OffsetPtr A reference to the offset that will be updated.
   /// \param Params DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
-  bool skipValue(DataExtractor DebugInfoData, uint32_t *OffsetPtr,
+  bool skipValue(DataExtractor DebugInfoData, uint64_t *OffsetPtr,
                  const dwarf::FormParams Params) const {
     return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
   }
@@ -143,6 +143,28 @@ public:
   /// \param OffsetPtr A reference to the offset that will be updated.
   /// \param FormParams DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
+  static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
+                        uint64_t *OffsetPtr,
+                        const dwarf::FormParams FormParams);
+
+  // The following methods are temporarily kept in order to preserve
+  // compatibility with existing code and migrate to 64-bit offsets smoothly.
+  // They will be removed when the migration is finished.
+  // Please do not use them in new code.
+  static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
+                                       uint32_t *OffsetPtr);
+  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+                    dwarf::FormParams FormParams,
+                    const DWARFContext *Context = nullptr,
+                    const DWARFUnit *Unit = nullptr);
+  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+                    dwarf::FormParams FormParams, const DWARFUnit *U) {
+    return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
+  }
+  bool skipValue(DataExtractor DebugInfoData, uint32_t *OffsetPtr,
+                 const dwarf::FormParams Params) const {
+    return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
+  }
   static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
                         uint32_t *OffsetPtr,
                         const dwarf::FormParams FormParams);

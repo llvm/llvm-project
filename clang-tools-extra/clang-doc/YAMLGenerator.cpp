@@ -246,7 +246,6 @@ public:
 
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
-  bool createResources(ClangDocContext CDCtx) override { return true; }
 };
 
 const char *YAMLGenerator::Format = "yaml";

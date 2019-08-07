@@ -832,6 +832,16 @@ void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   DriverArgs.AddAllArgs(CC1Args, options::OPT_stdlib_EQ);
 }
 
+void ToolChain::AddClangCXXStdlibIsystemArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  DriverArgs.ClaimAllArgs(options::OPT_stdlibxx_isystem);
+  if (!DriverArgs.hasArg(options::OPT_nostdincxx))
+    for (const auto &P :
+         DriverArgs.getAllArgValues(options::OPT_stdlibxx_isystem))
+      addSystemInclude(DriverArgs, CC1Args, P);
+}
+
 bool ToolChain::ShouldLinkCXXStdlib(const llvm::opt::ArgList &Args) const {
   return getDriver().CCCIsCXX() &&
          !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,

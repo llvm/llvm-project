@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -98,10 +99,11 @@ public:
         : Kind(Kind), Filename(Filename) {}
   };
 
-  /// Returns nullptr if \param Path doesn't exist or isn't a directory.
-  /// Returns nullptr if OS kernel API told us we can't start watching. In such
-  /// case it's unclear whether just retrying has any chance to succeeed.
-  static std::unique_ptr<DirectoryWatcher>
+  /// llvm fatal_error if \param Path doesn't exist or isn't a directory.
+  /// Returns llvm::Expected Error if OS kernel API told us we can't start
+  /// watching. In such case it's unclear whether just retrying has any chance
+  /// to succeed.
+  static llvm::Expected<std::unique_ptr<DirectoryWatcher>>
   create(llvm::StringRef Path,
          std::function<void(llvm::ArrayRef<DirectoryWatcher::Event> Events,
                             bool IsInitial)>

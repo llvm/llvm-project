@@ -119,6 +119,7 @@ struct VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
+  Triple TT;
   const DataLayout &DL;
   LLVMContext &Context;
 
@@ -130,7 +131,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), DL(M.getDataLayout()), Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
+        Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {
@@ -1306,11 +1308,12 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
 }
 
 void Verifier::visitComdat(const Comdat &C) {
-  // The Module is invalid if the GlobalValue has private linkage.  Entities
-  // with private linkage don't have entries in the symbol table.
-  if (const GlobalValue *GV = M.getNamedValue(C.getName()))
-    Assert(!GV->hasPrivateLinkage(), "comdat global value has private linkage",
-           GV);
+  // In COFF the Module is invalid if the GlobalValue has private linkage.
+  // Entities with private linkage don't have entries in the symbol table.
+  if (TT.isOSBinFormatCOFF())
+    if (const GlobalValue *GV = M.getNamedValue(C.getName()))
+      Assert(!GV->hasPrivateLinkage(),
+             "comdat global value has private linkage", GV);
 }
 
 void Verifier::visitModuleIdents(const Module &M) {

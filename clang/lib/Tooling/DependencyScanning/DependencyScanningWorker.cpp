@@ -8,9 +8,11 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/Tooling.h"
 
 using namespace clang;
@@ -62,10 +64,12 @@ private:
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
 public:
-  DependencyScanningAction(StringRef WorkingDirectory,
-                           std::string &DependencyFileContents)
+  DependencyScanningAction(
+      StringRef WorkingDirectory, std::string &DependencyFileContents,
+      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
       : WorkingDirectory(WorkingDirectory),
-        DependencyFileContents(DependencyFileContents) {}
+        DependencyFileContents(DependencyFileContents),
+        DepFS(std::move(DepFS)) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -74,8 +78,6 @@ public:
     // Create a compiler instance to handle the actual work.
     CompilerInstance Compiler(std::move(PCHContainerOps));
     Compiler.setInvocation(std::move(Invocation));
-    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
-    Compiler.setFileManager(FileMgr);
 
     // Don't print 'X warnings and Y errors generated'.
     Compiler.getDiagnosticOpts().ShowCarets = false;
@@ -84,6 +86,27 @@ public:
     if (!Compiler.hasDiagnostics())
       return false;
 
+    // Use the dependency scanning optimized file system if we can.
+    if (DepFS) {
+      // FIXME: Purge the symlink entries from the stat cache in the FM.
+      const CompilerInvocation &CI = Compiler.getInvocation();
+      // Add any filenames that were explicity passed in the build settings and
+      // that might be opened, as we want to ensure we don't run source
+      // minimization on them.
+      DepFS->IgnoredFiles.clear();
+      for (const auto &Entry : CI.getHeaderSearchOpts().UserEntries)
+        DepFS->IgnoredFiles.insert(Entry.Path);
+      for (const auto &Entry : CI.getHeaderSearchOpts().VFSOverlayFiles)
+        DepFS->IgnoredFiles.insert(Entry);
+
+      // Support for virtual file system overlays on top of the caching
+      // filesystem.
+      FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+          CI, Compiler.getDiagnostics(), DepFS));
+    }
+
+    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
+    Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
     // Create the dependency collector that will collect the produced
@@ -103,7 +126,8 @@ public:
 
     auto Action = llvm::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
-    FileMgr->clearStatCache();
+    if (!DepFS)
+      FileMgr->clearStatCache();
     return Result;
   }
 
@@ -111,16 +135,19 @@ private:
   StringRef WorkingDirectory;
   /// The dependency file will be written to this string.
   std::string &DependencyFileContents;
+  llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 };
 
 } // end anonymous namespace
 
-DependencyScanningWorker::DependencyScanningWorker() {
+DependencyScanningWorker::DependencyScanningWorker(
+    DependencyScanningService &Service) {
   DiagOpts = new DiagnosticOptions();
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  /// FIXME: Use the shared file system from the service for fast scanning
-  /// mode.
-  WorkerFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
+  RealFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
+  if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
+    DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
+                                                   RealFS);
 }
 
 llvm::Expected<std::string>
@@ -133,14 +160,17 @@ DependencyScanningWorker::getDependencyFile(const std::string &Input,
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.get());
 
-  WorkerFS->setCurrentWorkingDirectory(WorkingDirectory);
-  tooling::ClangTool Tool(CDB, Input, PCHContainerOps, WorkerFS);
+  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  /// Create the tool that uses the underlying file system to ensure that any
+  /// file system requests that are made by the driver do not go through the
+  /// dependency scanning filesystem.
+  tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS);
   Tool.clearArgumentsAdjusters();
   Tool.setRestoreWorkingDir(false);
   Tool.setPrintErrorMessage(false);
   Tool.setDiagnosticConsumer(&DiagPrinter);
   std::string Output;
-  DependencyScanningAction Action(WorkingDirectory, Output);
+  DependencyScanningAction Action(WorkingDirectory, Output, DepFS);
   if (Tool.run(&Action)) {
     return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                                llvm::inconvertibleErrorCode());

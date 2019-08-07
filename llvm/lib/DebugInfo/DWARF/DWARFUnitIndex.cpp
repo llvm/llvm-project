@@ -18,7 +18,7 @@
 using namespace llvm;
 
 bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
-                                   uint32_t *OffsetPtr) {
+                                   uint64_t *OffsetPtr) {
   if (!IndexData.isValidOffsetForDataOfSize(*OffsetPtr, 16))
     return false;
   Version = IndexData.getU32(OffsetPtr);
@@ -45,7 +45,7 @@ bool DWARFUnitIndex::parse(DataExtractor IndexData) {
 }
 
 bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   if (!Header.parse(IndexData, &Offset))
     return false;
 

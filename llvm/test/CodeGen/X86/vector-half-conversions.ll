@@ -24,6 +24,7 @@ define float @cvt_i16_to_f32(i16 %a0) nounwind {
 define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; ALL-LABEL: cvt_4i16_to_4f32:
 ; ALL:       # %bb.0:
+; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
@@ -931,20 +932,88 @@ define double @cvt_i16_to_f64(i16 %a0) nounwind {
 }
 
 define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
-; ALL-LABEL: cvt_2i16_to_2f64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movswl %ax, %ecx
-; ALL-NEXT:    shrl $16, %eax
-; ALL-NEXT:    cwtl
-; ALL-NEXT:    vmovd %eax, %xmm0
-; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; ALL-NEXT:    vmovd %ecx, %xmm1
-; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; ALL-NEXT:    retq
+; AVX1-LABEL: cvt_2i16_to_2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    movswl %ax, %ecx
+; AVX1-NEXT:    shrl $16, %eax
+; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %ecx, %xmm1
+; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: cvt_2i16_to_2f64:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    vmovd %xmm0, %eax
+; AVX2-SLOW-NEXT:    movswl %ax, %ecx
+; AVX2-SLOW-NEXT:    shrl $16, %eax
+; AVX2-SLOW-NEXT:    cwtl
+; AVX2-SLOW-NEXT:    vmovd %eax, %xmm0
+; AVX2-SLOW-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vmovd %ecx, %xmm1
+; AVX2-SLOW-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: cvt_2i16_to_2f64:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,8,9,10,11,8,9,10,11,12,13,14,15]
+; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
+; AVX2-FAST-NEXT:    movswl %ax, %ecx
+; AVX2-FAST-NEXT:    shrl $16, %eax
+; AVX2-FAST-NEXT:    cwtl
+; AVX2-FAST-NEXT:    vmovd %eax, %xmm0
+; AVX2-FAST-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vmovd %ecx, %xmm1
+; AVX2-FAST-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-FAST-NEXT:    retq
+;
+; AVX512F-LABEL: cvt_2i16_to_2f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    movswl %ax, %ecx
+; AVX512F-NEXT:    shrl $16, %eax
+; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    vmovd %eax, %xmm0
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %ecx, %xmm1
+; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512F-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: cvt_2i16_to_2f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    retq
   %1 = bitcast <2 x i16> %a0 to <2 x half>
   %2 = fpext <2 x half> %1 to <2 x double>
   ret <2 x double> %2
@@ -953,6 +1022,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; ALL-LABEL: cvt_4i16_to_4f64:
 ; ALL:       # %bb.0:
+; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movl %eax, %edx
@@ -1477,7 +1547,7 @@ define <4 x i16> @cvt_4f32_to_4i16(<4 x float> %a0) nounwind {
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
 ; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -1502,7 +1572,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
 ; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -1855,7 +1925,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
 ; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovaps %xmm0, (%rdi)
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
@@ -2162,12 +2232,12 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; ALL-NEXT:    subq $40, %rsp
 ; ALL-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps (%rsp), %xmm0
+; ALL-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
 ; ALL-NEXT:    addq $40, %rsp
 ; ALL-NEXT:    retq
   %1 = fptrunc <2 x double> %a0 to <2 x half>
@@ -2189,16 +2259,16 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
-; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; ALL-NEXT:    # xmm0 = mem[1,0]
-; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps (%rsp), %xmm0
+; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; ALL-NEXT:    # xmm0 = mem[1,0]
+; ALL-NEXT:    callq __truncdfhf2
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; ALL-NEXT:    addq $88, %rsp
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -2220,16 +2290,16 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
-; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; ALL-NEXT:    # xmm0 = mem[1,0]
-; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps (%rsp), %xmm0
+; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; ALL-NEXT:    # xmm0 = mem[1,0]
+; ALL-NEXT:    callq __truncdfhf2
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    addq $88, %rsp
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -2252,7 +2322,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
@@ -2658,16 +2728,16 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
-; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; ALL-NEXT:    # xmm0 = mem[1,0]
-; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
 ; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps (%rsp), %xmm0
+; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; ALL-NEXT:    # xmm0 = mem[1,0]
+; ALL-NEXT:    callq __truncdfhf2
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovaps %xmm0, (%rbx)
 ; ALL-NEXT:    addq $80, %rsp
 ; ALL-NEXT:    popq %rbx
@@ -2695,7 +2765,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, (%rsp)
+; ALL-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; ALL-NEXT:    # xmm0 = mem[1,0]
 ; ALL-NEXT:    callq __truncdfhf2

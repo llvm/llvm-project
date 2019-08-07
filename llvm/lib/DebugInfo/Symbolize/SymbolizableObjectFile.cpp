@@ -188,10 +188,8 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     // For the purposes of symbolization, pretend the symbol's address is that
     // of the function's code, not the descriptor.
     uint64_t OpdOffset = SymbolAddress - OpdAddress;
-    uint32_t OpdOffset32 = OpdOffset;
-    if (OpdOffset == OpdOffset32 &&
-        OpdExtractor->isValidOffsetForAddress(OpdOffset32))
-      SymbolAddress = OpdExtractor->getAddress(&OpdOffset32);
+    if (OpdExtractor->isValidOffsetForAddress(OpdOffset))
+      SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
   }
   Expected<StringRef> SymbolNameOrErr = Symbol.getName();
   if (!SymbolNameOrErr)

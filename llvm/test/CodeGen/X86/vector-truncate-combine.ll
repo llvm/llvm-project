@@ -14,7 +14,11 @@
 ; NOTE: This operation could be collapsed in to a single truncate. Once that is done
 ; this test will have to be adjusted.
 
+; CHECK:      PUNPCKLBWrr
+; CHECK:      PUNPCKLWDrr
 ; CHECK:      PANDrm
+; CHECK:      PACKUSWBrr
+; CHECK:      PACKUSWBrr
 ; CHECK:      PACKUSWBrr
 ; CHECK:      MOVPDI2DIrr
 

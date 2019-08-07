@@ -766,13 +766,3 @@ Symbols:
 # WASM-NEXT:         Flags:           [  ]
 # WASM-NEXT:       - Index:           1
 # WASM:      ...
-
-# RUN: obj2yaml %p/Inputs/unwind-section.elf-x86-64 | FileCheck %s --check-prefix ELF-X86-64-UNWIND
-
-# ELF-X86-64-UNWIND:      - Name:            .eh_frame
-# ELF-X86-64-UNWIND-NEXT:   Type:            SHT_X86_64_UNWIND
-# ELF-X86-64-UNWIND-NEXT:   Flags:           [ SHF_ALLOC ]
-# ELF-X86-64-UNWIND-NEXT:   AddressAlign:    0x0000000000000001
-
-# RUN: not obj2yaml %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-# ENOENT: Error reading file: {{.*}}.blah: {{[Nn]}}o such file or directory

@@ -8,6 +8,7 @@
 
 #include "AST.h"
 
+#include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
@@ -42,34 +43,13 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
 }
 } // namespace
 
-// Returns true if the complete name of decl \p D is spelled in the source code.
-// This is not the case for:
-//   * symbols formed via macro concatenation, the spelling location will
-//     be "<scratch space>"
-//   * symbols controlled and defined by a compile command-line option
-//     `-DName=foo`, the spelling location will be "<command line>".
-bool isSpelledInSourceCode(const Decl *D) {
-  const auto &SM = D->getASTContext().getSourceManager();
-  auto Loc = D->getLocation();
-  // FIXME: Revisit the strategy, the heuristic is limitted when handling
-  // macros, we should use the location where the whole definition occurs.
-  if (Loc.isMacroID()) {
-    std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
-        llvm::StringRef(PrintLoc).startswith("<command line>"))
-      return false;
-  }
-  return true;
+bool isImplementationDetail(const Decl *D) {
+  return !isSpelledInSource(D->getLocation(),
+                            D->getASTContext().getSourceManager());
 }
 
-bool isImplementationDetail(const Decl *D) { return !isSpelledInSourceCode(D); }
-
-SourceLocation findNameLoc(const clang::Decl *D) {
-  const auto &SM = D->getASTContext().getSourceManager();
-  if (!isSpelledInSourceCode(D))
-    // Use the expansion location as spelling location is not interesting.
-    return SM.getExpansionRange(D->getLocation()).getBegin();
-  return SM.getSpellingLoc(D->getLocation());
+SourceLocation findName(const clang::Decl *D) {
+  return D->getLocation();
 }
 
 std::string printQualifiedName(const NamedDecl &ND) {

@@ -2151,7 +2151,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   DWARFExpression Expr(Data, getDwarfVersion(), PtrSize);
 
   using Encoding = DWARFExpression::Operation::Encoding;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   for (auto &Op : Expr) {
     assert(Op.getCode() != dwarf::DW_OP_const_type &&
            "3 operand ops not yet supported");
@@ -2174,7 +2174,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
             if (Comment != End)
               Comment++;
       } else {
-        for (uint32_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
+        for (uint64_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
           Streamer.EmitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
       }
       Offset = Op.getOperandEndOffset(I);

@@ -1,0 +1,22 @@
+## Test that an error is reported when a docnum is specified, which is
+## greater than the number of YAML inputs in the file.
+
+# RUN: not yaml2obj %s --docnum=3 2>&1 | FileCheck %s
+# CHECK: error: Cannot find the 3rd document
+
+# RUN: not yaml2obj %s --docnum=76768677 2>&1 | FileCheck %s --check-prefix=TWO
+# TWO: error: Cannot find the 76768677th document
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64

@@ -37,7 +37,7 @@ class DWARFUnitIndex {
     uint32_t NumUnits;
     uint32_t NumBuckets = 0;
 
-    bool parse(DataExtractor IndexData, uint32_t *OffsetPtr);
+    bool parse(DataExtractor IndexData, uint64_t *OffsetPtr);
     void dump(raw_ostream &OS) const;
   };
 

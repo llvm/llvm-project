@@ -249,7 +249,7 @@ struct Info {
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
 
-  llvm::SmallString<16> extractName();
+  llvm::SmallString<16> extractName() const;
 
   // Returns a reference to the parent scope (that is, the immediate parent
   // namespace or class in which this decl resides).
@@ -348,6 +348,19 @@ struct EnumInfo : public SymbolInfo {
   llvm::SmallVector<SmallString<16>, 4> Members; // List of enum members.
 };
 
+struct Index : public Reference {
+  Index() = default;
+  Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
+      : Reference(USR, Name, IT, Path) {}
+  // This is used to look for a USR in a vector of Indexes using std::find
+  bool operator==(const SymbolID &Other) const { return USR == Other; }
+  bool operator<(const Index &Other) const { return Name < Other.Name; }
+
+  std::vector<Index> Children;
+
+  void sort();
+};
+
 // TODO: Add functionality to include separate markdown pages.
 
 // A standalone function to call to merge a vector of infos into one.
@@ -357,10 +370,24 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 struct ClangDocContext {
+  ClangDocContext() = default;
+  ClangDocContext(tooling::ExecutionContext *ECtx, bool PublicOnly,
+                  StringRef OutDirectory,
+                  std::vector<std::string> UserStylesheets,
+                  std::vector<std::string> JsScripts)
+      : ECtx(ECtx), PublicOnly(PublicOnly), OutDirectory(OutDirectory),
+        UserStylesheets(UserStylesheets), JsScripts(JsScripts) {}
   tooling::ExecutionContext *ECtx;
   bool PublicOnly;
   std::string OutDirectory;
+  // Path of CSS stylesheets that will be copied to OutDirectory and used to
+  // style all HTML files.
   std::vector<std::string> UserStylesheets;
+  // JavaScript files that will be imported in allHTML file.
+  std::vector<std::string> JsScripts;
+  // Other files that should be copied to OutDirectory, besides UserStylesheets.
+  std::vector<std::string> FilesToCopy;
+  Index Idx;
 };
 
 } // namespace doc

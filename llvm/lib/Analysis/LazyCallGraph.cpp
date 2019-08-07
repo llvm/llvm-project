@@ -1751,16 +1751,14 @@ static void printNode(raw_ostream &OS, LazyCallGraph::Node &N) {
 }
 
 static void printSCC(raw_ostream &OS, LazyCallGraph::SCC &C) {
-  ptrdiff_t Size = size(C);
-  OS << "    SCC with " << Size << " functions:\n";
+  OS << "    SCC with " << C.size() << " functions:\n";
 
   for (LazyCallGraph::Node &N : C)
     OS << "      " << N.getFunction().getName() << "\n";
 }
 
 static void printRefSCC(raw_ostream &OS, LazyCallGraph::RefSCC &C) {
-  ptrdiff_t Size = size(C);
-  OS << "  RefSCC with " << Size << " call SCCs:\n";
+  OS << "  RefSCC with " << C.size() << " call SCCs:\n";
 
   for (LazyCallGraph::SCC &InnerC : C)
     printSCC(OS, InnerC);

@@ -460,15 +460,22 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
     #define FOO(X, Y) int Y = ++X
     #define BAR(X) X + 1
     #define ECHO(X) X
+
+    #define BUZZ BAZZ(ADD)
+    #define BAZZ(m) m(1)
+    #define ADD(a) int f = a + 1;
     template<typename T>
     class P {};
-    void f() {
+
+    int main() {
       $a[[P<P<P<P<P<int>>>>> a]];
       $b[[int b = 1]];
       $c[[FOO(b, c)]]; 
       $d[[FOO(BAR(BAR(b)), d)]];
       // FIXME: We might want to select everything inside the outer ECHO.
       ECHO(ECHO($e[[int) ECHO(e]]));
+      // Shouldn't crash.
+      $f[[BUZZ]];
     }
   )cpp");
 
@@ -495,6 +502,7 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
   CheckRange("c");
   CheckRange("d");
   CheckRange("e");
+  CheckRange("f");
 }
 
 } // namespace

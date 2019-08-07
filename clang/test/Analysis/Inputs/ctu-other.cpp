@@ -131,3 +131,17 @@ union U {
   const unsigned int b;
 };
 U extU = {.a = 4};
+
+class TestAnonUnionUSR {
+public:
+  inline float f(int value) {
+    union {
+      float f;
+      int i;
+    };
+    i = value;
+    return f;
+  }
+  static const int Test;
+};
+const int TestAnonUnionUSR::Test = 5;

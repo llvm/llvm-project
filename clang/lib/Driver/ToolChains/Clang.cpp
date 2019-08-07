@@ -1235,6 +1235,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       // Do not claim the argument so that the use of the argument does not
       // silently go unnoticed on toolchains which do not honour the option.
       continue;
+    } else if (A->getOption().matches(options::OPT_stdlibxx_isystem)) {
+      // Translated to -internal-isystem by the driver, no need to pass to cc1.
+      continue;
     }
 
     // Not translated, render as usual.
@@ -1289,11 +1292,15 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // of an offloading programming model.
 
   // Add C++ include arguments, if needed.
-  if (types::isCXX(Inputs[0].getType()))
-    forAllAssociatedToolChains(C, JA, getToolChain(),
-                               [&Args, &CmdArgs](const ToolChain &TC) {
-                                 TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
-                               });
+  if (types::isCXX(Inputs[0].getType())) {
+    bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
+    forAllAssociatedToolChains(
+        C, JA, getToolChain(),
+        [&Args, &CmdArgs, HasStdlibxxIsystem](const ToolChain &TC) {
+          HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
+                             : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
+        });
+  }
 
   // Add system include arguments for all targets but IAMCU.
   if (!IsIAMCU)

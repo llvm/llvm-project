@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cstdlib>
 
-#include <fuzzer/FuzzedDataProvider.h>
+#include <fuzzer/FuzzedDataProvider.hpp>
 
 // The test is intentionally extensive, as behavior of |FuzzedDataProvider| must
 // not be broken, given than many fuzz targets depend on it. Changing the

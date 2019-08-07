@@ -22,7 +22,21 @@ JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
 Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
   // FIXME: getProcessTriple is bogus. It returns the host LLVM was compiled on,
   //        rather than a valid triple for the current process.
-  return JITTargetMachineBuilder(Triple(sys::getProcessTriple()));
+  JITTargetMachineBuilder TMBuilder((Triple(sys::getProcessTriple())));
+
+  // Retrieve host CPU name and sub-target features and add them to builder.
+  // Relocation model, code model and codegen opt level are kept to default
+  // values.
+  llvm::SubtargetFeatures SubtargetFeatures;
+  llvm::StringMap<bool> FeatureMap;
+  llvm::sys::getHostCPUFeatures(FeatureMap);
+  for (auto &Feature : FeatureMap)
+    SubtargetFeatures.AddFeature(Feature.first(), Feature.second);
+
+  TMBuilder.setCPU(llvm::sys::getHostCPUName());
+  TMBuilder.addFeatures(SubtargetFeatures.getFeatures());
+
+  return TMBuilder;
 }
 
 Expected<std::unique_ptr<TargetMachine>>

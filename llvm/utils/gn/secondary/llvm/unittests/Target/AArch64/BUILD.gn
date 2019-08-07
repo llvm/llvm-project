@@ -16,5 +16,6 @@ unittest("AArch64Tests") {
   include_dirs = [ "//llvm/lib/Target/AArch64" ]
   sources = [
     "InstSizes.cpp",
+    "TestStackOffset.cpp",
   ]
 }

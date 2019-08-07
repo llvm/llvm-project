@@ -200,6 +200,24 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
+  if (Loc.isMacroID()) {
+    std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>"))
+      return false;
+  }
+  return true;
+}
+
+SourceLocation spellingLocIfSpelled(SourceLocation Loc,
+                                    const SourceManager &SM) {
+  if (!isSpelledInSource(Loc, SM))
+    // Use the expansion location as spelling location is not interesting.
+    return SM.getExpansionRange(Loc).getBegin();
+  return SM.getSpellingLoc(Loc);
+}
+
 llvm::Optional<Range> getTokenRange(const SourceManager &SM,
                                     const LangOptions &LangOpts,
                                     SourceLocation TokLoc) {
@@ -296,14 +314,52 @@ static SourceRange unionTokenRange(SourceRange R1, SourceRange R2,
                      E1 < E2 ? R2.getEnd() : R1.getEnd());
 }
 
-// Returns the tokenFileRange for a given Location as a Token Range
+// Check if two locations have the same file id.
+static bool inSameFile(SourceLocation Loc1, SourceLocation Loc2,
+                       const SourceManager &SM) {
+  return SM.getFileID(Loc1) == SM.getFileID(Loc2);
+}
+
+// Find an expansion range (not necessarily immediate) the ends of which are in
+// the same file id.
+static SourceRange
+getExpansionTokenRangeInSameFile(SourceLocation Loc, const SourceManager &SM,
+                                 const LangOptions &LangOpts) {
+  SourceRange ExpansionRange =
+      toTokenRange(SM.getImmediateExpansionRange(Loc), SM, LangOpts);
+  // Fast path for most common cases.
+  if (inSameFile(ExpansionRange.getBegin(), ExpansionRange.getEnd(), SM))
+    return ExpansionRange;
+  // Record the stack of expansion locations for the beginning, keyed by FileID.
+  llvm::DenseMap<FileID, SourceLocation> BeginExpansions;
+  for (SourceLocation Begin = ExpansionRange.getBegin(); Begin.isValid();
+       Begin = Begin.isFileID()
+                   ? SourceLocation()
+                   : SM.getImmediateExpansionRange(Begin).getBegin()) {
+    BeginExpansions[SM.getFileID(Begin)] = Begin;
+  }
+  // Move up the stack of expansion locations for the end until we find the
+  // location in BeginExpansions with that has the same file id.
+  for (SourceLocation End = ExpansionRange.getEnd(); End.isValid();
+       End = End.isFileID() ? SourceLocation()
+                            : toTokenRange(SM.getImmediateExpansionRange(End),
+                                           SM, LangOpts)
+                                  .getEnd()) {
+    auto It = BeginExpansions.find(SM.getFileID(End));
+    if (It != BeginExpansions.end())
+      return {It->second, End};
+  }
+  llvm_unreachable(
+      "We should able to find a common ancestor in the expansion tree.");
+}
+// Returns the file range for a given Location as a Token Range
 // This is quite similar to getFileLoc in SourceManager as both use
 // getImmediateExpansionRange and getImmediateSpellingLoc (for macro IDs).
 // However:
 // - We want to maintain the full range information as we move from one file to
 //   the next. getFileLoc only uses the BeginLoc of getImmediateExpansionRange.
-// - We want to split '>>' tokens as the lexer parses the '>>' in template
-//   instantiations as a '>>' instead of a '>'.
+// - We want to split '>>' tokens as the lexer parses the '>>' in nested
+//   template instantiations as a '>>' instead of two '>'s.
 // There is also getExpansionRange but it simply calls
 // getImmediateExpansionRange on the begin and ends separately which is wrong.
 static SourceRange getTokenFileRange(SourceLocation Loc,
@@ -311,16 +367,19 @@ static SourceRange getTokenFileRange(SourceLocation Loc,
                                      const LangOptions &LangOpts) {
   SourceRange FileRange = Loc;
   while (!FileRange.getBegin().isFileID()) {
-    assert(!FileRange.getEnd().isFileID() &&
-           "Both Begin and End should be MacroIDs.");
     if (SM.isMacroArgExpansion(FileRange.getBegin())) {
-      FileRange.setBegin(SM.getImmediateSpellingLoc(FileRange.getBegin()));
-      FileRange.setEnd(SM.getImmediateSpellingLoc(FileRange.getEnd()));
+      FileRange = unionTokenRange(
+          SM.getImmediateSpellingLoc(FileRange.getBegin()),
+          SM.getImmediateSpellingLoc(FileRange.getEnd()), SM, LangOpts);
+      assert(inSameFile(FileRange.getBegin(), FileRange.getEnd(), SM));
     } else {
-      SourceRange ExpansionRangeForBegin = toTokenRange(
-          SM.getImmediateExpansionRange(FileRange.getBegin()), SM, LangOpts);
-      SourceRange ExpansionRangeForEnd = toTokenRange(
-          SM.getImmediateExpansionRange(FileRange.getEnd()), SM, LangOpts);
+      SourceRange ExpansionRangeForBegin =
+          getExpansionTokenRangeInSameFile(FileRange.getBegin(), SM, LangOpts);
+      SourceRange ExpansionRangeForEnd =
+          getExpansionTokenRangeInSameFile(FileRange.getEnd(), SM, LangOpts);
+      assert(inSameFile(ExpansionRangeForBegin.getBegin(),
+                        ExpansionRangeForEnd.getBegin(), SM) &&
+             "Both Expansion ranges should be in same file.");
       FileRange = unionTokenRange(ExpansionRangeForBegin, ExpansionRangeForEnd,
                                   SM, LangOpts);
     }

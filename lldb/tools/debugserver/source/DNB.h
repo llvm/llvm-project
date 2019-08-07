@@ -20,11 +20,17 @@
 #include "MacOSX/ThreadInfo.h"
 #include <mach/thread_info.h>
 #include <string>
+#include <Availability.h>
+#include <mach/machine.h>
 
 #define DNB_EXPORT __attribute__((visibility("default")))
 
 #ifndef CPU_TYPE_ARM64
 #define CPU_TYPE_ARM64 ((cpu_type_t)12 | 0x01000000)
+#endif
+
+#ifndef CPU_TYPE_ARM64_32
+#define CPU_TYPE_ARM64_32 ((cpu_type_t)12 | 0x02000000)
 #endif
 
 typedef bool (*DNBShouldCancelCallback)(void *);
@@ -226,5 +232,6 @@ const char *DNBStateAsString(nub_state_t state);
 nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
                                     size_t resolved_path_size);
 bool DNBGetOSVersionNumbers(uint64_t *major, uint64_t *minor, uint64_t *patch);
-
+/// \return the iOSSupportVersion of the host OS.
+std::string DNBGetMacCatalystVersionString();
 #endif

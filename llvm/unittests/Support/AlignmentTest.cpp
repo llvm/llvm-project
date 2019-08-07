@@ -256,7 +256,8 @@ TEST(AlignmentDeathTest, InvalidCTors) {
   EXPECT_DEATH((Align(0)), "Value must not be 0");
   for (uint64_t Value : getNonPowerOfTwo()) {
     EXPECT_DEATH((Align(Value)), "Alignment is not a power of 2");
-    EXPECT_DEATH((MaybeAlign(Value)), "Alignment is not 0 or a power of 2");
+    EXPECT_DEATH((MaybeAlign(Value)),
+                 "Alignment is neither 0 nor a power of 2");
   }
 }
 
