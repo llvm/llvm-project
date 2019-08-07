@@ -6,9 +6,6 @@ void I(int i, int j) {
   static const int AboveMax = 32;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "I"(j)); // expected-error{{constraint 'I' expects an integer constant expression}}
-  __asm__("xorl %0,%2"
-          : "=r"(i)
           : "0"(i), "I"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'I'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
@@ -23,9 +20,6 @@ void J(int i, int j) {
   static const int AboveMax = 64;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "J"(j)); // expected-error{{constraint 'J' expects an integer constant expression}}
-  __asm__("xorl %0,%2"
-          : "=r"(i)
           : "0"(i), "J"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'J'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
@@ -38,9 +32,6 @@ void J(int i, int j) {
 void K(int i, int j) {
   static const int BelowMin = -129;
   static const int AboveMax = 128;
-  __asm__("xorl %0,%2"
-          : "=r"(i)
-          : "0"(i), "K"(j)); // expected-error{{constraint 'K' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "K"(BelowMin)); // expected-error{{value '-129' out of range for constraint 'K'}}
@@ -60,9 +51,6 @@ void L(int i, int j) {
   static const int Valid1 = 0xff;
   static const int Valid2 = 0xffff;
   static const int Valid3 = 0xffffffff;
-  __asm__("xorl %0,%2"
-          : "=r"(i)
-          : "0"(i), "L"(j)); // expected-error{{constraint 'L' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "L"(Invalid1)); // expected-error{{value '1' out of range for constraint 'L'}}
@@ -91,9 +79,6 @@ void M(int i, int j) {
   static const int AboveMax = 4;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "M"(j)); // expected-error{{constraint 'M' expects an integer constant expression}}
-  __asm__("xorl %0,%2"
-          : "=r"(i)
           : "0"(i), "M"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'M'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
@@ -108,9 +93,6 @@ void N(int i, int j) {
   static const int AboveMax = 256;
   __asm__("xorl %0,%2"
           : "=r"(i)
-          : "0"(i), "N"(j)); // expected-error{{constraint 'N' expects an integer constant expression}}
-  __asm__("xorl %0,%2"
-          : "=r"(i)
           : "0"(i), "N"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'N'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
@@ -123,9 +105,6 @@ void N(int i, int j) {
 void O(int i, int j) {
   static const int BelowMin = -1;
   static const int AboveMax = 128;
-  __asm__("xorl %0,%2"
-          : "=r"(i)
-          : "0"(i), "O"(j)); // expected-error{{constraint 'O' expects an integer constant expression}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "O"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'O'}}
@@ -146,10 +125,6 @@ void pr40890(void) {
   __asm__ __volatile__("\n#define S_A abcd%0\n" : : "n"(&((struct s*)0)->a));
   // This offset-from-null pointer can be used as an integer constant expression.
   __asm__ __volatile__("\n#define S_B abcd%0\n" : : "n"(&((struct s*)0)->b));
-  // This pointer cannot be used as an integer constant expression.
-  __asm__ __volatile__("\n#define GLOBAL_A abcd%0\n" : : "n"(&s.a)); // expected-error{{constraint 'n' expects an integer constant expression}}
-  // Floating-point is also not okay.
-  __asm__ __volatile__("\n#define PI abcd%0\n" : : "n"(3.14f)); // expected-error{{constraint 'n' expects an integer constant expression}}
 #ifdef AMD64
   // This arbitrary pointer is fine.
   __asm__ __volatile__("\n#define BEEF abcd%0\n" : : "n"((int*)0xdeadbeeeeeef));

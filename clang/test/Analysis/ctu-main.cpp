@@ -112,6 +112,19 @@ void test_virtual_functions(mycls* obj) {
   clang_analyzer_eval(obj->fvcl(1) == 8);      // expected-warning{{FALSE}} expected-warning{{TRUE}}
 }
 
+class TestAnonUnionUSR {
+public:
+  inline float f(int value) {
+    union {
+      float f;
+      int i;
+    };
+    i = value;
+    return f;
+  }
+  static const int Test;
+};
+
 int main() {
   clang_analyzer_eval(f(3) == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(f(4) == 3); // expected-warning{{TRUE}}
@@ -144,4 +157,5 @@ int main() {
   clang_analyzer_eval(extSubSCN.a == 1); // expected-warning{{TRUE}}
   // clang_analyzer_eval(extSCC.a == 7); // TODO
   clang_analyzer_eval(extU.a == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(TestAnonUnionUSR::Test == 5); // expected-warning{{TRUE}}
 }

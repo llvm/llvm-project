@@ -99,10 +99,10 @@ public:
         : Kind(Kind), Filename(Filename) {}
   };
 
-  /// Asserts if \param Path doesn't exist or isn't a directory.
+  /// llvm fatal_error if \param Path doesn't exist or isn't a directory.
   /// Returns llvm::Expected Error if OS kernel API told us we can't start
   /// watching. In such case it's unclear whether just retrying has any chance
-  /// to succeeed.
+  /// to succeed.
   static llvm::Expected<std::unique_ptr<DirectoryWatcher>>
   create(llvm::StringRef Path,
          std::function<void(llvm::ArrayRef<DirectoryWatcher::Event> Events,

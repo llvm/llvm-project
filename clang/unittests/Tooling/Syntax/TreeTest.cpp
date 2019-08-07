@@ -138,15 +138,14 @@ void foo() {}
 | `-CompoundStatement
 |   |-2: {
 |   `-3: }
-|-TopLevelDeclaration
-| |-void
-| |-foo
-| |-(
-| |-)
-| `-CompoundStatement
-|   |-2: {
-|   `-3: }
-`-<eof>
+`-TopLevelDeclaration
+  |-void
+  |-foo
+  |-(
+  |-)
+  `-CompoundStatement
+    |-2: {
+    `-3: }
 )txt"},
   };
 
