@@ -342,6 +342,8 @@ def CLZ64r: PseudoDPUInstruction<
                   [(set i64:$dc, (ctlz i64:$da))]>;
 }
 
+def : Pat<(i32 (trunc (srl i64:$src, (i32 32)))), (EXTRACT_SUBREG DoubleReg:$src, sub_32bit_hi)>;
+
 def : Pat<(sext_inreg DoubleReg:$src,  i8), (EXTSB_Srr (EXTRACT_SUBREG DoubleReg:$src, sub_32bit))>;
 def : Pat<(sext_inreg DoubleReg:$src, i16), (EXTSH_Srr (EXTRACT_SUBREG DoubleReg:$src, sub_32bit))>;
 def : Pat<(sext_inreg DoubleReg:$src, i32), (MOVE_Srr  (EXTRACT_SUBREG DoubleReg:$src, sub_32bit))>;
