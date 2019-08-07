@@ -450,7 +450,8 @@ protected:
           }
         } else {
           result.AppendMessageWithFormat(
-              "Current executable set to '%s' (%s).\n", file_path,
+              "Current executable set to '%s' (%s).\n",
+              file_spec.GetPath().c_str(),
               target_sp->GetArchitecture().GetArchitectureName());
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         }
