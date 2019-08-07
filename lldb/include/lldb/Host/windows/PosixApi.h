@@ -9,6 +9,7 @@
 #ifndef liblldb_Host_windows_PosixApi_h
 #define liblldb_Host_windows_PosixApi_h
 
+#include "lldb/Host/Config.h"
 #include "llvm/Support/Compiler.h"
 #if !defined(_WIN32)
 #error "windows/PosixApi.h being #included on non Windows system!"
@@ -45,14 +46,14 @@
 #define S_IRWXG 0
 #define S_IRWXO 0
 
-#ifdef __MINGW32__
+#if HAVE_SYS_TYPES_H
 // pyconfig.h typedefs this.  We require python headers to be included before
 // any LLDB headers, but there's no way to prevent python's pid_t definition
 // from leaking, so this is the best option.
 #ifndef NO_PID_T
 #include <sys/types.h>
 #endif
-#endif // __MINGW32__
+#endif // HAVE_SYS_TYPES_H
 
 #ifdef _MSC_VER
 

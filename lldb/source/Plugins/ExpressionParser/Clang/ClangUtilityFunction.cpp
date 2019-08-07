@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/Config.h"
+
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"

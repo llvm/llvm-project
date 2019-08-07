@@ -9,6 +9,8 @@
 #ifndef lldb_Platform_h_
 #define lldb_Platform_h_
 
+#include "lldb/Host/Config.h"
+
 #if defined(_WIN32)
 
 #include <io.h>

@@ -19,6 +19,8 @@
 
 #define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
 
+#cmakedefine01 HAVE_SYS_TYPES_H
+
 #cmakedefine01 HAVE_SYS_EVENT_H
 
 #cmakedefine01 HAVE_PPOLL
