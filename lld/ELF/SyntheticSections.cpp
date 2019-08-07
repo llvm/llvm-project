@@ -2505,8 +2505,8 @@ template <class ELFT>
 static std::vector<GdbIndexSection::NameAttrEntry>
 readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
                      const std::vector<GdbIndexSection::CuEntry> &cUs) {
-  const DWARFSection &pubNames = obj.getGnuPubNamesSection();
-  const DWARFSection &pubTypes = obj.getGnuPubTypesSection();
+  const DWARFSection &pubNames = obj.getGnuPubnamesSection();
+  const DWARFSection &pubTypes = obj.getGnuPubtypesSection();
 
   std::vector<GdbIndexSection::NameAttrEntry> ret;
   for (const DWARFSection *pub : {&pubNames, &pubTypes}) {

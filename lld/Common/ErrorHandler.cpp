@@ -29,16 +29,14 @@ using namespace lld;
 // but outs() or errs() are not thread-safe. We protect them using a mutex.
 static std::mutex mu;
 
-// Prints "\n" or does nothing, depending on Msg contents of
-// the previous call of this function.
-static void newline(raw_ostream *errorOS, const Twine &msg) {
-  // True if the previous error message contained "\n".
-  // We want to separate multi-line error messages with a newline.
-  static bool flag;
+// We want to separate multi-line messages with a newline. `sep` is "\n"
+// if the last messages was multi-line. Otherwise "".
+static StringRef sep;
 
-  if (flag)
-    *errorOS << "\n";
-  flag = StringRef(msg.str()).contains('\n');
+static StringRef getSeparator(const Twine &msg) {
+  if (StringRef(msg.str()).contains('\n'))
+    return "\n";
+  return "";
 }
 
 ErrorHandler &lld::errorHandler() {
@@ -160,9 +158,9 @@ void ErrorHandler::warn(const Twine &msg) {
   }
 
   std::lock_guard<std::mutex> lock(mu);
-  newline(errorOS, msg);
-  *errorOS << getLocation(msg) << ": " << Colors::MAGENTA
+  *errorOS << sep << getLocation(msg) << ": " << Colors::MAGENTA
            << "warning: " << Colors::RESET << msg << "\n";
+  sep = getSeparator(msg);
 }
 
 void ErrorHandler::error(const Twine &msg) {
@@ -170,8 +168,8 @@ void ErrorHandler::error(const Twine &msg) {
   // this particular error is printed out as two errors.
   if (vsDiagnostics) {
     static std::regex re(R"(^(duplicate symbol: .*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))");
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))"
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))");
     std::string str = msg.str();
     std::smatch m;
 
@@ -185,17 +183,16 @@ void ErrorHandler::error(const Twine &msg) {
   std::lock_guard<std::mutex> lock(mu);
 
   if (errorLimit == 0 || errorCount < errorLimit) {
-    newline(errorOS, msg);
-    *errorOS << getLocation(msg) << ": " << Colors::RED
+    *errorOS << sep << getLocation(msg) << ": " << Colors::RED
              << "error: " << Colors::RESET << msg << "\n";
   } else if (errorCount == errorLimit) {
-    newline(errorOS, msg);
-    *errorOS << getLocation(msg) << ": " << Colors::RED
+    *errorOS << sep << getLocation(msg) << ": " << Colors::RED
              << "error: " << Colors::RESET << errorLimitExceededMsg << "\n";
     if (exitEarly)
       exitLld(1);
   }
 
+  sep = getSeparator(msg);
   ++errorCount;
 }
 

@@ -119,49 +119,6 @@ void CompileUnit::AddFunction(FunctionSP &funcSP) {
   m_functions_by_uid[funcSP->GetID()] = funcSP;
 }
 
-// Find functions using the Mangled::Tokens token list. This function currently
-// implements an interactive approach designed to find all instances of certain
-// functions. It isn't designed to the quickest way to lookup functions as it
-// will need to iterate through all functions and see if they match, though it
-// does provide a powerful and context sensitive way to search for all
-// functions with a certain name, all functions in a namespace, or all
-// functions of a template type. See Mangled::Tokens::Parse() comments for more
-// information.
-//
-// The function prototype will need to change to return a list of results. It
-// was originally used to help debug the Mangled class and the
-// Mangled::Tokens::MatchesQuery() function and it currently will print out a
-// list of matching results for the functions that are currently in this
-// compile unit.
-//
-// A FindFunctions method should be called prior to this that takes
-// a regular function name (const char * or ConstString as a parameter) before
-// resorting to this slower but more complete function. The other FindFunctions
-// method should be able to take advantage of any accelerator tables available
-// in the debug information (which is parsed by the SymbolFile parser plug-ins
-// and registered with each Module).
-// void
-// CompileUnit::FindFunctions(const Mangled::Tokens& tokens)
-//{
-//  if (!m_functions.empty())
-//  {
-//      Stream s(stdout);
-//      std::vector<FunctionSP>::const_iterator pos;
-//      std::vector<FunctionSP>::const_iterator end = m_functions.end();
-//      for (pos = m_functions.begin(); pos != end; ++pos)
-//      {
-//          const ConstString& demangled = (*pos)->Mangled().Demangled();
-//          if (demangled)
-//          {
-//              const Mangled::Tokens& func_tokens =
-//              (*pos)->Mangled().GetTokens();
-//              if (func_tokens.MatchesQuery (tokens))
-//                  s << "demangled MATCH found: " << demangled << "\n";
-//          }
-//      }
-//  }
-//}
-
 FunctionSP CompileUnit::FindFunctionByUID(lldb::user_id_t func_uid) {
   auto it = m_functions_by_uid.find(func_uid);
   if (it == m_functions_by_uid.end())
