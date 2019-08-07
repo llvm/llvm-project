@@ -175,4 +175,4 @@ Sections:
 # ERR2:      error: Section size must be greater than or equal to the content size
 # ERR2-NEXT: - Name: .data
 # ERR2-NEXT:   ^
-# ERR2-NEXT: yaml2obj: Failed to parse YAML file!
+# ERR2-NEXT: yaml2obj: error: Failed to parse YAML input!

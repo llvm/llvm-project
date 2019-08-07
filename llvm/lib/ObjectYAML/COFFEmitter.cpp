@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "yaml2obj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -20,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -28,6 +28,8 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace {
 
 /// This parses a yaml stream that represents a COFF object file.
 /// See docs/yaml2obj for the yaml scheema.
@@ -64,7 +66,8 @@ struct COFFParser {
 
   bool parseSections() {
     for (std::vector<COFFYAML::Section>::iterator i = Obj.Sections.begin(),
-           e = Obj.Sections.end(); i != e; ++i) {
+                                                  e = Obj.Sections.end();
+         i != e; ++i) {
       COFFYAML::Section &Sec = *i;
 
       // If the name is less than 8 bytes, store it in place, otherwise
@@ -102,7 +105,8 @@ struct COFFParser {
 
   bool parseSymbols() {
     for (std::vector<COFFYAML::Symbol>::iterator i = Obj.Symbols.begin(),
-           e = Obj.Symbols.end(); i != e; ++i) {
+                                                 e = Obj.Symbols.end();
+         i != e; ++i) {
       COFFYAML::Symbol &Sym = *i;
 
       // If the name is less than 8 bytes, store it in place, otherwise
@@ -113,8 +117,8 @@ struct COFFParser {
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);
-        *reinterpret_cast<support::aligned_ulittle32_t*>(
-            Sym.Header.Name + 4) = Index;
+        *reinterpret_cast<support::aligned_ulittle32_t *>(Sym.Header.Name + 4) =
+            Index;
       }
 
       Sym.Header.Type = Sym.SimpleType;
@@ -153,6 +157,10 @@ struct COFFParser {
   uint32_t SectionTableSize;
 };
 
+enum { DOSStubSize = 128 };
+
+} // end anonymous namespace
+
 // Take a CP and assign addresses and sizes to everything. Returns false if the
 // layout is not valid to do.
 static bool layoutOptionalHeader(COFFParser &CP) {
@@ -164,10 +172,6 @@ static bool layoutOptionalHeader(COFFParser &CP) {
       PEHeaderSize +
       sizeof(object::data_directory) * (COFF::NUM_DATA_DIRECTORIES + 1);
   return true;
-}
-
-namespace {
-enum { DOSStubSize = 128 };
 }
 
 static yaml::BinaryRef
@@ -271,7 +275,7 @@ static bool layoutCOFF(COFFParser &CP) {
   uint32_t NumberOfSymbols = 0;
   for (std::vector<COFFYAML::Symbol>::iterator i = CP.Obj.Symbols.begin(),
                                                e = CP.Obj.Symbols.end();
-                                               i != e; ++i) {
+       i != e; ++i) {
     uint32_t NumberOfAuxSymbols = 0;
     if (i->FunctionDefinition)
       NumberOfAuxSymbols += 1;
@@ -298,24 +302,23 @@ static bool layoutCOFF(COFFParser &CP) {
   else
     CP.Obj.Header.PointerToSymbolTable = 0;
 
-  *reinterpret_cast<support::ulittle32_t *>(&CP.StringTable[0])
-    = CP.StringTable.size();
+  *reinterpret_cast<support::ulittle32_t *>(&CP.StringTable[0]) =
+      CP.StringTable.size();
 
   return true;
 }
 
-template <typename value_type>
-struct binary_le_impl {
+template <typename value_type> struct binary_le_impl {
   value_type Value;
   binary_le_impl(value_type V) : Value(V) {}
 };
 
 template <typename value_type>
-raw_ostream &operator <<( raw_ostream &OS
-                        , const binary_le_impl<value_type> &BLE) {
+raw_ostream &operator<<(raw_ostream &OS,
+                        const binary_le_impl<value_type> &BLE) {
   char Buffer[sizeof(BLE.Value)];
   support::endian::write<value_type, support::little, support::unaligned>(
-    Buffer, BLE.Value);
+      Buffer, BLE.Value);
   OS.write(Buffer, sizeof(BLE.Value));
   return OS;
 }
@@ -335,13 +338,13 @@ raw_ostream &operator<<(raw_ostream &OS, const zeros_impl<NumBytes> &) {
   return OS;
 }
 
-template <typename T>
-zeros_impl<sizeof(T)> zeros(const T &) {
+template <typename T> zeros_impl<sizeof(T)> zeros(const T &) {
   return zeros_impl<sizeof(T)>();
 }
 
 template <typename T>
-static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Header) {
+static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
+                                         T Header) {
   memset(Header, 0, sizeof(*Header));
   Header->Magic = Magic;
   Header->SectionAlignment = CP.Obj.OptionalHeader->Header.SectionAlignment;
@@ -376,10 +379,8 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Heade
       CP.Obj.OptionalHeader->Header.MajorOperatingSystemVersion;
   Header->MinorOperatingSystemVersion =
       CP.Obj.OptionalHeader->Header.MinorOperatingSystemVersion;
-  Header->MajorImageVersion =
-      CP.Obj.OptionalHeader->Header.MajorImageVersion;
-  Header->MinorImageVersion =
-      CP.Obj.OptionalHeader->Header.MinorImageVersion;
+  Header->MajorImageVersion = CP.Obj.OptionalHeader->Header.MajorImageVersion;
+  Header->MinorImageVersion = CP.Obj.OptionalHeader->Header.MinorImageVersion;
   Header->MajorSubsystemVersion =
       CP.Obj.OptionalHeader->Header.MajorSubsystemVersion;
   Header->MinorSubsystemVersion =
@@ -423,15 +424,13 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   if (CP.useBigObj()) {
     OS << binary_le(static_cast<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN))
        << binary_le(static_cast<uint16_t>(0xffff))
-       << binary_le(static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion))
+       << binary_le(
+              static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion))
        << binary_le(CP.Obj.Header.Machine)
        << binary_le(CP.Obj.Header.TimeDateStamp);
     OS.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
-    OS << zeros(uint32_t(0))
-       << zeros(uint32_t(0))
-       << zeros(uint32_t(0))
-       << zeros(uint32_t(0))
-       << binary_le(CP.Obj.Header.NumberOfSections)
+    OS << zeros(uint32_t(0)) << zeros(uint32_t(0)) << zeros(uint32_t(0))
+       << zeros(uint32_t(0)) << binary_le(CP.Obj.Header.NumberOfSections)
        << binary_le(CP.Obj.Header.PointerToSymbolTable)
        << binary_le(CP.Obj.Header.NumberOfSymbols);
   } else {
@@ -450,7 +449,8 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
     } else {
       object::pe32_header PEH;
-      uint32_t BaseOfData = initializeOptionalHeader(CP, COFF::PE32Header::PE32, &PEH);
+      uint32_t BaseOfData =
+          initializeOptionalHeader(CP, COFF::PE32Header::PE32, &PEH);
       PEH.BaseOfData = BaseOfData;
       OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
     }
@@ -472,7 +472,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   // Output section table.
   for (std::vector<COFFYAML::Section>::iterator i = CP.Obj.Sections.begin(),
                                                 e = CP.Obj.Sections.end();
-                                                i != e; ++i) {
+       i != e; ++i) {
     OS.write(i->Header.Name, COFF::NameSize);
     OS << binary_le(i->Header.VirtualSize)
        << binary_le(i->Header.VirtualAddress)
@@ -514,8 +514,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       } else {
         SymbolTableIndex = SymbolTableIndexMap[R.SymbolName];
       }
-      OS << binary_le(R.VirtualAddress)
-         << binary_le(SymbolTableIndex)
+      OS << binary_le(R.VirtualAddress) << binary_le(SymbolTableIndex)
          << binary_le(R.Type);
     }
   }
@@ -524,15 +523,14 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
 
   for (std::vector<COFFYAML::Symbol>::const_iterator i = CP.Obj.Symbols.begin(),
                                                      e = CP.Obj.Symbols.end();
-                                                     i != e; ++i) {
+       i != e; ++i) {
     OS.write(i->Header.Name, COFF::NameSize);
     OS << binary_le(i->Header.Value);
     if (CP.useBigObj())
-       OS << binary_le(i->Header.SectionNumber);
+      OS << binary_le(i->Header.SectionNumber);
     else
-       OS << binary_le(static_cast<int16_t>(i->Header.SectionNumber));
-    OS << binary_le(i->Header.Type)
-       << binary_le(i->Header.StorageClass)
+      OS << binary_le(static_cast<int16_t>(i->Header.SectionNumber));
+    OS << binary_le(i->Header.Type) << binary_le(i->Header.StorageClass)
        << binary_le(i->Header.NumberOfAuxSymbols);
 
     if (i->FunctionDefinition) {
@@ -578,8 +576,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->CLRToken) {
-      OS << binary_le(i->CLRToken->AuxType)
-         << zeros(i->CLRToken->unused1)
+      OS << binary_le(i->CLRToken->AuxType) << zeros(i->CLRToken->unused1)
          << binary_le(i->CLRToken->SymbolTableIndex)
          << zeros(i->CLRToken->unused2);
       OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
@@ -591,6 +588,9 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     OS.write(&CP.StringTable[0], CP.StringTable.size());
   return true;
 }
+
+namespace llvm {
+namespace yaml {
 
 int yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
   COFFParser CP(Doc);
@@ -614,3 +614,6 @@ int yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
   }
   return 0;
 }
+
+} // namespace yaml
+} // namespace llvm
