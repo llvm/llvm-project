@@ -622,16 +622,6 @@ DWARFDebugNames::NameIndex::getEntry(uint64_t *Offset) const {
   return std::move(E);
 }
 
-// A temporarily method to preserve compatibility with existing code.
-// Will be removed when the migration to 64-bit offsets is finished.
-Expected<DWARFDebugNames::Entry>
-DWARFDebugNames::NameIndex::getEntry(uint32_t *Offset) const {
-  uint64_t Offset64 = *Offset;
-  auto Result = getEntry(&Offset64);
-  *Offset = Offset64;
-  return std::move(Result);
-}
-
 DWARFDebugNames::NameTableEntry
 DWARFDebugNames::NameIndex::getNameTableEntry(uint32_t Index) const {
   assert(0 < Index && Index <= Hdr.NameCount);
