@@ -341,6 +341,7 @@ enum DNBProfileDataScanType {
       (1 << 8), // Assume eProfileMemory, get Anonymous memory as well.
 
   eProfileEnergy = (1 << 9),
+  eProfileEnergyCPUCap = (1 << 10),
 
   eProfileMemoryCap = (1 << 15),
 

@@ -162,7 +162,7 @@ let Definition = "process" in {
     Desc<"Disable reading and caching of memory in fixed-size units.">;
   def ExtraStartCommand: Property<"extra-startup-command", "Array">,
     DefaultUnsignedValue<16>,
-    Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;">;
+    Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;'">;
   def IgnoreBreakpointsInExpressions: Property<"ignore-breakpoints-in-expressions", "Boolean">,
     Global,
     DefaultTrue,

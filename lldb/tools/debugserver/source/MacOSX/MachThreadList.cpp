@@ -12,6 +12,7 @@
 
 #include "MachThreadList.h"
 
+#include "DNB.h"
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
 #include "MachProcess.h"
@@ -278,8 +279,12 @@ MachThreadList::UpdateThreadList(MachProcess *process, bool update,
 #elif defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
     if (m_is_64_bit)
       DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
-    else
-      DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM);
+    else {
+      if (process->GetCPUType() == CPU_TYPE_ARM64_32)
+        DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
+      else
+        DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM);
+    }
 #endif
   }
 
