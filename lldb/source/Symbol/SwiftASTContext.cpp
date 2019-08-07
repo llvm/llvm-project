@@ -3204,8 +3204,10 @@ public:
     SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
     if (!sym_file)
       return;
-    auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-        sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC));
+    auto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
+    if (!ast_ctx)
+      return llvm::consumeError(ast_ctx.takeError());
+    auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&(*ast_ctx));
     if (!clang_ctx)
       return;
     clang::FileSystemOptions file_system_options;
@@ -3226,11 +3228,15 @@ public:
           continue;
         clang::ASTImporter importer(to_ctx, file_manager, *from_ctx,
                                     file_manager, false);
-        clang::QualType clang_type(
+        llvm::Expected<clang::QualType> clang_type(
             importer.Import(ClangUtil::GetQualType(compiler_type)));
+        if (!clang_type) {
+          llvm::consumeError(clang_type.takeError());
+          continue;
+        }
 
         // FIXME: Support more than structs.
-        auto *clang_record_type = clang_type->getAsStructureType();
+        auto *clang_record_type = (*clang_type)->getAsStructureType();
         if (!clang_record_type)
           continue;
         clang::Decl *clang_decl = clang_record_type->getDecl();
