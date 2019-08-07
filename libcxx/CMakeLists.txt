@@ -148,16 +148,6 @@ set(LIBCXX_CXX_ABI "default" CACHE STRING
 set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
-# FIXME: This is a temporary hack to get the buildbots working while D63883 is in flight.
-# Without this all the bots fail while building libc++
-if (DEFINED ENV{USER})
-  if (("$ENV{USER}" STREQUAL "buildbot") OR (("$ENV{USER}" STREQUAL "llvmbb") OR ("$ENV{USER}" STREQUAL "buildslave")))
-    if (LIBCXX_CXX_ABI STREQUAL "libcxxabi" AND NOT DEFINED LIBCXX_CXX_ABI_INCLUDE_PATHS)
-      message(WARNING "OVERRIDING BUILDBOT CONFIG")
-      set(LIBCXX_CXX_ABI "default" CACHE STRING "FIXME" FORCE)
-    endif()
-  endif()
-endif()
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
   if (LIBCXX_TARGETING_MSVC)
