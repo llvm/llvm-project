@@ -65,7 +65,7 @@ static cl::opt<bool> ForceSkipUniformRegions(
 static cl::opt<bool>
     RelaxedUniformRegions("structurizecfg-relaxed-uniform-regions", cl::Hidden,
                           cl::desc("Allow relaxed uniform region checks"),
-                          cl::init(false));
+                          cl::init(true));
 
 // Definition of the complex types used in this pass.
 

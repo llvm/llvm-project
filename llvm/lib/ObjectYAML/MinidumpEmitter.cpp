@@ -6,13 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "yaml2obj.h"
 #include "llvm/ObjectYAML/MinidumpYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+namespace llvm {
+namespace yaml {
 
 int yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out) {
   writeAsBinary(Doc, Out);
   return 0;
 }
+
+} // namespace yaml
+} // namespace llvm

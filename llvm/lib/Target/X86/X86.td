@@ -786,6 +786,22 @@ def ProcessorFeatures {
   list<SubtargetFeature> KNMFeatures =
     !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
 
+  // Barcelona
+  list<SubtargetFeature> BarcelonaInheritableFeatures = [FeatureX87,
+                                                         FeatureCMPXCHG8B,
+                                                         FeatureSSE4A,
+                                                         Feature3DNowA,
+                                                         FeatureFXSR,
+                                                         FeatureNOPL,
+                                                         FeatureCMPXCHG16B,
+                                                         FeatureLZCNT,
+                                                         FeaturePOPCNT,
+                                                         FeatureSlowSHLD,
+                                                         FeatureLAHFSAHF,
+                                                         FeatureCMOV,
+                                                         Feature64Bit,
+                                                         FeatureFastScalarShiftMasks];
+  list<SubtargetFeature> BarcelonaFeatures = BarcelonaInheritableFeatures;
 
   // Bobcat
   list<SubtargetFeature> BtVer1InheritableFeatures = [FeatureX87,
@@ -1129,10 +1145,7 @@ foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
 }
 
 foreach P = ["amdfam10", "barcelona"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureSSE4A, Feature3DNowA,
-                 FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureLZCNT,
-                 FeaturePOPCNT, FeatureSlowSHLD, FeatureLAHFSAHF, FeatureCMOV,
-                 Feature64Bit, FeatureFastScalarShiftMasks]>;
+  def : Proc<P, ProcessorFeatures.BarcelonaFeatures>;
 }
 
 // Bobcat

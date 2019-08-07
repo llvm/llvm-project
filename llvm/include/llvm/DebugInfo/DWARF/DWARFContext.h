@@ -225,10 +225,10 @@ public:
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
 
   /// Return the compile unit that includes an offset (relative to .debug_info).
-  DWARFCompileUnit *getCompileUnitForOffset(uint32_t Offset);
+  DWARFCompileUnit *getCompileUnitForOffset(uint64_t Offset);
 
   /// Get a DIE given an exact offset.
-  DWARFDie getDIEForOffset(uint32_t Offset);
+  DWARFDie getDIEForOffset(uint64_t Offset);
 
   unsigned getMaxVersion() {
     // Ensure info units have been parsed to discover MaxVersion

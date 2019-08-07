@@ -14,11 +14,13 @@
 
 #include "llvm/Object/Wasm.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 
+namespace {
 /// This parses a yaml stream that represents a Wasm object file.
 /// See docs/yaml2obj for the yaml scheema.
 class WasmWriter {
@@ -57,6 +59,26 @@ private:
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedEvents = 0;
 };
+
+class SubSectionWriter {
+  raw_ostream &OS;
+  std::string OutString;
+  raw_string_ostream StringStream;
+
+public:
+  SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
+
+  void done() {
+    StringStream.flush();
+    encodeULEB128(OutString.size(), OS);
+    OS << OutString;
+    OutString.clear();
+  }
+
+  raw_ostream &getStream() { return StringStream; }
+};
+
+} // end anonymous namespace
 
 static int writeUint64(raw_ostream &OS, uint64_t Value) {
   char Data[sizeof(Value)];
@@ -118,24 +140,6 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
   writeUint8(OS, wasm::WASM_OPCODE_END);
   return 0;
 }
-
-class SubSectionWriter {
-  raw_ostream &OS;
-  std::string OutString;
-  raw_string_ostream StringStream;
-
-public:
-  SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
-
-  void done() {
-    StringStream.flush();
-    encodeULEB128(OutString.size(), OS);
-    OS << OutString;
-    OutString.clear();
-  }
-
-  raw_ostream &getStream() { return StringStream; }
-};
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::DylinkSection &Section) {
@@ -651,8 +655,14 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
   return 0;
 }
 
-int yaml2wasm(llvm::WasmYAML::Object &Doc, raw_ostream &Out) {
+namespace llvm {
+namespace yaml {
+
+int yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out) {
   WasmWriter Writer(Doc);
 
   return Writer.writeWasm(Out);
 }
+
+} // namespace yaml
+} // namespace llvm

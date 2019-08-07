@@ -4315,7 +4315,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
                          const typename ELFT::Addr Size) {
     OS << "Displaying notes found at file offset " << format_hex(Offset, 10)
        << " with length " << format_hex(Size, 10) << ":\n"
-       << "  Owner                 Data size\tDescription\n";
+       << "  Owner                Data size \tDescription\n";
   };
 
   auto ProcessNote = [&](const Elf_Note &Note) {
@@ -4323,7 +4323,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     ArrayRef<uint8_t> Descriptor = Note.getDesc();
     Elf_Word Type = Note.getType();
 
-    OS << "  " << Name << std::string(22 - Name.size(), ' ')
+    OS << "  " << left_justify(Name, 20) << ' '
        << format_hex(Descriptor.size(), 10) << '\t';
 
     if (Name == "GNU") {

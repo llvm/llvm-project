@@ -12,6 +12,7 @@
 namespace {
 
 TEST_F(GISelMITest, TestCSE) {
+  setUp();
   if (!TM)
     return;
 
@@ -74,6 +75,7 @@ TEST_F(GISelMITest, TestCSE) {
 }
 
 TEST_F(GISelMITest, TestCSEConstantConfig) {
+  setUp();
   if (!TM)
     return;
 

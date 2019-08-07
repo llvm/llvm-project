@@ -179,3 +179,7 @@ cmpxchg16b (%eax)
 // 32: error: unsupported instruction
 // 64: error: unsupported instruction
 {evex} vmovdqu %xmm0, %xmm0
+
+// 32: 12: error: invalid operand for instruction
+// 64: 12: error: invalid operand for instruction
+vpermil2pd $16, %xmm3, %xmm5, %xmm1, %xmm2

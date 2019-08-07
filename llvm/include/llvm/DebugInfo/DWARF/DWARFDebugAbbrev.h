@@ -20,7 +20,7 @@ namespace llvm {
 class raw_ostream;
 
 class DWARFAbbreviationDeclarationSet {
-  uint32_t Offset;
+  uint64_t Offset;
   /// Code of the first abbreviation, if all abbreviations in the set have
   /// consecutive codes. UINT32_MAX otherwise.
   uint32_t FirstAbbrCode;
@@ -32,9 +32,9 @@ class DWARFAbbreviationDeclarationSet {
 public:
   DWARFAbbreviationDeclarationSet();
 
-  uint32_t getOffset() const { return Offset; }
+  uint64_t getOffset() const { return Offset; }
   void dump(raw_ostream &OS) const;
-  bool extract(DataExtractor Data, uint32_t *OffsetPtr);
+  bool extract(DataExtractor Data, uint64_t *OffsetPtr);
 
   const DWARFAbbreviationDeclaration *
   getAbbreviationDeclaration(uint32_t AbbrCode) const;

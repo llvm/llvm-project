@@ -151,14 +151,27 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i8_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
+; SSE2-LABEL: bitcast_v16i8_to_v2i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: bitcast_v16i8_to_v2i8:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v16i8_to_v2i8:
 ; AVX12:       # %bb.0:
@@ -174,7 +187,7 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %xmm0, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -305,15 +318,29 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i16_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
+; SSE2-LABEL: bitcast_v16i16_to_v2i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    packsswb %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: bitcast_v16i16_to_v2i8:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    packsswb %xmm1, %xmm0
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_v16i16_to_v2i8:
 ; AVX1:       # %bb.0:
@@ -347,7 +374,7 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -365,10 +392,12 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: bitcast_v32i8_to_v2i16:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %ecx
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-SSSE3-NEXT:    shll $16, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-SSSE3-NEXT:    shll $16, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
+; SSE2-SSSE3-NEXT:    movd %ecx, %xmm0
+; SSE2-SSSE3-NEXT:    pextrw $0, %xmm0, %ecx
 ; SSE2-SSSE3-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    addl %ecx, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -382,6 +411,7 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -390,8 +420,9 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ;
 ; AVX2-LABEL: bitcast_v32i8_to_v2i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX2-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -406,8 +437,8 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpmovb2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, (%rsp)
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %ecx
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX512-NEXT:    addl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -548,17 +579,33 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i32_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    packsswb %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
+; SSE2-LABEL: bitcast_v16i32_to_v2i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-NEXT:    packsswb %xmm2, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: bitcast_v16i32_to_v2i8:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSSE3-NEXT:    packsswb %xmm2, %xmm0
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,u,u,u,u,u,1,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_v16i32_to_v2i8:
 ; AVX1:       # %bb.0:
@@ -599,7 +646,7 @@ define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
@@ -618,11 +665,13 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: bitcast_v32i16_to_v2i16:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    packsswb %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
-; SSE2-SSSE3-NEXT:    shll $16, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %ecx
+; SSE2-SSSE3-NEXT:    shll $16, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
+; SSE2-SSSE3-NEXT:    movd %ecx, %xmm0
+; SSE2-SSSE3-NEXT:    pextrw $0, %xmm0, %ecx
 ; SSE2-SSSE3-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    addl %ecx, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -639,6 +688,7 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -649,8 +699,9 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX2-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -665,8 +716,8 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpmovw2m %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, (%rsp)
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %ecx
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpextrw $0, %xmm0, %ecx
 ; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX512-NEXT:    addl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -933,9 +984,9 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    orl %ecx, %edx
 ; SSE2-SSSE3-NEXT:    orl %eax, %edx
 ; SSE2-SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-SSSE3-NEXT:    movd %xmm0, %ecx
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,0,1]
 ; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    addl %ecx, %eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -1195,7 +1246,7 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; AVX1-NEXT:    orl %ecx, %edx
 ; AVX1-NEXT:    orl %eax, %edx
 ; AVX1-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovd %xmm0, %ecx
 ; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
@@ -1455,7 +1506,7 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; AVX2-NEXT:    orl %ecx, %edx
 ; AVX2-NEXT:    orl %eax, %edx
 ; AVX2-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovd %xmm0, %ecx
 ; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
@@ -1466,7 +1517,7 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX512-NEXT:    addl %ecx, %eax

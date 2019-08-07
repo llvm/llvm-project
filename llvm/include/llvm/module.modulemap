@@ -332,6 +332,7 @@ module LLVM_TableGen {
 module LLVM_Transforms {
   requires cplusplus
   umbrella "Transforms"
+
   module * { export * }
 }
 

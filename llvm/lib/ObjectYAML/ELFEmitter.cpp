@@ -11,13 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "yaml2obj.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
@@ -55,11 +55,9 @@ public:
   }
   void writeBlobToStream(raw_ostream &Out) { Out << OS.str(); }
 };
-} // end anonymous namespace
 
 // Used to keep track of section and symbol names, so that in the YAML file
 // sections and symbols can be referenced by name instead of by index.
-namespace {
 class NameToIdxMap {
   StringMap<unsigned> Map;
 
@@ -86,29 +84,11 @@ public:
   }
   unsigned size() const { return Map.size(); }
 };
-} // end anonymous namespace
 
-template <class T>
-static size_t arrayDataSize(ArrayRef<T> A) {
-  return A.size() * sizeof(T);
-}
-
-template <class T>
-static void writeArrayData(raw_ostream &OS, ArrayRef<T> A) {
-  OS.write((const char *)A.data(), arrayDataSize(A));
-}
-
-template <class T>
-static void zero(T &Obj) {
-  memset(&Obj, 0, sizeof(Obj));
-}
-
-namespace {
 /// "Single point of truth" for the ELF file construction.
 /// TODO: This class still has a ways to go before it is truly a "single
 /// point of truth".
-template <class ELFT>
-class ELFState {
+template <class ELFT> class ELFState {
   typedef typename ELFT::Ehdr Elf_Ehdr;
   typedef typename ELFT::Phdr Elf_Phdr;
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -185,8 +165,17 @@ private:
 };
 } // end anonymous namespace
 
-template <class ELFT>
-ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
+template <class T> static size_t arrayDataSize(ArrayRef<T> A) {
+  return A.size() * sizeof(T);
+}
+
+template <class T> static void writeArrayData(raw_ostream &OS, ArrayRef<T> A) {
+  OS.write((const char *)A.data(), arrayDataSize(A));
+}
+
+template <class T> static void zero(T &Obj) { memset(&Obj, 0, sizeof(Obj)); }
+
+template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
   StringSet<> DocSections;
   for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections)
     if (!D->Name.empty())
@@ -197,7 +186,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
     Doc.Sections.insert(
         Doc.Sections.begin(),
         llvm::make_unique<ELFYAML::Section>(
-          ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
+            ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
 
   std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
   if (!Doc.DynamicSymbols.empty())
@@ -216,8 +205,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
   }
 }
 
-template <class ELFT>
-void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
+template <class ELFT> void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   using namespace llvm::ELF;
   zero(Header);
   Header.e_ident[EI_MAG0] = 0x7f;
@@ -700,10 +688,9 @@ static bool isMips64EL(const ELFYAML::Object &Doc) {
 }
 
 template <class ELFT>
-bool
-ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
-                                    const ELFYAML::RelocationSection &Section,
-                                    ContiguousBlobAccumulator &CBA) {
+bool ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::RelocationSection &Section,
+    ContiguousBlobAccumulator &CBA) {
   assert((Section.Type == llvm::ELF::SHT_REL ||
           Section.Type == llvm::ELF::SHT_RELA) &&
          "Section type is not SHT_REL nor SHT_RELA");
@@ -949,7 +936,8 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   else
     SHeader.sh_entsize = sizeof(Elf_Dyn);
 
-  raw_ostream &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   for (const ELFYAML::DynamicEntry &DE : Section.Entries) {
     support::endian::write<uintX_t>(OS, DE.Tag, ELFT::TargetEndianness);
     support::endian::write<uintX_t>(OS, DE.Val, ELFT::TargetEndianness);
@@ -1075,6 +1063,9 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   return 0;
 }
 
+namespace llvm {
+namespace yaml {
+
 int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
   bool IsLE = Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
   bool Is64Bit = Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
@@ -1087,3 +1078,6 @@ int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
     return ELFState<object::ELF32LE>::writeELF(Out, Doc);
   return ELFState<object::ELF32BE>::writeELF(Out, Doc);
 }
+
+} // namespace yaml
+} // namespace llvm

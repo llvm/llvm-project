@@ -43,6 +43,7 @@
 
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
+; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-NEXT:  PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis containing CSE Info

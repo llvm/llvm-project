@@ -569,8 +569,17 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     SelectionDAG &DAG, unsigned Depth) const {
-  if (Depth >= 6) // Limit search depth.
+  // Limit search depth.
+  if (Depth >= 6)
     return SDValue();
+
+  // Ignore UNDEFs.
+  if (Op.isUndef())
+    return SDValue();
+
+  // Not demanding any bits/elts from Op.
+  if (DemandedBits == 0 || DemandedElts == 0)
+    return DAG.getUNDEF(Op.getValueType());
 
   unsigned NumElts = DemandedElts.getBitWidth();
   KnownBits LHSKnown, RHSKnown;
@@ -2524,6 +2533,12 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
+  Known.resetAll();
+}
+
+void TargetLowering::computeKnownBitsForTargetInstr(
+    Register R, KnownBits &Known, const APInt &DemandedElts,
+    const MachineRegisterInfo &MRI, unsigned Depth) const {
   Known.resetAll();
 }
 

@@ -1416,6 +1416,11 @@ enum : unsigned {
   NT_SIGINFO = 0x53494749,
 };
 
+// LLVM-specific notes.
+enum {
+  NT_LLVM_HWASAN_GLOBALS = 3,
+};
+
 // GNU note types
 enum {
   NT_GNU_ABI_TAG = 1,

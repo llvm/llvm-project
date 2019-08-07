@@ -544,7 +544,7 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
 /// SubRegCopy (To class) = COPY CopyReg:SubReg
 /// Dst = COPY SubRegCopy
 static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
-                                  const RegisterBankInfo &RBI, unsigned SrcReg,
+                                  const RegisterBankInfo &RBI, Register SrcReg,
                                   const TargetRegisterClass *From,
                                   const TargetRegisterClass *To,
                                   unsigned SubReg) {
@@ -1296,8 +1296,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
 
     Register DefReg = I.getOperand(0).getReg();
     LLT Ty = MRI.getType(DefReg);
-    assert((Ty == LLT::scalar(64) || Ty == LLT::scalar(32)) &&
-           "Unexpected legal constant type");
+    if (Ty != LLT::scalar(64) && Ty != LLT::scalar(32))
+      return false;
 
     if (Ty == LLT::scalar(64)) {
       I.getOperand(1).ChangeToRegister(AArch64::XZR, false);

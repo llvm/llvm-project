@@ -19,4 +19,5 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(AArch64Tests
   InstSizes.cpp
+  TestStackOffset.cpp
   )

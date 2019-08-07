@@ -92,3 +92,54 @@ define float @test5(i1 zeroext %arg, float %div) {
   ret float %mul
 }
 
+define float @fmul_nnan_nsz(i1 %cond, float %val) {
+; CHECK-LABEL: @fmul_nnan_nsz(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], float [[VAL:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], float -0.000000e+00, float [[VAL]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan nsz float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs = select i1 %cond, float %val, float +0.0
+  %rhs = select i1 %cond, float -0.0, float %val
+  %mul = fmul nnan nsz float %lhs, %rhs
+  ret float %mul
+}
+
+define <2 x float> @fadd_nsz(<2 x i1> %cond, <2 x float> %val) {
+; CHECK-LABEL: @fadd_nsz(
+; CHECK-NEXT:    [[LHS:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[VAL:%.*]], <2 x float> zeroinitializer
+; CHECK-NEXT:    [[RHS:%.*]] = select <2 x i1> [[COND]], <2 x float> zeroinitializer, <2 x float> [[VAL]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nsz <2 x float> [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret <2 x float> [[ADD]]
+;
+  %lhs = select <2 x i1> %cond, <2 x float> %val, <2 x float> <float +0.0, float +0.0>
+  %rhs = select <2 x i1> %cond, <2 x float> <float +0.0, float +0.0>, <2 x float> %val
+  %add = fadd nsz <2 x float> %lhs, %rhs
+  ret <2 x float> %add
+}
+
+define double @fsub_nnan(i1 %cond, double %val, double %val2) {
+; CHECK-LABEL: @fsub_nnan(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], double [[VAL:%.*]], double [[VAL2:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], double [[VAL]], double 7.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan double [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %lhs = select i1 %cond, double %val, double %val2
+  %rhs = select i1 %cond, double %val, double 7.0
+  %add = fsub nnan double %lhs, %rhs
+  ret double %add
+}
+
+define double @fdiv_nnan_nsz(i1 %cond, double %val, double %val2) {
+; CHECK-LABEL: @fdiv_nnan_nsz(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], double [[VAL2:%.*]], double 0.000000e+00
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], double 4.200000e+01, double [[VAL:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fdiv nnan nsz double [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %lhs = select i1 %cond, double %val2, double 0.0
+  %rhs = select i1 %cond, double 42.0, double %val
+  %add = fdiv nnan nsz double %lhs, %rhs
+  ret double %add
+}

@@ -107,12 +107,12 @@ public:
 
   /// Copy the debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
-  void translateLineTable(DataExtractor LineData, uint32_t Offset);
+  void translateLineTable(DataExtractor LineData, uint64_t Offset);
 
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);
 
-  uint32_t getLineSectionSize() const { return LineSectionSize; }
+  uint64_t getLineSectionSize() const { return LineSectionSize; }
 
   /// Emit the .debug_pubnames contribution for \p Unit.
   void emitPubNamesForUnit(const CompileUnit &Unit);
@@ -168,7 +168,7 @@ private:
 
   uint32_t RangesSectionSize;
   uint32_t LocSectionSize;
-  uint32_t LineSectionSize;
+  uint64_t LineSectionSize;
   uint32_t FrameSectionSize;
 
   /// Keep track of emitted CUs and their Unique ID.

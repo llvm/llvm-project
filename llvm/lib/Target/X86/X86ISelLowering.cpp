@@ -66,7 +66,7 @@ using namespace llvm;
 STATISTIC(NumTailCalls, "Number of tail calls");
 
 static cl::opt<bool> ExperimentalVectorWideningLegalization(
-    "x86-experimental-vector-widening-legalization", cl::init(true),
+    "x86-experimental-vector-widening-legalization", cl::init(false),
     cl::desc("Enable an experimental vector type legalization through widening "
              "rather than promotion."),
     cl::Hidden);
@@ -34129,16 +34129,36 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {
+    SDValue N0 = Op.getOperand(0);
+    SDValue N1 = Op.getOperand(1);
+
     APInt DemandedLHS, DemandedRHS;
     getPackDemandedElts(VT, DemandedElts, DemandedLHS, DemandedRHS);
 
     APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedLHS, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(N0, DemandedLHS, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedRHS, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(N1, DemandedRHS, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
       return true;
+
+    // Aggressively peek through ops to get at the demanded elts.
+    // TODO - we should do this for all target/faux shuffles ops.
+    if (!DemandedElts.isAllOnesValue()) {
+      APInt DemandedSrcBits =
+          APInt::getAllOnesValue(N0.getScalarValueSizeInBits());
+      SDValue NewN0 = SimplifyMultipleUseDemandedBits(
+          N0, DemandedSrcBits, DemandedLHS, TLO.DAG, Depth + 1);
+      SDValue NewN1 = SimplifyMultipleUseDemandedBits(
+          N1, DemandedSrcBits, DemandedRHS, TLO.DAG, Depth + 1);
+      if (NewN0 || NewN1) {
+        NewN0 = NewN0 ? NewN0 : N0;
+        NewN1 = NewN1 ? NewN1 : N1;
+        return TLO.CombineTo(Op,
+                             TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewN0, NewN1));
+      }
+    }
     break;
   }
   case X86ISD::HADD:
@@ -34758,11 +34778,12 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
         if (IdentityOp == 0)
           break;
       }
-      assert((IdentityOp == 0 || IdentityOp.countPopulation() == 1) &&
-             "Multiple identity shuffles detected");
 
       if (AllUndef)
         return DAG.getUNDEF(VT);
+
+      assert((IdentityOp == 0 || IdentityOp.countPopulation() == 1) &&
+             "Multiple identity shuffles detected");
 
       for (int i = 0; i != NumOps; ++i)
         if (IdentityOp[i])
@@ -35384,7 +35405,7 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
   // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
   ISD::NodeType BinOp;
   SDValue Src = DAG.matchBinOpReduction(
-      Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN});
+      Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN}, true);
   if (!Src)
     return SDValue();
 
@@ -40429,7 +40450,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-  if ((VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit()) &&
+  if (((VT.isVector() && !VT.isFloatingPoint()) ||
+       (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit())) &&
       isa<LoadSDNode>(St->getValue()) &&
       !cast<LoadSDNode>(St->getValue())->isVolatile() &&
       St->getChain().hasOneUse() && !St->isVolatile()) {
@@ -42827,6 +42849,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI,
                                const X86Subtarget &Subtarget) {
   // First try to optimize away the conversion entirely when it's
   // conditionally from a constant. Vectors only.
@@ -42856,13 +42879,22 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     unsigned BitWidth = InVT.getScalarSizeInBits();
     unsigned NumSignBits = DAG.ComputeNumSignBits(Op0);
     if (NumSignBits >= (BitWidth - 31)) {
-      EVT TruncVT = EVT::getIntegerVT(*DAG.getContext(), 32);
+      EVT TruncVT = MVT::i32;
       if (InVT.isVector())
         TruncVT = EVT::getVectorVT(*DAG.getContext(), TruncVT,
                                    InVT.getVectorNumElements());
       SDLoc dl(N);
-      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
-      return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Trunc);
+      if (DCI.isBeforeLegalize() || TruncVT != MVT::v2i32) {
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
+        return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Trunc);
+      }
+      // If we're after legalize and the type is v2i32 we need to shuffle and
+      // use CVTSI2P.
+      assert(InVT == MVT::v2i64 && "Unexpected VT!");
+      SDValue Cast = DAG.getBitcast(MVT::v4i32, Op0);
+      SDValue Shuf = DAG.getVectorShuffle(MVT::v4i32, dl, Cast, Cast,
+                                          { 0, 2, -1, -1 });
+      return DAG.getNode(X86ISD::CVTSI2P, dl, VT, Shuf);
     }
   }
 
@@ -44460,7 +44492,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
   case ISD::MSTORE:         return combineMaskedStore(N, DAG, DCI, Subtarget);
-  case ISD::SINT_TO_FP:     return combineSIntToFP(N, DAG, Subtarget);
+  case ISD::SINT_TO_FP:     return combineSIntToFP(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:     return combineUIntToFP(N, DAG, Subtarget);
   case ISD::FADD:
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);

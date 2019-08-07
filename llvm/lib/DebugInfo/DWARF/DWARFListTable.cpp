@@ -16,32 +16,32 @@
 using namespace llvm;
 
 Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
-                                    uint32_t *OffsetPtr) {
+                                    uint64_t *OffsetPtr) {
   HeaderOffset = *OffsetPtr;
   // Read and verify the length field.
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, sizeof(uint32_t)))
     return createStringError(errc::invalid_argument,
                        "section is not large enough to contain a "
-                       "%s table length at offset 0x%" PRIx32,
+                       "%s table length at offset 0x%" PRIx64,
                        SectionName.data(), *OffsetPtr);
   // TODO: Add support for DWARF64.
   HeaderData.Length = Data.getRelocatedValue(4, OffsetPtr);
   if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64)
     return createStringError(errc::not_supported,
-                       "DWARF64 is not supported in %s at offset 0x%" PRIx32,
+                       "DWARF64 is not supported in %s at offset 0x%" PRIx64,
                        SectionName.data(), HeaderOffset);
   Format = dwarf::DwarfFormat::DWARF32;
   if (HeaderData.Length + sizeof(uint32_t) < sizeof(Header))
     return createStringError(errc::invalid_argument,
-                       "%s table at offset 0x%" PRIx32
+                       "%s table at offset 0x%" PRIx64
                        " has too small length (0x%" PRIx32
                        ") to contain a complete header",
                        SectionName.data(), HeaderOffset, length());
-  uint32_t End = HeaderOffset + length();
+  uint64_t End = HeaderOffset + length();
   if (!Data.isValidOffsetForDataOfSize(HeaderOffset, End - HeaderOffset))
     return createStringError(errc::invalid_argument,
                        "section is not large enough to contain a %s table "
-                       "of length 0x%" PRIx32 " at offset 0x%" PRIx32,
+                       "of length 0x%" PRIx32 " at offset 0x%" PRIx64,
                        SectionName.data(), length(), HeaderOffset);
 
   HeaderData.Version = Data.getU16(OffsetPtr);
@@ -53,22 +53,22 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
   if (HeaderData.Version != 5)
     return createStringError(errc::invalid_argument,
                        "unrecognised %s table version %" PRIu16
-                       " in table at offset 0x%" PRIx32,
+                       " in table at offset 0x%" PRIx64,
                        SectionName.data(), HeaderData.Version, HeaderOffset);
   if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
     return createStringError(errc::not_supported,
-                       "%s table at offset 0x%" PRIx32
+                       "%s table at offset 0x%" PRIx64
                        " has unsupported address size %" PRIu8,
                        SectionName.data(), HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.SegSize != 0)
     return createStringError(errc::not_supported,
-                       "%s table at offset 0x%" PRIx32
+                       "%s table at offset 0x%" PRIx64
                        " has unsupported segment selector size %" PRIu8,
                        SectionName.data(), HeaderOffset, HeaderData.SegSize);
   if (End < HeaderOffset + sizeof(HeaderData) +
                 HeaderData.OffsetEntryCount * sizeof(uint32_t))
     return createStringError(errc::invalid_argument,
-        "%s table at offset 0x%" PRIx32 " has more offset entries (%" PRIu32
+        "%s table at offset 0x%" PRIx64 " has more offset entries (%" PRIu32
         ") than there is space for",
         SectionName.data(), HeaderOffset, HeaderData.OffsetEntryCount);
   Data.setAddressSize(HeaderData.AddrSize);
@@ -79,7 +79,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
 
 void DWARFListTableHeader::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
-    OS << format("0x%8.8" PRIx32 ": ", HeaderOffset);
+    OS << format("0x%8.8" PRIx64 ": ", HeaderOffset);
   OS << format(
       "%s list header: length = 0x%8.8" PRIx32 ", version = 0x%4.4" PRIx16 ", "
       "addr_size = 0x%2.2" PRIx8 ", seg_size = 0x%2.2" PRIx8
@@ -93,7 +93,7 @@ void DWARFListTableHeader::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     for (const auto &Off : Offsets) {
       OS << format("\n0x%8.8" PRIx32, Off);
       if (DumpOpts.Verbose)
-        OS << format(" => 0x%8.8" PRIx32,
+        OS << format(" => 0x%8.8" PRIx64,
                      Off + HeaderOffset + sizeof(HeaderData));
     }
     OS << "\n]\n";
