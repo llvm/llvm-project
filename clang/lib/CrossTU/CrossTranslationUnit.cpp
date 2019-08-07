@@ -193,12 +193,13 @@ CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
-std::string CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
+llvm::Optional<std::string>
+CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
   SmallString<128> DeclUSR;
   bool Ret = index::generateUSRForDecl(ND, DeclUSR);
-  (void)Ret;
-  assert(!Ret && "Unable to generate USR");
-  return DeclUSR.str();
+  if (Ret)
+    return {};
+  return std::string(DeclUSR.str());
 }
 
 /// Recursively visits the decls of a DeclContext, and returns one with the
@@ -218,7 +219,8 @@ CrossTranslationUnitContext::findDefInDeclContext(const DeclContext *DC,
     const T *ResultDecl;
     if (!ND || !hasBodyOrInit(ND, ResultDecl))
       continue;
-    if (getLookupName(ResultDecl) != LookupName)
+    llvm::Optional<std::string> ResultLookupName = getLookupName(ResultDecl);
+    if (!ResultLookupName || *ResultLookupName != LookupName)
       continue;
     return ResultDecl;
   }
@@ -233,12 +235,12 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   assert(!hasBodyOrInit(D) &&
          "D has a body or init in current translation unit!");
   ++NumGetCTUCalled;
-  const std::string LookupName = getLookupName(D);
-  if (LookupName.empty())
+  const llvm::Optional<std::string> LookupName = getLookupName(D);
+  if (!LookupName)
     return llvm::make_error<IndexError>(
         index_error_code::failed_to_generate_usr);
   llvm::Expected<ASTUnit *> ASTUnitOrError =
-      loadExternalAST(LookupName, CrossTUDir, IndexName, DisplayCTUProgress);
+      loadExternalAST(*LookupName, CrossTUDir, IndexName, DisplayCTUProgress);
   if (!ASTUnitOrError)
     return ASTUnitOrError.takeError();
   ASTUnit *Unit = *ASTUnitOrError;
@@ -294,7 +296,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   }
 
   TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
-  if (const T *ResultDecl = findDefInDeclContext<T>(TU, LookupName))
+  if (const T *ResultDecl = findDefInDeclContext<T>(TU, *LookupName))
     return importDefinition(ResultDecl, Unit);
   return llvm::make_error<IndexError>(index_error_code::failed_import);
 }

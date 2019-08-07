@@ -13,7 +13,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -316,10 +316,10 @@ SearchFilter::DoCUIteration(const ModuleSP &module_sp,
           // First make sure this compile unit's functions are parsed
           // since CompUnit::ForeachFunction only iterates over already
           // parsed functions.
-          SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-          if (!sym_vendor)
+          SymbolFile *sym_file = module_sp->GetSymbolFile();
+          if (!sym_file)
             continue;
-          if (!sym_vendor->ParseFunctions(*cu_sp))
+          if (!sym_file->ParseFunctions(*cu_sp))
             continue;
           // If we got any functions, use ForeachFunction to do the iteration.
           cu_sp->ForeachFunction([&](const FunctionSP &func_sp) {

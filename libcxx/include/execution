@@ -13,7 +13,7 @@
 #include <__config>
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
-#   include <pstl/internal/glue_execution_defs.h>
+#   include <__pstl_execution>
 #endif
 
 #endif // _LIBCPP_EXECUTION

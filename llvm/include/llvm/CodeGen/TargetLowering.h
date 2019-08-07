@@ -930,6 +930,8 @@ public:
     return Supported ? Action : Expand;
   }
 
+  // If Op is a strict floating-point operation, return the result
+  // of getOperationAction for the equivalent non-strict operation.
   LegalizeAction getStrictFPOperationAction(unsigned Op, EVT VT) const {
     unsigned EqOpc;
     switch (Op) {
@@ -962,14 +964,7 @@ public:
       case ISD::STRICT_FP_EXTEND: EqOpc = ISD::FP_EXTEND; break;
     }
 
-    auto Action = getOperationAction(EqOpc, VT);
-
-    // We don't currently handle Custom or Promote for strict FP pseudo-ops.
-    // For now, we just expand for those cases.
-    if (Action != Legal)
-      Action = Expand;
-
-    return Action;
+    return getOperationAction(EqOpc, VT);
   }
 
   /// Return true if the specified operation is legal on this target or can be
@@ -3170,6 +3165,14 @@ public:
                                              const APInt &DemandedElts,
                                              const SelectionDAG &DAG,
                                              unsigned Depth = 0) const;
+  /// Determine which of the bits specified in Mask are known to be either zero
+  /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
+  /// argument allows us to only collect the known bits that are shared by the
+  /// requested vector elements. This is for GISel.
+  virtual void computeKnownBitsForTargetInstr(Register R, KnownBits &Known,
+                                              const APInt &DemandedElts,
+                                              const MachineRegisterInfo &MRI,
+                                              unsigned Depth = 0) const;
 
   /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
   /// Default implementation computes low bits based on alignment

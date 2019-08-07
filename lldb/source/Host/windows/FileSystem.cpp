@@ -8,6 +8,7 @@
 
 #include "lldb/Host/windows/windows.h"
 
+#include <share.h>
 #include <shellapi.h>
 #include <sys/stat.h>
 #include <sys/types.h>

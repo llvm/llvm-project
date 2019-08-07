@@ -215,18 +215,26 @@ int main(int argc, const char **argv) {
       Exec->get()->getExecutionContext(),
       PublicOnly,
       OutDirectory,
-      {UserStylesheets.begin(), UserStylesheets.end()}};
+      {UserStylesheets.begin(), UserStylesheets.end()},
+      {"index.js", "index_json.js"}};
 
   if (Format == "html") {
     void *MainAddr = (void *)(intptr_t)GetExecutablePath;
     std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
+    llvm::SmallString<128> AssetsPath;
+    llvm::sys::path::native(ClangDocPath, AssetsPath);
+    AssetsPath = llvm::sys::path::parent_path(AssetsPath);
+    llvm::sys::path::append(AssetsPath, "..", "share", "clang");
     llvm::SmallString<128> DefaultStylesheet;
-    llvm::sys::path::native(ClangDocPath, DefaultStylesheet);
-    DefaultStylesheet = llvm::sys::path::parent_path(DefaultStylesheet);
+    llvm::sys::path::native(AssetsPath, DefaultStylesheet);
     llvm::sys::path::append(DefaultStylesheet,
-                            "../share/clang/clang-doc-default-stylesheet.css");
+                            "clang-doc-default-stylesheet.css");
+    llvm::SmallString<128> IndexJS;
+    llvm::sys::path::native(AssetsPath, IndexJS);
+    llvm::sys::path::append(IndexJS, "index.js");
     CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                  DefaultStylesheet.str());
+    CDCtx.FilesToCopy.emplace_back(IndexJS.str());
   }
 
   // Mapping phase
@@ -276,10 +284,14 @@ int main(int argc, const char **argv) {
       continue;
     }
 
+    // Add a reference to this Info in the Index
+    clang::doc::Generator::addInfoToIndex(CDCtx.Idx, I);
+
     if (auto Err = G->get()->generateDocForInfo(I, InfoOS, CDCtx))
       llvm::errs() << toString(std::move(Err)) << "\n";
   }
 
+  llvm::outs() << "Generating assets for docs...\n";
   if (!G->get()->createResources(CDCtx))
     return 1;
 

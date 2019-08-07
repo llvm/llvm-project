@@ -8,6 +8,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -22,8 +23,11 @@
 using namespace llvm;
 
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
-                               MachineIRBuilder &B)
-    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer) {}
+                               MachineIRBuilder &B, GISelKnownBits *KB)
+    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
+      KB(KB) {
+  (void)this->KB;
+}
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
                                     Register ToReg) const {

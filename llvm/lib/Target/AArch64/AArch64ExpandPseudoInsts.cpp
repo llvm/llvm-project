@@ -659,11 +659,12 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      // instruction sequence.
      int BaseOffset = -AFI->getTaggedBasePointerOffset();
      unsigned FrameReg;
-     int FrameRegOffset = TFI->resolveFrameOffsetReference(
-         MF, BaseOffset, false /*isFixed*/, FrameReg, /*PreferFP=*/false,
+     StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
+         MF, BaseOffset, false /*isFixed*/, FrameReg,
+         /*PreferFP=*/false,
          /*ForSimm=*/true);
      Register SrcReg = FrameReg;
-     if (FrameRegOffset != 0) {
+     if (FrameRegOffset) {
        // Use output register as temporary.
        SrcReg = MI.getOperand(0).getReg();
        emitFrameOffset(MBB, &MI, MI.getDebugLoc(), SrcReg, FrameReg,

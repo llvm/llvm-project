@@ -130,11 +130,11 @@ public:
   /// \param Attr DWARF attribute to search for.
   /// \param U the DWARFUnit the contains the DIE.
   /// \returns Optional DWARF form value if the attribute was extracted.
-  Optional<DWARFFormValue> getAttributeValue(const uint32_t DIEOffset,
+  Optional<DWARFFormValue> getAttributeValue(const uint64_t DIEOffset,
                                              const dwarf::Attribute Attr,
                                              const DWARFUnit &U) const;
 
-  bool extract(DataExtractor Data, uint32_t* OffsetPtr);
+  bool extract(DataExtractor Data, uint64_t* OffsetPtr);
   void dump(raw_ostream &OS) const;
 
   // Return an optional byte size of all attribute data in this abbreviation

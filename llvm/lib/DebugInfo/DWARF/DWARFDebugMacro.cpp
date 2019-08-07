@@ -53,7 +53,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 }
 
 void DWARFDebugMacro::parse(DataExtractor data) {
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   while (data.isValidOffset(Offset)) {
     // A macro list entry consists of:
     Entry E;

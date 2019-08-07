@@ -308,7 +308,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
   // Emit all symbol locations (declaration or definition) from AST.
   for (const Decl *D : Symbols.Decls) {
-    auto Loc = makeLocation(AST.getASTContext(), findNameLoc(D), *MainFilePath);
+    auto Loc =
+        makeLocation(AST.getASTContext(), spellingLocIfSpelled(findName(D), SM),
+                     *MainFilePath);
     if (!Loc)
       continue;
 
@@ -1044,7 +1046,8 @@ static llvm::Optional<TypeHierarchyItem>
 declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation NameLoc = findNameLoc(&ND);
+  SourceLocation NameLoc =
+      spellingLocIfSpelled(findName(&ND), Ctx.getSourceManager());
   // getFileLoc is a good choice for us, but we also need to make sure
   // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
   // that to make sure it does not switch files.

@@ -101,7 +101,7 @@ public:
 
   explicit MaybeAlign(uint64_t Value) {
     assert((Value == 0 || llvm::isPowerOf2_64(Value)) &&
-           "Alignment is not 0 or a power of 2");
+           "Alignment is neither 0 nor a power of 2");
     if (Value)
       emplace(Value);
   }

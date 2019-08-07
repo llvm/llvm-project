@@ -41,7 +41,7 @@ template<typename RawTypeT>
 DWARFFormValue createDataXFormValue(dwarf::Form Form, RawTypeT Value) {
   char Raw[sizeof(RawTypeT)];
   memcpy(Raw, &Value, sizeof(RawTypeT));
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DWARFFormValue Result(Form);
   DWARFDataExtractor Data(StringRef(Raw, sizeof(RawTypeT)),
                           sys::IsLittleEndianHost, sizeof(void *));
@@ -53,7 +53,7 @@ DWARFFormValue createULEBFormValue(uint64_t Value) {
   SmallString<10> RawData;
   raw_svector_ostream OS(RawData);
   encodeULEB128(Value, OS);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DWARFFormValue Result(DW_FORM_udata);
   DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
   Result.extractValue(Data, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
@@ -64,7 +64,7 @@ DWARFFormValue createSLEBFormValue(int64_t Value) {
   SmallString<10> RawData;
   raw_svector_ostream OS(RawData);
   encodeSLEB128(Value, OS);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DWARFFormValue Result(DW_FORM_sdata);
   DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
   Result.extractValue(Data, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
@@ -112,7 +112,7 @@ TEST(DWARFFormValue, SignedConstantForms) {
   DWARFFormValue Data16(DW_FORM_data16);
   DWARFDataExtractor DE16(StringRef(Cksum, 16), sys::IsLittleEndianHost,
                           sizeof(void *));
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   Data16.extractValue(DE16, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
   SmallString<32> Str;
   raw_svector_ostream Res(Str);

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 
+#include "AArch64StackOffset.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
@@ -39,12 +40,13 @@ public:
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
-  int resolveFrameIndexReference(const MachineFunction &MF, int FI,
-                                 unsigned &FrameReg, bool PreferFP,
-                                 bool ForSimm) const;
-  int resolveFrameOffsetReference(const MachineFunction &MF, int ObjectOffset,
-                                  bool isFixed, unsigned &FrameReg,
-                                  bool PreferFP, bool ForSimm) const;
+  StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
+                                         unsigned &FrameReg, bool PreferFP,
+                                         bool ForSimm) const;
+  StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
+                                          int ObjectOffset, bool isFixed,
+                                          unsigned &FrameReg, bool PreferFP,
+                                          bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  const std::vector<CalleeSavedInfo> &CSI,

@@ -49,7 +49,7 @@ private:
   using DescriptorColl = std::vector<Descriptor>;
   using desc_iterator_range = iterator_range<DescriptorColl::const_iterator>;
 
-  uint32_t Offset;
+  uint64_t Offset;
   Header HeaderData;
   DescriptorColl ArangeDescriptors;
 
@@ -57,7 +57,7 @@ public:
   DWARFDebugArangeSet() { clear(); }
 
   void clear();
-  bool extract(DataExtractor data, uint32_t *offset_ptr);
+  bool extract(DataExtractor data, uint64_t *offset_ptr);
   void dump(raw_ostream &OS) const;
 
   uint32_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }

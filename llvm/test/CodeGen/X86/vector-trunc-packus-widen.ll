@@ -1982,7 +1982,7 @@ define void @trunc_packus_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm1
 ; SSE41-NEXT:    packusdw %xmm3, %xmm1
 ; SSE41-NEXT:    packusdw %xmm1, %xmm4
-; SSE41-NEXT:    packuswb %xmm4, %xmm4
+; SSE41-NEXT:    packuswb %xmm0, %xmm4
 ; SSE41-NEXT:    movq %xmm4, (%rdi)
 ; SSE41-NEXT:    retq
 ;

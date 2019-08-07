@@ -405,7 +405,7 @@ void DwarfStreamer::emitLocationsForUnit(
 
   SmallVector<uint8_t, 32> Buffer;
   for (const auto &Attr : Attributes) {
-    uint32_t Offset = Attr.first.get();
+    uint64_t Offset = Attr.first.get();
     Attr.first.set(LocSectionSize);
     // This is the quantity to add to the old location address to get
     // the correct address for the new one.
@@ -584,7 +584,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
 /// Copy the debug_line over to the updated binary while unobfuscating the file
 /// names and directories.
-void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
+void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   StringRef Contents = Data.getData();
 
@@ -592,7 +592,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
   // length fields that will need to be updated when we change the length of
   // the files and directories in there.
   unsigned UnitLength = Data.getU32(&Offset);
-  unsigned UnitEnd = Offset + UnitLength;
+  uint64_t UnitEnd = Offset + UnitLength;
   MCSymbol *BeginLabel = MC->createTempSymbol();
   MCSymbol *EndLabel = MC->createTempSymbol();
   unsigned Version = Data.getU16(&Offset);
@@ -615,7 +615,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
   Offset += 4;
   LineSectionSize += 4;
 
-  uint32_t AfterHeaderLengthOffset = Offset;
+  uint64_t AfterHeaderLengthOffset = Offset;
   // Skip to the directories.
   Offset += (Version >= 4) ? 5 : 4;
   unsigned OpcodeBase = Data.getU8(&Offset);
@@ -645,7 +645,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
 
-    uint32_t OffsetBeforeLEBs = Offset;
+    uint64_t OffsetBeforeLEBs = Offset;
     Asm->EmitULEB128(Data.getULEB128(&Offset));
     Asm->EmitULEB128(Data.getULEB128(&Offset));
     Asm->EmitULEB128(Data.getULEB128(&Offset));

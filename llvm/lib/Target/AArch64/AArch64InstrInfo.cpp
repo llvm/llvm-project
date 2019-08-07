@@ -2972,21 +2972,29 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   MI.addMemOperand(MMO);
 }
 
-void llvm::emitFrameOffset(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                           unsigned DestReg, unsigned SrcReg, int Offset,
-                           const TargetInstrInfo *TII,
-                           MachineInstr::MIFlag Flag, bool SetNZCV,
-                           bool NeedsWinCFI, bool *HasWinCFI) {
-  if (DestReg == SrcReg && Offset == 0)
-    return;
-
-  assert((DestReg != AArch64::SP || Offset % 16 == 0) &&
-         "SP increment/decrement not 16-byte aligned");
-
-  bool isSub = Offset < 0;
-  if (isSub)
-    Offset = -Offset;
+// Helper function to emit a frame offset adjustment from a given
+// pointer (SrcReg), stored into DestReg. This function is explicit
+// in that it requires the opcode.
+static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &DL, unsigned DestReg,
+                               unsigned SrcReg, int64_t Offset, unsigned Opc,
+                               const TargetInstrInfo *TII,
+                               MachineInstr::MIFlag Flag, bool NeedsWinCFI,
+                               bool *HasWinCFI) {
+  int Sign = 1;
+  unsigned MaxEncoding, ShiftSize;
+  switch (Opc) {
+  case AArch64::ADDXri:
+  case AArch64::ADDSXri:
+  case AArch64::SUBXri:
+  case AArch64::SUBSXri:
+    MaxEncoding = 0xfff;
+    ShiftSize = 12;
+    break;
+  default:
+    llvm_unreachable("Unsupported opcode");
+  }
 
   // FIXME: If the offset won't fit in 24-bits, compute the offset into a
   // scratch register.  If DestReg is a virtual register, use it as the
@@ -2999,65 +3007,77 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   // of code.
   //  assert(Offset < (1 << 24) && "unimplemented reg plus immediate");
 
-  unsigned Opc;
-  if (SetNZCV)
-    Opc = isSub ? AArch64::SUBSXri : AArch64::ADDSXri;
-  else
-    Opc = isSub ? AArch64::SUBXri : AArch64::ADDXri;
-  const unsigned MaxEncoding = 0xfff;
-  const unsigned ShiftSize = 12;
   const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
-  while (((unsigned)Offset) >= (1 << ShiftSize)) {
-    unsigned ThisVal;
-    if (((unsigned)Offset) > MaxEncodableValue) {
-      ThisVal = MaxEncodableValue;
-    } else {
-      ThisVal = Offset & MaxEncodableValue;
+  do {
+    unsigned ThisVal = std::min<unsigned>(Offset, MaxEncodableValue);
+    unsigned LocalShiftSize = 0;
+    if (ThisVal > MaxEncoding) {
+      ThisVal = ThisVal >> ShiftSize;
+      LocalShiftSize = ShiftSize;
     }
     assert((ThisVal >> ShiftSize) <= MaxEncoding &&
            "Encoding cannot handle value that big");
-    BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
-        .addReg(SrcReg)
-        .addImm(ThisVal >> ShiftSize)
-        .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftSize))
-        .setMIFlag(Flag);
+    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
+                   .addReg(SrcReg)
+                   .addImm(Sign * (int)ThisVal);
+    if (ShiftSize)
+      MBI = MBI.addImm(
+          AArch64_AM::getShifterImm(AArch64_AM::LSL, LocalShiftSize));
+    MBI = MBI.setMIFlag(Flag);
 
-    if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP) {
+    if (NeedsWinCFI) {
+      assert(Sign == 1 && "SEH directives should always have a positive sign");
+      int Imm = (int)(ThisVal << LocalShiftSize);
+      if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
+          (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+        if (HasWinCFI)
+          *HasWinCFI = true;
+        if (Imm == 0)
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).setMIFlag(Flag);
+        else
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP))
+              .addImm(Imm)
+              .setMIFlag(Flag);
+        assert((Offset - Imm) == 0 && "Expected remaining offset to be zero to "
+                                      "emit a single SEH directive");
+      } else if (DestReg == AArch64::SP) {
+        if (HasWinCFI)
+          *HasWinCFI = true;
+        assert(SrcReg == AArch64::SP && "Unexpected SrcReg for SEH_StackAlloc");
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
+            .addImm(Imm)
+            .setMIFlag(Flag);
+      }
       if (HasWinCFI)
         *HasWinCFI = true;
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
-          .addImm(ThisVal)
-          .setMIFlag(Flag);
     }
 
     SrcReg = DestReg;
-    Offset -= ThisVal;
-    if (Offset == 0)
-      return;
-  }
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
-      .addReg(SrcReg)
-      .addImm(Offset)
-      .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
-      .setMIFlag(Flag);
+    Offset -= ThisVal << LocalShiftSize;
+  } while (Offset);
+}
 
-  if (NeedsWinCFI) {
-    if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
-        (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
-      if (HasWinCFI)
-        *HasWinCFI = true;
-      if (Offset == 0)
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).
-                setMIFlag(Flag);
-      else
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP)).
-                addImm(Offset).setMIFlag(Flag);
-    } else if (DestReg == AArch64::SP) {
-      if (HasWinCFI)
-        *HasWinCFI = true;
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc)).
-              addImm(Offset).setMIFlag(Flag);
+void llvm::emitFrameOffset(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                           unsigned DestReg, unsigned SrcReg,
+                           StackOffset Offset, const TargetInstrInfo *TII,
+                           MachineInstr::MIFlag Flag, bool SetNZCV,
+                           bool NeedsWinCFI, bool *HasWinCFI) {
+  int64_t Bytes;
+  Offset.getForFrameOffset(Bytes);
+
+  // First emit non-scalable frame offsets, or a simple 'mov'.
+  if (Bytes || (!Offset && SrcReg != DestReg)) {
+    assert((DestReg != AArch64::SP || Bytes % 16 == 0) &&
+           "SP increment/decrement not 16-byte aligned");
+    unsigned Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
+    if (Bytes < 0) {
+      Bytes = -Bytes;
+      Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
     }
+    emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII, Flag,
+                       NeedsWinCFI, HasWinCFI);
+    SrcReg = DestReg;
   }
 }
 
@@ -3239,7 +3259,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
-int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
+int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
+                                    StackOffset &SOffset,
                                     bool *OutUseUnscaledOp,
                                     unsigned *OutUnscaledOp,
                                     int *EmittableOffset) {
@@ -3283,7 +3304,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
   // Construct the complete offset.
   const MachineOperand &ImmOpnd =
       MI.getOperand(AArch64InstrInfo::getLoadStoreImmIdx(MI.getOpcode()));
-  Offset += ImmOpnd.getImm() * Scale;
+  int Offset = SOffset.getBytes() + ImmOpnd.getImm() * Scale;
 
   // If the offset doesn't match the scale, we rewrite the instruction to
   // use the unscaled instruction instead. Likewise, if we have a negative
@@ -3315,23 +3336,24 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
   if (OutUnscaledOp && UnscaledOp)
     *OutUnscaledOp = *UnscaledOp;
 
+  SOffset = StackOffset(Offset, MVT::i8);
   return AArch64FrameOffsetCanUpdate |
          (Offset == 0 ? AArch64FrameOffsetIsLegal : 0);
 }
 
 bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                                    unsigned FrameReg, int &Offset,
+                                    unsigned FrameReg, StackOffset &Offset,
                                     const AArch64InstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
   unsigned ImmIdx = FrameRegIdx + 1;
 
   if (Opcode == AArch64::ADDSXri || Opcode == AArch64::ADDXri) {
-    Offset += MI.getOperand(ImmIdx).getImm();
+    Offset += StackOffset(MI.getOperand(ImmIdx).getImm(), MVT::i8);
     emitFrameOffset(*MI.getParent(), MI, MI.getDebugLoc(),
                     MI.getOperand(0).getReg(), FrameReg, Offset, TII,
                     MachineInstr::NoFlags, (Opcode == AArch64::ADDSXri));
     MI.eraseFromParent();
-    Offset = 0;
+    Offset = StackOffset();
     return true;
   }
 
@@ -3348,7 +3370,7 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       MI.setDesc(TII->get(UnscaledOp));
 
     MI.getOperand(ImmIdx).ChangeToImmediate(NewOffset);
-    return Offset == 0;
+    return !Offset;
   }
 
   return false;

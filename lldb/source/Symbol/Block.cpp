@@ -12,7 +12,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 
@@ -393,7 +392,7 @@ VariableListSP Block::GetBlockVariableList(bool can_create) {
       SymbolContext sc;
       CalculateSymbolContext(&sc);
       assert(sc.module_sp);
-      sc.module_sp->GetSymbolVendor()->ParseVariablesForContext(sc);
+      sc.module_sp->GetSymbolFile()->ParseVariablesForContext(sc);
     }
   }
   return m_variable_list_sp;

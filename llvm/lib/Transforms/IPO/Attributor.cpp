@@ -332,21 +332,16 @@ ChangeStatus AbstractAttribute::update(Attributor &A,
   return HasChanged;
 }
 
-template <Attribute::AttrKind AK, typename Base>
-ChangeStatus IRAttribute<AK, Base>::manifest(Attributor &A) {
-  assert(this->getState().isValidState() &&
-         "Attempted to manifest an invalid state!");
-  assert(getIRPosition().getAssociatedValue() &&
+ ChangeStatus IRAttributeManifest::manifestAttrs(Attributor &A, IRPosition
+     &IRP, const ArrayRef<Attribute> &DeducedAttrs) {
+  assert(IRP.getAssociatedValue() &&
          "Attempted to manifest an attribute without associated value!");
 
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
 
-  Function &ScopeFn = getAnchorScope();
+  Function &ScopeFn = IRP.getAnchorScope();
   LLVMContext &Ctx = ScopeFn.getContext();
-  IRPosition::Kind PK = getPositionKind();
-
-  SmallVector<Attribute, 4> DeducedAttrs;
-  getDeducedAttributes(Ctx, DeducedAttrs);
+  IRPosition::Kind PK = IRP.getPositionKind();
 
   // In the following some generic code that will manifest attributes in
   // DeducedAttrs if they improve the current IR. Due to the different
@@ -360,12 +355,12 @@ ChangeStatus IRAttribute<AK, Base>::manifest(Attributor &A) {
     Attrs = ScopeFn.getAttributes();
     break;
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    Attrs = ImmutableCallSite(&getAnchorValue()).getAttributes();
+    Attrs = ImmutableCallSite(&IRP.getAnchorValue()).getAttributes();
     break;
   }
 
   for (const Attribute &Attr : DeducedAttrs) {
-    if (!addIfNotExistent(Ctx, Attr, Attrs, getAttrIdx()))
+    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx()))
       continue;
 
     HasChanged = ChangeStatus::CHANGED;
@@ -382,7 +377,7 @@ ChangeStatus IRAttribute<AK, Base>::manifest(Attributor &A) {
     ScopeFn.setAttributes(Attrs);
     break;
   case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    CallSite(&getAnchorValue()).setAttributes(Attrs);
+    CallSite(&IRP.getAnchorValue()).setAttributes(Attrs);
   }
 
   return HasChanged;

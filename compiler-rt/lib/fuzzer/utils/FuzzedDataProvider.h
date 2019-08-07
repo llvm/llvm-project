@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// This a temporary copy of compiler-rt/include/fuzzer/FuzzedDataProvider.hpp.
+// TODO(mmoroz@chromium.org): delete this copy.
 // A single header library providing an utility class to break up an array of
 // bytes. Whenever run on the same input, provides the same output, as long as
 // its methods are called in the same order, with the same arguments.

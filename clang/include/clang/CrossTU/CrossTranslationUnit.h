@@ -17,6 +17,7 @@
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
@@ -159,7 +160,7 @@ public:
                                                    ASTUnit *Unit);
 
   /// Get a name to identify a named decl.
-  static std::string getLookupName(const NamedDecl *ND);
+  static llvm::Optional<std::string> getLookupName(const NamedDecl *ND);
 
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);

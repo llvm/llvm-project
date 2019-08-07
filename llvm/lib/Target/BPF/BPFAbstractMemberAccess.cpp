@@ -311,7 +311,7 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
 
   // Child is a derived/pointer type, which is due to type casting.
   // Pointer type cannot be in the middle of chain.
-  if (const auto *PtrTy = dyn_cast<DIDerivedType>(CType))
+  if (isa<DIDerivedType>(CType))
     return false;
 
   // Parent is a pointer type.

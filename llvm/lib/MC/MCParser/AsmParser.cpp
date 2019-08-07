@@ -728,7 +728,8 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     PlatformParser.reset(createWasmAsmParser());
     break;
   case MCObjectFileInfo::IsXCOFF:
-    // TODO: Need to implement createXCOFFAsmParser for XCOFF format.
+    report_fatal_error(
+        "Need to implement createXCOFFAsmParser for XCOFF format.");
     break;
   }
 

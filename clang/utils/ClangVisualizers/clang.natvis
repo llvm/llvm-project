@@ -763,6 +763,51 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="Kind == clang::tok::identifier">{{Identifier ({(clang::IdentifierInfo *)(PtrData),na})}}</DisplayString>
     <DisplayString>{(clang::tok::TokenKind)Kind,en}</DisplayString>
   </Type>
+  <Type Name="clang::Lexer">
+    <DisplayString>{BufferPtr,nasb}</DisplayString>
+  </Type>
+  <Type Name="clang::Preprocessor::IncludeStackInfo">
+    <DisplayString Condition="TheLexer._Mypair._Myval2 != 0">{TheLexer._Mypair._Myval2,na}</DisplayString>
+    <DisplayString Condition="TheTokenLexer._Mypair._Myval2 != 0">Expanding Macro: {TheTokenLexer._Mypair._Myval2,na}</DisplayString>
+    <DisplayString></DisplayString>
+  </Type>
+  <Type Name="clang::Preprocessor">
+    <DisplayString IncludeView="cached" Condition="CachedLexPos &lt; CachedTokens.Size">
+      [{(Token *)(CachedTokens.BeginX) + CachedLexPos,na}] {IncludeMacroStack._Mypair._Myval2._Mylast - 1,na}
+    </DisplayString>
+    <DisplayString IncludeView="cached"> {IncludeMacroStack._Mypair._Myval2._Mylast - 1,na}</DisplayString>
+    <DisplayString Condition="CurLexer._Mypair._Myval2 != 0">{CurLexer._Mypair._Myval2,na}</DisplayString>
+    <DisplayString Condition="CurTokenLexer._Mypair._Myval2 != 0">Expanding Macro: {CurTokenLexer._Mypair._Myval2,na}</DisplayString>
+    <!-- Can't use CurLexerKind because natvis sees the type rather than the variable -->
+    <DisplayString Condition="IncludeMacroStack._Mypair._Myval2._Mylast - IncludeMacroStack._Mypair._Myval2._Myfirst">
+      {this,view(cached)}
+    </DisplayString>
+    <DisplayString>CLK_LexAfterModuleImport</DisplayString>
+  </Type>
+  <Type Name="clang::Parser">
+    <DisplayString>[{Tok}] {PP,na}</DisplayString>
+  </Type>
+  <Type Name="clang::LambdaIntroducer::LambdaCapture">
+    <DisplayString Condition="Kind == LCK_This">this</DisplayString>
+    <DisplayString Condition="Kind == LCK_StarThis">*this</DisplayString>
+    <DisplayString Condition="Kind == LCK_ByCopy">{Id}</DisplayString>
+    <DisplayString Condition="Kind == LCK_ByRef">&amp;{Id}</DisplayString>
+    <DisplayString>No visualizer for {Kind}</DisplayString>
+  </Type>
+  <Type Name="clang::LambdaIntroducer">
+    <DisplayString IncludeView="default" Condition="Default==LCD_None"></DisplayString>
+    <DisplayString IncludeView="default" Condition="Default==LCD_ByCopy">=,</DisplayString>
+    <DisplayString IncludeView="default" Condition="Default==LCD_ByRef">&amp;,</DisplayString>
+    <DisplayString IncludeView="capture0" Condition="Captures.Size==0"></DisplayString>
+    <DisplayString IncludeView="capture0">{(LambdaCapture *)(Captures.BeginX),na}{this,view(capture1)na}</DisplayString>
+    <DisplayString IncludeView="capture1" Condition="Captures.Size==1"></DisplayString>
+    <DisplayString IncludeView="capture1">,{(LambdaCapture *)(Captures.BeginX)+1,na}{this,view(capture2)na}</DisplayString>
+    <DisplayString IncludeView="capture2" Condition="Captures.Size==2"></DisplayString>
+    <DisplayString IncludeView="capture2">,{(LambdaCapture *)(Captures.BeginX)+2,na}{this,view(capture3)na}</DisplayString>
+    <DisplayString IncludeView="capture3" Condition="Captures.Size==3"></DisplayString>
+    <DisplayString IncludeView="capture3">,...</DisplayString>
+    <DisplayString>[{this,view(default)na}{this,view(capture0)na}]</DisplayString>
+  </Type>
   <Type Name="clang::DeclSpec">
     <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_typename || TypeSpecType == TST_typeofType || TypeSpecType == TST_underlyingType || TypeSpecType == TST_atomic">
       , [{TypeRep}]
@@ -817,6 +862,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{(DeclaratorDecl*)this,nand}</DisplayString>
     <Expand>
       <ExpandedItem>(DeclaratorDecl*)this,nd</ExpandedItem>
+      <Item Name="Init">Init</Item>
       <Item Name="VarDeclBits">VarDeclBits</Item>
     </Expand>
   </Type>

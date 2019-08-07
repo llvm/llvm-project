@@ -11,7 +11,12 @@ config.test_source_root = os.path.dirname(__file__)
 # Setup default compiler flags used with -fsanitize=memory option.
 clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
-clang_hwasan_cflags = ["-fsanitize=hwaddress"] + clang_cflags
+clang_hwasan_cflags = ["-fsanitize=hwaddress", "-mllvm", "-hwasan-globals"] + clang_cflags
+if config.target_arch == 'x86_64':
+  # This does basically the same thing as tagged-globals on aarch64. Because
+  # the x86_64 implementation is for testing purposes only there is no
+  # equivalent target feature implemented on x86_64.
+  clang_hwasan_cflags += ["-mcmodel=large"]
 clang_hwasan_cxxflags = config.cxx_mode_flags + clang_hwasan_cflags
 
 def build_invocation(compile_flags):

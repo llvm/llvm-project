@@ -686,7 +686,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
   // legalized. In order to allow further legalization of the inst, we create
   // a new instruction and erase the existing one.
 
-  unsigned ValReg = MI.getOperand(0).getReg();
+  Register ValReg = MI.getOperand(0).getReg();
   const LLT ValTy = MRI.getType(ValReg);
 
   if (!ValTy.isVector() || !ValTy.getElementType().isPointer() ||

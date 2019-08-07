@@ -8,7 +8,9 @@
 // RUN: cp %S/Inputs/header2.h %t.dir/Inputs/header2.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/regular_cdb.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 //
 // Make sure we didn't produce any dependency files!
@@ -20,9 +22,13 @@
 // as it might fail if the results for `regular_cdb.cpp` are reported before
 // `regular_cdb2.cpp`.
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
+// RUN:   FileCheck --check-prefix=CHECK1 %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN:   FileCheck --check-prefix=CHECK2 %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 
 #include "header.h"

@@ -1846,11 +1846,9 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
       InputExpr->EvaluateAsRValue(EVResult, getContext(), true);
 
       llvm::APSInt IntResult;
-      if (!EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
-                                           getContext()))
-        llvm_unreachable("Invalid immediate constant!");
-
-      return llvm::ConstantInt::get(getLLVMContext(), IntResult);
+      if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                          getContext()))
+        return llvm::ConstantInt::get(getLLVMContext(), IntResult);
     }
 
     Expr::EvalResult Result;

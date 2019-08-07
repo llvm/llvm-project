@@ -1,0 +1,46 @@
+## Check we can produce 32/64 bits outputs with a different endianness.
+
+# RUN: yaml2obj %s --docnum=1 | llvm-readobj --file-headers - | FileCheck %s --check-prefix LE64
+# RUN: yaml2obj %s --docnum=2 | llvm-readobj --file-headers - | FileCheck %s --check-prefix BE64
+# RUN: yaml2obj %s --docnum=3 | llvm-readobj --file-headers - | FileCheck %s --check-prefix LE32
+# RUN: yaml2obj %s --docnum=4 | llvm-readobj --file-headers - | FileCheck %s --check-prefix BE32
+
+# LE64:      Class: 64-bit (0x2)
+# LE64-NEXT: DataEncoding: LittleEndian (0x1)
+
+# BE64:      Class: 64-bit (0x2)
+# BE64-NEXT: DataEncoding: BigEndian (0x2)
+
+# LE32:      Class: 32-bit (0x1)
+# LE32-NEXT: DataEncoding: LittleEndian (0x1)
+
+# BE32:      Class: 32-bit (0x1)
+# BE32-NEXT: DataEncoding: BigEndian (0x2)
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS64
+  Data: ELFDATA2MSB
+  Type: ET_EXEC
+  Machine: EM_PPC64
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_386
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS32
+  Data: ELFDATA2MSB
+  Type: ET_EXEC
+  Machine: EM_PPC
