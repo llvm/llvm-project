@@ -1142,7 +1142,6 @@ private:
   void DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx);
 public:
   
-  //----------------------------------------------------------------------
   // Install any files through the platform that need be to installed prior to
   // launching or attaching.
   Status Install(ProcessLaunchInfo *launch_info);

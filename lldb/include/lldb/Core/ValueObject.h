@@ -365,7 +365,6 @@ public:
   virtual lldb::ValueType GetValueType() const = 0;
 
   // Subclasses can implement the functions below.
-  //------------------------------------------------------------------
   virtual ConstString GetMangledTypeName();
 
   virtual ConstString GetTypeName();

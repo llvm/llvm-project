@@ -152,7 +152,6 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  //----------------------------------------------------------------------
   ConstString GetDemangledName(lldb::LanguageType language,
                                const SymbolContext *sc = nullptr) const;
 
@@ -160,7 +159,6 @@ public:
   ///
   /// \return
   ///     A const reference to the display demangled name string object.
-  //----------------------------------------------------------------------
   ConstString GetDisplayDemangledName(lldb::LanguageType language,
                                       const SymbolContext *sc = nullptr) const;
 

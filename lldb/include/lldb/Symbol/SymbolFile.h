@@ -243,15 +243,12 @@ public:
   virtual void GetLoadedModules(lldb::LanguageType language,
                                 FileSpecList &modules) {}
 
-  //------------------------------------------------------------------
   // Some symbol files might know if we should always check for inline
   // source file and line entries. This virtual function lets
   // SymbolFile subclasses control that, but a default implementation
   // is supplied.
-  //------------------------------------------------------------------
   virtual bool ForceInlineSourceFileCheck();
 
-  //------------------------------------------------------------------
   /// Retrieve all the AST data blobs from the SymbolFile.
   ///
   /// Symbol files can store AST data for any language that wants to
@@ -269,7 +266,6 @@ public:
   /// @return
   ///   Zero or more buffers, each of which contain the raw data
   ///   of an AST in the requested language.
-  //------------------------------------------------------------------
   virtual std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language);
 

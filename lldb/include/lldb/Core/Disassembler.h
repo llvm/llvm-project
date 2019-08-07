@@ -270,7 +270,6 @@ public:
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
 
-  //------------------------------------------------------------------
   /// Get the index of the next branch instruction.
   ///
   /// Given a list of instructions, find the next branch instruction
@@ -292,7 +291,6 @@ public:
   ///     The instruction index of the first branch that is at or past
   ///     \a start. Returns UINT32_MAX if no matching branches are 
   ///     found.
-  //------------------------------------------------------------------
   uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
                                            Target &target,
                                            bool ignore_calls) const;

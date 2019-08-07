@@ -22,9 +22,7 @@ namespace lldb_private {
 
 class Materializer {
 public:
-  //----------------------------------------------------------------------
   // See TypeSystem.h for how to add subclasses to this.
-  //----------------------------------------------------------------------
   enum LLVMCastKind { eKindBasic, eKindSwiftREPL };
 
   LLVMCastKind getKind() const { return m_kind; }

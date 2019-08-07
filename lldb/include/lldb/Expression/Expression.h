@@ -68,15 +68,12 @@ public:
   /// default, return eLanguageTypeUnknown.
   virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
 
-  //------------------------------------------------------------------
   /// Return the object that the parser should use when registering external
   /// values (assuming it doesn't use a ClangExpressionDeclMap).  May be
   /// NULL if there is a ClangExpressionDeclMap or everything should be
   /// self-contained.
-  //------------------------------------------------------------------
   virtual Materializer *GetMaterializer() { return NULL; }
 
-  //------------------------------------------------------------------
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
   virtual ResultType DesiredResultType() { return eResultTypeAny; }

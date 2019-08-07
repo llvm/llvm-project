@@ -104,9 +104,7 @@ public:
     LanguageFlags() = delete;
   };
 
-  //------------------------------------------------------------------
   // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const TypeSystem *ts) {
     return ts->getKind() == TypeSystem::eKindSwift;
   }
@@ -114,9 +112,7 @@ public:
   /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
-  //------------------------------------------------------------------
   // Constructors and destructors
-  //------------------------------------------------------------------
   SwiftASTContext(std::string description, llvm::Triple triple,
                   Target *target = nullptr);
 
@@ -124,9 +120,7 @@ public:
 
   ~SwiftASTContext();
 
-  //------------------------------------------------------------------
   // PluginInterface functions
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -390,16 +384,12 @@ public:
 
   DWARFASTParser *GetDWARFParser() override;
 
-  //----------------------------------------------------------------------
   // CompilerDecl functions
-  //----------------------------------------------------------------------
   ConstString DeclGetName(void *opaque_decl) override {
     return ConstString("");
   }
 
-  //----------------------------------------------------------------------
   // CompilerDeclContext functions
-  //----------------------------------------------------------------------
 
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
@@ -425,9 +415,7 @@ public:
     return false;
   }
 
-  //----------------------------------------------------------------------
   // Tests
-  //----------------------------------------------------------------------
 
   bool IsArrayType(void *type, CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override;
@@ -517,21 +505,15 @@ public:
   bool IsObjCObjectPointerType(const CompilerType &type,
                                CompilerType *class_type_ptr);
 
-  //----------------------------------------------------------------------
   // Type Completion
-  //----------------------------------------------------------------------
 
   bool GetCompleteType(void *type) override;
 
-  //----------------------------------------------------------------------
   // AST related queries
-  //----------------------------------------------------------------------
 
   uint32_t GetPointerByteSize() override;
 
-  //----------------------------------------------------------------------
   // Accessors
-  //----------------------------------------------------------------------
 
   ConstString GetTypeName(void *type) override;
 
@@ -546,9 +528,7 @@ public:
 
   lldb::TypeClass GetTypeClass(void *type) override;
 
-  //----------------------------------------------------------------------
   // Creating related types
-  //----------------------------------------------------------------------
 
   CompilerType GetArrayElementType(void *type, uint64_t *stride) override;
 
@@ -573,9 +553,7 @@ public:
 
   CompilerType GetPointerType(void *type) override;
 
-  //----------------------------------------------------------------------
   // Exploring the type
-  //----------------------------------------------------------------------
 
   llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -643,9 +621,7 @@ public:
                                   bool *has_payload, CompilerType *payload,
                                   bool *is_indirect);
 
-  //----------------------------------------------------------------------
   // Dumping types
-  //----------------------------------------------------------------------
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
   LLVM_DUMP_METHOD virtual void
@@ -676,9 +652,7 @@ public:
   void DumpTypeDescription(void *type, Stream *s, bool print_help_if_available,
                            bool print_extensions_if_available);
 
-  //----------------------------------------------------------------------
   // TODO: These methods appear unused. Should they be removed?
-  //----------------------------------------------------------------------
 
   bool IsRuntimeGeneratedType(void *type) override;
 
@@ -686,9 +660,7 @@ public:
                    const DataExtractor &data, lldb::offset_t data_offset,
                    size_t data_byte_size) override;
 
-  //----------------------------------------------------------------------
   // TODO: Determine if these methods should move to ClangASTContext.
-  //----------------------------------------------------------------------
 
   bool IsPointerOrReferenceType(void *type,
                                 CompilerType *pointee_type) override;

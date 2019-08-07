@@ -88,7 +88,6 @@ public:
   /// FileSpec is filled in.
   static FileSpec GetGlobalTempDir();
 
-  //---------------------------------------------------------------------------
   /// If the triple does not specify the vendor, os, and environment parts, we
   /// "augment" these using information from the host and return the resulting
   /// ArchSpec object.

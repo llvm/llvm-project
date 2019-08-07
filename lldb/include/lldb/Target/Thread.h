@@ -940,7 +940,6 @@ public:
   /// \return
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
-  //------------------------------------------------------------------
   lldb::ValueObjectSP GetReturnValueObject(bool *is_swift_error_value);
 
   /// Gets the outer-most expression variable from the completed plans

@@ -67,7 +67,6 @@ public:
     return m_materializer_up.get();
   }
 
-  //------------------------------------------------------------------
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
   const char *Text() override { return m_transformed_text.c_str(); }

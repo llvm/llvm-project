@@ -85,7 +85,6 @@ public:
   /// \return
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
-  //------------------------------------------------------------------
   virtual unsigned Parse(DiagnosticManager &diagnostic_manager,
                          uint32_t first_line = 0,
                          uint32_t last_line = UINT32_MAX) = 0;

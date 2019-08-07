@@ -107,9 +107,7 @@ public:
                                  uint32_t limit_start_line = 0,
                                  uint32_t limit_end_line = 0);
 
-  //------------------------------------------------------------------
   /// Accessor for the mutex that guards LLVM::getGlobalContext()
-  //------------------------------------------------------------------
   static std::recursive_mutex &GetLLVMGlobalContextMutex();
 
   lldb::addr_t FindSymbol(ConstString name, bool &missing_weak);

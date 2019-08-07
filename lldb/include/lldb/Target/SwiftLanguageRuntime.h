@@ -73,9 +73,7 @@ public:
     return ClassID == &ID || LanguageRuntime::isA(ClassID);
   }
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -97,9 +95,7 @@ public:
   static lldb::BreakpointPreconditionSP
   GetBreakpointExceptionPrecondition(lldb::LanguageType language, bool throw_bp);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -379,9 +375,7 @@ public:
   bool IsABIStable();
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
-  //------------------------------------------------------------------
   SwiftLanguageRuntime(Process *process);
 
   Value::ValueType GetValueType(Value::ValueType static_value_type,

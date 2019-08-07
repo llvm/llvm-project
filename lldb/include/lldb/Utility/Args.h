@@ -255,7 +255,6 @@ public:
   int GetOptionValuesAsStrings(const char *option,
                                std::vector<std::string> &values);
 
-  //------------------------------------------------------------------
   // Clear the arguments.
   //
   // For re-setting or blanking out the list of arguments.

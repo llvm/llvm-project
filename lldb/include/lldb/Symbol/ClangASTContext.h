@@ -194,9 +194,7 @@ public:
     return GetTranslationUnitDecl(getASTContext());
   }
 
-  //----------------------------------------------------------------------
   // Copy "src" into this ClangASTContext.
-  //----------------------------------------------------------------------
   CompilerType CopyType(const CompilerType &src);
 
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
@@ -707,7 +705,6 @@ public:
 
   static CompilerType RemoveFastQualifiers(const CompilerType &type);
 
-  //----------------------------------------------------------------------
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 

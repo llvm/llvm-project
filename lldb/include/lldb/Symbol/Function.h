@@ -353,7 +353,6 @@ public:
   ///
   /// \param[in] can_throw
   ///     Pass in true if this is a function know to throw
-  //------------------------------------------------------------------
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
            Type *func_type, const AddressRange &range,

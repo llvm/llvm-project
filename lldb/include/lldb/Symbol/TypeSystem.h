@@ -192,7 +192,6 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
-  //----------------------------------------------------------------------
   // Check if the current module or target that was used to create this
   // type system is compatible with the TypeSystem plug-in.
   //
@@ -200,10 +199,8 @@ public:
   // and the version of the runtime information in a module is out of date
   // with this type system. For such cases, languages can check and return
   // an error.
-  //----------------------------------------------------------------------
   virtual Status IsCompatible();
 
-  //----------------------------------------------------------------------
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -372,7 +369,6 @@ public:
   virtual lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
   virtual CompilerType GetGenericArgumentType(void *type, size_t idx);
 
-  //----------------------------------------------------------------------
   // Dumping types
 
 #ifndef NDEBUG
