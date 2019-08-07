@@ -6151,7 +6151,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
     // Note thay the bound type may be in a different AST context.
-    return bound_type.GetBitSize(nullptr).getValueOr(0);
+    return bound_type.GetBitSize(exe_scope);
   }
 
   // lldb ValueObject subsystem expects functions to be a single

@@ -401,9 +401,6 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     static ConstString g__storage("_storage");
     static ConstString g_rawValue("rawValue");
 
-    static ConstString g___bufferPointer("__bufferPointer");
-    static ConstString g__nativeBuffer("_nativeBuffer");
-
     ValueObjectSP buffer_sp(valobj.GetNonSyntheticValue()->GetChildAtNamePath(
         {g_buffer, g__storage, g_rawValue}));
 
