@@ -2860,7 +2860,8 @@ public:
     if (colors == SAVEDCOLOR)
       colorcode = llvm::sys::Process::OutputBold(bg);
     else
-      colorcode = llvm::sys::Process::OutputColor(colors, bold, bg);
+      colorcode =
+          llvm::sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
     if (colorcode) {
       size_t len = strlen(colorcode);
       write(colorcode, len);
