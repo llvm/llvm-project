@@ -20,7 +20,6 @@
 #define LLVM_C_TRANSFORMS_TAPIR_H
 
 #include "llvm-c/Types.h"
-#include "llvm/Transforms/Tapir/TapirTypes.h"
 
 #ifdef __cplusplus
 extern "C" {
