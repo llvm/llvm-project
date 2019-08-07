@@ -551,9 +551,10 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-llvm::Optional<uint64_t> CompilerType::GetByteStride() const {
+llvm::Optional<uint64_t>
+CompilerType::GetByteStride(ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    return m_type_system->GetByteStride(m_type);
+    return m_type_system->GetByteStride(m_type, exe_scope);
   return {};
 }
 

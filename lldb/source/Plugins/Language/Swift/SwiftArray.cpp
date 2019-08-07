@@ -84,11 +84,10 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
   ProcessSP process_sp(m_exe_ctx_ref.GetProcessSP());
   if (!process_sp)
     return;
-  auto element_stride = m_elem_type.GetByteStride();
   auto opt_size = elem_type.GetByteSize(process_sp.get());
   if (opt_size)
     m_element_size = *opt_size;
-  auto opt_stride = elem_type.GetByteStride();
+  auto opt_stride = elem_type.GetByteStride(process_sp.get());
   if (opt_stride)
     m_element_stride = *opt_stride;
   size_t ptr_size = process_sp->GetAddressByteSize();
@@ -215,7 +214,7 @@ SwiftArraySliceBufferHandler::SwiftArraySliceBufferHandler(
   if (opt_size)
     m_element_size = *opt_size;
 
-  auto opt_stride = elem_type.GetByteStride();
+  auto opt_stride = elem_type.GetByteStride(process_sp.get());
   if (opt_stride)
     m_element_stride = *opt_stride;
 

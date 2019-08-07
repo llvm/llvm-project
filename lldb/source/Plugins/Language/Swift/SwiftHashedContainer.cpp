@@ -432,14 +432,14 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (!m_process)
     return;
 
-  auto key_stride = key_type.GetByteStride();
+  auto key_stride = key_type.GetByteStride(m_process);
   if (key_stride) {
     m_key_stride = *key_stride;
     m_key_stride_padded = *key_stride;
   }
 
   if (value_type) {
-    auto value_type_stride = value_type.GetByteStride();
+    auto value_type_stride = value_type.GetByteStride(m_process);
     m_value_stride = value_type_stride ? *value_type_stride : 0;
     if (SwiftASTContext *swift_ast =
             llvm::dyn_cast_or_null<SwiftASTContext>(key_type.GetTypeSystem())) {
@@ -455,7 +455,7 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       m_element_type = swift_ast->CreateTupleType(tuple_elements);
       auto *swift_type = reinterpret_cast<::swift::TypeBase *>(
           m_element_type.GetCanonicalType().GetOpaqueQualType());
-      auto element_stride = m_element_type.GetByteStride();
+      auto element_stride = m_element_type.GetByteStride(m_process);
       if (element_stride) {
         m_key_stride_padded = *element_stride - m_value_stride;
       }
