@@ -40,6 +40,10 @@ public:
     return rnglistsSection;
   }
 
+  const llvm::DWARFSection &getStrOffsetsSection() const override {
+    return strOffsetsSection;
+  }
+
   const llvm::DWARFSection &getLineSection() const override {
     return lineSection;
   }
@@ -79,6 +83,7 @@ private:
   LLDDWARFSection infoSection;
   LLDDWARFSection rangesSection;
   LLDDWARFSection rnglistsSection;
+  LLDDWARFSection strOffsetsSection;
   LLDDWARFSection lineSection;
   LLDDWARFSection addrSection;
   StringRef abbrevSection;

@@ -1,7 +1,12 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
-# RUN: ld.lld --gdb-index %t1.o -o %t
+# RUN: ld.lld --gdb-index %t1.o -o %t 2>&1 | FileCheck --check-prefix=LLD %s
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
+
+# FIXME: Remove this once lld correctly returns non-zero on errors like this
+# There's no other behavior to test hidden behind this error - lld only parses
+# the CU for the address ranges, it doesn't need to decode any strings.
+# LLD-NOT: error:
 
 ## The code contains DWARF v5 sections .debug_rnglists and .debug_addr.
 ## Check we are able to build the correct address

@@ -15,7 +15,7 @@ other symbolication programs:
 
 The simplest form of symbolication is to load an executable:
 
-::
+.. code-block:: text
 
    (lldb) target create --no-dependents --arch x86_64 /tmp/a.out
 
@@ -30,7 +30,7 @@ Using the ``image list`` command will show us a list of all shared libraries
 associated with the current target. As expected, we currently only have a
 single binary:
 
-::
+.. code-block:: text
 
    (lldb) image list
    [  0] 73431214-6B76-3489-9557-5075F03E36B4 0x0000000100000000 /tmp/a.out
@@ -38,7 +38,7 @@ single binary:
 
 Now we can look up an address:
 
-::
+.. code-block:: text
 
    (lldb) image lookup --address 0x100000aa3
          Address: a.out[0x0000000100000aa3] (a.out.__TEXT.__text + 131)
@@ -51,7 +51,7 @@ address refers to a virtual address as defined by each object file.
 If we didn't use the ``--no-dependents`` option with ``target create``, we
 would have loaded all dependent shared libraries:
 
-::
+.. code-block:: text
 
    (lldb) image list
    [  0] 73431214-6B76-3489-9557-5075F03E36B4 0x0000000100000000 /tmp/a.out
@@ -64,7 +64,7 @@ would have loaded all dependent shared libraries:
 Now if we do a lookup using a file address, this can result in multiple matches
 since most shared libraries have a virtual address space that starts at zero:
 
-::
+.. code-block:: text
 
    (lldb) image lookup -a 0x1000
          Address: a.out[0x0000000000001000] (a.out.__PAGEZERO + 4096)
@@ -82,7 +82,7 @@ since most shared libraries have a virtual address space that starts at zero:
 To avoid getting multiple file address matches, you can specify the name of the
 shared library to limit the search:
 
-::
+.. code-block:: text
 
    (lldb) image lookup -a 0x1000 a.out
          Address: a.out[0x0000000000001000] (a.out.__PAGEZERO + 4096)
@@ -101,7 +101,7 @@ load --slide`` command allows us to set the load address for all sections.
 Below is an example of sliding all sections in a.out by adding 0x123000 to each
 section's file address:
 
-::
+.. code-block:: text
 
    (lldb) target create --no-dependents --arch x86_64 /tmp/a.out
    (lldb) target modules load --file a.out --slide 0x123000
@@ -116,7 +116,7 @@ segment with ``target modules load section address``, you don't need to do any
 calculations. To specify the load addresses of sections we can specify one or
 more section name + address pairs in the ``target modules load`` command:
 
-::
+.. code-block:: text
 
    (lldb) target create --no-dependents --arch x86_64 /tmp/a.out
    (lldb) target modules load --file a.out __TEXT 0x100123000
@@ -126,7 +126,7 @@ defined where sections have been loaded in our target, any lookups we do will
 now use load addresses so we don't have to do any math on the addresses in the
 crashlog backtraces, we can just use the raw addresses:
 
-::
+.. code-block:: text
 
    (lldb) image lookup --address 0x100123aa3
          Address: a.out[0x0000000100000aa3] (a.out.__TEXT.__text + 131)
@@ -142,7 +142,7 @@ one of the shared libraries, then add more modules to the target using the
 
 Lets say we have a Darwin crash log that contains the following images:
 
-::
+.. code-block:: text
 
    Binary Images:
       0x100000000 -    0x100000ff7 <A866975B-CA1E-3649-98D0-6C5FAA444ECF> /tmp/a.out
@@ -153,7 +153,7 @@ Lets say we have a Darwin crash log that contains the following images:
 First we create the target using the main executable and then add any extra
 shared libraries we want:
 
-::
+.. code-block:: text
 
    (lldb) target create --no-dependents --arch x86_64 /tmp/a.out
    (lldb) target modules add /usr/lib/system/libsystem_c.dylib
@@ -165,7 +165,7 @@ If you have debug symbols in standalone files, such as dSYM files on macOS,
 you can specify their paths using the --symfile option for the ``target create``
 (recent LLDB releases only) and ``target modules add`` commands:
 
-::
+.. code-block:: text
 
    (lldb) target create --no-dependents --arch x86_64 /tmp/a.out --symfile /tmp/a.out.dSYM
    (lldb) target modules add /usr/lib/system/libsystem_c.dylib --symfile /build/server/a/libsystem_c.dylib.dSYM
@@ -176,7 +176,7 @@ Then we set the load addresses for each __TEXT section (note the colors of the
 load addresses above and below) using the first address from the Binary Images
 section for each image:
 
-::
+.. code-block:: text
 
    (lldb) target modules load --file a.out 0x100000000
    (lldb) target modules load --file libsystem_c.dylib 0x7fff83f32000
@@ -189,7 +189,7 @@ using ``image lookup`` with the raw backtrace addresses.
 
 Given the following raw backtrace:
 
-::
+.. code-block:: text
 
    Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
    0   libsystem_kernel.dylib        	0x00007fff8a1e6d46 __kill + 10
@@ -200,7 +200,7 @@ Given the following raw backtrace:
 
 We can now symbolicate the load addresses:
 
-::
+.. code-block:: text
 
    (lldb) image lookup -a 0x00007fff8a1e6d46
    (lldb) image lookup -a 0x00007fff84597df0
@@ -215,8 +215,7 @@ If you add the --verbose flag to the ``image lookup --address`` command, you
 can get verbose information which can often include the locations of some of
 your local variables:
 
-::
-
+.. code-block:: text
 
    (lldb) image lookup --address 0x100123aa3 --verbose
          Address: a.out[0x0000000100000aa3] (a.out.__TEXT.__text + 110)
@@ -225,15 +224,16 @@ your local variables:
    CompileUnit: id = {0x00000000}, file = "/tmp/main.c", language = "ISO C:1999"
       Function: id = {0x0000004f}, name = "main", range = [0x0000000100000bc0-0x0000000100000dc9)
       FuncType: id = {0x0000004f}, decl = main.c:9, compiler_type = "int (int, const char **, const char **, const char **)"
-         Blocks: id = {0x0000004f}, range = [0x100000bc0-0x100000dc9)
-                  id = {0x000000ae}, range = [0x100000bf2-0x100000dc4)
+        Blocks: id = {0x0000004f}, range = [0x100000bc0-0x100000dc9)
+                id = {0x000000ae}, range = [0x100000bf2-0x100000dc4)
       LineEntry: [0x0000000100000bf2-0x0000000100000bfa): /tmp/main.c:13:23
-         Symbol: id = {0x00000004}, range = [0x0000000100000bc0-0x0000000100000dc9), name="main"
+        Symbol: id = {0x00000004}, range = [0x0000000100000bc0-0x0000000100000dc9), name="main"
       Variable: id = {0x000000bf}, name = "path", type= "char [1024]", location = DW_OP_fbreg(-1072), decl = main.c:28
       Variable: id = {0x00000072}, name = "argc", type= "int", location = r13, decl = main.c:8
       Variable: id = {0x00000081}, name = "argv", type= "const char **", location = r12, decl = main.c:8
       Variable: id = {0x00000090}, name = "envp", type= "const char **", location = r15, decl = main.c:8
       Variable: id = {0x0000009f}, name = "aapl", type= "const char **", location = rbx, decl = main.c:8
+
 
 The interesting part is the variables that are listed. The variables are the
 parameters and local variables that are in scope for the address that was
@@ -251,7 +251,7 @@ All of the commands above can be done through the python script bridge. The
 code below will recreate the target and add the three shared libraries that we
 added in the darwin crash log example above:
 
-::
+.. code-block:: python
 
    triple = "x86_64-apple-macosx"
    platform_name = None
@@ -316,7 +316,7 @@ target in order to symbolicate.
 Subclasses of this class will want to override the
 locate_module_and_debug_symbols method:
 
-::
+.. code-block:: text
 
    class CustomImage(lldb.utils.symbolication.Image):
       def locate_module_and_debug_symbols (self):
@@ -343,7 +343,7 @@ This module installs a new ``crashlog`` command into the lldb command
 interpreter so that you can use it to parse and symbolicate macOS crash
 logs:
 
-::
+.. code-block:: text
 
    (lldb) command script import lldb.macosx.crashlog
    "crashlog" and "save_crashlog" command installed, use the "--help" option for detailed help
@@ -353,7 +353,7 @@ logs:
 The command that is installed has built in help that shows the options that can
 be used when symbolicating:
 
-::
+.. code-block:: text
 
    (lldb) crashlog --help
    Usage: crashlog [options]  [FILE ...]
@@ -370,7 +370,7 @@ as if it were stopped at the locations described in the crash log and functions
 can  be disassembled and lookups can be performed using the addresses found in
 the crash log.
 
-::
+.. code-block:: text
 
    Options:
    -h, --help            show this help message and exit
