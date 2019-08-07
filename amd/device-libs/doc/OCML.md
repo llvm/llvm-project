@@ -14,54 +14,57 @@
 ## Introduction
 ### What Is OCML
 
-OCML is an LLVM-IR bitcode library designed to relieve language compiler and
-runtime implementers of the burden of implementing efficient and accurate
-mathematical functions.  It is essentially a “libm” in intermediate
-representation with a fixed, simple API that can be linked in to supply the
-implementations of most standard low-level mathematical functions provided by the language.
+OCML is an LLVM-IR bitcode library designed to relieve language compiler and runtime implementers of the burden of implementing efficient and accurate mathematical functions.  It is essentially a “libm” in intermediate representation with a fixed, simple API that can be linked in to supply the implementations of most standard low-level mathematical functions provided by the language.
 
 ## Using OCML
 ### Standard Usage
 
 OCML is expected to be used in a standard LLVM compilation flow as follows:
   * Compile source modules to LLVM-IR bitcode (clang)
-  * Link program bitcode, “wrapper” bitcode, OCML bitcode, and OCML control functions (llvm-link)
+  * Link program bitcode, “wrapper” bitcode, OCML bitcode, other device library bitcode, and OCML control functions (llvm-link)
   * Generic optimizations (opt)
   * Code generation (llc)
 
-Here, “wrapper” bitcode denotes a thin library responsible for mapping
-mangled built-in function calls as produced by clang to the OCML API.  An example in C might look like
+Here, “wrapper” bitcode denotes a thin library responsible for mapping language specific mangled built-in function calls as produced by clang to the OCML API.  An example for handling "sqrt" might look like
 
-    inline float sqrt(float x) { return __ocml_sqrt_f32(x); }
+    extern "C" __attribute__((const)) float __ocml_sqrt_f32(float);
+    float sqrt(float x) { return __ocml_sqrt_f32(x); }
 
-The next section describes OCML controls and how to make them.
+The next section describes OCML controls and how to use them.
 
 ### Controls
 
-OCML supports a number of controls that are provided by linking in libraries defining
-specifically named constant variables.  These variables are known at optimization time
-and result in specific paths taken with no control flow overhead.  These variables all
-have the form (in C)
+OCML (and a few other device libraries) requires a number of control variables definitions to be provided.  These definitions may be provided by linking in specific OCLC libraries which define one specifically named variable or via other runtime specific means.  These variables are known at optimization time and optimizations will result in specific paths taken with no control flow overhead.  These variables all have the form (in C)
 
-__constant const int __oclc_<name> = N;
+`__constant const int __oclc_<name> = N;`
 
 
-The currently supported controls are
-  * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced
-  * `unsafe_math_opt` - lower accuracy results may be produced with higher performance
-  * `daz_opt` - subnormal values consumed and produced may be flushed to zero
-  * `correctly_rounded_sqrt32` - float square root must be correctly rounded
-  * `wavefrontsize64` - the wave front size is 64
+The currently supported control `<name>`s and values `N` are
+  * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced.  `N` may be 1 (on/true/enabled), or 0 (off/false/disabled).
+  * `unsafe_math_opt` - lower accuracy results may be produced with higher performance.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).
+  * `daz_opt` - subnormal values consumed and produced may be flushed to zero.  `N`may be 1 (on/true/enabled) or 0 (off/false/disabled).
+  * `correctly_rounded_sqrt32` - float square root must be correctly rounded.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).
+  * `wavefrontsize64` - the wave front size is 64.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).  Very few current devices support a value of 0.
   * `ISA_version` - an integer representation of the ISA version of the target device
+
+The language runtime can link a specific set of OCLC control libraries to properly configure OCML and other device libraries which also use the controls.  If linking OCLC libraries is used to define the control variables, then the runtime must link in:
+
+- Exactly one of `oclc_correctly_rounded_sqrt_on.amdgcn.bc` or `oclc_correctly_rounded_sqrt_off.amdgcn.bc` depending on the kernel's requirements
+- Exactly one of `oclc_daz_opt_on.amdgcn.bc` or `oclc_daz_opt_off.amdgcn.bc` depending on the kernel's requirements
+- Exactly one of `oclc_finite_only_on.amdgcn.bc` or `oclc_finite_only_off.amdgcn.bc` depending on the kernel's requirements
+- Exactly one of `oclc_unsafe_math_on.amdgcn.bc` or `oclc_unsafe_math_off.amdgcn.bc` depending on the kernel's requirements
+- Exactly one of `oclc_wavefrontsize64_on.amdgcn.bc` or `oclc_wavefrontsize64_off.amdgcn.bc` depending on the kernel's requirements
+- Exactly one of `oclc_isa_version_XYZ.amdgcn.bc` where XYZ is the suffix of the `gfxXYZ` target name the kernel is being compiled for.
+
+If these rules are not follows, link time or execution time errors may result.
 
 ### Versioning
 
-OCML ships as a single LLVM-IR bitcode file named
+OCML ships within the larger release as a single LLVM-IR bitcode file named
 
-    ocml-{LLVM rev}-{OCLM rev}.bc
+    ocml.amdgcn.bc
 
-where `{LLVM rev}` is the version of LLVM used to create the file, of the
-form X.Y, e.g. 3.8, and `{OCML rev}` is the OCML library version of the form X.Y, currently 0.9.
+Bitcode linking errors are possible if the library is not in-sync with the compiler shipped with the same release.
 
 ### Tables
 
@@ -74,21 +77,18 @@ OCML functions follow a simple naming convention:
 
     __ocml_{function}_{type suffix}
 
-where {function} is generally the familiar libm name of the function, and {type suffix} indicates the type of the floating point arguments or results, and is one of
+where `{function}` is generally the familiar libm name of the function, and `{type suffix}` indicates the type of the floating point arguments or results, and is one of
   * `f16` – 16 bit floating point (half precision)
   * `f32` – 32 bit floating point (single precision)
   * `f64` – 64 bit floating point (double precision)
 
 For example, `__ocml_sqrt_f32` is the name of the OCML single precision square root function.
 
-OCML does not currently support higher than double precision due to the lack of support on most devices. 
+OCML does not currently support higher precision than double precision due to the lack of hardware support for such precisions. 
 
 ### Supported functions
 
-The following table contains a list of {function} currently supported by OCML, a brief
-description of each, and the maximum relative error in ULPs for each floating point
-type.  A “c” in the last 3 columns indicates that the function is required to
-be correctly rounded.
+The following table contains a list of {function} currently supported by OCML, a brief description of each, and the maximum relative error in ULPs for each floating point type.  A “c” in the last 3 columns indicates that the function is required to be correctly rounded.
 
 | **{function}** | **Description** | **f32 max err** | **f64 max err** | **f16 max err** |
 | --- | --- | --- | --- | --- |
@@ -158,7 +158,7 @@ be correctly rounded.
 | modf | extract integer and fraction | 0 | 0 | 0 |
 | mul_{rm} | multiply with specific rounding mode | c | c | c |
 | nan | produce a NaN with a specific payload | 0 | 0 | 0 |
-| ncdf | standard normal cumulateive distribution function | 16 | 16 | 4 |
+| ncdf | standard normal cumulative distribution function | 16 | 16 | 4 |
 | ncdfinv | inverse standard normal cumulative distribution function | 16 | 16 | 4 |
 | nearbyint | round to nearest integer (see also rint) | 0 | 0 | 0 |
 | nextafter | next closest value above or below | 0 | 0 | 0 |
@@ -198,3 +198,6 @@ For the functions supporting specific roundings, the rounding mode {rm} can be o
   * `rtp` – round towards positive infinity
   * `rtn` – round towards negative infinity
   * `rtz` – round towards zero
+
+Note that these functions are not currently available.
+

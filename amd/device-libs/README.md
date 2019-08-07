@@ -66,9 +66,6 @@ Testing requires the amdhsacod utility from ROCm Runtime.
 To install artifacts:
     make install
 
-To run offline tests:
-    make test
-
 To create packages for the library:
    make package
 
@@ -87,8 +84,9 @@ runtime might use is as follows:
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_daz_opt_off.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_finite_only_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_isa_version_803.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_unsafe_math_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_wavefrontsize64_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_isa_version_900.amdgcn.bc \
         test.cl -o test.so
 
 ### USING FROM CMAKE
@@ -101,15 +99,3 @@ the bitcode libraries. The package defines a variable
 `AMD_DEVICE_LIBS_TARGETS` containing a list of the exported CMake
 targets.
 
-## TESTING
-
-Currently all tests are offline:
- * OpenCL source is compiled to LLVM bitcode
- * Test bitcode is linked to library bitcode with llvm-link
- * Clang OpenCL compiler is run on resulting bitcode, producing code object.
- * Resulting code object is passed to llvm-objdump and amdhsacod -test.
-
-The output of tests (which includes AMDGPU disassembly) can be displayed by running ctest -VV in build directory.
-
-Tests for OpenCL conformance kernels can be enabled by specifying -DOCL_CONFORMANCE_HOME=<path> to CMake, for example,
-  cmake ... -DOCL_CONFORMANCE_HOME=/srv/hsa/drivers/opencl/tests/extra/hsa/ocl/conformance/1.2
