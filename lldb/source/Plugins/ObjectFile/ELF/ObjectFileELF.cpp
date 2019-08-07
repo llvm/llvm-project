@@ -29,10 +29,10 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
-
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/JamCRC.h"
@@ -80,41 +80,6 @@ const elf_word LLDB_NT_NETBSD_PROCINFO = 1;
 const elf_word LLDB_NT_GNU_ABI_OS_LINUX = 0x00;
 const elf_word LLDB_NT_GNU_ABI_OS_HURD = 0x01;
 const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
-
-// LLDB_NT_OWNER_CORE and LLDB_NT_OWNER_LINUX note contants
-#define NT_PRSTATUS 1
-#define NT_PRFPREG 2
-#define NT_PRPSINFO 3
-#define NT_TASKSTRUCT 4
-#define NT_AUXV 6
-#define NT_SIGINFO 0x53494749
-#define NT_FILE 0x46494c45
-#define NT_PRXFPREG 0x46e62b7f
-#define NT_PPC_VMX 0x100
-#define NT_PPC_SPE 0x101
-#define NT_PPC_VSX 0x102
-#define NT_386_TLS 0x200
-#define NT_386_IOPERM 0x201
-#define NT_X86_XSTATE 0x202
-#define NT_S390_HIGH_GPRS 0x300
-#define NT_S390_TIMER 0x301
-#define NT_S390_TODCMP 0x302
-#define NT_S390_TODPREG 0x303
-#define NT_S390_CTRS 0x304
-#define NT_S390_PREFIX 0x305
-#define NT_S390_LAST_BREAK 0x306
-#define NT_S390_SYSTEM_CALL 0x307
-#define NT_S390_TDB 0x308
-#define NT_S390_VXRS_LOW 0x309
-#define NT_S390_VXRS_HIGH 0x30a
-#define NT_ARM_VFP 0x400
-#define NT_ARM_TLS 0x401
-#define NT_ARM_HW_BREAK 0x402
-#define NT_ARM_HW_WATCH 0x403
-#define NT_ARM_SYSTEM_CALL 0x404
-#define NT_METAG_CBUF 0x500
-#define NT_METAG_RPIPE 0x501
-#define NT_METAG_TLS 0x502
 
 //===----------------------------------------------------------------------===//
 /// \class ELFRelocation
