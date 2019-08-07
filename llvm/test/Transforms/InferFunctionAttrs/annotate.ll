@@ -241,7 +241,7 @@ declare i64 @atol(i8*)
 ; CHECK: declare i64 @atoll(i8* nocapture) [[G1]]
 declare i64 @atoll(i8*)
 
-; CHECK-DARWIN: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
+; CHECK-DARWIN-NOT: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 ; CHECK-LINUX: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 ; CHECK-UNKNOWN-NOT: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 ; CHECK-NVPTX-NOT: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
