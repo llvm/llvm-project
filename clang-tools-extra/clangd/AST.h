@@ -33,7 +33,7 @@ bool isImplementationDetail(const Decl *D);
 ///
 /// The returned location is usually the spelling location where the name of the
 /// decl occurs in the code.
-SourceLocation findNameLoc(const clang::Decl *D);
+SourceLocation findName(const clang::Decl *D);
 
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
