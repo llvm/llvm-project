@@ -261,9 +261,9 @@ public:
   llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
   llvm::Optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
-
   /// Return the stride of the type in bits.
-  llvm::Optional<uint64_t> GetByteStride() const;
+  llvm::Optional<uint64_t>
+  GetByteStride(ExecutionContextScope *exe_scope) const;
 
   uint64_t GetAlignedBitSize() const;
 

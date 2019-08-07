@@ -6180,7 +6180,8 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
 }
 
 llvm::Optional<uint64_t>
-SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
+SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
+                               ExecutionContextScope *exe_scope) {
   if (!type)
     return {};
   const swift::irgen::FixedTypeInfo *fixed_type_info =

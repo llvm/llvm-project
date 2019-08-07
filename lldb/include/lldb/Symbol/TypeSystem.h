@@ -287,7 +287,8 @@ public:
              ExecutionContextScope *exe_scope) = 0;
 
   virtual llvm::Optional<uint64_t>
-  GetByteStride(lldb::opaque_compiler_type_t type) = 0;
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) = 0;
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
