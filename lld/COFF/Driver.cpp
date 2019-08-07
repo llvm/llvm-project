@@ -62,16 +62,16 @@ LinkerDriver *driver;
 bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &diag) {
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorOS = &diag;
-  errorHandler().colorDiagnostics = diag.has_colors();
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now"
       " (use /errorlimit:0 to see all errors)";
   errorHandler().exitEarly = canExitEarly;
+  enableColors(diag.has_colors());
+
   config = make<Configuration>();
-
   symtab = make<SymbolTable>();
-
   driver = make<LinkerDriver>();
+
   driver->link(args);
 
   // Call exit() if we can to avoid calling destructors.
