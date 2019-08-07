@@ -139,6 +139,8 @@ struct templ<int>
 { 
 };
 
+void parmvardecl_attr(struct A __attribute__((address_space(19)))*);
+
 )cpp");
 
   const FunctionDecl *Func = getFunctionNode(AST.get(), "func");
@@ -220,5 +222,16 @@ FullComment
                     R"cpp(
 TemplateArgument
 )cpp");
+
+  Func = getFunctionNode(AST.get(), "parmvardecl_attr");
+
+  const auto *Parm = Func->getParamDecl(0);
+  const auto TL = Parm->getTypeSourceInfo()->getTypeLoc();
+  ASSERT_TRUE(TL.getType()->isPointerType());
+
+  const auto ATL = TL.getNextTypeLoc().getAs<AttributedTypeLoc>();
+  const auto *AS = cast<AddressSpaceAttr>(ATL.getAttr());
+  EXPECT_EQ(toTargetAddressSpace(static_cast<LangAS>(AS->getAddressSpace())),
+            19u);
 }
 } // namespace clang

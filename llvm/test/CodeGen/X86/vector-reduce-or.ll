@@ -182,14 +182,14 @@ define i64 @test_v16i64(<16 x i64> %a0) {
 define i32 @test_v2i32(<2 x i32> %a0) {
 ; SSE-LABEL: test_v2i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; SSE-NEXT:    por %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -397,7 +397,8 @@ define i32 @test_v32i32(<32 x i32> %a0) {
 define i16 @test_v2i16(<2 x i16> %a0) {
 ; SSE-LABEL: test_v2i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    por %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -405,7 +406,7 @@ define i16 @test_v2i16(<2 x i16> %a0) {
 ;
 ; AVX-LABEL: test_v2i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -417,9 +418,10 @@ define i16 @test_v2i16(<2 x i16> %a0) {
 define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE-LABEL: test_v4i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -427,9 +429,9 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ;
 ; AVX-LABEL: test_v4i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -684,7 +686,8 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 define i8 @test_v2i8(<2 x i8> %a0) {
 ; SSE2-LABEL: test_v2i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrlw $8, %xmm1
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -692,7 +695,8 @@ define i8 @test_v2i8(<2 x i8> %a0) {
 ;
 ; SSE41-LABEL: test_v2i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    psrlw $8, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
 ; SSE41-NEXT:    pextrb $0, %xmm1, %eax
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -700,7 +704,7 @@ define i8 @test_v2i8(<2 x i8> %a0) {
 ;
 ; AVX-LABEL: test_v2i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -712,9 +716,11 @@ define i8 @test_v2i8(<2 x i8> %a0) {
 define i8 @test_v4i8(<4 x i8> %a0) {
 ; SSE2-LABEL: test_v4i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    psrlw $8, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -722,9 +728,11 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ;
 ; SSE41-LABEL: test_v4i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    psrld $16, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    psrlw $8, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -732,9 +740,9 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ;
 ; AVX-LABEL: test_v4i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -746,12 +754,13 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 define i8 @test_v8i8(<8 x i8> %a0) {
 ; SSE2-LABEL: test_v8i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    psrld $16, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
+; SSE2-NEXT:    psrlw $8, %xmm1
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -759,12 +768,13 @@ define i8 @test_v8i8(<8 x i8> %a0) {
 ;
 ; SSE41-LABEL: test_v8i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    psrld $16, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    psrld $16, %xmm1
+; SSE41-NEXT:    psrlw $8, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
 ; SSE41-NEXT:    pextrb $0, %xmm1, %eax
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -772,11 +782,11 @@ define i8 @test_v8i8(<8 x i8> %a0) {
 ;
 ; AVX-LABEL: test_v8i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax

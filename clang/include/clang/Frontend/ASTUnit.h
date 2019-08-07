@@ -390,7 +390,7 @@ private:
   /// just about any usage.
   /// Becomes a noop in release mode; only useful for debug mode checking.
   class ConcurrencyState {
-    void *Mutex; // a llvm::sys::MutexImpl in debug;
+    void *Mutex; // a std::recursive_mutex in debug;
 
   public:
     ConcurrencyState();

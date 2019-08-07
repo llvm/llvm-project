@@ -74,8 +74,7 @@ define <4 x i16*> @AGEP4(<4 x i16*> %param, <4 x i32> %off) nounwind {
 define <4 x i8*> @AGEP5(<4 x i8*> %param, <4 x i8> %off) nounwind {
 ; CHECK-LABEL: AGEP5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $24, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrad $24, %xmm1, %xmm1
+; CHECK-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %A = getelementptr i8, <4 x i8*> %param, <4 x i8> %off

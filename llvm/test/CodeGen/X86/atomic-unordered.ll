@@ -460,7 +460,7 @@ define void @vec_store(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O0-LABEL: vec_store:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-O0-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-O0-NEXT:    vpextrd $1, %xmm0, %ecx
 ; CHECK-O0-NEXT:    movl %eax, (%rdi)
 ; CHECK-O0-NEXT:    movl %ecx, 4(%rdi)
 ; CHECK-O0-NEXT:    retq
@@ -468,7 +468,7 @@ define void @vec_store(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O3-LABEL: vec_store:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    vmovd %xmm0, %eax
-; CHECK-O3-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-O3-NEXT:    vpextrd $1, %xmm0, %ecx
 ; CHECK-O3-NEXT:    movl %eax, (%rdi)
 ; CHECK-O3-NEXT:    movl %ecx, 4(%rdi)
 ; CHECK-O3-NEXT:    retq
@@ -485,7 +485,7 @@ define void @vec_store_unaligned(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O0-LABEL: vec_store_unaligned:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-O0-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-O0-NEXT:    vpextrd $1, %xmm0, %ecx
 ; CHECK-O0-NEXT:    movl %eax, (%rdi)
 ; CHECK-O0-NEXT:    movl %ecx, 4(%rdi)
 ; CHECK-O0-NEXT:    retq
@@ -493,7 +493,7 @@ define void @vec_store_unaligned(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O3-LABEL: vec_store_unaligned:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    vmovd %xmm0, %eax
-; CHECK-O3-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-O3-NEXT:    vpextrd $1, %xmm0, %ecx
 ; CHECK-O3-NEXT:    movl %eax, (%rdi)
 ; CHECK-O3-NEXT:    movl %ecx, 4(%rdi)
 ; CHECK-O3-NEXT:    retq

@@ -7,7 +7,6 @@
 define <2 x double> @a(<2 x i32> %x) nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -19,7 +18,6 @@ define <2 x i32> @b(<2 x double> %x) nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    retl
 entry:
   %y = fptosi <2 x double> %x to <2 x i32>

@@ -90,6 +90,30 @@ TEST_F(CompletionStringTest, Function) {
   EXPECT_EQ(formatDocumentation(*CCS, "Foo's comment"), "Foo's comment");
 }
 
+TEST_F(CompletionStringTest, FunctionWithDefaultParams) {
+  // return_type foo(p1, p2 = 0, p3 = 0)
+  Builder.AddChunk(CodeCompletionString::CK_Comma);
+  Builder.AddTypedTextChunk("p3 = 0");
+  auto *DefaultParam2 = Builder.TakeString();
+
+  Builder.AddChunk(CodeCompletionString::CK_Comma);
+  Builder.AddTypedTextChunk("p2 = 0");
+  Builder.AddOptionalChunk(DefaultParam2);
+  auto *DefaultParam1 = Builder.TakeString();
+
+  Builder.AddResultTypeChunk("return_type");
+  Builder.AddTypedTextChunk("Foo");
+  Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+  Builder.AddPlaceholderChunk("p1");
+  Builder.AddOptionalChunk(DefaultParam1);
+  Builder.AddChunk(CodeCompletionString::CK_RightParen);
+
+  auto *CCS = Builder.TakeString();
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "(p1, p2 = 0, p3 = 0)");
+  EXPECT_EQ(Snippet, "(${1:p1})");
+}
+
 TEST_F(CompletionStringTest, EscapeSnippet) {
   Builder.AddTypedTextChunk("Foo");
   Builder.AddChunk(CodeCompletionString::CK_LeftParen);

@@ -652,3 +652,23 @@ Sections:
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
+
+## Check the case when e_shstrndx == SHN_XINDEX, but null section's sh_link contains
+## the index of a section header string table that is larger than the number of the sections.
+
+# RUN: yaml2obj --docnum=31 %s -o %t31
+# RUN: not llvm-objcopy %t31 2>&1 | FileCheck %s -DFILE=%t31 --check-prefix=INVALID-SHSTRTAB-INDEX
+
+# INVALID-SHSTRTAB-INDEX: error: section header string table index 255 does not exist
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+## SHN_XINDEX == 0xffff.
+  SHStrNdx: 0xffff
+Sections:
+  - Type: SHT_NULL
+    Link: 0xff

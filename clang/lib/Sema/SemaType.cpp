@@ -5978,9 +5978,9 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     }
 
     ASTContext &Ctx = S.Context;
-    auto *ASAttr = ::new (Ctx) AddressSpaceAttr(
-        Attr.getRange(), Ctx, Attr.getAttributeSpellingListIndex(),
-        static_cast<unsigned>(ASIdx));
+    auto *ASAttr = ::new (Ctx)
+        AddressSpaceAttr(Attr.getRange(), Ctx, static_cast<unsigned>(ASIdx),
+                         Attr.getAttributeSpellingListIndex());
 
     // If the expression is not value dependent (not templated), then we can
     // apply the address space qualifiers just to the equivalent type.

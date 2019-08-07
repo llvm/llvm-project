@@ -3,7 +3,7 @@
 # Test that the pre/post increment save of a flating point register is correct.
 
 # CHECK:        ExceptionData {
-# CHECK-NEXT:      FunctionLength: 136
+# CHECK-NEXT:      FunctionLength: 144
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
 # CHECK-NEXT:      EpiloguePacked: No
@@ -23,7 +23,7 @@
 # CHECK-NEXT:      ]
 # CHECK-NEXT:      EpilogueScopes [
 # CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 25
+# CHECK-NEXT:          StartOffset: 26
 # CHECK-NEXT:          EpilogueStartIndex: 19
 # CHECK-NEXT:          Opcodes [
 # CHECK-NEXT:            0xc80e              ; ldp x19, x20, [sp, #112]

@@ -30,18 +30,10 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind {
 ; X86_AVX256-LABEL: insert_subvector_512:
 ; X86_AVX256:       # %bb.0:
-; X86_AVX256-NEXT:    pushl %ebp
-; X86_AVX256-NEXT:    movl %esp, %ebp
-; X86_AVX256-NEXT:    andl $-8, %esp
-; X86_AVX256-NEXT:    subl $8, %esp
-; X86_AVX256-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; X86_AVX256-NEXT:    vmovlps %xmm2, (%esp)
 ; X86_AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; X86_AVX256-NEXT:    vpinsrd $0, (%esp), %xmm2, %xmm2
+; X86_AVX256-NEXT:    vpinsrd $0, {{[0-9]+}}(%esp), %xmm2, %xmm2
 ; X86_AVX256-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm2, %xmm2
 ; X86_AVX256-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; X86_AVX256-NEXT:    movl %ebp, %esp
-; X86_AVX256-NEXT:    popl %ebp
 ; X86_AVX256-NEXT:    retl
 ;
 ; X64_AVX256-LABEL: insert_subvector_512:

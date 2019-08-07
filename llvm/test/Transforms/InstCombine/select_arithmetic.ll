@@ -94,10 +94,7 @@ define float @test5(i1 zeroext %arg, float %div) {
 
 define float @fmul_nnan_nsz(i1 %cond, float %val) {
 ; CHECK-LABEL: @fmul_nnan_nsz(
-; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], float [[VAL:%.*]], float 0.000000e+00
-; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], float -0.000000e+00, float [[VAL]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan nsz float [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret float [[MUL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %lhs = select i1 %cond, float %val, float +0.0
   %rhs = select i1 %cond, float -0.0, float %val
@@ -107,10 +104,7 @@ define float @fmul_nnan_nsz(i1 %cond, float %val) {
 
 define <2 x float> @fadd_nsz(<2 x i1> %cond, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_nsz(
-; CHECK-NEXT:    [[LHS:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[VAL:%.*]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[RHS:%.*]] = select <2 x i1> [[COND]], <2 x float> zeroinitializer, <2 x float> [[VAL]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nsz <2 x float> [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret <2 x float> [[ADD]]
+; CHECK-NEXT:    ret <2 x float> [[VAL:%.*]]
 ;
   %lhs = select <2 x i1> %cond, <2 x float> %val, <2 x float> <float +0.0, float +0.0>
   %rhs = select <2 x i1> %cond, <2 x float> <float +0.0, float +0.0>, <2 x float> %val
@@ -120,9 +114,8 @@ define <2 x float> @fadd_nsz(<2 x i1> %cond, <2 x float> %val) {
 
 define double @fsub_nnan(i1 %cond, double %val, double %val2) {
 ; CHECK-LABEL: @fsub_nnan(
-; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], double [[VAL:%.*]], double [[VAL2:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], double [[VAL]], double 7.000000e+00
-; CHECK-NEXT:    [[ADD:%.*]] = fsub nnan double [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd nnan double [[VAL2:%.*]], -7.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = select nnan i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[ADD]]
 ;
   %lhs = select i1 %cond, double %val, double %val2
@@ -131,6 +124,7 @@ define double @fsub_nnan(i1 %cond, double %val, double %val2) {
   ret double %add
 }
 
+; TODO combine selects feeding fdiv like we do for fmul, fadd and fsub
 define double @fdiv_nnan_nsz(i1 %cond, double %val, double %val2) {
 ; CHECK-LABEL: @fdiv_nnan_nsz(
 ; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], double [[VAL2:%.*]], double 0.000000e+00

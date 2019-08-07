@@ -757,15 +757,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    errorHandler().colorDiagnostics = true;
+    enableColors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    errorHandler().colorDiagnostics = false;
+    enableColors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      errorHandler().colorDiagnostics = true;
+      enableColors(true);
     else if (s == "never")
-      errorHandler().colorDiagnostics = false;
+      enableColors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }

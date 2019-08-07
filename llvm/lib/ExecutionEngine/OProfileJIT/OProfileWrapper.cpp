@@ -17,11 +17,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
+#include <mutex>
 #include <stddef.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -54,7 +54,7 @@ bool OProfileWrapper::initialize() {
   using namespace llvm;
   using namespace llvm::sys;
 
-  MutexGuard Guard(OProfileInitializationMutex);
+  std::lock_guard<sys::Mutex> Guard(OProfileInitializationMutex);
 
   if (Initialized)
     return OpenAgentFunc != 0;

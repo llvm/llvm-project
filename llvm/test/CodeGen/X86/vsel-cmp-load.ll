@@ -8,12 +8,12 @@
 define <8 x i32> @eq_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: eq_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -28,8 +28,8 @@ define <8 x i32> @eq_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ;
 ; AVX512-LABEL: eq_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX512-NEXT:    vptestnmw %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vptestnmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <8 x i8>, <8 x i8>* %p
@@ -41,14 +41,14 @@ define <8 x i32> @eq_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 define <4 x i64> @ne_zero(<4 x i16>* %p, <4 x i64> %x, <4 x i64> %y) {
 ; AVX1-LABEL: ne_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxwq %xmm2, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; AVX1-NEXT:    vpmovsxwq %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -63,8 +63,8 @@ define <4 x i64> @ne_zero(<4 x i16>* %p, <4 x i64> %x, <4 x i64> %y) {
 ;
 ; AVX512-LABEL: ne_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX512-NEXT:    vptestmd %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vptestmw %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <4 x i16>, <4 x i16>* %p
@@ -111,10 +111,10 @@ define <16 x i16> @sgt_zero(<16 x i8>* %p, <16 x i16> %x, <16 x i16> %y) {
 define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: slt_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm2
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -127,8 +127,8 @@ define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ;
 ; AVX512-LABEL: slt_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbw (%rdi), %xmm2
-; AVX512-NEXT:    vpmovw2m %xmm2, %k1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vpmovb2m %xmm2, %k1
 ; AVX512-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <8 x i8>, <8 x i8>* %p
@@ -140,12 +140,12 @@ define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 define <4 x double> @eq_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x double> %y) {
 ; AVX1-LABEL: eq_zero_fp_select:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbq %xmm2, %xmm3
+; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbq %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -160,8 +160,8 @@ define <4 x double> @eq_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doubl
 ;
 ; AVX512-LABEL: eq_zero_fp_select:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; AVX512-NEXT:    vptestnmd %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vptestnmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <4 x i8>, <4 x i8>* %p
@@ -173,14 +173,14 @@ define <4 x double> @eq_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doubl
 define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> %y) {
 ; AVX1-LABEL: ne_zero_fp_select:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -195,8 +195,8 @@ define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> 
 ;
 ; AVX512-LABEL: ne_zero_fp_select:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX512-NEXT:    vptestmw %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vptestmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <8 x i8>, <8 x i8>* %p
@@ -208,12 +208,12 @@ define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> 
 define <4 x double> @sgt_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x double> %y) {
 ; AVX1-LABEL: sgt_zero_fp_select:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbd (%rdi), %xmm2
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbq %xmm2, %xmm3
+; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbq %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -228,9 +228,9 @@ define <4 x double> @sgt_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doub
 ;
 ; AVX512-LABEL: sgt_zero_fp_select:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbd (%rdi), %xmm2
+; AVX512-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpcmpgtd %xmm3, %xmm2, %k1
+; AVX512-NEXT:    vpcmpgtb %xmm3, %xmm2, %k1
 ; AVX512-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %load = load <4 x i8>, <4 x i8>* %p

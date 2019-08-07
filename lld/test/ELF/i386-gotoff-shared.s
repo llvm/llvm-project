@@ -1,8 +1,8 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
-// RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readelf -S %t.so | FileCheck %s
-// RUN: llvm-objdump -d %t.so | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DISASM %s
 
 bar:
         movl    bar@GOTOFF(%ebx), %eax
@@ -12,4 +12,4 @@ bar:
 
 // 0x1000 - 0x3000 (.got.plt) = -8192
 
-// DISASM:  1000: {{.*}} movl    -8192(%ebx), %eax
+// DISASM:  1000:       movl    -8192(%ebx), %eax

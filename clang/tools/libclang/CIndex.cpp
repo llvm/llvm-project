@@ -45,7 +45,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Signals.h"
@@ -53,6 +52,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 #if LLVM_ENABLE_THREADS != 0 && defined(__APPLE__)
 #define USE_DARWIN_THREADS
@@ -8943,10 +8943,10 @@ Logger &cxindex::Logger::operator<<(const llvm::format_object_base &Fmt) {
   return *this;
 }
 
-static llvm::ManagedStatic<llvm::sys::Mutex> LoggingMutex;
+static llvm::ManagedStatic<std::mutex> LoggingMutex;
 
 cxindex::Logger::~Logger() {
-  llvm::sys::ScopedLock L(*LoggingMutex);
+  std::lock_guard<std::mutex> L(*LoggingMutex);
 
   static llvm::TimeRecord sBeginTR = llvm::TimeRecord::getCurrentTime();
 

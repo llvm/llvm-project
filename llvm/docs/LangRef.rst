@@ -3952,6 +3952,17 @@ PowerPC:
 - ``ws``: A 32 or 64-bit floating-point register, from the full VSX register
   set.
 
+RISC-V:
+
+- ``A``: An address operand (using a general-purpose register, without an
+  offset).
+- ``I``: A 12-bit signed integer immediate operand.
+- ``J``: A zero integer immediate operand.
+- ``K``: A 5-bit unsigned integer immediate operand.
+- ``f``: A 32- or 64-bit floating-point register (requires F or D extension).
+- ``r``: A 32- or 64-bit general-purpose register (depending on the platform
+  ``XLEN``).
+
 Sparc:
 
 - ``I``: An immediate 13-bit signed integer.

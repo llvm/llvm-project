@@ -265,6 +265,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::SDIV, VT, Expand);
     setOperationAction(ISD::UREM, VT, Expand);
     setOperationAction(ISD::SREM, VT, Expand);
+    setOperationAction(ISD::CTPOP, VT, Expand);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);

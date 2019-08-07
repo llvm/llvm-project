@@ -254,16 +254,16 @@ define <2 x i32> @shl2_other(<2 x i32> %A) nounwind {
 ; X32-LABEL: shl2_other:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movdqa %xmm0, %xmm1
-; X32-NEXT:    psllq $2, %xmm1
-; X32-NEXT:    psllq $9, %xmm0
+; X32-NEXT:    pslld $2, %xmm1
+; X32-NEXT:    pslld $9, %xmm0
 ; X32-NEXT:    pxor %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shl2_other:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psllq $2, %xmm1
-; X64-NEXT:    psllq $9, %xmm0
+; X64-NEXT:    pslld $2, %xmm1
+; X64-NEXT:    pslld $9, %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -276,19 +276,17 @@ entry:
 define <2 x i32> @shr2_other(<2 x i32> %A) nounwind {
 ; X32-LABEL: shr2_other:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    movdqa %xmm0, %xmm1
-; X32-NEXT:    psrlq $8, %xmm1
-; X32-NEXT:    psrlq $1, %xmm0
+; X32-NEXT:    psrld $8, %xmm1
+; X32-NEXT:    psrld $1, %xmm0
 ; X32-NEXT:    pxor %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shr2_other:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psrlq $8, %xmm1
-; X64-NEXT:    psrlq $1, %xmm0
+; X64-NEXT:    psrld $8, %xmm1
+; X64-NEXT:    psrld $1, %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:

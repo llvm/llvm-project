@@ -32,6 +32,21 @@ void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   }
 }
 
+void appendOptionalChunk(const CodeCompletionString &CCS, std::string *Out) {
+  for (const CodeCompletionString::Chunk &C : CCS) {
+    switch (C.Kind) {
+    case CodeCompletionString::CK_Optional:
+      assert(C.Optional &&
+             "Expected the optional code completion string to be non-null.");
+      appendOptionalChunk(*C.Optional, Out);
+      break;
+    default:
+      *Out += C.Text;
+      break;
+    }
+  }
+}
+
 bool looksLikeDocComment(llvm::StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
@@ -138,6 +153,9 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       *Snippet += Chunk.Text;
       break;
     case CodeCompletionString::CK_Optional:
+      assert(Chunk.Optional);      
+      // No need to create placeholders for default arguments in Snippet.
+      appendOptionalChunk(*Chunk.Optional, Signature);
       break;
     case CodeCompletionString::CK_Placeholder:
       *Signature += Chunk.Text;

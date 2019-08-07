@@ -49,7 +49,7 @@ static cl::opt<bool> SwitchInstProfUpdateWrapperStrict(
     "switch-inst-prof-update-wrapper-strict", cl::Hidden,
     cl::desc("Assert that prof branch_weights metadata is valid when creating "
              "an instance of SwitchInstProfUpdateWrapper"),
-    cl::init(false));
+    cl::init(true));
 
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
