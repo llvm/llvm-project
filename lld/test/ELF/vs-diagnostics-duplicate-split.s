@@ -3,10 +3,10 @@
 // RUN: not ld.lld --vs-diagnostics --shared %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 
 // CHECK:      duplicate.s(15): error: duplicate symbol: foo
-// CHECK-NEXT: >>> defined at duplicate.s:15 (/tmp/duplicate.s:15)
+// CHECK-NEXT: >>> defined at duplicate.s:15 (/tmp{{/|\\}}duplicate.s:15)
 // CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})
 // CHECK:      duplicate.s(15): error: duplicate symbol: foo
-// CHECK-NEXT: >>> defined at duplicate.s:15 (/tmp/duplicate.s:15)
+// CHECK-NEXT: >>> defined at duplicate.s:15 (/tmp{{/|\\}}duplicate.s:15)
 // CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})
 
 .file 1 "/tmp" "duplicate.s"
