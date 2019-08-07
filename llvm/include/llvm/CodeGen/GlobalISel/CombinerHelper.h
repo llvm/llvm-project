@@ -27,6 +27,7 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
+class GISelKnownBits;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -38,9 +39,11 @@ class CombinerHelper {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
+  GISelKnownBits *KB;
 
 public:
-  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B);
+  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
+                 GISelKnownBits *KB = nullptr);
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
@@ -66,8 +69,8 @@ public:
   bool tryCombineBr(MachineInstr &MI);
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
-  /// 
-  bool tryCombineMemCpyFamily(MachineInstr &MI);
+  /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
+  bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

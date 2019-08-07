@@ -63,6 +63,7 @@ void CheckCommentInfo(CommentInfo &Expected, CommentInfo &Actual) {
 void CheckReference(Reference &Expected, Reference &Actual) {
   EXPECT_EQ(Expected.Name, Actual.Name);
   EXPECT_EQ(Expected.RefType, Actual.RefType);
+  EXPECT_EQ(Expected.Path, Actual.Path);
 }
 
 void CheckTypeInfo(TypeInfo *Expected, TypeInfo *Actual) {
@@ -178,6 +179,13 @@ void CheckRecordInfo(RecordInfo *Expected, RecordInfo *Actual) {
   ASSERT_EQ(Expected->ChildEnums.size(), Actual->ChildEnums.size());
   for (size_t Idx = 0; Idx < Actual->ChildEnums.size(); ++Idx)
     CheckEnumInfo(&Expected->ChildEnums[Idx], &Actual->ChildEnums[Idx]);
+}
+
+void CheckIndex(Index &Expected, Index &Actual) {
+  CheckReference(Expected, Actual);
+  ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
+  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
+    CheckIndex(Expected.Children[Idx], Actual.Children[Idx]);
 }
 
 } // namespace doc

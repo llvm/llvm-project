@@ -1247,7 +1247,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    packuswb %xmm4, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm1
-; SSE2-NEXT:    packuswb %xmm1, %xmm1
+; SSE2-NEXT:    packuswb %xmm0, %xmm1
 ; SSE2-NEXT:    movq %xmm1, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -1310,7 +1310,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm4, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm0, %xmm1
-; SSSE3-NEXT:    packuswb %xmm1, %xmm1
+; SSSE3-NEXT:    packuswb %xmm0, %xmm1
 ; SSSE3-NEXT:    movq %xmm1, (%rdi)
 ; SSSE3-NEXT:    retq
 ;
@@ -1364,7 +1364,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm9
 ; SSE41-NEXT:    packusdw %xmm5, %xmm9
 ; SSE41-NEXT:    packusdw %xmm9, %xmm1
-; SSE41-NEXT:    packuswb %xmm1, %xmm1
+; SSE41-NEXT:    packuswb %xmm0, %xmm1
 ; SSE41-NEXT:    movq %xmm1, (%rdi)
 ; SSE41-NEXT:    retq
 ;
@@ -1998,7 +1998,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
 ; SSE2-NEXT:    pandn %xmm2, %xmm5
 ; SSE2-NEXT:    por %xmm0, %xmm5
 ; SSE2-NEXT:    packuswb %xmm6, %xmm5
-; SSE2-NEXT:    packuswb %xmm5, %xmm5
+; SSE2-NEXT:    packuswb %xmm0, %xmm5
 ; SSE2-NEXT:    movq %xmm5, (%rdi)
 ; SSE2-NEXT:    retq
 ;

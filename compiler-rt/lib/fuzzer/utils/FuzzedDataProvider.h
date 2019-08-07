@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// This a temporary copy of compiler-rt/include/fuzzer/FuzzedDataProvider.hpp.
+// TODO(mmoroz@chromium.org): delete this copy.
 // A single header library providing an utility class to break up an array of
 // bytes. Whenever run on the same input, provides the same output, as long as
 // its methods are called in the same order, with the same arguments.
@@ -26,7 +28,7 @@
 #include <vector>
 
 class FuzzedDataProvider {
-public:
+ public:
   // |data| is an array of length |size| that the FuzzedDataProvider wraps to
   // provide more granular access. |data| must outlive the FuzzedDataProvider.
   FuzzedDataProvider(const uint8_t *data, size_t size)
@@ -186,7 +188,7 @@ public:
   // Reports the remaining bytes available for fuzzed input.
   size_t remaining_bytes() { return remaining_bytes_; }
 
-private:
+ private:
   FuzzedDataProvider(const FuzzedDataProvider &) = delete;
   FuzzedDataProvider &operator=(const FuzzedDataProvider &) = delete;
 

@@ -14,8 +14,7 @@ define <8 x i8> @test_pavgusb(x86_mmx %a.coerce, x86_mmx %b.coerce) nounwind rea
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pavgusb %mm1, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast x86_mmx %a.coerce to <8 x i8>
@@ -52,8 +51,7 @@ define <2 x i32> @test_pf2id(<2 x float> %a) nounwind readnone {
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    pf2id %mm0, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x float> %a to x86_mmx
@@ -169,8 +167,7 @@ define <2 x i32> @test_pfcmpeq(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X64-NEXT:    movdq2q %xmm0, %mm1
 ; X64-NEXT:    pfcmpeq %mm0, %mm1
 ; X64-NEXT:    movq %mm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x float> %a to x86_mmx
@@ -209,8 +206,7 @@ define <2 x i32> @test_pfcmpge(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X64-NEXT:    movdq2q %xmm0, %mm1
 ; X64-NEXT:    pfcmpge %mm0, %mm1
 ; X64-NEXT:    movq %mm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x float> %a to x86_mmx
@@ -249,8 +245,7 @@ define <2 x i32> @test_pfcmpgt(<2 x float> %a, <2 x float> %b) nounwind readnone
 ; X64-NEXT:    movdq2q %xmm0, %mm1
 ; X64-NEXT:    pfcmpgt %mm0, %mm1
 ; X64-NEXT:    movq %mm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x float> %a to x86_mmx
@@ -685,8 +680,7 @@ define <4 x i16> @test_pmulhrw(x86_mmx %a.coerce, x86_mmx %b.coerce) nounwind re
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pmulhrw %mm1, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast x86_mmx %a.coerce to <4 x i16>
@@ -723,8 +717,7 @@ define <2 x i32> @test_pf2iw(<2 x float> %a) nounwind readnone {
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    pf2iw %mm0, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x float> %a to x86_mmx
@@ -896,12 +889,10 @@ define <2 x i32> @test_pswapdsi(<2 x i32> %a) nounwind readnone {
 ;
 ; X64-LABEL: test_pswapdsi:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    pswapd %mm0, %mm0 # mm0 = mm0[1,0]
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i32> %a to x86_mmx

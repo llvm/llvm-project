@@ -10,7 +10,8 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:    subl $12, %esp
 ; NARROW-NEXT:    movl $0, (%esp)
 ; NARROW-NEXT:    pcmpeqd %xmm0, %xmm0
-; NARROW-NEXT:    movdqa {{.*#+}} xmm1 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; NARROW-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; NARROW-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; NARROW-NEXT:    .p2align 4, 0x90
 ; NARROW-NEXT:  .LBB0_1: # %forcond
 ; NARROW-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -26,13 +27,13 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; NARROW-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; NARROW-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; NARROW-NEXT:    pmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; NARROW-NEXT:    psubw %xmm0, %xmm2
-; NARROW-NEXT:    psllw $8, %xmm2
-; NARROW-NEXT:    psraw $8, %xmm2
-; NARROW-NEXT:    psrlw $2, %xmm2
-; NARROW-NEXT:    pshufb %xmm1, %xmm2
-; NARROW-NEXT:    movq %xmm2, (%edx,%eax,8)
+; NARROW-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; NARROW-NEXT:    psubb %xmm0, %xmm3
+; NARROW-NEXT:    psrlw $2, %xmm3
+; NARROW-NEXT:    pand %xmm1, %xmm3
+; NARROW-NEXT:    pxor %xmm2, %xmm3
+; NARROW-NEXT:    psubb %xmm2, %xmm3
+; NARROW-NEXT:    movq %xmm3, (%edx,%eax,8)
 ; NARROW-NEXT:    incl (%esp)
 ; NARROW-NEXT:    jmp .LBB0_1
 ; NARROW-NEXT:  .LBB0_3: # %afterfor

@@ -345,6 +345,14 @@ private:
                          SmallVector<const OMPDeclareReductionDecl *, 4>>
       FunctionUDRMapTy;
   FunctionUDRMapTy FunctionUDRMap;
+  /// Map from the user-defined mapper declaration to its corresponding
+  /// functions.
+  llvm::DenseMap<const OMPDeclareMapperDecl *, llvm::Function *> UDMMap;
+  /// Map of functions and their local user-defined mappers.
+  using FunctionUDMMapTy =
+      llvm::DenseMap<llvm::Function *,
+                     SmallVector<const OMPDeclareMapperDecl *, 4>>;
+  FunctionUDMMapTy FunctionUDMMap;
   /// Type kmp_critical_name, originally defined as typedef kmp_int32
   /// kmp_critical_name[8];
   llvm::ArrayType *KmpCriticalNameTy;
@@ -738,6 +746,14 @@ private:
                                 llvm::Value *Ctor, llvm::Value *CopyCtor,
                                 llvm::Value *Dtor, SourceLocation Loc);
 
+  /// Emit the array initialization or deletion portion for user-defined mapper
+  /// code generation.
+  void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
+                                  llvm::Value *Handle, llvm::Value *BasePtr,
+                                  llvm::Value *Ptr, llvm::Value *Size,
+                                  llvm::Value *MapType, CharUnits ElementSize,
+                                  llvm::BasicBlock *ExitBB, bool IsInit);
+
   struct TaskResultTy {
     llvm::Value *NewTask = nullptr;
     llvm::Function *TaskEntry = nullptr;
@@ -797,6 +813,10 @@ public:
   /// Get combiner/initializer for the specified user-defined reduction, if any.
   virtual std::pair<llvm::Function *, llvm::Function *>
   getUserDefinedReduction(const OMPDeclareReductionDecl *D);
+
+  /// Emit the function for the user defined mapper construct.
+  void emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
+                             CodeGenFunction *CGF = nullptr);
 
   /// Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,

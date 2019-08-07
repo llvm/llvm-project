@@ -544,7 +544,7 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
 /// SubRegCopy (To class) = COPY CopyReg:SubReg
 /// Dst = COPY SubRegCopy
 static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
-                                  const RegisterBankInfo &RBI, unsigned SrcReg,
+                                  const RegisterBankInfo &RBI, Register SrcReg,
                                   const TargetRegisterClass *From,
                                   const TargetRegisterClass *To,
                                   unsigned SubReg) {
@@ -1284,6 +1284,31 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
     return earlySelectSHL(I, MRI);
   case TargetOpcode::G_LOAD:
     return earlySelectLoad(I, MRI);
+  case TargetOpcode::G_CONSTANT: {
+    bool IsZero = false;
+    if (I.getOperand(1).isCImm())
+      IsZero = I.getOperand(1).getCImm()->getZExtValue() == 0;
+    else if (I.getOperand(1).isImm())
+      IsZero = I.getOperand(1).getImm() == 0;
+
+    if (!IsZero)
+      return false;
+
+    Register DefReg = I.getOperand(0).getReg();
+    LLT Ty = MRI.getType(DefReg);
+    if (Ty != LLT::scalar(64) && Ty != LLT::scalar(32))
+      return false;
+
+    if (Ty == LLT::scalar(64)) {
+      I.getOperand(1).ChangeToRegister(AArch64::XZR, false);
+      RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+    } else {
+      I.getOperand(1).ChangeToRegister(AArch64::WZR, false);
+      RBI.constrainGenericRegister(DefReg, AArch64::GPR32RegClass, MRI);
+    }
+    I.setDesc(TII.get(TargetOpcode::COPY));
+    return true;
+  }
   default:
     return false;
   }

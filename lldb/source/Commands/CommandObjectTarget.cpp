@@ -37,7 +37,6 @@
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
@@ -1471,11 +1470,10 @@ static void DumpModuleSections(CommandInterpreter &interpreter, Stream &strm,
   }
 }
 
-static bool DumpModuleSymbolVendor(Stream &strm, Module *module) {
+static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
   if (module) {
-    SymbolVendor *symbol_vendor = module->GetSymbolVendor(true);
-    if (symbol_vendor) {
-      symbol_vendor->Dump(&strm);
+    if (SymbolFile *symbol_file = module->GetSymbolFile(true)) {
+      symbol_file->Dump(strm);
       return true;
     }
   }
@@ -2330,7 +2328,7 @@ protected:
           for (uint32_t image_idx = 0; image_idx < num_modules; ++image_idx) {
             if (m_interpreter.WasInterrupted())
               break;
-            if (DumpModuleSymbolVendor(
+            if (DumpModuleSymbolFile(
                     result.GetOutputStream(),
                     target_modules.GetModulePointerAtIndexUnlocked(image_idx)))
               num_dumped++;
@@ -2355,7 +2353,7 @@ protected:
                 break;
               Module *module = module_list.GetModulePointerAtIndex(i);
               if (module) {
-                if (DumpModuleSymbolVendor(result.GetOutputStream(), module))
+                if (DumpModuleSymbolFile(result.GetOutputStream(), module))
                   num_dumped++;
               }
             }

@@ -455,7 +455,7 @@ public:
 
   /// Change the register this operand corresponds to.
   ///
-  void setReg(unsigned Reg);
+  void setReg(Register Reg);
 
   void setSubReg(unsigned subReg) {
     assert(isReg() && "Wrong MachineOperand mutator");
@@ -468,13 +468,13 @@ public:
   /// using TargetRegisterInfo to compose the subreg indices if necessary.
   /// Reg must be a virtual register, SubIdx can be 0.
   ///
-  void substVirtReg(unsigned Reg, unsigned SubIdx, const TargetRegisterInfo&);
+  void substVirtReg(Register Reg, unsigned SubIdx, const TargetRegisterInfo&);
 
   /// substPhysReg - Substitute the current register with the physical register
   /// Reg, taking any existing SubReg into account. For instance,
   /// substPhysReg(%eax) will change %reg1024:sub_8bit to %al.
   ///
-  void substPhysReg(unsigned Reg, const TargetRegisterInfo&);
+  void substPhysReg(MCRegister Reg, const TargetRegisterInfo&);
 
   void setIsUse(bool Val = true) { setIsDef(!Val); }
 
@@ -736,7 +736,7 @@ public:
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,
   /// the setReg method should be used.
-  void ChangeToRegister(unsigned Reg, bool isDef, bool isImp = false,
+  void ChangeToRegister(Register Reg, bool isDef, bool isImp = false,
                         bool isKill = false, bool isDead = false,
                         bool isUndef = false, bool isDebug = false);
 
@@ -762,7 +762,7 @@ public:
     return Op;
   }
 
-  static MachineOperand CreateReg(unsigned Reg, bool isDef, bool isImp = false,
+  static MachineOperand CreateReg(Register Reg, bool isDef, bool isImp = false,
                                   bool isKill = false, bool isDead = false,
                                   bool isUndef = false,
                                   bool isEarlyClobber = false,

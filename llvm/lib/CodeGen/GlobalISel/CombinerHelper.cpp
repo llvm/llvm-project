@@ -8,6 +8,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -22,8 +23,11 @@
 using namespace llvm;
 
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
-                               MachineIRBuilder &B)
-    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer) {}
+                               MachineIRBuilder &B, GISelKnownBits *KB)
+    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
+      KB(KB) {
+  (void)this->KB;
+}
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
                                     Register ToReg) const {
@@ -861,7 +865,7 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
   return true;
 }
 
-bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI) {
+bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
   assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
@@ -899,6 +903,9 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+
+  if (MaxLen && KnownLen > MaxLen)
+    return false;
 
   if (ID == Intrinsic::memcpy)
     return optimizeMemcpy(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);

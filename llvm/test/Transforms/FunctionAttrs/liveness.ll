@@ -26,7 +26,7 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 }
 ; TEST 1: Only first block is live.
 
-; CHECK: Function Attrs: nofree nosync nounwind
+; CHECK: Function Attrs: nofree noreturn nosync nounwind
 ; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
@@ -184,8 +184,13 @@ cond.true:                                        ; preds = %entry
   call void @normal_call()
   %call = invoke i32 @foo_noreturn_nounwind() to label %continue
             unwind label %cleanup
-  ; CHECK:      call i32 @foo_noreturn_nounwind()
+  ; CHECK:      call void @normal_call()
+  ; CHECK-NEXT: call i32 @foo_noreturn_nounwind()
   ; CHECK-NEXT: unreachable
+
+  ; We keep the invoke around as other attributes might have references to it.
+  ; CHECK:       cond.true.split:                                  ; No predecessors!
+  ; CHECK-NEXT:      invoke i32 @foo_noreturn_nounwind()
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()

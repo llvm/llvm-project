@@ -56,7 +56,7 @@ Error Decompressor::consumeCompressedZLibHeader(bool Is64Bit,
     return createError("corrupted compressed section header");
 
   DataExtractor Extractor(SectionData, IsLittleEndian, 0);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   if (Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Word)
                                              : sizeof(Elf32_Word)) !=
       ELFCOMPRESS_ZLIB)

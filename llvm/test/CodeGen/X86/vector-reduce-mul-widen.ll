@@ -1745,7 +1745,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    pmullw %xmm0, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
+; SSE2-NEXT:    packuswb %xmm0, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
@@ -1960,7 +1960,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    pmullw %xmm0, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
+; SSE2-NEXT:    packuswb %xmm0, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
@@ -2229,7 +2229,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    pmullw %xmm0, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
+; SSE2-NEXT:    packuswb %xmm0, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
@@ -2601,7 +2601,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    pmullw %xmm1, %xmm2
 ; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
+; SSE2-NEXT:    packuswb %xmm0, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq

@@ -156,6 +156,7 @@ template <> struct MappingTraits<Reference> {
     IO.mapOptional("Name", Ref.Name, SmallString<16>());
     IO.mapOptional("USR", Ref.USR, SymbolID());
     IO.mapOptional("Path", Ref.Path, SmallString<128>());
+    IO.mapOptional("IsInGlobalNamespace", Ref.IsInGlobalNamespace, false);
   }
 };
 
@@ -245,7 +246,6 @@ public:
 
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
-  bool createResources(ClangDocContext CDCtx) override { return true; }
 };
 
 const char *YAMLGenerator::Format = "yaml";

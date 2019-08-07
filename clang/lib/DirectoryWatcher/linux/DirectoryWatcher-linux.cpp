@@ -13,6 +13,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
 #include <atomic>
@@ -24,7 +25,6 @@
 #include <vector>
 
 #include <fcntl.h>
-#include <linux/version.h>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
 #include <unistd.h>
@@ -321,32 +321,37 @@ DirectoryWatcherLinux::DirectoryWatcherLinux(
 
 } // namespace
 
-std::unique_ptr<DirectoryWatcher> clang::DirectoryWatcher::create(
+llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::create(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     bool WaitForInitialSync) {
-  if (Path.empty())
-    return nullptr;
+  assert(!Path.empty() && "Path.empty()");
 
   const int InotifyFD = inotify_init1(IN_CLOEXEC);
   if (InotifyFD == -1)
-    return nullptr;
+    return llvm::make_error<llvm::StringError>(
+        std::string("inotify_init1() error: ") + strerror(errno),
+        llvm::inconvertibleErrorCode());
 
   const int InotifyWD = inotify_add_watch(
       InotifyFD, Path.str().c_str(),
       IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MODIFY |
       IN_MOVED_FROM | IN_MOVE_SELF | IN_MOVED_TO | IN_ONLYDIR | IN_IGNORED
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+#ifdef IN_EXCL_UNLINK
       | IN_EXCL_UNLINK
 #endif
       );
   if (InotifyWD == -1)
-    return nullptr;
+    return llvm::make_error<llvm::StringError>(
+        std::string("inotify_add_watch() error: ") + strerror(errno),
+        llvm::inconvertibleErrorCode());
 
   auto InotifyPollingStopper = SemaphorePipe::create();
 
   if (!InotifyPollingStopper)
-    return nullptr;
+    return llvm::make_error<llvm::StringError>(
+        std::string("SemaphorePipe::create() error: ") + strerror(errno),
+        llvm::inconvertibleErrorCode());
 
   return llvm::make_unique<DirectoryWatcherLinux>(
       Path, Receiver, WaitForInitialSync, InotifyFD, InotifyWD,

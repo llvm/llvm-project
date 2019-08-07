@@ -98,7 +98,7 @@ DWARFFormValue DWARFFormValue::createFromBlockValue(dwarf::Form F,
 }
 
 DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
-                                              uint32_t *OffsetPtr) {
+                                              uint64_t *OffsetPtr) {
   DWARFFormValue FormValue(F);
   FormValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr,
                          U->getFormParams(), U);
@@ -106,7 +106,7 @@ DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
 }
 
 bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
-                               uint32_t *OffsetPtr,
+                               uint64_t *OffsetPtr,
                                const dwarf::FormParams Params) {
   bool Indirect = false;
   do {
@@ -234,7 +234,7 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
 }
 
 bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
-                                  uint32_t *OffsetPtr, dwarf::FormParams FP,
+                                  uint64_t *OffsetPtr, dwarf::FormParams FP,
                                   const DWARFContext *Ctx,
                                   const DWARFUnit *CU) {
   if (!Ctx && CU)
@@ -590,7 +590,7 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
   // FIXME: Add support for DW_FORM_GNU_strp_alt
   if (Form == DW_FORM_GNU_strp_alt || C == nullptr)
     return None;
-  uint32_t Offset = Value.uval;
+  uint64_t Offset = Value.uval;
   if (Form == DW_FORM_line_strp) {
     // .debug_line_str is tracked in the Context.
     if (const char *Str = C->getLineStringExtractor().getCStr(&Offset))
@@ -624,6 +624,7 @@ Optional<uint64_t> DWARFFormValue::getAsAddress() const {
     return SA->Address;
   return None;
 }
+
 Optional<object::SectionedAddress>
 DWARFFormValue::getAsSectionedAddress() const {
   if (!isFormClass(FC_Address))
@@ -716,4 +717,41 @@ Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
   if (!isFormClass(FC_Reference))
     return None;
   return Value.uval;
+}
+
+// The following is temporary code aimed to preserve compatibility with
+// existing code which uses 32-bit offsets.
+// It will be removed when migration to 64-bit offsets is finished.
+
+namespace {
+
+class WrapOffset {
+  uint64_t Offset64;
+  uint32_t *Offset32;
+
+public:
+  WrapOffset(uint32_t *Offset)
+      : Offset64(*Offset), Offset32(Offset) {}
+  ~WrapOffset() { *Offset32 = Offset64; }
+  operator uint64_t *() { return &Offset64; }
+};
+
+}
+
+DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
+                                              uint32_t *OffsetPtr) {
+  return createFromUnit(F, U, WrapOffset(OffsetPtr));
+}
+
+bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
+                               uint32_t *OffsetPtr,
+                               const dwarf::FormParams Params) {
+  return skipValue(Form, DebugInfoData, WrapOffset(OffsetPtr), Params);
+}
+
+bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
+                                  uint32_t *OffsetPtr, dwarf::FormParams FP,
+                                  const DWARFContext *Ctx,
+                                  const DWARFUnit *CU) {
+  return extractValue(Data, WrapOffset(OffsetPtr), FP, Ctx, CU);
 }

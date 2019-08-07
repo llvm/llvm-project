@@ -72,7 +72,7 @@ config.substitutions.append(
     ('%libstdcxx', '-l' + config.sanitizer_cxx_lib.lstrip('lib')))
 
 # Default test suffixes.
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['Linux']:
     config.unsupported = True

@@ -286,7 +286,7 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
                        CCAssignFn AssignFn)
       : ValueHandler(MIRBuilder, MRI, AssignFn) {}
 
-  bool isArgumentHandler() const override { return true; }
+  bool isIncomingArgumentHandler() const override { return true; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {

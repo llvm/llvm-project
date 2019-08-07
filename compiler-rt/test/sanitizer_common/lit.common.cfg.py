@@ -66,7 +66,7 @@ config.substitutions.append( ("%tool_options", tool_options) )
 config.substitutions.append( ('%env_tool_opts=',
                               'env ' + tool_options + '=' + default_tool_options_str))
 
-config.suffixes = ['.c', '.cc', '.cpp']
+config.suffixes = ['.c', '.cpp']
 
 if config.host_os not in ['Linux', 'Darwin', 'NetBSD', 'FreeBSD']:
   config.unsupported = True

@@ -15,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64StackOffset.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -299,7 +300,7 @@ private:
 /// if necessary, to be replaced by the scavenger at the end of PEI.
 void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
-                     int Offset, const TargetInstrInfo *TII,
+                     StackOffset Offset, const TargetInstrInfo *TII,
                      MachineInstr::MIFlag = MachineInstr::NoFlags,
                      bool SetNZCV = false, bool NeedsWinCFI = false,
                      bool *HasWinCFI = nullptr);
@@ -308,7 +309,7 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
 /// FP. Return false if the offset could not be handled directly in MI, and
 /// return the left-over portion by reference.
 bool rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                              unsigned FrameReg, int &Offset,
+                              unsigned FrameReg, StackOffset &Offset,
                               const AArch64InstrInfo *TII);
 
 /// Use to report the frame offset status in isAArch64FrameOffsetLegal.
@@ -332,7 +333,7 @@ enum AArch64FrameOffsetStatus {
 /// If set, @p EmittableOffset contains the amount that can be set in @p MI
 /// (possibly with @p OutUnscaledOp if OutUseUnscaledOp is true) and that
 /// is a legal offset.
-int isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
+int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               bool *OutUseUnscaledOp = nullptr,
                               unsigned *OutUnscaledOp = nullptr,
                               int *EmittableOffset = nullptr);

@@ -147,6 +147,10 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
+if (NOT TARGET pstl::ParallelSTL)
+  message(STATUS "Could not find ParallelSTL, libc++abi will not attempt to use it but the build may fail if the libc++ in use needs it to be available.")
+endif()
+
 if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
   set(LIBCXXABI_USE_SJLJ_EXCEPTIONS ON)
 else()
@@ -160,6 +164,9 @@ if (LIBCXXABI_ENABLE_SHARED)
     llvm_setup_rpath(cxxabi_shared)
   endif()
   target_link_libraries(cxxabi_shared PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  if (TARGET pstl::ParallelSTL)
+    target_link_libraries(cxxabi_shared PUBLIC pstl::ParallelSTL)
+  endif()
   set_target_properties(cxxabi_shared
                         PROPERTIES
                           CXX_EXTENSIONS
@@ -208,6 +215,9 @@ endif()
 if (LIBCXXABI_ENABLE_STATIC)
   add_library(cxxabi_static STATIC ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
   target_link_libraries(cxxabi_static PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  if (TARGET pstl::ParallelSTL)
+    target_link_libraries(cxxabi_static PUBLIC pstl::ParallelSTL)
+  endif()
   set_target_properties(cxxabi_static
                         PROPERTIES
                           CXX_EXTENSIONS

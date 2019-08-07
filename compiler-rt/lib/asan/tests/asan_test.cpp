@@ -531,7 +531,7 @@ TEST(AddressSanitizer, ManyStackObjectsTest) {
 #endif
 
 #if 0  // This test requires online symbolizer.
-// Moved to lit_tests/stack-oob-frames.cc.
+// Moved to lit_tests/stack-oob-frames.cpp.
 // Reenable here once we have online symbolizer by default.
 NOINLINE static void Frame0(int frame, char *a, char *b, char *c) {
   char d[4] = {0};

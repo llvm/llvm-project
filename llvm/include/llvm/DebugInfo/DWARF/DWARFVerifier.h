@@ -94,7 +94,7 @@ private:
   /// A map that tracks all references (converted absolute references) so we
   /// can verify each reference points to a valid DIE and not an offset that
   /// lies between to valid DIEs.
-  std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
+  std::map<uint64_t, std::set<uint64_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
   // Used to relax some checks that do not currently work portably
   bool IsObjectFile;
@@ -138,7 +138,7 @@ private:
   ///
   /// \returns true if the header is verified successfully, false otherwise.
   bool verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
-                        uint32_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
+                        uint64_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
                         bool &isUnitDWARF64);
 
   /// Verifies the header of a unit in a .debug_info or .debug_types section.

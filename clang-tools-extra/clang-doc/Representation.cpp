@@ -197,7 +197,7 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
-llvm::SmallString<16> Info::extractName() {
+llvm::SmallString<16> Info::extractName() const {
   if (!Name.empty())
     return Name;
 
@@ -227,6 +227,12 @@ llvm::SmallString<16> Info::extractName() {
   }
   llvm_unreachable("Invalid InfoType.");
   return llvm::SmallString<16>("");
+}
+
+void Index::sort() {
+  std::sort(Children.begin(), Children.end());
+  for (auto &C : Children)
+    C.sort();
 }
 
 } // namespace doc

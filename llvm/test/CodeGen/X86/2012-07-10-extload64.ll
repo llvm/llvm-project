@@ -33,7 +33,7 @@ define <2 x i32> @load_64(<2 x i32>* %ptr) {
 ; CHECK-LABEL: load_64:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
 BB:
   %t = load <2 x i32>, <2 x i32>* %ptr

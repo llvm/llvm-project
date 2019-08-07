@@ -296,8 +296,8 @@ define <4 x float> @sitofp_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0

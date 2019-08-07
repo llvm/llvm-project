@@ -1,5 +1,6 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+# Generates RISCVGenSystemOperands.inc
 tablegen("RISCVGenSystemOperands") {
   visibility = [ ":Utils" ]
   args = [ "-gen-searchable-tables" ]

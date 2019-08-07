@@ -919,9 +919,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND,   MVT::f32, Custom);
   }
 
-  if (!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()){
+  if (!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) {
     setOperationAction(ISD::FP_EXTEND,  MVT::f64, Custom);
-    setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
+    if (Subtarget->hasFullFP16())
+      setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
   }
 
   if (!Subtarget->hasFP16())

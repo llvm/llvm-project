@@ -67,8 +67,15 @@ define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr #0 {
 ; ATTRIBUTOR-NOT: nofree
 ; ATTRIBUTOR: define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr
 define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr #0 {
-  tail call void @free_in_scc1(i8* %0)
+  %cmp = icmp eq i8* %0, null
+  br i1 %cmp, label %rec, label %call
+call:
   tail call void @free(i8* %0) #1
+  br label %end
+rec:
+  tail call void @free_in_scc1(i8* %0)
+  br label %end
+end:
   ret void
 }
 
@@ -85,7 +92,7 @@ define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr #0 {
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion1()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion1()
 define void @mutual_recursion1() #0 {
   call void @mutual_recursion2()
@@ -94,7 +101,7 @@ define void @mutual_recursion1() #0 {
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion2()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion2()
 define void @mutual_recursion2() #0 {
   call void @mutual_recursion1()

@@ -28,7 +28,7 @@ private:
   void extract(DataExtractor DebugArangesData);
 
   /// Call appendRange multiple times and then call construct.
-  void appendRange(uint32_t CUOffset, uint64_t LowPC, uint64_t HighPC);
+  void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC);
   void construct();
 
   struct Range {
@@ -60,10 +60,10 @@ private:
 
   struct RangeEndpoint {
     uint64_t Address;
-    uint32_t CUOffset;
+    uint64_t CUOffset;
     bool IsRangeStart;
 
-    RangeEndpoint(uint64_t Address, uint32_t CUOffset, bool IsRangeStart)
+    RangeEndpoint(uint64_t Address, uint64_t CUOffset, bool IsRangeStart)
         : Address(Address), CUOffset(CUOffset), IsRangeStart(IsRangeStart) {}
 
     bool operator<(const RangeEndpoint &Other) const {
@@ -76,7 +76,7 @@ private:
 
   std::vector<RangeEndpoint> Endpoints;
   RangeColl Aranges;
-  DenseSet<uint32_t> ParsedCUOffsets;
+  DenseSet<uint64_t> ParsedCUOffsets;
 };
 
 } // end namespace llvm

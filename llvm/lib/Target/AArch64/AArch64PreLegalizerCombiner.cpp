@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -27,10 +28,14 @@ using namespace MIPatternMatch;
 
 namespace {
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
+  GISelKnownBits *KB;
+
 public:
-  AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize)
+  AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
+                                  GISelKnownBits *KB)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize) {}
+                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
+        KB(KB) {}
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };
@@ -38,7 +43,7 @@ public:
 bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B);
+  CombinerHelper Helper(Observer, B, KB);
 
   switch (MI.getOpcode()) {
   default:
@@ -56,9 +61,12 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
     case Intrinsic::memset: {
+      // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
+      // heuristics decide.
+      unsigned MaxLen = EnableOpt ? 0 : 32;
       // Try to inline memcpy type calls if optimizations are enabled.
-      return (EnableOpt && !EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI)
-                                           : false;
+      return (!EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI, MaxLen)
+                              : false;
     }
     default:
       break;
@@ -89,6 +97,8 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
+  AU.addRequired<GISelKnownBitsAnalysis>();
+  AU.addPreserved<GISelKnownBitsAnalysis>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -104,8 +114,9 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                         F.hasMinSize());
+                                         F.hasMinSize(), KB);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
 }
@@ -115,6 +126,7 @@ INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,
                     false)

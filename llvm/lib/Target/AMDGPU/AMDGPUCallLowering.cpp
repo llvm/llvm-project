@@ -128,7 +128,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 
   // FIXME: What is the point of this being a callback?
-  bool isArgumentHandler() const override { return true; }
+  bool isIncomingArgumentHandler() const override { return true; }
 };
 
 struct FormalArgHandler : public IncomingArgHandler {

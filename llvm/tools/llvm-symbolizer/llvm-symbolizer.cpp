@@ -55,6 +55,10 @@ static cl::opt<bool>
                          cl::desc("Interpret addresses as relative addresses"),
                          cl::ReallyHidden);
 
+static cl::opt<bool> ClUntagAddresses(
+    "untag-addresses", cl::init(true),
+    cl::desc("Remove memory tags from addresses before symbolization"));
+
 static cl::opt<bool>
     ClPrintInlining("inlining", cl::init(true),
                     cl::desc("Print all inlined frames for a given address"));
@@ -274,6 +278,7 @@ int main(int argc, char **argv) {
     ClDemangle.setInitialValue(false);
     ClPrintFunctions.setInitialValue(FunctionNameKind::None);
     ClPrintInlining.setInitialValue(false);
+    ClUntagAddresses.setInitialValue(false);
     ClOutputStyle.setInitialValue(DIPrinter::OutputStyle::GNU);
   }
 
@@ -290,6 +295,7 @@ int main(int argc, char **argv) {
   Opts.UseSymbolTable = ClUseSymbolTable;
   Opts.Demangle = ClDemangle;
   Opts.RelativeAddresses = ClUseRelativeAddress;
+  Opts.UntagAddresses = ClUntagAddresses;
   Opts.DefaultArch = ClDefaultArch;
   Opts.FallbackDebugPath = ClFallbackDebugPath;
   Opts.DWPName = ClDwpName;

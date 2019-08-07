@@ -41,7 +41,7 @@ TEST(RecursiveASTVisitor, CXXCtorInitializerVisitNoImplicit) {
   for (bool VisitImplCode : {true, false}) {
     CXXCtorInitializerVisitor Visitor(VisitImplCode);
     Visitor.ExpectMatch("initializer", 7, 17);
-    EXPECT_TRUE(Visitor.runOver(R"cpp(
+    llvm::StringRef Code = R"cpp(
         class A {};
         class B : public A {
           B() {};
@@ -49,8 +49,8 @@ TEST(RecursiveASTVisitor, CXXCtorInitializerVisitNoImplicit) {
         class C : public A {
           C() : A() {}
         };
-      )cpp",
-                                CXXCtorInitializerVisitor::Lang_CXX));
+      )cpp";
+    EXPECT_TRUE(Visitor.runOver(Code, CXXCtorInitializerVisitor::Lang_CXX));
     EXPECT_EQ(Visitor.VisitedImplicitInitializer, VisitImplCode);
   }
 }

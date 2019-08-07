@@ -122,14 +122,22 @@ class SrcOp {
     MachineInstrBuilder SrcMIB;
     Register Reg;
     CmpInst::Predicate Pred;
+    int64_t Imm;
   };
 
 public:
-  enum class SrcType { Ty_Reg, Ty_MIB, Ty_Predicate };
+  enum class SrcType { Ty_Reg, Ty_MIB, Ty_Predicate, Ty_Imm };
   SrcOp(Register R) : Reg(R), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineInstrBuilder &MIB) : SrcMIB(MIB), Ty(SrcType::Ty_MIB) {}
   SrcOp(const CmpInst::Predicate P) : Pred(P), Ty(SrcType::Ty_Predicate) {}
+  /// Use of registers held in unsigned integer variables (or more rarely signed
+  /// integers) is no longer permitted to avoid ambiguity with upcoming support
+  /// for immediates.
+  SrcOp(unsigned) = delete;
+  SrcOp(int) = delete;
+  SrcOp(uint64_t V) : Imm(V), Ty(SrcType::Ty_Imm) {}
+  SrcOp(int64_t V) : Imm(V), Ty(SrcType::Ty_Imm) {}
 
   void addSrcToMIB(MachineInstrBuilder &MIB) const {
     switch (Ty) {
@@ -142,12 +150,16 @@ public:
     case SrcType::Ty_MIB:
       MIB.addUse(SrcMIB->getOperand(0).getReg());
       break;
+    case SrcType::Ty_Imm:
+      MIB.addImm(Imm);
+      break;
     }
   }
 
   LLT getLLTTy(const MachineRegisterInfo &MRI) const {
     switch (Ty) {
     case SrcType::Ty_Predicate:
+    case SrcType::Ty_Imm:
       llvm_unreachable("Not a register operand");
     case SrcType::Ty_Reg:
       return MRI.getType(Reg);
@@ -160,6 +172,7 @@ public:
   Register getReg() const {
     switch (Ty) {
     case SrcType::Ty_Predicate:
+    case SrcType::Ty_Imm:
       llvm_unreachable("Not a register operand");
     case SrcType::Ty_Reg:
       return Reg;
@@ -175,6 +188,15 @@ public:
       return Pred;
     default:
       llvm_unreachable("Not a register operand");
+    }
+  }
+
+  int64_t getImm() const {
+    switch (Ty) {
+    case SrcType::Ty_Imm:
+      return Imm;
+    default:
+      llvm_unreachable("Not an immediate");
     }
   }
 

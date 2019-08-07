@@ -1,0 +1,197 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("AMDGPUGenAsmMatcher") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenCallingConv") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-callingconv" ]
+  td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenDAGISel") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenGlobalISel") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-global-isel" ]
+  td_file = "AMDGPUGISel.td"
+}
+
+tablegen("AMDGPUGenMCPseudoLowering") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-pseudo-lowering" ]
+  td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenRegisterBank") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-register-bank" ]
+  td_file = "AMDGPU.td"
+}
+
+tablegen("R600GenCallingConv") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-callingconv" ]
+  td_file = "R600.td"
+}
+
+tablegen("R600GenDAGISel") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "R600.td"
+}
+
+tablegen("R600GenDFAPacketizer") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-dfa-packetizer" ]
+  td_file = "R600.td"
+}
+
+static_library("LLVMAMDGPUCodeGen") {
+  deps = [
+    ":AMDGPUGenAsmMatcher",
+    ":AMDGPUGenCallingConv",
+    ":AMDGPUGenDAGISel",
+    ":AMDGPUGenGlobalISel",
+    ":AMDGPUGenMCPseudoLowering",
+    ":AMDGPUGenRegisterBank",
+    ":R600GenCallingConv",
+    ":R600GenDAGISel",
+    ":R600GenDFAPacketizer",
+    "MCTargetDesc",
+    "TargetInfo",
+    "Utils",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/GlobalISel",
+    "//llvm/lib/CodeGen/MIRParser",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Transforms/IPO",
+    "//llvm/lib/Transforms/Scalar",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "AMDGPUAliasAnalysis.cpp",
+    "AMDGPUAlwaysInlinePass.cpp",
+    "AMDGPUAnnotateKernelFeatures.cpp",
+    "AMDGPUAnnotateUniformValues.cpp",
+    "AMDGPUArgumentUsageInfo.cpp",
+    "AMDGPUAsmPrinter.cpp",
+    "AMDGPUAtomicOptimizer.cpp",
+    "AMDGPUCallLowering.cpp",
+    "AMDGPUCodeGenPrepare.cpp",
+    "AMDGPUFixFunctionBitcasts.cpp",
+    "AMDGPUFrameLowering.cpp",
+    "AMDGPUHSAMetadataStreamer.cpp",
+    "AMDGPUISelDAGToDAG.cpp",
+    "AMDGPUISelLowering.cpp",
+    "AMDGPUInline.cpp",
+    "AMDGPUInstrInfo.cpp",
+    "AMDGPUInstructionSelector.cpp",
+    "AMDGPULegalizerInfo.cpp",
+    "AMDGPULibCalls.cpp",
+    "AMDGPULibFunc.cpp",
+    "AMDGPULowerIntrinsics.cpp",
+    "AMDGPULowerKernelArguments.cpp",
+    "AMDGPULowerKernelAttributes.cpp",
+    "AMDGPUMCInstLower.cpp",
+    "AMDGPUMachineCFGStructurizer.cpp",
+    "AMDGPUMachineFunction.cpp",
+    "AMDGPUMachineModuleInfo.cpp",
+    "AMDGPUMacroFusion.cpp",
+    "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
+    "AMDGPUPerfHintAnalysis.cpp",
+    "AMDGPUPromoteAlloca.cpp",
+    "AMDGPUPropagateAttributes.cpp",
+    "AMDGPURegisterBankInfo.cpp",
+    "AMDGPURegisterInfo.cpp",
+    "AMDGPURewriteOutArguments.cpp",
+    "AMDGPUSubtarget.cpp",
+    "AMDGPUTargetMachine.cpp",
+    "AMDGPUTargetObjectFile.cpp",
+    "AMDGPUTargetTransformInfo.cpp",
+    "AMDGPUUnifyDivergentExitNodes.cpp",
+    "AMDGPUUnifyMetadata.cpp",
+    "AMDILCFGStructurizer.cpp",
+    "GCNDPPCombine.cpp",
+    "GCNHazardRecognizer.cpp",
+    "GCNILPSched.cpp",
+    "GCNIterativeScheduler.cpp",
+    "GCNMinRegStrategy.cpp",
+    "GCNNSAReassign.cpp",
+    "GCNRegBankReassign.cpp",
+    "GCNRegPressure.cpp",
+    "GCNSchedStrategy.cpp",
+    "R600AsmPrinter.cpp",
+    "R600ClauseMergePass.cpp",
+    "R600ControlFlowFinalizer.cpp",
+    "R600EmitClauseMarkers.cpp",
+    "R600ExpandSpecialInstrs.cpp",
+    "R600FrameLowering.cpp",
+    "R600ISelLowering.cpp",
+    "R600InstrInfo.cpp",
+    "R600MachineFunctionInfo.cpp",
+    "R600MachineScheduler.cpp",
+    "R600OpenCLImageTypeLoweringPass.cpp",
+    "R600OptimizeVectorRegisters.cpp",
+    "R600Packetizer.cpp",
+    "R600RegisterInfo.cpp",
+    "SIAddIMGInit.cpp",
+    "SIAnnotateControlFlow.cpp",
+    "SIFixSGPRCopies.cpp",
+    "SIFixVGPRCopies.cpp",
+    "SIFixupVectorISel.cpp",
+    "SIFoldOperands.cpp",
+    "SIFormMemoryClauses.cpp",
+    "SIFrameLowering.cpp",
+    "SIISelLowering.cpp",
+    "SIInsertSkips.cpp",
+    "SIInsertWaitcnts.cpp",
+    "SIInstrInfo.cpp",
+    "SILoadStoreOptimizer.cpp",
+    "SILowerControlFlow.cpp",
+    "SILowerI1Copies.cpp",
+    "SILowerSGPRSpills.cpp",
+    "SIMachineFunctionInfo.cpp",
+    "SIMachineScheduler.cpp",
+    "SIMemoryLegalizer.cpp",
+    "SIModeRegister.cpp",
+    "SIOptimizeExecMasking.cpp",
+    "SIOptimizeExecMaskingPreRA.cpp",
+    "SIPeepholeSDWA.cpp",
+    "SIPreAllocateWWMRegs.cpp",
+    "SIRegisterInfo.cpp",
+    "SIShrinkInstructions.cpp",
+    "SIWholeQuadMode.cpp",
+  ]
+}
+
+# This is a bit different from most build files: Due to this group
+# having the directory's name, "//llvm/lib/Target/AMDGPU" will refer to this
+# target, which pulls in the code in this directory *and all subdirectories*.
+# For most other directories, "//llvm/lib/Foo" only pulls in the code directly
+# in "llvm/lib/Foo". The forwarding targets in //llvm/lib/Target expect this
+# different behavior.
+group("AMDGPU") {
+  deps = [
+    ":LLVMAMDGPUCodeGen",
+    "AsmParser",
+    "Disassembler",
+    "MCTargetDesc",
+    "TargetInfo",
+    "Utils",
+  ]
+}

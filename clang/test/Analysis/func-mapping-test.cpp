@@ -41,3 +41,10 @@ union U {
 };
 U u = {.a = 6};
 // CHECK-DAG: c:@u
+
+// No USR can be generated for this.
+// Check for no crash in this case.
+static union {
+  float uf;
+  const int ui;
+};

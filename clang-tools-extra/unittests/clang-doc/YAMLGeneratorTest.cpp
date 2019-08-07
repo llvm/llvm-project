@@ -80,7 +80,8 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.Members.emplace_back("int", "path/to/int", "X",
                          AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "path/to/F");
+  // F is in the global namespace
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
                                 "path/to/G");
 
@@ -120,7 +121,7 @@ Members:
 Parents:
   - Type:            Record
     Name:            'F'
-    Path:            'path/to/F'
+    IsInGlobalNamespace: true
 VirtualParents:
   - Type:            Record
     Name:            'G'

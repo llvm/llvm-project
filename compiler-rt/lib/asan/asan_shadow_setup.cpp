@@ -37,7 +37,7 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
         size);
     Abort();
   }
-  if (common_flags()->no_huge_pages_for_shadow) NoHugePagesInRegion(beg, size);
+  SetShadowRegionHugePageMode(beg, size);
   if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
 }
 

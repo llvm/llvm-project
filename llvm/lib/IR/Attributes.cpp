@@ -1438,7 +1438,9 @@ AttrBuilder::AttrBuilder(AttributeSet AS) {
 void AttrBuilder::clear() {
   Attrs.reset();
   TargetDepAttrs.clear();
-  Alignment = StackAlignment = DerefBytes = DerefOrNullBytes = 0;
+  Alignment.reset();
+  StackAlignment.reset();
+  DerefBytes = DerefOrNullBytes = 0;
   AllocSizeArgs = 0;
   ByValType = nullptr;
 }
@@ -1462,9 +1464,9 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
   Attrs[Kind] = true;
 
   if (Kind == Attribute::Alignment)
-    Alignment = Attr.getAlignment();
+    Alignment = MaybeAlign(Attr.getAlignment());
   else if (Kind == Attribute::StackAlignment)
-    StackAlignment = Attr.getStackAlignment();
+    StackAlignment = MaybeAlign(Attr.getStackAlignment());
   else if (Kind == Attribute::ByVal)
     ByValType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)
@@ -1486,9 +1488,9 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
   Attrs[Val] = false;
 
   if (Val == Attribute::Alignment)
-    Alignment = 0;
+    Alignment.reset();
   else if (Val == Attribute::StackAlignment)
-    StackAlignment = 0;
+    StackAlignment.reset();
   else if (Val == Attribute::ByVal)
     ByValType = nullptr;
   else if (Val == Attribute::Dereferenceable)
@@ -1517,23 +1519,25 @@ std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(AllocSizeArgs);
 }
 
-AttrBuilder &AttrBuilder::addAlignmentAttr(unsigned Align) {
-  if (Align == 0) return *this;
+AttrBuilder &AttrBuilder::addAlignmentAttr(unsigned A) {
+  MaybeAlign Align(A);
+  if (!Align)
+    return *this;
 
-  assert(isPowerOf2_32(Align) && "Alignment must be a power of two.");
-  assert(Align <= 0x40000000 && "Alignment too large.");
+  assert(*Align <= 0x40000000 && "Alignment too large.");
 
   Attrs[Attribute::Alignment] = true;
   Alignment = Align;
   return *this;
 }
 
-AttrBuilder &AttrBuilder::addStackAlignmentAttr(unsigned Align) {
+AttrBuilder &AttrBuilder::addStackAlignmentAttr(unsigned A) {
+  MaybeAlign Align(A);
   // Default alignment, allow the target to define how to align it.
-  if (Align == 0) return *this;
+  if (!Align)
+    return *this;
 
-  assert(isPowerOf2_32(Align) && "Alignment must be a power of two.");
-  assert(Align <= 0x100 && "Alignment too large.");
+  assert(*Align <= 0x100 && "Alignment too large.");
 
   Attrs[Attribute::StackAlignment] = true;
   StackAlignment = Align;
@@ -1610,10 +1614,10 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
   // FIXME: What if both have alignments, but they don't match?!
   if (B.Alignment)
-    Alignment = 0;
+    Alignment.reset();
 
   if (B.StackAlignment)
-    StackAlignment = 0;
+    StackAlignment.reset();
 
   if (B.DerefBytes)
     DerefBytes = 0;

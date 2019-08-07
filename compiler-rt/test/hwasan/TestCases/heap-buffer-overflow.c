@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 static volatile char sink;
 
 int main(int argc, char **argv) {
@@ -22,7 +24,7 @@ int main(int argc, char **argv) {
   int offset = argc < 2 ? 40 : atoi(argv[1]);
   int size = argc < 3 ? 30 : atoi(argv[2]);
   char * volatile x = (char*)malloc(size);
-  fprintf(stderr, "base: %p access: %p\n", x, &x[offset]);
+  untag_fprintf(stderr, "base: %p access: %p\n", x, &x[offset]);
   sink = x[offset];
 
 // CHECK40: allocated heap chunk; size: 32 offset: 8

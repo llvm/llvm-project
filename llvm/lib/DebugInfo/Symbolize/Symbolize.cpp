@@ -268,7 +268,7 @@ bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
         return false;
       }
       DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian(), 0);
-      uint32_t Offset = 0;
+      uint64_t Offset = 0;
       if (const char *DebugNameStr = DE.getCStr(&Offset)) {
         // 4-byte align the offset.
         Offset = (Offset + 3) & ~0x3;
@@ -418,8 +418,8 @@ Expected<SymbolizableModule *>
 LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
                                  std::unique_ptr<DIContext> Context,
                                  StringRef ModuleName) {
-  auto InfoOrErr =
-      SymbolizableObjectFile::create(Obj, std::move(Context));
+  auto InfoOrErr = SymbolizableObjectFile::create(Obj, std::move(Context),
+                                                  Opts.UntagAddresses);
   std::unique_ptr<SymbolizableModule> SymMod;
   if (InfoOrErr)
     SymMod = std::move(*InfoOrErr);

@@ -36,7 +36,7 @@ public:
   struct LocationList {
     /// The beginning offset where this location list is stored in the debug_loc
     /// section.
-    unsigned Offset;
+    uint64_t Offset;
     /// All the locations in which the variable is stored.
     SmallVector<Entry, 2> Entries;
     /// Dump this list on OS.
@@ -69,7 +69,7 @@ public:
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
   Optional<LocationList> parseOneLocationList(DWARFDataExtractor Data,
-                                              uint32_t *Offset);
+                                              uint64_t *Offset);
 };
 
 class DWARFDebugLoclists {
@@ -82,7 +82,7 @@ public:
   };
 
   struct LocationList {
-    unsigned Offset;
+    uint64_t Offset;
     SmallVector<Entry, 2> Entries;
     void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
               unsigned AddressSize, const MCRegisterInfo *RegInfo,
@@ -107,7 +107,7 @@ public:
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
   static Optional<LocationList>
-  parseOneLocationList(DataExtractor Data, unsigned *Offset, unsigned Version);
+  parseOneLocationList(DataExtractor Data, uint64_t *Offset, unsigned Version);
 };
 
 } // end namespace llvm

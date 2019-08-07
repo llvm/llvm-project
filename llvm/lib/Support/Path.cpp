@@ -855,11 +855,11 @@ void make_absolute(const Twine &current_directory,
   StringRef p(path.data(), path.size());
 
   bool rootDirectory = path::has_root_directory(p);
-  bool rootName =
-      (real_style(Style::native) != Style::windows) || path::has_root_name(p);
+  bool rootName = path::has_root_name(p);
 
   // Already absolute.
-  if (rootName && rootDirectory)
+  if ((rootName || real_style(Style::native) != Style::windows) &&
+      rootDirectory)
     return;
 
   // All of the following conditions will need the current directory.

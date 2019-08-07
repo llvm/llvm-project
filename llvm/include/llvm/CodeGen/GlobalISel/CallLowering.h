@@ -72,9 +72,9 @@ public:
 
     virtual ~ValueHandler() = default;
 
-    /// Returns true if the handler is dealing with formal arguments,
-    /// not with return values etc.
-    virtual bool isArgumentHandler() const { return false; }
+    /// Returns true if the handler is dealing with incoming arguments,
+    /// i.e. those that move values from some physical location to vregs.
+    virtual bool isIncomingArgumentHandler() const { return false; }
 
     /// Materialize a VReg containing the address of the specified
     /// stack-based object. This is either based on a FrameIndex or

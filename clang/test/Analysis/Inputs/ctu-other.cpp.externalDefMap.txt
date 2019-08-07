@@ -25,3 +25,4 @@ c:@extSCN ctu-other.cpp.ast
 c:@extSubSCN ctu-other.cpp.ast
 c:@extSCC ctu-other.cpp.ast
 c:@extU ctu-other.cpp.ast
+c:@S@TestAnonUnionUSR@Test ctu-other.cpp.ast

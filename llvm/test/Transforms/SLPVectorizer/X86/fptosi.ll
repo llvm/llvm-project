@@ -160,38 +160,11 @@ define void @fptosi_8f64_8i32() #0 {
 }
 
 define void @fptosi_8f64_8i16() #0 {
-; SSE-LABEL: @fptosi_8f64_8i16(
-; SSE-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
-; SSE-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 2), align 8
-; SSE-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 3), align 8
-; SSE-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4), align 8
-; SSE-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 5), align 8
-; SSE-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 6), align 8
-; SSE-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 7), align 8
-; SSE-NEXT:    [[CVT0:%.*]] = fptosi double [[A0]] to i16
-; SSE-NEXT:    [[CVT1:%.*]] = fptosi double [[A1]] to i16
-; SSE-NEXT:    [[CVT2:%.*]] = fptosi double [[A2]] to i16
-; SSE-NEXT:    [[CVT3:%.*]] = fptosi double [[A3]] to i16
-; SSE-NEXT:    [[CVT4:%.*]] = fptosi double [[A4]] to i16
-; SSE-NEXT:    [[CVT5:%.*]] = fptosi double [[A5]] to i16
-; SSE-NEXT:    [[CVT6:%.*]] = fptosi double [[A6]] to i16
-; SSE-NEXT:    [[CVT7:%.*]] = fptosi double [[A7]] to i16
-; SSE-NEXT:    store i16 [[CVT0]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 0), align 2
-; SSE-NEXT:    store i16 [[CVT1]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 1), align 2
-; SSE-NEXT:    store i16 [[CVT2]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 2), align 2
-; SSE-NEXT:    store i16 [[CVT3]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 3), align 2
-; SSE-NEXT:    store i16 [[CVT4]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 4), align 2
-; SSE-NEXT:    store i16 [[CVT5]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 5), align 2
-; SSE-NEXT:    store i16 [[CVT6]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 6), align 2
-; SSE-NEXT:    store i16 [[CVT7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @dst16, i32 0, i64 7), align 2
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @fptosi_8f64_8i16(
-; AVX-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
-; AVX-NEXT:    [[TMP2:%.*]] = fptosi <8 x double> [[TMP1]] to <8 x i16>
-; AVX-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([32 x i16]* @dst16 to <8 x i16>*), align 2
-; AVX-NEXT:    ret void
+; CHECK-LABEL: @fptosi_8f64_8i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fptosi <8 x double> [[TMP1]] to <8 x i16>
+; CHECK-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([32 x i16]* @dst16 to <8 x i16>*), align 2
+; CHECK-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
   %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8

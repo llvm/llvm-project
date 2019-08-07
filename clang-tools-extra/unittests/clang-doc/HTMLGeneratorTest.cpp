@@ -28,6 +28,7 @@ getClangDocContext(std::vector<std::string> UserStylesheets = {}) {
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");
+  CDCtx.JsScripts.emplace_back("index.js");
   return CDCtx;
 }
 
@@ -56,6 +57,8 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
 <title>namespace Namespace</title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
 <link rel="stylesheet" href="user-provided-stylesheet.css"/>
+<script src="index.js"></script>
+<div id="index" path=""></div>
 <div>
   <h1>namespace Namespace</h1>
   <h2>Namespaces</h2>
@@ -114,6 +117,8 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
 <meta charset="utf-8"/>
 <title>class r</title>
 <link rel="stylesheet" href="../../../clang-doc-default-stylesheet.css"/>
+<script src="../../../index.js"></script>
+<div id="index" path="X/Y/Z"></div>
 <div>
   <h1>class r</h1>
   <p>Defined at line 10 of test.cpp</p>
@@ -175,6 +180,8 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 <meta charset="utf-8"/>
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
+<script src="index.js"></script>
+<div id="index" path=""></div>
 <div>
   <h3>f</h3>
   <p>
@@ -212,6 +219,8 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
 <meta charset="utf-8"/>
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
+<script src="index.js"></script>
+<div id="index" path=""></div>
 <div>
   <h3>enum class e</h3>
   <ul>
@@ -281,6 +290,8 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
 <meta charset="utf-8"/>
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
+<script src="index.js"></script>
+<div id="index" path=""></div>
 <div>
   <h3>f</h3>
   <p>void f(int I, int J)</p>

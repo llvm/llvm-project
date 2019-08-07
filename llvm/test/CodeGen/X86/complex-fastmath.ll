@@ -39,7 +39,7 @@ define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; FMA-NEXT:    vaddss %xmm0, %xmm0, %xmm2
 ; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulss %xmm1, %xmm1, %xmm1
-; FMA-NEXT:    vfmsub231ss %xmm0, %xmm0, %xmm1
+; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm1 = (xmm0 * xmm0) - xmm1
 ; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm2[0],xmm1[2,3]
 ; FMA-NEXT:    retq
   %2 = extractelement <2 x float> %0, i32 0
@@ -85,7 +85,7 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 ; FMA-NEXT:    vaddsd %xmm0, %xmm0, %xmm2
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulsd %xmm1, %xmm1, %xmm1
-; FMA-NEXT:    vfmsub231sd %xmm0, %xmm0, %xmm1
+; FMA-NEXT:    vfmsub231sd {{.*#+}} xmm1 = (xmm0 * xmm0) - xmm1
 ; FMA-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm2[0]
 ; FMA-NEXT:    retq
   %2 = extractelement <2 x double> %0, i32 0
@@ -137,9 +137,9 @@ define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; FMA-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; FMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm4
-; FMA-NEXT:    vfmadd231ss %xmm0, %xmm3, %xmm4
+; FMA-NEXT:    vfmadd231ss {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulss %xmm2, %xmm3, %xmm2
-; FMA-NEXT:    vfmsub231ss %xmm0, %xmm1, %xmm2
+; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm2 = (xmm1 * xmm0) - xmm2
 ; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm4[0],xmm2[2,3]
 ; FMA-NEXT:    retq
   %3 = extractelement <2 x float> %0, i32 0
@@ -192,9 +192,9 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ; FMA-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; FMA-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
 ; FMA-NEXT:    vmulsd %xmm2, %xmm1, %xmm4
-; FMA-NEXT:    vfmadd231sd %xmm0, %xmm3, %xmm4
+; FMA-NEXT:    vfmadd231sd {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulsd %xmm2, %xmm3, %xmm2
-; FMA-NEXT:    vfmsub231sd %xmm0, %xmm1, %xmm2
+; FMA-NEXT:    vfmsub231sd {{.*#+}} xmm2 = (xmm1 * xmm0) - xmm2
 ; FMA-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm4[0]
 ; FMA-NEXT:    retq
   %3 = extractelement <2 x double> %0, i32 0

@@ -114,11 +114,17 @@ struct CommentInfo {
 struct Reference {
   Reference() = default;
   Reference(llvm::StringRef Name) : Name(Name) {}
-  Reference(llvm::StringRef Name, StringRef Path) : Name(Name), Path(Path) {}
+  // An empty path means the info is in the global namespace because the path is
+  // a composite of the parent namespaces.
+  Reference(llvm::StringRef Name, StringRef Path)
+      : Name(Name), Path(Path), IsInGlobalNamespace(Path.empty()) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT)
       : USR(USR), Name(Name), RefType(IT) {}
+  // An empty path means the info is in the global namespace because the path is
+  // a composite of the parent namespaces.
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
-      : USR(USR), Name(Name), RefType(IT), Path(Path) {}
+      : USR(USR), Name(Name), RefType(IT), Path(Path),
+        IsInGlobalNamespace(Path.empty()) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, RefType) ==
@@ -130,8 +136,12 @@ struct Reference {
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
                                            // Reference (namespace, record,
                                            // function, enum, default).
-  llvm::SmallString<128> Path; // Path of directory where the clang-doc
-                               // generated file will be saved
+  // Path of directory where the clang-doc generated file will be saved
+  // (possibly unresolved)
+  llvm::SmallString<128> Path;
+  // Indicates if the info's parent is the global namespace, or if the info is
+  // the global namespace
+  bool IsInGlobalNamespace = false;
 };
 
 // A base struct for TypeInfos
@@ -239,7 +249,7 @@ struct Info {
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
 
-  llvm::SmallString<16> extractName();
+  llvm::SmallString<16> extractName() const;
 
   // Returns a reference to the parent scope (that is, the immediate parent
   // namespace or class in which this decl resides).
@@ -338,6 +348,19 @@ struct EnumInfo : public SymbolInfo {
   llvm::SmallVector<SmallString<16>, 4> Members; // List of enum members.
 };
 
+struct Index : public Reference {
+  Index() = default;
+  Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
+      : Reference(USR, Name, IT, Path) {}
+  // This is used to look for a USR in a vector of Indexes using std::find
+  bool operator==(const SymbolID &Other) const { return USR == Other; }
+  bool operator<(const Index &Other) const { return Name < Other.Name; }
+
+  std::vector<Index> Children;
+
+  void sort();
+};
+
 // TODO: Add functionality to include separate markdown pages.
 
 // A standalone function to call to merge a vector of infos into one.
@@ -347,10 +370,24 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 struct ClangDocContext {
+  ClangDocContext() = default;
+  ClangDocContext(tooling::ExecutionContext *ECtx, bool PublicOnly,
+                  StringRef OutDirectory,
+                  std::vector<std::string> UserStylesheets,
+                  std::vector<std::string> JsScripts)
+      : ECtx(ECtx), PublicOnly(PublicOnly), OutDirectory(OutDirectory),
+        UserStylesheets(UserStylesheets), JsScripts(JsScripts) {}
   tooling::ExecutionContext *ECtx;
   bool PublicOnly;
   std::string OutDirectory;
+  // Path of CSS stylesheets that will be copied to OutDirectory and used to
+  // style all HTML files.
   std::vector<std::string> UserStylesheets;
+  // JavaScript files that will be imported in allHTML file.
+  std::vector<std::string> JsScripts;
+  // Other files that should be copied to OutDirectory, besides UserStylesheets.
+  std::vector<std::string> FilesToCopy;
+  Index Idx;
 };
 
 } // namespace doc

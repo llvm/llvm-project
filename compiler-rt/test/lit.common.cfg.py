@@ -254,7 +254,7 @@ if config.host_os == 'Darwin':
       config.available_features.add('osx-autointerception')
       config.available_features.add('osx-ld64-live_support')
     else:
-      # The ASAN initialization-bug.cc test should XFAIL on OS X systems
+      # The ASAN initialization-bug.cpp test should XFAIL on OS X systems
       # older than El Capitan. By marking the test as being unsupported with
       # this "feature", we can pass the test on newer OS X versions and other
       # platforms.

@@ -5,7 +5,7 @@
 # REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
-# RUN: ld.lld -z separate-code %t.o -o %t
+# RUN: ld.lld %t.o -o %t
 # RUN: %lldb %t -s %S/Inputs/dir-separator-no-comp-dir-relative-name.lldbinit -o exit | FileCheck %s
 
 # CHECK-LABEL: image dump line-table a.c

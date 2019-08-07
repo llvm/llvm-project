@@ -1097,39 +1097,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       return;
     }
     break;
-  case ISD::STRICT_FADD:
-  case ISD::STRICT_FSUB:
-  case ISD::STRICT_FMUL:
-  case ISD::STRICT_FDIV:
-  case ISD::STRICT_FREM:
-  case ISD::STRICT_FSQRT:
-  case ISD::STRICT_FMA:
-  case ISD::STRICT_FPOW:
-  case ISD::STRICT_FPOWI:
-  case ISD::STRICT_FSIN:
-  case ISD::STRICT_FCOS:
-  case ISD::STRICT_FEXP:
-  case ISD::STRICT_FEXP2:
-  case ISD::STRICT_FLOG:
-  case ISD::STRICT_FLOG10:
-  case ISD::STRICT_FLOG2:
-  case ISD::STRICT_FRINT:
-  case ISD::STRICT_FNEARBYINT:
-  case ISD::STRICT_FMAXNUM:
-  case ISD::STRICT_FMINNUM:
-  case ISD::STRICT_FCEIL:
-  case ISD::STRICT_FFLOOR:
-  case ISD::STRICT_FROUND:
-  case ISD::STRICT_FTRUNC:
-  case ISD::STRICT_FP_ROUND:
-  case ISD::STRICT_FP_EXTEND:
-    // These pseudo-ops get legalized as if they were their non-strict
-    // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
-    // is also legal, but if ISD::FSQRT requires expansion then so does
-    // ISD::STRICT_FSQRT.
-    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                            Node->getValueType(0));
-    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -2815,6 +2782,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::STRICT_FP_ROUND:
+    // This expansion does not honor the "strict" properties anyway,
+    // so prefer falling back to the non-strict operation if legal.
+    if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                       Node->getValueType(0))
+        == TargetLowering::Legal)
+      break;
     Tmp1 = EmitStackConvert(Node->getOperand(1), 
                             Node->getValueType(0),
                             Node->getValueType(0), dl, Node->getOperand(0));
@@ -2829,6 +2802,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   case ISD::STRICT_FP_EXTEND:
+    // This expansion does not honor the "strict" properties anyway,
+    // so prefer falling back to the non-strict operation if legal.
+    if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                       Node->getValueType(0))
+        == TargetLowering::Legal)
+      break;
     Tmp1 = EmitStackConvert(Node->getOperand(1),
                             Node->getOperand(1).getValueType(),
                             Node->getValueType(0), dl, Node->getOperand(0));
@@ -3713,6 +3692,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::INTRINSIC_VOID:
     // FIXME: Custom lowering for these operations shouldn't return null!
     break;
+  }
+
+  if (Results.empty() && Node->isStrictFPOpcode()) {
+    // FIXME: We were asked to expand a strict floating-point operation,
+    // but there is currently no expansion implemented that would preserve
+    // the "strict" properties.  For now, we just fall back to the non-strict
+    // version if that is legal on the target.  The actual mutation of the
+    // operation will happen in SelectionDAGISel::DoInstructionSelection.
+    if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                       Node->getValueType(0))
+        == TargetLowering::Legal)
+      return true;
   }
 
   // Replace the original node with the legalized result.
