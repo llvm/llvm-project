@@ -13,6 +13,7 @@
 // pass. It should be easy to create an analysis pass around it if there
 // is a need (but D45420 needs to happen first).
 //
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -46,38 +47,6 @@ static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
 static const unsigned MaxInterleaveFactor = 16;
 
 namespace llvm {
-
-#ifndef NDEBUG
-static void debugVectorizationFailure(const StringRef DebugMsg,
-    Instruction *I) {
-  dbgs() << "LV: Not vectorizing: " << DebugMsg;
-  if (I != nullptr)
-    dbgs() << " " << *I;
-  else
-    dbgs() << '.';
-  dbgs() << '\n';
-}
-#endif
-
-OptimizationRemarkAnalysis createLVMissedAnalysis(const char *PassName,
-                                                  StringRef RemarkName,
-                                                  Loop *TheLoop,
-                                                  Instruction *I) {
-  Value *CodeRegion = TheLoop->getHeader();
-  DebugLoc DL = TheLoop->getStartLoc();
-
-  if (I) {
-    CodeRegion = I->getParent();
-    // If there is no debug location attached to the instruction, revert back to
-    // using the loop's.
-    if (I->getDebugLoc())
-      DL = I->getDebugLoc();
-  }
-
-  OptimizationRemarkAnalysis R(PassName, RemarkName, DL, CodeRegion);
-  R << "loop not vectorized: ";
-  return R;
-}
 
 bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   switch (Kind) {
@@ -448,14 +417,6 @@ bool LoopVectorizationLegality::isUniform(Value *V) {
   return LAI->isUniform(V);
 }
 
-void LoopVectorizationLegality::reportVectorizationFailure(
-    const StringRef DebugMsg, const StringRef OREMsg,
-    const StringRef ORETag, Instruction *I) const {
-  LLVM_DEBUG(debugVectorizationFailure(DebugMsg, I));
-  ORE->emit(createLVMissedAnalysis(Hints->vectorizeAnalysisPassName(),
-      ORETag, TheLoop, I) << OREMsg);
-}
-
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->empty() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -470,7 +431,7 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     if (!Br) {
       reportVectorizationFailure("Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood");
+          "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
         Result = false;
       else
@@ -489,7 +450,7 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
         !LI->isLoopHeader(Br->getSuccessor(1))) {
       reportVectorizationFailure("Unsupported conditional branch",
           "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood");
+          "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
         Result = false;
       else
@@ -503,7 +464,7 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
                          TheLoop /*context outer loop*/)) {
     reportVectorizationFailure("Outer loop contains divergent loops",
         "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood");
+        "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -514,7 +475,7 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   if (!setupOuterLoopInductions()) {
     reportVectorizationFailure("Unsupported outer loop Phi(s)",
                                "Unsupported outer loop Phi(s)",
-                               "UnsupportedPhi");
+                               "UnsupportedPhi", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -621,7 +582,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             !PhiTy->isPointerTy()) {
           reportVectorizationFailure("Found a non-int non-pointer PHI",
                                      "loop control flow is not understood by vectorizer",
-                                     "CFGNotUnderstood");
+                                     "CFGNotUnderstood", ORE, TheLoop);
           return false;
         }
 
@@ -641,7 +602,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (Phi->getNumIncomingValues() != 2) {
           reportVectorizationFailure("Found an invalid PHI",
               "loop control flow is not understood by vectorizer",
-              "CFGNotUnderstood", Phi);
+              "CFGNotUnderstood", ORE, TheLoop, Phi);
           return false;
         }
 
@@ -693,7 +654,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         reportVectorizationFailure("Found an unidentified PHI",
             "value that could not be identified as "
             "reduction is used outside the loop",
-            "NonReductionValueUsedOutsideLoop", Phi);
+            "NonReductionValueUsedOutsideLoop", ORE, TheLoop, Phi);
         return false;
       } // end of PHI handling
 
@@ -724,11 +685,11 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
               "library call cannot be vectorized. "
               "Try compiling with -fno-math-errno, -ffast-math, "
               "or similar flags",
-              "CantVectorizeLibcall", CI);
+              "CantVectorizeLibcall", ORE, TheLoop, CI);
         } else {
           reportVectorizationFailure("Found a non-intrinsic callsite",
                                      "call instruction cannot be vectorized",
-                                     "CantVectorizeLibcall", CI);
+                                     "CantVectorizeLibcall", ORE, TheLoop, CI);
         }
         return false;
       }
@@ -743,7 +704,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(i)), TheLoop)) {
               reportVectorizationFailure("Found unvectorizable intrinsic",
                   "intrinsic instruction cannot be vectorized",
-                  "CantVectorizeIntrinsic", CI);
+                  "CantVectorizeIntrinsic", ORE, TheLoop, CI);
               return false;
             }
           }
@@ -756,7 +717,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           isa<ExtractElementInst>(I)) {
         reportVectorizationFailure("Found unvectorizable type",
             "instruction return type cannot be vectorized",
-            "CantVectorizeInstructionReturnType", &I);
+            "CantVectorizeInstructionReturnType", ORE, TheLoop, &I);
         return false;
       }
 
@@ -766,7 +727,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (!VectorType::isValidElementType(T)) {
           reportVectorizationFailure("Store instruction cannot be vectorized",
                                      "store instruction cannot be vectorized",
-                                     "CantVectorizeStore", ST);
+                                     "CantVectorizeStore", ORE, TheLoop, ST);
           return false;
         }
 
@@ -781,7 +742,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             reportVectorizationFailure(
                 "nontemporal store instruction cannot be vectorized",
                 "nontemporal store instruction cannot be vectorized",
-                "CantVectorizeNontemporalStore", ST);
+                "CantVectorizeNontemporalStore", ORE, TheLoop, ST);
             return false;
           }
         }
@@ -797,7 +758,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             reportVectorizationFailure(
                 "nontemporal load instruction cannot be vectorized",
                 "nontemporal load instruction cannot be vectorized",
-                "CantVectorizeNontemporalLoad", LD);
+                "CantVectorizeNontemporalLoad", ORE, TheLoop, LD);
             return false;
           }
         }
@@ -826,7 +787,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         }
         reportVectorizationFailure("Value cannot be used outside the loop",
                                    "value cannot be used outside the loop",
-                                   "ValueUsedOutsideLoop", &I);
+                                   "ValueUsedOutsideLoop", ORE, TheLoop, &I);
         return false;
       }
     } // next instr.
@@ -836,12 +797,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     if (Inductions.empty()) {
       reportVectorizationFailure("Did not find one integer induction var",
           "loop induction variable could not be identified",
-          "NoInductionVariable");
+          "NoInductionVariable", ORE, TheLoop);
       return false;
     } else if (!WidestIndTy) {
       reportVectorizationFailure("Did not find one integer induction var",
           "integer loop induction variable could not be identified",
-          "NoIntegerInductionVariable");
+          "NoIntegerInductionVariable", ORE, TheLoop);
       return false;
     } else {
       LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
@@ -872,7 +833,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
     reportVectorizationFailure("Stores to a uniform address",
         "write to a loop invariant address could not be vectorized",
-        "CantVectorizeStoreToLoopInvariantAddress");
+        "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
     return false;
   }
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
@@ -956,7 +917,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   if (!EnableIfConversion) {
     reportVectorizationFailure("If-conversion is disabled",
                                "if-conversion is disabled",
-                               "IfConversionDisabled");
+                               "IfConversionDisabled",
+                               ORE, TheLoop);
     return false;
   }
 
@@ -982,7 +944,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     if (!isa<BranchInst>(BB->getTerminator())) {
       reportVectorizationFailure("Loop contains a switch statement",
                                  "loop contains a switch statement",
-                                 "LoopContainsSwitch", BB->getTerminator());
+                                 "LoopContainsSwitch", ORE, TheLoop,
+                                 BB->getTerminator());
       return false;
     }
 
@@ -992,14 +955,16 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
         reportVectorizationFailure(
             "Control flow cannot be substituted for a select",
             "control flow cannot be substituted for a select",
-            "NoCFGForSelect", BB->getTerminator());
+            "NoCFGForSelect", ORE, TheLoop,
+            BB->getTerminator());
         return false;
       }
     } else if (BB != Header && !canIfConvertPHINodes(BB)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select",
           "control flow cannot be substituted for a select",
-          "NoCFGForSelect", BB->getTerminator());
+          "NoCFGForSelect", ORE, TheLoop,
+          BB->getTerminator());
       return false;
     }
   }
@@ -1029,7 +994,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   if (!Lp->getLoopPreheader()) {
     reportVectorizationFailure("Loop doesn't have a legal pre-header",
         "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood");
+        "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1040,7 +1005,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   if (Lp->getNumBackEdges() != 1) {
     reportVectorizationFailure("The loop must have a single backedge",
         "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood");
+        "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1051,7 +1016,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   if (!Lp->getExitingBlock()) {
     reportVectorizationFailure("The loop must have an exiting block",
         "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood");
+        "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1064,7 +1029,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
     reportVectorizationFailure("The exiting block is not the loop latch",
         "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood");
+        "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1127,7 +1092,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     if (!canVectorizeOuterLoop()) {
       reportVectorizationFailure("Unsupported outer loop",
                                  "unsupported outer loop",
-                                 "UnsupportedOuterLoop");
+                                 "UnsupportedOuterLoop",
+                                 ORE, TheLoop);
       // TODO: Implement DoExtraAnalysis when subsequent legal checks support
       // outer loops.
       return false;
@@ -1179,7 +1145,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   if (PSE.getUnionPredicate().getComplexity() > SCEVThreshold) {
     reportVectorizationFailure("Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
-        "TooManySCEVRunTimeChecks");
+        "TooManySCEVRunTimeChecks", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1202,7 +1168,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() {
         "No primary induction, cannot fold tail by masking",
         "Missing a primary induction variable in the loop, which is "
         "needed in order to fold tail by masking as required.",
-        "NoPrimaryInduction");
+        "NoPrimaryInduction", ORE, TheLoop);
     return false;
   }
 
@@ -1211,7 +1177,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() {
     reportVectorizationFailure(
         "Loop has reductions, cannot fold tail by masking",
         "Cannot fold tail by masking in the presence of reductions.",
-        "ReductionFoldingTailByMasking");
+        "ReductionFoldingTailByMasking", ORE, TheLoop);
     return false;
   }
 
@@ -1225,7 +1191,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() {
       reportVectorizationFailure(
           "Cannot fold tail by masking, loop has an outside user for",
           "Cannot fold tail by masking in the presence of live outs.",
-          "LiveOutFoldingTailByMasking", UI);
+          "LiveOutFoldingTailByMasking", ORE, TheLoop, UI);
       return false;
     }
   }
@@ -1240,7 +1206,8 @@ bool LoopVectorizationLegality::canFoldTailByMasking() {
       reportVectorizationFailure(
           "Cannot fold tail by masking as required",
           "control flow cannot be substituted for a select",
-          "NoCFGForSelect", BB->getTerminator());
+          "NoCFGForSelect", ORE, TheLoop,
+          BB->getTerminator());
       return false;
     }
   }

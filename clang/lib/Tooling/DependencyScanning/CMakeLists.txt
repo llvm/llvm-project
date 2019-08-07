@@ -4,6 +4,8 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangDependencyScanning
+  DependencyScanningFilesystem.cpp
+  DependencyScanningService.cpp
   DependencyScanningWorker.cpp
 
   DEPENDS

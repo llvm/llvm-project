@@ -69,6 +69,14 @@ void DNBArchMachARM64::Initialize() {
 
   // Register this arch plug-in with the main protocol class
   DNBArchProtocol::RegisterArchPlugin(arch_plugin_info);
+
+  DNBArchPluginInfo arch_plugin_info_32 = {
+      CPU_TYPE_ARM64_32, DNBArchMachARM64::Create,
+      DNBArchMachARM64::GetRegisterSetInfo,
+      DNBArchMachARM64::SoftwareBreakpointOpcode};
+
+  // Register this arch plug-in with the main protocol class
+  DNBArchProtocol::RegisterArchPlugin(arch_plugin_info_32);
 }
 
 DNBArchProtocol *DNBArchMachARM64::Create(MachThread *thread) {

@@ -135,11 +135,12 @@ static void collectCopies(SmallVectorImpl<Register> &Copies,
 
 class GISelMITest : public ::testing::Test {
 protected:
-  GISelMITest() : ::testing::Test() {
+  GISelMITest() : ::testing::Test() {}
+  void setUp(StringRef ExtraAssembly = "") {
     TM = createTargetMachine();
     if (!TM)
       return;
-    ModuleMMIPair = createDummyModule(Context, *TM, "");
+    ModuleMMIPair = createDummyModule(Context, *TM, ExtraAssembly);
     MF = getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
     collectCopies(Copies, MF);
     EntryMBB = &*MF->begin();

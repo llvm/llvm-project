@@ -50,7 +50,9 @@
 #include "VSCode.h"
 
 #if defined(_WIN32)
+#ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
+#endif
 typedef int socklen_t;
 constexpr const char *dev_null_path = "nul";
 

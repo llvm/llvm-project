@@ -2873,6 +2873,18 @@ POST_SYSCALL(rt_sigaction)(long res, long signum,
     POST_WRITE(oldact, oldact_sz);
   }
 }
+
+PRE_SYSCALL(getrandom)(void *buf, uptr count, long flags) {
+  if (buf) {
+    PRE_WRITE(buf, count);
+  }
+}
+
+POST_SYSCALL(getrandom)(long res, void *buf, uptr count, long flags) {
+  if (res > 0 && buf) {
+    POST_WRITE(buf, res);
+  }
+}
 }  // extern "C"
 
 #undef PRE_SYSCALL

@@ -44,6 +44,30 @@
 #include "CFBundle.h"
 #include "CFString.h"
 
+#ifndef PLATFORM_BRIDGEOS
+#define PLATFORM_BRIDGEOS 5
+#endif
+
+#ifndef PLATFORM_MACCATALYST
+#define PLATFORM_MACCATALYST 6
+#endif
+
+#ifndef PLATFORM_IOSSIMULATOR
+#define PLATFORM_IOSSIMULATOR 7
+#endif
+
+#ifndef PLATFORM_TVOSSIMULATOR
+#define PLATFORM_TVOSSIMULATOR 8
+#endif
+
+#ifndef PLATFORM_WATCHOSSIMULATOR
+#define PLATFORM_WATCHOSSIMULATOR 9
+#endif
+
+#ifndef PLATFORM_DRIVERKIT
+#define PLATFORM_DRIVERKIT 10
+#endif
+
 #ifdef WITH_SPRINGBOARD
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -480,6 +504,8 @@ MachProcess::MachProcess()
       (void (*)(void *info))dlsym(RTLD_DEFAULT, "_dyld_process_info_release");
   m_dyld_process_info_get_cache = (void (*)(void *info, void *cacheInfo))dlsym(
       RTLD_DEFAULT, "_dyld_process_info_get_cache");
+  m_dyld_process_info_get_platform = (uint32_t (*)(void *info))dlsym(
+      RTLD_DEFAULT, "_dyld_process_info_get_platform");
 
   DNBLogThreadedIf(LOG_PROCESS | LOG_VERBOSE, "%s", __PRETTY_FUNCTION__);
 }
@@ -600,11 +626,6 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     }
   }
 #if defined (LC_BUILD_VERSION)
-#ifndef PLATFORM_IOSSIMULATOR
-#define PLATFORM_IOSSIMULATOR 7
-#define PLATFORM_TVOSSIMULATOR 8
-#define PLATFORM_WATCHOSSIMULATOR 9
-#endif
   if (cmd == LC_BUILD_VERSION) {
     struct build_version_command build_vers;
     if (ReadMemory(load_command_address, sizeof(struct build_version_command),
@@ -618,6 +639,8 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     switch (build_vers.platform) {
     case PLATFORM_MACOS:
       return "macosx";
+    case PLATFORM_MACCATALYST:
+      return "maccatalyst";
     case PLATFORM_IOS:
     case PLATFORM_IOSSIMULATOR:
       return "ios";
@@ -629,6 +652,8 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
       return "watchos";
     case PLATFORM_BRIDGEOS:
       return "bridgeos";
+    case PLATFORM_DRIVERKIT:
+      return "driverkit";
     }
   }
 #endif
@@ -643,7 +668,7 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
 // commands.
 
 bool MachProcess::GetMachOInformationFromMemory(
-    nub_addr_t mach_o_header_addr, int wordsize,
+    uint32_t dyld_platform, nub_addr_t mach_o_header_addr, int wordsize,
     struct mach_o_information &inf) {
   uint64_t load_cmds_p;
   if (wordsize == 4) {
@@ -735,17 +760,42 @@ bool MachProcess::GetMachOInformationFromMemory(
     }
 
     uint32_t major_version, minor_version, patch_version;
-    if (const char *platform = GetDeploymentInfo(lc, load_cmds_p,
-                                                 major_version, minor_version,
-                                                 patch_version)) {
-      inf.min_version_os_name = platform;
-      inf.min_version_os_version = "";
-      inf.min_version_os_version += std::to_string(major_version);
-      inf.min_version_os_version += ".";
-      inf.min_version_os_version += std::to_string(minor_version);
-      if (patch_version != 0) {
+    if (const char *lc_platform = GetDeploymentInfo(
+            lc, load_cmds_p, major_version, minor_version, patch_version)) {
+      // APPLE INTERNAL: macCatalyst support
+      // This handles two special cases:
+      // 1. Zippered frameworks have two deployment info load commands.
+      //    Make sure to select the requested one.
+      // 2. The xctest binary is a pure macOS binary but is launched with
+      //    DYLD_FORCE_PLATFORM=6.
+      if (dyld_platform == PLATFORM_MACCATALYST &&
+          inf.mach_header.filetype == MH_EXECUTE &&
+          inf.min_version_os_name.empty() &&
+          (strcmp("macosx", lc_platform) == 0)) {
+        // DYLD says this *is* a macCatalyst process. If we haven't
+        // parsed any load commands, transform a macOS load command
+        // into a generic macCatalyst load command. It will be
+        // overwritten by a more specific one if there is one.  This
+        // is only done for the main executable. It is perfectly fine
+        // for a macCatalyst binary to link against a macOS-only framework.
+        inf.min_version_os_name = "maccatalyst";
+        inf.min_version_os_version = GetMacCatalystVersionString();
+      } else if (dyld_platform != PLATFORM_MACCATALYST &&
+                 inf.min_version_os_name == "macosx") {
+        // This is a zippered binary and the process is not running as
+        // PLATFORM_MACCATALYST. Stick with the macosx load command
+        // that we've already processed, ignore this one, which is
+        // presumed to be a PLATFORM_MACCATALYST one.
+      } else {
+        inf.min_version_os_name = lc_platform;
+        inf.min_version_os_version = "";
+        inf.min_version_os_version += std::to_string(major_version);
         inf.min_version_os_version += ".";
-        inf.min_version_os_version += std::to_string(patch_version);
+        inf.min_version_os_version += std::to_string(minor_version);
+        if (patch_version != 0) {
+          inf.min_version_os_version += ".";
+          inf.min_version_os_version += std::to_string(patch_version);
+        }
       }
     }
 
@@ -941,7 +991,10 @@ JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
     ////  Second, read the mach header / load commands for all the dylibs
 
     for (size_t i = 0; i < image_count; i++) {
-      if (!GetMachOInformationFromMemory(image_infos[i].load_address,
+      // The SPI to provide platform is not available on older systems.
+      uint32_t platform = 0;
+      if (!GetMachOInformationFromMemory(platform,
+                                         image_infos[i].load_address,
                                          pointer_size,
                                          image_infos[i].macho_info)) {
         return reply_sp;
@@ -972,8 +1025,9 @@ struct dyld_process_cache_info {
 // binary_image_information' - call
 // GetMachOInformationFromMemory to fill in the mach-o header/load command
 // details.
-void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
+uint32_t MachProcess::GetAllLoadedBinariesViaDYLDSPI(
     std::vector<struct binary_image_information> &image_infos) {
+  uint32_t platform = 0;
   kern_return_t kern_ret;
   if (m_dyld_process_info_create) {
     dyld_process_info info =
@@ -988,9 +1042,12 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
             image.load_address = mach_header_addr;
             image_infos.push_back(image);
           });
+      if (m_dyld_process_info_get_platform)
+        platform = m_dyld_process_info_get_platform(info);
       m_dyld_process_info_release(info);
     }
   }
+  return platform;
 }
 
 // Fetch information about all shared libraries using the dyld SPIs that exist
@@ -1011,10 +1068,11 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
       pointer_size = 8;
 
     std::vector<struct binary_image_information> image_infos;
-    GetAllLoadedBinariesViaDYLDSPI(image_infos);
+    uint32_t platform = GetAllLoadedBinariesViaDYLDSPI(image_infos);
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
-      GetMachOInformationFromMemory(image_infos[i].load_address, pointer_size,
+      GetMachOInformationFromMemory(platform,
+                                    image_infos[i].load_address, pointer_size,
                                     image_infos[i].macho_info);
     }
     return FormatDynamicLibrariesIntoJSON(image_infos);
@@ -1040,7 +1098,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
       pointer_size = 8;
 
     std::vector<struct binary_image_information> all_image_infos;
-    GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
+    uint32_t platform = GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
 
     std::vector<struct binary_image_information> image_infos;
     const size_t macho_addresses_count = macho_addresses.size();
@@ -1055,7 +1113,8 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
 
     const size_t image_infos_count = image_infos.size();
     for (size_t i = 0; i < image_infos_count; i++) {
-      GetMachOInformationFromMemory(image_infos[i].load_address, pointer_size,
+      GetMachOInformationFromMemory(platform,
+                                    image_infos[i].load_address, pointer_size,
                                     image_infos[i].macho_info);
     }
     return FormatDynamicLibrariesIntoJSON(image_infos);
@@ -2541,6 +2600,18 @@ bool MachProcess::GetOSVersionNumbers(uint64_t *major, uint64_t *minor,
 
   return true;
 #endif
+}
+
+std::string MachProcess::GetMacCatalystVersionString() {
+  @autoreleasepool {
+    NSDictionary *version_info =
+      [NSDictionary dictionaryWithContentsOfFile:
+       @"/System/Library/CoreServices/SystemVersion.plist"];
+    NSString *version_value = [version_info objectForKey: @"iOSSupportVersion"];
+    if (const char *version_str = [version_value UTF8String])
+      return version_str;
+  }
+  return {};
 }
 
 // Do the process specific setup for attach.  If this returns NULL, then there's

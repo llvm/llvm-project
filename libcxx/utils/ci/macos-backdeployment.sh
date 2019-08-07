@@ -4,12 +4,11 @@ set -ue
 
 function usage() {
   cat <<EOM
-$(basename ${0}) [-h|--help] --libcxx-root <LIBCXX-ROOT> --libcxxabi-root <LIBCXXABI-ROOT> --std <STD> --arch <ARCHITECTURE> --deployment-target <TARGET> --sdk-version <SDK-VERSION> [--lit-args <ARGS...>]
+$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> --deployment-target <TARGET> --sdk-version <SDK-VERSION> [--lit-args <ARGS...>]
 
 This script is used to continually test the back-deployment use case of libc++ and libc++abi on MacOS.
 
-  --libcxx-root       Full path to the root of the libc++ repository to test.
-  --libcxxabi-root    Full path to the root of the libc++abi repository to test.
+  --monorepo-root     Full path to the root of the LLVM monorepo. Both libc++ and libc++abi headers from the monorepo are used.
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
   --arch              Architecture to build the tests for (32, 64).
   --deployment-target The deployment target to run the tests for. This should be a version number of MacOS (e.g. 10.12). All MacOS versions until and including 10.9 are supported.
@@ -22,19 +21,10 @@ EOM
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --libcxx-root)
-    LIBCXX_ROOT="${2}"
-    if [[ ! -d "${LIBCXX_ROOT}" ]]; then
-      echo "--libcxx-root '${LIBCXX_ROOT}' is not a valid directory"
-      usage
-      exit 1
-    fi
-    shift; shift
-    ;;
-    --libcxxabi-root)
-    LIBCXXABI_ROOT="${2}"
-    if [[ ! -d "${LIBCXXABI_ROOT}" ]]; then
-      echo "--libcxxabi-root '${LIBCXXABI_ROOT}' is not a valid directory"
+    --monorepo-root)
+    MONOREPO_ROOT="${2}"
+    if [[ ! -d "${MONOREPO_ROOT}" ]]; then
+      echo "--monorepo-root '${MONOREPO_ROOT}' is not a valid directory"
       usage
       exit 1
     fi
@@ -76,8 +66,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z ${LIBCXX_ROOT+x} ]]; then echo "--libcxx-root is a required parameter"; usage; exit 1; fi
-if [[ -z ${LIBCXXABI_ROOT+x} ]]; then echo "--libcxxabi-root is a required parameter"; usage; exit 1; fi
+if [[ -z ${MONOREPO_ROOT+x} ]]; then echo "--monorepo-root is a required parameter"; usage; exit 1; fi
 if [[ -z ${STD+x} ]]; then echo "--std is a required parameter"; usage; exit 1; fi
 if [[ -z ${ARCH+x} ]]; then echo "--arch is a required parameter"; usage; exit 1; fi
 if [[ -z ${DEPLOYMENT_TARGET+x} ]]; then echo "--deployment-target is a required parameter"; usage; exit 1; fi
@@ -98,20 +87,11 @@ function cleanup {
 trap cleanup EXIT
 
 
-LLVM_ROOT="${TEMP_DIR}/llvm"
-LIBCXX_BUILD_DIR="${TEMP_DIR}/libcxx-build"
-LIBCXX_INSTALL_DIR="${TEMP_DIR}/libcxx-install"
-LIBCXXABI_BUILD_DIR="${TEMP_DIR}/libcxxabi-build"
-LIBCXXABI_INSTALL_DIR="${TEMP_DIR}/libcxxabi-install"
+LLVM_BUILD_DIR="${TEMP_DIR}/llvm-build"
+LLVM_INSTALL_DIR="${TEMP_DIR}/llvm-install"
 
 PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
 LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
-
-
-echo "@@@ Downloading LLVM tarball of master (only used for CMake configuration) @@@"
-mkdir "${LLVM_ROOT}"
-curl -L "${LLVM_TARBALL_URL}" | tar -xz --strip-components=1 -C "${LLVM_ROOT}"
-echo "@@@@@@"
 
 
 echo "@@@ Configuring architecture-related stuff @@@"
@@ -120,31 +100,19 @@ if [[ "${ARCH}" == "64" ]]; then LIT_ARCH_STRING="";         else LIT_ARCH_STRIN
 echo "@@@@@@"
 
 
-echo "@@@ Configuring CMake for libc++ @@@"
-mkdir -p "${LIBCXX_BUILD_DIR}"
-(cd "${LIBCXX_BUILD_DIR}" &&
-  xcrun cmake "${LIBCXX_ROOT}" -GNinja \
-    -DLLVM_PATH="${LLVM_ROOT}" \
-    -DCMAKE_INSTALL_PREFIX="${LIBCXX_INSTALL_DIR}" \
-    -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCH_STRING}"
-)
-echo "@@@@@@"
-
-
-echo "@@@ Configuring CMake for libc++abi @@@"
-mkdir -p "${LIBCXXABI_BUILD_DIR}"
-(cd "${LIBCXXABI_BUILD_DIR}" &&
-  xcrun cmake "${LIBCXXABI_ROOT}" -GNinja \
-    -DLIBCXXABI_LIBCXX_PATH="${LIBCXX_ROOT}" \
-    -DLLVM_PATH="${LLVM_ROOT}" \
-    -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_INSTALL_DIR}" \
+echo "@@@ Configuring CMake @@@"
+mkdir -p "${LLVM_BUILD_DIR}"
+(cd "${LLVM_BUILD_DIR}" &&
+  xcrun cmake "${MONOREPO_ROOT}/llvm" -GNinja \
+    -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
+    -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
     -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCH_STRING}"
 )
 echo "@@@@@@"
 
 
 echo "@@@ Installing the latest libc++ headers @@@"
-ninja -C "${LIBCXX_BUILD_DIR}" install-cxx-headers
+ninja -C "${LLVM_BUILD_DIR}" install-cxx-headers
 echo "@@@@@@"
 
 
@@ -161,14 +129,14 @@ echo "@@@@@@"
 
 # TODO: We need to also run the tests for libc++abi.
 echo "@@@ Running tests for libc++ @@@"
-"${LIBCXX_BUILD_DIR}/bin/llvm-lit" -sv "${LIBCXX_ROOT}/test" \
-                                   --param=enable_experimental=false \
-                                   ${LIT_ARCH_STRING} \
-                                   --param=cxx_headers="${LIBCXX_INSTALL_DIR}/include/c++/v1" \
-                                   --param=std="${STD}" \
-                                   --param=platform="macosx${DEPLOYMENT_TARGET}" \
-                                   --param=cxx_runtime_root="$(dirname "${LIBCXX_ON_DEPLOYMENT_TARGET}")" \
-                                   --param=abi_library_path="$(dirname "${LIBCXXABI_ON_DEPLOYMENT_TARGET}")" \
-                                   --param=use_system_cxx_lib="$(dirname "${LIBCXX_IN_SDK}")" \
-                                   ${ADDITIONAL_LIT_ARGS}
+"${LLVM_BUILD_DIR}/bin/llvm-lit" -sv "${MONOREPO_ROOT}/libcxx/test" \
+                                 --param=enable_experimental=false \
+                                 ${LIT_ARCH_STRING} \
+                                 --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
+                                 --param=std="${STD}" \
+                                 --param=platform="macosx${DEPLOYMENT_TARGET}" \
+                                 --param=cxx_runtime_root="$(dirname "${LIBCXX_ON_DEPLOYMENT_TARGET}")" \
+                                 --param=abi_library_path="$(dirname "${LIBCXXABI_ON_DEPLOYMENT_TARGET}")" \
+                                 --param=use_system_cxx_lib="$(dirname "${LIBCXX_IN_SDK}")" \
+                                 ${ADDITIONAL_LIT_ARGS}
 echo "@@@@@@"

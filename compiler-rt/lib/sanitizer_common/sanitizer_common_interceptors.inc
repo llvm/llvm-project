@@ -9550,6 +9550,21 @@ INTERCEPTOR(void, sl_free, void *sl, int freeall) {
 #define INIT_SL_INIT
 #endif
 
+#if SANITIZER_INTERCEPT_GETRANDOM
+INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getrandom, buf, buflen, flags);
+  SSIZE_T n = REAL(getrandom)(buf, buflen, flags);
+  if (n > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, n);
+  }
+  return n;
+}
+#define INIT_GETRANDOM COMMON_INTERCEPT_FUNCTION(getrandom)
+#else
+#define INIT_GETRANDOM
+#endif
+
 static void InitializeCommonInterceptors() {
 #if SI_POSIX
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
@@ -9848,6 +9863,7 @@ static void InitializeCommonInterceptors() {
   INIT_FDEVNAME;
   INIT_GETUSERSHELL;
   INIT_SL_INIT;
+  INIT_GETRANDOM;
 
   INIT___PRINTF_CHK;
 }

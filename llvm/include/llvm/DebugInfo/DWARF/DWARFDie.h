@@ -63,7 +63,7 @@ public:
   /// Get the absolute offset into the debug info or types section.
   ///
   /// \returns the DIE offset or -1U if invalid.
-  uint32_t getOffset() const {
+  uint64_t getOffset() const {
     assert(isValid() && "must check validity prior to calling");
     return Die->getOffset();
   }

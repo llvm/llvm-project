@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 TEST_F(GISelMITest, TestBuildConstantFConstant) {
+  setUp();
   if (!TM)
     return;
 
@@ -41,6 +42,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
 #ifndef NDEBUG
 
 TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
+  setUp();
   if (!TM)
     return;
 

@@ -722,12 +722,6 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
     break;
 #include "clang/AST/DeclNodes.inc"
   }
-
-  // Visit any attributes attached to this declaration.
-  for (auto *I : D->attrs()) {
-    if (!getDerived().TraverseAttr(I))
-      return false;
-  }
   return true;
 }
 
@@ -1407,6 +1401,11 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclContextHelper(DeclContext *DC) {
     { CODE; }                                                                  \
     if (ReturnValue && ShouldVisitChildren)                                    \
       TRY_TO(TraverseDeclContextHelper(dyn_cast<DeclContext>(D)));             \
+    if (ReturnValue) {                                                         \
+      /* Visit any attributes attached to this declaration. */                 \
+      for (auto *I : D->attrs())                                               \
+        TRY_TO(getDerived().TraverseAttr(I));                                  \
+    }                                                                          \
     if (ReturnValue && getDerived().shouldTraversePostOrder())                 \
       TRY_TO(WalkUpFrom##DECL(D));                                             \
     return ReturnValue;                                                        \

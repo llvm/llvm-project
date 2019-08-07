@@ -12,19 +12,27 @@ using namespace llvm;
 
 namespace {
 
+// Test fixture
+template <typename T>
+class DataExtractorTest : public ::testing::Test { };
+
+// Test DataExtractor with both types which can be used for offsets.
+typedef ::testing::Types</*uint32_t, */uint64_t> TestTypes;
+TYPED_TEST_CASE(DataExtractorTest, TestTypes);
+
 const char numberData[] = "\x80\x90\xFF\xFF\x80\x00\x00\x00";
 const char stringData[] = "hellohello\0hello";
 const char leb128data[] = "\xA6\x49";
 const char bigleb128data[] = "\xAA\xA9\xFF\xAA\xFF\xAA\xFF\x4A";
 
-TEST(DataExtractorTest, OffsetOverflow) {
+TYPED_TEST(DataExtractorTest, OffsetOverflow) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
   EXPECT_FALSE(DE.isValidOffsetForDataOfSize(-2U, 5));
 }
 
-TEST(DataExtractorTest, UnsignedNumbers) {
+TYPED_TEST(DataExtractorTest, UnsignedNumbers) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
-  uint32_t offset = 0;
+  TypeParam offset = 0;
 
   EXPECT_EQ(0x80U, DE.getU8(&offset));
   EXPECT_EQ(1U, offset);
@@ -70,9 +78,9 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(8U, offset);
 }
 
-TEST(DataExtractorTest, SignedNumbers) {
+TYPED_TEST(DataExtractorTest, SignedNumbers) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
-  uint32_t offset = 0;
+  TypeParam offset = 0;
 
   EXPECT_EQ(-128, DE.getSigned(&offset, 1));
   EXPECT_EQ(1U, offset);
@@ -87,9 +95,9 @@ TEST(DataExtractorTest, SignedNumbers) {
   EXPECT_EQ(8U, offset);
 }
 
-TEST(DataExtractorTest, Strings) {
+TYPED_TEST(DataExtractorTest, Strings) {
   DataExtractor DE(StringRef(stringData, sizeof(stringData)-1), false, 8);
-  uint32_t offset = 0;
+  TypeParam offset = 0;
 
   EXPECT_EQ(stringData, DE.getCStr(&offset));
   EXPECT_EQ(11U, offset);
@@ -97,9 +105,9 @@ TEST(DataExtractorTest, Strings) {
   EXPECT_EQ(11U, offset);
 }
 
-TEST(DataExtractorTest, LEB128) {
+TYPED_TEST(DataExtractorTest, LEB128) {
   DataExtractor DE(StringRef(leb128data, sizeof(leb128data)-1), false, 8);
-  uint32_t offset = 0;
+  TypeParam offset = 0;
 
   EXPECT_EQ(9382ULL, DE.getULEB128(&offset));
   EXPECT_EQ(2U, offset);
@@ -116,9 +124,9 @@ TEST(DataExtractorTest, LEB128) {
   EXPECT_EQ(8U, offset);
 }
 
-TEST(DataExtractorTest, LEB128_error) {
+TYPED_TEST(DataExtractorTest, LEB128_error) {
   DataExtractor DE(StringRef("\x81"), false, 8);
-  uint32_t Offset = 0;
+  TypeParam Offset = 0;
   EXPECT_EQ(0U, DE.getULEB128(&Offset));
   EXPECT_EQ(0U, Offset);
 

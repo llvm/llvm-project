@@ -156,3 +156,23 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ERR2
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: 0000000000000000
+    Size: 2
+
+# ERR2:      error: Section size must be greater than or equal to the content size
+# ERR2-NEXT: - Name: .data
+# ERR2-NEXT:   ^
+# ERR2-NEXT: error: Failed to parse YAML input!

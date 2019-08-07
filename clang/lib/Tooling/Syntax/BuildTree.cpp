@@ -58,8 +58,11 @@ public:
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
     auto Tokens = Arena.tokenBuffer().expandedTokens();
+    assert(!Tokens.empty());
+    assert(Tokens.back().kind() == tok::eof);
+
     // Build the root of the tree, consuming all the children.
-    Pending.foldChildren(Tokens,
+    Pending.foldChildren(Tokens.drop_back(),
                          new (Arena.allocator()) syntax::TranslationUnit);
 
     return cast<syntax::TranslationUnit>(std::move(Pending).finalize());
@@ -96,10 +99,11 @@ private:
   /// Ensures that added nodes properly nest and cover the whole token stream.
   struct Forest {
     Forest(syntax::Arena &A) {
-      // FIXME: do not add 'eof' to the tree.
-
+      assert(!A.tokenBuffer().expandedTokens().empty());
+      assert(A.tokenBuffer().expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
-      for (auto &T : A.tokenBuffer().expandedTokens())
+      // Note that we do not have 'eof' in the tree.
+      for (auto &T : A.tokenBuffer().expandedTokens().drop_back())
         Trees.insert(Trees.end(),
                      {&T, NodeAndRole{new (A.allocator()) syntax::Leaf(&T)}});
     }

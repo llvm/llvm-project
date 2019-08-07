@@ -16,4 +16,5 @@ add_llvm_unittest(GlobalISelTests
   MachineIRBuilderTest.cpp
   GISelMITest.cpp
   PatternMatchTest.cpp
+  KnownBitsTest.cpp
   )

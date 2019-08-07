@@ -278,6 +278,31 @@ void PrintAddressDescription(
       Printf("%s", d.Default());
       GetStackTraceFromId(chunk.GetAllocStackId()).Print();
       num_descriptions_printed++;
+    } else {
+      // Check whether the address points into a loaded library. If so, this is
+      // most likely a global variable.
+      const char *module_name;
+      uptr module_address;
+      Symbolizer *sym = Symbolizer::GetOrInit();
+      if (sym->GetModuleNameAndOffsetForPC(mem, &module_name,
+                                           &module_address)) {
+        DataInfo info;
+        if (sym->SymbolizeData(mem, &info) && info.start) {
+          Printf(
+              "%p is located %zd bytes to the %s of %zd-byte global variable "
+              "%s [%p,%p) in %s\n",
+              untagged_addr,
+              candidate == left ? untagged_addr - (info.start + info.size)
+                                : info.start - untagged_addr,
+              candidate == left ? "right" : "left", info.size, info.name,
+              info.start, info.start + info.size, module_name);
+        } else {
+          Printf("%p is located to the %s of a global variable in (%s+0x%x)\n",
+                 untagged_addr, candidate == left ? "right" : "left",
+                 module_name, module_address);
+        }
+        num_descriptions_printed++;
+      }
     }
   }
 

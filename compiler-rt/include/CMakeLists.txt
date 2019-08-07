@@ -15,7 +15,7 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/tsan_interface_atomic.h
     )
   set(FUZZER_HEADERS
-    fuzzer/FuzzedDataProvider.h
+    fuzzer/FuzzedDataProvider.hpp
     )
 endif(COMPILER_RT_BUILD_SANITIZERS)
 

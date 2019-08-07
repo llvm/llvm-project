@@ -548,10 +548,15 @@ BEGIN_TWO_BYTE_PACK()
 
   class LSBaseSDNodeBitfields {
     friend class LSBaseSDNode;
+    friend class MaskedGatherScatterSDNode;
 
     uint16_t : NumMemSDNodeBits;
 
-    uint16_t AddressingMode : 3; // enum ISD::MemIndexedMode
+    // This storage is shared between disparate class hierarchies to hold an
+    // enumeration specific to the class hierarchy in use.
+    //   LSBaseSDNode => enum ISD::MemIndexedMode
+    //   MaskedGatherScatterSDNode => enum ISD::MemIndexType
+    uint16_t AddressingMode : 3;
   };
   enum { NumLSBaseSDNodeBits = NumMemSDNodeBits + 3 };
 
@@ -2363,8 +2368,24 @@ public:
 
   MaskedGatherScatterSDNode(ISD::NodeType NodeTy, unsigned Order,
                             const DebugLoc &dl, SDVTList VTs, EVT MemVT,
-                            MachineMemOperand *MMO)
-      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {}
+                            MachineMemOperand *MMO, ISD::MemIndexType IndexType)
+      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
+    LSBaseSDNodeBits.AddressingMode = IndexType;
+    assert(getIndexType() == IndexType && "Value truncated");
+  }
+
+  /// How is Index applied to BasePtr when computing addresses.
+  ISD::MemIndexType getIndexType() const {
+    return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
+  }
+  bool isIndexScaled() const {
+    return (getIndexType() == ISD::SIGNED_SCALED) ||
+           (getIndexType() == ISD::UNSIGNED_SCALED);
+  }
+  bool isIndexSigned() const {
+    return (getIndexType() == ISD::SIGNED_SCALED) ||
+           (getIndexType() == ISD::SIGNED_UNSCALED);
+  }
 
   // In the both nodes address is Op1, mask is Op2:
   // MaskedGatherSDNode  (Chain, passthru, mask, base, index, scale)
@@ -2388,8 +2409,10 @@ public:
   friend class SelectionDAG;
 
   MaskedGatherSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                     EVT MemVT, MachineMemOperand *MMO)
-      : MaskedGatherScatterSDNode(ISD::MGATHER, Order, dl, VTs, MemVT, MMO) {}
+                     EVT MemVT, MachineMemOperand *MMO,
+                     ISD::MemIndexType IndexType)
+      : MaskedGatherScatterSDNode(ISD::MGATHER, Order, dl, VTs, MemVT, MMO,
+                                  IndexType) {}
 
   const SDValue &getPassThru() const { return getOperand(1); }
 
@@ -2405,8 +2428,10 @@ public:
   friend class SelectionDAG;
 
   MaskedScatterSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                      EVT MemVT, MachineMemOperand *MMO)
-      : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, VTs, MemVT, MMO) {}
+                      EVT MemVT, MachineMemOperand *MMO,
+                      ISD::MemIndexType IndexType)
+      : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, VTs, MemVT, MMO,
+                                  IndexType) {}
 
   const SDValue &getValue() const { return getOperand(1); }
 

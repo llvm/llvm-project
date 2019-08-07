@@ -45,6 +45,15 @@
 #define S_IRWXG 0
 #define S_IRWXO 0
 
+#ifdef __MINGW32__
+// pyconfig.h typedefs this.  We require python headers to be included before
+// any LLDB headers, but there's no way to prevent python's pid_t definition
+// from leaking, so this is the best option.
+#ifndef NO_PID_T
+#include <sys/types.h>
+#endif
+#endif // __MINGW32__
+
 #ifdef _MSC_VER
 
 // PRIxxx format macros for printf()
@@ -80,11 +89,15 @@ int vasprintf(char **ret, const char *fmt, va_list ap);
 char *strcasestr(const char *s, const char *find);
 char *realpath(const char *name, char *resolved);
 
+#ifdef _MSC_VER
+
 char *basename(char *path);
 char *dirname(char *path);
 
 int strcasecmp(const char *s1, const char *s2);
 int strncasecmp(const char *s1, const char *s2, size_t n);
+
+#endif // _MSC_VER
 
 // empty functions
 inline int posix_openpt(int flag) { LLVM_BUILTIN_UNREACHABLE; }

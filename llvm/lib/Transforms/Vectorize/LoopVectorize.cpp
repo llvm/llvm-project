@@ -795,6 +795,59 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
     B.SetCurrentDebugLocation(DebugLoc());
 }
 
+/// Write a record \p DebugMsg about vectorization failure to the debug
+/// output stream. If \p I is passed, it is an instruction that prevents
+/// vectorization.
+#ifndef NDEBUG
+static void debugVectorizationFailure(const StringRef DebugMsg,
+    Instruction *I) {
+  dbgs() << "LV: Not vectorizing: " << DebugMsg;
+  if (I != nullptr)
+    dbgs() << " " << *I;
+  else
+    dbgs() << '.';
+  dbgs() << '\n';
+}
+#endif
+
+/// Create an analysis remark that explains why vectorization failed
+///
+/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
+/// RemarkName is the identifier for the remark.  If \p I is passed it is an
+/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
+/// the location of the remark.  \return the remark object that can be
+/// streamed to.
+static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
+    StringRef RemarkName, Loop *TheLoop, Instruction *I) {
+  Value *CodeRegion = TheLoop->getHeader();
+  DebugLoc DL = TheLoop->getStartLoc();
+
+  if (I) {
+    CodeRegion = I->getParent();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
+  }
+
+  OptimizationRemarkAnalysis R(PassName, RemarkName, DL, CodeRegion);
+  R << "loop not vectorized: ";
+  return R;
+}
+
+namespace llvm {
+
+void reportVectorizationFailure(const StringRef DebugMsg,
+    const StringRef OREMsg, const StringRef ORETag,
+    OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I) {
+  LLVM_DEBUG(debugVectorizationFailure(DebugMsg, I));
+  LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
+  ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(),
+                ORETag, TheLoop, I) << OREMsg);
+}
+
+} // end namespace llvm
+
 #ifndef NDEBUG
 /// \return string containing a file name and a line # for the given loop.
 static std::string getDebugLocString(const Loop *L) {
@@ -1273,15 +1326,6 @@ private:
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(Instruction *I);
-
-  /// Create an analysis remark that explains why vectorization failed
-  ///
-  /// \p RemarkName is the identifier for the remark.  \return the remark object
-  /// that can be streamed to.
-  OptimizationRemarkAnalysis createMissedAnalysis(StringRef RemarkName) {
-    return createLVMissedAnalysis(Hints->vectorizeAnalysisPassName(),
-                                  RemarkName, TheLoop);
-  }
 
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
@@ -4707,36 +4751,30 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
   LLVM_DEBUG(dbgs() << "LV: Performing code size checks.\n");
 
   if (Legal->getRuntimePointerChecking()->Need) {
-    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
-              << "runtime pointer checks needed. Enable vectorization of this "
-                 "loop with '#pragma clang loop vectorize(enable)' when "
-                 "compiling with -Os/-Oz");
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Aborting. Runtime ptr check is required with -Os/-Oz.\n");
+    reportVectorizationFailure("Runtime ptr check is required with -Os/-Oz",
+        "runtime pointer checks needed. Enable vectorization of this "
+        "loop with '#pragma clang loop vectorize(enable)' when "
+        "compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
     return true;
   }
 
   if (!PSE.getUnionPredicate().getPredicates().empty()) {
-    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
-              << "runtime SCEV checks needed. Enable vectorization of this "
-                 "loop with '#pragma clang loop vectorize(enable)' when "
-                 "compiling with -Os/-Oz");
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Aborting. Runtime SCEV check is required with -Os/-Oz.\n");
+    reportVectorizationFailure("Runtime SCEV check is required with -Os/-Oz",
+        "runtime SCEV checks needed. Enable vectorization of this "
+        "loop with '#pragma clang loop vectorize(enable)' when "
+        "compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
     return true;
   }
 
   // FIXME: Avoid specializing for stride==1 instead of bailing out.
   if (!Legal->getLAI()->getSymbolicStrides().empty()) {
-    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
-              << "runtime stride == 1 checks needed. Enable vectorization of "
-                 "this loop with '#pragma clang loop vectorize(enable)' when "
-                 "compiling with -Os/-Oz");
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Aborting. Runtime stride check is required with -Os/-Oz.\n");
+    reportVectorizationFailure("Runtime stride check is required with -Os/-Oz",
+        "runtime stride == 1 checks needed. Enable vectorization of "
+        "this loop with '#pragma clang loop vectorize(enable)' when "
+        "compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
     return true;
   }
 
@@ -4747,22 +4785,19 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF() {
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
     // TODO: It may by useful to do since it's still likely to be dynamically
     // uniform if the target can skip.
-    LLVM_DEBUG(
-        dbgs() << "LV: Not inserting runtime ptr check for divergent target");
-
-    ORE->emit(
-      createMissedAnalysis("CantVersionLoopWithDivergentTarget")
-      << "runtime pointer checks needed. Not enabled for divergent target");
-
+    reportVectorizationFailure(
+        "Not inserting runtime ptr check for divergent target",
+        "runtime pointer checks needed. Not enabled for divergent target",
+        "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
     return None;
   }
 
   unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC == 1) {
-    ORE->emit(createMissedAnalysis("SingleIterationLoop")
-              << "loop trip count is one, irrelevant for vectorization");
-    LLVM_DEBUG(dbgs() << "LV: Aborting, single iteration (non) loop.\n");
+    reportVectorizationFailure("Single iteration (non) loop",
+        "loop trip count is one, irrelevant for vectorization",
+        "SingleIterationLoop", ORE, TheLoop);
     return None;
   }
 
@@ -4816,16 +4851,19 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF() {
   }
 
   if (TC == 0) {
-    ORE->emit(
-        createMissedAnalysis("UnknownLoopCountComplexCFG")
-        << "unable to calculate the loop count due to complex control flow");
+    reportVectorizationFailure(
+        "Unable to calculate the loop count due to complex control flow",
+        "unable to calculate the loop count due to complex control flow",
+        "UnknownLoopCountComplexCFG", ORE, TheLoop);
     return None;
   }
 
-  ORE->emit(createMissedAnalysis("NoTailLoopWithOptForSize")
-            << "cannot optimize for size and vectorize at the same time. "
-               "Enable vectorization of this loop with '#pragma clang loop "
-               "vectorize(enable)' when compiling with -Os/-Oz");
+  reportVectorizationFailure(
+      "Cannot optimize for size and vectorize at the same time.",
+      "cannot optimize for size and vectorize at the same time. "
+      "Enable vectorization of this loop with '#pragma clang loop "
+      "vectorize(enable)' when compiling with -Os/-Oz",
+      "NoTailLoopWithOptForSize", ORE, TheLoop);
   return None;
 }
 
@@ -4936,10 +4974,9 @@ LoopVectorizationCostModel::selectVectorizationFactor(unsigned MaxVF) {
   }
 
   if (!EnableCondStoresVectorization && NumPredStores) {
-    ORE->emit(createMissedAnalysis("ConditionalStore")
-              << "store that is conditionally executed prevents vectorization");
-    LLVM_DEBUG(
-        dbgs() << "LV: No vectorization. There are conditional stores.\n");
+    reportVectorizationFailure("There are conditional stores.",
+        "store that is conditionally executed prevents vectorization",
+        "ConditionalStore", ORE, TheLoop);
     Width = 1;
     Cost = ScalarCost;
   }
@@ -7423,11 +7460,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // an integer loop and the vector instructions selected are purely integer
   // vector instructions?
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
-    LLVM_DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
-                         "attribute is used.\n");
-    ORE->emit(createLVMissedAnalysis(Hints.vectorizeAnalysisPassName(),
-                                     "NoImplicitFloat", L)
-              << "loop not vectorized due to NoImplicitFloat attribute");
+    reportVectorizationFailure(
+        "Can't vectorize when the NoImplicitFloat attribute is used",
+        "loop not vectorized due to NoImplicitFloat attribute",
+        "NoImplicitFloat", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }
@@ -7438,11 +7474,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // additional fp-math flags can help.
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
-    LLVM_DEBUG(
-        dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
-    ORE->emit(
-        createLVMissedAnalysis(Hints.vectorizeAnalysisPassName(), "UnsafeFP", L)
-        << "loop not vectorized due to unsafe FP support.");
+    reportVectorizationFailure(
+        "Potentially unsafe FP op prevents vectorization",
+        "loop not vectorized due to unsafe FP support.",
+        "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }

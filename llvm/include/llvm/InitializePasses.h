@@ -202,6 +202,7 @@ void initializeLegacyLICMPassPass(PassRegistry&);
 void initializeLegacyLoopSinkPassPass(PassRegistry&);
 void initializeLegalizerPass(PassRegistry&);
 void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
+void initializeGISelKnownBitsAnalysisPass(PassRegistry &);
 void initializeLibCallsShrinkWrapLegacyPassPass(PassRegistry&);
 void initializeLintPass(PassRegistry&);
 void initializeLiveDebugValuesPass(PassRegistry&);

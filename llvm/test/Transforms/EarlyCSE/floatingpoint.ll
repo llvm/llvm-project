@@ -13,3 +13,16 @@ define <4 x float> @fW( <4 x float> %a) {
        %b = fadd  <4 x float> %a, <float -0.0,float -0.0,float -0.0,float -0.0>
        ret <4 x float> %b
 }
+
+; CSE unary fnegs.
+define void @fX(<4 x float> *%p, <4 x float> %a) {
+       ; CHECK: %x = fneg <4 x float> %a
+       ; CHECK: %y = fneg <4 x float> %a
+       ; CHECK-NEXT:  store volatile <4 x float> %x, <4 x float>* %p
+       ; CHECK-NEXT: store volatile <4 x float> %y, <4 x float>* %p
+       %x = fneg <4 x float> %a
+       %y = fneg <4 x float> %a
+       store volatile <4 x float> %x, <4 x float>* %p
+       store volatile <4 x float> %y, <4 x float>* %p
+       ret void
+}

@@ -8555,14 +8555,15 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
 
   SDValue OpsLo[] = { Chain, DataLo, MaskLo, BasePtr, IndexLo, Scale };
   SDValue Lo = DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
-                                    DataLo.getValueType(), DL, OpsLo, MMO);
+                                    DataLo.getValueType(), DL, OpsLo, MMO,
+                                    MSC->getIndexType());
 
   // The order of the Scatter operation after split is well defined. The "Hi"
   // part comes after the "Lo". So these two operations should be chained one
   // after another.
   SDValue OpsHi[] = { Lo, DataHi, MaskHi, BasePtr, IndexHi, Scale };
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataHi.getValueType(),
-                              DL, OpsHi, MMO);
+                              DL, OpsHi, MMO, MSC->getIndexType());
 }
 
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
@@ -8691,11 +8692,11 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
 
   SDValue OpsLo[] = { Chain, PassThruLo, MaskLo, BasePtr, IndexLo, Scale };
   Lo = DAG.getMaskedGather(DAG.getVTList(LoVT, MVT::Other), LoVT, DL, OpsLo,
-                           MMO);
+                           MMO, MGT->getIndexType());
 
   SDValue OpsHi[] = { Chain, PassThruHi, MaskHi, BasePtr, IndexHi, Scale };
   Hi = DAG.getMaskedGather(DAG.getVTList(HiVT, MVT::Other), HiVT, DL, OpsHi,
-                           MMO);
+                           MMO, MGT->getIndexType());
 
   AddToWorklist(Lo.getNode());
   AddToWorklist(Hi.getNode());

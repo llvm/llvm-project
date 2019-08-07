@@ -114,13 +114,17 @@ unsigned GlobalValue::getAddressSpace() const {
 }
 
 void GlobalObject::setAlignment(unsigned Align) {
-  assert((Align & (Align-1)) == 0 && "Alignment is not a power of 2!");
-  assert(Align <= MaximumAlignment &&
+  setAlignment(MaybeAlign(Align));
+}
+
+void GlobalObject::setAlignment(MaybeAlign Align) {
+  assert((!Align || Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
-  unsigned AlignmentData = Log2_32(Align) + 1;
+  unsigned AlignmentData = encode(Align);
   unsigned OldData = getGlobalValueSubClassData();
   setGlobalValueSubClassData((OldData & ~AlignmentMask) | AlignmentData);
-  assert(getAlignment() == Align && "Alignment representation error!");
+  assert(MaybeAlign(getAlignment()) == Align &&
+         "Alignment representation error!");
 }
 
 void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {

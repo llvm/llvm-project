@@ -1263,7 +1263,14 @@ class FieldInit : public TypedInit {
 
   FieldInit(Init *R, StringInit *FN)
       : TypedInit(IK_FieldInit, R->getFieldType(FN)), Rec(R), FieldName(FN) {
-    assert(getType() && "FieldInit with non-record type!");
+#ifndef NDEBUG
+    if (!getType()) {
+      llvm::errs() << "In Record = " << Rec->getAsString()
+                   << ", got FieldName = " << *FieldName
+                   << " with non-record type!\n";
+      llvm_unreachable("FieldInit with non-record type!");
+    }
+#endif
   }
 
 public:

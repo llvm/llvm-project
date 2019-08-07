@@ -11,9 +11,11 @@
 using namespace llvm;
 using namespace clang;
 
-std::unique_ptr<DirectoryWatcher> clang::DirectoryWatcher::create(
+llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::create(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     bool WaitForInitialSync) {
-  return nullptr;
+  return llvm::make_error<llvm::StringError>(
+      "DirectoryWatcher is not implemented for this platform!",
+      llvm::inconvertibleErrorCode());
 }

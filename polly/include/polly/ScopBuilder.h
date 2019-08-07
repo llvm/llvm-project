@@ -123,6 +123,172 @@ class ScopBuilder {
   // Build the SCoP for Region @p R.
   void buildScop(Region &R, AssumptionCache &AC);
 
+  /// Adjust the dimensions of @p Dom that was constructed for @p OldL
+  ///        to be compatible to domains constructed for loop @p NewL.
+  ///
+  /// This function assumes @p NewL and @p OldL are equal or there is a CFG
+  /// edge from @p OldL to @p NewL.
+  isl::set adjustDomainDimensions(isl::set Dom, Loop *OldL, Loop *NewL);
+
+  /// Compute the domain for each basic block in @p R.
+  ///
+  /// @param R                The region we currently traverse.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool buildDomains(Region *R,
+                    DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Compute the branching constraints for each basic block in @p R.
+  ///
+  /// @param R                The region we currently build branching conditions
+  ///                         for.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool buildDomainsWithBranchConstraints(
+      Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Build the conditions sets for the terminator @p TI in the @p Domain.
+  ///
+  /// This will fill @p ConditionSets with the conditions under which control
+  /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
+  /// have as many elements as @p TI has successors.
+  bool buildConditionSets(BasicBlock *BB, Instruction *TI, Loop *L,
+                          __isl_keep isl_set *Domain,
+                          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets);
+
+  /// Build the conditions sets for the branch condition @p Condition in
+  /// the @p Domain.
+  ///
+  /// This will fill @p ConditionSets with the conditions under which control
+  /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
+  /// have as many elements as @p TI has successors. If @p TI is nullptr the
+  /// context under which @p Condition is true/false will be returned as the
+  /// new elements of @p ConditionSets.
+  bool buildConditionSets(BasicBlock *BB, Value *Condition, Instruction *TI,
+                          Loop *L, __isl_keep isl_set *Domain,
+                          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets);
+
+  /// Build the conditions sets for the switch @p SI in the @p Domain.
+  ///
+  /// This will fill @p ConditionSets with the conditions under which control
+  /// will be moved from @p SI to its successors. Hence, @p ConditionSets will
+  /// have as many elements as @p SI has successors.
+  bool buildConditionSets(BasicBlock *BB, SwitchInst *SI, Loop *L,
+                          __isl_keep isl_set *Domain,
+                          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                          SmallVectorImpl<__isl_give isl_set *> &ConditionSets);
+
+  /// Build condition sets for unsigned ICmpInst(s).
+  /// Special handling is required for unsigned operands to ensure that if
+  /// MSB (aka the Sign bit) is set for an operands in an unsigned ICmpInst
+  /// it should wrap around.
+  ///
+  /// @param IsStrictUpperBound holds information on the predicate relation
+  /// between TestVal and UpperBound, i.e,
+  /// TestVal < UpperBound  OR  TestVal <= UpperBound
+  __isl_give isl_set *buildUnsignedConditionSets(
+      BasicBlock *BB, Value *Condition, __isl_keep isl_set *Domain,
+      const SCEV *SCEV_TestVal, const SCEV *SCEV_UpperBound,
+      DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+      bool IsStrictUpperBound);
+
+  /// Propagate the domain constraints through the region @p R.
+  ///
+  /// @param R                The region we currently build branching
+  /// conditions for.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool propagateDomainConstraints(
+      Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Propagate domains that are known due to graph properties.
+  ///
+  /// As a CFG is mostly structured we use the graph properties to propagate
+  /// domains without the need to compute all path conditions. In particular,
+  /// if a block A dominates a block B and B post-dominates A we know that the
+  /// domain of B is a superset of the domain of A. As we do not have
+  /// post-dominator information available here we use the less precise region
+  /// information. Given a region R, we know that the exit is always executed
+  /// if the entry was executed, thus the domain of the exit is a superset of
+  /// the domain of the entry. In case the exit can only be reached from
+  /// within the region the domains are in fact equal. This function will use
+  /// this property to avoid the generation of condition constraints that
+  /// determine when a branch is taken. If @p BB is a region entry block we
+  /// will propagate its domain to the region exit block. Additionally, we put
+  /// the region exit block in the @p FinishedExitBlocks set so we can later
+  /// skip edges from within the region to that block.
+  ///
+  /// @param BB                 The block for which the domain is currently
+  ///                           propagated.
+  /// @param BBLoop             The innermost affine loop surrounding @p BB.
+  /// @param FinishedExitBlocks Set of region exits the domain was set for.
+  /// @param InvalidDomainMap   BB to InvalidDomain map for the BB of current
+  ///                           region.
+  void propagateDomainConstraintsToRegionExit(
+      BasicBlock *BB, Loop *BBLoop,
+      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks,
+      DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Propagate invalid domains of statements through @p R.
+  ///
+  /// This method will propagate invalid statement domains through @p R and at
+  /// the same time add error block domains to them. Additionally, the domains
+  /// of error statements and those only reachable via error statements will
+  /// be replaced by an empty set. Later those will be removed completely.
+  ///
+  /// @param R                The currently traversed region.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  //
+  /// @returns True if there was no problem and false otherwise.
+  bool propagateInvalidStmtDomains(
+      Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Compute the union of predecessor domains for @p BB.
+  ///
+  /// To compute the union of all domains of predecessors of @p BB this
+  /// function applies similar reasoning on the CFG structure as described for
+  ///   @see propagateDomainConstraintsToRegionExit
+  ///
+  /// @param BB     The block for which the predecessor domains are collected.
+  /// @param Domain The domain under which BB is executed.
+  ///
+  /// @returns The domain under which @p BB is executed.
+  isl::set getPredecessorDomainConstraints(BasicBlock *BB, isl::set Domain);
+
+  /// Add loop carried constraints to the header block of the loop @p L.
+  ///
+  /// @param L                The loop to process.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool addLoopBoundsToHeaderDomain(
+      Loop *L, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
+
+  /// Compute the isl representation for the SCEV @p E in this BB.
+  ///
+  /// @param BB               The BB for which isl representation is to be
+  /// computed.
+  /// @param InvalidDomainMap A map of BB to their invalid domains.
+  /// @param E                The SCEV that should be translated.
+  /// @param NonNegative      Flag to indicate the @p E has to be
+  /// non-negative.
+  ///
+  /// Note that this function will also adjust the invalid context
+  /// accordingly.
+  __isl_give isl_pw_aff *
+  getPwAff(BasicBlock *BB, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+           const SCEV *E, bool NonNegative = false);
+
   /// Create equivalence classes for required invariant accesses.
   ///
   /// These classes will consolidate multiple required invariant loads from the
@@ -441,6 +607,10 @@ class ScopBuilder {
 
   /// Add user provided parameter constraints to context (command line).
   void addUserContext();
+
+  /// Add user provided parameter constraints to context (source code).
+  void addUserAssumptions(AssumptionCache &AC,
+                          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
 
   /// Add all recorded assumptions to the assumed context.
   void addRecordedAssumptions();

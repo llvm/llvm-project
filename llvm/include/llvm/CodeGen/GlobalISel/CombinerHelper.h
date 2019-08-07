@@ -27,6 +27,7 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
+class GISelKnownBits;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -38,9 +39,11 @@ class CombinerHelper {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
+  GISelKnownBits *KB;
 
 public:
-  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B);
+  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
+                 GISelKnownBits *KB = nullptr);
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;

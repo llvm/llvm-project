@@ -70,11 +70,11 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
     return;
 
-  DenseMap<uint32_t, uint32_t> OffsetRemapping;
+  DenseMap<uint64_t, uint32_t> OffsetRemapping;
 
   DataExtractor Data(CurStrSection, true, 0);
-  uint32_t LocalOffset = 0;
-  uint32_t PrevOffset = 0;
+  uint64_t LocalOffset = 0;
+  uint64_t PrevOffset = 0;
   while (const char *s = Data.getCStr(&LocalOffset)) {
     OffsetRemapping[PrevOffset] =
         Strings.getOffset(s, LocalOffset - PrevOffset);
@@ -85,7 +85,7 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   Out.SwitchSection(StrOffsetSection);
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   uint64_t Size = CurStrOffsetSection.size();
   while (Offset < Size) {
     auto OldOffset = Data.getU32(&Offset);
@@ -94,9 +94,9 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   }
 }
 
-static uint32_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
+static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
   uint64_t CurCode;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true, 0);
   while ((CurCode = AbbrevData.getULEB128(&Offset)) != AbbrCode) {
     // Tag
@@ -118,7 +118,7 @@ struct CompileUnitIdentifiers {
 
 static Expected<const char *>
 getIndexedString(dwarf::Form Form, DataExtractor InfoData,
-                 uint32_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
+                 uint64_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
   if (Form != dwarf::DW_FORM_GNU_str_index)
@@ -126,8 +126,8 @@ getIndexedString(dwarf::Form Form, DataExtractor InfoData,
         "string field encoded without DW_FORM_string or DW_FORM_GNU_str_index");
   auto StrIndex = InfoData.getULEB128(&InfoOffset);
   DataExtractor StrOffsetsData(StrOffsets, true, 0);
-  uint32_t StrOffsetsOffset = 4 * StrIndex;
-  uint32_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
+  uint64_t StrOffsetsOffset = 4 * StrIndex;
+  uint64_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
   DataExtractor StrData(Str, true, 0);
   return StrData.getCStr(&StrOffset);
 }
@@ -136,7 +136,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
                                                          StringRef Info,
                                                          StringRef StrOffsets,
                                                          StringRef Str) {
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DataExtractor InfoData(Info, true, 0);
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
   uint64_t Length = InfoData.getU32(&Offset);
@@ -153,7 +153,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
 
   DataExtractor AbbrevData(Abbrev, true, 0);
-  uint32_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
+  uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
@@ -250,7 +250,7 @@ static void addAllTypes(MCStreamer &Out,
                         const UnitIndexEntry &CUEntry, uint32_t &TypesOffset) {
   for (StringRef Types : TypesSections) {
     Out.SwitchSection(OutputTypes);
-    uint32_t Offset = 0;
+    uint64_t Offset = 0;
     DataExtractor Data(Types, true, 0);
     while (Data.isValidOffset(Offset)) {
       UnitIndexEntry Entry = CUEntry;

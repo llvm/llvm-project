@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <bitset>
 #include <cassert>
@@ -705,8 +706,8 @@ template <> struct DenseMapInfo<AttributeList> {
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<std::string, std::string> TargetDepAttrs;
-  uint64_t Alignment = 0;
-  uint64_t StackAlignment = 0;
+  MaybeAlign Alignment;
+  MaybeAlign StackAlignment;
   uint64_t DerefBytes = 0;
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
@@ -773,10 +774,12 @@ public:
   bool hasAlignmentAttr() const;
 
   /// Retrieve the alignment attribute, if it exists.
-  uint64_t getAlignment() const { return Alignment; }
+  uint64_t getAlignment() const { return Alignment ? Alignment->value() : 0; }
 
   /// Retrieve the stack alignment attribute, if it exists.
-  uint64_t getStackAlignment() const { return StackAlignment; }
+  uint64_t getStackAlignment() const {
+    return StackAlignment ? StackAlignment->value() : 0;
+  }
 
   /// Retrieve the number of dereferenceable bytes, if the
   /// dereferenceable attribute exists (zero is returned otherwise).
