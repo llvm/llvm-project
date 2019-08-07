@@ -5156,7 +5156,8 @@ ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
 }
 
 Optional<uint64_t>
-ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
+ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
+                               ExecutionContextScope *exe_scope) {
   return {};
 }
 

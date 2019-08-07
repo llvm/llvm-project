@@ -515,7 +515,7 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
   }
 
   auto stride = 0;
-  auto opt_stride = static_type.GetByteStride();
+  auto opt_stride = static_type.GetByteStride(frame_sp.get());
   if (opt_stride)
     stride = *opt_stride;
 
