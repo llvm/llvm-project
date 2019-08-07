@@ -420,7 +420,11 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
         // than the one from the CU.
         auto oso_mod_time = std::chrono::time_point_cast<std::chrono::seconds>(
             FileSystem::Instance().GetModificationTime(oso_file));
-        if (oso_mod_time != comp_unit_info->oso_mod_time) {
+        // A timestamp of 0 means that the linker was in deterministic mode. In
+        // that case, we should skip the check against the filesystem last
+        // modification timestamp, since it will never match.
+        if (comp_unit_info->oso_mod_time != llvm::sys::TimePoint<>() &&
+            oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(
               "debug map object file '%s' has changed (actual time is "
               "%s, debug map time is %s"
