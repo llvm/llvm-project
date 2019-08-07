@@ -76,7 +76,7 @@ install(EXPORT ParallelSTLTargets
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
         DESTINATION lib/cmake/ParallelSTL)
-install(DIRECTORY include/pstl
+install(DIRECTORY include/
         DESTINATION include)
 
 add_custom_target(install-pstl

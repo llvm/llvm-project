@@ -1310,8 +1310,6 @@ public:
 
   bool IsRemovable() const override { return true; }
 
-  StructuredData::GenericSP GetImplementingObject() { return m_cmd_obj_sp; }
-
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
   llvm::StringRef GetHelp() override {
