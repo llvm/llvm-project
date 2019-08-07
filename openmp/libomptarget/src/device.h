@@ -137,10 +137,10 @@ struct DeviceTy {
   long getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-      bool &IsNew, bool IsImplicit, bool UpdateRefCount = true);
+      bool &IsNew, bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount = true);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-      bool UpdateRefCount);
+      bool UpdateRefCount, bool &IsHostPtr);
   int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool ForceDelete);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
