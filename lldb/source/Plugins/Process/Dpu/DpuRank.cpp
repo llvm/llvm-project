@@ -151,7 +151,7 @@ bool Dpu::StopThreadsUnlock() {
 }
 
 static void SetExitStatus(unsigned int *exit_status, struct _dpu_context_t *context) {
-  *exit_status = context->registers[lldb_private::r21_dpu];
+  *exit_status = context->registers[lldb_private::r0_dpu];
 }
 
 StateType Dpu::PollStatus(unsigned int *exit_status) {
