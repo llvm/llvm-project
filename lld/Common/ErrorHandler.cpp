@@ -168,8 +168,8 @@ void ErrorHandler::error(const Twine &msg) {
   // this particular error is printed out as two errors.
   if (vsDiagnostics) {
     static std::regex re(R"(^(duplicate symbol: .*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))"
-                         R"((\n>>> defined at \S+:\d+\n>>>.*))");
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))"
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))");
     std::string str = msg.str();
     std::smatch m;
 
