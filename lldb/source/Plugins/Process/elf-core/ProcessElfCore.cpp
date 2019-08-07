@@ -33,6 +33,7 @@
 #include "ThreadElfCore.h"
 
 using namespace lldb_private;
+namespace ELF = llvm::ELF;
 
 ConstString ProcessElfCore::GetPluginNameStatic() {
   static ConstString g_name("elf-core");
@@ -521,8 +522,8 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     if (note.info.n_name != "FreeBSD")
       continue;
 
-    if ((note.info.n_type == FREEBSD::NT_PRSTATUS && have_prstatus) ||
-        (note.info.n_type == FREEBSD::NT_PRPSINFO && have_prpsinfo)) {
+    if ((note.info.n_type == ELF::NT_PRSTATUS && have_prstatus) ||
+        (note.info.n_type == ELF::NT_PRPSINFO && have_prpsinfo)) {
       assert(thread_data.gpregset.GetByteSize() > 0);
       // Add the new thread to thread list
       m_thread_data.push_back(thread_data);
@@ -532,19 +533,19 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
 
     switch (note.info.n_type) {
-    case FREEBSD::NT_PRSTATUS:
+    case ELF::NT_PRSTATUS:
       have_prstatus = true;
       ParseFreeBSDPrStatus(thread_data, note.data, GetArchitecture());
       break;
-    case FREEBSD::NT_PRPSINFO:
+    case ELF::NT_PRPSINFO:
       have_prpsinfo = true;
       break;
-    case FREEBSD::NT_THRMISC: {
+    case ELF::NT_FREEBSD_THRMISC: {
       lldb::offset_t offset = 0;
       thread_data.name = note.data.GetCStr(&offset, 20);
       break;
     }
-    case FREEBSD::NT_PROCSTAT_AUXV:
+    case ELF::NT_FREEBSD_PROCSTAT_AUXV:
       // FIXME: FreeBSD sticks an int at the beginning of the note
       m_auxv = DataExtractor(note.data, 4, note.data.GetByteSize() - 4);
       break;
@@ -771,8 +772,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
     if (note.info.n_name != "CORE" && note.info.n_name != "LINUX")
       continue;
 
-    if ((note.info.n_type == LINUX::NT_PRSTATUS && have_prstatus) ||
-        (note.info.n_type == LINUX::NT_PRPSINFO && have_prpsinfo)) {
+    if ((note.info.n_type == ELF::NT_PRSTATUS && have_prstatus) ||
+        (note.info.n_type == ELF::NT_PRPSINFO && have_prpsinfo)) {
       assert(thread_data.gpregset.GetByteSize() > 0);
       // Add the new thread to thread list
       m_thread_data.push_back(thread_data);
@@ -782,7 +783,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
     }
 
     switch (note.info.n_type) {
-    case LINUX::NT_PRSTATUS: {
+    case ELF::NT_PRSTATUS: {
       have_prstatus = true;
       ELFLinuxPrStatus prstatus;
       Status status = prstatus.Parse(note.data, arch);
@@ -795,7 +796,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       thread_data.gpregset = DataExtractor(note.data, header_size, len);
       break;
     }
-    case LINUX::NT_PRPSINFO: {
+    case ELF::NT_PRPSINFO: {
       have_prpsinfo = true;
       ELFLinuxPrPsInfo prpsinfo;
       Status status = prpsinfo.Parse(note.data, arch);
@@ -805,7 +806,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       SetID(prpsinfo.pr_pid);
       break;
     }
-    case LINUX::NT_SIGINFO: {
+    case ELF::NT_SIGINFO: {
       ELFLinuxSigInfo siginfo;
       Status status = siginfo.Parse(note.data, arch);
       if (status.Fail())
@@ -813,7 +814,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       thread_data.signo = siginfo.si_signo;
       break;
     }
-    case LINUX::NT_FILE: {
+    case ELF::NT_FILE: {
       m_nt_file_entries.clear();
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
@@ -832,7 +833,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       }
       break;
     }
-    case LINUX::NT_AUXV:
+    case ELF::NT_AUXV:
       m_auxv = note.data;
       break;
     default:
