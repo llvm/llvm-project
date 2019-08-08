@@ -3190,6 +3190,7 @@ public:
     if (!module)
       return;
 
+    // Find the type in the debug info.
     TypeList clang_types;
     const bool exact_match = true;
     const uint32_t max_matches = UINT32_MAX;
@@ -3201,6 +3202,7 @@ public:
     SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
     if (!sym_file)
       return;
+    // Filter out non-Clang types.
     auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
         sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC));
     if (!clang_ctx)
