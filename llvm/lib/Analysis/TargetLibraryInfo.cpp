@@ -58,7 +58,7 @@ static bool hasBcmp(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isMusl();
   // Both NetBSD and OpenBSD are planning to remove the function. Windows does
   // not have it.
-  return TT.isOSFreeBSD() || TT.isOSSolaris() || TT.isOSDarwin();
+  return TT.isOSFreeBSD() || TT.isOSSolaris();
 }
 
 /// Initialize the set of available library functions based on the specified

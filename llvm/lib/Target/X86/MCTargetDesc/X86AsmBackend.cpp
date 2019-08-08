@@ -287,7 +287,7 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
                                          const MCRelaxableFragment *DF,
                                          const MCAsmLayout &Layout) const {
   // Relax if the value is too big for a (signed) i8.
-  return int64_t(Value) != int64_t(int8_t(Value));
+  return !isInt<8>(Value);
 }
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions

@@ -28,9 +28,9 @@
 ; OBJ:     OffsetInParent: 0
 ; OBJ:     BasePointerOffset: 12
 ; OBJ:     LocalVariableAddrRange {
-; OBJ:       OffsetStart: .text+0x10
+; OBJ:       OffsetStart: .text+0x14
 ; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x2C
+; OBJ:       Range: 0x30
 ; OBJ:     }
 ; OBJ:   }
 

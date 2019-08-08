@@ -502,8 +502,8 @@ private:
   }
 
   /// extractDIEsIfNeeded - Parses a compile unit and indexes its DIEs if it
-  /// hasn't already been done. Returns the number of DIEs parsed at this call.
-  size_t extractDIEsIfNeeded(bool CUDieOnly);
+  /// hasn't already been done
+  void extractDIEsIfNeeded(bool CUDieOnly);
 
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,

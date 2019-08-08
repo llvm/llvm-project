@@ -32,12 +32,16 @@ public:
     f(infoSection);
   }
 
-  const llvm::DWARFSection &getRangeSection() const override {
-    return rangeSection;
+  const llvm::DWARFSection &getRangesSection() const override {
+    return rangesSection;
   }
 
   const llvm::DWARFSection &getRnglistsSection() const override {
-    return rngListsSection;
+    return rnglistsSection;
+  }
+
+  const llvm::DWARFSection &getStrOffsetsSection() const override {
+    return strOffsetsSection;
   }
 
   const llvm::DWARFSection &getLineSection() const override {
@@ -48,18 +52,18 @@ public:
     return addrSection;
   }
 
-  const llvm::DWARFSection &getGnuPubNamesSection() const override {
-    return gnuPubNamesSection;
+  const llvm::DWARFSection &getGnuPubnamesSection() const override {
+    return gnuPubnamesSection;
   }
 
-  const llvm::DWARFSection &getGnuPubTypesSection() const override {
-    return gnuPubTypesSection;
+  const llvm::DWARFSection &getGnuPubtypesSection() const override {
+    return gnuPubtypesSection;
   }
 
   StringRef getFileName() const override { return ""; }
   StringRef getAbbrevSection() const override { return abbrevSection; }
-  StringRef getStringSection() const override { return strSection; }
-  StringRef getLineStringSection() const override { return lineStringSection; }
+  StringRef getStrSection() const override { return strSection; }
+  StringRef getLineStrSection() const override { return lineStrSection; }
 
   bool isLittleEndian() const override {
     return ELFT::TargetEndianness == llvm::support::little;
@@ -74,16 +78,17 @@ private:
                                                uint64_t pos,
                                                ArrayRef<RelTy> rels) const;
 
-  LLDDWARFSection gnuPubNamesSection;
-  LLDDWARFSection gnuPubTypesSection;
+  LLDDWARFSection gnuPubnamesSection;
+  LLDDWARFSection gnuPubtypesSection;
   LLDDWARFSection infoSection;
-  LLDDWARFSection rangeSection;
-  LLDDWARFSection rngListsSection;
+  LLDDWARFSection rangesSection;
+  LLDDWARFSection rnglistsSection;
+  LLDDWARFSection strOffsetsSection;
   LLDDWARFSection lineSection;
   LLDDWARFSection addrSection;
   StringRef abbrevSection;
   StringRef strSection;
-  StringRef lineStringSection;
+  StringRef lineStrSection;
 };
 
 } // namespace elf

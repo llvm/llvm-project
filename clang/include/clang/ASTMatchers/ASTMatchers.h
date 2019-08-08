@@ -6410,7 +6410,7 @@ AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
 /// \endcode
 /// returnStmt(forFunction(hasName("operator=")))
 ///   matches 'return *this'
-///   but does match 'return > 0'
+///   but does not match 'return v > 0'
 AST_MATCHER_P(Stmt, forFunction, internal::Matcher<FunctionDecl>,
               InnerMatcher) {
   const auto &Parents = Finder->getASTContext().getParents(Node);

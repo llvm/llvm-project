@@ -1074,12 +1074,13 @@ define i32 @sad_2i8() nounwind {
 ; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    psadbw %xmm3, %xmm2
-; SSE2-NEXT:    paddq %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    addq $4, %rax
 ; SSE2-NEXT:    jne .LBB3_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -1096,12 +1097,13 @@ define i32 @sad_2i8() nounwind {
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0],xmm0[1,2,3,4,5,6,7]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3,4,5,6,7]
 ; AVX-NEXT:    vpsadbw %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    addq $4, %rax
 ; AVX-NEXT:    jne .LBB3_1
 ; AVX-NEXT:  # %bb.2: # %middle.block
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:

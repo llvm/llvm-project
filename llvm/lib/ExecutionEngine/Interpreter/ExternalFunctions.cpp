@@ -32,7 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/UniqueLock.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cmath>
@@ -41,6 +40,7 @@
 #include <cstdio>
 #include <cstring>
 #include <map>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -258,7 +258,7 @@ GenericValue Interpreter::callExternalFunction(Function *F,
                                                ArrayRef<GenericValue> ArgVals) {
   TheInterpreter = this;
 
-  unique_lock<sys::Mutex> Guard(*FunctionsLock);
+  std::unique_lock<sys::Mutex> Guard(*FunctionsLock);
 
   // Do a lookup to see if the function is in our cache... this should just be a
   // deferred annotation!

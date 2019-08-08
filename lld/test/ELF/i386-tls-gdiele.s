@@ -1,10 +1,10 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-gdiele-i686.s -o %tso.o
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
-// RUN: ld.lld -shared %tso.o -o %tso
-// RUN: ld.lld --hash-style=sysv %t.o %tso -o %tout
+// RUN: llvm-mc -filetype=obj -triple=i686 %p/Inputs/tls-opt-gdiele-i686.s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t1.o
+// RUN: ld.lld -shared %t.o -soname=t.so -o %t.so
+// RUN: ld.lld --hash-style=sysv %t1.o %t.so -o %tout
 // RUN: llvm-readobj -r %tout | FileCheck --check-prefix=NORELOC %s
-// RUN: llvm-objdump -d %tout | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck --check-prefix=DISASM %s
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: Section ({{.*}}) .rel.dyn {
@@ -16,14 +16,14 @@
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: _start:
-// DISASM-NEXT: 401000: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 401006: 03 83 58 f0 ff ff addl -4008(%ebx), %eax
-// DISASM-NEXT: 40100c: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 401012: 03 83 5c f0 ff ff addl -4004(%ebx), %eax
-// DISASM-NEXT: 401018: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 40101e: 81 e8 08 00 00 00 subl $8, %eax
-// DISASM-NEXT: 401024: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DISASM-NEXT: 40102a: 81 e8 04 00 00 00 subl $4, %eax
+// DISASM-NEXT: 401000:       movl %gs:0, %eax
+// DISASM-NEXT:               addl -4008(%ebx), %eax
+// DISASM-NEXT:               movl %gs:0, %eax
+// DISASM-NEXT:               addl -4004(%ebx), %eax
+// DISASM-NEXT:               movl %gs:0, %eax
+// DISASM-NEXT:               subl $8, %eax
+// DISASM-NEXT:               movl %gs:0, %eax
+// DISASM-NEXT:               subl $4, %eax
 
 .type tlsexe1,@object
 .section .tbss,"awT",@nobits

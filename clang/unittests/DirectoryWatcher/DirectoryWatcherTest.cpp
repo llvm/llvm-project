@@ -8,7 +8,6 @@
 
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"

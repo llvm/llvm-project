@@ -170,7 +170,7 @@ struct Attributor {
   /// the one reasoning about the "captured" state for the argument or the one
   /// reasoning on the memory access behavior of the function as a whole.
   template <typename AAType>
-  const AAType *getAAFor(AbstractAttribute &QueryingAA, const Value &V,
+  const AAType *getAAFor(const AbstractAttribute &QueryingAA, const Value &V,
                          int ArgNo = -1) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
@@ -199,7 +199,7 @@ struct Attributor {
       // Do not return an attribute with an invalid state. This minimizes checks
       // at the calls sites and allows the fallback below to kick in.
       if (AA->getState().isValidState()) {
-        QueryMap[AA].insert(&QueryingAA);
+        QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
         return AA;
       }
     }
@@ -266,29 +266,57 @@ struct Attributor {
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
   bool checkForAllCallSites(Function &F, std::function<bool(CallSite)> &Pred,
-                            AbstractAttribute &QueryingAA,
+                            const AbstractAttribute &QueryingAA,
                             bool RequireAllCallSites);
+
+  /// Check \p Pred on all values potentially returned by \p F.
+  ///
+  /// This method will evaluate \p Pred on all values potentially returned by
+  /// \p F associated to their respective return instructions. Return true if
+  /// \p Pred holds on all of them.
+  bool checkForAllReturnedValuesAndReturnInsts(
+      const Function &F,
+      const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+          &Pred,
+      const AbstractAttribute &QueryingAA);
+
+  /// Check \p Pred on all values potentially returned by \p F.
+  ///
+  /// This is the context insensitive version of the method above.
+  bool checkForAllReturnedValues(const Function &F,
+                                 const function_ref<bool(Value &)> &Pred,
+                                 const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
   ///
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
-  bool checkForAllInstructions(
-      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
-      AbstractAttribute &QueryingAA, InformationCache &InfoCache,
-      const ArrayRef<unsigned> &Opcodes);
+  bool checkForAllInstructions(const Function &F,
+                               const function_ref<bool(Instruction &)> &Pred,
+                               const AbstractAttribute &QueryingAA,
+                               InformationCache &InfoCache,
+                               const ArrayRef<unsigned> &Opcodes);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
   bool checkForAllCallLikeInstructions(
-      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
-      AbstractAttribute &QueryingAA, InformationCache &InfoCache) {
+      const Function &F, const function_ref<bool(Instruction &)> &Pred,
+      const AbstractAttribute &QueryingAA, InformationCache &InfoCache) {
     return checkForAllInstructions(F, Pred, QueryingAA, InfoCache,
                                    {(unsigned)Instruction::Invoke,
                                     (unsigned)Instruction::CallBr,
                                     (unsigned)Instruction::Call});
   }
+
+  /// Check \p Pred on all Read/Write instructions.
+  ///
+  /// This method will evaluate \p Pred on all instructions that read or write
+  /// to memory present in \p InfoCache and return true if \p Pred holds on all
+  /// of them.
+  bool checkForAllReadWriteInstructions(
+      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
+      AbstractAttribute &QueryingAA, InformationCache &InfoCache);
 
 private:
   /// The set of all abstract attributes.
@@ -659,12 +687,26 @@ protected:
 /// IRAttribute::manifest is defined in the Attributor.cpp.
 struct IRAttributeManifest {
   static ChangeStatus manifestAttrs(Attributor &A, IRPosition &IRP,
-      const ArrayRef<Attribute> &DeducedAttrs);
+                                    const ArrayRef<Attribute> &DeducedAttrs);
+};
+
+/// Helper to tie a abstract state implementation to an abstract attribute.
+template <typename StateTy, typename Base>
+struct StateWrapper : public StateTy, public Base {
+  /// Provide static access to the type of the state.
+  using StateType = StateTy;
+
+  /// See AbstractAttribute::getState(...).
+  StateType &getState() override { return *this; }
+
+  /// See AbstractAttribute::getState(...).
+  const AbstractState &getState() const override { return *this; }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
 template <Attribute::AttrKind AK, typename Base>
-struct IRAttribute : public IRPosition, public Base, public IRAttributeManifest {
+struct IRAttribute : public IRPosition,
+                     public Base {
   ~IRAttribute() {}
 
   /// Constructors for the IRPosition.
@@ -741,6 +783,7 @@ struct IRAttribute : public IRPosition, public Base, public IRAttributeManifest 
 /// NOTE: The mechanics of adding a new "concrete" abstract attribute are
 ///       described in the file comment.
 struct AbstractAttribute {
+  using StateType = AbstractState;
 
   /// Virtual destructor.
   virtual ~AbstractAttribute() {}
@@ -756,7 +799,8 @@ struct AbstractAttribute {
   virtual void initialize(Attributor &A, InformationCache &InfoCache) {}
 
   /// Return the internal abstract state for inspection.
-  virtual const AbstractState &getState() const = 0;
+  virtual StateType &getState() = 0;
+  virtual const StateType &getState() const = 0;
 
   /// Return an IR position, see struct IRPosition.
   virtual const IRPosition &getIRPosition() const = 0;
@@ -789,11 +833,16 @@ protected:
   virtual ChangeStatus manifest(Attributor &A) {
     return ChangeStatus::UNCHANGED;
   }
+
+  /// Hook to enable custom statistic tracking, called after manifest that
+  /// resulted in a change if statistics are enabled.
+  ///
+  /// We require subclasses to provide an implementation so we remember to
+  /// add statistics for them.
+  virtual void trackStatistics() const = 0;
+
   /// Return an IR position, see struct IRPosition.
   virtual IRPosition &getIRPosition() = 0;
-
-  /// Return the internal abstract state for careful modification.
-  virtual AbstractState &getState() = 0;
 
   /// The actual update/transfer function which has to be implemented by the
   /// derived classes.
@@ -836,49 +885,58 @@ struct AAReturnedValues
   /// This method will evaluate \p Pred on returned values and return
   /// true if (1) all returned values are known, and (2) \p Pred returned true
   /// for all returned values.
-  virtual bool checkForallReturnedValues(
-      std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> &Pred)
-      const = 0;
+  ///
+  /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
+  /// method, this one will not filter dead return instructions.
+  virtual bool checkForAllReturnedValuesAndReturnInsts(
+      const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+          &Pred) const = 0;
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
-struct AANoUnwind : public IRAttribute<Attribute::NoUnwind, AbstractAttribute> {
+struct AANoUnwind
+    : public IRAttribute<Attribute::NoUnwind,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoUnwind, IRAttribute);
 
   /// Returns true if nounwind is assumed.
-  virtual bool isAssumedNoUnwind() const = 0;
+  bool isAssumedNoUnwind() const { return getAssumed(); }
 
   /// Returns true if nounwind is known.
-  virtual bool isKnownNoUnwind() const = 0;
+  bool isKnownNoUnwind() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
-struct AANoSync : public IRAttribute<Attribute::NoSync, AbstractAttribute> {
+struct AANoSync
+    : public IRAttribute<Attribute::NoSync,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoSync, IRAttribute);
 
   /// Returns true if "nosync" is assumed.
-  virtual bool isAssumedNoSync() const = 0;
+  bool isAssumedNoSync() const { return getAssumed(); }
 
   /// Returns true if "nosync" is known.
-  virtual bool isKnownNoSync() const = 0;
+  bool isKnownNoSync() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
 /// An abstract interface for all nonnull attributes.
-struct AANonNull : public IRAttribute<Attribute::NonNull, AbstractAttribute> {
+struct AANonNull
+    : public IRAttribute<Attribute::NonNull,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANonNull, IRAttribute);
 
   /// Return true if we assume that the underlying value is nonnull.
-  virtual bool isAssumedNonNull() const = 0;
+  bool isAssumedNonNull() const { return getAssumed(); }
 
   /// Return true if we know that underlying value is nonnull.
-  virtual bool isKnownNonNull() const = 0;
+  bool isKnownNonNull() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -886,14 +944,15 @@ struct AANonNull : public IRAttribute<Attribute::NonNull, AbstractAttribute> {
 
 /// An abstract attribute for norecurse.
 struct AANoRecurse
-    : public IRAttribute<Attribute::NoRecurse, AbstractAttribute> {
+    : public IRAttribute<Attribute::NoRecurse,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoRecurse, IRAttribute);
 
-  /// Return true if "norecurse" is known.
-  virtual bool isKnownNoRecurse() const = 0;
-
   /// Return true if "norecurse" is assumed.
-  virtual bool isAssumedNoRecurse() const = 0;
+  bool isAssumedNoRecurse() const { return getAssumed(); }
+
+  /// Return true if "norecurse" is known.
+  bool isKnownNoRecurse() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -901,63 +960,71 @@ struct AANoRecurse
 
 /// An abstract attribute for willreturn.
 struct AAWillReturn
-    : public IRAttribute<Attribute::WillReturn, AbstractAttribute> {
+    : public IRAttribute<Attribute::WillReturn,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AAWillReturn, IRAttribute);
 
-  /// Return true if "willreturn" is known.
-  virtual bool isKnownWillReturn() const = 0;
-
   /// Return true if "willreturn" is assumed.
-  virtual bool isAssumedWillReturn() const = 0;
+  bool isAssumedWillReturn() const { return getAssumed(); }
+
+  /// Return true if "willreturn" is known.
+  bool isKnownWillReturn() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
 /// An abstract interface for all noalias attributes.
-struct AANoAlias : public IRAttribute<Attribute::NoAlias, AbstractAttribute> {
+struct AANoAlias
+    : public IRAttribute<Attribute::NoAlias,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoAlias, IRAttribute);
 
   /// Return true if we assume that the underlying value is alias.
-  virtual bool isAssumedNoAlias() const = 0;
+  bool isAssumedNoAlias() const { return getAssumed(); }
 
   /// Return true if we know that underlying value is noalias.
-  virtual bool isKnownNoAlias() const = 0;
+  bool isKnownNoAlias() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
 /// An AbstractAttribute for nofree.
-struct AANoFree : public IRAttribute<Attribute::NoFree, AbstractAttribute> {
+struct AANoFree
+    : public IRAttribute<Attribute::NoFree,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoFree, IRAttribute);
 
-  /// Return true if "nofree" is known.
-  virtual bool isKnownNoFree() const = 0;
-
   /// Return true if "nofree" is assumed.
-  virtual bool isAssumedNoFree() const = 0;
+  bool isAssumedNoFree() const { return getAssumed(); }
+
+  /// Return true if "nofree" is known.
+  bool isKnownNoFree() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
 /// An AbstractAttribute for noreturn.
-struct AANoReturn : public IRAttribute<Attribute::NoReturn, AbstractAttribute> {
+struct AANoReturn
+    : public IRAttribute<Attribute::NoReturn,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
   IRPositionConstructorForward(AANoReturn, IRAttribute);
 
-  /// Return true if the underlying object is known to never return.
-  virtual bool isKnownNoReturn() const = 0;
-
   /// Return true if the underlying object is assumed to never return.
-  virtual bool isAssumedNoReturn() const = 0;
+  bool isAssumedNoReturn() const { return getAssumed(); }
+
+  /// Return true if the underlying object is known to never return.
+  bool isKnownNoReturn() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;
 };
 
 /// An abstract interface for liveness abstract attribute.
-struct AAIsDead : public AbstractAttribute, public IRPosition {
+struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
+                  public IRPosition {
   IRPositionConstructorForward(AAIsDead, IRPosition);
 
   /// Returns true if \p BB is assumed dead.
@@ -1027,14 +1094,16 @@ struct AADereferenceable
 };
 
 /// An abstract interface for all align attributes.
-struct AAAlign : public IRAttribute<Attribute::Alignment, AbstractAttribute> {
+struct AAAlign
+    : public IRAttribute<Attribute::Alignment,
+                         StateWrapper<IntegerState, AbstractAttribute>> {
   IRPositionConstructorForward(AAAlign, IRAttribute);
 
   /// Return assumed alignment.
-  virtual unsigned getAssumedAlign() const = 0;
+  unsigned getAssumedAlign() const { return getAssumed(); }
 
   /// Return known alignemnt.
-  virtual unsigned getKnownAlign() const = 0;
+  unsigned getKnownAlign() const { return getKnown(); }
 
   /// Unique ID (due to the unique address)
   static const char ID;

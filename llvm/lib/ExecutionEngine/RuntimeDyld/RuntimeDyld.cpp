@@ -20,7 +20,7 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/MutexGuard.h"
+#include <mutex>
 
 #include <future>
 
@@ -120,7 +120,7 @@ static void dumpSectionMemory(const SectionEntry &S, StringRef State) {
 
 // Resolve the relocations for all symbols we currently know about.
 void RuntimeDyldImpl::resolveRelocations() {
-  MutexGuard locked(lock);
+  std::lock_guard<sys::Mutex> locked(lock);
 
   // Print out the sections prior to relocation.
   LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
@@ -156,7 +156,7 @@ void RuntimeDyldImpl::resolveLocalRelocations() {
 
 void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
                                         uint64_t TargetAddress) {
-  MutexGuard locked(lock);
+  std::lock_guard<sys::Mutex> locked(lock);
   for (unsigned i = 0, e = Sections.size(); i != e; ++i) {
     if (Sections[i].getAddress() == LocalAddress) {
       reassignSectionAddress(i, TargetAddress);
@@ -177,7 +177,7 @@ static Error getOffset(const SymbolRef &Sym, SectionRef Sec,
 
 Expected<RuntimeDyldImpl::ObjSectionToIDMap>
 RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
-  MutexGuard locked(lock);
+  std::lock_guard<sys::Mutex> locked(lock);
 
   // Save information about our target
   Arch = (Triple::ArchType)Obj.getArch();

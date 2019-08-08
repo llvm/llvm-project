@@ -137,11 +137,11 @@ namespace {
     bool isPRECandidate(MachineInstr *MI);
     bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
     bool PerformSimplePRE(MachineDominatorTree *DT);
-    /// Heuristics to see if it's beneficial to move common computations of MBB
+    /// Heuristics to see if it's profitable to move common computations of MBB
     /// and MBB1 to CandidateBB.
-    bool isBeneficalToHoistInto(MachineBasicBlock *CandidateBB,
-                                MachineBasicBlock *MBB,
-                                MachineBasicBlock *MBB1);
+    bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
+                                 MachineBasicBlock *MBB,
+                                 MachineBasicBlock *MBB1);
   };
 
 } // end anonymous namespace
@@ -809,7 +809,7 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
     if (!CMBB->isLegalToHoistInto())
       continue;
 
-    if (!isBeneficalToHoistInto(CMBB, MBB, MBB1))
+    if (!isProfitableToHoistInto(CMBB, MBB, MBB1))
       continue;
 
     // Two instrs are partial redundant if their basic blocks are reachable
@@ -864,9 +864,9 @@ bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
   return Changed;
 }
 
-bool MachineCSE::isBeneficalToHoistInto(MachineBasicBlock *CandidateBB,
-                                        MachineBasicBlock *MBB,
-                                        MachineBasicBlock *MBB1) {
+bool MachineCSE::isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
+                                         MachineBasicBlock *MBB,
+                                         MachineBasicBlock *MBB1) {
   if (CandidateBB->getParent()->getFunction().hasMinSize())
     return true;
   assert(DT->dominates(CandidateBB, MBB) && "CandidateBB should dominate MBB");

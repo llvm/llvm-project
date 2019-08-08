@@ -37,6 +37,8 @@
 //
 // This file implements function mockers of various arities.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_FUNCTION_MOCKERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_FUNCTION_MOCKERS_H_
 

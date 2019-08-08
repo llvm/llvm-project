@@ -215,17 +215,27 @@ entry:
 }
 
 define void @test5(i1 %c, <2 x i16> %a, <2 x i16> %b, <2 x i16>* %p) nounwind {
-; CHECK-LABEL: test5:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne LBB4_2
-; CHECK-NEXT:  ## %bb.1:
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:  LBB4_2:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; CHECK-NEXT:    movd %xmm0, (%rsi)
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test5:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testb $1, %dil
+; GENERIC-NEXT:    jne LBB4_2
+; GENERIC-NEXT:  ## %bb.1:
+; GENERIC-NEXT:    movaps %xmm1, %xmm0
+; GENERIC-NEXT:  LBB4_2:
+; GENERIC-NEXT:    movss %xmm0, (%rsi)
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test5:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testb $1, %dil
+; ATOM-NEXT:    jne LBB4_2
+; ATOM-NEXT:  ## %bb.1:
+; ATOM-NEXT:    movaps %xmm1, %xmm0
+; ATOM-NEXT:  LBB4_2:
+; ATOM-NEXT:    movss %xmm0, (%rsi)
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test5:
 ; ATHLON:       ## %bb.0:

@@ -350,12 +350,15 @@ struct EnumInfo : public SymbolInfo {
 
 struct Index : public Reference {
   Index() = default;
+  Index(StringRef Name, StringRef JumpToSection)
+      : Reference(Name), JumpToSection(JumpToSection) {}
   Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
       : Reference(USR, Name, IT, Path) {}
   // This is used to look for a USR in a vector of Indexes using std::find
   bool operator==(const SymbolID &Other) const { return USR == Other; }
   bool operator<(const Index &Other) const { return Name < Other.Name; }
 
+  llvm::Optional<SmallString<16>> JumpToSection;
   std::vector<Index> Children;
 
   void sort();

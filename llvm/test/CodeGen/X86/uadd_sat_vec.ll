@@ -542,96 +542,54 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; SSE2-LABEL: v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllq $32, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
-; SSE2-NEXT:    psllq $32, %xmm1
-; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
-; SSE2-NEXT:    pand %xmm2, %xmm3
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
-; SSE2-NEXT:    psrlq $32, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: v2i32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    psllq $32, %xmm0
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
-; SSSE3-NEXT:    psllq $32, %xmm1
-; SSSE3-NEXT:    paddq %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    paddd %xmm0, %xmm1
 ; SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm2
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pcmpeqd %xmm2, %xmm3
 ; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
-; SSSE3-NEXT:    pand %xmm2, %xmm3
 ; SSSE3-NEXT:    por %xmm1, %xmm0
-; SSSE3-NEXT:    por %xmm3, %xmm0
-; SSSE3-NEXT:    psrlq $32, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: v2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    psllq $32, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
-; SSE41-NEXT:    psllq $32, %xmm1
-; SSE41-NEXT:    paddq %xmm0, %xmm1
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    pxor %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm3, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,0,2,2]
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    por %xmm3, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    psrlq $32, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm2
+; SSE41-NEXT:    pminud %xmm2, %xmm0
+; SSE41-NEXT:    paddd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpminud %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm1
-; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm1
-; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpminud %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: v2i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512-NEXT:    vpsllq $32, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovdqa %xmm1, %xmm2
 ; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm2
-; AVX512-NEXT:    vpminuq %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512-NEXT:    vpminud %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %z = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
   ret <2 x i32> %z

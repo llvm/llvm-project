@@ -2389,6 +2389,49 @@ TEST_P(ImportFunctions,
                 functionDecl(hasName("f"), hasDescendant(declRefExpr()))))));
 }
 
+struct ImportFunctionTemplates : ASTImporterOptionSpecificTestBase {};
+
+TEST_P(ImportFunctionTemplates, ImportFunctionTemplateInRecordDeclTwice) {
+  auto Code =
+      R"(
+      class X {
+        template <class T>
+        void f(T t);
+      };
+      )";
+  Decl *FromTU1 = getTuDecl(Code, Lang_CXX, "input1.cc");
+  auto *FromD1 = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU1, functionTemplateDecl(hasName("f")));
+  auto *ToD1 = Import(FromD1, Lang_CXX);
+  Decl *FromTU2 = getTuDecl(Code, Lang_CXX, "input2.cc");
+  auto *FromD2 = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU2, functionTemplateDecl(hasName("f")));
+  auto *ToD2 = Import(FromD2, Lang_CXX);
+  EXPECT_EQ(ToD1, ToD2);
+}
+
+TEST_P(ImportFunctionTemplates,
+       ImportFunctionTemplateWithDefInRecordDeclTwice) {
+  auto Code =
+      R"(
+      class X {
+        template <class T>
+        void f(T t);
+      };
+      template <class T>
+      void X::f(T t) {};
+      )";
+  Decl *FromTU1 = getTuDecl(Code, Lang_CXX, "input1.cc");
+  auto *FromD1 = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU1, functionTemplateDecl(hasName("f")));
+  auto *ToD1 = Import(FromD1, Lang_CXX);
+  Decl *FromTU2 = getTuDecl(Code, Lang_CXX, "input2.cc");
+  auto *FromD2 = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU2, functionTemplateDecl(hasName("f")));
+  auto *ToD2 = Import(FromD2, Lang_CXX);
+  EXPECT_EQ(ToD1, ToD2);
+}
+
 struct ImportFriendFunctions : ImportFunctions {};
 
 TEST_P(ImportFriendFunctions, ImportFriendFunctionRedeclChainProto) {
@@ -5221,6 +5264,9 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFriendFunctionTemplates,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportClasses,
+                        DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctionTemplates,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFriendFunctions,

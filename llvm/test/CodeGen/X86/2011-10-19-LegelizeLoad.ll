@@ -17,19 +17,23 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pmovsxbq {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pmovsxbq {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    pextrq $1, %xmm1, %rax
-; CHECK-NEXT:    pextrq $1, %xmm0, %rcx
-; CHECK-NEXT:    cqto
-; CHECK-NEXT:    idivq %rcx
-; CHECK-NEXT:    movq %rax, %xmm2
-; CHECK-NEXT:    movq %xmm1, %rax
-; CHECK-NEXT:    movq %xmm0, %rcx
-; CHECK-NEXT:    cqto
-; CHECK-NEXT:    idivq %rcx
-; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pextrb $1, %xmm0, %eax
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    pextrb $1, %xmm1, %ecx
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    cbtw
+; CHECK-NEXT:    idivb %cl
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    pextrb $0, %xmm0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    cbtw
+; CHECK-NEXT:    pextrb $0, %xmm1, %edx
+; CHECK-NEXT:    idivb %dl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0
 ; CHECK-NEXT:    pextrw $0, %xmm0, {{.*}}(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

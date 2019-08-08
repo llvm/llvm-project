@@ -38,6 +38,8 @@
 // This file contains template meta-programming utility classes needed
 // for implementing Google Mock.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_GENERATED_INTERNAL_UTILS_H_
 #define GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_GENERATED_INTERNAL_UTILS_H_
 

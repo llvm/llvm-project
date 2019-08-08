@@ -85,7 +85,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -96,6 +95,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -2692,20 +2692,20 @@ InputKind ASTUnit::getInputKind() const {
 
 #ifndef NDEBUG
 ASTUnit::ConcurrencyState::ConcurrencyState() {
-  Mutex = new llvm::sys::MutexImpl(/*recursive=*/true);
+  Mutex = new std::recursive_mutex;
 }
 
 ASTUnit::ConcurrencyState::~ConcurrencyState() {
-  delete static_cast<llvm::sys::MutexImpl *>(Mutex);
+  delete static_cast<std::recursive_mutex *>(Mutex);
 }
 
 void ASTUnit::ConcurrencyState::start() {
-  bool acquired = static_cast<llvm::sys::MutexImpl *>(Mutex)->tryacquire();
+  bool acquired = static_cast<std::recursive_mutex *>(Mutex)->try_lock();
   assert(acquired && "Concurrent access to ASTUnit!");
 }
 
 void ASTUnit::ConcurrencyState::finish() {
-  static_cast<llvm::sys::MutexImpl *>(Mutex)->release();
+  static_cast<std::recursive_mutex *>(Mutex)->unlock();
 }
 
 #else // NDEBUG

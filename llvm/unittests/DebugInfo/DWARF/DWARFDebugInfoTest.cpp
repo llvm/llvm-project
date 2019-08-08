@@ -1096,7 +1096,7 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
   ASSERT_TRUE((bool)Obj);
   std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
   EXPECT_TRUE(
-      DwarfContext->getDWARFObj().getStringOffsetSection().Data.empty());
+      DwarfContext->getDWARFObj().getStrOffsetsSection().Data.empty());
 }
 
 TEST(DWARFDebugInfo, TestRelations) {

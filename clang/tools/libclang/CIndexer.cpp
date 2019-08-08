@@ -18,11 +18,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/YAMLParser.h"
 #include <cstdio>
+#include <mutex>
 
 #ifdef __CYGWIN__
 #include <cygwin/version.h>

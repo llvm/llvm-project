@@ -130,6 +130,8 @@ public:
                SMLoc IDLoc, const MCSubtargetInfo *STI);
   void emitRRR(unsigned Opcode, unsigned Reg0, unsigned Reg1, unsigned Reg2,
                SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1, unsigned Reg2,
+                MCOperand Op3, SMLoc IDLoc, const MCSubtargetInfo *STI);
   void emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm,
                SMLoc IDLoc, const MCSubtargetInfo *STI);
   void emitRRIII(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm0,
@@ -158,6 +160,10 @@ public:
                               unsigned BaseReg, MCOperand &HiOperand,
                               MCOperand &LoOperand, unsigned ATReg, SMLoc IDLoc,
                               const MCSubtargetInfo *STI);
+  void emitSCWithSymOffset(unsigned Opcode, unsigned SrcReg, unsigned BaseReg,
+                           MCOperand &HiOperand, MCOperand &LoOperand,
+                           unsigned ATReg, SMLoc IDLoc,
+                           const MCSubtargetInfo *STI);
   void emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg, unsigned BaseReg,
                              int64_t Offset, unsigned TmpReg, SMLoc IDLoc,
                              const MCSubtargetInfo *STI);

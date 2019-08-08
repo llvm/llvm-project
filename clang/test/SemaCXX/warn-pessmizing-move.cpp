@@ -122,13 +122,13 @@ A test7() {
   A a3 = (std::move(A()));
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:21}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:25}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:21}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:26}:""
   A a4 = (std::move((A())));
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:21}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:26-[[@LINE-4]]:27}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:21}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:26-[[@LINE-4]]:28}:""
 
   return std::move(a1);
   // expected-warning@-1{{prevents copy elision}}
@@ -143,13 +143,13 @@ A test7() {
   return (std::move(a1));
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:21}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:23-[[@LINE-4]]:24}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:21}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:23-[[@LINE-4]]:25}:""
   return (std::move((a1)));
   // expected-warning@-1{{prevents copy elision}}
   // expected-note@-2{{remove std::move call}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:21}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:25-[[@LINE-4]]:26}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:21}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:25-[[@LINE-4]]:27}:""
 }
 
 #define wrap1(x) x
@@ -226,4 +226,31 @@ namespace templates {
     test2<A, A>();
     test2<B, A>();
   }
+}
+
+A init_list() {
+  A a1;
+  return { std::move(a1) };
+  // expected-warning@-1{{prevents copy elision}}
+  // expected-note@-2{{remove std::move call}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:22}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:27}:""
+
+  return { (std::move(a1)) };
+  // expected-warning@-1{{prevents copy elision}}
+  // expected-note@-2{{remove std::move call}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:23}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:25-[[@LINE-4]]:29}:""
+
+  A a2 = { std::move(A()) };
+  // expected-warning@-1{{prevents copy elision}}
+  // expected-note@-2{{remove std::move call}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:22}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:25-[[@LINE-4]]:28}:""
+
+  A a3 = { (std::move(A())) };
+  // expected-warning@-1{{prevents copy elision}}
+  // expected-note@-2{{remove std::move call}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:23}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:26-[[@LINE-4]]:30}:""
 }

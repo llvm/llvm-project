@@ -47,11 +47,11 @@ entry:
 
 define <2 x i8> @slm-costs_8_v2_mul(<2 x i8> %a, <2 x i8> %b)  {
 ; SLM-LABEL: 'slm-costs_8_v2_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res = mul nsw <2 x i8> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = mul nsw <2 x i8> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i8> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v2_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = mul nsw <2 x i8> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = mul nsw <2 x i8> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i8> %res
 ;
 entry:
@@ -61,11 +61,11 @@ entry:
 
 define <4 x i8> @slm-costs_8_v4_mul(<4 x i8> %a, <4 x i8> %b)  {
 ; SLM-LABEL: 'slm-costs_8_v4_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %res = mul nsw <4 x i8> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = mul nsw <4 x i8> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v4_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i8> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = mul nsw <4 x i8> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %res
 ;
 entry:
@@ -177,11 +177,11 @@ entry:
 
 define <8 x i8> @slm-costs_8_v8_mul(<8 x i8> %a, <8 x i8> %b)  {
 ; SLM-LABEL: 'slm-costs_8_v8_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <8 x i8> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = mul nsw <8 x i8> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v8_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <8 x i8> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = mul nsw <8 x i8> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %res
 ;
 entry:
@@ -216,11 +216,11 @@ entry:
 
 define <2 x i16> @slm-costs_16_v2_mul(<2 x i16> %a, <2 x i16> %b)  {
 ; SLM-LABEL: 'slm-costs_16_v2_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res = mul nsw <2 x i16> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <2 x i16> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i16> %res
 ;
 ; GLM-LABEL: 'slm-costs_16_v2_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = mul nsw <2 x i16> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <2 x i16> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i16> %res
 ;
 entry:
@@ -230,11 +230,11 @@ entry:
 
 define <4 x i16> @slm-costs_16_v4_mul(<4 x i16> %a, <4 x i16> %b)  {
 ; SLM-LABEL: 'slm-costs_16_v4_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = mul nsw <4 x i16> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i16> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %res
 ;
 ; GLM-LABEL: 'slm-costs_16_v4_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i16> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <4 x i16> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %res
 ;
 entry:
@@ -385,11 +385,11 @@ entry:
 
 define <2 x i32> @slm-costs_32_v2_mul(<2 x i32> %a, <2 x i32> %b)  {
 ; SLM-LABEL: 'slm-costs_32_v2_mul'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res = mul nsw <2 x i32> %a, %b
+; SLM-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = mul nsw <2 x i32> %a, %b
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
 ;
 ; GLM-LABEL: 'slm-costs_32_v2_mul'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = mul nsw <2 x i32> %a, %b
+; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <2 x i32> %a, %b
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
 ;
 entry:

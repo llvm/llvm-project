@@ -39,8 +39,8 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 
 // ---------------------- TSD ---------------- {{{1
 
-#if SANITIZER_NETBSD
-// Thread Static Data cannot be used in early init on NetBSD.
+#if SANITIZER_NETBSD && !ASAN_DYNAMIC
+// Thread Static Data cannot be used in early static ASan init on NetBSD.
 // Reuse the Asan TSD API for compatibility with existing code
 // with an alternative implementation.
 

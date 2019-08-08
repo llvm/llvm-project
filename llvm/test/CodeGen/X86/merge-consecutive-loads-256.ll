@@ -676,18 +676,18 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 define <2 x i8> @PR42846(<2 x i8>* %j, <2 x i8> %k) {
 ; AVX-LABEL: PR42846:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*}}(%rip), %ymm1
-; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; AVX-NEXT:    vpextrw $0, %xmm1, (%rdi)
+; AVX-NEXT:    vmovdqa {{.*}}(%rip), %ymm0
+; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; X32-AVX-LABEL: PR42846:
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vmovdqa l, %ymm1
-; X32-AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; X32-AVX-NEXT:    vpextrw $0, %xmm1, (%eax)
+; X32-AVX-NEXT:    vmovdqa l, %ymm0
+; X32-AVX-NEXT:    vpextrw $0, %xmm0, (%eax)
+; X32-AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X32-AVX-NEXT:    vzeroupper
 ; X32-AVX-NEXT:    retl
   %t0 = load volatile <32 x i8>, <32 x i8>* @l, align 32

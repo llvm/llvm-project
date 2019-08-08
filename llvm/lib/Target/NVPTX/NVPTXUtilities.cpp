@@ -19,10 +19,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MutexGuard.h"
+#include "llvm/Support/Mutex.h"
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -38,12 +39,12 @@ static ManagedStatic<per_module_annot_t> annotationCache;
 static sys::Mutex Lock;
 
 void clearAnnotationCache(const Module *Mod) {
-  MutexGuard Guard(Lock);
+  std::lock_guard<sys::Mutex> Guard(Lock);
   annotationCache->erase(Mod);
 }
 
 static void cacheAnnotationFromMD(const MDNode *md, key_val_pair_t &retval) {
-  MutexGuard Guard(Lock);
+  std::lock_guard<sys::Mutex> Guard(Lock);
   assert(md && "Invalid mdnode for annotation");
   assert((md->getNumOperands() % 2) == 1 && "Invalid number of operands");
   // start index = 1, to skip the global variable key
@@ -69,7 +70,7 @@ static void cacheAnnotationFromMD(const MDNode *md, key_val_pair_t &retval) {
 }
 
 static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
-  MutexGuard Guard(Lock);
+  std::lock_guard<sys::Mutex> Guard(Lock);
   NamedMDNode *NMD = m->getNamedMetadata("nvvm.annotations");
   if (!NMD)
     return;
@@ -103,7 +104,7 @@ static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
 
 bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            unsigned &retval) {
-  MutexGuard Guard(Lock);
+  std::lock_guard<sys::Mutex> Guard(Lock);
   const Module *m = gv->getParent();
   if ((*annotationCache).find(m) == (*annotationCache).end())
     cacheAnnotationFromMD(m, gv);
@@ -117,7 +118,7 @@ bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
 
 bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            std::vector<unsigned> &retval) {
-  MutexGuard Guard(Lock);
+  std::lock_guard<sys::Mutex> Guard(Lock);
   const Module *m = gv->getParent();
   if ((*annotationCache).find(m) == (*annotationCache).end())
     cacheAnnotationFromMD(m, gv);

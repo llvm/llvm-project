@@ -115,12 +115,10 @@ define i32 @test4(x86_mmx %a) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    andl $-16, %esp
+; X32-NEXT:    subl $32, %esp
 ; X32-NEXT:    movq %mm0, (%esp)
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
-; X32-NEXT:    movd %xmm0, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
@@ -128,9 +126,7 @@ define i32 @test4(x86_mmx %a) nounwind {
 ; X64-LABEL: test4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,0,1]
-; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
   %tmp0 = bitcast x86_mmx %a to <2 x i32>
   %tmp1 = extractelement <2 x i32> %tmp0, i32 1

@@ -14,7 +14,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
-#include "gmock/gmock-generated-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>

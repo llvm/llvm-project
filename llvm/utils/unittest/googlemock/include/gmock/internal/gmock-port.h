@@ -36,6 +36,8 @@
 // end with _ are part of Google Mock's public API and can be used by
 // code outside Google Mock.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PORT_H_
 #define GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PORT_H_
 

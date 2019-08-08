@@ -2,7 +2,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -timeline -timeline-max-iterations=2 < %s | FileCheck %s
 
   vmulps     %ymm0, %ymm1, %ymm2
-  vpermil2pd $16, %xmm3, %xmm5, %xmm1, %xmm2
+  vpermil2pd $15, %xmm3, %xmm5, %xmm1, %xmm2
   vmulps     %ymm2, %ymm3, %ymm4
   vaddps     %ymm4, %ymm5, %ymm6
   vmulps     %ymm6, %ymm3, %ymm4
@@ -28,7 +28,7 @@
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     1.00                        vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      1     1.00                        vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT:  1      1     1.00                        vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vmulps	%ymm2, %ymm3, %ymm4
 # CHECK-NEXT:  1      3     1.00                        vaddps	%ymm4, %ymm5, %ymm6
 # CHECK-NEXT:  1      5     1.00                        vmulps	%ymm6, %ymm3, %ymm4
@@ -51,7 +51,7 @@
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulps	%ymm2, %ymm3, %ymm4
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vaddps	%ymm4, %ymm5, %ymm6
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulps	%ymm6, %ymm3, %ymm4
@@ -62,13 +62,13 @@
 # CHECK-NEXT: Index     0123456789          01234
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .   .   vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: [0,1]     DeE----R  .    .    .   .   vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT: [0,1]     DeE----R  .    .    .   .   vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
 # CHECK-NEXT: [0,2]     D=eeeeeER .    .    .   .   vmulps	%ymm2, %ymm3, %ymm4
 # CHECK-NEXT: [0,3]     D======eeeER   .    .   .   vaddps	%ymm4, %ymm5, %ymm6
 # CHECK-NEXT: [0,4]     .D========eeeeeER   .   .   vmulps	%ymm6, %ymm3, %ymm4
 # CHECK-NEXT: [0,5]     .D=============eeeER.   .   vaddps	%ymm4, %ymm5, %ymm0
 # CHECK-NEXT: [1,0]     .D================eeeeeER   vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: [1,1]     .DeE--------------------R   vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT: [1,1]     .DeE--------------------R   vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
 # CHECK-NEXT: [1,2]     . DeeeeeE---------------R   vmulps	%ymm2, %ymm3, %ymm4
 # CHECK-NEXT: [1,3]     . D=====eeeE------------R   vaddps	%ymm4, %ymm5, %ymm6
 # CHECK-NEXT: [1,4]     . D========eeeeeE-------R   vmulps	%ymm6, %ymm3, %ymm4
@@ -82,7 +82,7 @@
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     9.0    0.5    0.0       vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 1.     2     1.0    1.0    12.0      vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT: 1.     2     1.0    1.0    12.0      vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
 # CHECK-NEXT: 2.     2     1.5    0.0    7.5       vmulps	%ymm2, %ymm3, %ymm4
 # CHECK-NEXT: 3.     2     6.5    0.0    6.0       vaddps	%ymm4, %ymm5, %ymm6
 # CHECK-NEXT: 4.     2     9.0    0.0    3.5       vmulps	%ymm6, %ymm3, %ymm4

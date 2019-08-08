@@ -1271,6 +1271,12 @@ inline CastClass_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>, OpTy>
+m_ZExtOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_ZExt(Op), Op);
+}
+
+template <typename OpTy>
 inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
                         CastClass_match<OpTy, Instruction::SExt>>
 m_ZExtOrSExt(const OpTy &Op) {

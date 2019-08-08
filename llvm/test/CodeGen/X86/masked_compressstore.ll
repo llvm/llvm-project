@@ -603,11 +603,9 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB2_1
@@ -629,8 +627,8 @@ define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %
 ; SSE42-LABEL: compressstore_v2f32_v2i32:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm1
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE42-NEXT:    pmovsxdq %xmm2, %xmm1
 ; SSE42-NEXT:    movmskpd %xmm1, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    jne LBB2_1
@@ -648,69 +646,54 @@ define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %
 ; SSE42-NEXT:    extractps $1, %xmm0, (%rdi)
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: compressstore_v2f32_v2i32:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vmovmskpd %xmm1, %eax
-; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne LBB2_1
-; AVX1-NEXT:  ## %bb.2: ## %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne LBB2_3
-; AVX1-NEXT:  LBB2_4: ## %else2
-; AVX1-NEXT:    retq
-; AVX1-NEXT:  LBB2_1: ## %cond.store
-; AVX1-NEXT:    vmovss %xmm0, (%rdi)
-; AVX1-NEXT:    addq $4, %rdi
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je LBB2_4
-; AVX1-NEXT:  LBB2_3: ## %cond.store1
-; AVX1-NEXT:    vextractps $1, %xmm0, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: compressstore_v2f32_v2i32:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vmovmskpd %xmm1, %eax
-; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne LBB2_1
-; AVX2-NEXT:  ## %bb.2: ## %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne LBB2_3
-; AVX2-NEXT:  LBB2_4: ## %else2
-; AVX2-NEXT:    retq
-; AVX2-NEXT:  LBB2_1: ## %cond.store
-; AVX2-NEXT:    vmovss %xmm0, (%rdi)
-; AVX2-NEXT:    addq $4, %rdi
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je LBB2_4
-; AVX2-NEXT:  LBB2_3: ## %cond.store1
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rdi)
-; AVX2-NEXT:    retq
+; AVX1OR2-LABEL: compressstore_v2f32_v2i32:
+; AVX1OR2:       ## %bb.0:
+; AVX1OR2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1OR2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpmovsxdq %xmm1, %xmm1
+; AVX1OR2-NEXT:    vmovmskpd %xmm1, %eax
+; AVX1OR2-NEXT:    testb $1, %al
+; AVX1OR2-NEXT:    jne LBB2_1
+; AVX1OR2-NEXT:  ## %bb.2: ## %else
+; AVX1OR2-NEXT:    testb $2, %al
+; AVX1OR2-NEXT:    jne LBB2_3
+; AVX1OR2-NEXT:  LBB2_4: ## %else2
+; AVX1OR2-NEXT:    retq
+; AVX1OR2-NEXT:  LBB2_1: ## %cond.store
+; AVX1OR2-NEXT:    vmovss %xmm0, (%rdi)
+; AVX1OR2-NEXT:    addq $4, %rdi
+; AVX1OR2-NEXT:    testb $2, %al
+; AVX1OR2-NEXT:    je LBB2_4
+; AVX1OR2-NEXT:  LBB2_3: ## %cond.store1
+; AVX1OR2-NEXT:    vextractps $1, %xmm0, (%rdi)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: compressstore_v2f32_v2i32:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512F-NEXT:    vptestnmq %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VL-LABEL: compressstore_v2f32_v2i32:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512VL-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; AVX512VL-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
-; AVX512VL-NEXT:    retq
+; AVX512VLDQ-LABEL: compressstore_v2f32_v2i32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vptestnmd %xmm1, %xmm1, %k0
+; AVX512VLDQ-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VLDQ-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: compressstore_v2f32_v2i32:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    vptestnmd %xmm1, %xmm1, %k0
+; AVX512VLBW-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
+; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   call void @llvm.masked.compressstore.v2f32(<2 x float> %V, float* %base, <2 x i1> %mask)
   ret void

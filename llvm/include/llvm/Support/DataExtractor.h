@@ -420,29 +420,6 @@ public:
   bool isValidOffsetForAddress(uint64_t offset) const {
     return isValidOffsetForDataOfSize(offset, AddressSize);
   }
-
-  // The following methods are temporarily kept in order to preserve
-  // compatibility with existing code and migrate to 64-bit offsets smoothly.
-  // They will be removed when the migration is finished.
-  // Please do not use them in new code.
-  const char *getCStr(uint32_t *offset_ptr) const;
-  StringRef getCStrRef(uint32_t *offset_ptr) const;
-  uint64_t getUnsigned(uint32_t *offset_ptr, uint32_t byte_size) const;
-  int64_t getSigned(uint32_t *offset_ptr, uint32_t size) const;
-  uint64_t getAddress(uint32_t *offset_ptr) const {
-    return getUnsigned(offset_ptr, AddressSize);
-  }
-  uint8_t getU8(uint32_t *offset_ptr) const;
-  uint8_t *getU8(uint32_t *offset_ptr, uint8_t *dst, uint32_t count) const;
-  uint16_t getU16(uint32_t *offset_ptr) const;
-  uint16_t *getU16(uint32_t *offset_ptr, uint16_t *dst, uint32_t count) const;
-  uint32_t getU24(uint32_t *offset_ptr) const;
-  uint32_t getU32(uint32_t *offset_ptr) const;
-  uint32_t *getU32(uint32_t *offset_ptr, uint32_t *dst, uint32_t count) const;
-  uint64_t getU64(uint32_t *offset_ptr) const;
-  uint64_t *getU64(uint32_t *offset_ptr, uint64_t *dst, uint32_t count) const;
-  int64_t getSLEB128(uint32_t *offset_ptr) const;
-  uint64_t getULEB128(uint32_t *offset_ptr) const;
 };
 
 } // namespace llvm

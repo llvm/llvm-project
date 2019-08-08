@@ -35,6 +35,8 @@
 //
 // This file implements some commonly used variadic matchers.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_MATCHERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_MATCHERS_H_
 
