@@ -1579,31 +1579,28 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   for (GlobalVariable &global_var : m_module->globals()) {
-    std::string global_name = global_var.getName().str();
+    llvm::StringRef global_name = global_var.getName();
 
     if (log)
-      LLDB_LOGF(log, "Examining %s, DeclForGlobalValue returns %p",
-                global_name.c_str(),
-                static_cast<void *>(DeclForGlobal(&global_var)));
+      LLDB_LOG(log, "Examining {0}, DeclForGlobalValue returns {1}",
+               global_name, static_cast<void *>(DeclForGlobal(&global_var)));
 
-    if (global_name.find("OBJC_IVAR") == 0) {
+    if (global_name.startswith("OBJC_IVAR")) {
       if (!HandleSymbol(&global_var)) {
-        m_error_stream.Printf("Error [IRForTarget]: Couldn't find Objective-C "
-                              "indirect ivar symbol %s\n",
-                              global_name.c_str());
+        m_error_stream.Format("Error [IRForTarget]: Couldn't find Objective-C "
+                              "indirect ivar symbol {0}\n",
+                              global_name);
 
         return false;
       }
-    } else if (global_name.find("OBJC_CLASSLIST_REFERENCES_$") !=
-               global_name.npos) {
+    } else if (global_name.contains("OBJC_CLASSLIST_REFERENCES_$")) {
       if (!HandleObjCClass(&global_var)) {
         m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class "
                               "for an Objective-C static method call\n");
 
         return false;
       }
-    } else if (global_name.find("OBJC_CLASSLIST_SUP_REFS_$") !=
-               global_name.npos) {
+    } else if (global_name.contains("OBJC_CLASSLIST_SUP_REFS_$")) {
       if (!HandleObjCClass(&global_var)) {
         m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class "
                               "for an Objective-C static method call\n");
@@ -1612,9 +1609,9 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
       }
     } else if (DeclForGlobal(&global_var)) {
       if (!MaybeHandleVariable(&global_var)) {
-        m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "
-                              "external variable %s\n",
-                              global_name.c_str());
+        m_error_stream.Format("Internal error [IRForTarget]: Couldn't rewrite "
+                              "external variable {0}\n",
+                              global_name);
 
         return false;
       }
@@ -1872,9 +1869,9 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     if (!iter->getName().equals("_cmd")) {
-      m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes '%s' "
+      m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes '{0}' "
                             "after 'self' argument (should take '_cmd')",
-                            iter->getName().str().c_str());
+                            iter->getName());
 
       return false;
     }
@@ -1893,15 +1890,15 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (!argument->getName().equals("$__lldb_arg")) {
-    m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes an "
-                          "argument named '%s' instead of the struct pointer",
-                          argument->getName().str().c_str());
+    m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes an "
+                          "argument named '{0}' instead of the struct pointer",
+                          argument->getName());
 
     return false;
   }
 
   if (log)
-    LLDB_LOGF(log, "Arg: \"%s\"", PrintValue(argument).c_str());
+    LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
   Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
@@ -1939,12 +1936,12 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     if (log)
-      LLDB_LOGF(log, "  \"%s\" (\"%s\") placed at %" PRIu64, name.GetCString(),
-                decl->getNameAsString().c_str(), offset);
+      LLDB_LOG(log, "  \"{0}\" (\"{1}\") placed at %" PRIu64, name,
+               decl->getNameAsString(), offset);
 
     if (value) {
       if (log)
-        LLDB_LOGF(log, "    Replacing [%s]", PrintValue(value).c_str());
+        LLDB_LOG(log, "    Replacing [{0}]", PrintValue(value));
 
       FunctionValueCache body_result_maker(
           [this, name, offset_type, offset, argument,
@@ -1994,8 +1991,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             body_result_maker.GetValue(instruction->getParent()->getParent()));
       } else {
         if (log)
-          LLDB_LOGF(log, "Unhandled non-constant type: \"%s\"",
-                    PrintValue(value).c_str());
+          LLDB_LOG(log, "Unhandled non-constant type: \"{0}\"",
+                   PrintValue(value));
         return false;
       }
 
@@ -2005,8 +2002,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (log)
-    LLDB_LOGF(log, "Total structure [align %" PRId64 ", size %" PRIu64 "]",
-              (int64_t)alignment, (uint64_t)size);
+    LLDB_LOG(log, "Total structure [align {0}, size {1}]", (int64_t)alignment,
+             (uint64_t)size);
 
   return true;
 }
@@ -2050,7 +2047,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module as passed in to IRForTarget: \n\"%s\"", s.c_str());
+    LLDB_LOG(log, "Module as passed in to IRForTarget: \n\"{0}\"", s);
   }
 
   Function *const main_function =
@@ -2059,12 +2056,11 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
   if (!m_func_name.IsEmpty() && !main_function) {
     if (log)
-      LLDB_LOGF(log, "Couldn't find \"%s()\" in the module",
-                m_func_name.AsCString());
+      LLDB_LOG(log, "Couldn't find \"{0}()\" in the module", m_func_name);
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find wrapper "
-                          "'%s' in the module",
-                          m_func_name.AsCString());
+    m_error_stream.Format("Internal error [IRForTarget]: Couldn't find wrapper "
+                          "'{0}' in the module",
+                          m_func_name);
 
     return false;
   }
@@ -2109,8 +2105,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module after creating the result variable: \n\"%s\"",
-              s.c_str());
+    LLDB_LOG(log, "Module after creating the result variable: \n\"{0}\"", s);
   }
 
   for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
@@ -2244,7 +2239,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module after preparing for execution: \n\"%s\"", s.c_str());
+    LLDB_LOG(log, "Module after preparing for execution: \n\"{0}\"", s);
   }
 
   return true;

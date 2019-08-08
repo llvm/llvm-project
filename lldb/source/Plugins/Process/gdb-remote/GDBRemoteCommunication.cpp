@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
