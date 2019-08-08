@@ -504,12 +504,8 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         else {
           ObjectFile *objfile = nullptr;
           if (module_sp) {
-            SymbolVendor *symbol_vendor = module_sp->GetSymbolVendor();
-            if (symbol_vendor) {
-              SymbolFile *symbol_file = symbol_vendor->GetSymbolFile();
-              if (symbol_file)
-                objfile = symbol_file->GetObjectFile();
-            }
+            if (SymbolFile *symbol_file = module_sp->GetSymbolFile())
+              objfile = symbol_file->GetObjectFile();
           }
           if (objfile) {
             Host::SystemLog(
