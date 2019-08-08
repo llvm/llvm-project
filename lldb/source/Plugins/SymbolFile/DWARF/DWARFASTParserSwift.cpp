@@ -120,14 +120,6 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     }
     if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString()))
       mangled_name = name;
-    else {
-      const char *type_name_cstr = name.GetCString();
-      // TODO: remove this once all mangled names are always included for all
-      // types in DWARF
-      swift::ModuleDecl *swift_module = m_ast.GetModule(decl.GetFile(), error);
-      if (swift_module)
-        compiler_type = m_ast.FindType(type_name_cstr, swift_module);
-    }
   }
 
   if (mangled_name) {
