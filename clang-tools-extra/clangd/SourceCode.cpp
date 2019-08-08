@@ -200,6 +200,24 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
+  if (Loc.isMacroID()) {
+    std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>"))
+      return false;
+  }
+  return true;
+}
+
+SourceLocation spellingLocIfSpelled(SourceLocation Loc,
+                                    const SourceManager &SM) {
+  if (!isSpelledInSource(Loc, SM))
+    // Use the expansion location as spelling location is not interesting.
+    return SM.getExpansionRange(Loc).getBegin();
+  return SM.getSpellingLoc(Loc);
+}
+
 llvm::Optional<Range> getTokenRange(const SourceManager &SM,
                                     const LangOptions &LangOpts,
                                     SourceLocation TokLoc) {

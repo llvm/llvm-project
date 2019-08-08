@@ -66,7 +66,7 @@ return:                                           ; preds = %if.end3, %if.then2,
 ;   return 0;
 ; }
 ;
-; CHECK: define noalias double* @srec0(double* nocapture readnone %a)
+; CHECK: define noalias nonnull align 536870912 dereferenceable(4294967295) double* @srec0(double* nocapture readnone %a)
 define double* @srec0(double* %a) #0 {
 entry:
   %call = call double* @srec0(double* %a)

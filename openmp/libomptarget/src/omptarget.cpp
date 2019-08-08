@@ -242,6 +242,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
     // Address of pointer on the host and device, respectively.
     void *Pointer_HstPtrBegin, *Pointer_TgtPtrBegin;
     bool IsNew, Pointer_IsNew;
+    bool IsHostPtr = false;
     bool IsImplicit = arg_types[i] & OMP_TGT_MAPTYPE_IMPLICIT;
     // UpdateRef is based on MEMBER_OF instead of TARGET_PARAM because if we
     // have reached this point via __tgt_target_data_begin and not __tgt_target
@@ -253,7 +254,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
       DP("Has a pointer entry: \n");
       // base is address of pointer.
       Pointer_TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBase, HstPtrBase,
-          sizeof(void *), Pointer_IsNew, IsImplicit, UpdateRef);
+          sizeof(void *), Pointer_IsNew, IsHostPtr, IsImplicit, UpdateRef);
       if (!Pointer_TgtPtrBegin) {
         DP("Call to getOrAllocTgtPtr returned null pointer (device failure or "
             "illegal mapping).\n");
@@ -269,7 +270,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
     }
 
     void *TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBegin, HstPtrBase,
-        data_size, IsNew, IsImplicit, UpdateRef);
+        data_size, IsNew, IsHostPtr, IsImplicit, UpdateRef);
     if (!TgtPtrBegin && data_size) {
       // If data_size==0, then the argument could be a zero-length pointer to
       // NULL, so getOrAlloc() returning NULL is not an error.
@@ -289,19 +290,21 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
       bool copy = false;
-      if (IsNew || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
-        copy = true;
-      } else if (arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) {
-        // Copy data only if the "parent" struct has RefCount==1.
-        int32_t parent_idx = member_of(arg_types[i]);
-        long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
-        assert(parent_rc > 0 && "parent struct not found");
-        if (parent_rc == 1) {
+      if (!(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+        if (IsNew || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
           copy = true;
+        } else if (arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) {
+          // Copy data only if the "parent" struct has RefCount==1.
+          int32_t parent_idx = member_of(arg_types[i]);
+          long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
+          assert(parent_rc > 0 && "parent struct not found");
+          if (parent_rc == 1) {
+            copy = true;
+          }
         }
       }
 
-      if (copy) {
+      if (copy && !IsHostPtr) {
         DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
             data_size, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
         int rt = Device.data_submit(TgtPtrBegin, HstPtrBegin, data_size);
@@ -312,7 +315,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
       }
     }
 
-    if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
+    if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
       DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
           DPxPTR(Pointer_TgtPtrBegin), DPxPTR(TgtPtrBegin));
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
@@ -363,14 +366,14 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
       }
     }
 
-    bool IsLast;
+    bool IsLast, IsHostPtr;
     bool UpdateRef = !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
         (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
     bool ForceDelete = arg_types[i] & OMP_TGT_MAPTYPE_DELETE;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, data_size, IsLast,
-        UpdateRef);
+        UpdateRef, IsHostPtr);
     DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
         " - is%s last\n", data_size, DPxPTR(TgtPtrBegin),
         (IsLast ? "" : " not"));
@@ -387,18 +390,22 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
       if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
         bool CopyMember = false;
-        if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-            !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-          // Copy data only if the "parent" struct has RefCount==1.
-          int32_t parent_idx = member_of(arg_types[i]);
-          long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
-          assert(parent_rc > 0 && "parent struct not found");
-          if (parent_rc == 1) {
-            CopyMember = true;
+        if (!(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+          if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+              !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
+            // Copy data only if the "parent" struct has RefCount==1.
+            int32_t parent_idx = member_of(arg_types[i]);
+            long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
+            assert(parent_rc > 0 && "parent struct not found");
+            if (parent_rc == 1) {
+              CopyMember = true;
+            }
           }
         }
 
-        if (DelEntry || Always || CopyMember) {
+        if ((DelEntry || Always || CopyMember) &&
+            !(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+              TgtPtrBegin == HstPtrBegin)) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
               data_size, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
           int rt = Device.data_retrieve(HstPtrBegin, TgtPtrBegin, data_size);
@@ -471,11 +478,18 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
 
     void *HstPtrBegin = args[i];
     int64_t MapSize = arg_sizes[i];
-    bool IsLast;
+    bool IsLast, IsHostPtr;
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, MapSize, IsLast,
-        false);
+        false, IsHostPtr);
     if (!TgtPtrBegin) {
       DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
+      continue;
+    }
+
+    if (Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        TgtPtrBegin == HstPtrBegin) {
+      DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
+         DPxPTR(HstPtrBegin));
       continue;
     }
 
@@ -514,6 +528,7 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
         DP("Copying data to device failed.\n");
         return OFFLOAD_FAIL;
       }
+
       uintptr_t lb = (uintptr_t) HstPtrBegin;
       uintptr_t ub = (uintptr_t) HstPtrBegin + MapSize;
       Device.ShadowMtx.lock();
@@ -640,17 +655,24 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
         void *HstPtrVal = args[i];
         void *HstPtrBegin = args_base[i];
         void *HstPtrBase = args[idx];
-        bool IsLast; // unused.
+        bool IsLast, IsHostPtr; // unused.
         void *TgtPtrBase =
             (void *)((intptr_t)tgt_args[tgtIdx] + tgt_offsets[tgtIdx]);
         DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
         uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
         void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
         void *Pointer_TgtPtrBegin =
-            Device.getTgtPtrBegin(HstPtrVal, arg_sizes[i], IsLast, false);
+            Device.getTgtPtrBegin(HstPtrVal, arg_sizes[i], IsLast, false,
+                                  IsHostPtr);
         if (!Pointer_TgtPtrBegin) {
           DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
              DPxPTR(HstPtrVal));
+          continue;
+        }
+        if (Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+            TgtPtrBegin == HstPtrBegin) {
+          DP("Unified memory is active, no need to map lambda captured"
+             "variable (" DPxMOD ")\n", DPxPTR(HstPtrVal));
           continue;
         }
         DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
@@ -668,7 +690,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     void *HstPtrBase = args_base[i];
     void *TgtPtrBegin;
     ptrdiff_t TgtBaseOffset;
-    bool IsLast; // unused.
+    bool IsLast, IsHostPtr; // unused.
     if (arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) {
       DP("Forwarding first-private value " DPxMOD " to the target construct\n",
           DPxPTR(HstPtrBase));
@@ -705,14 +727,14 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
       }
     } else if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
       TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBase, sizeof(void *), IsLast,
-          false);
+          false, IsHostPtr);
       TgtBaseOffset = 0; // no offset for ptrs.
       DP("Obtained target argument " DPxMOD " from host pointer " DPxMOD " to "
          "object " DPxMOD "\n", DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBase),
          DPxPTR(HstPtrBase));
     } else {
       TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, arg_sizes[i], IsLast,
-          false);
+          false, IsHostPtr);
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
 #ifdef OMPTARGET_DEBUG
       void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);

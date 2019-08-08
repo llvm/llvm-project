@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/Support/InitLLVM.h"
@@ -45,9 +46,10 @@ public:
   ///
   /// \param Compilations     The reference to the compilation database that's
   /// used by the clang tool.
-  DependencyScanningTool(const tooling::CompilationDatabase &Compilations,
+  DependencyScanningTool(DependencyScanningService &Service,
+                         const tooling::CompilationDatabase &Compilations,
                          SharedStream &OS, SharedStream &Errs)
-      : Compilations(Compilations), OS(OS), Errs(Errs) {}
+      : Worker(Service), Compilations(Compilations), OS(OS), Errs(Errs) {}
 
   /// Computes the dependencies for the given file and prints them out.
   ///
@@ -79,6 +81,20 @@ llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
                          llvm::cl::Hidden);
 
 llvm::cl::OptionCategory DependencyScannerCategory("Tool options");
+
+static llvm::cl::opt<ScanningMode> ScanMode(
+    "mode",
+    llvm::cl::desc("The preprocessing mode used to compute the dependencies"),
+    llvm::cl::values(
+        clEnumValN(ScanningMode::MinimizedSourcePreprocessing,
+                   "preprocess-minimized-sources",
+                   "The set of dependencies is computed by preprocessing the "
+                   "source files that were minimized to only include the "
+                   "contents that might affect the dependencies"),
+        clEnumValN(ScanningMode::CanonicalPreprocessing, "preprocess",
+                   "The set of dependencies is computed by preprocessing the "
+                   "unmodified source files")),
+    llvm::cl::init(ScanningMode::MinimizedSourcePreprocessing));
 
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
@@ -136,12 +152,14 @@ int main(int argc, const char **argv) {
   SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
+
+  DependencyScanningService Service(ScanMode);
   unsigned NumWorkers =
       NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
     WorkerTools.push_back(llvm::make_unique<DependencyScanningTool>(
-        *AdjustingCompilations, DependencyOS, Errs));
+        Service, *AdjustingCompilations, DependencyOS, Errs));
 
   std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);

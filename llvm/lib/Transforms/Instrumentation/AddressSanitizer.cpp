@@ -129,6 +129,8 @@ static const uintptr_t kRetiredStackFrameMagic = 0x45E0360E;
 static const char *const kAsanModuleCtorName = "asan.module_ctor";
 static const char *const kAsanModuleDtorName = "asan.module_dtor";
 static const uint64_t kAsanCtorAndDtorPriority = 1;
+// On Emscripten, the system needs more than one priorities for constructors.
+static const uint64_t kAsanEmscriptenCtorAndDtorPriority = 50;
 static const char *const kAsanReportErrorTemplate = "__asan_report_";
 static const char *const kAsanRegisterGlobalsName = "__asan_register_globals";
 static const char *const kAsanUnregisterGlobalsName =
@@ -528,6 +530,14 @@ static size_t RedzoneSizeForScale(int MappingScale) {
   // Redzone used for stack and globals is at least 32 bytes.
   // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
   return std::max(32U, 1U << MappingScale);
+}
+
+static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
+  if (TargetTriple.isOSEmscripten()) {
+    return kAsanEmscriptenCtorAndDtorPriority;
+  } else {
+    return kAsanCtorAndDtorPriority;
+  }
 }
 
 namespace {
@@ -1777,7 +1787,8 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
       if (F->getName() == kAsanModuleCtorName) continue;
       ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
       // Don't instrument CTORs that will run before asan.module_ctor.
-      if (Priority->getLimitedValue() <= kAsanCtorAndDtorPriority) continue;
+      if (Priority->getLimitedValue() <= GetCtorAndDtorPriority(TargetTriple))
+        continue;
       poisonOneInitializer(*F, ModuleName);
     }
   }
@@ -2429,22 +2440,22 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
     Changed |= InstrumentGlobals(IRB, M, &CtorComdat);
   }
 
+  const uint64_t Priority = GetCtorAndDtorPriority(TargetTriple);
+
   // Put the constructor and destructor in comdat if both
   // (1) global instrumentation is not TU-specific
   // (2) target is ELF.
   if (UseCtorComdat && TargetTriple.isOSBinFormatELF() && CtorComdat) {
     AsanCtorFunction->setComdat(M.getOrInsertComdat(kAsanModuleCtorName));
-    appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority,
-                        AsanCtorFunction);
+    appendToGlobalCtors(M, AsanCtorFunction, Priority, AsanCtorFunction);
     if (AsanDtorFunction) {
       AsanDtorFunction->setComdat(M.getOrInsertComdat(kAsanModuleDtorName));
-      appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority,
-                          AsanDtorFunction);
+      appendToGlobalDtors(M, AsanDtorFunction, Priority, AsanDtorFunction);
     }
   } else {
-    appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority);
+    appendToGlobalCtors(M, AsanCtorFunction, Priority);
     if (AsanDtorFunction)
-      appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
+      appendToGlobalDtors(M, AsanDtorFunction, Priority);
   }
 
   return Changed;

@@ -55,7 +55,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #define EXTERN extern "C" __device__
-#define INLINE __inline__ __device__
+#define INLINE __forceinline__ __device__
 #define NOINLINE __noinline__ __device__
 #ifndef TRUE
 #define TRUE 1

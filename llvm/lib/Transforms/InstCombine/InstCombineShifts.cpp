@@ -46,8 +46,14 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
                     m_Instruction(Sh1)));
 
   // Inner shift: (x shiftopcode ShAmt1)
+  // Like with other shift, ignore zext of shift amount if any.
   Value *X, *ShAmt1;
   if (!match(Sh1, m_Shift(m_Value(X), m_ZExtOrSelf(m_Value(ShAmt1)))))
+    return nullptr;
+
+  // We have two shift amounts from two different shifts. The types of those
+  // shift amounts may not match. If that's the case let's bailout now..
+  if (ShAmt0->getType() != ShAmt1->getType())
     return nullptr;
 
   // The shift opcodes must be identical.

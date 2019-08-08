@@ -48,7 +48,7 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 }
 
 void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  StringRef RemainingTable = DCtx.getDWARFObj().getStringSection();
+  StringRef RemainingTable = DCtx.getDWARFObj().getStrSection();
   while (RemainingTable.size() > 0) {
     auto SymbolPair = RemainingTable.split('\0');
     RemainingTable = SymbolPair.second;
@@ -57,7 +57,7 @@ void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 }
 
 void dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  DataExtractor ArangesData(DCtx.getDWARFObj().getARangeSection(),
+  DataExtractor ArangesData(DCtx.getDWARFObj().getArangesSection(),
                             DCtx.isLittleEndian(), 0);
   uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
@@ -101,16 +101,16 @@ void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
 void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   const DWARFObject &D = DCtx.getDWARFObj();
   Y.PubNames.IsGNUStyle = false;
-  dumpPubSection(DCtx, Y.PubNames, D.getPubNamesSection());
+  dumpPubSection(DCtx, Y.PubNames, D.getPubnamesSection());
 
   Y.PubTypes.IsGNUStyle = false;
-  dumpPubSection(DCtx, Y.PubTypes, D.getPubTypesSection());
+  dumpPubSection(DCtx, Y.PubTypes, D.getPubtypesSection());
 
   Y.GNUPubNames.IsGNUStyle = true;
-  dumpPubSection(DCtx, Y.GNUPubNames, D.getGnuPubNamesSection());
+  dumpPubSection(DCtx, Y.GNUPubNames, D.getGnuPubnamesSection());
 
   Y.GNUPubTypes.IsGNUStyle = true;
-  dumpPubSection(DCtx, Y.GNUPubTypes, D.getGnuPubTypesSection());
+  dumpPubSection(DCtx, Y.GNUPubTypes, D.getGnuPubtypesSection());
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {

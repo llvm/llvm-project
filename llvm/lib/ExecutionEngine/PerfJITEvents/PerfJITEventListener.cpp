@@ -26,11 +26,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 #include <sys/mman.h>  // mmap()
 #include <sys/types.h> // getpid()
@@ -420,7 +420,7 @@ void PerfJITEventListener::NotifyCode(Expected<llvm::StringRef> &Symbol,
   rec.Tid = get_threadid();
 
   // avoid interspersing output
-  MutexGuard Guard(Mutex);
+  std::lock_guard<sys::Mutex> Guard(Mutex);
 
   rec.CodeIndex = CodeGeneration++; // under lock!
 
@@ -462,7 +462,7 @@ void PerfJITEventListener::NotifyDebug(uint64_t CodeAddr,
   // * char name[n]      : source file name in ASCII, including null termination
 
   // avoid interspersing output
-  MutexGuard Guard(Mutex);
+  std::lock_guard<sys::Mutex> Guard(Mutex);
 
   Dumpstream->write(reinterpret_cast<const char *>(&rec), sizeof(rec));
 

@@ -71,6 +71,7 @@ private:
   unsigned ThreadCount;
 };
 
+extern llvm::cl::opt<unsigned> ExecutorConcurrency;
 extern llvm::cl::opt<std::string> Filter;
 
 } // end namespace tooling

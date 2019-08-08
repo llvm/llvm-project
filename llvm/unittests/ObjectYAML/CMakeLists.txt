@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ObjectYAMLTests
   MinidumpYAMLTest.cpp
+  YAML2ObjTest.cpp
   YAMLTest.cpp
   )
 

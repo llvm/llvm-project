@@ -1,5 +1,5 @@
-; RUN: llc -data-sections=1 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s --check-prefix=DSECTIONS --check-prefix=CHECK
-; RUN: llc -data-sections=0 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s --check-prefix=NDSECTIONS --check-prefix=CHECK
+; RUN: llc -data-sections=1 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -data-sections=0 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 @a = global i32 1
 @b = global i32 2, !associated !0
@@ -28,14 +28,9 @@
 @j = global i32 1, section "bbb", !associated !4
 @k = global i32 1, !associated !4
 !4 = !{i32* @h}
-; NDSECTIONS-DAG: .section	aaa,"aw",@progbits
-; NDSECTIONS-DAG: .section	bbb,"awo",@progbits,h,unique,1
-; NDSECTIONS-DAG: .section	bbb,"awo",@progbits,h,unique,2
-
-; DSECTIONS-DAG: .section	aaa,"aw",@progbits,unique,1
-; DSECTIONS-DAG: .section	bbb,"awo",@progbits,h,unique,2
-; DSECTIONS-DAG: .section	bbb,"awo",@progbits,h,unique,3
-
+; CHECK-DAG: .section	aaa,"aw",@progbits
+; CHECK-DAG: .section	bbb,"awo",@progbits,h,unique,1
+; CHECK-DAG: .section	bbb,"awo",@progbits,h,unique,2
 ; CHECK-DAG: .section	.data.k,"awo",@progbits,h
 
 ; Non-GlobalValue metadata.
@@ -52,5 +47,4 @@
 @n = alias i32, i32* inttoptr (i64 add (i64 ptrtoint (i32* @a to i64), i64 1297036692682702848) to i32*)
 @o = global i32 1, section "eee", !associated !7
 !7 = !{i32* @n}
-; NDSECTIONS-DAG: .section	eee,"awo",@progbits,n,unique,3
-; DSECTIONS-DAG: .section	eee,"awo",@progbits,n,unique,6
+; CHECK-DAG: .section	eee,"awo",@progbits,n,unique,3

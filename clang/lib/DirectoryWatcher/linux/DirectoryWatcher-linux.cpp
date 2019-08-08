@@ -14,7 +14,6 @@
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
 #include <atomic>
 #include <condition_variable>
@@ -325,7 +324,9 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     bool WaitForInitialSync) {
-  assert(!Path.empty() && "Path.empty()");
+  if (Path.empty())
+    llvm::report_fatal_error(
+        "DirectoryWatcher::create can not accept an empty Path.");
 
   const int InotifyFD = inotify_init1(IN_CLOEXEC);
   if (InotifyFD == -1)

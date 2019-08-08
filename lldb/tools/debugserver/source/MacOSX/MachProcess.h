@@ -116,6 +116,7 @@ public:
 #endif
   static bool GetOSVersionNumbers(uint64_t *major, uint64_t *minor,
                                   uint64_t *patch);
+  static std::string GetMacCatalystVersionString();
 #ifdef WITH_BKS
   static void BKSCleanupAfterAttach(const void *attach_token,
                                     DNBError &err_str);
@@ -233,12 +234,13 @@ public:
   GetDeploymentInfo(const struct load_command&, uint64_t load_command_address,
                     uint32_t& major_version, uint32_t& minor_version,
                     uint32_t& patch_version);
-  bool GetMachOInformationFromMemory(nub_addr_t mach_o_header_addr,
+  bool GetMachOInformationFromMemory(uint32_t platform,
+                                     nub_addr_t mach_o_header_addr,
                                      int wordsize,
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
       const std::vector<struct binary_image_information> &image_infos);
-  void GetAllLoadedBinariesViaDYLDSPI(
+  uint32_t GetAllLoadedBinariesViaDYLDSPI(
       std::vector<struct binary_image_information> &image_infos);
   JSONGenerator::ObjectSP GetLoadedDynamicLibrariesInfos(
       nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count);
@@ -425,6 +427,7 @@ private:
                                    const uuid_t uuid, const char *path));
   void (*m_dyld_process_info_release)(void *info);
   void (*m_dyld_process_info_get_cache)(void *info, void *cacheInfo);
+  uint32_t (*m_dyld_process_info_get_platform)(void *info);
 };
 
 #endif // __MachProcess_h__

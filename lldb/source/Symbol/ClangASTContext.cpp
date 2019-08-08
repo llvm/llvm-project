@@ -8330,24 +8330,6 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
   VerifyDecl(cxx_method_decl);
 #endif
 
-  //    printf ("decl->isPolymorphic()             = %i\n",
-  //    cxx_record_decl->isPolymorphic());
-  //    printf ("decl->isAggregate()               = %i\n",
-  //    cxx_record_decl->isAggregate());
-  //    printf ("decl->isPOD()                     = %i\n",
-  //    cxx_record_decl->isPOD());
-  //    printf ("decl->isEmpty()                   = %i\n",
-  //    cxx_record_decl->isEmpty());
-  //    printf ("decl->isAbstract()                = %i\n",
-  //    cxx_record_decl->isAbstract());
-  //    printf ("decl->hasTrivialConstructor()     = %i\n",
-  //    cxx_record_decl->hasTrivialConstructor());
-  //    printf ("decl->hasTrivialCopyConstructor() = %i\n",
-  //    cxx_record_decl->hasTrivialCopyConstructor());
-  //    printf ("decl->hasTrivialCopyAssignment()  = %i\n",
-  //    cxx_record_decl->hasTrivialCopyAssignment());
-  //    printf ("decl->hasTrivialDestructor()      = %i\n",
-  //    cxx_record_decl->hasTrivialDestructor());
   return cxx_method_decl;
 }
 

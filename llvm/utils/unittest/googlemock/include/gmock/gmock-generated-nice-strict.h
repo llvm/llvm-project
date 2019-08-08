@@ -68,6 +68,8 @@
 // cannot have arguments passed by non-const reference, which are
 // banned by the Google C++ style guide anyway.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_NICE_STRICT_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_NICE_STRICT_H_
 

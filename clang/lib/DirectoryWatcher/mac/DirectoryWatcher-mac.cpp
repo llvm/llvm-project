@@ -150,7 +150,8 @@ FSEventStreamRef createFSEventStream(
     StringRef Path,
     std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
     dispatch_queue_t Queue) {
-  assert(!Path.empty() && "Path.empty()");
+  if (Path.empty())
+    return nullptr;
 
   CFMutableArrayRef PathsToWatch = [&]() {
     CFMutableArrayRef PathsToWatch =
@@ -208,7 +209,10 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
   dispatch_queue_t Queue =
       dispatch_queue_create("DirectoryWatcher", DISPATCH_QUEUE_SERIAL);
 
-  assert(!Path.empty() && "Path.empty()");
+  if (Path.empty())
+    llvm::report_fatal_error(
+        "DirectoryWatcher::create can not accept an empty Path.");
+
   auto EventStream = createFSEventStream(Path, Receiver, Queue);
   assert(EventStream && "EventStream expected to be non-null");
 

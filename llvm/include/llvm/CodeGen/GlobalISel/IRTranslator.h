@@ -243,6 +243,10 @@ private:
   bool valueIsSplit(const Value &V,
                     SmallVectorImpl<uint64_t> *Offsets = nullptr);
 
+  /// Common code for translating normal calls or invokes.
+  bool translateCallSite(const ImmutableCallSite &CS,
+                         MachineIRBuilder &MIRBuilder);
+
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);

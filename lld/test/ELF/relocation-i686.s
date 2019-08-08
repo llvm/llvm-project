@@ -1,10 +1,10 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t
-// RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld -shared %t2.o -o %t2.so
-// RUN: ld.lld --hash-style=sysv %t %t2.so -o %t2
-// RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=ADDR %s
-// RUN: llvm-objdump -d %t2 | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=i686 %p/Inputs/shared.s -o %t2.o
+// RUN: ld.lld -shared %t2.o -soname=t2.so -o %t2.so
+// RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t
+// RUN: llvm-readobj -S %t | FileCheck --check-prefix=ADDR %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 .global _start
 _start:
@@ -28,15 +28,15 @@ R_386_PC32_2:
 // CHECK: Disassembly of section .R_386_32:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_32:
-// CHECK-NEXT:  401000: {{.*}} movl $4198401, %edx
+// CHECK-NEXT:   movl $4198401, %edx
 
 // CHECK: Disassembly of section .R_386_PC32:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_PC32:
-// CHECK-NEXT:   401005:  e8 04 00 00 00  calll 4
+// CHECK-NEXT:   calll 4
 
 // CHECK:      R_386_PC32_2:
-// CHECK-NEXT:   40100e:  90  nop
+// CHECK-NEXT:   nop
 
 // Create a .got
 movl bar@GOT, %eax
@@ -70,7 +70,7 @@ R_386_GOTPC:
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   401014:  {{.*}} movl  $8172, %eax
+// CHECK-NEXT:   movl  $8172, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar
@@ -78,7 +78,7 @@ R_386_GOTPC:
 // CHECK:      Disassembly of section .dynamic_reloc:
 // CHECK-EMPTY:
 // CHECK-NEXT: .dynamic_reloc:
-// CHECK-NEXT:   401019:  e8 32 00 00 00 calll 50
+// CHECK-NEXT:   401019:       calll 50
 
 .section .R_386_GOT32,"ax",@progbits
 .global R_386_GOT32
@@ -93,7 +93,7 @@ R_386_GOT32:
 // CHECK:      Disassembly of section .R_386_GOT32:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOT32:
-// CHECK-NEXT: 40101e: a1 78 f0 ff ff movl 4294963320, %eax
-// CHECK-NEXT: 401023: a1 7c f0 ff ff movl 4294963324, %eax
-// CHECK-NEXT: 401028: a1 80 f0 ff ff movl 4294963328, %eax
-// CHECK-NEXT: 40102d: a1 80 f0 ff ff movl 4294963328, %eax
+// CHECK-NEXT: 40101e:       movl 4294963320, %eax
+// CHECK-NEXT: 401023:       movl 4294963324, %eax
+// CHECK-NEXT: 401028:       movl 4294963328, %eax
+// CHECK-NEXT: 40102d:       movl 4294963328, %eax

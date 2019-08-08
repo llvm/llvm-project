@@ -35,6 +35,10 @@ inline bool isImmUnsignedi8Value(uint64_t Value) {
   return isUInt<8>(Value) || isInt<8>(Value);
 }
 
+inline bool isImmUnsignedi4Value(uint64_t Value) {
+  return isUInt<4>(Value);
+}
+
 } // End of namespace llvm
 
 #endif

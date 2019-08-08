@@ -65,6 +65,17 @@
 
 using namespace llvm;
 
+const raw_ostream::Colors raw_ostream::BLACK;
+const raw_ostream::Colors raw_ostream::RED;
+const raw_ostream::Colors raw_ostream::GREEN;
+const raw_ostream::Colors raw_ostream::YELLOW;
+const raw_ostream::Colors raw_ostream::BLUE;
+const raw_ostream::Colors raw_ostream::MAGENTA;
+const raw_ostream::Colors raw_ostream::CYAN;
+const raw_ostream::Colors raw_ostream::WHITE;
+const raw_ostream::Colors raw_ostream::SAVEDCOLOR;
+const raw_ostream::Colors raw_ostream::RESET;
+
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
   // in their destructors.
@@ -130,6 +141,14 @@ raw_ostream &raw_ostream::operator<<(long long N) {
 
 raw_ostream &raw_ostream::write_hex(unsigned long long N) {
   llvm::write_hex(*this, N, HexPrintStyle::Lower);
+  return *this;
+}
+
+raw_ostream &raw_ostream::operator<<(Colors C) {
+  if (C == Colors::RESET)
+    resetColor();
+  else
+    changeColor(C);
   return *this;
 }
 
@@ -784,11 +803,15 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
 
 raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
                                          bool bg) {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode =
-    (colors == SAVEDCOLOR) ? sys::Process::OutputBold(bg)
-    : sys::Process::OutputColor(colors, bold, bg);
+      (colors == SAVEDCOLOR)
+          ? sys::Process::OutputBold(bg)
+          : sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
   if (colorcode) {
     size_t len = strlen(colorcode);
     write(colorcode, len);
@@ -799,6 +822,9 @@ raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
 }
 
 raw_ostream &raw_fd_ostream::resetColor() {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode = sys::Process::ResetColor();
@@ -812,6 +838,9 @@ raw_ostream &raw_fd_ostream::resetColor() {
 }
 
 raw_ostream &raw_fd_ostream::reverseColor() {
+  if (!ColorEnabled)
+    return *this;
+
   if (sys::Process::ColorNeedsFlush())
     flush();
   const char *colorcode = sys::Process::OutputReverse();

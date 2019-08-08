@@ -108,11 +108,12 @@ struct SimpleValue {
     // This can only handle non-void readnone functions.
     if (CallInst *CI = dyn_cast<CallInst>(Inst))
       return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy();
-    return isa<CastInst>(Inst) || isa<BinaryOperator>(Inst) ||
-           isa<GetElementPtrInst>(Inst) || isa<CmpInst>(Inst) ||
-           isa<SelectInst>(Inst) || isa<ExtractElementInst>(Inst) ||
-           isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
-           isa<ExtractValueInst>(Inst) || isa<InsertValueInst>(Inst);
+    return isa<CastInst>(Inst) || isa<UnaryOperator>(Inst) ||
+           isa<BinaryOperator>(Inst) || isa<GetElementPtrInst>(Inst) ||
+           isa<CmpInst>(Inst) || isa<SelectInst>(Inst) ||
+           isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
+           isa<ShuffleVectorInst>(Inst) || isa<ExtractValueInst>(Inst) ||
+           isa<InsertValueInst>(Inst);
   }
 };
 
@@ -240,7 +241,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
 
   assert((isa<CallInst>(Inst) || isa<GetElementPtrInst>(Inst) ||
           isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
-          isa<ShuffleVectorInst>(Inst)) &&
+          isa<ShuffleVectorInst>(Inst) || isa<UnaryOperator>(Inst)) &&
          "Invalid/unknown instruction");
 
   // Mix in the opcode.

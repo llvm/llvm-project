@@ -33,11 +33,12 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
     if (LLDDWARFSection *m =
             StringSwitch<LLDDWARFSection *>(sec->name)
                 .Case(".debug_addr", &addrSection)
-                .Case(".debug_gnu_pubnames", &gnuPubNamesSection)
-                .Case(".debug_gnu_pubtypes", &gnuPubTypesSection)
+                .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
+                .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
                 .Case(".debug_info", &infoSection)
-                .Case(".debug_ranges", &rangeSection)
-                .Case(".debug_rnglists", &rngListsSection)
+                .Case(".debug_ranges", &rangesSection)
+                .Case(".debug_rnglists", &rnglistsSection)
+                .Case(".debug_str_offsets", &strOffsetsSection)
                 .Case(".debug_line", &lineSection)
                 .Default(nullptr)) {
       m->Data = toStringRef(sec->data());
@@ -50,7 +51,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
     else if (sec->name == ".debug_str")
       strSection = toStringRef(sec->data());
     else if (sec->name == ".debug_line_str")
-      lineStringSection = toStringRef(sec->data());
+      lineStrSection = toStringRef(sec->data());
   }
 }
 

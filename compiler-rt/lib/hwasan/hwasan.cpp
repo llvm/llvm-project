@@ -193,27 +193,12 @@ void UpdateMemoryUsage() {
 void UpdateMemoryUsage() {}
 #endif
 
-// Prepare to run instrumented code on the main thread.
-void InitInstrumentation() {
-  if (hwasan_instrumentation_inited) return;
-
-  if (!InitShadow()) {
-    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
-    DumpProcessMap();
-    Die();
-  }
-
-  InitThreads();
-  hwasanThreadList().CreateCurrentThread();
-
-  hwasan_instrumentation_inited = 1;
-}
-
 } // namespace __hwasan
+
+using namespace __hwasan;
 
 void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
-  using namespace __hwasan;
   Thread *t = GetCurrentThread();
   if (!t) {
     // the thread is still being created.
@@ -231,9 +216,85 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
     Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
-// Interface.
+struct hwasan_global {
+  s32 gv_relptr;
+  u32 info;
+};
 
-using namespace __hwasan;
+static void InitGlobals(const hwasan_global *begin, const hwasan_global *end) {
+  for (auto *desc = begin; desc != end; ++desc) {
+    uptr gv = reinterpret_cast<uptr>(desc) + desc->gv_relptr;
+    uptr size = desc->info & 0xffffff;
+    uptr full_granule_size = RoundDownTo(size, 16);
+    u8 tag = desc->info >> 24;
+    TagMemoryAligned(gv, full_granule_size, tag);
+    if (size % 16)
+      TagMemoryAligned(gv + full_granule_size, 16, size % 16);
+  }
+}
+
+enum { NT_LLVM_HWASAN_GLOBALS = 3 };
+
+struct hwasan_global_note {
+  s32 begin_relptr;
+  s32 end_relptr;
+};
+
+static void InitGlobalsFromPhdrs(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                                 ElfW(Half) phnum) {
+  for (; phnum != 0; ++phdr, --phnum) {
+    if (phdr->p_type != PT_NOTE)
+      continue;
+    const char *note = reinterpret_cast<const char *>(base + phdr->p_vaddr);
+    const char *nend = note + phdr->p_memsz;
+    while (note < nend) {
+      auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(note);
+      const char *name = note + sizeof(ElfW(Nhdr));
+      const char *desc = name + nhdr->n_namesz;
+      if (nhdr->n_type != NT_LLVM_HWASAN_GLOBALS ||
+          internal_strcmp(name, "LLVM") != 0) {
+        note = desc + nhdr->n_descsz;
+        continue;
+      }
+
+      auto *global_note = reinterpret_cast<const hwasan_global_note *>(desc);
+      auto *global_begin = reinterpret_cast<const hwasan_global *>(
+          note + global_note->begin_relptr);
+      auto *global_end = reinterpret_cast<const hwasan_global *>(
+          note + global_note->end_relptr);
+      InitGlobals(global_begin, global_end);
+      return;
+    }
+  }
+}
+
+static void InitLoadedGlobals() {
+  dl_iterate_phdr(
+      [](dl_phdr_info *info, size_t size, void *data) {
+        InitGlobalsFromPhdrs(info->dlpi_addr, info->dlpi_phdr,
+                             info->dlpi_phnum);
+        return 0;
+      },
+      nullptr);
+}
+
+// Prepare to run instrumented code on the main thread.
+static void InitInstrumentation() {
+  if (hwasan_instrumentation_inited) return;
+
+  if (!InitShadow()) {
+    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
+    DumpProcessMap();
+    Die();
+  }
+
+  InitThreads();
+  hwasanThreadList().CreateCurrentThread();
+
+  hwasan_instrumentation_inited = 1;
+}
+
+// Interface.
 
 uptr __hwasan_shadow_memory_dynamic_address;  // Global interface symbol.
 
@@ -244,6 +305,17 @@ void __hwasan_init_frames(uptr beg, uptr end) {}
 void __hwasan_init_static() {
   InitShadowGOT();
   InitInstrumentation();
+
+  // In the non-static code path we call dl_iterate_phdr here. But at this point
+  // libc might not have been initialized enough for dl_iterate_phdr to work.
+  // Fortunately, since this is a statically linked executable we can use the
+  // linker-defined symbol __ehdr_start to find the only relevant set of phdrs.
+  extern ElfW(Ehdr) __ehdr_start;
+  InitGlobalsFromPhdrs(
+      0,
+      reinterpret_cast<const ElfW(Phdr) *>(
+          reinterpret_cast<const char *>(&__ehdr_start) + __ehdr_start.e_phoff),
+      __ehdr_start.e_phnum);
 }
 
 void __hwasan_init() {
@@ -267,6 +339,7 @@ void __hwasan_init() {
   DisableCoreDumperIfNecessary();
 
   InitInstrumentation();
+  InitLoadedGlobals();
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
@@ -299,6 +372,18 @@ void __hwasan_init() {
 
   hwasan_init_is_running = 0;
   hwasan_inited = 1;
+}
+
+void __hwasan_library_loaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                             ElfW(Half) phnum) {
+  InitGlobalsFromPhdrs(base, phdr, phnum);
+}
+
+void __hwasan_library_unloaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                               ElfW(Half) phnum) {
+  for (; phnum != 0; ++phdr, --phnum)
+    if (phdr->p_type == PT_LOAD)
+      TagMemory(base + phdr->p_vaddr, phdr->p_memsz, 0);
 }
 
 void __hwasan_print_shadow(const void *p, uptr sz) {

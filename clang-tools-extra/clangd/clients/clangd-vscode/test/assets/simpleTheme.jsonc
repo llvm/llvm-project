@@ -1,0 +1,17 @@
+{
+    // Some comment
+    "tokenColors": [
+        {
+            "scope": "a",
+            "settings": {
+                "foreground": "#ff0000"
+            }
+        },
+        {
+            "scope": "c",
+            "settings": {
+                "foreground": "#bcd"
+            }
+        }
+    ]
+}

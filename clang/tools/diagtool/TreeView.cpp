@@ -37,7 +37,8 @@ public:
 
   void setColor(llvm::raw_ostream::Colors Color) {
     if (ShowColors)
-      out << llvm::sys::Process::OutputColor(Color, false, false);
+      out << llvm::sys::Process::OutputColor(static_cast<char>(Color), false,
+                                             false);
   }
 
   void resetColor() {

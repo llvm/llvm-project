@@ -231,6 +231,10 @@ public:
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
 
+  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+    this->FS = std::move(FS);
+  }
+
   /// Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.
   ///

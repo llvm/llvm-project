@@ -1,0 +1,14 @@
+PHDRS {
+  text PT_LOAD;
+}
+SECTIONS {
+  .shstrtab     : { *(.shstrtab    ) }
+  .debug_info   : { *(.debug_info  ) }
+  .debug_line   : { *(.debug_line  ) }
+  .debug_str    : { *(.debug_str   ) }
+  .debug_abbrev : { *(.debug_abbrev) }
+
+  . = 0x201000;
+  .text : { *(.text .text.f) } :text
+  /DISCARD/ : { *(*) }
+}

@@ -196,9 +196,9 @@ struct LockMutex : ValueMapConfig<KeyT, MutexT> {
 // FIXME: These tests started failing on Windows.
 #if LLVM_ENABLE_THREADS && !defined(_WIN32)
 TYPED_TEST(ValueMapTest, LocksMutex) {
-  sys::Mutex M(false);  // Not recursive.
+  std::mutex M;
   bool CalledRAUW = false, CalledDeleted = false;
-  typedef LockMutex<TypeParam*, sys::Mutex> ConfigType;
+  typedef LockMutex<TypeParam*, std::mutex> ConfigType;
   typename ConfigType::ExtraData Data = {&M, &CalledRAUW, &CalledDeleted};
   ValueMap<TypeParam*, int, ConfigType> VM(Data);
   VM[this->BitcastV.get()] = 7;
