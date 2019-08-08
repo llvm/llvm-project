@@ -64,7 +64,9 @@ std::string getSecIndexForError(const ELFFile<ELFT> *Obj,
   return "[unknown index]";
 }
 
-static Error defaultWarningHandler(const Twine &Msg) { return createError(Msg); }
+static inline Error defaultWarningHandler(const Twine &Msg) {
+  return createError(Msg);
+}
 
 template <class ELFT>
 class ELFFile {
