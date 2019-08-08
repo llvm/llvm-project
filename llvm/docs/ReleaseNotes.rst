@@ -52,6 +52,10 @@ Non-comprehensive list of changes in this release
 * **llvm-objcopy/llvm-strip** got support for COFF object files/executables,
   supporting the most common copying/stripping options.
 
+* The CMake parameter ``CLANG_ANALYZER_ENABLE_Z3_SOLVER`` has been replaced by
+  ``LLVM_ENABLE_Z3_SOLVER``.
+
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
