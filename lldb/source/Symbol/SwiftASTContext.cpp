@@ -3148,6 +3148,31 @@ private:
 /// Clang AST to ClangImporter to import the type into Swift.
 class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   SwiftASTContext &m_swift_ast_ctx;
+
+  /// Used to filter out types with mismatching kinds.
+  bool HasTypeKind(TypeSP clang_type_sp, swift::Demangle::Node::Kind kind) {
+    CompilerType fwd_type = clang_type_sp->GetForwardCompilerType();
+    clang::QualType qual_type = ClangUtil::GetQualType(fwd_type);
+    switch (kind) {
+    case swift::Demangle::Node::Kind::Protocol:
+      // Not implemented.
+      return true;
+    case swift::Demangle::Node::Kind::Class:
+      // Not implemented.
+      return true;
+    case swift::Demangle::Node::Kind::TypeAlias:
+      // Not Implemented.
+      return true;
+    case swift::Demangle::Node::Kind::Structure:
+      return !qual_type->isStructureOrClassType();
+    case swift::Demangle::Node::Kind::Enum:
+      // Not Implemented.
+      return true;
+    default:
+      return true;
+    }
+  }
+
 public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
       : m_swift_ast_ctx(swift_ast_ctx) {}
@@ -3169,7 +3194,6 @@ public:
     const bool exact_match = true;
     const uint32_t max_matches = UINT32_MAX;
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    // FIXME: Filter by kind.
     if (!module->FindTypes(name_cs, exact_match, max_matches,
                            searched_symbol_files, clang_types))
       return;
@@ -3183,34 +3207,39 @@ public:
       return;
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);
+    for (unsigned i = 0; i < clang_types.GetSize(); ++i) {
+      TypeSP clang_type_sp = clang_types.GetTypeAtIndex(i);
+      if (!clang_type_sp)
+        continue;
 
-    for (unsigned i = 0; i < clang_types.GetSize(); ++i)
-      if (TypeSP clang_type_sp = clang_types.GetTypeAtIndex(i)) {
-        // Realize the full type.
-        CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
-        // Import the type into the DWARFImporter's context.
-        clang::ASTContext &to_ctx = dwarf_importer->getClangASTContext();
-        auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
-            compiler_type.GetTypeSystem());
-        if (!type_system)
-          continue;
-        clang::ASTContext *from_ctx = type_system->getASTContext();
-        if (!from_ctx)
-          continue;
-        clang::ASTImporter importer(to_ctx, file_manager, *from_ctx,
-                                    file_manager, false);
-        clang::QualType clang_type(
-            importer.Import(ClangUtil::GetQualType(compiler_type)));
+      // Filter out types with a mismatching type kind.
+      if (kind && HasTypeKind(clang_type_sp, *kind))
+        continue;
 
-        // FIXME: Support more than structs.
-        auto *clang_record_type = clang_type->getAsStructureType();
-        if (!clang_record_type)
-          continue;
-        clang::Decl *clang_decl = clang_record_type->getDecl();
-        if (!clang_decl)
-          continue;
-        results.push_back(clang_decl);
-      }
+      // Realize the full type.
+      CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
+      // Import the type into the DWARFImporter's context.
+      clang::ASTContext &to_ctx = dwarf_importer->getClangASTContext();
+      auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
+          compiler_type.GetTypeSystem());
+      if (!type_system)
+        continue;
+      clang::ASTContext *from_ctx = type_system->getASTContext();
+      if (!from_ctx)
+        continue;
+      clang::ASTImporter importer(to_ctx, file_manager, *from_ctx, file_manager,
+                                  false);
+      clang::QualType clang_type(
+          importer.Import(ClangUtil::GetQualType(compiler_type)));
+
+      auto *clang_record_type = clang_type->getAsStructureType();
+      if (!clang_record_type)
+        continue;
+      clang::Decl *clang_decl = clang_record_type->getDecl();
+      if (!clang_decl)
+        continue;
+      results.push_back(clang_decl);
+    }
   }
 };
 } // namespace lldb_private
