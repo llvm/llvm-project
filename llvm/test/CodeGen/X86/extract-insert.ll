@@ -31,12 +31,10 @@ define i8 @extractelt_bitcast(i32 %x) nounwind {
 define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
 ; X86-LABEL: extractelt_bitcast_extra_use:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractelt_bitcast_extra_use:

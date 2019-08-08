@@ -1698,7 +1698,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   const auto &FunctionRanges = Unit.getFunctionRanges();
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
   DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
-                                    OrigDwarf.getDWARFObj().getRangeSection(),
+                                    OrigDwarf.getDWARFObj().getRangesSection(),
                                     OrigDwarf.isLittleEndian(), AddressSize);
   auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
@@ -2003,7 +2003,7 @@ void DwarfLinker::patchFrameInfoForObject(const DebugMapObject &DMO,
                                           RangesTy &Ranges,
                                           DWARFContext &OrigDwarf,
                                           unsigned AddrSize) {
-  StringRef FrameData = OrigDwarf.getDWARFObj().getDebugFrameSection().Data;
+  StringRef FrameData = OrigDwarf.getDWARFObj().getFrameSection().Data;
   if (FrameData.empty())
     return;
 
@@ -2432,7 +2432,7 @@ void DwarfLinker::updateAccelKind(DWARFContext &Dwarf) {
   }
 
   if (!AtLeastOneDwarfAccelTable &&
-      !DwarfObj.getDebugNamesSection().Data.empty()) {
+      !DwarfObj.getNamesSection().Data.empty()) {
     AtLeastOneDwarfAccelTable = true;
   }
 }

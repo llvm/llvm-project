@@ -11,8 +11,7 @@
 /// The expectation is that the loop contains three pseudo instructions:
 /// - t2*LoopStart - placed in the preheader or pre-preheader. The do-loop
 ///   form should be in the preheader, whereas the while form should be in the
-///   preheaders only predecessor. TODO: Could DoLoopStart get moved into the
-///   pre-preheader?
+///   preheaders only predecessor.
 /// - t2LoopDec - placed within in the loop body.
 /// - t2LoopEnd - the loop latch terminator.
 ///
@@ -176,19 +175,25 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         // faster than performing a sub,cmp,br or even subs,br.
         Revert = true;
 
-      if (!Dec)
+      if (!Dec || End)
         continue;
 
-      // If we find that we load/store LR between LoopDec and LoopEnd, expect
-      // that the decremented value has been spilled to the stack. Because
-      // this value isn't actually going to be produced until the latch, by LE,
-      // we would need to generate a real sub. The value is also likely to be
-      // reloaded for use of LoopEnd - in which in case we'd need to perform
-      // an add because it gets negated again by LE! The other option is to
-      // then generate the other form of LE which doesn't perform the sub.
-      if (MI.mayLoad() || MI.mayStore())
-        Revert =
-          MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == ARM::LR;
+      // If we find that LR has been written or read between LoopDec and
+      // LoopEnd, expect that the decremented value is being used else where.
+      // Because this value isn't actually going to be produced until the
+      // latch, by LE, we would need to generate a real sub. The value is also
+      // likely to be copied/reloaded for use of LoopEnd - in which in case
+      // we'd need to perform an add because it gets subtracted again by LE!
+      // The other option is to then generate the other form of LE which doesn't
+      // perform the sub.
+      for (auto &MO : MI.operands()) {
+        if (MI.getOpcode() != ARM::t2LoopDec && MO.isReg() &&
+            MO.getReg() == ARM::LR) {
+          LLVM_DEBUG(dbgs() << "ARM Loops: Found LR Use/Def: " << MI);
+          Revert = true;
+          break;
+        }
+      }
     }
 
     if (Dec && End && Revert)

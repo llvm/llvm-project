@@ -117,14 +117,12 @@ define <8 x i32> @zext8(<8 x i16> %A) nounwind {
 define <8 x i32> @zext_8i8_8i32(<8 x i8> %A) nounwind {
 ; X32-LABEL: zext_8i8_8i32:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: zext_8i8_8i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; X64-NEXT:    retq
   %B = zext <8 x i8> %A to <8 x i32>
   ret <8 x i32>%B

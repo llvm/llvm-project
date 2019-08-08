@@ -260,6 +260,15 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isImmSExti64i32Value(CE->getValue());
   }
 
+  bool isImmUnsignedi4() const {
+    if (!isImm()) return false;
+    // If this isn't a constant expr, just assume it fits and let relaxation
+    // handle it.
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return true;
+    return isImmUnsignedi4Value(CE->getValue());
+  }
+
   bool isImmUnsignedi8() const {
     if (!isImm()) return false;
     // If this isn't a constant expr, just assume it fits and let relaxation

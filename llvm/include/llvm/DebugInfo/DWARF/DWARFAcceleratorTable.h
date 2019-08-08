@@ -453,10 +453,6 @@ public:
 
     Expected<Entry> getEntry(uint64_t *Offset) const;
 
-    // A temporarily method to preserve compatibility with existing code.
-    // Will be removed when the migration to 64-bit offsets is finished.
-    Expected<Entry> getEntry(uint32_t *Offset) const;
-
     /// Look up all entries in this Name Index matching \c Key.
     iterator_range<ValueIterator> equal_range(StringRef Key) const;
 

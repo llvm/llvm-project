@@ -27,42 +27,90 @@ using namespace PatternMatch;
 // This is valid for any shift, but they must be identical.
 static Instruction *
 reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
-                                             const SimplifyQuery &SQ) {
-  // Look for:  (x shiftopcode ShAmt0) shiftopcode ShAmt1
-  Value *X, *ShAmt1, *ShAmt0;
+                                             const SimplifyQuery &SQ,
+                                             InstCombiner::BuilderTy &Builder) {
+  // Look for a shift of some instruction, ignore zext of shift amount if any.
+  Instruction *Sh0Op0;
+  Value *ShAmt0;
+  if (!match(Sh0,
+             m_Shift(m_Instruction(Sh0Op0), m_ZExtOrSelf(m_Value(ShAmt0)))))
+    return nullptr;
+
+  // If there is a truncation between the two shifts, we must make note of it
+  // and look through it. The truncation imposes additional constraints on the
+  // transform.
   Instruction *Sh1;
-  if (!match(Sh0, m_Shift(m_CombineAnd(m_Shift(m_Value(X), m_Value(ShAmt1)),
-                                       m_Instruction(Sh1)),
-                          m_Value(ShAmt0))))
+  Value *Trunc = nullptr;
+  match(Sh0Op0,
+        m_CombineOr(m_CombineAnd(m_Trunc(m_Instruction(Sh1)), m_Value(Trunc)),
+                    m_Instruction(Sh1)));
+
+  // Inner shift: (x shiftopcode ShAmt1)
+  // Like with other shift, ignore zext of shift amount if any.
+  Value *X, *ShAmt1;
+  if (!match(Sh1, m_Shift(m_Value(X), m_ZExtOrSelf(m_Value(ShAmt1)))))
+    return nullptr;
+
+  // We have two shift amounts from two different shifts. The types of those
+  // shift amounts may not match. If that's the case let's bailout now..
+  if (ShAmt0->getType() != ShAmt1->getType())
     return nullptr;
 
   // The shift opcodes must be identical.
   Instruction::BinaryOps ShiftOpcode = Sh0->getOpcode();
   if (ShiftOpcode != Sh1->getOpcode())
     return nullptr;
+
+  // Did we match a pattern with truncation ?
+  if (Trunc) {
+    // For right-shifts we can't do any such simplifications. Leave as-is.
+    if (ShiftOpcode != Instruction::BinaryOps::Shl)
+      return nullptr; // FIXME: still could perform constant-folding.
+    // If we saw truncation, we'll need to produce extra instruction,
+    // and for that one of the operands of the shift must be one-use.
+    if (!match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
+      return nullptr;
+  }
+
   // Can we fold (ShAmt0+ShAmt1) ?
-  Value *NewShAmt = SimplifyBinOp(Instruction::BinaryOps::Add, ShAmt0, ShAmt1,
-                                  SQ.getWithInstruction(Sh0));
+  auto *NewShAmt = dyn_cast_or_null<Constant>(
+      SimplifyAddInst(ShAmt0, ShAmt1, /*isNSW=*/false, /*isNUW=*/false,
+                      SQ.getWithInstruction(Sh0)));
   if (!NewShAmt)
     return nullptr; // Did not simplify.
-  // Is the new shift amount smaller than the bit width?
-  // FIXME: could also rely on ConstantRange.
-  unsigned BitWidth = X->getType()->getScalarSizeInBits();
-  if (!match(NewShAmt, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
-                                          APInt(BitWidth, BitWidth))))
-    return nullptr;
+  // Is the new shift amount smaller than the bit width of inner shift?
+  if (!match(NewShAmt, m_SpecificInt_ICMP(
+                           ICmpInst::Predicate::ICMP_ULT,
+                           APInt(NewShAmt->getType()->getScalarSizeInBits(),
+                                 X->getType()->getScalarSizeInBits()))))
+    return nullptr; // FIXME: could perform constant-folding.
+
   // All good, we can do this fold.
+  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());
+
   BinaryOperator *NewShift = BinaryOperator::Create(ShiftOpcode, X, NewShAmt);
-  // If both of the original shifts had the same flag set, preserve the flag.
-  if (ShiftOpcode == Instruction::BinaryOps::Shl) {
-    NewShift->setHasNoUnsignedWrap(Sh0->hasNoUnsignedWrap() &&
-                                   Sh1->hasNoUnsignedWrap());
-    NewShift->setHasNoSignedWrap(Sh0->hasNoSignedWrap() &&
-                                 Sh1->hasNoSignedWrap());
-  } else {
-    NewShift->setIsExact(Sh0->isExact() && Sh1->isExact());
+
+  // The flags can only be propagated if there wasn't a trunc.
+  if (!Trunc) {
+    // If the pattern did not involve trunc, and both of the original shifts
+    // had the same flag set, preserve the flag.
+    if (ShiftOpcode == Instruction::BinaryOps::Shl) {
+      NewShift->setHasNoUnsignedWrap(Sh0->hasNoUnsignedWrap() &&
+                                     Sh1->hasNoUnsignedWrap());
+      NewShift->setHasNoSignedWrap(Sh0->hasNoSignedWrap() &&
+                                   Sh1->hasNoSignedWrap());
+    } else {
+      NewShift->setIsExact(Sh0->isExact() && Sh1->isExact());
+    }
   }
-  return NewShift;
+
+  Instruction *Ret = NewShift;
+  if (Trunc) {
+    Builder.Insert(NewShift);
+    Ret = CastInst::Create(Instruction::Trunc, NewShift, Sh0->getType());
+  }
+
+  return Ret;
 }
 
 // If we have some pattern that leaves only some low bits set, and then performs
@@ -158,7 +206,7 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
       return Res;
 
   if (Instruction *NewShift =
-          reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ))
+          reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ, Builder))
     return NewShift;
 
   // (C1 shift (A add C2)) -> (C1 shift C2) shift A)

@@ -83,10 +83,10 @@ bool lld::wasm::link(ArrayRef<const char *> args, bool canExitEarly,
                      raw_ostream &error) {
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorOS = &error;
-  errorHandler().colorDiagnostics = error.has_colors();
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";
+  enableColors(error.has_colors());
 
   config = make<Configuration>();
   symtab = make<SymbolTable>();
@@ -134,15 +134,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    errorHandler().colorDiagnostics = true;
+    enableColors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    errorHandler().colorDiagnostics = false;
+    enableColors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      errorHandler().colorDiagnostics = true;
+      enableColors(true);
     else if (s == "never")
-      errorHandler().colorDiagnostics = false;
+      enableColors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }

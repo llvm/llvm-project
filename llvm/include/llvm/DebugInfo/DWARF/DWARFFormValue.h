@@ -147,28 +147,6 @@ public:
                         uint64_t *OffsetPtr,
                         const dwarf::FormParams FormParams);
 
-  // The following methods are temporarily kept in order to preserve
-  // compatibility with existing code and migrate to 64-bit offsets smoothly.
-  // They will be removed when the migration is finished.
-  // Please do not use them in new code.
-  static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
-                                       uint32_t *OffsetPtr);
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    dwarf::FormParams FormParams,
-                    const DWARFContext *Context = nullptr,
-                    const DWARFUnit *Unit = nullptr);
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    dwarf::FormParams FormParams, const DWARFUnit *U) {
-    return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
-  }
-  bool skipValue(DataExtractor DebugInfoData, uint32_t *OffsetPtr,
-                 const dwarf::FormParams Params) const {
-    return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
-  }
-  static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
-                        uint32_t *OffsetPtr,
-                        const dwarf::FormParams FormParams);
-
 private:
   void dumpString(raw_ostream &OS) const;
 };

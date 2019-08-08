@@ -90,6 +90,14 @@ int main (int argc, char const *argv[])
     packed.b = 10;
     packed.c = 0x7112233;
 
+    struct LargePackedBits {
+        unsigned long a: 36;
+        unsigned long b: 36;
+    } __attribute__((packed));
+
+    struct LargePackedBits large_packed =
+      (struct LargePackedBits){ 0xcbbbbaaaa, 0xdffffeeee };
+    
     return 0;               //// Set break point at this line.
 
 }

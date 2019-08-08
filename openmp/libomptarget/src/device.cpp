@@ -157,12 +157,17 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
 // If NULL is returned, then either data allocation failed or the user tried
 // to do an illegal mapping.
 void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
-    int64_t Size, bool &IsNew, bool IsImplicit, bool UpdateRefCount) {
+    int64_t Size, bool &IsNew, bool &IsHostPtr, bool IsImplicit,
+    bool UpdateRefCount) {
   void *rc = NULL;
+  IsHostPtr = false;
   DataMapMtx.lock();
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
 
   // Check if the pointer is contained.
+  // If a variable is mapped to the device manually by the user - which would
+  // lead to the IsContained flag to be true - then we must ensure that the
+  // device address is returned even under unified memory conditions.
   if (lr.Flags.IsContained ||
       ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && IsImplicit)) {
     auto &HT = *lr.Entry;
@@ -183,15 +188,28 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     // Explicit extension of mapped data - not allowed.
     DP("Explicit extension of mapping is not allowed.\n");
   } else if (Size) {
-    // If it is not contained and Size > 0 we should create a new entry for it.
-    IsNew = true;
-    uintptr_t tp = (uintptr_t)RTL->data_alloc(RTLDeviceID, Size, HstPtrBegin);
-    DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", "
-        "HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(HstPtrBase),
-        DPxPTR(HstPtrBegin), DPxPTR((uintptr_t)HstPtrBegin + Size), DPxPTR(tp));
-    HostDataToTargetMap.push_front(HostDataToTargetTy((uintptr_t)HstPtrBase,
-        (uintptr_t)HstPtrBegin, (uintptr_t)HstPtrBegin + Size, tp));
-    rc = (void *)tp;
+    // If unified shared memory is active, implicitly mapped variables that are not
+    // privatized use host address. Any explicitly mapped variables also use
+    // host address where correctness is not impeded. In all other cases
+    // maps are respected.
+    // TODO: In addition to the mapping rules above, when the close map
+    // modifier is implemented, foce the mapping of the variable to the device.
+    if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+      DP("Return HstPtrBegin " DPxMOD " Size=%ld RefCount=%s\n",
+         DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
+      IsHostPtr = true;
+      rc = HstPtrBegin;
+    } else {
+      // If it is not contained and Size > 0 we should create a new entry for it.
+      IsNew = true;
+      uintptr_t tp = (uintptr_t)RTL->data_alloc(RTLDeviceID, Size, HstPtrBegin);
+      DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", "
+          "HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(HstPtrBase),
+          DPxPTR(HstPtrBegin), DPxPTR((uintptr_t)HstPtrBegin + Size), DPxPTR(tp));
+      HostDataToTargetMap.push_front(HostDataToTargetTy((uintptr_t)HstPtrBase,
+          (uintptr_t)HstPtrBegin, (uintptr_t)HstPtrBegin + Size, tp));
+      rc = (void *)tp;
+    }
   }
 
   DataMapMtx.unlock();
@@ -202,8 +220,10 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
 // Return the target pointer begin (where the data will be moved).
 // Decrement the reference counter if called from target_data_end.
 void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-    bool UpdateRefCount) {
+    bool UpdateRefCount, bool &IsHostPtr) {
   void *rc = NULL;
+  IsHostPtr = false;
+  IsLast = false;
   DataMapMtx.lock();
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
 
@@ -221,8 +241,14 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
         (CONSIDERED_INF(HT.RefCount)) ? "INF" :
             std::to_string(HT.RefCount).c_str());
     rc = (void *)tp;
-  } else {
-    IsLast = false;
+  } else if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+    // If the value isn't found in the mapping and unified shared memory
+    // is on then it means we have stumbled upon a value which we need to
+    // use directly from the host.
+    DP("Get HstPtrBegin " DPxMOD " Size=%ld RefCount=%s\n",
+       DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
+    IsHostPtr = true;
+    rc = HstPtrBegin;
   }
 
   DataMapMtx.unlock();
@@ -244,6 +270,8 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 }
 
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete) {
+  if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return OFFLOAD_SUCCESS;
   // Check if the pointer is contained in any sub-nodes.
   int rc;
   DataMapMtx.lock();

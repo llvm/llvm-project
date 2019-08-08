@@ -34,6 +34,15 @@ static cl::opt<bool> RoundSectionSizes(
     cl::desc("Round section sizes up to the section alignment"), cl::Hidden);
 } // end anonymous namespace
 
+static bool isMipsR6(const MCSubtargetInfo *STI) {
+  return STI->getFeatureBits()[Mips::FeatureMips32r6] ||
+         STI->getFeatureBits()[Mips::FeatureMips64r6];
+}
+
+static bool isMicroMips(const MCSubtargetInfo *STI) {
+  return STI->getFeatureBits()[Mips::FeatureMicroMips];
+}
+
 MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S), GPReg(Mips::GP), ModuleDirectiveAllowed(true) {
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
@@ -216,6 +225,19 @@ void MipsTargetStreamer::emitRRR(unsigned Opcode, unsigned Reg0, unsigned Reg1,
   emitRRX(Opcode, Reg0, Reg1, MCOperand::createReg(Reg2), IDLoc, STI);
 }
 
+void MipsTargetStreamer::emitRRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1,
+                                  unsigned Reg2, MCOperand Op3, SMLoc IDLoc,
+                                  const MCSubtargetInfo *STI) {
+  MCInst TmpInst;
+  TmpInst.setOpcode(Opcode);
+  TmpInst.addOperand(MCOperand::createReg(Reg0));
+  TmpInst.addOperand(MCOperand::createReg(Reg1));
+  TmpInst.addOperand(MCOperand::createReg(Reg2));
+  TmpInst.addOperand(Op3);
+  TmpInst.setLoc(IDLoc);
+  getStreamer().EmitInstruction(TmpInst, *STI);
+}
+
 void MipsTargetStreamer::emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1,
                                  int16_t Imm, SMLoc IDLoc,
                                  const MCSubtargetInfo *STI) {
@@ -264,8 +286,7 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
-  const FeatureBitset &Features = STI->getFeatureBits();
-  if (Features[Mips::FeatureMicroMips])
+  if (isMicroMips(STI))
     emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
   else
     emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
@@ -326,6 +347,36 @@ void MipsTargetStreamer::emitStoreWithSymOffset(
     emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
   // Emit the store with the adjusted base and offset.
   emitRRX(Opcode, SrcReg, ATReg, LoOperand, IDLoc, STI);
+}
+
+/// Emit a store instruction with an symbol offset.
+void MipsTargetStreamer::emitSCWithSymOffset(unsigned Opcode, unsigned SrcReg,
+                                             unsigned BaseReg,
+                                             MCOperand &HiOperand,
+                                             MCOperand &LoOperand,
+                                             unsigned ATReg, SMLoc IDLoc,
+                                             const MCSubtargetInfo *STI) {
+  // sc $8, sym => lui $at, %hi(sym)
+  //               sc $8, %lo(sym)($at)
+
+  // Generate the base address in ATReg.
+  emitRX(Mips::LUi, ATReg, HiOperand, IDLoc, STI);
+  if (!isMicroMips(STI) && isMipsR6(STI)) {
+    // For non-micromips r6 offset for 'sc' is not in the lower 16 bits so we
+    // put it in 'at'.
+    // sc $8, sym => lui $at, %hi(sym)
+    //               addiu $at, $at, %lo(sym)
+    //               sc $8, 0($at)
+    emitRRX(Mips::ADDiu, ATReg, ATReg, LoOperand, IDLoc, STI);
+    MCOperand Offset = MCOperand::createImm(0);
+    // Emit the store with the adjusted base and offset.
+    emitRRRX(Opcode, SrcReg, SrcReg, ATReg, Offset, IDLoc, STI);
+  } else {
+    if (BaseReg != Mips::ZERO)
+      emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
+    // Emit the store with the adjusted base and offset.
+    emitRRRX(Opcode, SrcReg, SrcReg, ATReg, LoOperand, IDLoc, STI);
+  }
 }
 
 /// Emit a load instruction with an immediate offset. DstReg and TmpReg are

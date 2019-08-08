@@ -13,9 +13,9 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Threading.h"
 #include <cassert>
+#include <mutex>
 using namespace llvm;
 
 static const ManagedStaticBase *StaticList = nullptr;
@@ -35,7 +35,7 @@ void ManagedStaticBase::RegisterManagedStatic(void *(*Creator)(),
                                               void (*Deleter)(void*)) const {
   assert(Creator);
   if (llvm_is_multithreaded()) {
-    MutexGuard Lock(*getManagedStaticMutex());
+    std::lock_guard<sys::Mutex> Lock(*getManagedStaticMutex());
 
     if (!Ptr.load(std::memory_order_relaxed)) {
       void *Tmp = Creator();
@@ -77,7 +77,7 @@ void ManagedStaticBase::destroy() const {
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.
 void llvm::llvm_shutdown() {
-  MutexGuard Lock(*getManagedStaticMutex());
+  std::lock_guard<sys::Mutex> Lock(*getManagedStaticMutex());
 
   while (StaticList)
     StaticList->destroy();

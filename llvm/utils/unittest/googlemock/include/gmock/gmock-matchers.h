@@ -35,6 +35,8 @@
 // matchers can be defined by the user implementing the
 // MatcherInterface<T> interface if necessary.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_MATCHERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_MATCHERS_H_
 

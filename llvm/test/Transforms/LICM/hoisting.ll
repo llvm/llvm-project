@@ -126,6 +126,29 @@ ifend:                                            ; preds = %tailrecurse
   ret { i32*, i32 } %d
 }
 
+; CHECK: define void @test6(float %f)
+; CHECK: call
+; CHECK: fneg
+; CHECK: call
+define void @test6(float %f) #2 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  call void @foo_may_call_exit(i32 0)
+  %neg = fneg float %f
+  call void @use(float %neg)
+  %inc = add nsw i32 %i, 1
+  %cmp = icmp slt i32 %inc, 10000
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+declare void @use(float)
+
 ; CHECK: define i32 @hoist_bitreverse(i32 %0)
 ; CHECK: bitreverse
 ; CHECK: br label %header

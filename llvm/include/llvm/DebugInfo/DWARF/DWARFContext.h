@@ -301,10 +301,10 @@ public:
                       std::function<void(Error)> RecoverableErrorCallback);
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(DObj->getStringSection(), false, 0);
+    return DataExtractor(DObj->getStrSection(), false, 0);
   }
   DataExtractor getLineStringExtractor() const {
-    return DataExtractor(DObj->getLineStringSection(), false, 0);
+    return DataExtractor(DObj->getLineStrSection(), false, 0);
   }
 
   /// Wraps the returned DIEs for a given address.

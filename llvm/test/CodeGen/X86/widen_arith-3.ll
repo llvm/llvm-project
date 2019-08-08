@@ -12,8 +12,7 @@ define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $32, %esp
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    movw $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $65537, {{[0-9]+}}(%esp) # imm = 0x10001
@@ -29,11 +28,11 @@ define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl 12(%ebp), %edx
 ; CHECK-NEXT:    movl 8(%ebp), %ecx
-; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; CHECK-NEXT:    psubd %xmm0, %xmm2
-; CHECK-NEXT:    pextrw $4, %xmm2, 4(%ecx,%eax,8)
-; CHECK-NEXT:    pshufb %xmm1, %xmm2
-; CHECK-NEXT:    movd %xmm2, (%ecx,%eax,8)
+; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    pinsrw $2, 4(%edx,%eax,8), %xmm1
+; CHECK-NEXT:    psubw %xmm0, %xmm1
+; CHECK-NEXT:    pextrw $2, %xmm1, 4(%ecx,%eax,8)
+; CHECK-NEXT:    movd %xmm1, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %afterfor

@@ -33,11 +33,11 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/UniqueLock.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <mutex>
 #include <type_traits>
 #include <utility>
 
@@ -266,9 +266,9 @@ public:
     // Make a copy that won't get changed even when *this is destroyed.
     ValueMapCallbackVH Copy(*this);
     typename Config::mutex_type *M = Config::getMutex(Copy.Map->Data);
-    unique_lock<typename Config::mutex_type> Guard;
+    std::unique_lock<typename Config::mutex_type> Guard;
     if (M)
-      Guard = unique_lock<typename Config::mutex_type>(*M);
+      Guard = std::unique_lock<typename Config::mutex_type>(*M);
     Config::onDelete(Copy.Map->Data, Copy.Unwrap());  // May destroy *this.
     Copy.Map->Map.erase(Copy);  // Definitely destroys *this.
   }
@@ -279,9 +279,9 @@ public:
     // Make a copy that won't get changed even when *this is destroyed.
     ValueMapCallbackVH Copy(*this);
     typename Config::mutex_type *M = Config::getMutex(Copy.Map->Data);
-    unique_lock<typename Config::mutex_type> Guard;
+    std::unique_lock<typename Config::mutex_type> Guard;
     if (M)
-      Guard = unique_lock<typename Config::mutex_type>(*M);
+      Guard = std::unique_lock<typename Config::mutex_type>(*M);
 
     KeyT typed_new_key = cast<KeySansPointerT>(new_key);
     // Can destroy *this:

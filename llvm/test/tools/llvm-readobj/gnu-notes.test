@@ -1,23 +1,23 @@
 ## Test tools are able to dump different types of notes.
 
 # RUN: yaml2obj --docnum=1 %s > %t1.so
-# RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --notes %t1.so | FileCheck %s --check-prefix=LLVM
 
-# GNU:      Displaying notes found at file offset 0x00000200 with length 0x00000020:
-# GNU-NEXT:   Owner                 Data size       Description
-# GNU-NEXT:   GNU                   0x00000010      NT_GNU_ABI_TAG (ABI version tag)
-# GNU-NEXT:     OS: Linux, ABI: 2.6.32
+#      GNU:Displaying notes found at file offset 0x00000200 with length 0x00000020:
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
+# GNU-NEXT:    OS: Linux, ABI: 2.6.32
 
-# GNU:      Displaying notes found at file offset 0x00000220 with length 0x00000020:
-# GNU-NEXT:   Owner                 Data size       Description
-# GNU-NEXT:   GNU                  0x00000010       NT_GNU_BUILD_ID (unique build ID bitstring)
-# GNU-NEXT:     Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+#      GNU:Displaying notes found at file offset 0x00000220 with length 0x00000020:
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
+# GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
-# GNU:      Displaying notes found at file offset 0x00000240 with length 0x0000001c:
-# GNU-NEXT:   Owner                 Data size       Description
-# GNU-NEXT:   GNU                  0x00000009       NT_GNU_GOLD_VERSION (gold version)
-# GNU-NEXT:     Version: gold 1.11
+#      GNU:Displaying notes found at file offset 0x00000240 with length 0x0000001c:
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
+# GNU-NEXT:    Version: gold 1.11
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {

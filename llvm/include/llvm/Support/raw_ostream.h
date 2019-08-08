@@ -72,7 +72,7 @@ private:
 
 public:
   // color order matches ANSI escape sequence, don't change
-  enum Colors {
+  enum class Colors {
     BLACK = 0,
     RED,
     GREEN,
@@ -81,8 +81,20 @@ public:
     MAGENTA,
     CYAN,
     WHITE,
-    SAVEDCOLOR
+    SAVEDCOLOR,
+    RESET,
   };
+
+  static const Colors BLACK = Colors::BLACK;
+  static const Colors RED = Colors::RED;
+  static const Colors GREEN = Colors::GREEN;
+  static const Colors YELLOW = Colors::YELLOW;
+  static const Colors BLUE = Colors::BLUE;
+  static const Colors MAGENTA = Colors::MAGENTA;
+  static const Colors CYAN = Colors::CYAN;
+  static const Colors WHITE = Colors::WHITE;
+  static const Colors SAVEDCOLOR = Colors::SAVEDCOLOR;
+  static const Colors RESET = Colors::RESET;
 
   explicit raw_ostream(bool unbuffered = false)
       : BufferMode(unbuffered ? Unbuffered : InternalBuffer) {
@@ -214,6 +226,9 @@ public:
   /// Output \p N in hexadecimal, without any prefix or padding.
   raw_ostream &write_hex(unsigned long long N);
 
+  // Change the foreground color of text.
+  raw_ostream &operator<<(Colors C);
+
   /// Output a formatted UUID with dash separators.
   using uuid_t = uint8_t[16];
   raw_ostream &write_uuid(const uuid_t UUID);
@@ -276,6 +291,10 @@ public:
 
   /// This function determines if this stream is displayed and supports colors.
   virtual bool has_colors() const { return is_displayed(); }
+
+  // Enable or disable colors. Once disable_colors() is called,
+  // changeColor() has no effect until enable_colors() is called.
+  virtual void enable_colors(bool enable) {}
 
   //===--------------------------------------------------------------------===//
   // Subclass Interface
@@ -365,8 +384,8 @@ public:
 class raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
-
   bool SupportsSeeking;
+  bool ColorEnabled = true;
 
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
@@ -441,6 +460,8 @@ public:
   bool is_displayed() const override;
 
   bool has_colors() const override;
+
+  void enable_colors(bool enable) override { ColorEnabled = enable; }
 
   std::error_code error() const { return EC; }
 

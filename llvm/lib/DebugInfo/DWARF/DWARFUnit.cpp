@@ -37,9 +37,9 @@ void DWARFUnitVector::addUnitsForSection(DWARFContext &C,
                                          const DWARFSection &Section,
                                          DWARFSectionKind SectionKind) {
   const DWARFObject &D = C.getDWARFObj();
-  addUnitsImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangeSection(),
-               &D.getLocSection(), D.getStringSection(),
-               D.getStringOffsetSection(), &D.getAddrSection(),
+  addUnitsImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangesSection(),
+               &D.getLocSection(), D.getStrSection(),
+               D.getStrOffsetsSection(), &D.getAddrSection(),
                D.getLineSection(), D.isLittleEndian(), false, false,
                SectionKind);
 }
@@ -49,9 +49,9 @@ void DWARFUnitVector::addUnitsForDWOSection(DWARFContext &C,
                                             DWARFSectionKind SectionKind,
                                             bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
-  addUnitsImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
-               &D.getLocDWOSection(), D.getStringDWOSection(),
-               D.getStringOffsetDWOSection(), &D.getAddrSection(),
+  addUnitsImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangesDWOSection(),
+               &D.getLocDWOSection(), D.getStrDWOSection(),
+               D.getStrOffsetsDWOSection(), &D.getAddrSection(),
                D.getLineDWOSection(), C.isLittleEndian(), true, Lazy,
                SectionKind);
 }
@@ -401,86 +401,85 @@ void DWARFUnit::extractDIEsToVector(
                                    getOffset(), DIEOffset);
 }
 
-size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
+void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   if ((CUDieOnly && !DieArray.empty()) ||
       DieArray.size() > 1)
-    return 0; // Already parsed.
+    return; // Already parsed.
 
   bool HasCUDie = !DieArray.empty();
   extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
 
   if (DieArray.empty())
-    return 0;
+    return;
 
   // If CU DIE was just parsed, copy several attribute values from it.
-  if (!HasCUDie) {
-    DWARFDie UnitDie = getUnitDIE();
-    if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
-      Header.setDWOId(*DWOId);
-    if (!IsDWO) {
-      assert(AddrOffsetSectionBase == 0);
-      assert(RangeSectionBase == 0);
-      AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
-      if (!AddrOffsetSectionBase)
-        AddrOffsetSectionBase =
-            toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
-      RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
-    }
+  if (HasCUDie)
+    return;
 
-    // In general, in DWARF v5 and beyond we derive the start of the unit's
-    // contribution to the string offsets table from the unit DIE's
-    // DW_AT_str_offsets_base attribute. Split DWARF units do not use this
-    // attribute, so we assume that there is a contribution to the string
-    // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
-    // In both cases we need to determine the format of the contribution,
-    // which may differ from the unit's format.
-    DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
-                          isLittleEndian, 0);
-    if (IsDWO || getVersion() >= 5) {
-      auto StringOffsetOrError =
-          IsDWO ? determineStringOffsetsTableContributionDWO(DA)
-                : determineStringOffsetsTableContribution(DA);
-      if (!StringOffsetOrError) {
-        WithColor::error() << "invalid contribution to string offsets table in section .debug_str_offsets[.dwo]: "
-                           << toString(StringOffsetOrError.takeError()) << '\n';
-      } else {
-        StringOffsetsTableContribution = *StringOffsetOrError;
-      }
-    }
+  DWARFDie UnitDie = getUnitDIE();
+  if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
+    Header.setDWOId(*DWOId);
+  if (!IsDWO) {
+    assert(AddrOffsetSectionBase == 0);
+    assert(RangeSectionBase == 0);
+    AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
+    if (!AddrOffsetSectionBase)
+      AddrOffsetSectionBase =
+          toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
+    RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
+  }
 
-    // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
-    // describe address ranges.
-    if (getVersion() >= 5) {
-      if (IsDWO)
-        setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+  // In general, in DWARF v5 and beyond we derive the start of the unit's
+  // contribution to the string offsets table from the unit DIE's
+  // DW_AT_str_offsets_base attribute. Split DWARF units do not use this
+  // attribute, so we assume that there is a contribution to the string
+  // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
+  // In both cases we need to determine the format of the contribution,
+  // which may differ from the unit's format.
+  DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
+                        isLittleEndian, 0);
+  if (IsDWO || getVersion() >= 5) {
+    auto StringOffsetOrError =
+        IsDWO ? determineStringOffsetsTableContributionDWO(DA)
+              : determineStringOffsetsTableContribution(DA);
+    if (!StringOffsetOrError) {
+      WithColor::error() << "invalid contribution to string offsets table in "
+                            "section .debug_str_offsets[.dwo]: "
+                         << toString(StringOffsetOrError.takeError()) << '\n';
+    } else {
+      StringOffsetsTableContribution = *StringOffsetOrError;
+    }
+  }
+
+  // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
+  // describe address ranges.
+  if (getVersion() >= 5) {
+    if (IsDWO)
+      setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+    else
+      setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
+                       toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
+    if (RangeSection->Data.size()) {
+      // Parse the range list table header. Individual range lists are
+      // extracted lazily.
+      DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                  isLittleEndian, 0);
+      if (auto TableOrError =
+              parseRngListTableHeader(RangesDA, RangeSectionBase))
+        RngListTable = TableOrError.get();
       else
-        setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
-                         toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
-      if (RangeSection->Data.size()) {
-        // Parse the range list table header. Individual range lists are
-        // extracted lazily.
-        DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                    isLittleEndian, 0);
-        if (auto TableOrError =
-                parseRngListTableHeader(RangesDA, RangeSectionBase))
-          RngListTable = TableOrError.get();
-        else
-          WithColor::error() << "parsing a range list table: "
-                             << toString(TableOrError.takeError())
-                             << '\n';
+        WithColor::error() << "parsing a range list table: "
+                           << toString(TableOrError.takeError()) << '\n';
 
-        // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
-        // Adjust RangeSectionBase to point past the table header.
-        if (IsDWO && RngListTable)
-          RangeSectionBase = RngListTable->getHeaderSize();
-      }
+      // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
+      // Adjust RangeSectionBase to point past the table header.
+      if (IsDWO && RngListTable)
+        RangeSectionBase = RngListTable->getHeaderSize();
     }
+  }
 
-    // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
-    // skeleton CU DIE, so that DWARF users not aware of it are not broken.
-    }
-
-  return DieArray.size();
+  // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
+  // skeleton CU DIE, so that DWARF users not aware of it are not broken.
 }
 
 bool DWARFUnit::parseDWO() {

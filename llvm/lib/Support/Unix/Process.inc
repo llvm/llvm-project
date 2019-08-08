@@ -16,7 +16,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
+#include <mutex>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -333,7 +333,7 @@ static ManagedStatic<sys::Mutex> TermColorMutex;
 static bool terminalHasColors(int fd) {
 #ifdef HAVE_TERMINFO
   // First, acquire a global lock because these C routines are thread hostile.
-  MutexGuard G(*TermColorMutex);
+  std::lock_guard<sys::Mutex> G(*TermColorMutex);
 
   int errret = 0;
   if (setupterm(nullptr, fd, &errret) != 0)

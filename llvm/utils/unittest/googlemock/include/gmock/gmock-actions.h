@@ -33,6 +33,8 @@
 //
 // This file implements some commonly used actions.
 
+// IWYU pragma: private, include "gmock/gmock.h"
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_ACTIONS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_ACTIONS_H_
 

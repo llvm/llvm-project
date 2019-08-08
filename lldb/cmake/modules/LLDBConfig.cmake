@@ -75,7 +75,7 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   if(NOT LLDB_EXPLICIT_XCODE_CACHE_USED)
     message(WARNING
       "When building with Xcode, we recommend using the corresponding cache script. "
-      "If this was a mistake, clean your lean build directory and re-run CMake with:\n"
+      "If this was a mistake, clean your build directory and re-run CMake with:\n"
       "  -C ${CMAKE_SOURCE_DIR}/cmake/caches/Apple-lldb-Xcode.cmake\n"
       "See: https://lldb.llvm.org/resources/build.html#cmakegeneratedxcodeproject\n")
   endif()
