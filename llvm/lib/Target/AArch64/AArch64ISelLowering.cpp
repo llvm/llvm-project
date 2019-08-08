@@ -5274,6 +5274,21 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   SDValue Entry = Op.getOperand(2);
   int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
 
+  // With aarch64-hardened-codegen, we only expand the full jump table dispatch
+  // sequence later, to guarantee the integrity of the intermediate values.
+  if (DAG.getMachineFunction().getFunction()
+        .hasFnAttribute("jump-table-hardening") ||
+      Subtarget->getTargetTriple().getArchName() == "arm64e") {
+    if (getTargetMachine().getCodeModel() != CodeModel::Small)
+      report_fatal_error("Unsupported code-model for hardened jump-table");
+    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::X16,
+                                     Entry, SDValue());
+    SDNode *B = DAG.getMachineNode(AArch64::BR_JumpTable, DL, MVT::Other,
+                                   DAG.getTargetJumpTable(JTI, MVT::i32),
+                                   Chain.getValue(0), Chain.getValue(1));
+    return SDValue(B, 0);
+  }
+
   SDNode *Dest =
       DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
                          Entry, DAG.getTargetJumpTable(JTI, MVT::i32));

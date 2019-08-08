@@ -33,6 +33,7 @@ add_llvm_target(AArch64CodeGen
   AArch64CondBrTuning.cpp
   AArch64ConditionalCompares.cpp
   AArch64DeadRegisterDefinitionsPass.cpp
+  AArch64ExpandHardenedPseudos.cpp
   AArch64ExpandImm.cpp
   AArch64ExpandPseudoInsts.cpp
   AArch64FalkorHWPFFix.cpp
