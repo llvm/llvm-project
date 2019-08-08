@@ -118,8 +118,6 @@ public:
     void SetOffset(uint32_t offset) { m_offset = offset; }
 
   protected:
-    void SetSizeAndAlignmentFromType(CompilerType &type);
-
     uint32_t m_alignment;
     uint32_t m_size;
     uint32_t m_offset;
