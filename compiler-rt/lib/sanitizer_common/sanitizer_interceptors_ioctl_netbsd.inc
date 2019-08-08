@@ -24,7 +24,7 @@ struct ioctl_desc {
   const char *name;
 };
 
-const unsigned ioctl_table_max = 1200;
+const unsigned ioctl_table_max = 1236;
 static ioctl_desc ioctl_table[ioctl_table_max];
 static unsigned ioctl_table_size = 0;
 
@@ -645,7 +645,7 @@ static void ioctl_table_fill() {
   _(SPKRTUNE, NONE, 0);
   _(SPKRGETVOL, WRITE, sizeof(unsigned int));
   _(SPKRSETVOL, READ, sizeof(unsigned int));
-#if 0 /* WIP */
+#if defined(__x86_64__)
   /* Entries from file: dev/nvmm/nvmm_ioctl.h */
   _(NVMM_IOC_CAPABILITY, WRITE, struct_nvmm_ioc_capability_sz);
   _(NVMM_IOC_MACHINE_CREATE, READWRITE, struct_nvmm_ioc_machine_create_sz);
@@ -661,7 +661,11 @@ static void ioctl_table_fill() {
   _(NVMM_IOC_GPA_UNMAP, READ, struct_nvmm_ioc_gpa_unmap_sz);
   _(NVMM_IOC_HVA_MAP, READ, struct_nvmm_ioc_hva_map_sz);
   _(NVMM_IOC_HVA_UNMAP, READ, struct_nvmm_ioc_hva_unmap_sz);
+  _(NVMM_IOC_CTL, READ, struct_nvmm_ioc_ctl_sz);
 #endif
+  /* Entries from file: dev/spi/spi_io.h */
+  _(SPI_IOCTL_CONFIGURE, READ, struct_spi_ioctl_configure_sz);
+  _(SPI_IOCTL_TRANSFER, READ, struct_spi_ioctl_transfer_sz);
   /* Entries from file: fs/autofs/autofs_ioctl.h */
   _(AUTOFSREQUEST, WRITE, struct_autofs_daemon_request_sz);
   _(AUTOFSDONE, READ, struct_autofs_daemon_done_sz);
@@ -895,6 +899,9 @@ static void ioctl_table_fill() {
   _(AUDIO_GETBUFINFO, WRITE, struct_audio_info_sz);
   _(AUDIO_SETCHAN, READ, sizeof(int));
   _(AUDIO_GETCHAN, WRITE, sizeof(int));
+  _(AUDIO_QUERYFORMAT, READWRITE, struct_audio_format_query_sz);
+  _(AUDIO_GETFORMAT, WRITE, struct_audio_info_sz);
+  _(AUDIO_SETFORMAT, READ, struct_audio_info_sz);
   _(AUDIO_MIXER_READ, READWRITE, struct_mixer_ctrl_sz);
   _(AUDIO_MIXER_WRITE, READWRITE, struct_mixer_ctrl_sz);
   _(AUDIO_MIXER_DEVINFO, READWRITE, struct_mixer_devinfo_sz);
@@ -985,6 +992,7 @@ static void ioctl_table_fill() {
   _(DIOCMWEDGES, WRITE, sizeof(int));
   _(DIOCGSECTORSIZE, WRITE, sizeof(unsigned int));
   _(DIOCGMEDIASIZE, WRITE, sizeof(uptr));
+  _(DIOCRMWEDGES, WRITE, sizeof(int));
   /* Entries from file: sys/drvctlio.h */
   _(DRVDETACHDEV, READ, struct_devdetachargs_sz);
   _(DRVRESCANBUS, READ, struct_devrescanargs_sz);
@@ -1206,6 +1214,8 @@ static void ioctl_table_fill() {
   _(SIOCGETHERCAP, READWRITE, struct_eccapreq_sz);
   _(SIOCGIFINDEX, READWRITE, struct_ifreq_sz);
   _(SIOCSETHERCAP, READ, struct_eccapreq_sz);
+  _(SIOCSIFDESCR, READ, struct_ifreq_sz);
+  _(SIOCGIFDESCR, READWRITE, struct_ifreq_sz);
   _(SIOCGUMBINFO, READWRITE, struct_ifreq_sz);
   _(SIOCSUMBPARAM, READ, struct_ifreq_sz);
   _(SIOCGUMBPARAM, READWRITE, struct_ifreq_sz);
@@ -1335,6 +1345,21 @@ static void ioctl_table_fill() {
   _(WDOGIOC_TICKLE, NONE, 0);
   _(WDOGIOC_GTICKLER, WRITE, sizeof(int));
   _(WDOGIOC_GWDOGS, READWRITE, struct_wdog_conf_sz);
+  /* Entries from file: sys/kcov.h */
+  _(KCOV_IOC_SETBUFSIZE, READ, sizeof(u64));
+  _(KCOV_IOC_ENABLE, READ, sizeof(int));
+  _(KCOV_IOC_DISABLE, NONE, 0);
+  /* Entries from file: sys/ipmi.h */
+  _(IPMICTL_RECEIVE_MSG_TRUNC, READWRITE, struct_ipmi_recv_sz);
+  _(IPMICTL_RECEIVE_MSG, READWRITE, struct_ipmi_recv_sz);
+  _(IPMICTL_SEND_COMMAND, READ, struct_ipmi_req_sz);
+  _(IPMICTL_REGISTER_FOR_CMD, READ, struct_ipmi_cmdspec_sz);
+  _(IPMICTL_UNREGISTER_FOR_CMD, READ, struct_ipmi_cmdspec_sz);
+  _(IPMICTL_SET_GETS_EVENTS_CMD, READ, sizeof(int));
+  _(IPMICTL_SET_MY_ADDRESS_CMD, READ, sizeof(unsigned int));
+  _(IPMICTL_GET_MY_ADDRESS_CMD, WRITE, sizeof(unsigned int));
+  _(IPMICTL_SET_MY_LUN_CMD, READ, sizeof(unsigned int));
+  _(IPMICTL_GET_MY_LUN_CMD, WRITE, sizeof(unsigned int));
   /* Entries from file: soundcard.h */
   _(SNDCTL_DSP_RESET, NONE, 0);
   _(SNDCTL_DSP_SYNC, NONE, 0);
