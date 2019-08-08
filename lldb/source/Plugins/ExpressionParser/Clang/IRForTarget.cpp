@@ -1387,15 +1387,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
                 PrintType(value_type).c_str(), *value_size, value_alignment);
     }
 
-    if (named_decl &&
-        !m_decl_map->AddValueToStruct(
-            named_decl, lldb_private::ConstString(name.c_str()), llvm_value_ptr,
-            *value_size, value_alignment)) {
-      if (!global_variable->hasExternalLinkage())
-        return true;
-      else
-        return true;
-    }
+    if (named_decl)
+      m_decl_map->AddValueToStruct(
+          named_decl, lldb_private::ConstString(name.c_str()), llvm_value_ptr,
+          *value_size, value_alignment);
   } else if (dyn_cast<llvm::Function>(llvm_value_ptr)) {
     if (log)
       LLDB_LOGF(log, "Function pointers aren't handled right now");

@@ -1,8 +1,6 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -d %t
-# RUN: llvm-readobj --symbols %t
 # RUN: llvm-objdump --no-show-raw-insn -d %t | FileCheck %s
 # RUN: llvm-readobj --symbols %t | FileCheck --check-prefix=CHECK-SYM %s
 
