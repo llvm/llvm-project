@@ -42,7 +42,7 @@ using namespace lldb_private;
 
 // Subclass lldb_private::Module so we can intercept the
 // "Module::GetObjectFile()" (so we can fixup the object file sections) and
-// also for "Module::GetSymbolVendor()" (so we can fixup the symbol file id.
+// also for "Module::GetSymbolFile()" (so we can fixup the symbol file id.
 
 const SymbolFileDWARFDebugMap::FileRangeMap &
 SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
@@ -174,12 +174,12 @@ public:
 
   ~DebugMapModule() override = default;
 
-  SymbolVendor *
-  GetSymbolVendor(bool can_create = true,
-                  lldb_private::Stream *feedback_strm = nullptr) override {
+  SymbolFile *
+  GetSymbolFile(bool can_create = true,
+                lldb_private::Stream *feedback_strm = nullptr) override {
     // Scope for locker
     if (m_symfile_up.get() || !can_create)
-      return m_symfile_up.get();
+      return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 
     ModuleSP exe_module_sp(m_exe_module_wp.lock());
     if (exe_module_sp) {
@@ -187,30 +187,28 @@ public:
       ObjectFile *oso_objfile = GetObjectFile();
       if (oso_objfile) {
         std::lock_guard<std::recursive_mutex> guard(m_mutex);
-        SymbolVendor *symbol_vendor =
-            Module::GetSymbolVendor(can_create, feedback_strm);
-        if (symbol_vendor) {
+        if (SymbolFile *symfile =
+                Module::GetSymbolFile(can_create, feedback_strm)) {
           // Set a pointer to this class to set our OSO DWARF file know that
           // the DWARF is being used along with a debug map and that it will
           // have the remapped sections that we do below.
           SymbolFileDWARF *oso_symfile =
-              SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(
-                  symbol_vendor->GetSymbolFile());
+              SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(symfile);
 
           if (!oso_symfile)
             return nullptr;
 
           ObjectFile *exe_objfile = exe_module_sp->GetObjectFile();
-          SymbolVendor *exe_sym_vendor = exe_module_sp->GetSymbolVendor();
+          SymbolFile *exe_symfile = exe_module_sp->GetSymbolFile();
 
-          if (exe_objfile && exe_sym_vendor) {
+          if (exe_objfile && exe_symfile) {
             oso_symfile->SetDebugMapModule(exe_module_sp);
             // Set the ID of the symbol file DWARF to the index of the OSO
             // shifted left by 32 bits to provide a unique prefix for any
             // UserID's that get created in the symbol file.
             oso_symfile->SetID(((uint64_t)m_cu_idx + 1ull) << 32ull);
           }
-          return symbol_vendor;
+          return symfile;
         }
       }
     }
@@ -538,12 +536,8 @@ SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
 
 SymbolFileDWARF *SymbolFileDWARFDebugMap::GetSymbolFileByCompUnitInfo(
     CompileUnitInfo *comp_unit_info) {
-  Module *oso_module = GetModuleByCompUnitInfo(comp_unit_info);
-  if (oso_module) {
-    SymbolVendor *sym_vendor = oso_module->GetSymbolVendor();
-    if (sym_vendor)
-      return GetSymbolFileAsSymbolFileDWARF(sym_vendor->GetSymbolFile());
-  }
+  if (Module *oso_module = GetModuleByCompUnitInfo(comp_unit_info))
+    return GetSymbolFileAsSymbolFileDWARF(oso_module->GetSymbolFile());
   return nullptr;
 }
 
