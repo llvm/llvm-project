@@ -64,6 +64,8 @@ std::string getSecIndexForError(const ELFFile<ELFT> *Obj,
   return "[unknown index]";
 }
 
+static Error defaultWarningHandler(const Twine &Msg) { return createError(Msg); }
+
 template <class ELFT>
 class ELFFile {
 public:
@@ -95,6 +97,13 @@ public:
   using Elf_Relr_Range = typename ELFT::RelrRange;
   using Elf_Phdr_Range = typename ELFT::PhdrRange;
 
+  // This is a callback that can be passed to a number of functions.
+  // It can be used to ignore non-critical errors (warnings), which is
+  // useful for dumpers, like llvm-readobj.
+  // It accepts a warning message string and returns a success
+  // when the warning should be ignored or an error otherwise.
+  using WarningHandler = llvm::function_ref<Error(const Twine &Msg)>;
+
   const uint8_t *base() const { return Buf.bytes_begin(); }
 
   size_t getBufSize() const { return Buf.size(); }
@@ -114,7 +123,9 @@ public:
   template <typename T>
   Expected<const T *> getEntry(const Elf_Shdr *Section, uint32_t Entry) const;
 
-  Expected<StringRef> getStringTable(const Elf_Shdr *Section) const;
+  Expected<StringRef>
+  getStringTable(const Elf_Shdr *Section,
+                 WarningHandler WarnHandler = &defaultWarningHandler) const;
   Expected<StringRef> getStringTableForSymtab(const Elf_Shdr &Section) const;
   Expected<StringRef> getStringTableForSymtab(const Elf_Shdr &Section,
                                               Elf_Shdr_Range Sections) const;
@@ -261,7 +272,9 @@ public:
     return make_range(notes_begin(Shdr, Err), notes_end());
   }
 
-  Expected<StringRef> getSectionStringTable(Elf_Shdr_Range Sections) const;
+  Expected<StringRef> getSectionStringTable(
+      Elf_Shdr_Range Sections,
+      WarningHandler WarnHandler = &defaultWarningHandler) const;
   Expected<uint32_t> getSectionIndex(const Elf_Sym *Sym, Elf_Sym_Range Syms,
                                      ArrayRef<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
@@ -275,7 +288,9 @@ public:
   Expected<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
                                       uint32_t Index) const;
 
-  Expected<StringRef> getSectionName(const Elf_Shdr *Section) const;
+  Expected<StringRef>
+  getSectionName(const Elf_Shdr *Section,
+                 WarningHandler WarnHandler = &defaultWarningHandler) const;
   Expected<StringRef> getSectionName(const Elf_Shdr *Section,
                                      StringRef DotShstrtab) const;
   template <typename T>
@@ -458,7 +473,8 @@ ELFFile<ELFT>::getRelocationSymbol(const Elf_Rel *Rel,
 
 template <class ELFT>
 Expected<StringRef>
-ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
+ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
+                                     WarningHandler WarnHandler) const {
   uint32_t Index = getHeader()->e_shstrndx;
   if (Index == ELF::SHN_XINDEX)
     Index = Sections[0].sh_link;
@@ -468,7 +484,7 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
   if (Index >= Sections.size())
     return createError("section header string table index " + Twine(Index) +
                        " does not exist");
-  return getStringTable(&Sections[Index]);
+  return getStringTable(&Sections[Index], WarnHandler);
 }
 
 template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}
@@ -569,13 +585,16 @@ ELFFile<ELFT>::getSection(uint32_t Index) const {
 
 template <class ELFT>
 Expected<StringRef>
-ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section) const {
+ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section,
+                              WarningHandler WarnHandler) const {
   if (Section->sh_type != ELF::SHT_STRTAB)
-    return createError("invalid sh_type for string table section " +
-                       getSecIndexForError(this, Section) +
-                       ": expected SHT_STRTAB, but got " +
-                       object::getELFSectionTypeName(getHeader()->e_machine,
-                                                     Section->sh_type));
+    if (Error E = WarnHandler("invalid sh_type for string table section " +
+                              getSecIndexForError(this, Section) +
+                              ": expected SHT_STRTAB, but got " +
+                              object::getELFSectionTypeName(
+                                  getHeader()->e_machine, Section->sh_type)))
+      return std::move(E);
+
   auto V = getSectionContentsAsArray<char>(Section);
   if (!V)
     return V.takeError();
@@ -650,11 +669,12 @@ ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec,
 
 template <class ELFT>
 Expected<StringRef>
-ELFFile<ELFT>::getSectionName(const Elf_Shdr *Section) const {
+ELFFile<ELFT>::getSectionName(const Elf_Shdr *Section,
+                              WarningHandler WarnHandler) const {
   auto SectionsOrErr = sections();
   if (!SectionsOrErr)
     return SectionsOrErr.takeError();
-  auto Table = getSectionStringTable(*SectionsOrErr);
+  auto Table = getSectionStringTable(*SectionsOrErr, WarnHandler);
   if (!Table)
     return Table.takeError();
   return getSectionName(Section, *Table);
