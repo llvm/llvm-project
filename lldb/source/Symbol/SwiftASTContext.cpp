@@ -6137,6 +6137,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   if (!type)
     return {};
 
+  // If the type has type parameters, bind them first.
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
@@ -6149,18 +6150,20 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     return bound_type.GetBitSize(exe_scope);
   }
 
-  // lldb ValueObject subsystem expects functions to be a single
-  // pointer in size to print them correctly. This is not true
-  // for swift (where functions aren't necessarily a single pointer
-  // in size), so we need to work around the limitation here.
+  // LLDB's ValueObject subsystem expects functions to be a single
+  // pointer in size to print them correctly. This is not true for
+  // swift (where functions aren't necessarily a single pointer in
+  // size), so we need to work around the limitation here.
   if (swift_can_type->getKind() == swift::TypeKind::Function)
     return GetPointerByteSize() * 8;
 
+  // Ask the static type type system.
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
     return fixed_type_info->getFixedSize().getValue() * 8;
 
+  // Ask the dynamic type system.
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
@@ -6173,6 +6176,8 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
                                ExecutionContextScope *exe_scope) {
   if (!type)
     return {};
+
+  // If the type has type parameters, bind them first.
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
@@ -6185,11 +6190,13 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
     return bound_type.GetByteStride(exe_scope);
   }
 
+  // Ask the static type type system.
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
     return fixed_type_info->getFixedStride().getValue();
 
+  // Ask the dynamic type system.
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
