@@ -45,20 +45,6 @@ uint32_t Materializer::AddStructMember(Entity &entity) {
   return ret;
 }
 
-void Materializer::Entity::SetSizeAndAlignmentFromType(CompilerType &type) {
-  if (llvm::Optional<uint64_t> size = type.GetByteSize(nullptr))
-    m_size = *size;
-
-  uint32_t bit_alignment = type.GetTypeBitAlign();
-
-  if (bit_alignment % 8) {
-    bit_alignment += 8;
-    bit_alignment &= ~((uint32_t)0x111u);
-  }
-
-  m_alignment = bit_alignment / 8;
-}
-
 class EntityPersistentVariable : public Materializer::Entity {
 public:
   EntityPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,

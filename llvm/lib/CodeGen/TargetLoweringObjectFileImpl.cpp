@@ -586,29 +586,14 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     Flags |= ELF::SHF_GROUP;
   }
 
-  bool EmitUniqueSection = false;
-
-  // If we have -ffunction-sections or -fdata-sections then we should emit the
-  // global value to a uniqued section of the same name.
-  if (!(Flags & ELF::SHF_MERGE) && !Kind.isCommon()) {
-    if (Kind.isText())
-      EmitUniqueSection = TM.getFunctionSections();
-    else
-      EmitUniqueSection = TM.getDataSections();
-  }
-  EmitUniqueSection |= GO->hasComdat();
-
   // A section can have at most one associated section. Put each global with
   // MD_associated in a unique section.
+  unsigned UniqueID = MCContext::GenericSectionID;
   const MCSymbolELF *AssociatedSymbol = getAssociatedSymbol(GO, TM);
   if (AssociatedSymbol) {
-    EmitUniqueSection = true;
+    UniqueID = NextUniqueID++;
     Flags |= ELF::SHF_LINK_ORDER;
   }
-
-  unsigned UniqueID = MCContext::GenericSectionID;
-  if (EmitUniqueSection)
-    UniqueID = NextUniqueID++;
 
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags,

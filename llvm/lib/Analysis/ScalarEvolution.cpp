@@ -9833,6 +9833,10 @@ Optional<APInt> ScalarEvolution::computeConstantDifference(const SCEV *More,
   // We avoid subtracting expressions here because this function is usually
   // fairly deep in the call stack (i.e. is called many times).
 
+  // X - X = 0.
+  if (More == Less)
+    return APInt(getTypeSizeInBits(More->getType()), 0);
+
   if (isa<SCEVAddRecExpr>(Less) && isa<SCEVAddRecExpr>(More)) {
     const auto *LAR = cast<SCEVAddRecExpr>(Less);
     const auto *MAR = cast<SCEVAddRecExpr>(More);

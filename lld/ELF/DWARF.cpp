@@ -38,6 +38,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_info", &infoSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
+                .Case(".debug_str_offsets", &strOffsetsSection)
                 .Case(".debug_line", &lineSection)
                 .Default(nullptr)) {
       m->Data = toStringRef(sec->data());

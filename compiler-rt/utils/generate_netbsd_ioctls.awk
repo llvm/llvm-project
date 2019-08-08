@@ -482,6 +482,8 @@ function get_type(string)
     return "sizeof(u16)"
   } else if (string == "u_int32_t" || string == "uint32_t") {
     return "sizeof(u32)"
+  } else if (string == "u_int64_t" || string == "uint64_t") {
+    return "sizeof(u64)"
   } else if (string ~ /\*$/) {
     return "sizeof(uptr)"
   } else if (string == "off_t") {
@@ -623,6 +625,10 @@ function get_type(string)
     return "struct_RF_ProgressInfo_sz"
   } else if (string == "nvlist_ref_t") {
     return "struct_nvlist_ref_sz"
+  } else if (string == "spi_ioctl_transfer_t") {
+    return "struct_spi_ioctl_transfer_sz"
+  } else if (string == "spi_ioctl_configure_t") {
+    return "struct_spi_ioctl_configure_sz"
   } else {
     print "Unrecognized entry: " string
     print "Aborting"

@@ -8,6 +8,11 @@
 # RUN: llvm-objcopy %t %t3
 # RUN: od -t x1 -j 4096 -N 12 %t3 | FileCheck %s --check-prefix=VALIDATE
 
+## Check that llvm-strip --strip-sections is equivalent to
+## llvm-objcopy --strip-sections. 
+# RUN: llvm-strip --strip-sections %t -o %t4
+# RUN: cmp %t2 %t4
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
