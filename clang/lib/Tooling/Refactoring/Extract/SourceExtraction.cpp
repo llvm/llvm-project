@@ -40,8 +40,11 @@ bool isSemicolonRequiredAfter(const Stmt *S) {
     return isSemicolonRequiredAfter(CXXFor->getBody());
   if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(S))
     return isSemicolonRequiredAfter(ObjCFor->getBody());
+  if(const auto *Switch = dyn_cast<SwitchStmt>(S))
+    return isSemicolonRequiredAfter(Switch->getBody());
+  if(const auto *Case = dyn_cast<SwitchCase>(S))
+    return isSemicolonRequiredAfter(Case->getSubStmt());
   switch (S->getStmtClass()) {
-  case Stmt::SwitchStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:

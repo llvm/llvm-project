@@ -32,3 +32,30 @@ define float @constraint_f_float(float %a) nounwind {
   %2 = tail call float asm "fadd.s $0, $1, $2", "=f,f,f"(float %a, float %1)
   ret float %2
 }
+
+define float @constraint_f_float_abi_name(float %a) nounwind {
+; RV32F-LABEL: constraint_f_float_abi_name:
+; RV32F:       # %bb.0:
+; RV32F-NEXT:    fmv.w.x fa0, a0
+; RV32F-NEXT:    lui a0, %hi(gf)
+; RV32F-NEXT:    flw fs0, %lo(gf)(a0)
+; RV32F-NEXT:    #APP
+; RV32F-NEXT:    fadd.s ft0, fa0, fs0
+; RV32F-NEXT:    #NO_APP
+; RV32F-NEXT:    fmv.x.w a0, ft0
+; RV32F-NEXT:    ret
+;
+; RV64F-LABEL: constraint_f_float_abi_name:
+; RV64F:       # %bb.0:
+; RV64F-NEXT:    fmv.w.x fa0, a0
+; RV64F-NEXT:    lui a0, %hi(gf)
+; RV64F-NEXT:    flw fs0, %lo(gf)(a0)
+; RV64F-NEXT:    #APP
+; RV64F-NEXT:    fadd.s ft0, fa0, fs0
+; RV64F-NEXT:    #NO_APP
+; RV64F-NEXT:    fmv.x.w a0, ft0
+; RV64F-NEXT:    ret
+  %1 = load float, float* @gf
+  %2 = tail call float asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(float %a, float %1)
+  ret float %2
+}

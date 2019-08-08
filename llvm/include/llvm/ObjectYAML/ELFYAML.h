@@ -128,6 +128,7 @@ struct Section {
     NoBits,
     Verdef,
     Verneed,
+    SymtabShndxSection,
     Symver,
     MipsABIFlags
   };
@@ -271,6 +272,16 @@ struct RelocationSection : Section {
 
   static bool classof(const Section *S) {
     return S->Kind == SectionKind::Relocation;
+  }
+};
+
+struct SymtabShndxSection : Section {
+  std::vector<uint32_t> Entries;
+
+  SymtabShndxSection() : Section(SectionKind::SymtabShndxSection) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::SymtabShndxSection;
   }
 };
 

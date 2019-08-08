@@ -15,6 +15,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
@@ -41,7 +42,31 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
   // contain TemplateArgumentLoc information.
   return llvm::None;
 }
+
+template <class T>
+bool isTemplateSpecializationKind(const NamedDecl *D,
+                                  TemplateSpecializationKind Kind) {
+  if (const auto *TD = dyn_cast<T>(D))
+    return TD->getTemplateSpecializationKind() == Kind;
+  return false;
+}
+
+bool isTemplateSpecializationKind(const NamedDecl *D,
+                                  TemplateSpecializationKind Kind) {
+  return isTemplateSpecializationKind<FunctionDecl>(D, Kind) ||
+         isTemplateSpecializationKind<CXXRecordDecl>(D, Kind) ||
+         isTemplateSpecializationKind<VarDecl>(D, Kind);
+}
+
 } // namespace
+
+bool isImplicitTemplateInstantiation(const NamedDecl *D) {
+  return isTemplateSpecializationKind(D, TSK_ImplicitInstantiation);
+}
+
+bool isExplicitTemplateSpecialization(const NamedDecl *D) {
+  return isTemplateSpecializationKind(D, TSK_ExplicitSpecialization);
+}
 
 bool isImplementationDetail(const Decl *D) {
   return !isSpelledInSource(D->getLocation(),

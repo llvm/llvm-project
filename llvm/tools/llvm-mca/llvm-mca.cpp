@@ -34,9 +34,12 @@
 #include "Views/TimelineView.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
+#include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Pipeline.h"
 #include "llvm/MCA/Stages/EntryStage.h"
 #include "llvm/MCA/Stages/InstructionTables.h"
@@ -307,28 +310,6 @@ int main(int argc, char **argv) {
   // Apply overrides to llvm-mca specific options.
   processViewOptions();
 
-  SourceMgr SrcMgr;
-
-  // Tell SrcMgr about this buffer, which is what the parser will pick up.
-  SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
-
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
-  assert(MRI && "Unable to create target register info!");
-
-  std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
-  assert(MAI && "Unable to create target asm info!");
-
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
-  MOFI.InitMCObjectFileInfo(TheTriple, /* PIC= */ false, Ctx);
-
-  std::unique_ptr<buffer_ostream> BOS;
-
-  std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-
-  std::unique_ptr<MCInstrAnalysis> MCIA(
-      TheTarget->createMCInstrAnalysis(MCII.get()));
-
   if (!MCPU.compare("native"))
     MCPU = llvm::sys::getHostCPUName();
 
@@ -355,6 +336,29 @@ int main(int argc, char **argv) {
           << "instruction itineraries are currently unsupported.\n";
     return 1;
   }
+
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  assert(MRI && "Unable to create target register info!");
+
+  std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
+  assert(MAI && "Unable to create target asm info!");
+
+  MCObjectFileInfo MOFI;
+  SourceMgr SrcMgr;
+
+  // Tell SrcMgr about this buffer, which is what the parser will pick up.
+  SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
+
+  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
+
+  MOFI.InitMCObjectFileInfo(TheTriple, /* PIC= */ false, Ctx);
+
+  std::unique_ptr<buffer_ostream> BOS;
+
+  std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
+
+  std::unique_ptr<MCInstrAnalysis> MCIA(
+      TheTarget->createMCInstrAnalysis(MCII.get()));
 
   // Parse the input and create CodeRegions that llvm-mca can analyze.
   mca::AsmCodeRegionGenerator CRG(*TheTarget, SrcMgr, Ctx, *MAI, *STI, *MCII);
@@ -487,7 +491,7 @@ int main(int argc, char **argv) {
     }
 
     // Create a basic pipeline simulating an out-of-order backend.
-    auto P = MCA.createDefaultPipeline(PO, IB, S);
+    auto P = MCA.createDefaultPipeline(PO, S);
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)

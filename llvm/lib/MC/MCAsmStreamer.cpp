@@ -162,6 +162,8 @@ public:
   void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                  unsigned ByteAlign) override;
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
@@ -754,6 +756,24 @@ void MCAsmStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
     OS << '+' << Offset;
   else if (Offset < 0)
     OS << '-' << -Offset;
+  EmitEOL();
+}
+
+// We need an XCOFF specific version of this directive as the AIX syntax
+// requires a QualName argument identifying the csect name and storage mapping
+// class to appear before the alignment if we are specifying it.
+void MCAsmStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                               unsigned ByteAlignment) {
+  assert(MAI->getLCOMMDirectiveAlignmentType() == LCOMM::Log2Alignment &&
+         "We only support writing log base-2 alignment format with XCOFF");
+  assert(isPowerOf2_32(ByteAlignment) && "alignment must be a power of 2");
+
+  OS << "\t.lcomm\t";
+  Symbol->print(OS, MAI);
+  OS << ',' << Size;
+  OS << ',' << Symbol->getName();
+  OS << ',' << Log2_32(ByteAlignment);
+
   EmitEOL();
 }
 

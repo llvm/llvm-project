@@ -490,12 +490,6 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
-  // Upgrade intrinsics "clang.arc.use" which doesn't start with "llvm.".
-  if (F->getName() == "clang.arc.use") {
-    NewFn = nullptr;
-    return true;
-  }
-
   // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
   if (Name.size() <= 8 || !Name.startswith("llvm."))
@@ -1660,14 +1654,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   if (!NewFn) {
     // Get the Function's name.
     StringRef Name = F->getName();
-
-    // clang.arc.use is an old name for llvm.arc.clang.arc.use. It is dropped
-    // from upgrader because the optimizer now only recognizes intrinsics for
-    // ARC runtime calls.
-    if (Name == "clang.arc.use") {
-      CI->eraseFromParent();
-      return;
-    }
 
     assert(Name.startswith("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);
@@ -3865,6 +3851,74 @@ bool llvm::UpgradeRetainReleaseMarker(Module &M) {
       }
     }
   }
+  return Changed;
+}
+
+bool llvm::UpgradeARCRuntimeCalls(Module &M) {
+  auto UpgradeToIntrinsic = [&](const char *OldFunc,
+                                llvm::Intrinsic::ID IntrinsicFunc) {
+    Function *Fn = M.getFunction(OldFunc);
+
+    if (!Fn)
+      return false;
+
+    Function *NewFn = llvm::Intrinsic::getDeclaration(&M, IntrinsicFunc);
+    Fn->replaceAllUsesWith(NewFn);
+    Fn->eraseFromParent();
+    return true;
+  };
+
+  // Unconditionally convert "clang.arc.use" to "llvm.objc.clang.arc.use".
+  bool Changed =
+      UpgradeToIntrinsic("clang.arc.use", llvm::Intrinsic::objc_clang_arc_use);
+
+  // Return if the bitcode doesn't have the arm64 retainAutoreleasedReturnValue
+  // marker. We don't know for sure that it was compiled with ARC in that case.
+  if (!M.getModuleFlag("clang.arc.retainAutoreleasedReturnValueMarker"))
+    return false;
+
+  std::pair<const char *, llvm::Intrinsic::ID> RuntimeFuncs[] = {
+      {"objc_autorelease", llvm::Intrinsic::objc_autorelease},
+      {"objc_autoreleasePoolPop", llvm::Intrinsic::objc_autoreleasePoolPop},
+      {"objc_autoreleasePoolPush", llvm::Intrinsic::objc_autoreleasePoolPush},
+      {"objc_autoreleaseReturnValue",
+       llvm::Intrinsic::objc_autoreleaseReturnValue},
+      {"objc_copyWeak", llvm::Intrinsic::objc_copyWeak},
+      {"objc_destroyWeak", llvm::Intrinsic::objc_destroyWeak},
+      {"objc_initWeak", llvm::Intrinsic::objc_initWeak},
+      {"objc_loadWeak", llvm::Intrinsic::objc_loadWeak},
+      {"objc_loadWeakRetained", llvm::Intrinsic::objc_loadWeakRetained},
+      {"objc_moveWeak", llvm::Intrinsic::objc_moveWeak},
+      {"objc_release", llvm::Intrinsic::objc_release},
+      {"objc_retain", llvm::Intrinsic::objc_retain},
+      {"objc_retainAutorelease", llvm::Intrinsic::objc_retainAutorelease},
+      {"objc_retainAutoreleaseReturnValue",
+       llvm::Intrinsic::objc_retainAutoreleaseReturnValue},
+      {"objc_retainAutoreleasedReturnValue",
+       llvm::Intrinsic::objc_retainAutoreleasedReturnValue},
+      {"objc_retainBlock", llvm::Intrinsic::objc_retainBlock},
+      {"objc_storeStrong", llvm::Intrinsic::objc_storeStrong},
+      {"objc_storeWeak", llvm::Intrinsic::objc_storeWeak},
+      {"objc_unsafeClaimAutoreleasedReturnValue",
+       llvm::Intrinsic::objc_unsafeClaimAutoreleasedReturnValue},
+      {"objc_retainedObject", llvm::Intrinsic::objc_retainedObject},
+      {"objc_unretainedObject", llvm::Intrinsic::objc_unretainedObject},
+      {"objc_unretainedPointer", llvm::Intrinsic::objc_unretainedPointer},
+      {"objc_retain_autorelease", llvm::Intrinsic::objc_retain_autorelease},
+      {"objc_sync_enter", llvm::Intrinsic::objc_sync_enter},
+      {"objc_sync_exit", llvm::Intrinsic::objc_sync_exit},
+      {"objc_arc_annotation_topdown_bbstart",
+       llvm::Intrinsic::objc_arc_annotation_topdown_bbstart},
+      {"objc_arc_annotation_topdown_bbend",
+       llvm::Intrinsic::objc_arc_annotation_topdown_bbend},
+      {"objc_arc_annotation_bottomup_bbstart",
+       llvm::Intrinsic::objc_arc_annotation_bottomup_bbstart},
+      {"objc_arc_annotation_bottomup_bbend",
+       llvm::Intrinsic::objc_arc_annotation_bottomup_bbend}};
+
+  for (auto &I : RuntimeFuncs)
+    Changed |= UpgradeToIntrinsic(I.first, I.second);
+
   return Changed;
 }
 

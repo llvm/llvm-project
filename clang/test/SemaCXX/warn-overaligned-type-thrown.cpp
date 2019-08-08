@@ -2,11 +2,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios10 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions -DUNDERALIGNED %s
 // RUN: %clang_cc1 -triple arm64-apple-tvos10 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions -DUNDERALIGNED %s
 // RUN: %clang_cc1 -triple arm64-apple-watchos4 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions -DUNDERALIGNED %s
+// RUN: %clang_cc1 -triple arm-linux-gnueabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions  -DUNDERALIGNED %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple arm64-apple-ios12 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple arm64-apple-tvos12 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple arm64-apple-watchos5 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
-// RUN: %clang_cc1 -triple arm-linux-gnueabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -triple arm-linux-androideabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnueabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple mipsel-linux-gnu -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple mips64el-linux-gnu -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s

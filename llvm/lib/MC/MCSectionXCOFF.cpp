@@ -28,9 +28,11 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
-  if (getKind().isCommon()) {
-    if (getMappingClass() != XCOFF::XMC_RW)
-      llvm_unreachable("Unsupported storage-mapping class for common csect");
+  if (getKind().isBSSLocal() || getKind().isCommon()) {
+    if (getMappingClass() != XCOFF::XMC_RW &&
+        getMappingClass() != XCOFF::XMC_BS)
+      llvm_unreachable("Generated a storage-mapping class for a common/bss "
+                       "csect we don't understand how to switch to.");
     if (getCSectType() != XCOFF::XTY_CM)
       llvm_unreachable("wrong csect type for .bss csect");
     // Don't have to print a directive for switching to section for commons.

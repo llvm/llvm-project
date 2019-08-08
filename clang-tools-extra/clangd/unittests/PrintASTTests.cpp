@@ -15,7 +15,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest-param-test.h"
 #include "gtest/gtest.h"
-#include "gtest/internal/gtest-param-util-generated.h"
 
 namespace clang {
 namespace clangd {

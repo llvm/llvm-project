@@ -13,12 +13,16 @@
 #ifndef LLVM_SUPPORT_FILECHECK_H
 #define LLVM_SUPPORT_FILECHECK_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
-#include <vector>
 #include <map>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
