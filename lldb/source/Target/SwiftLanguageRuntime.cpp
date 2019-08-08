@@ -2578,17 +2578,21 @@ SwiftLanguageRuntime::GetTypeInfo(CompilerType type) {
 }
 
 bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
-  auto *type_info = GetTypeInfo(type);
-  if (!type_info)
-    return true;
-  return type_info->isBitwiseTakable() && type_info->getSize() <= 24;
+  if (auto *type_info = GetTypeInfo(type))
+    return type_info->isBitwiseTakable() && type_info->getSize() <= 24;
+  return true;
 }
 
 llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
-  auto *type_info = GetTypeInfo(type);
-  if (!type_info)
-    return {};
-  return type_info->getSize() * 8;
+  if (auto *type_info = GetTypeInfo(type))
+    return type_info->getSize() * 8;
+  return {};
+}
+
+llvm::Optional<uint64_t> SwiftLanguageRuntime::GetByteStride(CompilerType type) {
+  if (auto *type_info = GetTypeInfo(type))
+    return type_info->getStride();
+  return {};
 }
 
 bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
