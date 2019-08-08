@@ -2575,14 +2575,21 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
-      // kitsune: if we are generating a Kokkos lambda construct 
-      // we are transforming it into a loop...  Thus we have to 
-      // "undo" the capture... 
-      // FIXME: Is this always sound/safe? 
+
+      // kitsune: if we are generating a kokkos-based lambda construct
+      // we are likely going to eventually tarnsform it into a parallel 
+      // loop construct. Thus we have to carefully consider how we handle 
+      // captures within the lambda... 
+      // 
+      // kitsune FIXME: Not sure that everything we are doing here is
+      // sound...
       if (InKokkosConstruct) {
         auto I = LocalDeclMap.find(VD);
         assert(I != LocalDeclMap.end());
-        return MakeAddrLValue(I->second, T);
+	if (VD->getType()->isReferenceType())
+	  return EmitLoadOfReferenceLValue(I->second, VD->getType(),
+					   AlignmentSource::Decl);
+	return MakeAddrLValue(I->second, T);
       }
 
       VD = VD->getCanonicalDecl();

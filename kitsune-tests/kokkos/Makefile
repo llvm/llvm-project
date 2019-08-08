@@ -7,7 +7,9 @@ CXXFLAGS=-std=c++14 -fPIC -I$(KITSUNE_HOME)/include
 LDFLAGS= -L$(KITSUNE_HOME)/lib -lkokkos -ldl -lrt 
 
 types=kitsune kokkos
-sources=pfor_1d_sum 
+
+sources=parallel_for_sum1 parallel_for_sum2 
+
 targets=$(foreach f,${sources}, $(foreach t, ${types}, ${f}_${t}))
 
 all: ${targets}
