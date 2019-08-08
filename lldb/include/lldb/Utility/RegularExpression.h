@@ -83,10 +83,6 @@ public:
     bool GetMatchAtIndex(llvm::StringRef s, uint32_t idx,
                          llvm::StringRef &match_str) const;
 
-    bool GetMatchSpanningIndices(llvm::StringRef s, uint32_t idx1,
-                                 uint32_t idx2,
-                                 llvm::StringRef &match_str) const;
-
   protected:
     std::vector<regmatch_t>
         m_matches; ///< Where parenthesized subexpressions results are stored

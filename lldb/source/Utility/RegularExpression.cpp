@@ -126,23 +126,6 @@ bool RegularExpression::Match::GetMatchAtIndex(
   return false;
 }
 
-bool RegularExpression::Match::GetMatchSpanningIndices(
-    llvm::StringRef s, uint32_t idx1, uint32_t idx2,
-    llvm::StringRef &match_str) const {
-  if (idx1 < m_matches.size() && idx2 < m_matches.size()) {
-    if (m_matches[idx1].rm_so == m_matches[idx2].rm_eo) {
-      // Matched the empty string...
-      match_str = llvm::StringRef();
-      return true;
-    } else if (m_matches[idx1].rm_so < m_matches[idx2].rm_eo) {
-      match_str = s.substr(m_matches[idx1].rm_so,
-                           m_matches[idx2].rm_eo - m_matches[idx1].rm_so);
-      return true;
-    }
-  }
-  return false;
-}
-
 // Returns true if the regular expression compiled and is ready for execution.
 bool RegularExpression::IsValid() const { return m_comp_err == 0; }
 
