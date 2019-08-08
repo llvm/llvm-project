@@ -120,9 +120,6 @@ if (NOT AMDDeviceLibs_FOUND)
   file(GLOB DEVICE_LIBS_SRC "src/comgr-device-libs.cpp")
   list(REMOVE_ITEM SOURCES ${DEVICE_LIBS_SRC})
 endif()
-configure_file("include/amd_comgr.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
-  @ONLY)
 add_library(amd_comgr SHARED ${SOURCES})
 
 if (AMDDeviceLibs_FOUND)
@@ -172,7 +169,7 @@ install(TARGETS amd_comgr
   DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
+  "include/amd_comgr.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(FILES
