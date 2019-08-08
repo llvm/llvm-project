@@ -1340,6 +1340,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
                        RetOpcode == AArch64::TCRETURNri ||
                        RetOpcode == AArch64::TCRETURNriBTI;
+
+    IsTailCallReturn |= RetOpcode == AArch64::AUTH_TCRETURNrii ||
+                        RetOpcode == AArch64::AUTH_TCRETURNriri;
     IsFunclet = isFuncletReturnInstr(*MBBI);
   }
 

@@ -30,6 +30,12 @@ enum NodeType : unsigned {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, discriminator, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, discriminator, operands.
+  AUTH_TC_RETURN,
+
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
@@ -542,6 +548,10 @@ public:
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
   bool supportSwiftError() const override {
+    return true;
+  }
+
+  bool supportPtrAuthBundles() const override {
     return true;
   }
 

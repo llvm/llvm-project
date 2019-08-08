@@ -1188,6 +1188,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:      break;
   case AArch64ISD::CALL:              return "AArch64ISD::CALL";
+  case AArch64ISD::AUTH_CALL:         return "AArch64ISD::AUTH_CALL";
+  case AArch64ISD::AUTH_TC_RETURN:    return "AArch64ISD::AUTH_TC_RETURN";
   case AArch64ISD::ADRP:              return "AArch64ISD::ADRP";
   case AArch64ISD::ADR:               return "AArch64ISD::ADR";
   case AArch64ISD::ADDlow:            return "AArch64ISD::ADDlow";
@@ -4039,6 +4041,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       assert(Subtarget->isTargetWindows() &&
              "Windows is the only supported COFF target");
       Callee = getGOT(G, DAG, AArch64II::MO_DLLIMPORT);
+    } else if (GV->getSection() == "llvm.ptrauth") {
+      // FIXME: this should deal with PtrAuthGlobalAddress instead
+      // If we're directly referencing a ptrauth wrapper, we need to materialize
+      // it from its __auth_ptr slot.
+      // We combine some of these into the call; ideally we'd catch them all.
+      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, /*TargetFlags=*/0);
+      Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
     } else {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, 0);
@@ -4065,6 +4074,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
+  unsigned Opc = IsTailCall ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
+
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -4074,6 +4085,17 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
+  }
+
+  if (CLI.PAI) {
+    const uint64_t Key = CLI.PAI->Key;
+    // Authenticated calls only support IA and IB.
+    if (Key > 1)
+      report_fatal_error("Unsupported key kind for authenticating call");
+
+    Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
+    Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
+    Ops.push_back(CLI.PAI->Discriminator);
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -4127,13 +4149,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // actual call instruction.
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(AArch64ISD::TC_RETURN, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(AArch64ISD::CALL, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
