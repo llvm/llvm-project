@@ -12724,6 +12724,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   // Walk the vars and build update/final expressions for the CodeGen.
   SmallVector<Expr *, 8> Updates;
   SmallVector<Expr *, 8> Finals;
+  SmallVector<Expr *, 8> UsedExprs;
   Expr *Step = Clause.getStep();
   Expr *CalcStep = Clause.getCalcStep();
   // OpenMP [2.14.3.7, linear clause]
@@ -12799,16 +12800,24 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     if (!Update.isUsable() || !Final.isUsable()) {
       Updates.push_back(nullptr);
       Finals.push_back(nullptr);
+      UsedExprs.push_back(nullptr);
       HasErrors = true;
     } else {
       Updates.push_back(Update.get());
       Finals.push_back(Final.get());
+      if (!Info.first)
+        UsedExprs.push_back(SimpleRefExpr);
     }
     ++CurInit;
     ++CurPrivate;
   }
+  if (Expr *S = Clause.getStep())
+    UsedExprs.push_back(S);
+  // Fill the remaining part with the nullptr.
+  UsedExprs.append(Clause.varlist_size() + 1 - UsedExprs.size(), nullptr);
   Clause.setUpdates(Updates);
   Clause.setFinals(Finals);
+  Clause.setUsedExprs(UsedExprs);
   return HasErrors;
 }
 

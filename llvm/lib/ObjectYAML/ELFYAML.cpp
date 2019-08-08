@@ -563,7 +563,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHN>::enumeration(
   ECase(SHN_HEXAGON_SCOMMON_4);
   ECase(SHN_HEXAGON_SCOMMON_8);
 #undef ECase
-  IO.enumFallback<Hex32>(Value);
+  IO.enumFallback<Hex16>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_STB>::enumeration(
@@ -897,8 +897,6 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
                                                    ELFYAML::Symbol &Symbol) {
   if (Symbol.Index && Symbol.Section.data())
     return "Index and Section cannot both be specified for Symbol";
-  if (Symbol.Index && *Symbol.Index == ELFYAML::ELF_SHN(ELF::SHN_XINDEX))
-    return "Large indexes are not supported";
   if (Symbol.NameIndex && !Symbol.Name.empty())
     return "Name and NameIndex cannot both be specified for Symbol";
   return StringRef();
@@ -967,6 +965,11 @@ static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
   commonSectionMapping(IO, Group);
   IO.mapOptional("Info", Group.Signature, StringRef());
   IO.mapRequired("Members", Group.Members);
+}
+
+static void sectionMapping(IO &IO, ELFYAML::SymtabShndxSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Entries", Section.Entries);
 }
 
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
@@ -1048,6 +1051,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::VerneedSection());
     sectionMapping(IO, *cast<ELFYAML::VerneedSection>(Section.get()));
+    break;
+  case ELF::SHT_SYMTAB_SHNDX:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::SymtabShndxSection());
+    sectionMapping(IO, *cast<ELFYAML::SymtabShndxSection>(Section.get()));
     break;
   default:
     if (!IO.outputting())

@@ -12,6 +12,13 @@ extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
 extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
+void xxx(int argc) {
+  int i, step; // expected-note {{initialize the variable 'step' to silence this warning}}
+#pragma omp target teams distribute simd linear(i : step) // expected-warning {{variable 'step' is uninitialized when used here}}
+  for (i = 0; i < 10; ++i)
+    ;
+}
+
 namespace X {
   int x;
 };

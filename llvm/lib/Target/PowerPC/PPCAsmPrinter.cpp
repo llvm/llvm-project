@@ -1659,7 +1659,7 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("COMDAT not yet supported by AIX.");
 
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
-  if (!GVKind.isCommon())
+  if (!GVKind.isCommon() && !GVKind.isBSSLocal())
     report_fatal_error("Only common variables are supported on AIX for now.");
 
   // Create the containing csect and switch to it.
@@ -1673,7 +1673,11 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   unsigned Align =
       GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);
   uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
-  OutStreamer->EmitCommonSymbol(XSym, Size, Align);
+
+  if (GVKind.isBSSLocal())
+    OutStreamer->EmitXCOFFLocalCommonSymbol(XSym, Size, Align);
+  else
+    OutStreamer->EmitCommonSymbol(XSym, Size, Align);
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code

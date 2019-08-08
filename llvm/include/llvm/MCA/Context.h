@@ -20,7 +20,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
-#include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Pipeline.h"
 #include "llvm/MCA/SourceMgr.h"
 #include <memory>
@@ -58,6 +57,9 @@ public:
   Context(const Context &C) = delete;
   Context &operator=(const Context &C) = delete;
 
+  const MCRegisterInfo &getMCRegisterInfo() const { return MRI; }
+  const MCSubtargetInfo &getMCSubtargetInfo() const { return STI; }
+
   void addHardwareUnit(std::unique_ptr<HardwareUnit> H) {
     Hardware.push_back(std::move(H));
   }
@@ -65,7 +67,6 @@ public:
   /// Construct a basic pipeline for simulating an out-of-order pipeline.
   /// This pipeline consists of Fetch, Dispatch, Execute, and Retire stages.
   std::unique_ptr<Pipeline> createDefaultPipeline(const PipelineOptions &Opts,
-                                                  InstrBuilder &IB,
                                                   SourceMgr &SrcMgr);
 };
 

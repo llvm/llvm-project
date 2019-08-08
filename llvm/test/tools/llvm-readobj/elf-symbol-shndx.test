@@ -72,8 +72,7 @@ Sections:
   - Name: .symtab_shndx
     Type: SHT_SYMTAB_SHNDX
     Link: .dynsym
-    EntSize: 4
-    Content: "0000000001000000"
+    Entries: [ 0, 1 ]
 Symbols:
   - Name:    undef
     Binding: STB_GLOBAL

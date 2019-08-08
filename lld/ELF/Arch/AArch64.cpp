@@ -90,6 +90,11 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
   case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G0:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G1:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G2:
     return R_TLS;
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
@@ -376,20 +381,25 @@ void AArch64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     break;
   case R_AARCH64_MOVW_PREL_G0:
   case R_AARCH64_MOVW_SABS_G0:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G0:
     checkInt(loc, val, 17, type);
     LLVM_FALLTHROUGH;
   case R_AARCH64_MOVW_PREL_G0_NC:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     writeSMovWImm(loc, val);
     break;
   case R_AARCH64_MOVW_PREL_G1:
   case R_AARCH64_MOVW_SABS_G1:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G1:
     checkInt(loc, val, 33, type);
     LLVM_FALLTHROUGH;
   case R_AARCH64_MOVW_PREL_G1_NC:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
     writeSMovWImm(loc, val >> 16);
     break;
   case R_AARCH64_MOVW_PREL_G2:
   case R_AARCH64_MOVW_SABS_G2:
+  case R_AARCH64_TLSLE_MOVW_TPREL_G2:
     checkInt(loc, val, 49, type);
     LLVM_FALLTHROUGH;
   case R_AARCH64_MOVW_PREL_G2_NC:

@@ -215,6 +215,9 @@ makeFollowupLoopID(MDNode *OrigLoopID, ArrayRef<StringRef> FollowupAttrs,
 /// Look for the loop attribute that disables all transformation heuristic.
 bool hasDisableAllTransformsHint(const Loop *L);
 
+/// Look for the loop attribute that disables the LICM transformation heuristics.
+bool hasDisableLICMTransformsHint(const Loop *L);
+
 /// The mode sets how eager a transformation should be applied.
 enum TransformationMode {
   /// The pass can use heuristics to determine whether a transformation should

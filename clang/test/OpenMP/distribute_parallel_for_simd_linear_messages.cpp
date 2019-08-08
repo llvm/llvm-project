@@ -3,6 +3,14 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 extern int omp_default_mem_alloc;
+
+void xxx(int argc) {
+  int i;
+#pragma omp distribute parallel for simd linear(i)
+  for (i = 0; i < 10; ++i)
+    ;
+}
+
 namespace X {
   int x;
 };

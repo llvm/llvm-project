@@ -1099,6 +1099,8 @@ private:
 
 public:
   LineType parseLine() {
+    if (!CurrentToken)
+      return LT_Invalid;
     NonTemplateLess.clear();
     if (CurrentToken->is(tok::hash))
       return parsePreprocessorDirective();

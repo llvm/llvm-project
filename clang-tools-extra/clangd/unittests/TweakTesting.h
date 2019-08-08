@@ -26,7 +26,7 @@ namespace clangd {
 //     namespace foo { template<typename> class X{}; }
 //     using namespace foo;
 //   cpp)";
-//   Context = Block;
+//   Context = Function;
 //   EXPECT_THAT(apply("[[auto]] X = foo<int>();"),
 //               "foo<int> X = foo<int();");
 //   EXPECT_AVAILABLE("^a^u^t^o^ X = foo<int>();");

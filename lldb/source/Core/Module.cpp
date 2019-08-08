@@ -1037,28 +1037,21 @@ size_t Module::FindTypes(
   return num_matches;
 }
 
-SymbolVendor *Module::GetSymbolVendor(bool can_create,
-                                      lldb_private::Stream *feedback_strm) {
-  if (!m_did_load_symbol_vendor.load()) {
+SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
+  if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    if (!m_did_load_symbol_vendor.load() && can_create) {
+    if (!m_did_load_symfile.load() && can_create) {
       ObjectFile *obj_file = GetObjectFile();
       if (obj_file != nullptr) {
         static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
         Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
-        m_did_load_symbol_vendor = true;
+        m_did_load_symfile = true;
       }
     }
   }
-  return m_symfile_up.get();
-}
-
-SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
-  if (SymbolVendor *vendor = GetSymbolVendor(can_create, feedback_strm))
-    return vendor->GetSymbolFile();
-  return nullptr;
+  return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
 Symtab *Module::GetSymtab() {
@@ -1467,7 +1460,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   }
   m_symfile_spec = file;
   m_symfile_up.reset();
-  m_did_load_symbol_vendor = false;
+  m_did_load_symfile = false;
 }
 
 bool Module::IsExecutable() {

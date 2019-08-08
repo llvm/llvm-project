@@ -1674,13 +1674,6 @@ private:
   }
 };
 
-template <class T> bool isExplicitTemplateSpecialization(const NamedDecl &ND) {
-  if (const auto *TD = dyn_cast<T>(&ND))
-    if (TD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-      return true;
-  return false;
-}
-
 } // namespace
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
@@ -1783,9 +1776,7 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   };
   // We only complete symbol's name, which is the same as the name of the
   // *primary* template in case of template specializations.
-  if (isExplicitTemplateSpecialization<FunctionDecl>(ND) ||
-      isExplicitTemplateSpecialization<CXXRecordDecl>(ND) ||
-      isExplicitTemplateSpecialization<VarDecl>(ND))
+  if (isExplicitTemplateSpecialization(&ND))
     return false;
 
   if (InTopLevelScope(ND))

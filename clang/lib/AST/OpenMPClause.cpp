@@ -429,15 +429,23 @@ void OMPLinearClause::setFinals(ArrayRef<Expr *> FL) {
   std::copy(FL.begin(), FL.end(), getUpdates().end());
 }
 
+void OMPLinearClause::setUsedExprs(ArrayRef<Expr *> UE) {
+  assert(
+      UE.size() == varlist_size() + 1 &&
+      "Number of used expressions is not the same as the preallocated buffer");
+  std::copy(UE.begin(), UE.end(), getFinals().end() + 2);
+}
+
 OMPLinearClause *OMPLinearClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
     SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
     ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep,
     Stmt *PreInit, Expr *PostUpdate) {
-  // Allocate space for 4 lists (Vars, Inits, Updates, Finals) and 2 expressions
-  // (Step and CalcStep).
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size() + 2));
+  // Allocate space for 5 lists (Vars, Inits, Updates, Finals), 2 expressions
+  // (Step and CalcStep), list of used expression + step.
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size() + 2 + VL.size() + 1));
   OMPLinearClause *Clause = new (Mem) OMPLinearClause(
       StartLoc, LParenLoc, Modifier, ModifierLoc, ColonLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
@@ -449,6 +457,8 @@ OMPLinearClause *OMPLinearClause::Create(
             nullptr);
   std::fill(Clause->getUpdates().end(), Clause->getUpdates().end() + VL.size(),
             nullptr);
+  std::fill(Clause->getUsedExprs().begin(), Clause->getUsedExprs().end(),
+            nullptr);
   Clause->setStep(Step);
   Clause->setCalcStep(CalcStep);
   Clause->setPreInitStmt(PreInit);
@@ -458,10 +468,17 @@ OMPLinearClause *OMPLinearClause::Create(
 
 OMPLinearClause *OMPLinearClause::CreateEmpty(const ASTContext &C,
                                               unsigned NumVars) {
-  // Allocate space for 4 lists (Vars, Inits, Updates, Finals) and 2 expressions
-  // (Step and CalcStep).
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * NumVars + 2));
+  // Allocate space for 5 lists (Vars, Inits, Updates, Finals), 2 expressions
+  // (Step and CalcStep), list of used expression + step.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * NumVars + 2 + NumVars  +1));
   return new (Mem) OMPLinearClause(NumVars);
+}
+
+OMPClause::child_range OMPLinearClause::used_children() {
+  // Range includes only non-nullptr elements.
+  return child_range(
+      reinterpret_cast<Stmt **>(getUsedExprs().begin()),
+      reinterpret_cast<Stmt **>(llvm::find(getUsedExprs(), nullptr)));
 }
 
 OMPAlignedClause *

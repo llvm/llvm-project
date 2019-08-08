@@ -49,7 +49,6 @@ class Symbol;
 class SymbolContext;
 class SymbolContextList;
 class SymbolFile;
-class SymbolVendor;
 class Symtab;
 class Target;
 class TypeList;
@@ -67,8 +66,8 @@ class VariableList;
 /// accessors are called. For example the object file (ObjectFile)
 /// representation will only be parsed if the object file is requested using
 /// the Module::GetObjectFile() is called. The debug symbols will only be
-/// parsed if the symbol vendor (SymbolVendor) is requested using the
-/// Module::GetSymbolVendor() is called.
+/// parsed if the symbol file (SymbolFile) is requested using the
+/// Module::GetSymbolFile() method.
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
@@ -420,10 +419,9 @@ public:
 
   /// Find types by name.
   ///
-  /// Type lookups in modules go through the SymbolVendor (which will use one
-  /// or more SymbolFile subclasses). The SymbolFile needs to be able to
-  /// lookup types by basename and not the fully qualified typename. This
-  /// allows the type accelerator tables to stay small, even with heavily
+  /// Type lookups in modules go through the SymbolFile. The SymbolFile needs to
+  /// be able to lookup types by basename and not the fully qualified typename.
+  /// This allows the type accelerator tables to stay small, even with heavily
   /// templatized C++. The type search will then narrow down the search
   /// results. If "exact_match" is true, then the type search will only match
   /// exact type name matches. If "exact_match" is false, the type will match
@@ -638,23 +636,17 @@ public:
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                   lldb::addr_t header_addr, Status &error,
                                   size_t size_to_read = 512);
-  /// Get the symbol vendor interface for the current architecture.
-  ///
-  /// If the symbol vendor file has not been located yet, this function will
-  /// find the best SymbolVendor plug-in that can use the current object file.
-  ///
-  /// \return
-  ///     If this module does not have a valid object file, or no
-  ///     plug-in can be found that can use the object file, nullptr will
-  ///     be returned, else a valid symbol vendor plug-in interface
-  ///     will be returned. The returned pointer is owned by this
-  ///     object and remains valid as long as the object is around.
-  virtual SymbolVendor *
-  GetSymbolVendor(bool can_create = true,
-                  lldb_private::Stream *feedback_strm = nullptr);
 
-  SymbolFile *GetSymbolFile(bool can_create = true,
-                            Stream *feedback_strm = nullptr);
+  /// Get the module's symbol file
+  ///
+  /// If the symbol file has already been loaded, this function returns it. All
+  /// arguments are ignored. If the symbol file has not been located yet, and
+  /// the can_create argument is false, the function returns nullptr. If
+  /// can_create is true, this function will find the best SymbolFile plug-in
+  /// that can use the current object file. feedback_strm, if not null, is used
+  /// to report the details of the search process.
+  virtual SymbolFile *GetSymbolFile(bool can_create = true,
+                                    Stream *feedback_strm = nullptr);
 
   Symtab *GetSymtab();
 
@@ -847,7 +839,7 @@ public:
   // when the module first gets created.
   bool FileHasChanged() const;
 
-  // SymbolVendor, SymbolFile and ObjectFile member objects should lock the
+  // SymbolFile and ObjectFile member objects should lock the
   // module mutex to avoid deadlocks.
   std::recursive_mutex &GetMutex() const { return m_mutex; }
 
@@ -899,12 +891,12 @@ public:
   /// A class that encapsulates name lookup information.
   ///
   /// Users can type a wide variety of partial names when setting breakpoints
-  /// by name or when looking for functions by name. SymbolVendor and
-  /// SymbolFile objects are only required to implement name lookup for
-  /// function basenames and for fully mangled names. This means if the user
-  /// types in a partial name, we must reduce this to a name lookup that will
-  /// work with all SymbolFile objects. So we might reduce a name lookup to
-  /// look for a basename, and then prune out any results that don't match.
+  /// by name or when looking for functions by name. The SymbolFile object is
+  /// only required to implement name lookup for function basenames and for
+  /// fully mangled names. This means if the user types in a partial name, we
+  /// must reduce this to a name lookup that will work with all SymbolFile
+  /// objects. So we might reduce a name lookup to look for a basename, and then
+  /// prune out any results that don't match.
   ///
   /// The "m_name" member variable represents the name as it was typed by the
   /// user. "m_lookup_name" will be the name we actually search for through
@@ -1011,7 +1003,7 @@ protected:
                                      /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};
-  std::atomic<bool> m_did_load_symbol_vendor{false};
+  std::atomic<bool> m_did_load_symfile{false};
   std::atomic<bool> m_did_set_uuid{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
