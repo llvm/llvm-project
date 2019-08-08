@@ -173,6 +173,12 @@ if(LLDB_INCLUDE_TESTS)
     endif()
   endif()
 
+  # BEGIN Swift Mods
+  if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+    list(APPEND LLDB_TEST_DEPS swift)
+  endif()
+  # END Swift Mods
+
   if(TARGET dsymutil)
     list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
