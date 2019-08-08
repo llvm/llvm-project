@@ -105,17 +105,17 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-NEXT:    mov v0.b[14], w8
 ; CHECK-NEXT:    mov v0.b[15], w8
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umov w8, v1.b[1]
+; CHECK-NEXT:    umov w9, v1.b[0]
 ; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
+; CHECK-NEXT:    umov w9, v1.b[2]
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
+; CHECK-NEXT:    umov w9, v1.b[3]
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
+; CHECK-NEXT:    umov w9, v1.b[4]
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    umov w9, v1.b[5]
 ; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[6]
 ; CHECK-NEXT:    and w8, w8, w9
@@ -132,9 +132,9 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 ; CHECK-NEXT:    mov w8, #-1
 ; CHECK-NEXT:    mov v0.s[3], w8
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.experimental.vector.reduce.and.v3i32(<3 x i32> %a)

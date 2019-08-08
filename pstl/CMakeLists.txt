@@ -35,19 +35,26 @@ target_compile_features(ParallelSTL INTERFACE cxx_std_17)
 
 if (PARALLELSTL_BACKEND STREQUAL "serial")
     message(STATUS "Parallel STL uses the serial backend")
-    target_compile_definitions(ParallelSTL INTERFACE -D_PSTL_PAR_BACKEND_SERIAL)
+    set(_PSTL_PAR_BACKEND_SERIAL ON)
 elseif (PARALLELSTL_BACKEND STREQUAL "tbb")
     find_package(TBB 2018 REQUIRED tbb OPTIONAL_COMPONENTS tbbmalloc)
     message(STATUS "Parallel STL uses TBB ${TBB_VERSION} (interface version: ${TBB_INTERFACE_VERSION})")
     target_link_libraries(ParallelSTL INTERFACE TBB::tbb)
-    target_compile_definitions(ParallelSTL INTERFACE -D_PSTL_PAR_BACKEND_TBB)
+    set(_PSTL_PAR_BACKEND_TBB ON)
 else()
     message(FATAL_ERROR "Requested unknown Parallel STL backend '${PARALLELSTL_BACKEND}'.")
 endif()
 
+set(PSTL_GENERATED_HEADERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated_headers")
+set(PSTL_CONFIG_SITE_PATH "${PSTL_GENERATED_HEADERS_DIR}/__pstl_config_site")
+configure_file("include/__pstl_config_site.in"
+               "${PSTL_CONFIG_SITE_PATH}"
+               @ONLY)
+
 target_include_directories(ParallelSTL
     INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PSTL_GENERATED_HEADERS_DIR}>
     $<INSTALL_INTERFACE:include>)
 
 ###############################################################################
@@ -77,6 +84,8 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
         DESTINATION lib/cmake/ParallelSTL)
 install(DIRECTORY include/
+        DESTINATION include)
+install(FILES "${PSTL_CONFIG_SITE_PATH}"
         DESTINATION include)
 
 add_custom_target(install-pstl

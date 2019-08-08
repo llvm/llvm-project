@@ -141,6 +141,9 @@ template <class ELFT> class ELFState {
   bool writeSectionContent(Elf_Shdr &SHeader, const ELFYAML::Group &Group,
                            ContiguousBlobAccumulator &CBA);
   bool writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::SymtabShndxSection &Shndx,
+                           ContiguousBlobAccumulator &CBA);
+  bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::SymverSection &Section,
                            ContiguousBlobAccumulator &CBA);
   bool writeSectionContent(Elf_Shdr &SHeader,
@@ -356,6 +359,9 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
       if (Sec->EntSize)
         SHeader.sh_entsize = *Sec->EntSize;
     } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+      if (!writeSectionContent(SHeader, *S, CBA))
+        return false;
+    } else if (auto S = dyn_cast<ELFYAML::SymtabShndxSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec)) {
@@ -737,6 +743,21 @@ bool ELFState<ELFT>::writeSectionContent(
       OS.write((const char *)&REntry, sizeof(REntry));
     }
   }
+  return true;
+}
+
+template <class ELFT>
+bool ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::SymtabShndxSection &Shndx,
+    ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  for (uint32_t E : Shndx.Entries)
+    support::endian::write<uint32_t>(OS, E, ELFT::TargetEndianness);
+
+  SHeader.sh_entsize = Shndx.EntSize ? (uint64_t)*Shndx.EntSize : 4;
+  SHeader.sh_size = Shndx.Entries.size() * SHeader.sh_entsize;
   return true;
 }
 

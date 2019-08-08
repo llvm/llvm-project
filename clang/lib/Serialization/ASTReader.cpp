@@ -12736,6 +12736,10 @@ void OMPClauseReader::VisitOMPLinearClause(OMPLinearClause *C) {
   C->setFinals(Vars);
   C->setStep(Record.readSubExpr());
   C->setCalcStep(Record.readSubExpr());
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars + 1; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setUsedExprs(Vars);
 }
 
 void OMPClauseReader::VisitOMPAlignedClause(OMPAlignedClause *C) {

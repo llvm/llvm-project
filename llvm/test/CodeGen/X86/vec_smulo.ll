@@ -1790,7 +1790,6 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE2-NEXT:    psrad $8, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[3,1,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,0,1]
 ; SSE2-NEXT:    psrad $31, %xmm4
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
@@ -1799,20 +1798,21 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE2-NEXT:    por %xmm4, %xmm1
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    movw %cx, 3(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    movw %cx, 6(%rdi)
+; SSE2-NEXT:    movd %xmm2, %edx
+; SSE2-NEXT:    movw %dx, 3(%rdi)
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    movb %al, 2(%rdi)
 ; SSE2-NEXT:    shrl $16, %ecx
-; SSE2-NEXT:    movb %cl, 5(%rdi)
+; SSE2-NEXT:    movb %cl, 8(%rdi)
+; SSE2-NEXT:    shrl $16, %edx
+; SSE2-NEXT:    movb %dl, 5(%rdi)
 ; SSE2-NEXT:    movd %xmm5, %eax
 ; SSE2-NEXT:    movw %ax, 9(%rdi)
-; SSE2-NEXT:    movd %xmm6, %ecx
-; SSE2-NEXT:    movw %cx, 6(%rdi)
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    movb %al, 11(%rdi)
-; SSE2-NEXT:    shrl $16, %ecx
-; SSE2-NEXT:    movb %cl, 8(%rdi)
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1845,7 +1845,6 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSSE3-NEXT:    psrad $8, %xmm1
 ; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm1
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[3,1,2,3]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,0,1]
 ; SSSE3-NEXT:    psrad $31, %xmm4
 ; SSSE3-NEXT:    pcmpeqd %xmm3, %xmm4
 ; SSSE3-NEXT:    pcmpeqd %xmm3, %xmm3
@@ -1854,20 +1853,21 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSSE3-NEXT:    por %xmm4, %xmm1
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    movw %ax, (%rdi)
-; SSSE3-NEXT:    movd %xmm2, %ecx
-; SSSE3-NEXT:    movw %cx, 3(%rdi)
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm0, %ecx
+; SSSE3-NEXT:    movw %cx, 6(%rdi)
+; SSSE3-NEXT:    movd %xmm2, %edx
+; SSSE3-NEXT:    movw %dx, 3(%rdi)
 ; SSSE3-NEXT:    shrl $16, %eax
 ; SSSE3-NEXT:    movb %al, 2(%rdi)
 ; SSSE3-NEXT:    shrl $16, %ecx
-; SSSE3-NEXT:    movb %cl, 5(%rdi)
+; SSSE3-NEXT:    movb %cl, 8(%rdi)
+; SSSE3-NEXT:    shrl $16, %edx
+; SSSE3-NEXT:    movb %dl, 5(%rdi)
 ; SSSE3-NEXT:    movd %xmm5, %eax
 ; SSSE3-NEXT:    movw %ax, 9(%rdi)
-; SSSE3-NEXT:    movd %xmm6, %ecx
-; SSSE3-NEXT:    movw %cx, 6(%rdi)
 ; SSSE3-NEXT:    shrl $16, %eax
 ; SSSE3-NEXT:    movb %al, 11(%rdi)
-; SSSE3-NEXT:    shrl $16, %ecx
-; SSSE3-NEXT:    movb %cl, 8(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;

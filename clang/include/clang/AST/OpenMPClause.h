@@ -3216,6 +3216,14 @@ class OMPLinearClause final
     return llvm::makeArrayRef(getUpdates().end(), varlist_size());
   }
 
+  /// Gets the list of used expressions for linear variables.
+  MutableArrayRef<Expr *> getUsedExprs() {
+    return MutableArrayRef<Expr *>(getFinals().end() + 2, varlist_size() + 1);
+  }
+  ArrayRef<const Expr *> getUsedExprs() const {
+    return llvm::makeArrayRef(getFinals().end() + 2, varlist_size() + 1);
+  }
+
   /// Sets the list of the copies of original linear variables.
   /// \param PL List of expressions.
   void setPrivates(ArrayRef<Expr *> PL);
@@ -3295,6 +3303,9 @@ public:
   /// \param FL List of expressions.
   void setFinals(ArrayRef<Expr *> FL);
 
+  /// Sets the list of used expressions for the linear clause.
+  void setUsedExprs(ArrayRef<Expr *> UE);
+
   using privates_iterator = MutableArrayRef<Expr *>::iterator;
   using privates_const_iterator = ArrayRef<const Expr *>::iterator;
   using privates_range = llvm::iterator_range<privates_iterator>;
@@ -3347,6 +3358,21 @@ public:
     return finals_const_range(getFinals().begin(), getFinals().end());
   }
 
+  using used_expressions_iterator = MutableArrayRef<Expr *>::iterator;
+  using used_expressions_const_iterator = ArrayRef<const Expr *>::iterator;
+  using used_expressions_range =
+      llvm::iterator_range<used_expressions_iterator>;
+  using used_expressions_const_range =
+      llvm::iterator_range<used_expressions_const_iterator>;
+
+  used_expressions_range used_expressions() {
+    return finals_range(getUsedExprs().begin(), getUsedExprs().end());
+  }
+
+  used_expressions_const_range used_expressions() const {
+    return finals_const_range(getUsedExprs().begin(), getUsedExprs().end());
+  }
+
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
                        reinterpret_cast<Stmt **>(varlist_end()));
@@ -3357,11 +3383,11 @@ public:
     return const_child_range(Children.begin(), Children.end());
   }
 
-  child_range used_children() {
-    return child_range(child_iterator(), child_iterator());
-  }
+  child_range used_children();
+
   const_child_range used_children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
+    auto Children = const_cast<OMPLinearClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {
