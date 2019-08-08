@@ -4843,23 +4843,6 @@ CompilerType SwiftASTContext::GetErrorType() {
   return {};
 }
 
-CompilerType SwiftASTContext::GetNSErrorType(Status &error) {
-  VALID_OR_RETURN(CompilerType());
-
-  std::string mangled =
-      SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError");
-  return GetTypeFromMangledTypename(ConstString(StringRef(mangled)), error);
-}
-
-CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem()))
-    return {swift::MetatypeType::get(GetSwiftType(instance_type),
-                                     *GetASTContext())};
-  return {};
-}
-
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
   SwiftASTContext *swift_ast = GetASTMap().Lookup(ast);
   return swift_ast;
@@ -4874,17 +4857,6 @@ uint32_t SwiftASTContext::GetPointerByteSize() {
             .GetByteSize(nullptr)
             .getValueOr(0);
   return m_pointer_byte_size;
-}
-
-uint32_t SwiftASTContext::GetPointerBitAlignment() {
-  VALID_OR_RETURN(0);
-
-  if (m_pointer_bit_align == 0) {
-    swift::ASTContext *ast = GetASTContext();
-    m_pointer_bit_align =
-        CompilerType(ast->TheRawPointerType.getPointer()).GetAlignedBitSize();
-  }
-  return m_pointer_bit_align;
 }
 
 bool SwiftASTContext::HasErrors() {
@@ -5485,22 +5457,6 @@ SwiftASTContext::GetAllocationStrategy(const CompilerType &type) {
 }
 
 bool SwiftASTContext::IsBeingDefined(void *type) { return false; }
-
-bool SwiftASTContext::IsObjCObjectPointerType(const CompilerType &type,
-                                              CompilerType *class_type_ptr) {
-  if (!type)
-    return false;
-
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  const swift::TypeKind type_kind = swift_can_type->getKind();
-  if (type_kind == swift::TypeKind::BuiltinNativeObject ||
-      type_kind == swift::TypeKind::BuiltinUnknownObject)
-    return true;
-
-  if (class_type_ptr)
-    class_type_ptr->Clear();
-  return false;
-}
 
 //----------------------------------------------------------------------
 // Type Completion
