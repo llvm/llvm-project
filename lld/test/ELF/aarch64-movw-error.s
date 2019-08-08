@@ -34,3 +34,22 @@ movn x0, #:prel_g0:.-0x10001
 movn x0, #:prel_g1:.-0x100010000
 # CHECK: relocation R_AARCH64_MOVW_PREL_G2 out of range: -281479271677952 is not in [-281474976710656, 281474976710655]
 movn x0, #:prel_g2:.-0x1000100000000
+
+movz x0, #:tprel_g0: v1
+# CHECK: relocation R_AARCH64_TLSLE_MOVW_TPREL_G0 out of range: 65552 is not in [-65536, 65535]
+movz x0, #:tprel_g1: v2
+# CHECK: relocation R_AARCH64_TLSLE_MOVW_TPREL_G1 out of range: 4295032848 is not in [-4294967296, 4294967295]
+movz x0, #:tprel_g2: v3
+# CHECK: relocation R_AARCH64_TLSLE_MOVW_TPREL_G2 out of range: 281479271743496 is not in [-281474976710656, 281474976710655]
+
+.section .tbss,"awT",@nobits
+.balign 16
+.space 0x10000
+v1:
+.quad 0
+.space 0x100000000 - 8
+v2:
+.quad 0
+.space 0x1000000000000 - 16
+v3:
+.quad 0
