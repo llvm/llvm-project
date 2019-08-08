@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -42,11 +43,13 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
@@ -93,6 +96,9 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return MCInstLowering.lowerOperand(MO, MCOp);
   }
+
+  const MCExpr *
+  lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) override;
 
   void EmitJumpTableInfo() override;
   void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
@@ -457,11 +463,39 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
+static void
+emitAuthenticatedPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
+                         const MachineModuleInfoMachO::AuthStubInfo &StubInfo) {
+  // L_foo$addend$auth_ptr$ib$23:
+  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.EmitValue(StubInfo.Pointer, /*size=*/8);
+}
+
 void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
   EmitHwasanMemaccessSymbols(M);
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
+
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+    auto Stubs = MMIMacho.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      // Switch to the "__auth_ptr" section.
+      OutStreamer->SwitchSection(
+          OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
+                                     SectionKind::getMetadata()));
+      EmitAlignment(Align(8));
+
+      for (auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->AddBlankLine();
+    }
+
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious
     // implementation of multiple entry points).  If this doesn't occur, the
@@ -907,6 +941,50 @@ void AArch64AsmPrinter::EmitFMov0(const MachineInstr &MI) {
     }
     EmitToStreamer(*OutStreamer, FMov);
   }
+}
+
+
+const MCExpr *
+AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
+  MCContext &Ctx = OutContext;
+
+  // Figure out the base symbol and the addend, if any.
+  APInt Offset(64, 0);
+  const Value *BaseGV =
+    PAI.getPointer()->stripAndAccumulateInBoundsConstantOffsets(
+      getDataLayout(), Offset);
+
+  auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
+
+  // If we can't understand the referenced ConstantExpr, there's nothing
+  // else we can do: emit an error.
+  if (!BaseGVB) {
+    BaseGVB = PAI.getGV();
+    BaseGV->getContext().emitError(
+        "Couldn't resolve target base/addend of llvm.ptrauth global '" +
+        BaseGV->getName() + "'");
+  }
+
+  // If there is an addend, turn that into the appropriate MCExpr.
+  const MCExpr *Sym = MCSymbolRefExpr::create(getSymbol(BaseGVB), Ctx);
+  if (Offset.sgt(0))
+    Sym = MCBinaryExpr::createAdd(
+        Sym, MCConstantExpr::create(Offset.getSExtValue(), Ctx), Ctx);
+  else if (Offset.slt(0))
+    Sym = MCBinaryExpr::createSub(
+        Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
+
+  auto *Disc = PAI.getDiscriminator();
+  uint64_t KeyID = PAI.getKey()->getZExtValue();
+  if (!isUInt<2>(KeyID))
+    BaseGV->getContext().emitError(
+        "Invalid AArch64 PAC Key ID '" + utostr(KeyID) + "' in llvm.ptrauth global '" +
+        BaseGV->getName() + "'");
+
+  // Finally build the complete @AUTH expr.
+  return AArch64AuthMCExpr::create(Sym, Disc->getZExtValue(),
+                                   AArch64PACKey::ID(KeyID),
+                                   PAI.hasAddressDiversity(), Ctx);
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real

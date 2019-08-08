@@ -159,7 +159,76 @@ bool AArch64ExpandHardenedPseudos::expandMI(MachineInstr &MI) {
     return true;
   }
 
-  return false;
+  if (MI.getOpcode() != AArch64::MOVaddrPAC)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
+
+
+  MachineOperand GAOp = MI.getOperand(0);
+  uint64_t Offset = MI.getOperand(1).getImm();
+  auto Key = (AArch64PACKey::ID)MI.getOperand(2).getImm();
+  unsigned AddrDisc = MI.getOperand(3).getReg();
+  uint64_t Disc = MI.getOperand(4).getImm();
+
+  // Emit:
+  // target materialization:
+  //     adrp x16, _target@GOTPAGE
+  //     ldr x16, [x16, _target@GOTPAGEOFF]
+  //     add x16, x16, #<offset> ; if offset != 0; up to 3 depending on width
+  //
+  // signing:
+  // - 0 discriminator:
+  //     paciza x16
+  // - Non-0 discriminator, no address discriminator:
+  //     mov x17, #Disc
+  //     pacia x16, x17
+  // - address discriminator (with potentially folded immediate discriminator):
+  //     pacia x16, xAddrDisc
+
+  MachineOperand GAHiOp(GAOp);
+  MachineOperand GALoOp(GAOp);
+  GAHiOp.setTargetFlags(AArch64II::MO_GOT | AArch64II::MO_PAGE);
+  GALoOp.setTargetFlags(AArch64II::MO_GOT | AArch64II::MO_PAGEOFF);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X16)
+    .add(GAHiOp);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), AArch64::X16)
+    .addReg(AArch64::X16)
+    .add(GALoOp);
+
+  if (Offset) {
+    if (!isUInt<32>(Offset))
+      report_fatal_error("ptrauth global offset too large, 32bit max encoding");
+
+    for (int BitPos = 0; BitPos < 32 && (Offset >> BitPos); BitPos += 12) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X16)
+        .addReg(AArch64::X16)
+        .addImm((Offset >> BitPos) & 0xfff)
+        .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos));
+    }
+  }
+
+  unsigned DiscReg = AArch64::XZR;
+  if (Disc) {
+    DiscReg = AArch64::X17;
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
+      .addImm(Disc)
+      .addImm(0);
+  } else if (AddrDisc != AArch64::XZR) {
+    assert(Disc == 0 && "Non-0 discriminators should be folded into addr-disc");
+    DiscReg = AddrDisc;
+  }
+
+  unsigned PACOpc = getPACOpcodeForKey(Key, DiscReg == AArch64::XZR);
+  auto MIB = BuildMI(MBB, MBBI, DL, TII->get(PACOpc), AArch64::X16)
+      .addReg(AArch64::X16);
+  if (DiscReg != AArch64::XZR)
+    MIB.addReg(DiscReg);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 

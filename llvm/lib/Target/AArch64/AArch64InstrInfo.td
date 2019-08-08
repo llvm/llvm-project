@@ -865,6 +865,18 @@ let Predicates = [HasPA] in {
     let Uses = [X16,X17];
   }
 
+  // Materialize a signed global address.
+  def MOVaddrPAC : Pseudo<(outs),
+                          (ins i64imm:$Addr, i64imm:$Offset, i32imm:$Key,
+                               GPR64:$AddrDisc, i64imm:$Disc), []>,
+               Sched<[WriteI, ReadI]> {
+    let isReMaterializable = 1;
+    let isCodeGenOnly = 1;
+    let Size = 28; // ranges from 12 to 28
+    let Defs = [X16,X17];
+    let Uses = [X16,X17];
+  }
+
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
       Uses = [SP] in {
     def AUTH_TCRETURNriri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff,
