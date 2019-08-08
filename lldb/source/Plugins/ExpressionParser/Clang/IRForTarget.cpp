@@ -164,38 +164,37 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
 
-  std::string result_name_str;
-  const char *result_name = nullptr;
+  llvm::StringRef result_name;
+  bool found_result = false;
 
   for (ValueSymbolTable::iterator vi = value_symbol_table.begin(),
                                   ve = value_symbol_table.end();
        vi != ve; ++vi) {
-    result_name_str = vi->first().str();
-    const char *value_name = result_name_str.c_str();
+    result_name = vi->first();
 
-    if (strstr(value_name, "$__lldb_expr_result_ptr") &&
-        strncmp(value_name, "_ZGV", 4)) {
-      result_name = value_name;
+    if (result_name.contains("$__lldb_expr_result_ptr") &&
+        !result_name.startswith("_ZGV")) {
+      found_result = true;
       m_result_is_pointer = true;
       break;
     }
 
-    if (strstr(value_name, "$__lldb_expr_result") &&
-        strncmp(value_name, "_ZGV", 4)) {
-      result_name = value_name;
+    if (result_name.contains("$__lldb_expr_result") &&
+        !result_name.startswith("_ZGV")) {
+      found_result = true;
       m_result_is_pointer = false;
       break;
     }
   }
 
-  if (!result_name) {
+  if (!found_result) {
     if (log)
       log->PutCString("Couldn't find result variable");
 
     return true;
   }
 
-  LLDB_LOGF(log, "Result name: \"%s\"", result_name);
+  LLDB_LOG(log, "Result name: \"{0}\"", result_name);
 
   Value *result_value = m_module->getNamedValue(result_name);
 
@@ -203,8 +202,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable had no data");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable's "
-                          "name (%s) exists, but not its definition\n",
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable's "
+                          "name ({0}) exists, but not its definition\n",
                           result_name);
 
     return false;
@@ -219,7 +218,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable isn't a GlobalVariable");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable ({0}) "
                           "is defined, but is not a global variable\n",
                           result_name);
 
@@ -231,7 +230,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable doesn't have a corresponding Decl");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable ({0}) "
                           "does not have a corresponding Clang entity\n",
                           result_name);
 
@@ -252,8 +251,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable Decl isn't a VarDecl");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable "
-                          "(%s)'s corresponding Clang entity isn't a "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable "
+                          "({0})'s corresponding Clang entity isn't a "
                           "variable\n",
                           result_name);
 
@@ -293,7 +292,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       if (log)
         log->PutCString("Expected result to have pointer type, but it did not");
 
-      m_error_stream.Printf("Internal error [IRForTarget]: Lvalue result (%s) "
+      m_error_stream.Format("Internal error [IRForTarget]: Lvalue result ({0}) "
                             "is not a pointer variable\n",
                             result_name);
 
@@ -382,8 +381,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (!result_global->hasInitializer()) {
       LLDB_LOGF(log, "Couldn't find initializer for unused variable");
 
-      m_error_stream.Printf("Internal error [IRForTarget]: Result variable "
-                            "(%s) has no writes and no initializer\n",
+      m_error_stream.Format("Internal error [IRForTarget]: Result variable "
+                            "({0}) has no writes and no initializer\n",
                             result_name);
 
       return false;
