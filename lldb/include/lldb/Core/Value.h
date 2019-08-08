@@ -210,7 +210,6 @@ public:
   uint64_t GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx);
 
   Status GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                        uint32_t data_offset,
                         Module *module); // Can be nullptr
 
   static const char *GetValueTypeAsCString(ValueType context_type);
