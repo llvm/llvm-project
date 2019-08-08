@@ -309,9 +309,18 @@ const FileEntry *HeaderSearch::getFileAndSuggestModule(
     ModuleMap::KnownHeader *SuggestedModule) {
   // If we have a module map that might map this header, load it and
   // check whether we'll have a suggestion for a module.
-  auto File = getFileMgr().getFile(FileName, /*OpenFile=*/true);
-  if (!File)
+  llvm::ErrorOr<const FileEntry *> File =
+      getFileMgr().getFile(FileName, /*OpenFile=*/true);
+  if (!File) {
+    // For rare, surprising errors (e.g. "out of file handles"), diag the EC
+    // message.
+    std::error_code EC = File.getError();
+    if (EC != std::errc::no_such_file_or_directory &&
+        EC != std::errc::is_a_directory) {
+      Diags.Report(IncludeLoc, diag::err_cannot_open_file) << EC.message();
+    }
     return nullptr;
+  }
 
   // If there is a module that corresponds to this header, suggest it.
   if (!findUsableModuleForHeader(*File, Dir ? Dir : (*File)->getDir(),
