@@ -4214,6 +4214,81 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
+Instruction *InstCombiner::tryCombinePtrAuthCall(CallBase &Call) {
+  Value *Callee = Call.getCalledValue();
+  auto *IPC = dyn_cast<IntToPtrInst>(Callee);
+  if (!IPC || !IPC->isNoopCast(DL))
+    return nullptr;
+
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(IPC->getOperand(0));
+  if (!II)
+    return nullptr;
+
+  auto PtrAuthBundleOrNone = Call.getOperandBundle(LLVMContext::OB_ptrauth);
+  assert(Call.getNumOperandBundles() <= 1 &&
+         "unimplemented support for ptrauth and other bundle");
+
+  Value *NewCallee = nullptr;
+  SmallVector<OperandBundleDef, 1> NewBundles;
+  switch (II->getIntrinsicID()) {
+  default:
+    return nullptr;
+
+  // call(ptrauth_resign(p)), ["ptrauth"()] ->  call p, ["ptrauth"()]
+  // assuming the call bundle and the sign operands match.
+  case Intrinsic::ptrauth_resign: {
+    if (!PtrAuthBundleOrNone)
+      return nullptr;
+    auto PtrAuthBundle = *PtrAuthBundleOrNone;
+    if (II->getOperand(3) != PtrAuthBundle.Inputs[0] ||
+        II->getOperand(4) != PtrAuthBundle.Inputs[1])
+      return nullptr;
+
+    Value *NewBundleOps[] = {II->getOperand(1), II->getOperand(2)};
+    NewBundles.emplace_back("ptrauth", NewBundleOps);
+    NewCallee = II->getOperand(0);
+    break;
+  }
+
+  // call(ptrauth_sign(p)), ["ptrauth"()] ->  call p
+  // assuming the call bundle and the sign operands match.
+  case Intrinsic::ptrauth_sign: {
+    if (!PtrAuthBundleOrNone)
+      return nullptr;
+    auto PtrAuthBundle = *PtrAuthBundleOrNone;
+    if (II->getOperand(1) != PtrAuthBundle.Inputs[0] ||
+        II->getOperand(2) != PtrAuthBundle.Inputs[1])
+      return nullptr;
+    NewCallee = II->getOperand(0);
+    break;
+  }
+
+  // call(ptrauth_auth(p)) ->  call p, ["ptrauth"()]
+  case Intrinsic::ptrauth_auth: {
+    if (PtrAuthBundleOrNone)
+      return nullptr;
+    Value *NewBundleOps[] = {II->getOperand(1), II->getOperand(2)};
+    NewBundles.emplace_back("ptrauth", NewBundleOps);
+    NewCallee = II->getOperand(0);
+    break;
+  }
+  }
+
+  if (!NewCallee)
+    return nullptr;
+
+  NewCallee = Builder.CreateBitOrPointerCast(NewCallee, Callee->getType());
+  CallBase *NewCall = nullptr;
+  if (auto *CI = dyn_cast<CallInst>(&Call)) {
+    NewCall = CallInst::Create(CI, NewBundles);
+  } else {
+    auto *IKI = cast<InvokeInst>(&Call);
+    NewCall = InvokeInst::Create(IKI, NewBundles);
+  }
+  NewCall->setCalledOperand(NewCallee);
+  return NewCall;
+}
+
 static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
   unsigned NumArgs = Call.getNumArgOperands();
   ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
@@ -4355,6 +4430,11 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
 
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
+
+  // Combine calls involving pointer authentication
+  if (Instruction *NewCall = tryCombinePtrAuthCall(Call))
+    return NewCall;
+
 
   PointerType *PTy = cast<PointerType>(Callee->getType());
   FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
