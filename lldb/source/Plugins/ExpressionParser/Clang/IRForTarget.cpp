@@ -1342,7 +1342,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       return false;
     }
 
-    std::string name(named_decl->getName().str());
+    llvm::StringRef name(named_decl->getName());
 
     clang::ValueDecl *value_decl = dyn_cast<clang::ValueDecl>(named_decl);
     if (value_decl == nullptr)
@@ -1353,7 +1353,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
 
     const Type *value_type = nullptr;
 
-    if (name[0] == '$') {
+    if (name.startswith("$")) {
       // The $__lldb_expr_result name indicates the return value has allocated
       // as a static variable.  Per the comment at
       // ASTResultSynthesizer::SynthesizeBodyResult, accesses to this static
@@ -1377,20 +1377,19 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
         (compiler_type.GetTypeBitAlign() + 7ull) / 8ull;
 
     if (log) {
-      LLDB_LOGF(log,
-                "Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64
-                ", align %" PRIu64 "]",
-                name.c_str(),
-                lldb_private::ClangUtil::GetQualType(compiler_type)
-                    .getAsString()
-                    .c_str(),
-                PrintType(value_type).c_str(), *value_size, value_alignment);
+      LLDB_LOG(
+          log,
+          "Type of \"{0}\" is [clang \"{1}\", llvm \"{2}\"] [size {3}, "
+          "align {4}]",
+          name,
+          lldb_private::ClangUtil::GetQualType(compiler_type).getAsString(),
+          PrintType(value_type), *value_size, value_alignment);
     }
 
     if (named_decl)
-      m_decl_map->AddValueToStruct(
-          named_decl, lldb_private::ConstString(name.c_str()), llvm_value_ptr,
-          *value_size, value_alignment);
+      m_decl_map->AddValueToStruct(named_decl, lldb_private::ConstString(name),
+                                   llvm_value_ptr, *value_size,
+                                   value_alignment);
   } else if (dyn_cast<llvm::Function>(llvm_value_ptr)) {
     if (log)
       LLDB_LOGF(log, "Function pointers aren't handled right now");
