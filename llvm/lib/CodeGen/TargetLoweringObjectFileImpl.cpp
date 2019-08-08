@@ -1836,11 +1836,12 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
   // Common symbols go into a csect with matching name which will get mapped
   // into the .bss section.
-  if (Kind.isCommon()) {
+  if (Kind.isBSSLocal() || Kind.isCommon()) {
     SmallString<128> Name;
     getNameWithPrefix(Name, GO, TM);
-    return getContext().getXCOFFSection(Name, XCOFF::XMC_RW, XCOFF::XTY_CM,
-                                        Kind, /* BeginSymbolName */ nullptr);
+    return getContext().getXCOFFSection(
+        Name, Kind.isBSSLocal() ? XCOFF::XMC_BS : XCOFF::XMC_RW, XCOFF::XTY_CM,
+        Kind, /* BeginSymbolName */ nullptr);
   }
 
   if (Kind.isText())

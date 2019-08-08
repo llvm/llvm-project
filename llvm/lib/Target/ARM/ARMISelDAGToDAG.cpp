@@ -146,9 +146,12 @@ public:
                             SDValue &OffImm);
   bool SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
                                  SDValue &OffImm);
-  template<unsigned Shift>
-  bool SelectT2AddrModeImm7(SDValue N, SDValue &Base,
-                            SDValue &OffImm);
+  template <unsigned Shift>
+  bool SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N, SDValue &OffImm);
+  bool SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N, SDValue &OffImm,
+                                  unsigned Shift);
+  template <unsigned Shift>
+  bool SelectT2AddrModeImm7(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectT2AddrModeSoReg(SDValue N, SDValue &Base,
                              SDValue &OffReg, SDValue &ShImm);
   bool SelectT2AddrModeExclusive(SDValue N, SDValue &Base, SDValue &OffImm);
@@ -179,6 +182,7 @@ private:
   bool tryARMIndexedLoad(SDNode *N);
   bool tryT1IndexedLoad(SDNode *N);
   bool tryT2IndexedLoad(SDNode *N);
+  bool tryMVEIndexedLoad(SDNode *N);
 
   /// SelectVLD - Select NEON load intrinsics.  NumVecs should be
   /// 1, 2, 3 or 4.  The opcode arrays specify the instructions used for
@@ -1307,6 +1311,31 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N,
   return true;
 }
 
+template <unsigned Shift>
+bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
+                                                 SDValue &OffImm) {
+  return SelectT2AddrModeImm7Offset(Op, N, OffImm, Shift);
+}
+
+bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
+                                                 SDValue &OffImm,
+                                                 unsigned Shift) {
+  unsigned Opcode = Op->getOpcode();
+  ISD::MemIndexedMode AM = (Opcode == ISD::LOAD)
+                               ? cast<LoadSDNode>(Op)->getAddressingMode()
+                               : cast<StoreSDNode>(Op)->getAddressingMode();
+  int RHSC;
+  if (isScaledConstantInRange(N, 1 << Shift, 0, 0x80, RHSC)) { // 7 bits.
+    OffImm =
+        ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
+            ? CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32)
+            : CurDAG->getTargetConstant(-RHSC * (1 << Shift), SDLoc(N),
+                                        MVT::i32);
+    return true;
+  }
+  return false;
+}
+
 bool ARMDAGToDAGISel::SelectT2AddrModeSoReg(SDValue N,
                                             SDValue &Base,
                                             SDValue &OffReg, SDValue &ShImm) {
@@ -1563,6 +1592,68 @@ bool ARMDAGToDAGISel::tryT2IndexedLoad(SDNode *N) {
   }
 
   return false;
+}
+
+bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  ISD::MemIndexedMode AM = LD->getAddressingMode();
+  if (AM == ISD::UNINDEXED)
+    return false;
+  EVT LoadedVT = LD->getMemoryVT();
+  if (!LoadedVT.isVector())
+    return false;
+  bool isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
+  SDValue Offset;
+  bool isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
+  unsigned Opcode = 0;
+  unsigned Align = LD->getAlignment();
+  bool IsLE = Subtarget->isLittle();
+
+  if (Align >= 2 && LoadedVT == MVT::v4i16 &&
+      SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 1)) {
+    if (isSExtLd)
+      Opcode = isPre ? ARM::MVE_VLDRHS32_pre : ARM::MVE_VLDRHS32_post;
+    else
+      Opcode = isPre ? ARM::MVE_VLDRHU32_pre : ARM::MVE_VLDRHU32_post;
+  } else if (LoadedVT == MVT::v8i8 &&
+             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0)) {
+    if (isSExtLd)
+      Opcode = isPre ? ARM::MVE_VLDRBS16_pre : ARM::MVE_VLDRBS16_post;
+    else
+      Opcode = isPre ? ARM::MVE_VLDRBU16_pre : ARM::MVE_VLDRBU16_post;
+  } else if (LoadedVT == MVT::v4i8 &&
+             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0)) {
+    if (isSExtLd)
+      Opcode = isPre ? ARM::MVE_VLDRBS32_pre : ARM::MVE_VLDRBS32_post;
+    else
+      Opcode = isPre ? ARM::MVE_VLDRBU32_pre : ARM::MVE_VLDRBU32_post;
+  } else if (Align >= 4 &&
+             (IsLE || LoadedVT == MVT::v4i32 || LoadedVT == MVT::v4f32) &&
+             SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 2))
+    Opcode = isPre ? ARM::MVE_VLDRWU32_pre : ARM::MVE_VLDRWU32_post;
+  else if (Align >= 2 &&
+           (IsLE || LoadedVT == MVT::v8i16 || LoadedVT == MVT::v8f16) &&
+           SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 1))
+    Opcode = isPre ? ARM::MVE_VLDRHU16_pre : ARM::MVE_VLDRHU16_post;
+  else if ((IsLE || LoadedVT == MVT::v16i8) &&
+           SelectT2AddrModeImm7Offset(N, LD->getOffset(), Offset, 0))
+    Opcode = isPre ? ARM::MVE_VLDRBU8_pre : ARM::MVE_VLDRBU8_post;
+  else
+    return false;
+
+  SDValue Chain = LD->getChain();
+  SDValue Base = LD->getBasePtr();
+  SDValue Ops[] = {Base, Offset,
+                   CurDAG->getTargetConstant(ARMVCC::None, SDLoc(N), MVT::i32),
+                   CurDAG->getRegister(0, MVT::i32), Chain};
+  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), LD->getValueType(0),
+                                       MVT::i32, MVT::Other, Ops);
+  transferMemOperands(N, New);
+  ReplaceUses(SDValue(N, 0), SDValue(New, 1));
+  ReplaceUses(SDValue(N, 1), SDValue(New, 0));
+  ReplaceUses(SDValue(N, 2), SDValue(New, 2));
+  CurDAG->RemoveDeadNode(N);
+  return true;
 }
 
 /// Form a GPRPair pseudo register from a pair of GPR regs.
@@ -2987,6 +3078,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ISD::LOAD: {
+    if (Subtarget->hasMVEIntegerOps() && tryMVEIndexedLoad(N))
+      return;
     if (Subtarget->isThumb() && Subtarget->hasThumb2()) {
       if (tryT2IndexedLoad(N))
         return;

@@ -37,5 +37,5 @@ config.substitutions.append(('%env_hwasan_opts=',
 # Default test suffixes.
 config.suffixes = ['.c', '.cpp']
 
-if config.host_os not in ['Linux', 'Android']:
+if config.host_os not in ['Linux', 'Android'] or not config.has_lld:
   config.unsupported = True

@@ -10,6 +10,8 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
+#include <__pstl_config_site>
+
 // The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
 #define _PSTL_VERSION 10000
 #define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
@@ -17,9 +19,7 @@
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
 #if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
-// TODO: In the future, we need to handle this setting using a configure-time
-//       option and something like a __config_site header.
-#    define _PSTL_PAR_BACKEND_SERIAL
+#    error "A parallel backend must be specified"
 #endif
 
 // Check the user-defined macro for warnings

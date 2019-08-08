@@ -493,8 +493,6 @@ static void createSyntheticSymbols() {
     }
   }
 
-  if (!config->shared)
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
   if (config->isPic) {
     WasmSym::stackPointer =
@@ -523,8 +521,6 @@ static void createSyntheticSymbols() {
     // See: https://github.com/WebAssembly/mutable-global
     WasmSym::stackPointer = symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, stackPointer);
-    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
-    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
   }
 
   if (config->sharedMemory && !config->shared) {
@@ -535,9 +531,17 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(i32ArgSignature, "__wasm_init_tls"));
   }
+}
 
-  WasmSym::dsoHandle = symtab->addSyntheticDataSymbol(
-      "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
+static void createOptionalSymbols() {
+  if (!config->relocatable)
+    WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+
+  if (!config->isPic) {
+    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
+    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
+  }
 }
 
 // Reconstructs command line arguments so that so that you can re-run
@@ -719,6 +723,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     symtab->addFile(f);
   if (errorCount())
     return;
+
+  createOptionalSymbols();
 
   // Handle the `--undefined <sym>` options.
   for (auto *arg : args.filtered(OPT_undefined))

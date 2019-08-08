@@ -28,8 +28,7 @@ namespace llvm {
 namespace mca {
 
 std::unique_ptr<Pipeline>
-Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
-                               SourceMgr &SrcMgr) {
+Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Create the hardware units defining the backend.

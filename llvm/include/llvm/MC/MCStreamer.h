@@ -537,6 +537,15 @@ public:
   /// \param Symbol - Symbol the image relative relocation should point to.
   virtual void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
 
+  /// Emits an lcomm directive with XCOFF csect information.
+  ///
+  /// \param Symbol - The symbol we are emiting.
+  /// \param Size - The size of the block of storage.
+  /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a power
+  /// of 2.
+  virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                             unsigned ByteAlignment);
+
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:

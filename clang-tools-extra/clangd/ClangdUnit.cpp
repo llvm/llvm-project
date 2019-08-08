@@ -9,6 +9,7 @@
 #include "ClangdUnit.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
+#include "AST.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Headers.h"
@@ -19,6 +20,7 @@
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -70,6 +72,9 @@ public:
       auto &SM = D->getASTContext().getSourceManager();
       if (!isInsideMainFile(D->getLocation(), SM))
         continue;
+      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+        if (isImplicitTemplateInstantiation(ND))
+          continue;
 
       // ObjCMethodDecl are not actually top-level decls.
       if (isa<ObjCMethodDecl>(D))

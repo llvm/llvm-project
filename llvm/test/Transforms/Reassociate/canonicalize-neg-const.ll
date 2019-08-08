@@ -184,3 +184,335 @@ define double @pr34078(double %A) {
   %add = fadd fast double %sub1, %sub1
   ret double %add
 }
+
+define double @fadd_fmul_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fmul_neg_const1(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[A:%.*]], [[MUL1]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %mul0 = fmul double %b, -3.0
+  %mul1 = fmul double %mul0, %c
+  %add = fadd double %mul1, %a
+  ret double %add
+}
+
+define double @fadd_fmul_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fmul_neg_const2(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[MUL1]], 4.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[A]], [[MUL2]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %mul0 = fmul double %a, -3.0
+  %mul1 = fmul double %mul0, %b
+  %mul2 = fmul double %mul1, -4.0
+  %add = fadd double %mul2, %a
+  ret double %add
+}
+
+define double @fadd_fmul_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fmul_neg_const3(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[MUL1]], -4.000000e+00
+; CHECK-NEXT:    [[MUL3:%.*]] = fmul double [[MUL2]], 5.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[C:%.*]], [[MUL3]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %mul0 = fmul double %a, -3.0
+  %mul1 = fmul double %mul0, %b
+  %mul2 = fmul double %mul1, -4.0
+  %mul3 = fmul double %mul2, -5.0
+  %add = fadd double %mul3, %c
+  ret double %add
+}
+
+define double @fsub_fmul_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fmul_neg_const1(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A:%.*]], [[MUL1]]
+; CHECK-NEXT:    ret double [[SUB]]
+;
+  %mul0 = fmul double %b, -3.0
+  %mul1 = fmul double %mul0, %c
+  %sub = fsub double %a, %mul1
+  ret double %sub
+}
+
+define double @fsub_fmul_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fmul_neg_const2(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[MUL1]], 4.000000e+00
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A]], [[MUL2]]
+; CHECK-NEXT:    ret double [[SUB]]
+;
+  %mul0 = fmul double %a, -3.0
+  %mul1 = fmul double %mul0, %b
+  %mul2 = fmul double %mul1, 4.0
+  %sub = fsub double %a, %mul2
+  ret double %sub
+}
+
+define double @fsub_fmul_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fmul_neg_const3(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[MUL1]], -4.000000e+00
+; CHECK-NEXT:    [[MUL3:%.*]] = fmul double [[MUL2]], 5.000000e+00
+; CHECK-NEXT:    [[SUB1:%.*]] = fadd double [[C:%.*]], [[MUL3]]
+; CHECK-NEXT:    ret double [[SUB1]]
+;
+  %mul0 = fmul double %a, 3.0
+  %mul1 = fmul double %mul0, %b
+  %mul2 = fmul double %mul1, -4.0
+  %mul3 = fmul double %mul2, -5.0
+  %sub = fsub double %c, %mul3
+  ret double %sub
+}
+
+define double @fadd_fdiv_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fdiv_neg_const1(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[A:%.*]], [[DIV1]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %div0 = fdiv double %b, -3.0
+  %div1 = fdiv double %div0, %c
+  %add = fadd double %div1, %a
+  ret double %add
+}
+
+define double @fadd_fdiv_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fdiv_neg_const2(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[DIV1]], 7.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[A]], [[DIV2]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %div0 = fdiv double -3.0, %a
+  %div1 = fdiv double %div0, %b
+  %div2 = fdiv double %div1, -7.0
+  %add = fadd double %div2, %a
+  ret double %add
+}
+
+define double @fadd_fdiv_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_fdiv_neg_const3(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double -4.000000e+00, [[DIV1]]
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[DIV2]], 5.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[C:%.*]], [[DIV3]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %div0 = fdiv double %a, -3.0
+  %div1 = fdiv double %div0, %b
+  %div2 = fdiv double -4.0, %div1
+  %div3 = fdiv double %div2, 5.0
+  %add = fadd double %div3, %c
+  ret double %add
+}
+
+define double @fsub_fdiv_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fdiv_neg_const1(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A:%.*]], [[DIV1]]
+; CHECK-NEXT:    ret double [[SUB]]
+;
+  %div0 = fdiv double %b, -3.0
+  %div1 = fdiv double %div0, %c
+  %sub = fsub double %a, %div1
+  ret double %sub
+}
+
+define double @fsub_fdiv_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fdiv_neg_const2(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[DIV1]], 7.000000e+00
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A]], [[DIV2]]
+; CHECK-NEXT:    ret double [[SUB]]
+;
+  %div0 = fdiv double -3.0, %a
+  %div1 = fdiv double %div0, %b
+  %div2 = fdiv double %div1, 7.0
+  %sub = fsub double %a, %div2
+  ret double %sub
+}
+
+define double @fsub_fdiv_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_fdiv_neg_const3(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[DIV1]], -7.000000e+00
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double 5.000000e+00, [[DIV2]]
+; CHECK-NEXT:    [[SUB1:%.*]] = fadd double [[C:%.*]], [[DIV3]]
+; CHECK-NEXT:    ret double [[SUB1]]
+;
+  %div0 = fdiv double -3.0, %a
+  %div1 = fdiv double %div0, %b
+  %div2 = fdiv double %div1, -7.0
+  %div3 = fdiv double -5.0, %div2
+  %sub = fsub double %c, %div3
+  ret double %sub
+}
+
+define double @fadd_mix_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_mix_neg_const1(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[MUL0]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[A:%.*]], [[DIV1]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %mul0 = fmul double %b, -3.0
+  %div1 = fdiv double %mul0, %c
+  %add = fadd double %div1, %a
+  ret double %add
+}
+
+define double @fadd_mix_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_mix_neg_const2(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[MUL1]], 5.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[A]], [[DIV2]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %div0 = fdiv double -3.0, %a
+  %mul1 = fmul double %div0, %b
+  %div2 = fdiv double %mul1, -5.0
+  %add = fadd double %div2, %a
+  ret double %add
+}
+
+define double @fadd_mix_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_mix_neg_const3(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[DIV1]], -4.000000e+00
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[MUL2]], 5.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[C:%.*]], [[DIV3]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %mul0 = fmul double %a, -3.0
+  %div1 = fdiv double %mul0, %b
+  %mul2 = fmul double -4.0, %div1
+  %div3 = fdiv double %mul2, -5.0
+  %add = fadd double %div3, %c
+  ret double %add
+}
+
+define double @fsub_mix_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_mix_neg_const1(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[DIV0]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[A:%.*]], [[MUL1]]
+; CHECK-NEXT:    ret double [[SUB]]
+;
+  %div0 = fdiv double %b, -3.0
+  %mul1 = fmul double %div0, %c
+  %sub = fsub double %a, %mul1
+  ret double %sub
+}
+define double @fsub_mix_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_mix_neg_const2(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[DIV1]], 5.000000e+00
+; CHECK-NEXT:    [[SUB1:%.*]] = fadd double [[A]], [[MUL2]]
+; CHECK-NEXT:    ret double [[SUB1]]
+;
+  %mul0 = fmul double -3.0, %a
+  %div1 = fdiv double %mul0, %b
+  %mul2 = fmul double %div1, -5.0
+  %sub = fsub double %a, %mul2
+  ret double %sub
+}
+
+define double @fsub_mix_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fsub_mix_neg_const3(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[MUL1]], -7.000000e+00
+; CHECK-NEXT:    [[MUL3:%.*]] = fmul double [[DIV2]], 5.000000e+00
+; CHECK-NEXT:    [[SUB1:%.*]] = fadd double [[C:%.*]], [[MUL3]]
+; CHECK-NEXT:    ret double [[SUB1]]
+;
+  %div0 = fdiv double -3.0, %a
+  %mul1 = fmul double %div0, %b
+  %div2 = fdiv double %mul1, -7.0
+  %mul3 = fmul double -5.0, %div2
+  %sub = fsub double %c, %mul3
+  ret double %sub
+}
+
+define double @fadd_both_ops_mix_neg_const1(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_both_ops_mix_neg_const1(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[B:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[MUL0]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[A:%.*]], -4.000000e+00
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[MUL2]], [[C]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[DIV1]], [[DIV3]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+  %mul0 = fmul double %b, -3.0
+  %div1 = fdiv double %mul0, %c
+  %mul2 = fmul double %a, -4.0
+  %div3 = fdiv double %mul2, %c
+  %add = fadd double %div1, %div3
+  ret double %add
+}
+
+define double @fadd_both_ops_mix_neg_const2(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_both_ops_mix_neg_const2(
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double -3.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[DIV0]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[MUL1]], 7.000000e+00
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double -5.000000e+00, [[C:%.*]]
+; CHECK-NEXT:    [[MUL4:%.*]] = fmul double [[B]], [[DIV3]]
+; CHECK-NEXT:    [[DIV5:%.*]] = fdiv double [[MUL4]], -6.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[DIV5]], [[DIV2]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %div0 = fdiv double -3.0, %a
+  %mul1 = fmul double %div0, %b
+  %div2 = fdiv double %mul1, -7.0
+  %div3 = fdiv double -5.0, %c
+  %mul4 = fmul double %div3, %b
+  %div5 = fdiv double %mul4, -6.0
+  %add = fadd double %div2, %div5
+  ret double %add
+}
+
+define double @fadd_both_opsmix_neg_const3(double %a, double %b, double %c) {
+; CHECK-LABEL: @fadd_both_opsmix_neg_const3(
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[MUL0]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[DIV1]], -4.000000e+00
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[MUL2]], 5.000000e+00
+; CHECK-NEXT:    [[MUL4:%.*]] = fmul double [[C:%.*]], -6.000000e+00
+; CHECK-NEXT:    [[DIV5:%.*]] = fdiv double [[MUL4]], [[B]]
+; CHECK-NEXT:    [[MUL6:%.*]] = fmul double [[DIV5]], -7.000000e+00
+; CHECK-NEXT:    [[MUL7:%.*]] = fdiv double [[MUL6]], -9.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fsub double [[MUL7]], [[DIV3]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+  %mul0 = fmul double %a, -3.0
+  %div1 = fdiv double %mul0, %b
+  %mul2 = fmul double -4.0, %div1
+  %div3 = fdiv double %mul2, -5.0
+  %mul4 = fmul double %c, -6.0
+  %div5 = fdiv double %mul4, %b
+  %mul6 = fmul double -7.0, %div5
+  %mul7 = fdiv double %mul6, -9.0
+  %add = fadd double %div3, %mul7
+  ret double %add
+}
