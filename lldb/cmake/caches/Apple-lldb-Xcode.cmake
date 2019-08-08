@@ -6,6 +6,9 @@ set(CMAKE_XCODE_GENERATE_SCHEME ON CACHE BOOL "")
 
 set(LLDB_BUILD_FRAMEWORK ON CACHE BOOL "")
 
+# Apparently, module-enabled builds clash with Xcode's analysis.
+set(LLVM_ENABLE_MODULES OFF CACHE BOOL "" FORCE)
+
 # Print a warning with instructions, if we
 # build with Xcode and didn't use this cache.
 set(LLDB_EXPLICIT_XCODE_CACHE_USED ON CACHE INTERNAL "")
