@@ -249,6 +249,12 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       template<typename $TemplateParameter[[T]]>
       void $Function[[foo]]($TemplateParameter[[T]] ...);
+    )cpp",
+    R"cpp(
+      template <class $TemplateParameter[[T]]>
+      struct $Class[[Tmpl]] {$TemplateParameter[[T]] $Field[[x]] = 0;};
+      extern template struct $Class[[Tmpl]]<float>;
+      template struct $Class[[Tmpl]]<double>;
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

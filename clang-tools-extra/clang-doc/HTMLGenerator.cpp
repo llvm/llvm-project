@@ -270,15 +270,22 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
   return LinkNode;
 }
 
-static std::unique_ptr<HTMLNode> genTypeReference(const Reference &Type,
-                                                  StringRef CurrentDirectory) {
-  if (Type.Path.empty() && !Type.IsInGlobalNamespace)
-    return llvm::make_unique<TextNode>(Type.Name);
+static std::unique_ptr<HTMLNode>
+genTypeReference(const Reference &Type, StringRef CurrentDirectory,
+                 llvm::Optional<StringRef> JumpToSection = None) {
+  if (Type.Path.empty() && !Type.IsInGlobalNamespace) {
+    if (!JumpToSection)
+      return llvm::make_unique<TextNode>(Type.Name);
+    else
+      return genLink(Type.Name, "#" + JumpToSection.getValue());
+  }
   llvm::SmallString<128> Path =
       computeRelativePath(Type.Path, CurrentDirectory);
   llvm::sys::path::append(Path, Type.Name + ".html");
   // Paths in HTML must be in posix-style
   llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
+  if (JumpToSection)
+    Path += ("#" + JumpToSection.getValue()).str();
   return genLink(Type.Name, Path);
 }
 
@@ -305,6 +312,7 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums) {
 
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H2, "Enums"));
+  Out.back()->Attributes.try_emplace("id", "Enums");
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_DIV));
   auto &DivBody = Out.back();
   for (const auto &E : Enums) {
@@ -333,6 +341,7 @@ genFunctionsBlock(const std::vector<FunctionInfo> &Functions,
 
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H2, "Functions"));
+  Out.back()->Attributes.try_emplace("id", "Functions");
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_DIV));
   auto &DivBody = Out.back();
   for (const auto &F : Functions) {
@@ -350,6 +359,7 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
 
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H2, "Members"));
+  Out.back()->Attributes.try_emplace("id", "Members");
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &M : Members) {
@@ -373,6 +383,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H2, Title));
+  Out.back()->Attributes.try_emplace("id", Title);
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &R : References)
@@ -406,6 +417,41 @@ genCommonFileNodes(StringRef Title, StringRef InfoPath,
   IndexNode->Attributes.try_emplace("id", "index");
   IndexNode->Attributes.try_emplace("path", InfoPath);
   Out.emplace_back(std::move(IndexNode));
+  return Out;
+}
+
+template <typename T,
+          typename = std::enable_if<std::is_base_of<T, Info>::value>>
+static Index genInfoIndexItem(const std::vector<T> &Infos, StringRef Title) {
+  Index Idx(Title, Title);
+  for (const auto &C : Infos)
+    Idx.Children.emplace_back(C.extractName(),
+                              llvm::toHex(llvm::toStringRef(C.USR)));
+  return Idx;
+}
+
+static std::vector<std::unique_ptr<TagNode>> genHTML(const Index &Index,
+                                                     StringRef InfoPath) {
+  std::vector<std::unique_ptr<TagNode>> Out;
+  if (!Index.Name.empty()) {
+    Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_SPAN));
+    auto &SpanBody = Out.back();
+    if (!Index.JumpToSection)
+      SpanBody->Children.emplace_back(genTypeReference(Index, InfoPath));
+    else
+      SpanBody->Children.emplace_back(genTypeReference(
+          Index, InfoPath, StringRef{Index.JumpToSection.getValue()}));
+  }
+  if (Index.Children.empty())
+    return Out;
+  Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_UL));
+  const auto &UlBody = Out.back();
+  for (const auto &C : Index.Children) {
+    auto LiBody = llvm::make_unique<TagNode>(HTMLTag::TAG_LI);
+    std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(C, InfoPath);
+    AppendVector(std::move(Nodes), LiBody->Children);
+    UlBody->Children.emplace_back(std::move(LiBody));
+  }
   return Out;
 }
 
@@ -455,6 +501,8 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const EnumInfo &I) {
 
   Out.emplace_back(
       llvm::make_unique<TagNode>(HTMLTag::TAG_H3, EnumType + I.Name));
+  Out.back()->Attributes.try_emplace("id",
+                                     llvm::toHex(llvm::toStringRef(I.USR)));
 
   std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members);
   if (Node)
@@ -474,6 +522,10 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I,
                                                      StringRef ParentInfoDir) {
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H3, I.Name));
+  // USR is used as id for functions instead of name to disambiguate function
+  // overloads.
+  Out.back()->Attributes.try_emplace("id",
+                                     llvm::toHex(llvm::toStringRef(I.USR)));
 
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_P));
   auto &FunctionHeader = Out.back();
@@ -510,8 +562,8 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I,
   return Out;
 }
 
-static std::vector<std::unique_ptr<TagNode>> genHTML(const NamespaceInfo &I,
-                                                     std::string &InfoTitle) {
+static std::vector<std::unique_ptr<TagNode>>
+genHTML(const NamespaceInfo &I, Index &InfoIndex, std::string &InfoTitle) {
   std::vector<std::unique_ptr<TagNode>> Out;
   if (I.Name.str() == "")
     InfoTitle = "Global Namespace";
@@ -538,11 +590,21 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const NamespaceInfo &I,
       genEnumsBlock(I.ChildEnums);
   AppendVector(std::move(ChildEnums), Out);
 
+  if (!I.ChildNamespaces.empty())
+    InfoIndex.Children.emplace_back("Namespaces", "Namespaces");
+  if (!I.ChildRecords.empty())
+    InfoIndex.Children.emplace_back("Records", "Records");
+  if (!I.ChildFunctions.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.ChildFunctions, "Functions"));
+  if (!I.ChildEnums.empty())
+    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+
   return Out;
 }
 
-static std::vector<std::unique_ptr<TagNode>> genHTML(const RecordInfo &I,
-                                                     std::string &InfoTitle) {
+static std::vector<std::unique_ptr<TagNode>>
+genHTML(const RecordInfo &I, Index &InfoIndex, std::string &InfoTitle) {
   std::vector<std::unique_ptr<TagNode>> Out;
   InfoTitle = (getTagType(I.TagType) + " " + I.Name).str();
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
@@ -587,6 +649,16 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const RecordInfo &I,
       genEnumsBlock(I.ChildEnums);
   AppendVector(std::move(ChildEnums), Out);
 
+  if (!I.Members.empty())
+    InfoIndex.Children.emplace_back("Members", "Members");
+  if (!I.ChildRecords.empty())
+    InfoIndex.Children.emplace_back("Records", "Records");
+  if (!I.ChildFunctions.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.ChildFunctions, "Functions"));
+  if (!I.ChildEnums.empty())
+    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+
   return Out;
 }
 
@@ -607,16 +679,17 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   HTMLFile F;
   std::string InfoTitle;
   auto MainContentNode = llvm::make_unique<TagNode>(HTMLTag::TAG_DIV);
+  Index InfoIndex;
   switch (I->IT) {
   case InfoType::IT_namespace: {
-    std::vector<std::unique_ptr<TagNode>> Nodes =
-        genHTML(*static_cast<clang::doc::NamespaceInfo *>(I), InfoTitle);
+    std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(
+        *static_cast<clang::doc::NamespaceInfo *>(I), InfoIndex, InfoTitle);
     AppendVector(std::move(Nodes), MainContentNode->Children);
     break;
   }
   case InfoType::IT_record: {
-    std::vector<std::unique_ptr<TagNode>> Nodes =
-        genHTML(*static_cast<clang::doc::RecordInfo *>(I), InfoTitle);
+    std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(
+        *static_cast<clang::doc::RecordInfo *>(I), InfoIndex, InfoTitle);
     AppendVector(std::move(Nodes), MainContentNode->Children);
     break;
   }
@@ -640,6 +713,9 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   std::vector<std::unique_ptr<TagNode>> BasicNodes =
       genCommonFileNodes(InfoTitle, I->Path, CDCtx);
   AppendVector(std::move(BasicNodes), F.Children);
+  std::vector<std::unique_ptr<TagNode>> InfoIndexHTML =
+      genHTML(InfoIndex, I->Path);
+  AppendVector(std::move(InfoIndexHTML), F.Children);
   F.Children.emplace_back(std::move(MainContentNode));
   F.Render(OS);
 
