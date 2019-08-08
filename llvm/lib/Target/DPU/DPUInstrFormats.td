@@ -10912,6 +10912,45 @@ def MOVErr: DPUInstruction {
 	let Inst{47-44} = 0b1000;
 }
 
+def MOVE_Srrci: DPUInstruction {
+	let OutOperandList   = (outs DoubleReg:$dc);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "move.s $dc, $ra, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<4> cc; bits<5> ra; bits<5> dc;
+	let Inst{15-0} = pc{15-0};
+	let Inst{23-16} = 0b00000000;
+	let Inst{27-24} = cc{3-0};
+	let Inst{33-28} = 0b111011;
+	let Inst{38-34} = ra{4-0};
+	let Inst{39} = 0b1;
+	let Inst{43-40} = dc{4-1};
+	let Inst{47-44} = 0b1001;
+}
+
+def MOVE_Srici: DPUInstruction {
+	let OutOperandList   = (outs DoubleReg:$dc);
+	let InOperandList    = (ins s8_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "move.s $dc, $imm, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<8> imm; bits<4> cc; bits<5> dc;
+	let Inst{15-0} = pc{15-0};
+	let Inst{19-16} = imm{7-4};
+	let Inst{23-20} = imm{3-0};
+	let Inst{27-24} = cc{3-0};
+	let Inst{39-28} = 0b111000111011;
+	let Inst{43-40} = dc{4-1};
+	let Inst{47-44} = 0b1001;
+}
+
 def MOVE_Srr: DPUInstruction {
 	let OutOperandList   = (outs DoubleReg:$dc);
 	let InOperandList    = (ins SimpleRegOrCst:$ra);
@@ -10964,6 +11003,45 @@ def MOVE_Uri: DPUInstruction {
 	let Inst{39-32} = 0b01101011;
 	let Inst{43-40} = dc{4-1};
 	let Inst{47-44} = 0b0101;
+}
+
+def MOVE_Urici: DPUInstruction {
+	let OutOperandList   = (outs DoubleReg:$dc);
+	let InOperandList    = (ins s8_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "move.u $dc, $imm, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<8> imm; bits<4> cc; bits<5> dc;
+	let Inst{15-0} = pc{15-0};
+	let Inst{19-16} = imm{7-4};
+	let Inst{23-20} = imm{3-0};
+	let Inst{27-24} = cc{3-0};
+	let Inst{39-28} = 0b011000111011;
+	let Inst{43-40} = dc{4-1};
+	let Inst{47-44} = 0b1001;
+}
+
+def MOVE_Urrci: DPUInstruction {
+	let OutOperandList   = (outs DoubleReg:$dc);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "move.u $dc, $ra, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<4> cc; bits<5> ra; bits<5> dc;
+	let Inst{15-0} = pc{15-0};
+	let Inst{23-16} = 0b00000000;
+	let Inst{27-24} = cc{3-0};
+	let Inst{33-28} = 0b111011;
+	let Inst{38-34} = ra{4-0};
+	let Inst{39} = 0b0;
+	let Inst{43-40} = dc{4-1};
+	let Inst{47-44} = 0b1001;
 }
 
 def MOVE_Urr: DPUInstruction {

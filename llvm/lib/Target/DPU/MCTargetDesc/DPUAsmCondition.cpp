@@ -2080,6 +2080,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::Log_nzCC;
   case DPU::EXTSB_Srrc:
     return ConditionClass::Log_setCC;
+  case DPU::MOVE_Urrci:
+    return ConditionClass::Log_nzCC;
   case DPU::NANDzrrci:
     return ConditionClass::Log_nzCC;
   case DPU::LSL1_Srrici:
@@ -2450,6 +2452,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::Shift_nzCC;
   case DPU::NAND_Urrici:
     return ConditionClass::Log_nzCC;
+  case DPU::MOVE_Urici:
+    return ConditionClass::Log_nzCC;
   case DPU::LSL_ADDzrrici:
     return ConditionClass::Div_nzCC;
   case DPU::RSUBCzrrci:
@@ -2482,6 +2486,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::Mul_nzCC;
   case DPU::ORN_Srric:
     return ConditionClass::Log_setCC;
+  case DPU::MOVE_Srrci:
+    return ConditionClass::Log_nzCC;
   case DPU::HASH_Srrrc:
     return ConditionClass::Log_setCC;
   case DPU::SUB_Urrrc:
@@ -2516,6 +2522,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::Log_nzCC;
   case DPU::MUL_UH_ULrrrci:
     return ConditionClass::Mul_nzCC;
+  case DPU::MOVE_Srici:
+    return ConditionClass::Log_nzCC;
   case DPU::LSRzrrc:
     return ConditionClass::Log_setCC;
   case DPU::NXORzric:
