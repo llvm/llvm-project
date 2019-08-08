@@ -74,8 +74,9 @@ bool TapirToTargetImpl::unifyReturns(Function &F) {
     if (isa<ReturnInst>(BB.getTerminator()))
       ReturningBlocks.push_back(&BB);
 
-  // If this function already has a single return, then terminate early.
-  if (ReturningBlocks.size() == 1)
+  // If this function already has no returns or a single return, then terminate
+  // early.
+  if (ReturningBlocks.size() <= 1)
     return false;
 
   BasicBlock *NewRetBlock = BasicBlock::Create(F.getContext(),
