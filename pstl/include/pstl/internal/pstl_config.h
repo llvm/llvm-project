@@ -10,6 +10,8 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
+#include <__pstl_config_site>
+
 // The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
 #define _PSTL_VERSION 10000
 #define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
