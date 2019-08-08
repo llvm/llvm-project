@@ -205,15 +205,15 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 // Adds an optional, linker generated, data symbols.  The symbol will only be
 // added if there is an undefine reference to it, or if it is explictly exported
 // via the --export flag.  Otherwise we don't add the symbol and return nullptr.
-DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name, uint32_t value,
-                                                uint32_t flags) {
+DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
+                                                uint32_t value) {
   Symbol *s = find(name);
   if (!s && (config->exportAll || config->exportedSymbols.count(name) != 0))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << name << "\n");
-  auto *rtn = replaceSymbol<DefinedData>(s, name, flags);
+  auto *rtn = replaceSymbol<DefinedData>(s, name, WASM_SYMBOL_VISIBILITY_HIDDEN);
   rtn->setVirtualAddress(value);
   rtn->referenced = true;
   return rtn;

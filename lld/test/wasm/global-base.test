@@ -24,11 +24,7 @@ CHECK-1024-NEXT:          Opcode:          I32_CONST
 CHECK-1024-NEXT:          Value:           1024
 
 CHECK-1024:       - Type:            EXPORT
-CHECK-1024-NEXT:    Exports:
-CHECK-1024-NEXT:      - Name:            memory
-CHECK-1024-NEXT:        Kind:            MEMORY
-CHECK-1024-NEXT:        Index:           0
-CHECK-1024-NEXT:      - Name:            __data_end
+CHECK-1024:           - Name:            __data_end
 CHECK-1024-NEXT:        Kind:            GLOBAL
 CHECK-1024-NEXT:        Index:           1
 CHECK-1024-NEXT:      - Name:            __global_base
@@ -59,11 +55,7 @@ CHECK-16777216-NEXT:          Opcode:          I32_CONST
 CHECK-16777216-NEXT:          Value:           16777216
 
 CHECK-16777216:       - Type:            EXPORT
-CHECK-16777216-NEXT:    Exports:
-CHECK-16777216-NEXT:      - Name:            memory
-CHECK-16777216-NEXT:        Kind:            MEMORY
-CHECK-16777216-NEXT:        Index:           0
-CHECK-16777216-NEXT:      - Name:            __data_end
+CHECK-16777216:           - Name:            __data_end
 CHECK-16777216-NEXT:        Kind:            GLOBAL
 CHECK-16777216-NEXT:        Index:           1
 CHECK-16777216-NEXT:      - Name:            __global_base
