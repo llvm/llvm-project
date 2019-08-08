@@ -2431,8 +2431,12 @@ uint32_t SymbolFileDWARF::FindTypes(
             name.GetCString(), append, max_matches, num_matches);
       }
     }
-    return num_matches;
-  } else {
+  }
+
+  // Next search through the reachable Clang modules. This only applies for
+  // DWARF objects compiled with -gmodules that haven't been processed by
+  // dsymutil.
+  if (num_die_matches < max_matches) {
     UpdateExternalModuleListIfNeeded();
 
     for (const auto &pair : m_external_type_modules) {
@@ -2450,7 +2454,7 @@ uint32_t SymbolFileDWARF::FindTypes(
     }
   }
 
-  return 0;
+  return num_die_matches;
 }
 
 size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
