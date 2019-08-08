@@ -1,0 +1,189 @@
+## Check that obj2yaml is able to dump a normal object which
+## contains the SHT_SYMTAB_SHNDX section and symbols with
+## section index == SHN_XINDEX.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      --- !ELF
+# CASE1-NEXT: FileHeader:
+# CASE1-NEXT:   Class:   ELFCLASS64
+# CASE1-NEXT:   Data:    ELFDATA2LSB
+# CASE1-NEXT:   Type:    ET_REL
+# CASE1-NEXT:   Machine: EM_X86_64
+# CASE1-NEXT: Sections:
+# CASE1-NEXT:   - Name:    bar
+# CASE1-NEXT:     Type:    SHT_PROGBITS
+# CASE1-NEXT:   - Name:    .symtab_shndx
+# CASE1-NEXT:     Type:    SHT_SYMTAB_SHNDX
+# CASE1-NEXT:     Link:    .symtab
+# CASE1-NEXT:     EntSize: 0x0000000000000004
+# CASE1-NEXT:     Entries: [ 0, 1, 2 ]
+# CASE1-NEXT: Symbols:
+# CASE1-NEXT:   - Name:  bar
+# CASE1-NEXT:     Type:  STT_SECTION
+# CASE1-NEXT:     Index: SHN_XINDEX
+# CASE1-NEXT:   - Name:  .symtab_shndx
+# CASE1-NEXT:     Type:  STT_SECTION
+# CASE1-NEXT:     Index: SHN_XINDEX
+# CASE1-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1, 2 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj is unable to dump an object, which has
+## symbols with section index == SHN_XINDEX, but no SHT_SYMTAB_SHNDX section.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=CASE2
+
+# CASE2: Error reading file: [[FILE]]: extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj is unable to dump an object, which has symbols with
+## section index == SHN_XINDEX, but SHT_SYMTAB_SHNDX table contains invalid indices
+## that are larger than total number of the sections.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: not obj2yaml %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
+
+# CASE3: Error reading file: [[FILE]]: invalid section index: 254
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 254 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj is unable to dump an object, which has symbols with
+## section index == SHN_XINDEX, but SHT_SYMTAB_SHNDX table contains more
+## entries than the number of symbols in .symtab.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: not obj2yaml %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=CASE4
+
+## FIXME: The error message below needs rewording. Size should not be equal to the number of symbols.
+## CASE4: Error reading file: [[FILE]]: SHT_SYMTAB_SHNDX section has sh_size (48) which is not equal to the number of symbols (3)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1, 2 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## ELF gABI allows having multiple SHT_SYMTAB_SHNDX sections.
+## We only support having one associated with .symtab now.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: not obj2yaml %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
+
+# CASE5: Error reading file: [[FILE]]: multiple SHT_SYMTAB_SHNDX sections are not supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .symtab_shndx1
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    EntSize: 4
+    Link:    .symtab
+  - Name:    .symtab_shndx2
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    Link:    .symtab
+
+## Check that yaml2obj can't dump the object if SHT_SYMTAB_SHNDX is
+## not associated with a SHT_SYMTAB section (this case is illegal).
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: not obj2yaml %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=CASE6
+
+# CASE6: Error reading file: [[FILE]]: SHT_SYMTAB_SHNDX section is linked with SHT_PROGBITS section (expected SHT_SYMTAB/SHT_DYNSYM)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    Link:    .foo
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+
+## Check that yaml2obj can't dump the object if SHT_SYMTAB_SHNDX is
+## associated with a SHT_DYNSYM section (not implemented yet).
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: not obj2yaml %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=CASE7
+
+# CASE7: Error reading file: [[FILE]]: only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1 ]
+    Link:    .dynsym
+DynamicSymbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX

@@ -207,7 +207,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=11 -o %t11
 # RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 
-# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX section has sh_size (24) which is not equal to the number of symbols (6)
+# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX section has sh_size (24) which is not equal to the number of symbols (2)
 
 --- !ELF
 FileHeader:
@@ -218,8 +218,7 @@ FileHeader:
 Sections:
   - Name: .symtab_shndx
     Type: SHT_SYMTAB_SHNDX
-    Size: 0x18
-    EntSize: 4
+    Entries: [ 0, 1 ]
     Link: .symtab
 
 ## Check that llvm-readobj reports an error if the e_phentsize field is broken.

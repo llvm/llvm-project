@@ -18,7 +18,7 @@
 # CHECK-NEXT:     Index:   SHN_HEXAGON_SCOMMON_1
 # CHECK-NEXT:     Binding: STB_GLOBAL
 # CHECK-NEXT:   - Name:    unknown_index
-# CHECK-NEXT:     Index:   0x0000FFFE
+# CHECK-NEXT:     Index:   0xFFFE
 # CHECK-NEXT:     Binding: STB_GLOBAL
 
 !ELF
@@ -47,8 +47,3 @@ Symbols:
   - Name:     unknown_index
     Index:    0xfffe
     Binding:  STB_GLOBAL
-
-## shn_xindex.o contains a symbol with st_shndx == SHN_XINDEX.
-## We do not support it at this moment.
-# RUN: not obj2yaml %S/Inputs/shn_xindex.o 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: Error reading file: {{.*}}shn_xindex.o: SHN_XINDEX symbols are not supported

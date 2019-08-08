@@ -635,8 +635,11 @@ ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section,
   const Elf_Shdr &SymTable = **SymTableOrErr;
   if (SymTable.sh_type != ELF::SHT_SYMTAB &&
       SymTable.sh_type != ELF::SHT_DYNSYM)
-    // TODO: this error is untested.
-    return createError("invalid sh_type");
+    return createError("SHT_SYMTAB_SHNDX section is linked with " +
+                       object::getELFSectionTypeName(getHeader()->e_machine,
+                                                     SymTable.sh_type) +
+                       " section (expected SHT_SYMTAB/SHT_DYNSYM)");
+
   if (V.size() != (SymTable.sh_size / sizeof(Elf_Sym)))
     return createError("SHT_SYMTAB_SHNDX section has sh_size (" +
                        Twine(SymTable.sh_size) +

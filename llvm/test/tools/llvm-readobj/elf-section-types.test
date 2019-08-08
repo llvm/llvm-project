@@ -166,8 +166,7 @@ Sections:
   - Name: symtab_shndx
     Type: SHT_SYMTAB_SHNDX
     Link: .symtab
-    EntSize: 0x4
-    Content: "0000000000000000"
+    Entries: [ 0, 1 ]
   - Name: relr
     Type: SHT_RELR
   - Name: android_rel
