@@ -5750,18 +5750,30 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
+  SDValue ReturnAddr;
+  SDValue FrameAddr;
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   if (Depth) {
-    SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
+    SDNodeFlags Flags;
+    Flags.setNoUnsignedWrap(true);
+    FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(8, DL, getPointerTy(DAG.getDataLayout()));
-    return DAG.getLoad(VT, DL, DAG.getEntryNode(),
-                       DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset),
-                       MachinePointerInfo());
+    ReturnAddr = DAG.getLoad(VT, DL, DAG.getEntryNode(),
+                     DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset, Flags),
+                     MachinePointerInfo());
+  } else {
+    unsigned LRReg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
+    ReturnAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, LRReg, VT);
   }
 
-  // Return LR, which contains the return address. Mark it an implicit live-in.
-  unsigned Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
-  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+  // If we're doing LR signing, we need to fixup ReturnAddr: strip it.
+  if (!MF.getFunction().hasFnAttribute("ptrauth-returns"))
+    return ReturnAddr;
+
+  return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getConstant(Intrinsic::ptrauth_strip, DL, MVT::i32), ReturnAddr,
+        DAG.getConstant(AArch64PACKey::IB, DL, MVT::i32));
 }
 
 /// LowerShiftRightParts - Lower SRA_PARTS, which returns two
