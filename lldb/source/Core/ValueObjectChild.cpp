@@ -227,7 +227,7 @@ bool ValueObjectChild::UpdateValue() {
         if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue) {
           Value &value = is_instance_ptr_base ? m_parent->GetValue() : m_value;
           m_error =
-              value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+              value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
         } else {
           m_error.Clear(); // No value so nothing to read...
         }

@@ -314,7 +314,7 @@ bool Value::GetData(DataExtractor &data) {
 }
 
 Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                             uint32_t data_offset, Module *module) {
+                             Module *module) {
   data.Clear();
 
   Status error;
@@ -520,13 +520,12 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
   // Make sure we have enough room within "data", and if we don't make
   // something large enough that does
-  if (!data.ValidOffsetForDataOfSize(data_offset, byte_size)) {
-    auto data_sp =
-        std::make_shared<DataBufferHeap>(data_offset + byte_size, '\0');
+  if (!data.ValidOffsetForDataOfSize(0, byte_size)) {
+    auto data_sp = std::make_shared<DataBufferHeap>(byte_size, '\0');
     data.SetData(data_sp);
   }
 
-  uint8_t *dst = const_cast<uint8_t *>(data.PeekData(data_offset, byte_size));
+  uint8_t *dst = const_cast<uint8_t *>(data.PeekData(0, byte_size));
   if (dst != nullptr) {
     if (address_type == eAddressTypeHost) {
       // The address is an address in this process, so just copy it.
@@ -597,7 +596,7 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     {
       DataExtractor data;
       lldb::addr_t addr = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-      Status error(GetValueAsData(exe_ctx, data, 0, nullptr));
+      Status error(GetValueAsData(exe_ctx, data, nullptr));
       if (error.Success()) {
         Scalar scalar;
         if (compiler_type.GetValueAsScalar(data, 0, data.GetByteSize(),
