@@ -59,6 +59,8 @@ class ELFDumper {
   Expected<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::SymtabShndxSection *>
+  dumpSymtabShndxSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerdefSection *> dumpVerdefSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
@@ -158,14 +160,44 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
 
   // Dump symbols. We need to do this early because other sections might want
   // to access the deduplicated symbol names that we also create here.
+  const Elf_Shdr *SymTab = nullptr;
+  const Elf_Shdr *SymTabShndx = nullptr;
+  const Elf_Shdr *DynSymTab = nullptr;
+
   for (const Elf_Shdr &Sec : Sections) {
-    if (Sec.sh_type == ELF::SHT_SYMTAB)
-      if (Error E = dumpSymbols(&Sec, Y->Symbols))
-        return std::move(E);
-    if (Sec.sh_type == ELF::SHT_DYNSYM)
-      if (Error E = dumpSymbols(&Sec, Y->DynamicSymbols))
-        return std::move(E);
+    if (Sec.sh_type == ELF::SHT_SYMTAB) {
+      SymTab = &Sec;
+    } else if (Sec.sh_type == ELF::SHT_DYNSYM) {
+      DynSymTab = &Sec;
+    } else if (Sec.sh_type == ELF::SHT_SYMTAB_SHNDX) {
+      // ABI allows us to have one SHT_SYMTAB_SHNDX for each symbol table.
+      // We only support having the SHT_SYMTAB_SHNDX for SHT_SYMTAB now.
+      if (SymTabShndx)
+        return createStringError(obj2yaml_error::not_implemented,
+                                 "multiple SHT_SYMTAB_SHNDX sections are not supported");
+      SymTabShndx = &Sec;
+    }
   }
+
+  // We need to locate the SHT_SYMTAB_SHNDX section early, because it might be
+  // needed for dumping symbols.
+  if (SymTabShndx) {
+    if (!SymTab || SymTabShndx->sh_link != SymTab - Sections.begin())
+      return createStringError(
+          obj2yaml_error::not_implemented,
+          "only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported");
+
+    auto TableOrErr = Obj.getSHNDXTable(*SymTabShndx);
+    if (!TableOrErr)
+      return TableOrErr.takeError();
+    ShndxTable = *TableOrErr;
+  }
+  if (SymTab)
+    if (Error E = dumpSymbols(SymTab, Y->Symbols))
+      return std::move(E);
+  if (DynSymTab)
+    if (Error E = dumpSymbols(DynSymTab, Y->DynamicSymbols))
+      return std::move(E);
 
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
@@ -182,10 +214,11 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       // Do not dump these sections.
       break;
     case ELF::SHT_SYMTAB_SHNDX: {
-      auto TableOrErr = Obj.getSHNDXTable(Sec);
-      if (!TableOrErr)
-        return TableOrErr.takeError();
-      ShndxTable = *TableOrErr;
+      Expected<ELFYAML::SymtabShndxSection *> SecOrErr =
+          dumpSymtabShndxSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Sections.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_REL:
@@ -309,9 +342,6 @@ Error ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   S.Name = SymbolNameOrErr.get();
 
   if (Sym->st_shndx >= ELF::SHN_LORESERVE) {
-    if (Sym->st_shndx == ELF::SHN_XINDEX)
-      return createStringError(obj2yaml_error::not_implemented,
-                               "SHN_XINDEX symbols are not supported");
     S.Index = (ELFYAML::ELF_SHN)Sym->st_shndx;
     return Error::success();
   }
@@ -496,6 +526,21 @@ ELFDumper<ELFT>::dumpContentSection(const Elf_Shdr *Shdr) {
 
   if (Shdr->sh_info)
     S->Info = static_cast<llvm::yaml::Hex64>(Shdr->sh_info);
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::SymtabShndxSection *>
+ELFDumper<ELFT>::dumpSymtabShndxSection(const Elf_Shdr *Shdr) {
+  auto S = make_unique<ELFYAML::SymtabShndxSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto EntriesOrErr = Obj.template getSectionContentsAsArray<Elf_Word>(Shdr);
+  if (!EntriesOrErr)
+    return EntriesOrErr.takeError();
+  for (const Elf_Word &E : *EntriesOrErr)
+    S->Entries.push_back(E);
   return S.release();
 }
 

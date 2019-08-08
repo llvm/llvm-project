@@ -43,7 +43,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include "llvm/Support/UniqueLock.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>

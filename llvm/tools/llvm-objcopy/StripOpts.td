@@ -52,6 +52,9 @@ def strip_debug : Flag<["--"], "strip-debug">,
 def d : Flag<["-"], "d">, Alias<strip_debug>;
 def g : Flag<["-"], "g">, Alias<strip_debug>;
 def S : Flag<["-"], "S">, Alias<strip_debug>;
+def strip_sections
+    : Flag<["--"], "strip-sections">,
+      HelpText<"Remove all section headers and all sections not in segments">;
 def strip_unneeded : Flag<["--"], "strip-unneeded">,
                      HelpText<"Remove all symbols not needed by relocations">;
 

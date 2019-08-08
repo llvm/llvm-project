@@ -763,12 +763,16 @@ Value *InstCombiner::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (match(LHS, m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
       match(RHS, m_Select(m_Specific(A), m_Value(D), m_Value(E)))) {
     bool SelectsHaveOneUse = LHS->hasOneUse() && RHS->hasOneUse();
-    BuilderTy::FastMathFlagGuard Guard(Builder);
-    if (isa<FPMathOperator>(&I))
-      Builder.setFastMathFlags(I.getFastMathFlags());
 
-    Value *V1 = SimplifyBinOp(Opcode, C, E, SQ.getWithInstruction(&I));
-    Value *V2 = SimplifyBinOp(Opcode, B, D, SQ.getWithInstruction(&I));
+    FastMathFlags FMF;
+    BuilderTy::FastMathFlagGuard Guard(Builder);
+    if (isa<FPMathOperator>(&I)) {
+      FMF = I.getFastMathFlags();
+      Builder.setFastMathFlags(FMF);
+    }
+
+    Value *V1 = SimplifyBinOp(Opcode, C, E, FMF, SQ.getWithInstruction(&I));
+    Value *V2 = SimplifyBinOp(Opcode, B, D, FMF, SQ.getWithInstruction(&I));
     if (V1 && V2)
       SI = Builder.CreateSelect(A, V2, V1);
     else if (V2 && SelectsHaveOneUse)

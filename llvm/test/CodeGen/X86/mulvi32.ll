@@ -7,36 +7,39 @@
 ; PR6399
 
 define <2 x i32> @_mul2xi32a(<2 x i32>, <2 x i32>) {
-; SSE-LABEL: _mul2xi32a:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pmuludq %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: _mul2xi32a:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: _mul2xi32a:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pmulld %xmm1, %xmm0
+; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi32a:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = mul <2 x i32> %0, %1
   ret <2 x i32> %r
 }
 
 define <2 x i32> @_mul2xi32b(<2 x i32>, <2 x i32>) {
-; SSE2-LABEL: _mul2xi32b:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: _mul2xi32b:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    pmuludq %xmm1, %xmm0
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE42-NEXT:    retq
+; SSE-LABEL: _mul2xi32b:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmuludq %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi32b:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX-NEXT:    retq
   %factor0 = shufflevector <2 x i32> %0, <2 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
   %factor1 = shufflevector <2 x i32> %1, <2 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
@@ -153,8 +156,8 @@ define <4 x i64> @_mul4xi32toi64a(<4 x i32>, <4 x i32>) {
 ;
 ; AVX1-LABEL: _mul4xi32toi64a:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,2,3,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,1,3,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
 ; AVX1-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero

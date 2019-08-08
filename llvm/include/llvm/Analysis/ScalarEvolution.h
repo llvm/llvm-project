@@ -468,6 +468,8 @@ template <> struct DenseMapInfo<ExitLimitQuery> {
 /// can't do much with the SCEV objects directly, they must ask this class
 /// for services.
 class ScalarEvolution {
+  friend class ScalarEvolutionsTest;
+
 public:
   /// An enum describing the relationship between a SCEV and a loop.
   enum LoopDisposition {

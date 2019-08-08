@@ -36,6 +36,7 @@ struct PreferredTuple {
 };
 
 class CombinerHelper {
+protected:
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;

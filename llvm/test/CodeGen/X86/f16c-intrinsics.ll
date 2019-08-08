@@ -268,14 +268,12 @@ define void @test_x86_vcvtps2ph_128_m(<4 x i16>* nocapture %d, <4 x float> %a) n
 ; X32-AVX512VL-LABEL: test_x86_vcvtps2ph_128_m:
 ; X32-AVX512VL:       # %bb.0: # %entry
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X32-AVX512VL-NEXT:    vcvtps2ph $3, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x1d,0xc0,0x03]
-; X32-AVX512VL-NEXT:    vmovlps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x13,0x00]
+; X32-AVX512VL-NEXT:    vcvtps2ph $3, %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x1d,0x00,0x03]
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-AVX512VL-LABEL: test_x86_vcvtps2ph_128_m:
 ; X64-AVX512VL:       # %bb.0: # %entry
-; X64-AVX512VL-NEXT:    vcvtps2ph $3, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x1d,0xc0,0x03]
-; X64-AVX512VL-NEXT:    vmovlps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x13,0x07]
+; X64-AVX512VL-NEXT:    vcvtps2ph $3, %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x1d,0x07,0x03]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a, i32 3)

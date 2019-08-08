@@ -5121,6 +5121,14 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
       MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
   }
 
+  // If the trip count is constant, limit the interleave count to be less than
+  // the trip count divided by VF.
+  if (TC > 0) {
+    assert(TC >= VF && "VF exceeds trip count?");
+    if ((TC / VF) < MaxInterleaveCount)
+      MaxInterleaveCount = (TC / VF);
+  }
+
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0)
@@ -5129,7 +5137,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
   assert(LoopCost && "Non-zero loop cost expected");
 
   // Clamp the calculated IC to be between the 1 and the max interleave count
-  // that the target allows.
+  // that the target and trip count allows.
   if (IC > MaxInterleaveCount)
     IC = MaxInterleaveCount;
   else if (IC < 1)

@@ -165,11 +165,9 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <4 x dou
 define void @store_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; SSE2-LABEL: store_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    movmskpd %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB3_1
@@ -190,8 +188,8 @@ define void @store_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 x floa
 ; SSE4-LABEL: store_v2f32_v2i32:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pxor %xmm2, %xmm2
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE4-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE4-NEXT:    pmovsxdq %xmm2, %xmm0
 ; SSE4-NEXT:    movmskpd %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB3_1
@@ -208,43 +206,40 @@ define void @store_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 x floa
 ; SSE4-NEXT:    extractps $1, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: store_v2f32_v2i32:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: store_v2f32_v2i32:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX2-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX2-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
-; AVX2-NEXT:    retq
+; AVX1OR2-LABEL: store_v2f32_v2i32:
+; AVX1OR2:       ## %bb.0:
+; AVX1OR2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1OR2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX1OR2-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_v2f32_v2i32:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VL-LABEL: store_v2f32_v2i32:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovups %xmm1, (%rdi) {%k1}
-; AVX512VL-NEXT:    retq
+; AVX512VLDQ-LABEL: store_v2f32_v2i32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vptestnmd %xmm0, %xmm0, %k0
+; AVX512VLDQ-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VLDQ-NEXT:    vmovups %xmm1, (%rdi) {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: store_v2f32_v2i32:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k0
+; AVX512VLBW-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLBW-NEXT:    vmovups %xmm1, (%rdi) {%k1}
+; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
   ret void
@@ -1046,11 +1041,9 @@ define void @store_v1i32_v1i32(<1 x i32> %trigger, <1 x i32>* %addr, <1 x i32> %
 define void @store_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ; SSE2-LABEL: store_v2i32_v2i32:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    movmskpd %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB10_1
@@ -1064,15 +1057,15 @@ define void @store_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB10_4
 ; SSE2-NEXT:  LBB10_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    movd %xmm0, 4(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: store_v2i32_v2i32:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pxor %xmm2, %xmm2
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE4-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE4-NEXT:    pmovsxdq %xmm2, %xmm0
 ; SSE4-NEXT:    movmskpd %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB10_1
@@ -1086,48 +1079,51 @@ define void @store_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %
 ; SSE4-NEXT:    testb $2, %al
 ; SSE4-NEXT:    je LBB10_4
 ; SSE4-NEXT:  LBB10_3: ## %cond.store1
-; SSE4-NEXT:    extractps $2, %xmm1, 4(%rdi)
+; SSE4-NEXT:    extractps $1, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: store_v2i32_v2i32:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_v2i32_v2i32:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX2-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX2-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_v2i32_v2i32:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
-; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VL-LABEL: store_v2i32_v2i32:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vpmovqd %xmm1, (%rdi) {%k1}
-; AVX512VL-NEXT:    retq
+; AVX512VLDQ-LABEL: store_v2i32_v2i32:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vptestnmd %xmm0, %xmm0, %k0
+; AVX512VLDQ-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VLDQ-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: store_v2i32_v2i32:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    vptestnmd %xmm0, %xmm0, %k0
+; AVX512VLBW-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VLBW-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
+; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> %val, <2 x i32>* %addr, i32 4, <2 x i1> %mask)
   ret void

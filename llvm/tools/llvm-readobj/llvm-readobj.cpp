@@ -394,6 +394,12 @@ void reportWarning(Twine Msg) {
   WithColor::warning(errs()) << Msg << "\n";
 }
 
+void reportWarning(StringRef Input, Error Err) {
+  if (Input == "-")
+    Input = "<stdin>";
+  warn(createFileError(Input, std::move(Err)));
+}
+
 void warn(Error Err) {
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
     reportWarning(EI.message());

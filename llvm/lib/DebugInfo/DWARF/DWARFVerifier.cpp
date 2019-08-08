@@ -295,9 +295,9 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
         Unit = TypeUnitVector.addUnit(llvm::make_unique<DWARFTypeUnit>(
-            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            &DObj.getLocSection(), DObj.getStringSection(),
-            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
+            &DObj.getLocSection(), DObj.getStrSection(),
+            DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),
             DObj.getLineSection(), DCtx.isLittleEndian(), false,
             TypeUnitVector));
         break;
@@ -309,9 +309,9 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       // UnitType = 0 means that we are verifying a compile unit in DWARF v4.
       case 0: {
         Unit = CompileUnitVector.addUnit(llvm::make_unique<DWARFCompileUnit>(
-            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            &DObj.getLocSection(), DObj.getStringSection(),
-            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
+            &DObj.getLocSection(), DObj.getStrSection(),
+            DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),
             DObj.getLineSection(), DCtx.isLittleEndian(), false,
             CompileUnitVector));
         break;
@@ -449,7 +449,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getRangeSection().Data.size())
+      if (*SectionOffset >= DObj.getRangesSection().Data.size())
         ReportError("DW_AT_ranges offset is beyond .debug_ranges bounds:");
       break;
     }
@@ -578,7 +578,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_strp: {
     auto SecOffset = AttrValue.Value.getAsSectionOffset();
     assert(SecOffset); // DW_FORM_strp is a section offset.
-    if (SecOffset && *SecOffset >= DObj.getStringSection().size()) {
+    if (SecOffset && *SecOffset >= DObj.getStrSection().size()) {
       ++NumErrors;
       error() << "DW_FORM_strp offset beyond .debug_str bounds:\n";
       dump(Die) << '\n';
@@ -605,7 +605,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     // Use a 64-bit type to calculate the offset to guard against overflow.
     uint64_t Offset =
         (uint64_t)DieCU->getStringOffsetsBase() + Index * ItemSize;
-    if (DObj.getStringOffsetSection().Data.size() < Offset + ItemSize) {
+    if (DObj.getStrOffsetsSection().Data.size() < Offset + ItemSize) {
       ++NumErrors;
       error() << FormEncodingString(Form) << " uses index "
               << format("%" PRIu64, Index) << ", which is too large:\n";
@@ -614,7 +614,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     }
     // Check that the string offset is valid.
     uint64_t StringOffset = *DieCU->getStringOffsetSectionItem(Index);
-    if (StringOffset >= DObj.getStringSection().size()) {
+    if (StringOffset >= DObj.getStrSection().size()) {
       ++NumErrors;
       error() << FormEncodingString(Form) << " uses index "
               << format("%" PRIu64, Index)
@@ -1456,7 +1456,7 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
 
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
-  DataExtractor StrData(D.getStringSection(), DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian(), 0);
   unsigned NumErrors = 0;
   if (!D.getAppleNamesSection().Data.empty())
     NumErrors += verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData,
@@ -1471,8 +1471,8 @@ bool DWARFVerifier::handleAccelTables() {
     NumErrors += verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData,
                                        ".apple_objc");
 
-  if (!D.getDebugNamesSection().Data.empty())
-    NumErrors += verifyDebugNames(D.getDebugNamesSection(), StrData);
+  if (!D.getNamesSection().Data.empty())
+    NumErrors += verifyDebugNames(D.getNamesSection(), StrData);
   return NumErrors == 0;
 }
 
