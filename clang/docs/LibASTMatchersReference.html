@@ -6819,7 +6819,7 @@ F&amp; operator=(const F&amp; o) {
 }
 returnStmt(forFunction(hasName("operator=")))
   matches 'return *this'
-  but does match 'return &gt; 0'
+  but does not match 'return v &gt; 0'
 </pre></td></tr>
 
 

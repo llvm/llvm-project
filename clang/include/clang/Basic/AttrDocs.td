@@ -4315,7 +4315,7 @@ object of type ``T``:
     int *getInt() { return &value; }
   };
 
-The argument ``T`` is optional and currently ignored.
+The argument ``T`` is optional and is ignored.
 This attribute may be used by analysis tools and has no effect on code
 generation.
 
@@ -4341,7 +4341,7 @@ like pointers to an object of type ``T``:
     int *getInt() { return &valuePointer; }
   };
 
-The argument ``T`` is optional and currently ignored.
+The argument ``T`` is optional and is ignored.
 This attribute may be used by analysis tools and has no effect on code
 generation.
 

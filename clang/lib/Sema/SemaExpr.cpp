@@ -10184,45 +10184,55 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   // result.
   ValueDecl *DL = getCompareDecl(LHSStripped);
   ValueDecl *DR = getCompareDecl(RHSStripped);
+
+  // Used for indexing into %select in warn_comparison_always
+  enum {
+    AlwaysConstant,
+    AlwaysTrue,
+    AlwaysFalse,
+    AlwaysEqual, // std::strong_ordering::equal from operator<=>
+  };
   if (DL && DR && declaresSameEntity(DL, DR)) {
-    StringRef Result;
+    unsigned Result;
     switch (Opc) {
     case BO_EQ: case BO_LE: case BO_GE:
-      Result = "true";
+      Result = AlwaysTrue;
       break;
     case BO_NE: case BO_LT: case BO_GT:
-      Result = "false";
+      Result = AlwaysFalse;
       break;
     case BO_Cmp:
-      Result = "'std::strong_ordering::equal'";
+      Result = AlwaysEqual;
       break;
     default:
+      Result = AlwaysConstant;
       break;
     }
     S.DiagRuntimeBehavior(Loc, nullptr,
                           S.PDiag(diag::warn_comparison_always)
-                              << 0 /*self-comparison*/ << !Result.empty()
+                              << 0 /*self-comparison*/
                               << Result);
   } else if (DL && DR &&
              DL->getType()->isArrayType() && DR->getType()->isArrayType() &&
              !DL->isWeak() && !DR->isWeak()) {
     // What is it always going to evaluate to?
-    StringRef Result;
+    unsigned Result;
     switch(Opc) {
     case BO_EQ: // e.g. array1 == array2
-      Result = "false";
+      Result = AlwaysFalse;
       break;
     case BO_NE: // e.g. array1 != array2
-      Result = "true";
+      Result = AlwaysTrue;
       break;
     default: // e.g. array1 <= array2
       // The best we can say is 'a constant'
+      Result = AlwaysConstant;
       break;
     }
     S.DiagRuntimeBehavior(Loc, nullptr,
                           S.PDiag(diag::warn_comparison_always)
                               << 1 /*array comparison*/
-                              << !Result.empty() << Result);
+                              << Result);
   }
 
   if (isa<CastExpr>(LHSStripped))

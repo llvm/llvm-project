@@ -1691,6 +1691,7 @@ DeclResult Sema::CheckClassTemplate(
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
 
   AddPushedVisibilityAttribute(NewClass);
+  inferGslOwnerPointerAttribute(NewClass);
 
   if (TUK != TUK_Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.

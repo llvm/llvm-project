@@ -5864,6 +5864,8 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   if (!Previous.empty()) {
     Redeclaration = true;
     MergeTypedefNameDecl(S, NewTD, Previous);
+  } else {
+    inferGslPointerAttribute(NewTD);
   }
 
   if (ShadowedDecl && !Redeclaration)
@@ -15147,6 +15149,9 @@ CreateNewDecl:
 
   if (PrevDecl)
     mergeDeclAttributes(New, PrevDecl);
+
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New))
+    inferGslOwnerPointerAttribute(CXXRD);
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.

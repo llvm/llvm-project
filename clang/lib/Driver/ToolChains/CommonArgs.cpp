@@ -145,6 +145,11 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
   // (constructed via -Xarch_).
   Args.AddAllArgValues(CmdArgs, options::OPT_Zlinker_input);
 
+  // LIBRARY_PATH are included before user inputs and only supported on native
+  // toolchains.
+  if (!TC.isCrossCompiling())
+    addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+
   for (const auto &II : Inputs) {
     // If the current tool chain refers to an OpenMP or HIP offloading host, we
     // should ignore inputs that refer to OpenMP or HIP offloading devices -
@@ -181,12 +186,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
     } else {
       A.renderAsInput(Args, CmdArgs);
     }
-  }
-
-  // LIBRARY_PATH - included following the user specified library paths.
-  //                and only supported on native toolchains.
-  if (!TC.isCrossCompiling()) {
-    addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
   }
 }
 

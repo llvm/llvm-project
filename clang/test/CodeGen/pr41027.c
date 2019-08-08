@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -O2 -o - %s | FileCheck %s
 
 // CHECK-LABEL: f:

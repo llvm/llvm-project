@@ -6176,6 +6176,17 @@ public:
       ClassTemplateSpecializationDecl *BaseTemplateSpec,
       SourceLocation BaseLoc);
 
+  /// Add gsl::Pointer attribute to std::container::iterator
+  /// \param ND The declaration that introduces the name
+  /// std::container::iterator. \param UnderlyingRecord The record named by ND.
+  void inferGslPointerAttribute(NamedDecl *ND, CXXRecordDecl *UnderlyingRecord);
+
+  /// Add [[gsl::Owner]] and [[gsl::Pointer]] attributes for std:: types.
+  void inferGslOwnerPointerAttribute(CXXRecordDecl *Record);
+
+  /// Add [[gsl::Pointer]] attributes for std:: types.
+  void inferGslPointerAttribute(TypedefNameDecl *TD);
+
   void CheckCompletedCXXClass(CXXRecordDecl *Record);
 
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
