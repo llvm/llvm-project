@@ -120,7 +120,7 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
   // getTgtPtrBegin() function which means that there is no device
   // corresponding point for ptr. This function should return false
   // in that situation.
-  if (Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+  if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
     rc = !IsHostPtr;
   DP("Call to omp_target_is_present returns %d\n", rc);
   return rc;

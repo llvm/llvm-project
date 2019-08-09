@@ -244,6 +244,9 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
     bool IsNew, Pointer_IsNew;
     bool IsHostPtr = false;
     bool IsImplicit = arg_types[i] & OMP_TGT_MAPTYPE_IMPLICIT;
+    // Force the creation of a device side copy of the data when:
+    // a close map modifier was associated with a map that contained a to.
+    bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
     // UpdateRef is based on MEMBER_OF instead of TARGET_PARAM because if we
     // have reached this point via __tgt_target_data_begin and not __tgt_target
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
@@ -254,7 +257,8 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
       DP("Has a pointer entry: \n");
       // base is address of pointer.
       Pointer_TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBase, HstPtrBase,
-          sizeof(void *), Pointer_IsNew, IsHostPtr, IsImplicit, UpdateRef);
+          sizeof(void *), Pointer_IsNew, IsHostPtr, IsImplicit, UpdateRef,
+          HasCloseModifier);
       if (!Pointer_TgtPtrBegin) {
         DP("Call to getOrAllocTgtPtr returned null pointer (device failure or "
             "illegal mapping).\n");
@@ -270,7 +274,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
     }
 
     void *TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBegin, HstPtrBase,
-        data_size, IsNew, IsHostPtr, IsImplicit, UpdateRef);
+        data_size, IsNew, IsHostPtr, IsImplicit, UpdateRef, HasCloseModifier);
     if (!TgtPtrBegin && data_size) {
       // If data_size==0, then the argument could be a zero-length pointer to
       // NULL, so getOrAlloc() returning NULL is not an error.
@@ -290,7 +294,8 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
       bool copy = false;
-      if (!(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+      if (!(RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+          HasCloseModifier) {
         if (IsNew || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
           copy = true;
         } else if (arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) {
@@ -370,6 +375,7 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
     bool UpdateRef = !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
         (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
     bool ForceDelete = arg_types[i] & OMP_TGT_MAPTYPE_DELETE;
+    bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, data_size, IsLast,
@@ -390,7 +396,8 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
       if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
         bool CopyMember = false;
-        if (!(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+        if (!(RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+            HasCloseModifier) {
           if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
               !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
             // Copy data only if the "parent" struct has RefCount==1.
@@ -404,7 +411,7 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         }
 
         if ((DelEntry || Always || CopyMember) &&
-            !(Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+            !(RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
               TgtPtrBegin == HstPtrBegin)) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
               data_size, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
@@ -455,7 +462,8 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
 
       // Deallocate map
       if (DelEntry) {
-        int rt = Device.deallocTgtPtr(HstPtrBegin, data_size, ForceDelete);
+        int rt = Device.deallocTgtPtr(HstPtrBegin, data_size, ForceDelete,
+                                      HasCloseModifier);
         if (rt != OFFLOAD_SUCCESS) {
           DP("Deallocating data from device failed.\n");
           return OFFLOAD_FAIL;
@@ -486,7 +494,7 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
       continue;
     }
 
-    if (Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+    if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
         TgtPtrBegin == HstPtrBegin) {
       DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
          DPxPTR(HstPtrBegin));
@@ -669,7 +677,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
              DPxPTR(HstPtrVal));
           continue;
         }
-        if (Device.RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
             TgtPtrBegin == HstPtrBegin) {
           DP("Unified memory is active, no need to map lambda captured"
              "variable (" DPxMOD ")\n", DPxPTR(HstPtrVal));
