@@ -115,7 +115,19 @@ Changes to the ARM Backend
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+* Support for ``.cplocal`` assembler directive.
+
+* Support for ``sge``, ``sgeu``, ``sgt``, ``sgtu`` pseudo instructions.
+
+* Support for ``o`` inline asm constraint.
+
+* Improved support of GlobalISel instruction selection framework.
+  This feature is still in experimental state for MIPS targets though.
+
+* Various code-gen improvements, related to improved and fixed instruction
+  selection and encoding and floating-point registers allocation.
+
+* Complete P5600 scheduling model.
 
 
 Changes to the PowerPC Target
