@@ -262,10 +262,6 @@ public:
 
   swift::Identifier GetIdentifier(const llvm::StringRef &name);
 
-  // Find a type by a fully qualified name that includes the module name
-  // (the format being "<module_name>.<type_name>").
-  CompilerType FindQualifiedType(const char *qualified_name);
-
   CompilerType FindType(const char *name, swift::ModuleDecl *swift_module);
 
   llvm::Optional<SwiftASTContext::TypeOrDecl>
