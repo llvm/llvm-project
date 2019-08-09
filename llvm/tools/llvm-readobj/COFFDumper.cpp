@@ -60,6 +60,10 @@ using namespace llvm::codeview;
 using namespace llvm::support;
 using namespace llvm::Win64EH;
 
+static inline Error createError(const Twine &Err) {
+  return make_error<StringError>(Err, object_error::parse_failed);
+}
+
 namespace {
 
 struct LoadConfigTables {
@@ -167,7 +171,7 @@ private:
   void printDelayImportedSymbols(
       const DelayImportDirectoryEntryRef &I,
       iterator_range<imported_symbol_iterator> Range);
-  ErrorOr<const coff_resource_dir_entry &>
+  Expected<const coff_resource_dir_entry &>
   getResourceDirectoryTableEntry(const coff_resource_dir_table &Table,
                                  uint32_t Index);
 
@@ -1729,7 +1733,8 @@ COFFDumper::countTotalTableEntries(ResourceSectionRef RSF,
   uint32_t TotalEntries = 0;
   for (int i = 0; i < Table.NumberOfNameEntries + Table.NumberOfIDEntries;
        i++) {
-    auto Entry = unwrapOrError(getResourceDirectoryTableEntry(Table, i));
+    auto Entry = unwrapOrError(Obj->getFileName(),
+                               getResourceDirectoryTableEntry(Table, i));
     if (Entry.Offset.isSubDir()) {
       StringRef NextLevel;
       if (Level == "Name")
@@ -1755,7 +1760,8 @@ void COFFDumper::printResourceDirectoryTable(
   // Iterate through level in resource directory tree.
   for (int i = 0; i < Table.NumberOfNameEntries + Table.NumberOfIDEntries;
        i++) {
-    auto Entry = unwrapOrError(getResourceDirectoryTableEntry(Table, i));
+    auto Entry = unwrapOrError(Obj->getFileName(),
+                               getResourceDirectoryTableEntry(Table, i));
     StringRef Name;
     SmallString<20> IDStr;
     raw_svector_ostream OS(IDStr);
@@ -1808,11 +1814,11 @@ void COFFDumper::printResourceDirectoryTable(
   }
 }
 
-ErrorOr<const coff_resource_dir_entry &>
+Expected<const coff_resource_dir_entry &>
 COFFDumper::getResourceDirectoryTableEntry(const coff_resource_dir_table &Table,
                                            uint32_t Index) {
   if (Index >= (uint32_t)(Table.NumberOfNameEntries + Table.NumberOfIDEntries))
-    return object_error::parse_failed;
+    return createError("can't get resource directory table entry");
   auto TablePtr = reinterpret_cast<const coff_resource_dir_entry *>(&Table + 1);
   return TablePtr[Index];
 }
