@@ -291,8 +291,9 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   });
   switch (Op.getOpcode()) {
   case ISD::ADDRSPACECAST:
-    return LowerUnsupported(Op,DAG,
-                            "Cast between addresses of different address space is not supported");
+    return LowerUnsupported(
+        Op, DAG,
+        "Cast between addresses of different address space is not supported");
 
   case ISD::DYNAMIC_STACKALLOC:
   case ISD::STACKSAVE:
@@ -625,16 +626,15 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   }
 }
 
-SDValue DPUTargetLowering::LowerUnsupported(SDValue Op,
-                                            SelectionDAG &DAG,
+SDValue DPUTargetLowering::LowerUnsupported(SDValue Op, SelectionDAG &DAG,
                                             StringRef Message) const {
-  const Function & Func = DAG.getMachineFunction().getFunction();
+  const Function &Func = DAG.getMachineFunction().getFunction();
   const DebugLoc &DL = Op.getDebugLoc();
   DiagnosticInfoUnsupported Diag(Func, Message, DL);
   Func.getContext().diagnose(Diag);
   if (DL.get() == NULL) {
-    report_fatal_error(Message + "\n(add -g to CFLAGS for more precise diagnostic)",
-                       false);
+    report_fatal_error(
+        Message + "\n(add -g to CFLAGS for more precise diagnostic)", false);
   } else {
     report_fatal_error(Message, false);
   }
@@ -773,7 +773,8 @@ SDValue DPUTargetLowering::LowerFormalArguments(
         LLVM_DEBUG(
             dbgs()
             << "DPU/Lower - argument passed by reference - size in bits = "
-            << std::to_string(VA.getLocVT().getSizeInBits()) << " << - locmemoffset=" << VA.getLocMemOffset() << "\n");
+            << std::to_string(VA.getLocVT().getSizeInBits())
+            << " << - locmemoffset=" << VA.getLocMemOffset() << "\n");
         // Create the frame index object for this incoming parameter...
         int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits() / 8,
                                        -VA.getLocMemOffset() -
@@ -2288,7 +2289,7 @@ EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
 
   auto MemOp = MI.memoperands_begin();
   auto MemOpEnd = MI.memoperands_end();
-  for (; MemOp!= MemOpEnd; MemOp++) {
+  for (; MemOp != MemOpEnd; MemOp++) {
     int MemOpAlignment = (*MemOp)->getAlignment();
     if ((Alignment == -1) || (Alignment > MemOpAlignment))
       Alignment = MemOpAlignment;
@@ -2300,47 +2301,47 @@ EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
 
   if ((Alignment % 8) == 0 && (offset % 8) == 0) {
     BuildMI(*BB, MI, dl, TII.get(DPU::SDrir))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2))
-      .add(MI.getOperand(0));
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(0));
   } else {
     if ((Alignment % 4) == 0 && (offset % 4) == 0) {
 
       BuildMI(*BB, MI, dl, TII.get(DPU::SWrir))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2))
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
 
       BuildMI(*BB, MI, dl, TII.get(DPU::SWrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4)
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
     } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2))
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg1)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
-        .addImm(16);
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
+          .addImm(16);
       BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 2)
-        .addReg(TmpReg1);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 2)
+          .addReg(TmpReg1);
 
       BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4)
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg2)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
-        .addImm(16);
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
+          .addImm(16);
       BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 6)
-        .addReg(TmpReg2);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 6)
+          .addReg(TmpReg2);
     } else if (Alignment == 1) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
@@ -2349,58 +2350,60 @@ EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
       unsigned TmpReg5 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg6 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2))
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg1)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
-        .addImm(8);
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 1)
-        .addReg(TmpReg1);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 1)
+          .addReg(TmpReg1);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg2)
-        .addReg(TmpReg1)
-        .addImm(8);
+          .addReg(TmpReg1)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 2)
-        .addReg(TmpReg2);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 2)
+          .addReg(TmpReg2);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg3)
-        .addReg(TmpReg2)
-        .addImm(8);
+          .addReg(TmpReg2)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 3)
-        .addReg(TmpReg3);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 3)
+          .addReg(TmpReg3);
 
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4)
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg4)
-        .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
-        .addImm(8);
+          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 5)
-        .addReg(TmpReg4);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 5)
+          .addReg(TmpReg4);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg5)
-        .addReg(TmpReg4)
-        .addImm(8);
+          .addReg(TmpReg4)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 6)
-        .addReg(TmpReg5);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 6)
+          .addReg(TmpReg5);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg6)
-        .addReg(TmpReg5)
-        .addImm(8);
+          .addReg(TmpReg5)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 7)
-        .addReg(TmpReg6);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 7)
+          .addReg(TmpReg6);
     } else {
-      llvm_unreachable("Unexpected Alignment in EmitUnalignedStoreWramDoubleRegisterWithCustomInserter");
+      llvm_unreachable(
+          "Unexpected Alignment in "
+          "EmitUnalignedStoreWramDoubleRegisterWithCustomInserter");
     }
   }
 
@@ -2435,7 +2438,7 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
 
   auto MemOp = MI.memoperands_begin();
   auto MemOpEnd = MI.memoperands_end();
-  for (; MemOp!= MemOpEnd; MemOp++) {
+  for (; MemOp != MemOpEnd; MemOp++) {
     int MemOpAlignment = (*MemOp)->getAlignment();
     if ((Alignment == -1) || (Alignment > MemOpAlignment))
       Alignment = MemOpAlignment;
@@ -2446,10 +2449,10 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
     Alignment = 4;
 
   if ((Alignment % 8) == 0 && (offset % 8) == 0) {
-      BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
-      .add(MI.getOperand(0))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2));
+    BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2));
   } else {
     unsigned DestLsb = RI.createVirtualRegister(&DPU::GP_REGRegClass);
     unsigned DestMsb = RI.createVirtualRegister(&DPU::GP_REGRegClass);
@@ -2458,38 +2461,38 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
 
     if ((Alignment % 4) == 0 && (offset % 4) == 0) {
       BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestLsb)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2));
 
       BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestMsb)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4);
     } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg4 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg1)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2));
       BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg2)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 2);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 2);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestLsb)
-        .addReg(TmpReg1)
-        .addReg(TmpReg2)
-        .addImm(16);
+          .addReg(TmpReg1)
+          .addReg(TmpReg2)
+          .addImm(16);
 
       BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg3)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4);
       BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg4)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 6);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 6);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestMsb)
-        .addReg(TmpReg3)
-        .addReg(TmpReg4)
-        .addImm(16);
+          .addReg(TmpReg3)
+          .addReg(TmpReg4)
+          .addImm(16);
     } else if (Alignment == 1) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
@@ -2504,69 +2507,70 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
       unsigned TmpReg11 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg12 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg1)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2));
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg2)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 1);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 1);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg3)
-        .addReg(TmpReg1)
-        .addReg(TmpReg2)
-        .addImm(8);
+          .addReg(TmpReg1)
+          .addReg(TmpReg2)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg4)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 2);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 2);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg5)
-        .addReg(TmpReg3)
-        .addReg(TmpReg4)
-        .addImm(16);
+          .addReg(TmpReg3)
+          .addReg(TmpReg4)
+          .addImm(16);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg6)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 3);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 3);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestLsb)
-        .addReg(TmpReg5)
-        .addReg(TmpReg6)
-        .addImm(24);
+          .addReg(TmpReg5)
+          .addReg(TmpReg6)
+          .addImm(24);
 
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg7)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 4);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 4);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg8)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 5);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 5);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg9)
-        .addReg(TmpReg7)
-        .addReg(TmpReg8)
-        .addImm(8);
+          .addReg(TmpReg7)
+          .addReg(TmpReg8)
+          .addImm(8);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg10)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 6);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 6);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg11)
-        .addReg(TmpReg9)
-        .addReg(TmpReg10)
-        .addImm(16);
+          .addReg(TmpReg9)
+          .addReg(TmpReg10)
+          .addImm(16);
       BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg12)
-        .add(MI.getOperand(1))
-        .addImm(MI.getOperand(2).getImm() + 7);
+          .add(MI.getOperand(1))
+          .addImm(MI.getOperand(2).getImm() + 7);
       BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestMsb)
-        .addReg(TmpReg11)
-        .addReg(TmpReg12)
-        .addImm(24);
+          .addReg(TmpReg11)
+          .addReg(TmpReg12)
+          .addImm(24);
     } else {
-      llvm_unreachable("Unexpected Alignment in EmitUnalignedLoadWramDoubleRegisterWithCustomInserter");
+      llvm_unreachable("Unexpected Alignment in "
+                       "EmitUnalignedLoadWramDoubleRegisterWithCustomInserter");
     }
 
     BuildMI(*BB, MI, dl, TII.get(DPU::IMPLICIT_DEF), UndefReg);
 
     BuildMI(*BB, MI, dl, TII.get(DPU::INSERT_SUBREG), DestPart)
-      .addReg(UndefReg)
-      .addReg(DestLsb)
-      .addImm(DPU::sub_32bit);
+        .addReg(UndefReg)
+        .addReg(DestLsb)
+        .addImm(DPU::sub_32bit);
 
     BuildMI(*BB, MI, dl, TII.get(DPU::INSERT_SUBREG), MI.getOperand(0).getReg())
-      .addReg(DestPart)
-      .addReg(DestMsb)
-      .addImm(DPU::sub_32bit_hi);
+        .addReg(DestPart)
+        .addReg(DestMsb)
+        .addImm(DPU::sub_32bit_hi);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
