@@ -315,13 +315,6 @@ public:
   swift::ClangImporter *GetClangImporter();
   swift::DWARFImporter *GetDWARFImporter();
 
-  // ***********************************************************
-  //  these calls create non-nominal types which are given in
-  //  metadata just in terms of their building blocks and for
-  //  which there is no one basic type to compose from
-  // ***********************************************************
-  CompilerType CreateTupleType(const std::vector<CompilerType> &elements);
-
   struct TupleElement {
     ConstString element_name;
     CompilerType element_type;
