@@ -72,11 +72,12 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  DPUMachineFunctionInfo *FuncInfo= MF.getInfo<DPUMachineFunctionInfo>();
+  DPUMachineFunctionInfo *FuncInfo = MF.getInfo<DPUMachineFunctionInfo>();
   int Offset = FuncInfo->getOffsetFromFrameIndex(FrameIndex);
 
   LLVM_DEBUG({
-      dbgs() << "DPU/Reg - eliminating frame index in instruction (index= "<< FrameIndex << ") ";
+    dbgs() << "DPU/Reg - eliminating frame index in instruction (index= "
+           << FrameIndex << ") ";
     MI.dump();
     dbgs() << "\n";
   });

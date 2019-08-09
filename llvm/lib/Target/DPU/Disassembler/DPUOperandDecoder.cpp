@@ -36,18 +36,17 @@ using namespace llvm;
 // Decoded registers, with respect to their indexing in the DPU. See
 // DPURegisterInfo.td
 static const unsigned GP32RegisterMap[] = {
-    DPU::R0,   DPU::R1,  DPU::R2,     DPU::R3,   DPU::R4,   DPU::R5,
-    DPU::R6,   DPU::R7,  DPU::R8,     DPU::R9,   DPU::R10,  DPU::R11,
-    DPU::R12,  DPU::R13, DPU::R14,    DPU::R15,  DPU::R16,  DPU::R17,
-    DPU::R18,  DPU::R19, DPU::R20,    DPU::R21,  DPU::R22,  DPU::R23,
-    DPU::ZERO, DPU::ONE, DPU::LNEG,   DPU::MNEG, DPU::ID,   DPU::ID2,
-    DPU::ID4,  DPU::ID8};
+    DPU::R0,  DPU::R1,  DPU::R2,  DPU::R3,   DPU::R4,  DPU::R5,   DPU::R6,
+    DPU::R7,  DPU::R8,  DPU::R9,  DPU::R10,  DPU::R11, DPU::R12,  DPU::R13,
+    DPU::R14, DPU::R15, DPU::R16, DPU::R17,  DPU::R18, DPU::R19,  DPU::R20,
+    DPU::R21, DPU::R22, DPU::R23, DPU::ZERO, DPU::ONE, DPU::LNEG, DPU::MNEG,
+    DPU::ID,  DPU::ID2, DPU::ID4, DPU::ID8};
 
 // Decoded registers, with respect to their indexing in the DPU. See
 // DPURegisterInfo.td
 static const unsigned GP64RegisterMap[] = {
-    DPU::D0,  DPU::D2,  DPU::D4,  DPU::D6,  DPU::D8,    DPU::D10,
-    DPU::D12, DPU::D14, DPU::D16, DPU::D18, DPU::D20,   DPU::D22};
+    DPU::D0,  DPU::D2,  DPU::D4,  DPU::D6,  DPU::D8,  DPU::D10,
+    DPU::D12, DPU::D14, DPU::D16, DPU::D18, DPU::D20, DPU::D22};
 
 static MCDisassembler::DecodeStatus Decode_32RegisterClass(MCInst &MI,
                                                            unsigned RegNo) {
@@ -178,7 +177,7 @@ MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_false_cc(MCInst &MI) {
   return MCDisassembler::Success;
 }
 
-#define FIXUP_PC(pc) (0x80000000 | (unsigned)((pc) * 8))
+#define FIXUP_PC(pc) (0x80000000 | (unsigned)((pc)*8))
 
 MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_pc(llvm::MCInst &MI,
                                                           uint64_t Value) {

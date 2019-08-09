@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_DPU_DPUTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_DPU_DPUTARGETTRANSFORMINFO_H
 
@@ -42,7 +41,6 @@ public:
         TLI(ST->getTargetLowering()) {}
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const { return true; }
-
 };
 } // namespace llvm
 

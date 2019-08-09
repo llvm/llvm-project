@@ -29,7 +29,8 @@ class DPUMachineFunctionInfo : public MachineFunctionInfo {
   std::set<int> frameIndexOffsetSet;
 
 public:
-  explicit DPUMachineFunctionInfo(MachineFunction &MF) : MFI(MF.getFrameInfo()), frameIndexOffsetSet() {}
+  explicit DPUMachineFunctionInfo(MachineFunction &MF)
+      : MFI(MF.getFrameInfo()), frameIndexOffsetSet() {}
 
   int getOffsetFromFrameIndex(int FrameIndex);
 };
