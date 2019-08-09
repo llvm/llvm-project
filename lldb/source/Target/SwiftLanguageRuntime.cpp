@@ -3068,7 +3068,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                   ExecutionContext exe_ctx;
                   frame.CalculateExecutionContext(exe_ctx);
                   error = argument_values.GetValueAtIndex(0)->GetValueAsData(
-                      &exe_ctx, data, 0, NULL);
+                      &exe_ctx, data, NULL);
                   lldb::offset_t offset = 0;
                   lldb::addr_t fn_ptr_addr = data.GetPointer(&offset);
                   Address fn_ptr_address;

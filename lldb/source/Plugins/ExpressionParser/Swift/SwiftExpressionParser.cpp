@@ -400,10 +400,10 @@ public:
   virtual swift::Identifier getPreferredPrivateDiscriminator() {
     if (m_sc.comp_unit) {
       if (lldb_private::Module *module = m_sc.module_sp.get()) {
-        if (lldb_private::SymbolVendor *symbol_vendor =
-                module->GetSymbolVendor()) {
+        if (lldb_private::SymbolFile *symbol_file =
+                module->GetSymbolFile()) {
           std::string private_discriminator_string;
-          if (symbol_vendor->GetCompileOption("-private-discriminator",
+          if (symbol_file->GetCompileOption("-private-discriminator",
                                               private_discriminator_string,
                                               m_sc.comp_unit)) {
             return m_source_file.getASTContext().getIdentifier(
