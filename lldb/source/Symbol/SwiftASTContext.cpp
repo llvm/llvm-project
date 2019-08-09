@@ -3155,7 +3155,8 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     clang::QualType qual_type = ClangUtil::GetQualType(fwd_type);
     switch (kind) {
     case swift::Demangle::Node::Kind::Protocol:
-      // Not implemented.
+      // Not implemented since Objective-C protocols aren't yet
+      // described in DWARF.
       return true;
     case swift::Demangle::Node::Kind::Class:
       return !qual_type->isObjCObjectOrInterfaceType();
