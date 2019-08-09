@@ -463,34 +463,35 @@ static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
 
 // Create ABI-defined synthetic symbols
 static void createSyntheticSymbols() {
+  if (config->relocatable)
+    return;
+
   static WasmSignature nullSignature = {{}, {}};
   static WasmSignature i32ArgSignature = {{}, {ValType::I32}};
   static llvm::wasm::WasmGlobalType globalTypeI32 = {WASM_TYPE_I32, false};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
-  if (!config->relocatable) {
-    WasmSym::callCtors = symtab->addSyntheticFunction(
-        "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
+  WasmSym::callCtors = symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
-    if (config->passiveSegments) {
-      // Passive segments are used to avoid memory being reinitialized on each
-      // thread's instantiation. These passive segments are initialized and
-      // dropped in __wasm_init_memory, which is the first function called from
-      // __wasm_call_ctors.
-      WasmSym::initMemory = symtab->addSyntheticFunction(
-          "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
-    }
+  if (config->passiveSegments) {
+    // Passive segments are used to avoid memory being reinitialized on each
+    // thread's instantiation. These passive segments are initialized and
+    // dropped in __wasm_init_memory, which is the first function called from
+    // __wasm_call_ctors.
+    WasmSym::initMemory = symtab->addSyntheticFunction(
+        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
+  }
 
-    if (config->isPic) {
-      // For PIC code we create a synthetic function __wasm_apply_relocs which
-      // is called from __wasm_call_ctors before the user-level constructors.
-      WasmSym::applyRelocs = symtab->addSyntheticFunction(
-          "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
-    }
+  if (config->isPic) {
+    // For PIC code we create a synthetic function __wasm_apply_relocs which
+    // is called from __wasm_call_ctors before the user-level constructors.
+    WasmSym::applyRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
   }
 
 
@@ -524,11 +525,15 @@ static void createSyntheticSymbols() {
 }
 
 static void createOptionalSymbols() {
-  if (!config->relocatable)
-    WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+  if (config->relocatable)
+    return;
+
+  WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+
+  if (!config->shared)
+    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
   if (!config->isPic) {
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
   }
@@ -700,8 +705,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_export))
     config->exportedSymbols.insert(arg->getValue());
 
-  if (!config->relocatable)
-    createSyntheticSymbols();
+  createSyntheticSymbols();
 
   createFiles(args);
   if (errorCount())

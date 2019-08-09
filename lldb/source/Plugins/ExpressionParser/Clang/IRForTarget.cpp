@@ -167,10 +167,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   llvm::StringRef result_name;
   bool found_result = false;
 
-  for (ValueSymbolTable::iterator vi = value_symbol_table.begin(),
-                                  ve = value_symbol_table.end();
-       vi != ve; ++vi) {
-    result_name = vi->first();
+  for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
+    result_name = value_symbol.first();
 
     if (result_name.contains("$__lldb_expr_result_ptr") &&
         !result_name.startswith("_ZGV")) {
@@ -555,14 +553,12 @@ bool IRForTarget::RewriteObjCConstStrings() {
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
 
-  for (ValueSymbolTable::iterator vi = value_symbol_table.begin(),
-                                  ve = value_symbol_table.end();
-       vi != ve; ++vi) {
-    std::string value_name = vi->first().str();
+  for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
+    std::string value_name = value_symbol.first().str();
     const char *value_name_cstr = value_name.c_str();
 
     if (strstr(value_name_cstr, "_unnamed_cfstring_")) {
-      Value *nsstring_value = vi->second;
+      Value *nsstring_value = value_symbol.second;
 
       GlobalVariable *nsstring_global =
           dyn_cast<GlobalVariable>(nsstring_value);
@@ -741,14 +737,12 @@ bool IRForTarget::RewriteObjCConstStrings() {
     }
   }
 
-  for (ValueSymbolTable::iterator vi = value_symbol_table.begin(),
-                                  ve = value_symbol_table.end();
-       vi != ve; ++vi) {
-    std::string value_name = vi->first().str();
+  for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
+    std::string value_name = value_symbol.first().str();
     const char *value_name_cstr = value_name.c_str();
 
     if (!strcmp(value_name_cstr, "__CFConstantStringClassReference")) {
-      GlobalVariable *gv = dyn_cast<GlobalVariable>(vi->second);
+      GlobalVariable *gv = dyn_cast<GlobalVariable>(value_symbol.second);
 
       if (!gv) {
         if (log)
@@ -911,26 +905,18 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  BasicBlock::iterator ii;
-
   typedef SmallVector<Instruction *, 2> InstrList;
-  typedef InstrList::iterator InstrIterator;
 
   InstrList selector_loads;
 
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
-
+  for (Instruction &inst : basic_block) {
     if (LoadInst *load = dyn_cast<LoadInst>(&inst))
       if (IsObjCSelectorRef(load->getPointerOperand()))
         selector_loads.push_back(&inst);
   }
 
-  InstrIterator iter;
-
-  for (iter = selector_loads.begin(); iter != selector_loads.end(); ++iter) {
-    if (!RewriteObjCSelector(*iter)) {
+  for (Instruction *inst : selector_loads) {
+    if (!RewriteObjCSelector(inst)) {
       m_error_stream.Printf("Internal error [IRForTarget]: Couldn't change a "
                             "static reference to an Objective-C selector to a "
                             "dynamic reference\n");
@@ -1076,25 +1062,18 @@ bool IRForTarget::RewriteObjCClassReferences(BasicBlock &basic_block) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  BasicBlock::iterator ii;
-
   typedef SmallVector<Instruction *, 2> InstrList;
-  typedef InstrList::iterator InstrIterator;
 
   InstrList class_loads;
 
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
-
+  for (Instruction &inst : basic_block) {
     if (LoadInst *load = dyn_cast<LoadInst>(&inst))
       if (IsObjCClassReference(load->getPointerOperand()))
         class_loads.push_back(&inst);
   }
 
-  InstrIterator iter;
-
-  for (iter = class_loads.begin(); iter != class_loads.end(); ++iter) {
-    if (!RewriteObjCClassReference(*iter)) {
+  for (Instruction *inst : class_loads) {
+    if (!RewriteObjCClassReference(inst)) {
       m_error_stream.Printf("Internal error [IRForTarget]: Couldn't change a "
                             "static reference to an Objective-C class to a "
                             "dynamic reference\n");
@@ -1187,15 +1166,11 @@ bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  BasicBlock::iterator ii;
-
   typedef SmallVector<Instruction *, 2> InstrList;
-  typedef InstrList::iterator InstrIterator;
 
   InstrList pvar_allocs;
 
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
+  for (Instruction &inst : basic_block) {
 
     if (AllocaInst *alloc = dyn_cast<AllocaInst>(&inst)) {
       llvm::StringRef alloc_name = alloc->getName();
@@ -1217,10 +1192,8 @@ bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
     }
   }
 
-  InstrIterator iter;
-
-  for (iter = pvar_allocs.begin(); iter != pvar_allocs.end(); ++iter) {
-    if (!RewritePersistentAlloc(*iter)) {
+  for (Instruction *inst : pvar_allocs) {
+    if (!RewritePersistentAlloc(inst)) {
       m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "
                             "the creation of a persistent variable\n");
 
@@ -1445,9 +1418,8 @@ bool IRForTarget::MaybeHandleCallArguments(CallInst *Old) {
 
   for (unsigned op_index = 0, num_ops = Old->getNumArgOperands();
        op_index < num_ops; ++op_index)
-    if (!MaybeHandleVariable(Old->getArgOperand(
-            op_index))) // conservatively believe that this is a store
-    {
+    // conservatively believe that this is a store
+    if (!MaybeHandleVariable(Old->getArgOperand(op_index))) {
       m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "
                             "one of the arguments of a function call.\n");
 
@@ -1515,13 +1487,9 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
 }
 
 bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
-  BasicBlock::iterator ii;
-
   std::vector<CallInst *> calls_to_remove;
 
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
-
+  for (Instruction &inst : basic_block) {
     CallInst *call = dyn_cast<CallInst>(&inst);
 
     // MaybeHandleCallArguments handles error reporting; we are silent here
@@ -1544,25 +1512,16 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
       calls_to_remove.push_back(call);
   }
 
-  for (std::vector<CallInst *>::iterator ci = calls_to_remove.begin(),
-                                         ce = calls_to_remove.end();
-       ci != ce; ++ci) {
-    (*ci)->eraseFromParent();
-  }
+  for (CallInst *ci : calls_to_remove)
+    ci->eraseFromParent();
 
   return true;
 }
 
 bool IRForTarget::ResolveCalls(BasicBlock &basic_block) {
-  /////////////////////////////////////////////////////////////////////////
   // Prepare the current basic block for execution in the remote process
-  //
 
-  BasicBlock::iterator ii;
-
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
-
+  for (Instruction &inst : basic_block) {
     CallInst *call = dyn_cast<CallInst>(&inst);
 
     // MaybeHandleCallArguments handles error reporting; we are silent here
@@ -1658,20 +1617,13 @@ static void ExciseGuardStore(Instruction *guard_store) {
 }
 
 bool IRForTarget::RemoveGuards(BasicBlock &basic_block) {
-  ///////////////////////////////////////////////////////
   // Eliminate any reference to guard variables found.
-  //
-
-  BasicBlock::iterator ii;
-
   typedef SmallVector<Instruction *, 2> InstrList;
-  typedef InstrList::iterator InstrIterator;
 
   InstrList guard_loads;
   InstrList guard_stores;
 
-  for (ii = basic_block.begin(); ii != basic_block.end(); ++ii) {
-    Instruction &inst = *ii;
+  for (Instruction &inst : basic_block) {
 
     if (LoadInst *load = dyn_cast<LoadInst>(&inst))
       if (isGuardVariableRef(load->getPointerOperand()))
@@ -1682,13 +1634,11 @@ bool IRForTarget::RemoveGuards(BasicBlock &basic_block) {
         guard_stores.push_back(&inst);
   }
 
-  InstrIterator iter;
+  for (Instruction *inst : guard_loads)
+    TurnGuardLoadIntoZero(inst);
 
-  for (iter = guard_loads.begin(); iter != guard_loads.end(); ++iter)
-    TurnGuardLoadIntoZero(*iter);
-
-  for (iter = guard_stores.begin(); iter != guard_stores.end(); ++iter)
-    ExciseGuardStore(*iter);
+  for (Instruction *inst : guard_stores)
+    ExciseGuardStore(inst);
 
   return true;
 }
@@ -2107,17 +2057,9 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     LLDB_LOG(log, "Module after creating the result variable: \n\"{0}\"", s);
   }
 
-  for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
-       ++fi) {
-    llvm::Function *function = &*fi;
-
-    if (function->begin() == function->end())
-      continue;
-
-    Function::iterator bbi;
-
-    for (bbi = function->begin(); bbi != function->end(); ++bbi) {
-      if (!RemoveGuards(*bbi)) {
+  for (llvm::Function &function : *m_module) {
+    for (BasicBlock &bb : function) {
+      if (!RemoveGuards(bb)) {
         if (log)
           LLDB_LOGF(log, "RemoveGuards() failed");
 
@@ -2126,7 +2068,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
         return false;
       }
 
-      if (!RewritePersistentAllocs(*bbi)) {
+      if (!RewritePersistentAllocs(bb)) {
         if (log)
           LLDB_LOGF(log, "RewritePersistentAllocs() failed");
 
@@ -2136,7 +2078,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
         return false;
       }
 
-      if (!RemoveCXAAtExit(*bbi)) {
+      if (!RemoveCXAAtExit(bb)) {
         if (log)
           LLDB_LOGF(log, "RemoveCXAAtExit() failed");
 
@@ -2160,14 +2102,9 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     return false;
   }
 
-  for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
-       ++fi) {
-    llvm::Function *function = &*fi;
-
-    for (llvm::Function::iterator bbi = function->begin(),
-                                  bbe = function->end();
-         bbi != bbe; ++bbi) {
-      if (!RewriteObjCSelectors(*bbi)) {
+  for (llvm::Function &function : *m_module) {
+    for (llvm::BasicBlock &bb : function) {
+      if (!RewriteObjCSelectors(bb)) {
         if (log)
           LLDB_LOGF(log, "RewriteObjCSelectors() failed");
 
@@ -2177,7 +2114,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
         return false;
       }
 
-      if (!RewriteObjCClassReferences(*bbi)) {
+      if (!RewriteObjCClassReferences(bb)) {
         if (log)
           LLDB_LOGF(log, "RewriteObjCClassReferences() failed");
 
@@ -2188,14 +2125,9 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
-       ++fi) {
-    llvm::Function *function = &*fi;
-
-    for (llvm::Function::iterator bbi = function->begin(),
-                                  bbe = function->end();
-         bbi != bbe; ++bbi) {
-      if (!ResolveCalls(*bbi)) {
+  for (llvm::Function &function : *m_module) {
+    for (BasicBlock &bb : function) {
+      if (!ResolveCalls(bb)) {
         if (log)
           LLDB_LOGF(log, "ResolveCalls() failed");
 
