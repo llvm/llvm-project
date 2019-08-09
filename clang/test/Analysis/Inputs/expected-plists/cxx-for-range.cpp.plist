@@ -191,7 +191,7 @@
         </dict>
         <dict>
          <key>line</key><integer>11</integer>
-         <key>col</key><integer>14</integer>
+         <key>col</key><integer>9</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
@@ -515,7 +515,7 @@
         </dict>
         <dict>
          <key>line</key><integer>11</integer>
-         <key>col</key><integer>14</integer>
+         <key>col</key><integer>9</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>

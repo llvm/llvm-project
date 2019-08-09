@@ -96,9 +96,9 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
-#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace llvm {
 

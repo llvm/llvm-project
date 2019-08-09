@@ -187,7 +187,7 @@ class SSHExecutor(RemoteExecutor):
         remote = self.user_prefix + self.host
         ssh_cmd = [self.ssh_command, '-oBatchMode=yes', remote]
         if env:
-            env_cmd = ['env'] + ['%s=%s' % (k, v) for k, v in env.items()]
+            env_cmd = ['env'] + ['%s="%s"' % (k, v) for k, v in env.items()]
         else:
             env_cmd = []
         remote_cmd = ' '.join(env_cmd + cmd)

@@ -42,6 +42,10 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
 
+  void copyAttributesFrom(const GlobalValue *Src) {
+    GlobalValue::copyAttributesFrom(Src);
+  }
+
   /// These methods set and retrieve indirect symbol.
   void setIndirectSymbol(Constant *Symbol) {
     setOperand(0, Symbol);

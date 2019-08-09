@@ -60,7 +60,7 @@ https://github.com/llvm/llvm-project/tree/master/llvm/utils/lit
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: Apache-2.0 with LLVM exception',
+        'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',

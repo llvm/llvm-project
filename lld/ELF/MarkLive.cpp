@@ -291,6 +291,10 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
 // GOT, which means that the ifunc must be available when the main partition is
 // loaded) and TLS symbols (because we only know how to correctly process TLS
 // relocations for the main partition).
+//
+// We also need to move sections whose names are C identifiers that are referred
+// to from __start_/__stop_ symbols because there will only be one set of
+// symbols for the whole program.
 template <class ELFT> void MarkLive<ELFT>::moveToMain() {
   for (InputFile *file : objectFiles)
     for (Symbol *s : file->getSymbols())
@@ -298,6 +302,14 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
         if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&
             d->section->isLive())
           markSymbol(s);
+
+  for (InputSectionBase *sec : inputSections) {
+    if (!sec->isLive() || !isValidCIdentifier(sec->name))
+      continue;
+    if (symtab->find(("__start_" + sec->name).str()) ||
+        symtab->find(("__stop_" + sec->name).str()))
+      enqueue(sec, 0);
+  }
 
   mark();
 }

@@ -2,11 +2,9 @@
 ; Make sure that the loop in the end has only one basic block.
 
 ; CHECK-LABEL: fred
-; CHECK: %b2
 ; Rely on the comments, make sure the one for the loop header is present.
 ; CHECK: %loop
-; CHECK: %should_merge
-; CHECK: %exit
+; CHECK-NOT: %should_merge
 
 target triple = "hexagon"
 

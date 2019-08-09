@@ -725,10 +725,9 @@ define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %x) nounwind "min-legal-vector-
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm1
-; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
-; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-NEXT:    vpmovdb %ymm1, %xmm1
+; CHECK-NEXT:    vpmovdb %ymm0, %xmm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, <16 x i32>* %x
@@ -741,10 +740,9 @@ define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-wi
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm1
-; CHECK-NEXT:    vpmovqd %ymm0, %xmm0
-; CHECK-NEXT:    vpmovqd %ymm1, %xmm1
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vpmovqw %ymm1, %xmm1
+; CHECK-NEXT:    vpmovqw %ymm0, %xmm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = load <8 x i64>, <8 x i64>* %x
