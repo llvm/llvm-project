@@ -15,19 +15,19 @@ __attribute__((noinline)) int fct3(int val) {
 
 __attribute__((noinline)) int fct2(int val) {
   val += 3; // StepIn entry location
-  val = fct3(val);
-  val = fct3(val); // Step location 2
-  val++;
-  return val;
+  int val2 = fct3(val);
+  int val3 = fct3(val2); // Step location 2
+  val3++;
+  return val3;
 }
 
 __attribute__((noinline)) int fct1(int val) {
   val++;
-  val = fct2(val);
-  val *= 2;
-  val = fct2(val); // Step location 1
-  val = val + val * 4;
-  return val;
+  int val2 = fct2(val);
+  val2 *= 2;
+  int val3 = fct2(val2); // Step location 1
+  val3 = val3 + val3 * 4;
+  return val3;
 }
 
 __attribute__((noinline)) int main(int argc, char const *argv[]) {
