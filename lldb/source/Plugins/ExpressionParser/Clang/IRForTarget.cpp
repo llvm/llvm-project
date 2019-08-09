@@ -43,6 +43,8 @@ using namespace llvm;
 
 static char ID;
 
+typedef SmallVector<Instruction *, 2> InstrList;
+
 IRForTarget::FunctionValueCache::FunctionValueCache(Maker const &maker)
     : m_maker(maker), m_values() {}
 
@@ -885,7 +887,6 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-  typedef SmallVector<Instruction *, 2> InstrList;
 
   InstrList selector_loads;
 
@@ -1038,8 +1039,6 @@ bool IRForTarget::RewriteObjCClassReferences(BasicBlock &basic_block) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  typedef SmallVector<Instruction *, 2> InstrList;
-
   InstrList class_loads;
 
   for (Instruction &inst : basic_block) {
@@ -1138,8 +1137,6 @@ bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
 
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  typedef SmallVector<Instruction *, 2> InstrList;
 
   InstrList pvar_allocs;
 
@@ -1567,7 +1564,6 @@ static void ExciseGuardStore(Instruction *guard_store) {
 
 bool IRForTarget::RemoveGuards(BasicBlock &basic_block) {
   // Eliminate any reference to guard variables found.
-  typedef SmallVector<Instruction *, 2> InstrList;
 
   InstrList guard_loads;
   InstrList guard_stores;
