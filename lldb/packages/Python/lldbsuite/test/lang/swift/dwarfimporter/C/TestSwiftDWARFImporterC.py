@@ -54,6 +54,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 typename='__ObjC.Point', num_children=2)
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
+        self.expect("fr v enumerator", substrs=[".yellow"])
         self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
         self.expect("fr v swiftStructCMember",
                     substrs=["x = 3", "y = 4", "swift struct c member"])
