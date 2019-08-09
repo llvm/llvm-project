@@ -1,6 +1,10 @@
 @import ObjCStuff;
 
 @implementation ObjCClass
+- (id)init {
+  self = [NSNumber numberWithInt: 1234];
+  return self;
+}
 - (NSString * _Nonnull)debugDescription {
   return @"Hello from Objective-C!";
 }

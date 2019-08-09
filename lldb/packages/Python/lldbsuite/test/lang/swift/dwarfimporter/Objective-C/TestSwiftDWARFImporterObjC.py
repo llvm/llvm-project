@@ -45,14 +45,8 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")
-        # Expect an Objective-C rendition for now.
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("obj"),
-                                typename="Class", num_children=0)
-        self.expect("fr v obj", substrs=["obj = 0x"])
-       
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
+                                typename="Swift.Optional<__ObjC.ObjCClass>",
+                                num_children=0)
+        self.expect("fr v obj", substrs=["ObjCClass", "private_ivar", "42"])
