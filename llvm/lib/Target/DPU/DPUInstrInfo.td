@@ -80,6 +80,11 @@ def : Pat<(trap), (FAULTi 7)>;
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 
+// Inspects parent to determine whether an or instruction can be implemented as
+// an add (i.e. whether we know overflow won't occur in the add).
+def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr", [],
+                                 [SDNPWantParent]>;
+
 def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
 }]>;
@@ -341,6 +346,8 @@ def CLZ64r: PseudoDPUInstruction<
                   "",
                   [(set i64:$dc, (ctlz i64:$da))]>;
 }
+
+def : Pat<(or (i32 AddLikeOrOp:$rb), (shl i32:$ra, (i32 imm:$imm))), (LSL_ADDrrri i32:$rb, i32:$ra, (i32 imm:$imm))>;
 
 def : Pat<(i32 (trunc (srl i64:$src, (i32 32)))), (EXTRACT_SUBREG DoubleReg:$src, sub_32bit_hi)>;
 

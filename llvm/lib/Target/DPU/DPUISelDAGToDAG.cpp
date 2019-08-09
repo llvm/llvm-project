@@ -87,6 +87,8 @@ private:
                                   const DPUInstrInfo *DII,
                                   const TargetRegisterInfo *TRI,
                                   const MachineInstr &MI);
+
+  bool SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out);
 };
 } // namespace
 
@@ -384,7 +386,6 @@ void DPUDAGToDAGISel::Select(SDNode *Node) {
     auto *DPUTLI = (const DPUTargetLowering *)TLI;
     Node = DPUTLI->LowerSetCc(V, *CurDAG).getNode();
   } break;
-
   }
 
   // Select the default instruction
@@ -411,6 +412,22 @@ bool DPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
   OutOps.push_back(Op0);
   OutOps.push_back(Op1);
   return false;
+}
+
+// Determine whether an ISD::OR's operands are suitable to turn the operation
+// into an addition, which often has more compact encodings.
+bool DPUDAGToDAGISel::SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out) {
+  assert(Parent->getOpcode() == ISD::OR && "unexpected parent");
+  Out = N;
+  bool SanityCheck =
+      !(N != Parent->getOperand(0) && N != Parent->getOperand(1));
+  // In debug, assert
+  assert(SanityCheck);
+  // In release, let's just not do the optimization
+  if (!SanityCheck)
+    return false;
+  return CurDAG->haveNoCommonBitsSet(Parent->getOperand(0),
+                                     Parent->getOperand(1));
 }
 
 /// createDPUISelDag - This pass converts a legalized DAG into a
