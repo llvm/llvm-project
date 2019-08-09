@@ -169,6 +169,7 @@ public:
   bool SLPVectorize;
   bool LoopVectorize;
   bool LoopsInterleaved;
+  bool LoopStripmine;
   bool RerollLoops;
   bool NewGVN;
   bool DisableGVNLoadPRE;

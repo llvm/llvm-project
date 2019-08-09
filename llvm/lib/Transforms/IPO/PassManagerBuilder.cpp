@@ -55,6 +55,10 @@ static cl::opt<bool>
                        cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
 
 static cl::opt<bool>
+RunLoopStripmining("stripmine-loops", cl::Hidden,
+                    cl::desc("Run the Tapir Loop stripmining passes"));
+
+static cl::opt<bool>
 UseGVNAfterVectorization("use-gvn-after-vectorization",
   cl::init(false), cl::Hidden,
   cl::desc("Run GVN instead of Early CSE after vectorization passes"));
@@ -148,10 +152,6 @@ cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
     cl::desc("Enable order file instrumentation (default = off)"));
 
-static cl::opt<bool> EnableTapirLoopStripmine(
-    "enable-tapir-loop-stripmine", cl::init(true), cl::Hidden,
-    cl::desc("Enable the Tapir loop-stripmining pass (default = on)"));
-
 static cl::opt<bool> EnableSerializeSmallTasks(
   "enable-serialize-small-tasks", cl::Hidden, cl::init(false),
   cl::desc("Serialize any Tapir tasks found to be unprofitable (default = off)"));
@@ -171,6 +171,7 @@ PassManagerBuilder::PassManagerBuilder() {
     SLPVectorize = RunSLPVectorization;
     LoopVectorize = EnableLoopVectorization;
     LoopsInterleaved = EnableLoopInterleaving;
+    LoopStripmine = RunLoopStripmining;
     RerollLoops = RunLoopRerolling;
     NewGVN = RunNewGVN;
     LicmMssaOptCap = SetLicmMssaOptCap;
@@ -707,9 +708,8 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createFloat2IntPass());
 
-  // Stripmine Tapir loops.  This pass is currently only performed when
-  // -enable-tapir-loop-stripmine is specified.
-  if (EnableTapirLoopStripmine) {
+  // Stripmine Tapir loops.
+  if (LoopStripmine) {
     MPM.add(createLoopStripMinePass());
     // Cleanup the IR after stripminning.
     MPM.add(createTaskSimplifyPass());
