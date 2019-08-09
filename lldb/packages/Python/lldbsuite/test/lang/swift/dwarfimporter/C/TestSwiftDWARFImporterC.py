@@ -49,18 +49,12 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")
-        if self.getDebugInfo() == 'dsym':
-            # Swiftified type.
-            type_name = '__ObjC.Point'
-        else:
-            # Clang type, because -gmodules breadcrumb following isn't implented yet.
-            type_name = 'Point'
-
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
-                                typename=type_name, num_children=2)
+                                typename='__ObjC.Point', num_children=2)
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
+        self.expect("fr v enumerator", substrs=[".yellow"])
         self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
         self.expect("fr v swiftStructCMember",
                     substrs=["x = 3", "y = 4", "swift struct c member"])

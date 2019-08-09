@@ -3173,11 +3173,11 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     case swift::Demangle::Node::Kind::TypeAlias:
       // Not Implemented.
       return true;
+      // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
     case swift::Demangle::Node::Kind::Structure:
-      return !qual_type->isStructureOrClassType();
     case swift::Demangle::Node::Kind::Enum:
-      // Not Implemented.
-      return true;
+      return !qual_type->isStructureOrClassType() &&
+             !qual_type->isEnumeralType();
     default:
       return true;
     }
@@ -3200,6 +3200,7 @@ public:
     if (!module)
       return;
 
+    // Find the type in the debug info.
     TypeList clang_types;
     const bool exact_match = true;
     const uint32_t max_matches = UINT32_MAX;
@@ -3211,7 +3212,7 @@ public:
     SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
     if (!sym_file)
       return;
-    auto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
+    uto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
     if (!ast_ctx)
       return llvm::consumeError(ast_ctx.takeError());
     auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&(*ast_ctx));
@@ -3254,6 +3255,7 @@ public:
       clang::Decl *clang_decl = clang_record_type->getDecl();
       if (!clang_decl)
         continue;
+
       results.push_back(clang_decl);
     }
   }
@@ -4793,26 +4795,6 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
 }
 
 CompilerType
-SwiftASTContext::CreateTupleType(const std::vector<CompilerType> &elements) {
-  VALID_OR_RETURN(CompilerType());
-
-  Status error;
-  if (elements.size() == 0)
-    return {GetASTContext()->TheEmptyTupleType};
-  else {
-    std::vector<swift::TupleTypeElt> tuple_elems;
-    for (const CompilerType &type : elements) {
-      if (auto swift_type = GetSwiftType(type))
-        tuple_elems.push_back(swift::TupleTypeElt(swift_type));
-      else
-        return CompilerType();
-    }
-    llvm::ArrayRef<swift::TupleTypeElt> fields(tuple_elems);
-    return {swift::TupleType::get(fields, *GetASTContext()).getPointer()};
-  }
-}
-
-CompilerType
 SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
   VALID_OR_RETURN(CompilerType());
 
@@ -4854,23 +4836,6 @@ CompilerType SwiftASTContext::GetErrorType() {
   return {};
 }
 
-CompilerType SwiftASTContext::GetNSErrorType(Status &error) {
-  VALID_OR_RETURN(CompilerType());
-
-  std::string mangled =
-      SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError");
-  return GetTypeFromMangledTypename(ConstString(StringRef(mangled)), error);
-}
-
-CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem()))
-    return {swift::MetatypeType::get(GetSwiftType(instance_type),
-                                     *GetASTContext())};
-  return {};
-}
-
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
   SwiftASTContext *swift_ast = GetASTMap().Lookup(ast);
   return swift_ast;
@@ -4885,17 +4850,6 @@ uint32_t SwiftASTContext::GetPointerByteSize() {
             .GetByteSize(nullptr)
             .getValueOr(0);
   return m_pointer_byte_size;
-}
-
-uint32_t SwiftASTContext::GetPointerBitAlignment() {
-  VALID_OR_RETURN(0);
-
-  if (m_pointer_bit_align == 0) {
-    swift::ASTContext *ast = GetASTContext();
-    m_pointer_bit_align =
-        CompilerType(ast->TheRawPointerType.getPointer()).GetAlignedBitSize();
-  }
-  return m_pointer_bit_align;
 }
 
 bool SwiftASTContext::HasErrors() {
@@ -5503,22 +5457,6 @@ SwiftASTContext::GetAllocationStrategy(const CompilerType &type) {
 }
 
 bool SwiftASTContext::IsBeingDefined(void *type) { return false; }
-
-bool SwiftASTContext::IsObjCObjectPointerType(const CompilerType &type,
-                                              CompilerType *class_type_ptr) {
-  if (!type)
-    return false;
-
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  const swift::TypeKind type_kind = swift_can_type->getKind();
-  if (type_kind == swift::TypeKind::BuiltinNativeObject ||
-      type_kind == swift::TypeKind::BuiltinUnknownObject)
-    return true;
-
-  if (class_type_ptr)
-    class_type_ptr->Clear();
-  return false;
-}
 
 //----------------------------------------------------------------------
 // Type Completion
@@ -6157,6 +6095,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   if (!type)
     return {};
 
+  // If the type has type parameters, bind them first.
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
@@ -6169,18 +6108,20 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     return bound_type.GetBitSize(exe_scope);
   }
 
-  // lldb ValueObject subsystem expects functions to be a single
-  // pointer in size to print them correctly. This is not true
-  // for swift (where functions aren't necessarily a single pointer
-  // in size), so we need to work around the limitation here.
+  // LLDB's ValueObject subsystem expects functions to be a single
+  // pointer in size to print them correctly. This is not true for
+  // swift (where functions aren't necessarily a single pointer in
+  // size), so we need to work around the limitation here.
   if (swift_can_type->getKind() == swift::TypeKind::Function)
     return GetPointerByteSize() * 8;
 
+  // Ask the static type type system.
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
     return fixed_type_info->getFixedSize().getValue() * 8;
 
+  // Ask the dynamic type system.
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
@@ -6193,6 +6134,8 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
                                ExecutionContextScope *exe_scope) {
   if (!type)
     return {};
+
+  // If the type has type parameters, bind them first.
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
@@ -6205,11 +6148,13 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
     return bound_type.GetByteStride(exe_scope);
   }
 
+  // Ask the static type type system.
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
     return fixed_type_info->getFixedStride().getValue();
 
+  // Ask the dynamic type system.
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))

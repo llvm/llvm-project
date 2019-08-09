@@ -165,17 +165,20 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
     llvm::APInt matched_value(llvm::APInt::getNullValue(64));
 
-    auto iter = m_cases->begin(), end = m_cases->end();
-    for (; iter != end; ++iter) {
-      llvm::APInt case_value = iter->first;
+    for (auto val_name : *m_cases) {
+      llvm::APInt case_value = val_name.first;
+      // Don't display the zero case in an option set unless it's the
+      // only value.
+      if (case_value == 0 && value != 0)
+        continue;
       if ((case_value & value) == case_value) {
         // hey a case matched!!
         any_match = true;
         if (first_match) {
-          ss.Printf("[.%s", iter->second.AsCString());
+          ss.Printf("[.%s", val_name.second.AsCString());
           first_match = false;
         } else {
-          ss.Printf(", .%s", iter->second.AsCString());
+          ss.Printf(", .%s", val_name.second.AsCString());
         }
 
         matched_value |= case_value;

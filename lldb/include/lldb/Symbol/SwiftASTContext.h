@@ -300,8 +300,6 @@ public:
   bool SetTriple(const llvm::Triple triple,
                  lldb_private::Module *module = nullptr);
 
-  uint32_t GetPointerBitAlignment();
-
   // Imports the type from the passed in type into this SwiftASTContext. The
   // type must be a Swift type. If the type can be imported, returns the
   // CompilerType for the imported type.
@@ -312,13 +310,6 @@ public:
   swift::ClangImporter *GetClangImporter();
   swift::DWARFImporter *GetDWARFImporter();
 
-  // ***********************************************************
-  //  these calls create non-nominal types which are given in
-  //  metadata just in terms of their building blocks and for
-  //  which there is no one basic type to compose from
-  // ***********************************************************
-  CompilerType CreateTupleType(const std::vector<CompilerType> &elements);
-
   struct TupleElement {
     ConstString element_name;
     CompilerType element_type;
@@ -327,10 +318,6 @@ public:
   CompilerType CreateTupleType(const std::vector<TupleElement> &elements);
 
   CompilerType GetErrorType();
-
-  CompilerType GetNSErrorType(Status &error);
-
-  CompilerType CreateMetatypeType(CompilerType instance_type);
 
   bool HasErrors();
 
@@ -501,9 +488,6 @@ public:
   static bool IsNonTriviallyManagedReferenceType(
       const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
       CompilerType *underlying_type = nullptr);
-
-  bool IsObjCObjectPointerType(const CompilerType &type,
-                               CompilerType *class_type_ptr);
 
   // Type Completion
 
