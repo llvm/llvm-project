@@ -264,10 +264,6 @@ namespace clang {
       Ctx.setDiagnosticHandler(llvm::make_unique<ClangDiagnosticHandler>(
         CodeGenOpts, this));
 
-      PerformPrelinkPasses(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                           LangOpts, C.getTargetInfo().getDataLayout(),
-                           getModule(), Action);
-
       Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
           setupOptimizationRemarks(Ctx, CodeGenOpts.OptRecordFile,
                                    CodeGenOpts.OptRecordPasses,
@@ -307,8 +303,7 @@ namespace clang {
 
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                         LangOpts, C.getTargetInfo().getDataLayout(),
-                        getModule(), Action, std::move(AsmOutStream),
-                        false /* SetLLVMOpts */);
+                        getModule(), Action, std::move(AsmOutStream));
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
