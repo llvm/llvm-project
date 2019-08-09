@@ -512,6 +512,22 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
 
+    // TODO: real CodeGen support for SVE types requires more infrastructure
+    // to be added first.  Report an error until then.
+#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
+    {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet generate code for SVE type '%0'");
+      auto *BT = cast<BuiltinType>(Ty);
+      auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
+      CGM.getDiags().Report(DiagID) << Name;
+      // Return something safe.
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
+      break;
+    }
+
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

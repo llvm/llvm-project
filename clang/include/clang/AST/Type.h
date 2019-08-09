@@ -2414,6 +2414,9 @@ public:
 // OpenCL extension types
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) Id,
 #include "clang/Basic/OpenCLExtensionTypes.def"
+// SVE Types
+#define SVE_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/AArch64SVEACLETypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id

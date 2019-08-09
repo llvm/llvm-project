@@ -111,6 +111,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
   IsRenderScriptTarget = false;
+  HasAArch64SVETypes = false;
 
   // Default to no types using fpret.
   RealTypeUsesObjCFPRet = 0;
