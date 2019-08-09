@@ -44656,10 +44656,11 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'I':
     case 'J':
     case 'K':
-    case 'L':
-    case 'M':
     case 'N':
     case 'G':
+    case 'L':
+    case 'M':
+      return C_Immediate;
     case 'C':
     case 'e':
     case 'Z':
