@@ -239,7 +239,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUInlinerPass(*PR);
-  initializeAMDGPUOCL12AdapterPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPULowerKernelCallsPass(*PR);
   initializeGCNRegBankReassignPass(*PR);
@@ -383,10 +382,6 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
   return FSAttr.hasAttribute(Attribute::None) ?
     getTargetFeatureString() :
     FSAttr.getValueAsString();
-}
-
-void AMDGPUTargetMachine::addPreLinkPasses(PassManagerBase & PM) {
-  PM.add(llvm::createAMDGPUOCL12AdapterPass());
 }
 
 /// Predicate for Internalize pass.

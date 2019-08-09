@@ -53,8 +53,6 @@ public:
     return TLOF.get();
   }
 
-  void addPreLinkPasses(PassManagerBase & PM) override;
-
   void adjustPassManager(PassManagerBuilder &) override;
 
   /// Get the integer value of a null pointer in the given address space.
