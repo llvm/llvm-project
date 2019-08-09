@@ -495,6 +495,9 @@ public:
   }
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
+
+  Error tryExtractDIEsIfNeeded(bool CUDieOnly);
+
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {

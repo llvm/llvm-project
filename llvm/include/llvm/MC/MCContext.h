@@ -22,6 +22,7 @@
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -275,6 +276,8 @@ namespace llvm {
     /// Do automatic reset in destructor
     bool AutoReset;
 
+    MCTargetOptions const *TargetOptions;
+
     bool HadError = false;
 
     MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
@@ -298,7 +301,9 @@ namespace llvm {
   public:
     explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
                        const MCObjectFileInfo *MOFI,
-                       const SourceMgr *Mgr = nullptr, bool DoAutoReset = true);
+                       const SourceMgr *Mgr = nullptr,
+                       MCTargetOptions const *TargetOpts = nullptr,
+                       bool DoAutoReset = true);
     MCContext(const MCContext &) = delete;
     MCContext &operator=(const MCContext &) = delete;
     ~MCContext();
@@ -659,6 +664,7 @@ namespace llvm {
 
     bool hadError() { return HadError; }
     void reportError(SMLoc L, const Twine &Msg);
+    void reportWarning(SMLoc L, const Twine &Msg);
     // Unrecoverable error has occurred. Display the best diagnostic we can
     // and bail via exit(1). For now, most MC backend errors are unrecoverable.
     // FIXME: We should really do something about that.

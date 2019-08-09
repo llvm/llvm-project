@@ -6,31 +6,27 @@ define hidden void @test() {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    lsls r1, r0, #2
-; CHECK-NEXT:    b .LBB0_2
-; CHECK-NEXT:  .LBB0_1: @ %bb2
-; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    bne .LBB0_6
-; CHECK-NEXT:  .LBB0_2: @ %switch
+; CHECK-NEXT:  .LBB0_1: @ %switch
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adr r2, .LJTI0_0
 ; CHECK-NEXT:    ldr r2, [r2, r1]
 ; CHECK-NEXT:    mov pc, r2
-; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LJTI0_0:
-; CHECK-NEXT:    .long .LBB0_6+1
-; CHECK-NEXT:    .long .LBB0_4+1
-; CHECK-NEXT:    .long .LBB0_6+1
 ; CHECK-NEXT:    .long .LBB0_5+1
-; CHECK-NEXT:  .LBB0_4: @ %switch
-; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    b .LBB0_1
-; CHECK-NEXT:  .LBB0_5: @ %bb
-; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    .long .LBB0_4+1
+; CHECK-NEXT:    .long .LBB0_5+1
+; CHECK-NEXT:    .long .LBB0_3+1
+; CHECK-NEXT:  .LBB0_3: @ %bb
+; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    bne .LBB0_5
+; CHECK-NEXT:  .LBB0_4: @ %bb2
+; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    beq .LBB0_1
-; CHECK-NEXT:  .LBB0_6: @ %dead
+; CHECK-NEXT:  .LBB0_5: @ %dead
 entry:
   br label %switch
 

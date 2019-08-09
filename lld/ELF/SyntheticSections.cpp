@@ -2475,6 +2475,10 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 
   uint32_t cuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &cu : dwarf.compile_units()) {
+    if (Error e = cu->tryExtractDIEsIfNeeded(false)) {
+      error(toString(sec) + ": " + toString(std::move(e)));
+      return {};
+    }
     Expected<DWARFAddressRangesVector> ranges = cu->collectAddressRanges();
     if (!ranges) {
       error(toString(sec) + ": " + toString(ranges.takeError()));

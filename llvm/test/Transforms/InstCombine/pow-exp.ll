@@ -212,6 +212,7 @@ declare void @use_f(float)
 
 define double @pow_ok_base(double %e) {
 ; CHECK-LABEL: @pow_ok_base(
+; Do not change 0xBFE0776{{.*}} to the exact constant, see PR42740
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]

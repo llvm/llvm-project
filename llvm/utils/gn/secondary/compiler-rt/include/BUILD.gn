@@ -2,7 +2,7 @@ import("//clang/resource_dir.gni")
 
 copy("include") {
   sources = [
-    "fuzzer/FuzzedDataProvider.hpp",
+    "fuzzer/FuzzedDataProvider.h",
     "sanitizer/allocator_interface.h",
     "sanitizer/asan_interface.h",
     "sanitizer/common_interface_defs.h",

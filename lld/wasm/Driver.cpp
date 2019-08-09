@@ -463,38 +463,37 @@ static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
 
 // Create ABI-defined synthetic symbols
 static void createSyntheticSymbols() {
+  if (config->relocatable)
+    return;
+
   static WasmSignature nullSignature = {{}, {}};
   static WasmSignature i32ArgSignature = {{}, {ValType::I32}};
   static llvm::wasm::WasmGlobalType globalTypeI32 = {WASM_TYPE_I32, false};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
-  if (!config->relocatable) {
-    WasmSym::callCtors = symtab->addSyntheticFunction(
-        "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
+  WasmSym::callCtors = symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
-    if (config->passiveSegments) {
-      // Passive segments are used to avoid memory being reinitialized on each
-      // thread's instantiation. These passive segments are initialized and
-      // dropped in __wasm_init_memory, which is the first function called from
-      // __wasm_call_ctors.
-      WasmSym::initMemory = symtab->addSyntheticFunction(
-          "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
-    }
-
-    if (config->isPic) {
-      // For PIC code we create a synthetic function __wasm_apply_relocs which
-      // is called from __wasm_call_ctors before the user-level constructors.
-      WasmSym::applyRelocs = symtab->addSyntheticFunction(
-          "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-          make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
-    }
+  if (config->passiveSegments) {
+    // Passive segments are used to avoid memory being reinitialized on each
+    // thread's instantiation. These passive segments are initialized and
+    // dropped in __wasm_init_memory, which is the first function called from
+    // __wasm_call_ctors.
+    WasmSym::initMemory = symtab->addSyntheticFunction(
+        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
   }
 
-  if (!config->shared)
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+  if (config->isPic) {
+    // For PIC code we create a synthetic function __wasm_apply_relocs which
+    // is called from __wasm_call_ctors before the user-level constructors.
+    WasmSym::applyRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
+  }
+
 
   if (config->isPic) {
     WasmSym::stackPointer =
@@ -510,21 +509,9 @@ static void createSyntheticSymbols() {
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
   } else {
-    llvm::wasm::WasmGlobal global;
-    global.Type = {WASM_TYPE_I32, true};
-    global.InitExpr.Value.Int32 = 0;
-    global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    global.SymbolName = "__stack_pointer";
-    auto *stackPointer = make<InputGlobal>(global, nullptr);
-    stackPointer->live = true;
     // For non-PIC code
-    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
-    // spec proposal is implemented in all major browsers.
-    // See: https://github.com/WebAssembly/mutable-global
-    WasmSym::stackPointer = symtab->addSyntheticGlobal(
-        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, stackPointer);
-    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
-    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
+    WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true, 0);
+    WasmSym::stackPointer->markLive();
   }
 
   if (config->sharedMemory && !config->shared) {
@@ -535,9 +522,21 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(i32ArgSignature, "__wasm_init_tls"));
   }
+}
 
-  WasmSym::dsoHandle = symtab->addSyntheticDataSymbol(
-      "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
+static void createOptionalSymbols() {
+  if (config->relocatable)
+    return;
+
+  WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+
+  if (!config->shared)
+    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+
+  if (!config->isPic) {
+    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
+    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
+  }
 }
 
 // Reconstructs command line arguments so that so that you can re-run
@@ -706,8 +705,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_export))
     config->exportedSymbols.insert(arg->getValue());
 
-  if (!config->relocatable)
-    createSyntheticSymbols();
+  createSyntheticSymbols();
 
   createFiles(args);
   if (errorCount())
@@ -719,6 +717,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     symtab->addFile(f);
   if (errorCount())
     return;
+
+  createOptionalSymbols();
 
   // Handle the `--undefined <sym>` options.
   for (auto *arg : args.filtered(OPT_undefined))

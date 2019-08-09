@@ -58,10 +58,6 @@ public:
   // Linkage, Type, Parent and AddressSpace taken from the Aliasee.
   static GlobalAlias *create(const Twine &Name, GlobalValue *Aliasee);
 
-  void copyAttributesFrom(const GlobalValue *Src) {
-    GlobalValue::copyAttributesFrom(Src);
-  }
-
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///

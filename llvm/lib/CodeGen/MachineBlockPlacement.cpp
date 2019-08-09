@@ -462,17 +462,20 @@ class MachineBlockPlacement : public MachineFunctionPass {
                                   const MachineBasicBlock *ExitBB,
                                   const BlockFilterSet &LoopBlockSet);
   MachineBasicBlock *findBestLoopTopHelper(MachineBasicBlock *OldTop,
-      const MachineLoop &L, const BlockFilterSet &LoopBlockSet);
+                                           const MachineLoop &L,
+                                           const BlockFilterSet &LoopBlockSet,
+                                           bool HasStaticProfileOnly = false);
   MachineBasicBlock *findBestLoopTop(
       const MachineLoop &L, const BlockFilterSet &LoopBlockSet);
+  MachineBasicBlock *findBestLoopTopNoProfile(
+      const MachineLoop &L, const BlockFilterSet &LoopBlockSet);
   MachineBasicBlock *findBestLoopExit(
-      const MachineLoop &L, const BlockFilterSet &LoopBlockSet,
-      BlockFrequency &ExitFreq);
+      const MachineLoop &L, const BlockFilterSet &LoopBlockSet);
   BlockFilterSet collectLoopBlockSet(const MachineLoop &L);
   void buildLoopChains(const MachineLoop &L);
   void rotateLoop(
       BlockChain &LoopChain, const MachineBasicBlock *ExitingBB,
-      BlockFrequency ExitFreq, const BlockFilterSet &LoopBlockSet);
+      const BlockFilterSet &LoopBlockSet);
   void rotateLoopWithProfile(
       BlockChain &LoopChain, const MachineLoop &L,
       const BlockFilterSet &LoopBlockSet);
@@ -1947,11 +1950,14 @@ MachineBlockPlacement::FallThroughGains(
 ///        At the same time, move it before old top increases the taken branch
 ///        to loop exit block, so the reduced taken branch will be compared with
 ///        the increased taken branch to the loop exit block.
+///
+///        This pattern is enabled only when PlainMode is false.
 MachineBasicBlock *
 MachineBlockPlacement::findBestLoopTopHelper(
     MachineBasicBlock *OldTop,
     const MachineLoop &L,
-    const BlockFilterSet &LoopBlockSet) {
+    const BlockFilterSet &LoopBlockSet,
+    bool HasStaticProfileOnly) {
   // Check that the header hasn't been fused with a preheader block due to
   // crazy branches. If it has, we need to start with the header at the top to
   // prevent pulling the preheader into the loop body.
@@ -1975,22 +1981,38 @@ MachineBlockPlacement::findBestLoopTopHelper(
     if (Pred->succ_size() > 2)
       continue;
 
-    MachineBasicBlock *OtherBB = nullptr;
-    if (Pred->succ_size() == 2) {
-      OtherBB = *Pred->succ_begin();
-      if (OtherBB == OldTop)
-        OtherBB = *Pred->succ_rbegin();
-    }
-
     if (!canMoveBottomBlockToTop(Pred, OldTop))
       continue;
 
-    BlockFrequency Gains = FallThroughGains(Pred, OldTop, OtherBB,
-                                            LoopBlockSet);
-    if ((Gains > 0) && (Gains > BestGains ||
-        ((Gains == BestGains) && Pred->isLayoutSuccessor(OldTop)))) {
-      BestPred = Pred;
-      BestGains = Gains;
+    if (HasStaticProfileOnly) {
+      // In plain mode we consider pattern 1 only.
+      if (Pred->succ_size() > 1)
+        continue;
+
+      BlockFrequency PredFreq = MBFI->getBlockFreq(Pred);
+      if (!BestPred || PredFreq > BestGains ||
+          (!(PredFreq < BestGains) &&
+           Pred->isLayoutSuccessor(OldTop))) {
+        BestPred = Pred;
+        BestGains = PredFreq;
+      }
+    } else {
+      // With profile information we also consider pattern 2.
+      MachineBasicBlock *OtherBB = nullptr;
+      if (Pred->succ_size() == 2) {
+        OtherBB = *Pred->succ_begin();
+        if (OtherBB == OldTop)
+          OtherBB = *Pred->succ_rbegin();
+      }
+
+      // And more sophisticated cost model.
+      BlockFrequency Gains = FallThroughGains(Pred, OldTop, OtherBB,
+                                              LoopBlockSet);
+      if ((Gains > 0) && (Gains > BestGains ||
+          ((Gains == BestGains) && Pred->isLayoutSuccessor(OldTop)))) {
+        BestPred = Pred;
+        BestGains = Gains;
+      }
     }
   }
 
@@ -2010,7 +2032,7 @@ MachineBlockPlacement::findBestLoopTopHelper(
   return BestPred;
 }
 
-/// Find the best loop top block for layout.
+/// Find the best loop top block for layout in FDO mode.
 ///
 /// This function iteratively calls findBestLoopTopHelper, until no new better
 /// BB can be found.
@@ -2038,6 +2060,34 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   return NewTop;
 }
 
+/// Find the best loop top block for layout in plain mode. It is less agressive
+/// than findBestLoopTop.
+///
+/// Look for a block which is strictly better than the loop header for laying
+/// out at the top of the loop. This looks for one and only one pattern:
+/// a latch block with no conditional exit. This block will cause a conditional
+/// jump around it or will be the bottom of the loop if we lay it out in place,
+/// but if it doesn't end up at the bottom of the loop for any reason,
+/// rotation alone won't fix it. Because such a block will always result in an
+/// unconditional jump (for the backedge) rotating it in front of the loop
+/// header is always profitable.
+MachineBasicBlock *
+MachineBlockPlacement::findBestLoopTopNoProfile(
+    const MachineLoop &L,
+    const BlockFilterSet &LoopBlockSet) {
+  // Placing the latch block before the header may introduce an extra branch
+  // that skips this block the first time the loop is executed, which we want
+  // to avoid when optimising for size.
+  // FIXME: in theory there is a case that does not introduce a new branch,
+  // i.e. when the layout predecessor does not fallthrough to the loop header.
+  // In practice this never happens though: there always seems to be a preheader
+  // that can fallthrough and that is also placed before the header.
+  if (F->getFunction().hasOptSize())
+    return L.getHeader();
+
+  return findBestLoopTopHelper(L.getHeader(), L, LoopBlockSet, true);
+}
+
 /// Find the best loop exiting block for layout.
 ///
 /// This routine implements the logic to analyze the loop looking for the best
@@ -2045,8 +2095,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
 /// fallthrough opportunities.
 MachineBasicBlock *
 MachineBlockPlacement::findBestLoopExit(const MachineLoop &L,
-                                        const BlockFilterSet &LoopBlockSet,
-                                        BlockFrequency &ExitFreq) {
+                                        const BlockFilterSet &LoopBlockSet) {
   // We don't want to layout the loop linearly in all cases. If the loop header
   // is just a normal basic block in the loop, we want to look for what block
   // within the loop is the best one to layout at the top. However, if the loop
@@ -2157,7 +2206,6 @@ MachineBlockPlacement::findBestLoopExit(const MachineLoop &L,
 
   LLVM_DEBUG(dbgs() << "  Best exiting block: " << getBlockName(ExitingBB)
                     << "\n");
-  ExitFreq = BestExitEdgeFreq;
   return ExitingBB;
 }
 
@@ -2202,7 +2250,6 @@ MachineBlockPlacement::hasViableTopFallthrough(
 /// of its bottom already, don't rotate it.
 void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
                                        const MachineBasicBlock *ExitingBB,
-                                       BlockFrequency ExitFreq,
                                        const BlockFilterSet &LoopBlockSet) {
   if (!ExitingBB)
     return;
@@ -2226,12 +2273,6 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
           (!SuccChain || Succ == *SuccChain->begin()))
         return;
     }
-
-    // Rotate will destroy the top fallthrough, we need to ensure the new exit
-    // frequency is larger than top fallthrough.
-    BlockFrequency FallThrough2Top = TopFallThroughFreq(Top, LoopBlockSet);
-    if (FallThrough2Top >= ExitFreq)
-      return;
   }
 
   BlockChain::iterator ExitIt = llvm::find(LoopChain, ExitingBB);
@@ -2483,7 +2524,10 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // loop. This will default to the header, but may end up as one of the
   // predecessors to the header if there is one which will result in strictly
   // fewer branches in the loop body.
-  MachineBasicBlock *LoopTop = findBestLoopTop(L, LoopBlockSet);
+  MachineBasicBlock *LoopTop =
+      (RotateLoopWithProfile || F->getFunction().hasProfileData()) ?
+          findBestLoopTop(L, LoopBlockSet) :
+          findBestLoopTopNoProfile(L, LoopBlockSet);
 
   // If we selected just the header for the loop top, look for a potentially
   // profitable exit block in the event that rotating the loop can eliminate
@@ -2492,9 +2536,8 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // Loops are processed innermost to uttermost, make sure we clear
   // PreferredLoopExit before processing a new loop.
   PreferredLoopExit = nullptr;
-  BlockFrequency ExitFreq;
   if (!RotateLoopWithProfile && LoopTop == L.getHeader())
-    PreferredLoopExit = findBestLoopExit(L, LoopBlockSet, ExitFreq);
+    PreferredLoopExit = findBestLoopExit(L, LoopBlockSet);
 
   BlockChain &LoopChain = *BlockToChain[LoopTop];
 
@@ -2511,10 +2554,11 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
 
   buildChain(LoopTop, LoopChain, &LoopBlockSet);
 
-  if (RotateLoopWithProfile)
-    rotateLoopWithProfile(LoopChain, L, LoopBlockSet);
-  else
-    rotateLoop(LoopChain, PreferredLoopExit, ExitFreq, LoopBlockSet);
+  if (RotateLoopWithProfile) {
+    if (LoopTop == L.getHeader())
+      rotateLoopWithProfile(LoopChain, L, LoopBlockSet);
+  } else
+    rotateLoop(LoopChain, PreferredLoopExit, LoopBlockSet);
 
   LLVM_DEBUG({
     // Crash at the end so we get all of the debugging output first.

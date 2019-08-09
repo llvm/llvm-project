@@ -127,9 +127,8 @@ ifend:                                            ; preds = %tailrecurse
 }
 
 ; CHECK: define void @test6(float %f)
-; CHECK: call
 ; CHECK: fneg
-; CHECK: call
+; CHECK: br label %for.body
 define void @test6(float %f) #2 {
 entry:
   br label %for.body

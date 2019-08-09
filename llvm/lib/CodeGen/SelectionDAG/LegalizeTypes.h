@@ -933,6 +933,8 @@ private:
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
 
+  void SplitVSETCC(const SDNode *N);
+
   //===--------------------------------------------------------------------===//
   // Generic Expansion: LegalizeTypesGeneric.cpp
   //===--------------------------------------------------------------------===//

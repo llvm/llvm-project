@@ -543,7 +543,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     Status error;
     DataExtractor data;
     error = argument_values.GetValueAtIndex(0)->GetValueAsData(&exe_ctx, data,
-                                                               0, nullptr);
+                                                               nullptr);
     lldb::offset_t offset = 0;
     lldb::addr_t region_addr = data.GetPointer(&offset);
 

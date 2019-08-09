@@ -199,7 +199,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
     ClearDynamicTypeInformation();
     m_dynamic_type_info.Clear();
     m_value = m_parent->GetValue();
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
     return m_error.Success();
   }
 
@@ -249,7 +249,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   if (m_address.IsValid() && m_dynamic_type_info) {
     // The variable value is in the Scalar value inside the m_value. We can
     // point our m_data right to it.
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
     if (m_error.Success()) {
       if (!CanProvideValue()) {
         // this value object represents an aggregate type whose children have

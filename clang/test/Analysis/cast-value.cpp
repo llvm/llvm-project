@@ -14,20 +14,33 @@ template <class X, class Y>
 const X *cast(Y Value);
 
 template <class X, class Y>
-const X *dyn_cast(Y Value);
+const X *dyn_cast(Y *Value);
+template <class X, class Y>
+const X &dyn_cast(Y &Value);
 
 template <class X, class Y>
 const X *cast_or_null(Y Value);
 
 template <class X, class Y>
-const X *dyn_cast_or_null(Y Value);
+const X *dyn_cast_or_null(Y *Value);
+template <class X, class Y>
+const X *dyn_cast_or_null(Y &Value);
 } // namespace llvm
 
-using namespace llvm;
+namespace clang {
+struct Shape {
+  template <typename T>
+  const T *castAs() const;
 
-class Shape {};
+  template <typename T>
+  const T *getAs() const;
+};
 class Triangle : public Shape {};
 class Circle : public Shape {};
+} // namespace clang
+
+using namespace llvm;
+using namespace clang;
 
 namespace test_cast {
 void evalLogic(const Shape *S) {
@@ -91,10 +104,67 @@ void evalLogic(const Shape *S) {
   if (!S)
     clang_analyzer_eval(!C); // logic-warning {{TRUE}}
 }
+} // namespace test_dyn_cast_or_null
 
-void evalNonNullParamNonNullReturn(const Shape *S) {
+namespace test_cast_as {
+void evalLogic(const Shape *S) {
+  const Circle *C = S->castAs<Circle>();
+  clang_analyzer_numTimesReached(); // logic-warning {{1}}
+
+  if (S && C)
+    clang_analyzer_eval(C == S);
+  // logic-warning@-1 {{TRUE}}
+
+  if (S && !C)
+    clang_analyzer_warnIfReached(); // no-warning
+
+  if (!S)
+    clang_analyzer_warnIfReached(); // no-warning
+}
+} // namespace test_cast_as
+
+namespace test_get_as {
+void evalLogic(const Shape *S) {
+  const Circle *C = S->getAs<Circle>();
+  clang_analyzer_numTimesReached(); // logic-warning {{2}}
+
+  if (S && C)
+    clang_analyzer_eval(C == S);
+  // logic-warning@-1 {{TRUE}}
+
+  if (S && !C)
+    clang_analyzer_warnIfReached(); // logic-warning {{REACHABLE}}
+
+  if (!S)
+    clang_analyzer_warnIfReached(); // no-warning
+}
+} // namespace test_get_as
+
+namespace test_notes {
+void evalReferences(const Shape &S) {
+  const auto &C = dyn_cast<Circle>(S);
+  // expected-note@-1 {{Assuming dynamic cast from 'Shape' to 'Circle' fails}}
+  // expected-note@-2 {{Dereference of null pointer}}
+  // expected-warning@-3 {{Dereference of null pointer}}
+  // logic-warning@-4 {{Dereference of null pointer}}
+}
+
+void evalNonNullParamNonNullReturnReference(const Shape &S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
   // expected-note@-1 {{Assuming dynamic cast from 'Shape' to 'Circle' succeeds}}
+  // expected-note@-2 {{Assuming pointer value is null}}
+  // expected-note@-3 {{'C' initialized here}}
+
+  (void)(1 / !(bool)C);
+  // expected-note@-1 {{'C' is non-null}}
+  // expected-note@-2 {{Division by zero}}
+  // expected-warning@-3 {{Division by zero}}
+  // logic-warning@-4 {{Division by zero}}
+}
+
+void evalNonNullParamNonNullReturn(const Shape *S) {
+  const auto *C = cast<Circle>(S);
+  // expected-note@-1 {{Checked cast from 'Shape' to 'Circle' succeeds}}
   // expected-note@-2 {{Assuming pointer value is null}}
   // expected-note@-3 {{'C' initialized here}}
 
@@ -134,4 +204,40 @@ void evalNullParamNullReturn(const Shape *S) {
   // expected-warning@-2 {{Division by zero}}
   // logic-warning@-3 {{Division by zero}}
 }
-} // namespace test_dyn_cast_or_null
+
+void evalZeroParamNonNullReturnPointer(const Shape *S) {
+  const auto *C = S->castAs<Circle>();
+  // expected-note@-1 {{Assuming pointer value is null}}
+  // expected-note@-2 {{Checked cast to 'Circle' succeeds}}
+  // expected-note@-3 {{'C' initialized here}}
+
+  (void)(1 / !(bool)C);
+  // expected-note@-1 {{'C' is non-null}}
+  // expected-note@-2 {{Division by zero}}
+  // expected-warning@-3 {{Division by zero}}
+  // logic-warning@-4 {{Division by zero}}
+}
+
+void evalZeroParamNonNullReturn(const Shape &S) {
+  const auto *C = S.castAs<Circle>();
+  // expected-note@-1 {{Checked cast to 'Circle' succeeds}}
+  // expected-note@-2 {{'C' initialized here}}
+
+  (void)(1 / !(bool)C);
+  // expected-note@-1 {{'C' is non-null}}
+  // expected-note@-2 {{Division by zero}}
+  // expected-warning@-3 {{Division by zero}}
+  // logic-warning@-4 {{Division by zero}}
+}
+
+void evalZeroParamNullReturn(const Shape &S) {
+  const auto *C = S.getAs<Circle>();
+  // expected-note@-1 {{Assuming dynamic cast to 'Circle' fails}}
+  // expected-note@-2 {{'C' initialized to a null pointer value}}
+
+  (void)(1 / (bool)C);
+  // expected-note@-1 {{Division by zero}}
+  // expected-warning@-2 {{Division by zero}}
+  // logic-warning@-3 {{Division by zero}}
+}
+} // namespace test_notes

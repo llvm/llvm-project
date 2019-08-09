@@ -46,10 +46,6 @@ public:
                              LinkageTypes Linkage, const Twine &Name,
                              Constant *Resolver, Module *Parent);
 
-  void copyAttributesFrom(const GlobalIFunc *Src) {
-    GlobalValue::copyAttributesFrom(Src);
-  }
-
   /// This method unlinks 'this' from the containing module, but does not
   /// delete it.
   void removeFromParent();

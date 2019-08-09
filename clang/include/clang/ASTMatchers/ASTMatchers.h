@@ -6533,14 +6533,15 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
 }
 
 /// Matches expressions that match InnerMatcher that are possibly wrapped in an
-/// elidable constructor.
+/// elidable constructor and other corresponding bookkeeping nodes.
 ///
-/// In C++17 copy elidable constructors are no longer being
-/// generated in the AST as it is not permitted by the standard. They are
-/// however part of the AST in C++14 and earlier. Therefore, to write a matcher
-/// that works in all language modes, the matcher has to skip elidable
-/// constructor AST nodes if they appear in the AST. This matcher can be used to
-/// skip those elidable constructors.
+/// In C++17, elidable copy constructors are no longer being generated in the
+/// AST as it is not permitted by the standard. They are, however, part of the
+/// AST in C++14 and earlier. So, a matcher must abstract over these differences
+/// to work in all language modes. This matcher skips elidable constructor-call
+/// AST nodes, `ExprWithCleanups` nodes wrapping elidable constructor-calls and
+/// various implicit nodes inside the constructor calls, all of which will not
+/// appear in the C++17 AST.
 ///
 /// Given
 ///
@@ -6552,13 +6553,20 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
 /// }
 /// \endcode
 ///
-/// ``varDecl(hasInitializer(any(
-///       ignoringElidableConstructorCall(callExpr()),
-///       exprWithCleanups(ignoringElidableConstructorCall(callExpr()))))``
-/// matches ``H D = G()``
+/// ``varDecl(hasInitializer(ignoringElidableConstructorCall(callExpr())))``
+/// matches ``H D = G()`` in C++11 through C++17 (and beyond).
 AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(&Node)) {
+  // E tracks the node that we are examining.
+  const Expr *E = &Node;
+  // If present, remove an outer `ExprWithCleanups` corresponding to the
+  // underlying `CXXConstructExpr`. This check won't cover all cases of added
+  // `ExprWithCleanups` corresponding to `CXXConstructExpr` nodes (because the
+  // EWC is placed on the outermost node of the expression, which this may not
+  // be), but, it still improves the coverage of this matcher.
+  if (const auto *CleanupsExpr = dyn_cast<ExprWithCleanups>(&Node))
+    E = CleanupsExpr->getSubExpr();
+  if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(E)) {
     if (CtorExpr->isElidable()) {
       if (const auto *MaterializeTemp =
               dyn_cast<MaterializeTemporaryExpr>(CtorExpr->getArg(0))) {
