@@ -2397,6 +2397,21 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+/// getConstraintType - Given a constraint letter, return the type of
+/// constraint it is for this target.
+RISCVTargetLowering::ConstraintType
+RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'f':
+      return C_RegisterClass;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
@@ -2407,6 +2422,12 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     switch (Constraint[0]) {
     case 'r':
       return std::make_pair(0U, &RISCV::GPRRegClass);
+    case 'f':
+      if (Subtarget.hasStdExtF() && VT == MVT::f32)
+        return std::make_pair(0U, &RISCV::FPR32RegClass);
+      if (Subtarget.hasStdExtD() && VT == MVT::f64)
+        return std::make_pair(0U, &RISCV::FPR64RegClass);
+      break;
     default:
       break;
     }
