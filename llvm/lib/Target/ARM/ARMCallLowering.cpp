@@ -499,12 +499,7 @@ unsigned getCallOpcode(const ARMSubtarget &STI, bool isDirect) {
 }
 } // end anonymous namespace
 
-bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
-                                CallingConv::ID CallConv,
-                                const MachineOperand &Callee,
-                                const ArgInfo &OrigRet,
-                                ArrayRef<ArgInfo> OrigArgs,
-                                const MDNode *KnownCallees) const {
+bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const auto &TLI = *getTLI<ARMTargetLowering>();
   const auto &DL = MF.getDataLayout();
@@ -522,7 +517,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Create the call instruction so we can add the implicit uses of arg
   // registers, but don't insert it yet.
-  bool IsDirect = !Callee.isReg();
+  bool IsDirect = !Info.Callee.isReg();
   auto CallOpcode = getCallOpcode(STI, IsDirect);
   auto MIB = MIRBuilder.buildInstrNoInsert(CallOpcode);
 
@@ -530,22 +525,22 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (IsThumb)
     MIB.add(predOps(ARMCC::AL));
 
-  MIB.add(Callee);
+  MIB.add(Info.Callee);
   if (!IsDirect) {
-    auto CalleeReg = Callee.getReg();
+    auto CalleeReg = Info.Callee.getReg();
     if (CalleeReg && !Register::isPhysicalRegister(CalleeReg)) {
       unsigned CalleeIdx = IsThumb ? 2 : 0;
       MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),
-          *MIB.getInstr(), MIB->getDesc(), Callee, CalleeIdx));
+          *MIB.getInstr(), MIB->getDesc(), Info.Callee, CalleeIdx));
     }
   }
 
-  MIB.addRegMask(TRI->getCallPreservedMask(MF, CallConv));
+  MIB.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   bool IsVarArg = false;
   SmallVector<ArgInfo, 8> ArgInfos;
-  for (auto Arg : OrigArgs) {
+  for (auto Arg : Info.OrigArgs) {
     if (!isSupportedType(DL, TLI, Arg.Ty))
       return false;
 
@@ -558,7 +553,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(Arg, ArgInfos, MF);
   }
 
-  auto ArgAssignFn = TLI.CCAssignFnForCall(CallConv, IsVarArg);
+  auto ArgAssignFn = TLI.CCAssignFnForCall(Info.CallConv, IsVarArg);
   OutgoingValueHandler ArgHandler(MIRBuilder, MRI, MIB, ArgAssignFn);
   if (!handleAssignments(MIRBuilder, ArgInfos, ArgHandler))
     return false;
@@ -566,13 +561,13 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
-  if (!OrigRet.Ty->isVoidTy()) {
-    if (!isSupportedType(DL, TLI, OrigRet.Ty))
+  if (!Info.OrigRet.Ty->isVoidTy()) {
+    if (!isSupportedType(DL, TLI, Info.OrigRet.Ty))
       return false;
 
     ArgInfos.clear();
-    splitToValueTypes(OrigRet, ArgInfos, MF);
-    auto RetAssignFn = TLI.CCAssignFnForReturn(CallConv, IsVarArg);
+    splitToValueTypes(Info.OrigRet, ArgInfos, MF);
+    auto RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv, IsVarArg);
     CallReturnHandler RetHandler(MIRBuilder, MRI, MIB, RetAssignFn);
     if (!handleAssignments(MIRBuilder, ArgInfos, RetHandler))
       return false;

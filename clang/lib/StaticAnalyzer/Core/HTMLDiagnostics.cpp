@@ -612,7 +612,7 @@ HandlePopUpPieceStartTag(Rewriter &R,
   for (const auto &Range : PopUpRanges) {
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "",
                          "<table class='variable_popup'><tbody>",
-                         /*IsTokenRange=*/false);
+                         /*IsTokenRange=*/true);
   }
 }
 
@@ -644,12 +644,11 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
     Out << "</tbody></table></span>";
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(),
                          "<span class='variable'>", Buf.c_str(),
-                         /*IsTokenRange=*/false);
-
-  // Otherwise inject just the new row at the end of the range.
+                         /*IsTokenRange=*/true);
   } else {
+    // Otherwise inject just the new row at the end of the range.
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "", Buf.c_str(),
-                         /*IsTokenRange=*/false);
+                         /*IsTokenRange=*/true);
   }
 }
 

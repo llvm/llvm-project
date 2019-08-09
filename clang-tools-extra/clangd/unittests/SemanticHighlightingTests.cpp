@@ -55,7 +55,7 @@ void checkHighlightings(llvm::StringRef Code) {
   Annotations Test(Code);
   auto AST = TestTU::withCode(Test.code()).build();
   std::vector<HighlightingToken> ActualTokens = getSemanticHighlightings(AST);
-  EXPECT_THAT(ActualTokens, getExpectedTokens(Test));
+  EXPECT_THAT(ActualTokens, getExpectedTokens(Test)) << Code;
 }
 
 // Any annotations in OldCode and NewCode are converted into their corresponding
@@ -276,6 +276,15 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]] *$Variable[[FP]] = ($Class[[Foo]]*)$Variable[[B]];
         $Primitive[[int]] $Variable[[I]] = ($Primitive[[int]])$Variable[[B]];
       }
+    )cpp"
+    R"cpp(
+      struct $Class[[B]] {};
+      struct $Class[[A]] {
+        $Class[[B]] $Field[[BB]];
+        $Class[[A]] &operator=($Class[[A]] &&$Variable[[O]]);
+      };
+
+      $Class[[A]] &$Class[[A]]::operator=($Class[[A]] &&$Variable[[O]]) = default;
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
