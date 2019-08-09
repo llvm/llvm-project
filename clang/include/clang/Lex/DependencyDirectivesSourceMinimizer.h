@@ -47,6 +47,9 @@ enum TokenKind {
   pp_else,
   pp_endif,
   decl_at_import,
+  cxx_export_decl,
+  cxx_module_decl,
+  cxx_import_decl,
   pp_eof,
 };
 
