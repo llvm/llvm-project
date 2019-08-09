@@ -56,6 +56,10 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // A 5-bit unsigned immediate for CSR access instructions.
     Info.setRequiresImmediate(0, 31);
     return true;
+  case 'f':
+    // A floating-point register.
+    Info.setAllowsRegister();
+    return true;
   }
 }
 
