@@ -13,7 +13,7 @@ func f() {
   // The Objective-C runtime recognizes this as a tagged pointer.
   // CHECK-DAG: (NSNumber) inlined = {{.*}}42
   let inlined = NSNumber(value: 42)
-  // CHECK-DAG: (CMYK) enumerator = yellow
+  // CHECK-DAG: (CMYK) enumerator = [.yellow]
   let enumerator = yellow
   // CHECK-DAG: (FourColors) typedef = cyan
   let typedef = FourColors(0)

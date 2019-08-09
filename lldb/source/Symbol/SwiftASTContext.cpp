@@ -3163,11 +3163,11 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     case swift::Demangle::Node::Kind::TypeAlias:
       // Not Implemented.
       return true;
+      // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
     case swift::Demangle::Node::Kind::Structure:
-      return !qual_type->isStructureOrClassType();
     case swift::Demangle::Node::Kind::Enum:
-      // Not Implemented.
-      return true;
+      return !qual_type->isStructureOrClassType() &&
+             !qual_type->isEnumeralType();
     default:
       return true;
     }
@@ -3234,12 +3234,10 @@ public:
       clang::QualType clang_type(
           importer.Import(ClangUtil::GetQualType(compiler_type)));
 
-      auto *clang_record_type = clang_type->getAsStructureType();
-      if (!clang_record_type)
-        continue;
-      clang::Decl *clang_decl = clang_record_type->getDecl();
+      clang::Decl *clang_decl = clang_type->getAsTagDecl();
       if (!clang_decl)
         continue;
+
       results.push_back(clang_decl);
     }
   }
