@@ -56,6 +56,9 @@ vload##N(size_t i, const A T *p) \
 
 #define FLGEN(T) \
     FLGENA(__constant,T) \
+    FLGENA(__private,T) \
+    FLGENA(__local,T) \
+    FLGENA(__global,T) \
     FLGENA(,T)
 
 FLGEN(float)
@@ -77,6 +80,9 @@ vstore##N(T##N v, size_t i, A T *p) \
     FSGENAN(2,A,T)
 
 #define FSGEN(T) \
+    FSGENA(__private,T) \
+    FSGENA(__local,T) \
+    FSGENA(__global,T) \
     FSGENA(,T)
 
 FSGEN(float)
@@ -113,6 +119,9 @@ extern ALATTR(S(C(A##_pfx,vld_##T##3))) C(T##_utype,3) vload##3(size_t, const A 
 
 #define ILGEN(T) \
     ILGENA(__constant,T) \
+    ILGENA(__private,T) \
+    ILGENA(__local,T) \
+    ILGENA(__global,T) \
     ILGENA(,T)
 
 ILGEN(char)
@@ -152,6 +161,9 @@ extern ASATTR(S(C(A##_pfx,vst_##T##3))) void vstore##3(C(T##_utype,3), size_t, A
     ISGENAN(2,A,T)
 
 #define ISGEN(T) \
+    ISGENA(__private,T) \
+    ISGENA(__local,T) \
+    ISGENA(__global,T) \
     ISGENA(,T)
 
 ISGEN(char)

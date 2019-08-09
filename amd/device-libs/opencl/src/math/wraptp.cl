@@ -106,7 +106,19 @@ F(T##2 x, T##2 y, A P##2 * v) \
     WRAP2TAP(F,T,A,P) \
     WRAP1TAP(F,T,A,P)
 
-SWRAPTAP(remquo,float,,int)
-SWRAPTAP(remquo,double,,int)
-PWRAPTAP(remquo,half,,int)
+#define SWRAPTP(F,T,P) \
+    SWRAPTAP(F,T,__private,P) \
+    SWRAPTAP(F,T,__local,P) \
+    SWRAPTAP(F,T,__global,P) \
+    SWRAPTAP(F,T,,P)
+
+#define PWRAPTP(F,T,P) \
+    PWRAPTAP(F,T,__private,P) \
+    PWRAPTAP(F,T,__local,P) \
+    PWRAPTAP(F,T,__global,P) \
+    PWRAPTAP(F,T,,P)
+
+SWRAPTP(remquo,float,int)
+SWRAPTP(remquo,double,int)
+PWRAPTP(remquo,half,int)
 

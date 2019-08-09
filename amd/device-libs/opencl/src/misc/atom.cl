@@ -88,6 +88,8 @@ atomic_##O(volatile A T *p, T v) \
     F(T,A,xor)
 
 #define OPS(F,T) \
+    OPSA(F,T,__local) \
+    OPSA(F,T,__global) \
     OPSA(F,T,)
 
 #define ALL() \
@@ -147,19 +149,27 @@ atomic_xchg(volatile A T *p, T v) \
 }
 
 #define OPS(F,T) \
-    F(T,)
+    F(T,__local) \
+    F(T,__global) \
+    F(T,) \
 
 ALL()
 
-ATTR float
-atomic_xchg(volatile float *p, float v)
-{
-    return as_float(__opencl_atomic_exchange((VOLATILE atomic_int *)p, as_int(v), OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE));
+#define G(A) \
+ATTR float \
+atomic_xchg(volatile A float *p, float v) \
+{ \
+    return as_float(__opencl_atomic_exchange((VOLATILE atomic_int *)p, as_int(v), OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE)); \
 }
+
+G(__local)
+G(__global)
+G()
 
 // Handle cmpxchg
 #undef GEN1
 #undef GEN2
+#undef G
 
 #define GEN1(T,A) \
 ATTR T \

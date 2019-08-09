@@ -32,6 +32,9 @@ vload_half(size_t i, const A half *p) \
     LGENA1(A)
 
 LGENA(__constant)
+LGENA(__global)
+LGENA(__local)
+LGENA(__private)
 LGENA()
 
 #define LAGENAN(N,A) \
@@ -65,6 +68,9 @@ vloada_half(size_t i, const A half *p) \
     LAGENA1(A)
 
 LAGENA(__constant)
+LAGENA(__global)
+LAGENA(__local)
+LAGENA(__private)
 LAGENA()
 
 #define SGENTARN(N,T,A,R) \
@@ -97,6 +103,9 @@ vstore_half##R(T v, size_t i, A half *p) \
     SGENTAR(T,A,_rtz)
 
 #define SGENT(T) \
+    SGENTA(T,__global) \
+    SGENTA(T,__local) \
+    SGENTA(T,__private) \
     SGENTA(T,)
 
 SGENT(float)
@@ -141,6 +150,9 @@ vstorea_half##R(T v, size_t i, A half *p) \
     SAGENTAR(T,A,_rtz)
 
 #define SAGENT(T) \
+    SAGENTA(T,__global) \
+    SAGENTA(T,__local) \
+    SAGENTA(T,__private) \
     SAGENTA(T,)
 
 SAGENT(float)
