@@ -1383,12 +1383,10 @@ lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name,
       jit_file.GetFilename() = const_name;
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
 
-      if (limit_file_ptr) {
-        SymbolVendor *symbol_vendor = jit_module_sp->GetSymbolVendor();
-        if (symbol_vendor)
-          symbol_vendor->SetLimitSourceFileRange(
+      if (limit_file_ptr)
+        if (SymbolFile *symbol_file = jit_module_sp->GetSymbolFile())
+          symbol_file->SetLimitSourceFileRange(
               *limit_file_ptr, limit_start_line, limit_end_line);
-      }
 
       target->GetImages().Append(jit_module_sp);
       return jit_module_sp;

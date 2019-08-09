@@ -105,7 +105,6 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -1414,11 +1413,11 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   std::string last_sdk_path;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
-  SymbolVendor *sym_vendor = module.GetSymbolVendor();
-  if (!sym_vendor)
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
     return false;
 
-  auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+  auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found %d AST file data entries.",
              (int)ast_file_datas.size());
 
@@ -1472,11 +1471,11 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
 
 /// Return whether this module contains any serialized Swift ASTs.
 bool HasSwiftModules(Module &module) {
-  SymbolVendor *sym_vendor = module.GetSymbolVendor();
-  if (!sym_vendor)
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
     return false;
 
-  auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+  auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
   return !ast_file_datas.empty();
 }
 
@@ -1608,11 +1607,7 @@ void SwiftASTContext::RemapClangImporterOptions(
 
 /// Retrieve the .dSYM bundle for \p module.
 static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
-  SymbolVendor *sym_vendor = module.GetSymbolVendor();
-  if (!sym_vendor)
-    return {};
-
-  auto sym_file = sym_vendor->GetSymbolFile();
+  auto sym_file = module.GetSymbolFile();
   if (!sym_file)
     return {};
 
@@ -1733,11 +1728,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   bool set_triple = false;
 
-  SymbolVendor *sym_vendor = module.GetSymbolVendor();
+  SymbolFile *sym_file = module.GetSymbolFile();
 
   std::string target_triple;
 
-  if (sym_vendor) {
+  if (sym_file) {
     bool got_serialized_options;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
@@ -1775,13 +1770,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
     if (!got_serialized_options || swift_ast_sp->GetPlatformSDKPath().empty()) {
       std::string platform_sdk_path;
-      if (sym_vendor->GetCompileOption("-sdk", platform_sdk_path)) {
+      if (sym_file->GetCompileOption("-sdk", platform_sdk_path)) {
         FileSpec sdk_spec(platform_sdk_path.c_str());
         if (FileSystem::Instance().Exists(sdk_spec)) {
           swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
         }
 
-        if (sym_vendor->GetCompileOption("-target", target_triple)) {
+        if (sym_file->GetCompileOption("-target", target_triple)) {
           swift_ast_sp->SetTriple(llvm::Triple(target_triple), &module);
           set_triple = true;
         }
@@ -1791,12 +1786,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     if (!got_serialized_options) {
 
       std::vector<std::string> fw_paths;
-      if (sym_vendor->GetCompileOptions("-F", fw_paths))
+      if (sym_file->GetCompileOptions("-F", fw_paths))
         for (std::string &fw_path : fw_paths)
           framework_search_paths.push_back({fw_path, /*is_system*/ false});
 
       std::vector<std::string> include_paths;
-      if (sym_vendor->GetCompileOptions("-I", include_paths)) {
+      if (sym_file->GetCompileOptions("-I", include_paths)) {
         for (std::string &search_path : include_paths) {
           const FileSpec path_spec(search_path.c_str());
 
@@ -1816,7 +1811,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       }
 
       std::vector<std::string> cc_options;
-      if (sym_vendor->GetCompileOptions("-Xcc", cc_options)) {
+      if (sym_file->GetCompileOptions("-Xcc", cc_options)) {
         for (size_t i = 0; i < cc_options.size(); ++i) {
           if (!cc_options[i].compare("-iquote") && i + 1 < cc_options.size()) {
             swift_ast_sp->AddClangArgumentPair("-iquote", cc_options[i + 1]);
@@ -2166,11 +2161,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (!HasSwiftModules(*module_sp))
           return;
 
-        SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-        if (!sym_vendor)
-          return;
-
-        SymbolFile *sym_file = sym_vendor->GetSymbolFile();
+        SymbolFile *sym_file = module_sp->GetSymbolFile();
         if (!sym_file)
           return;
 
@@ -4139,10 +4130,10 @@ bool SwiftASTContext::RegisterSectionModules(
     if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
       return true;
 
-    SymbolVendor *sym_vendor = module.GetSymbolVendor();
-    if (sym_vendor) {
+    SymbolFile *sym_file = module.GetSymbolFile();
+    if (sym_file) {
       // Grab all the AST blobs from the symbol vendor.
-      auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+      auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
       LOG_PRINTF(
           LIBLLDB_LOG_TYPES,
           "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor.",

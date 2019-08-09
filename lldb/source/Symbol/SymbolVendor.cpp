@@ -75,29 +75,6 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   }
 }
 
-bool SymbolVendor::GetCompileOption(const char *option, std::string &value,
-                                    lldb_private::CompileUnit *cu) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    return sym_file->GetCompileOption(option, value, cu);
-
-  value.clear();
-  return false;
-}
-
-int SymbolVendor::GetCompileOptions(const char *option,
-                                    std::vector<std::string> &values,
-                                    lldb_private::CompileUnit *cu) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    return sym_file->GetCompileOptions(option, values, cu);
-
-  values.clear();
-  return false;
-}
-
 void SymbolVendor::GetLoadedModules(lldb::LanguageType language,
                                     FileSpecList &modules) {
   SymbolFile *sym_file = GetSymbolFile();
@@ -118,17 +95,6 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
 }
 
 uint32_t SymbolVendor::GetPluginVersion() { return 1; }
-
-bool SymbolVendor::SetLimitSourceFileRange(const FileSpec &file,
-                                           uint32_t first_line,
-                                           uint32_t last_line) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    return sym_file->SetLimitSourceFileRange(file, first_line, last_line);
-
-  return false;
-}
 
 bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
                                                  uint32_t actual_line) {
@@ -172,12 +138,4 @@ SymbolVendor::GetASTData(lldb::LanguageType language) {
     ast_datas = sym_file->GetASTData(language);
 
   return ast_datas;
-}
-
-bool SymbolVendor::ForceInlineSourceFileCheck() {
-  SymbolFile *sym_file = GetSymbolFile();
-  if (sym_file)
-    return sym_file->ForceInlineSourceFileCheck();
-
-  return false;
 }
