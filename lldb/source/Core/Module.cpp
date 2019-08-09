@@ -1682,3 +1682,37 @@ void Module::ForEachTypeSystem(
     std::function<bool(TypeSystem *)> const &callback) {
   m_type_system_map.ForEach(callback);
 }
+
+std::vector<DataBufferSP>
+Module::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
+  // Sometimes the AST Section data is found from the module, so look there
+  // first:
+  SectionList *section_list = GetSectionList();
+
+  if (section_list) {
+    SectionSP section_sp(
+        section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+    if (section_sp) {
+      DataExtractor section_data;
+
+      if (section_sp->GetSectionData(section_data)) {
+        ast_datas.push_back(DataBufferSP(
+            new DataBufferHeap((const char *)section_data.GetDataStart(),
+                               section_data.GetByteSize())));
+        return ast_datas;
+      }
+    }
+  }
+
+  // If we couldn't find it in the Module, then look for it in the SymbolFile:
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    ast_datas = sym_file->GetASTData(language);
+
+  return ast_datas;
+}
