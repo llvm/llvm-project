@@ -2027,7 +2027,13 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
     }
   }
 
-  if (D->isThisDeclarationADefinition()) {
+  bool VisitBody = D->isThisDeclarationADefinition();
+  // If a method is set to default outside the class definition the compiler
+  // generates the method body and adds it to the AST.
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+    VisitBody &= !MD->isDefaulted() || getDerived().shouldVisitImplicitCode();
+
+  if (VisitBody) {
     TRY_TO(TraverseStmt(D->getBody())); // Function body.
   }
   return true;

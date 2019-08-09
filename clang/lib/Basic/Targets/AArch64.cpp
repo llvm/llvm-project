@@ -62,6 +62,16 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
 
+  // Make the SVE types available.  Note that this deliberately doesn't
+  // depend on SveMode, since in principle it should be possible to turn
+  // SVE on and off within a translation unit.  It should also be possible
+  // to compile the global declaration:
+  //
+  // __SVInt8_t *ptr;
+  //
+  // even without SVE.
+  HasAArch64SVETypes = true;
+
   // {} in inline assembly are neon specifiers, not assembly variant
   // specifiers.
   NoAsmVariants = true;

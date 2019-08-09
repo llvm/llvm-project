@@ -10,6 +10,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
 #include <future>
@@ -284,12 +285,7 @@ TEST(DirectoryWatcherTest, InitialScanSync) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/true);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   checkEventualResultWithTimeout(TestConsumer);
 }
@@ -322,12 +318,7 @@ TEST(DirectoryWatcherTest, InitialScanAsync) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/false);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   checkEventualResultWithTimeout(TestConsumer);
 }
@@ -349,12 +340,7 @@ TEST(DirectoryWatcherTest, AddFiles) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/true);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   fixture.addFile("a");
   fixture.addFile("b");
@@ -381,12 +367,7 @@ TEST(DirectoryWatcherTest, ModifyFile) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/true);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   // modify the file
   {
@@ -418,12 +399,7 @@ TEST(DirectoryWatcherTest, DeleteFile) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/true);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   fixture.deleteFile("a");
 
@@ -446,12 +422,7 @@ TEST(DirectoryWatcherTest, DeleteWatchedDir) {
             TestConsumer.consume(Events, IsInitial);
           },
           /*waitForInitialSync=*/true);
-  if (!DW) {
-    logAllUnhandledErrors(
-        DW.takeError(), llvm::errs(),
-        "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-    exit(EXIT_FAILURE);
-  }
+  ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
 
   remove_directories(fixture.TestWatchedDir);
 
@@ -473,12 +444,7 @@ TEST(DirectoryWatcherTest, InvalidatedWatcher) {
               TestConsumer.consume(Events, IsInitial);
             },
             /*waitForInitialSync=*/true);
-    if (!DW) {
-      logAllUnhandledErrors(
-          DW.takeError(), llvm::errs(),
-          "DirectoryWatcherTest Failure on DirectoryWatcher::create(): ");
-      exit(EXIT_FAILURE);
-    }
+    ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
   } // DW is destructed here.
 
   checkEventualResultWithTimeout(TestConsumer);

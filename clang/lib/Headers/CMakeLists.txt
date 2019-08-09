@@ -133,6 +133,9 @@ set(ppc_wrapper_files
   ppc_wrappers/xmmintrin.h
   ppc_wrappers/mm_malloc.h
   ppc_wrappers/emmintrin.h
+  ppc_wrappers/pmmintrin.h
+  ppc_wrappers/tmmintrin.h
+  ppc_wrappers/smmintrin.h
 )
 
 set(openmp_wrapper_files
