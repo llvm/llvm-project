@@ -5073,6 +5073,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
 
+  // -fstripmine is enabled based on the optimization level selected.  For now,
+  // we enable stripmining when the optimization level enables vectorization.
+  bool EnableStripmine = EnableVec;
+  OptSpecifier StripmineAliasOption =
+      EnableStripmine ? options::OPT_O_Group : options::OPT_fstripmine;
+  if (Args.hasFlag(options::OPT_fstripmine, StripmineAliasOption,
+                   options::OPT_fno_stripmine, EnableStripmine))
+    CmdArgs.push_back("-stripmine-loops");
+
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);

@@ -998,6 +998,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.VectorizeLoop = Args.hasArg(OPT_vectorize_loops);
   Opts.VectorizeSLP = Args.hasArg(OPT_vectorize_slp);
 
+  Opts.StripmineLoop = Args.hasArg(OPT_stripmine_loops);
+
   Opts.PreferVectorWidth = Args.getLastArgValue(OPT_mprefer_vector_width_EQ);
 
   Opts.MainFileName = Args.getLastArgValue(OPT_main_file_name);

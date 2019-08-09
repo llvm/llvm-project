@@ -644,6 +644,8 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;
   PMBuilder.LoopVectorize = CodeGenOpts.VectorizeLoop;
 
+  PMBuilder.LoopStripmine = CodeGenOpts.StripmineLoop;
+
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
   // Loop interleaving in the loop vectorizer has historically been set to be
   // enabled when loop unrolling is enabled.
