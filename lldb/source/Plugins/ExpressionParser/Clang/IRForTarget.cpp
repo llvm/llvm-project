@@ -554,10 +554,9 @@ bool IRForTarget::RewriteObjCConstStrings() {
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
 
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
-    std::string value_name = value_symbol.first().str();
-    const char *value_name_cstr = value_name.c_str();
+    llvm::StringRef value_name = value_symbol.first();
 
-    if (strstr(value_name_cstr, "_unnamed_cfstring_")) {
+    if (value_name.contains("_unnamed_cfstring_")) {
       Value *nsstring_value = value_symbol.second;
 
       GlobalVariable *nsstring_global =
@@ -715,11 +714,11 @@ bool IRForTarget::RewriteObjCConstStrings() {
 
       if (log) {
         if (cstr_array)
-          LLDB_LOGF(log, "Found NSString constant %s, which contains \"%s\"",
-                    value_name_cstr, cstr_array->getAsString().str().c_str());
+          LLDB_LOG(log, "Found NSString constant {0}, which contains \"{1}\"",
+                   value_name, cstr_array->getAsString());
         else
-          LLDB_LOGF(log, "Found NSString constant %s, which contains \"\"",
-                    value_name_cstr);
+          LLDB_LOG(log, "Found NSString constant {0}, which contains \"\"",
+                   value_name);
       }
 
       if (!cstr_array)
@@ -738,10 +737,9 @@ bool IRForTarget::RewriteObjCConstStrings() {
   }
 
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
-    std::string value_name = value_symbol.first().str();
-    const char *value_name_cstr = value_name.c_str();
+    llvm::StringRef value_name = value_symbol.first();
 
-    if (!strcmp(value_name_cstr, "__CFConstantStringClassReference")) {
+    if (value_name == "__CFConstantStringClassReference") {
       GlobalVariable *gv = dyn_cast<GlobalVariable>(value_symbol.second);
 
       if (!gv) {
