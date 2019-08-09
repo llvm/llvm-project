@@ -897,6 +897,8 @@ public:
   /// Return true from callback to keep iterating, false to stop iterating.
   void ForEachTypeSystem(std::function<bool(TypeSystem *)> const &callback);
 
+  std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///

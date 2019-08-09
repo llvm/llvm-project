@@ -1413,11 +1413,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   std::string last_sdk_path;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
-  SymbolFile *sym_file = module.GetSymbolFile();
-  if (!sym_file)
-    return false;
-
-  auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
+  auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found %d AST file data entries.",
              (int)ast_file_datas.size());
 
@@ -1471,11 +1467,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
 
 /// Return whether this module contains any serialized Swift ASTs.
 bool HasSwiftModules(Module &module) {
-  SymbolFile *sym_file = module.GetSymbolFile();
-  if (!sym_file)
-    return false;
-
-  auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
+  auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
   return !ast_file_datas.empty();
 }
 
@@ -4130,54 +4122,51 @@ bool SwiftASTContext::RegisterSectionModules(
     if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
       return true;
 
-    SymbolFile *sym_file = module.GetSymbolFile();
-    if (sym_file) {
-      // Grab all the AST blobs from the symbol vendor.
-      auto ast_file_datas = sym_file->GetASTData(eLanguageTypeSwift);
-      LOG_PRINTF(
-          LIBLLDB_LOG_TYPES,
-          "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor.",
-          GetBriefModuleName(module).c_str(), ast_file_datas.size());
+    // Grab all the AST blobs from the symbol vendor.
+    auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
+    LOG_PRINTF(
+        LIBLLDB_LOG_TYPES,
+        "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor.",
+        GetBriefModuleName(module).c_str(), ast_file_datas.size());
 
-      // Add each of the AST blobs to the vector of AST blobs for
-      // the module.
-      auto &ast_vector = GetASTVectorForModule(&module);
-      ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
-                        ast_file_datas.end());
+    // Add each of the AST blobs to the vector of AST blobs for
+    // the module.
+    auto &ast_vector = GetASTVectorForModule(&module);
+    ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
+                      ast_file_datas.end());
 
-      // Retrieve the module names from the AST blobs retrieved
-      // from the symbol vendor.
-      size_t parse_fail_count = 0;
-      size_t ast_number = 0;
-      for (auto ast_file_data_sp : ast_file_datas) {
-        // Parse the AST section info from the AST blob.
-        ++ast_number;
-        llvm::StringRef section_data_ref(
-            (const char *)ast_file_data_sp->GetBytes(),
-            ast_file_data_sp->GetByteSize());
-        llvm::SmallVector<std::string, 4> swift_modules;
-        if (swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
-          // Collect the Swift module names referenced by the AST.
-          for (auto module_name : swift_modules) {
-            module_names.push_back(module_name);
-            LOG_PRINTF(
-                LIBLLDB_LOG_TYPES,
-                "parsed module \"%s\" from Swift AST section %zu of %zu.",
-                module_name.c_str(), ast_number, ast_file_datas.size());
-          }
-        } else {
-          // Keep track of the fact that we failed to parse the AST section
-          // info.
-          LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                     "failed to parse AST section %zu of %zu.", ast_number,
-                     ast_file_datas.size());
-          ++parse_fail_count;
+    // Retrieve the module names from the AST blobs retrieved
+    // from the symbol vendor.
+    size_t parse_fail_count = 0;
+    size_t ast_number = 0;
+    for (auto ast_file_data_sp : ast_file_datas) {
+      // Parse the AST section info from the AST blob.
+      ++ast_number;
+      llvm::StringRef section_data_ref(
+          (const char *)ast_file_data_sp->GetBytes(),
+          ast_file_data_sp->GetByteSize());
+      llvm::SmallVector<std::string, 4> swift_modules;
+      if (swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
+        // Collect the Swift module names referenced by the AST.
+        for (auto module_name : swift_modules) {
+          module_names.push_back(module_name);
+          LOG_PRINTF(
+              LIBLLDB_LOG_TYPES,
+              "parsed module \"%s\" from Swift AST section %zu of %zu.",
+              module_name.c_str(), ast_number, ast_file_datas.size());
         }
+      } else {
+        // Keep track of the fact that we failed to parse the AST section
+        // info.
+        LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                    "failed to parse AST section %zu of %zu.", ast_number,
+                    ast_file_datas.size());
+        ++parse_fail_count;
       }
-      if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
-        // We found AST data entries and we successfully parsed all of them.
-        return true;
-      }
+    }
+    if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
+      // We found AST data entries and we successfully parsed all of them.
+      return true;
     }
   }
   return false;
