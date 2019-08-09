@@ -149,6 +149,7 @@ static void BackgroundThread(void *arg) {
   // We don't use ScopedIgnoreInterceptors, because we want ignores to be
   // enabled even when the thread function exits (e.g. during pthread thread
   // shutdown code).
+  cur_thread_init();
   cur_thread()->ignore_interceptors++;
   const u64 kMs2Ns = 1000 * 1000;
 

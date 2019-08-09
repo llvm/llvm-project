@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan -O0 %s -o %t
 // RUN: not %run %t        2>&1 | FileCheck %s --check-prefix=CHECK-RACE
 // RUN:     %run %t ignore 2>&1 | FileCheck %s --check-prefix=CHECK-IGNORE
-// XFAIL: freebsd,netbsd
+// XFAIL: netbsd
 
 #include <sys/mman.h>
 #include <string.h>
