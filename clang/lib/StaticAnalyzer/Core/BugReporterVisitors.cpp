@@ -2335,12 +2335,12 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
   // Check if the field name of the MemberExprs is ambiguous. Example:
   // " 'a.d' is equal to 'h.d' " in 'test/Analysis/null-deref-path-notes.cpp'.
   bool IsSameFieldName = false;
-  if (const auto *LhsME =
-          dyn_cast<MemberExpr>(BExpr->getLHS()->IgnoreParenCasts()))
-    if (const auto *RhsME =
-            dyn_cast<MemberExpr>(BExpr->getRHS()->IgnoreParenCasts()))
-      IsSameFieldName = LhsME->getMemberDecl()->getName() ==
-                        RhsME->getMemberDecl()->getName();
+  const auto *LhsME = dyn_cast<MemberExpr>(BExpr->getLHS()->IgnoreParenCasts());
+  const auto *RhsME = dyn_cast<MemberExpr>(BExpr->getRHS()->IgnoreParenCasts());
+
+  if (LhsME && RhsME)
+    IsSameFieldName =
+        LhsME->getMemberDecl()->getName() == RhsME->getMemberDecl()->getName();
 
   SmallString<128> LhsString, RhsString;
   {
@@ -2410,16 +2410,31 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
 
   Out << (shouldInvert ? LhsString : RhsString);
   const LocationContext *LCtx = N->getLocationContext();
-  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
+  const SourceManager &SM = BRC.getSourceManager();
 
   // Convert 'field ...' to 'Field ...' if it is a MemberExpr.
   std::string Message = Out.str();
   Message[0] = toupper(Message[0]);
 
-  // If we know the value create a pop-up note.
-  if (!IsAssuming)
-    return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Message);
+  // If we know the value create a pop-up note to the value part of 'BExpr'.
+  if (!IsAssuming) {
+    PathDiagnosticLocation Loc;
+    if (!shouldInvert) {
+      if (LhsME && LhsME->getMemberLoc().isValid())
+        Loc = PathDiagnosticLocation(LhsME->getMemberLoc(), SM);
+      else
+        Loc = PathDiagnosticLocation(BExpr->getLHS(), SM, LCtx);
+    } else {
+      if (RhsME && RhsME->getMemberLoc().isValid())
+        Loc = PathDiagnosticLocation(RhsME->getMemberLoc(), SM);
+      else
+        Loc = PathDiagnosticLocation(BExpr->getRHS(), SM, LCtx);
+    }
 
+    return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Message);
+  }
+
+  PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
   if (shouldPrune.hasValue())
     event->setPrunable(shouldPrune.getValue());
@@ -2472,12 +2487,14 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
     return nullptr;
 
   const LocationContext *LCtx = N->getLocationContext();
-  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
 
-  // If we know the value create a pop-up note.
-  if (!IsAssuming)
+  // If we know the value create a pop-up note to the 'DRE'.
+  if (!IsAssuming) {
+    PathDiagnosticLocation Loc(DRE, BRC.getSourceManager(), LCtx);
     return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Out.str());
+  }
 
+  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
   const ProgramState *state = N->getState().get();
   if (const MemRegion *R = state->getLValue(VD, LCtx).getAsRegion()) {
@@ -2505,11 +2522,17 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
     return nullptr;
 
   const LocationContext *LCtx = N->getLocationContext();
-  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
+  PathDiagnosticLocation Loc;
+
+  // If we know the value create a pop-up note to the member of the MemberExpr.
+  if (!IsAssuming && ME->getMemberLoc().isValid())
+    Loc = PathDiagnosticLocation(ME->getMemberLoc(), BRC.getSourceManager());
+  else
+    Loc = PathDiagnosticLocation(Cond, BRC.getSourceManager(), LCtx);
+
   if (!Loc.isValid() || !Loc.asLocation().isValid())
     return nullptr;
 
-  // If we know the value create a pop-up note.
   if (!IsAssuming)
     return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Out.str());
 
