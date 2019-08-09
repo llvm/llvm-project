@@ -4751,26 +4751,6 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
 }
 
 CompilerType
-SwiftASTContext::CreateTupleType(const std::vector<CompilerType> &elements) {
-  VALID_OR_RETURN(CompilerType());
-
-  Status error;
-  if (elements.size() == 0)
-    return {GetASTContext()->TheEmptyTupleType};
-  else {
-    std::vector<swift::TupleTypeElt> tuple_elems;
-    for (const CompilerType &type : elements) {
-      if (auto swift_type = GetSwiftType(type))
-        tuple_elems.push_back(swift::TupleTypeElt(swift_type));
-      else
-        return CompilerType();
-    }
-    llvm::ArrayRef<swift::TupleTypeElt> fields(tuple_elems);
-    return {swift::TupleType::get(fields, *GetASTContext()).getPointer()};
-  }
-}
-
-CompilerType
 SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
   VALID_OR_RETURN(CompilerType());
 
