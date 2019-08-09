@@ -3158,11 +3158,10 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
       // Not implemented.
       return true;
     case swift::Demangle::Node::Kind::Class:
-      // Not implemented.
-      return true;
+      return !qual_type->isObjCObjectOrInterfaceType();
     case swift::Demangle::Node::Kind::TypeAlias:
       // Not Implemented.
-      return true;
+      return !qual_type->getAs<clang::TypedefType>();
       // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
     case swift::Demangle::Node::Kind::Structure:
     case swift::Demangle::Node::Kind::Enum:
@@ -3171,6 +3170,26 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     default:
       return true;
     }
+  }
+
+  clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
+                                     swift::Demangle::Node::Kind kind) {
+    switch (kind) {
+    case swift::Demangle::Node::Kind::Class:
+      if (auto *obj_type = qual_type->getAsObjCInterfaceType())
+        return obj_type->getInterface();
+      break;
+    case swift::Demangle::Node::Kind::TypeAlias:
+      if (auto *typedef_type = qual_type->getAs<clang::TypedefType>())
+        return typedef_type->getDecl();
+      break;
+    case swift::Demangle::Node::Kind::Structure:
+    case swift::Demangle::Node::Kind::Enum:
+      return qual_type->getAsTagDecl();
+    default:
+      break;
+    }
+    return nullptr;
   }
 
 public:
@@ -3234,11 +3253,21 @@ public:
       clang::QualType clang_type(
           importer.Import(ClangUtil::GetQualType(compiler_type)));
 
-      clang::Decl *clang_decl = clang_type->getAsTagDecl();
-      if (!clang_decl)
-        continue;
-
-      results.push_back(clang_decl);
+      // Retrieve the imported type's Decl.
+      if (kind) {
+        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, *kind))
+          results.push_back(clang_decl);
+      } else {
+        swift::Demangle::Node::Kind kinds[] = {
+            swift::Demangle::Node::Kind::Protocol,
+            swift::Demangle::Node::Kind::Class,
+            swift::Demangle::Node::Kind::TypeAlias,
+            swift::Demangle::Node::Kind::Structure,
+            swift::Demangle::Node::Kind::TypeAlias};
+        for (auto kind : kinds)
+          if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, kind))
+            results.push_back(clang_decl);
+      }
     }
   }
 };

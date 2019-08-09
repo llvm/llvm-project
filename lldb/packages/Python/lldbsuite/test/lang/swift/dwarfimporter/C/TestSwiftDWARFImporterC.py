@@ -58,6 +58,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
         self.expect("fr v swiftStructCMember",
                     substrs=["x = 3", "y = 4", "swift struct c member"])
+        self.expect("fr v typedef", substrs=["x = 5", "y = 6"])
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()

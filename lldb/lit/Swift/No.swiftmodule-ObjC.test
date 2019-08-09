@@ -14,5 +14,7 @@
 breakpoint set -p "break here"
 run
 frame variable -d no-dynamic
-frame variable -O object
+frame variable object
+# FIXME: (fails creating the expression context)  frame variable -O object
 target var globalFloat
+quit
