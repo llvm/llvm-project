@@ -4387,33 +4387,6 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (qualified_name && qualified_name[0]) {
-    const char *dot_pos = strchr(qualified_name, '.');
-    if (dot_pos) {
-      ConstString module_name(qualified_name, dot_pos - qualified_name);
-      SourceModule module_info;
-      module_info.path.push_back(module_name);
-      swift::ModuleDecl *swift_module = GetCachedModule(module_info);
-      if (swift_module) {
-        swift::ModuleDecl::AccessPathTy access_path;
-        llvm::SmallVector<swift::ValueDecl *, 4> decls;
-        const char *module_type_name = dot_pos + 1;
-        swift_module->lookupValue(access_path, GetIdentifier(module_type_name),
-                                  swift::NLKind::UnqualifiedLookup, decls);
-        for (auto decl : decls) {
-          CompilerType type = ValueDeclToType(decl, GetASTContext());
-          if (type)
-            return type;
-        }
-      }
-    }
-  }
-  return {};
-}
-
 static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {
   if (swift::ValueDecl *value_decl =
           swift::dyn_cast_or_null<swift::ValueDecl>(decl))
