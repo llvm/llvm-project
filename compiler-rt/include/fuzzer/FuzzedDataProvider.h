@@ -13,11 +13,10 @@
 #ifndef LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
 #define LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
 
-#include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <initializer_list>
 #include <string>

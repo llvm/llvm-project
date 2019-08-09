@@ -188,7 +188,7 @@ TEST(ClangdUnitTest,
                         AllOf(DeclNamed("foo"), WithTemplateArgs("")),
                         AllOf(DeclNamed("i"), WithTemplateArgs("")),
                         AllOf(DeclNamed("d"), WithTemplateArgs("")),
-                        AllOf(DeclNamed("foo"), WithTemplateArgs("<>")),
+                        AllOf(DeclNamed("foo"), WithTemplateArgs("<T *>")),
                         AllOf(DeclNamed("foo"), WithTemplateArgs("<bool>"))}));
 }
 

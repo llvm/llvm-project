@@ -20,25 +20,40 @@ Symbols:
     Type: STT_OBJECT
   - Name: symbol_func
     Type: STT_FUNC
+  - Name: unknown_7
+    Type: 7
+  - Name: unknown_8
+    Type: 8
+  - Name: unknown_9
+    Type: 9
   - Name: symbol_ifunc
     Type: STT_GNU_IFUNC
-  - Name: os_specific
+  - Name: os_specific_10
+    Type: 10
+  - Name: os_specific_11
     Type: 11
-  - Name: proc_specific
+  - Name: os_specific_12
+    Type: 12
+  - Name: proc_specific_13
     Type: 13
-  - Name: unknown
-    Type: 7
+  - Name: proc_specific_14
+    Type: 14
+  - Name: proc_specific_15
+    Type: 15
 
-## FIXME: Should not print blank types for unknown, OS-specific and processor-
-##        specific types. See https://bugs.llvm.org/show_bug.cgi?id=41713.
-
-# CHECK:      os_specific   {{.*}}|                  |                |     |*UND*
-# CHECK-NEXT: proc_specific {{.*}}|                  |                |     |*UND*
-# CHECK-NEXT: symbol_common {{.*}}|            COMMON|                |     |*COM*
-# CHECK-NEXT: symbol_file   {{.*}}|              FILE|                |     |*UND*
-# CHECK-NEXT: symbol_func   {{.*}}|              FUNC|                |     |*UND*
-# CHECK-NEXT: symbol_ifunc  {{.*}}|             IFUNC|                |     |*UND*
-# CHECK-NEXT: symbol_notype {{.*}}|            NOTYPE|                |     |*UND*
-# CHECK-NEXT: symbol_obj    {{.*}}|            OBJECT|                |     |*UND*
-# CHECK-NEXT: symbol_tls    {{.*}}|               TLS|                |     |*UND*
-# CHECK-NEXT: unknown       {{.*}}|                  |                |     |*UND*
+# CHECK:      os_specific_10      |                |   U  |             IFUNC|                |     |*UND*
+# CHECK-NEXT: os_specific_11      |                |   U  | <OS specific>: 11|                |     |*UND*
+# CHECK-NEXT: os_specific_12      |                |   U  | <OS specific>: 12|                |     |*UND*
+# CHECK-NEXT: proc_specific_13    |                |   U  |<processor specific>: 13|                |     |*UND*
+# CHECK-NEXT: proc_specific_14    |                |   U  |<processor specific>: 14|                |     |*UND*
+# CHECK-NEXT: proc_specific_15    |                |   U  |<processor specific>: 15|                |     |*UND*
+# CHECK-NEXT: symbol_common       |                |   U  |            COMMON|                |     |*COM*
+# CHECK-NEXT: symbol_file         |                |   U  |              FILE|                |     |*UND*
+# CHECK-NEXT: symbol_func         |                |   U  |              FUNC|                |     |*UND*
+# CHECK-NEXT: symbol_ifunc        |                |   U  |             IFUNC|                |     |*UND*
+# CHECK-NEXT: symbol_notype       |                |   U  |            NOTYPE|                |     |*UND*
+# CHECK-NEXT: symbol_obj          |                |   U  |            OBJECT|                |     |*UND*
+# CHECK-NEXT: symbol_tls          |                |   U  |               TLS|                |     |*UND*
+# CHECK-NEXT: unknown_7           |                |   U  |      <unknown>: 7|                |     |*UND*
+# CHECK-NEXT: unknown_8           |                |   U  |      <unknown>: 8|                |     |*UND*
+# CHECK-NEXT: unknown_9           |                |   U  |      <unknown>: 9|                |     |*UND*

@@ -5258,6 +5258,20 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::OCLIntelSubgroupAVCImeSingleRefStreamin:
     case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
       break;
+
+    case clang::BuiltinType::SveBool:
+    case clang::BuiltinType::SveInt8:
+    case clang::BuiltinType::SveInt16:
+    case clang::BuiltinType::SveInt32:
+    case clang::BuiltinType::SveInt64:
+    case clang::BuiltinType::SveUint8:
+    case clang::BuiltinType::SveUint16:
+    case clang::BuiltinType::SveUint32:
+    case clang::BuiltinType::SveUint64:
+    case clang::BuiltinType::SveFloat16:
+    case clang::BuiltinType::SveFloat32:
+    case clang::BuiltinType::SveFloat64:
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may

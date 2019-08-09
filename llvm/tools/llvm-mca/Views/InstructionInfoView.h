@@ -40,6 +40,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MCA/CodeEmitter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
@@ -51,14 +52,18 @@ namespace mca {
 class InstructionInfoView : public View {
   const llvm::MCSubtargetInfo &STI;
   const llvm::MCInstrInfo &MCII;
+  CodeEmitter &CE;
+  bool PrintEncodings;
   llvm::ArrayRef<llvm::MCInst> Source;
   llvm::MCInstPrinter &MCIP;
 
 public:
-  InstructionInfoView(const llvm::MCSubtargetInfo &sti,
-                      const llvm::MCInstrInfo &mcii,
-                      llvm::ArrayRef<llvm::MCInst> S, llvm::MCInstPrinter &IP)
-      : STI(sti), MCII(mcii), Source(S), MCIP(IP) {}
+  InstructionInfoView(const llvm::MCSubtargetInfo &ST,
+                      const llvm::MCInstrInfo &II, CodeEmitter &C,
+                      bool ShouldPrintEncodings, llvm::ArrayRef<llvm::MCInst> S,
+                      llvm::MCInstPrinter &IP)
+      : STI(ST), MCII(II), CE(C), PrintEncodings(ShouldPrintEncodings),
+        Source(S), MCIP(IP) {}
 
   void printView(llvm::raw_ostream &OS) const override;
 };

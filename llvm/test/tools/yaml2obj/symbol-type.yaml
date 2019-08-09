@@ -9,12 +9,14 @@
 # CHECK: Type: Section
 # CHECK: Name: known_hex
 # CHECK: Type: Object
-# CHECK: Name: unknown_hex
-# CHECK: Type: 0xB
+
+# CHECK: Name: unknown_hex_11
+# CHECK: Type: OS Specific (0xB)
+
 # CHECK: Name: known_int
 # CHECK: Type: Object
 # CHECK: Name: unknown_int
-# CHECK: Type: 0xB
+# CHECK: Type: OS Specific (0xB)
 
 !ELF
 FileHeader:
@@ -38,7 +40,7 @@ Symbols:
   - Name:    known_hex
     Type:    0x1
     Binding: STB_GLOBAL
-  - Name:    unknown_hex
+  - Name:    unknown_hex_11
     Type:    0xb
     Binding: STB_GLOBAL
   - Name:    known_int

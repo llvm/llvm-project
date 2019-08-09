@@ -1298,6 +1298,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
+  if (Target.hasAArch64SVETypes()) {
+#define SVE_TYPE(Name, Id, SingletonId) \
+    InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AArch64SVEACLETypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -1968,6 +1974,25 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(AS);
       Align = Target->getPointerAlign(AS);
       break;
+    // The SVE types are effectively target-specific.  The length of an
+    // SVE_VECTOR_TYPE is only known at runtime, but it is always a multiple
+    // of 128 bits.  There is one predicate bit for each vector byte, so the
+    // length of an SVE_PREDICATE_TYPE is always a multiple of 16 bits.
+    //
+    // Because the length is only known at runtime, we use a dummy value
+    // of 0 for the static length.  The alignment values are those defined
+    // by the Procedure Call Standard for the Arm Architecture.
+#define SVE_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP)\
+    case BuiltinType::Id: \
+      Width = 0; \
+      Align = 128; \
+      break;
+#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, ElKind) \
+    case BuiltinType::Id: \
+      Width = 0; \
+      Align = 16; \
+      break;
+#include "clang/Basic/AArch64SVEACLETypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -6556,8 +6581,9 @@ void ASTContext::getObjCEncodingForPropertyType(QualType T,
                              /*Field=*/nullptr);
 }
 
-static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
-                                            BuiltinType::Kind kind) {
+static char getObjCEncodingForPrimitiveType(const ASTContext *C,
+                                            const BuiltinType *BT) {
+    BuiltinType::Kind kind = BT->getKind();
     switch (kind) {
     case BuiltinType::Void:       return 'v';
     case BuiltinType::Bool:       return 'B';
@@ -6617,6 +6643,17 @@ static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
       // FIXME: potentially need @encodes for these!
       return ' ';
 
+#define SVE_TYPE(Name, Id, SingletonId) \
+    case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
+    {
+      DiagnosticsEngine &Diags = C->getDiagnostics();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "cannot yet @encode type %0");
+      Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
+      return ' ';
+    }
+
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
@@ -6653,7 +6690,7 @@ static char ObjCEncodingForEnumType(const ASTContext *C, const EnumType *ET) {
 
   // The encoding of a fixed enum type matches its fixed underlying type.
   const auto *BT = Enum->getIntegerType()->castAs<BuiltinType>();
-  return getObjCEncodingForPrimitiveKind(C, BT->getKind());
+  return getObjCEncodingForPrimitiveType(C, BT);
 }
 
 static void EncodeBitField(const ASTContext *Ctx, std::string& S,
@@ -6693,7 +6730,7 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
       S += ObjCEncodingForEnumType(Ctx, ET);
     else {
       const auto *BT = T->castAs<BuiltinType>();
-      S += getObjCEncodingForPrimitiveKind(Ctx, BT->getKind());
+      S += getObjCEncodingForPrimitiveType(Ctx, BT);
     }
   }
   S += llvm::utostr(FD->getBitWidthValue(*Ctx));
@@ -6711,7 +6748,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     if (FD && FD->isBitField())
       return EncodeBitField(this, S, T, FD);
     if (const auto *BT = dyn_cast<BuiltinType>(CT))
-      S += getObjCEncodingForPrimitiveKind(this, BT->getKind());
+      S += getObjCEncodingForPrimitiveType(this, BT);
     else
       S += ObjCEncodingForEnumType(this, cast<EnumType>(CT));
     return;
