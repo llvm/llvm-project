@@ -402,21 +402,26 @@ void DWARFUnit::extractDIEsToVector(
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
+  if (Error e = tryExtractDIEsIfNeeded(CUDieOnly))
+    WithColor::error() << toString(std::move(e));
+}
+
+Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if ((CUDieOnly && !DieArray.empty()) ||
       DieArray.size() > 1)
-    return; // Already parsed.
+    return Error::success(); // Already parsed.
 
   bool HasCUDie = !DieArray.empty();
   extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
 
   if (DieArray.empty())
-    return;
+    return Error::success();
 
   // If CU DIE was just parsed, copy several attribute values from it.
   if (HasCUDie)
-    return;
+    return Error::success();
 
-  DWARFDie UnitDie = getUnitDIE();
+  DWARFDie UnitDie(this, &DieArray[0]);
   if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
     Header.setDWOId(*DWOId);
   if (!IsDWO) {
@@ -442,13 +447,13 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     auto StringOffsetOrError =
         IsDWO ? determineStringOffsetsTableContributionDWO(DA)
               : determineStringOffsetsTableContribution(DA);
-    if (!StringOffsetOrError) {
-      WithColor::error() << "invalid contribution to string offsets table in "
-                            "section .debug_str_offsets[.dwo]: "
-                         << toString(StringOffsetOrError.takeError()) << '\n';
-    } else {
-      StringOffsetsTableContribution = *StringOffsetOrError;
-    }
+    if (!StringOffsetOrError)
+      return createStringError(errc::invalid_argument,
+                               "invalid reference to or invalid content in "
+                               ".debug_str_offsets[.dwo]: " +
+                                   toString(StringOffsetOrError.takeError()));
+
+    StringOffsetsTableContribution = *StringOffsetOrError;
   }
 
   // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
@@ -464,12 +469,14 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       // extracted lazily.
       DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                                   isLittleEndian, 0);
-      if (auto TableOrError =
-              parseRngListTableHeader(RangesDA, RangeSectionBase))
-        RngListTable = TableOrError.get();
-      else
-        WithColor::error() << "parsing a range list table: "
-                           << toString(TableOrError.takeError()) << '\n';
+      auto TableOrError =
+              parseRngListTableHeader(RangesDA, RangeSectionBase);
+      if (!TableOrError)
+        return createStringError(errc::invalid_argument,
+                                 "parsing a range list table: " +
+                                     toString(TableOrError.takeError()));
+
+      RngListTable = TableOrError.get();
 
       // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
       // Adjust RangeSectionBase to point past the table header.
@@ -480,6 +487,7 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 
   // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
   // skeleton CU DIE, so that DWARF users not aware of it are not broken.
+  return Error::success();
 }
 
 bool DWARFUnit::parseDWO() {
@@ -569,9 +577,9 @@ DWARFUnit::findRnglistFromIndex(uint32_t Index) {
   if (RngListTable)
     return createStringError(errc::invalid_argument,
                              "invalid range list table index %d", Index);
-  else
-    return createStringError(errc::invalid_argument,
-                             "missing or invalid range list table");
+
+  return createStringError(errc::invalid_argument,
+                           "missing or invalid range list table");
 }
 
 Expected<DWARFAddressRangesVector> DWARFUnit::collectAddressRanges() {

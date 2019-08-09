@@ -537,6 +537,101 @@ potentially useful project.
    SelectionDAG/TargetLowering is available but is not recommended as a more
    powerful API is available.
 
+.. _min-legalizerinfo:
+
+Minimum Rule Set
+^^^^^^^^^^^^^^^^
+
+GlobalISel's legalizer has a great deal of flexibility in how a given target
+shapes the GMIR that the rest of the backend must handle. However, there are
+a small number of requirements that all targets must meet.
+
+Before discussing the minimum requirements, we'll need some terminology:
+
+Producer Type Set
+  The set of types which is the union of all possible types produced by at
+  least one legal instruction.
+
+Consumer Type Set
+  The set of types which is the union of all possible types consumed by at
+  least one legal instruction.
+
+Both sets are often identical but there's no guarantee of that. For example,
+it's not uncommon to be unable to consume s64 but still be able to produce it
+for a few specific instructions.
+
+Minimum Rules For Scalars
+"""""""""""""""""""""""""
+
+* G_ANYEXT must be legal for all inputs from the producer type set and all larger
+  outputs from the consumer type set.
+* G_TRUNC must be legal for all inputs from the producer type set and all
+  smaller outputs from the consumer type set.
+
+G_ANYEXT, and G_TRUNC have mandatory legality since the GMIR requires a means to
+connect operations with different type sizes. They are usually trivial to support
+since G_ANYEXT doesn't define the value of the additional bits and G_TRUNC is
+discarding bits. The other conversions can be lowered into G_ANYEXT/G_TRUNC
+with some additional operations that are subject to further legalization. For
+example, G_SEXT can lower to:
+  %1 = G_ANYEXT %0
+  %2 = G_CONSTANT ...
+  %3 = G_SHL %1, %2
+  %4 = G_ASHR %3, %2
+and the G_CONSTANT/G_SHL/G_ASHR can further lower to other operations or target
+instructions. Similarly, G_FPEXT has no legality requirement since it can lower
+to a G_ANYEXT followed by a target instruction.
+
+G_MERGE_VALUES and G_UNMERGE_VALUES do not have legality requirements since the
+former can lower to G_ANYEXT and some other legalizable instructions, while the
+latter can lower to some legalizable instructions followed by G_TRUNC.
+
+Minimum Legality For Vectors
+""""""""""""""""""""""""""""
+
+Within the vector types, there aren't any defined conversions in LLVM IR as
+vectors are often converted by reinterpreting the bits or by decomposing the
+vector and reconstituting it as a different type. As such, G_BITCAST is the
+only operation to account for. We generally don't require that it's legal
+because it can usually be lowered to COPY (or to nothing using
+replaceAllUses()). However, there are situations where G_BITCAST is non-trivial
+(e.g. little-endian vectors of big-endian data such as on big-endian MIPS MSA and
+big-endian ARM NEON, see `_i_bitcast`). To account for this G_BITCAST must be
+legal for all type combinations that change the bit pattern in the value.
+
+There are no legality requirements for G_BUILD_VECTOR, or G_BUILD_VECTOR_TRUNC
+since these can be handled by:
+* Declaring them legal.
+* Scalarizing them.
+* Lowering them to G_TRUNC+G_ANYEXT and some legalizable instructions.
+* Lowering them to target instructions which are legal by definition.
+
+The same reasoning also allows G_UNMERGE_VALUES to lack legality requirements
+for vector inputs.
+
+Minimum Legality for Pointers
+"""""""""""""""""""""""""""""
+
+There are no minimum rules for pointers since G_INTTOPTR and G_PTRTOINT can
+be selected to a COPY from register class to another by the legalizer.
+
+Minimum Legality For Operations
+"""""""""""""""""""""""""""""""
+
+The rules for G_ANYEXT, G_MERGE_VALUES, G_BITCAST, G_BUILD_VECTOR,
+G_BUILD_VECTOR_TRUNC, G_CONCAT_VECTORS, G_UNMERGE_VALUES, G_PTRTOINT, and
+G_INTTOPTR have already been noted above. In addition to those, the following
+operations have requirements:
+* At least one G_IMPLICIT_DEF must be legal. This is usually trivial as it
+  requires no code to be selected.
+* G_PHI must be legal for all types in the producer and consumer typesets. This
+  is usually trivial as it requires no code to be selected.
+* At least one G_FRAME_INDEX must be legal
+* At least one G_BLOCK_ADDR must be legal
+
+There are many other operations you'd expect to have legality requirements but
+they can be lowered to target instructions which are legal by definition.
+
 .. _regbankselect:
 
 RegBankSelect

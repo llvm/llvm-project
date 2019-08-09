@@ -1,4 +1,4 @@
-//===- FuzzedDataProvider.hpp - Utility header for fuzz targets -*- C++ -* ===//
+//===- FuzzedDataProvider.h - Utility header for fuzz targets ---*- C++ -* ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+// In addition to the comments below, the API is also briefly documented at
+// https://github.com/google/fuzzing/blob/master/docs/split-inputs.md#fuzzed-data-provider
 class FuzzedDataProvider {
  public:
   // |data| is an array of length |size| that the FuzzedDataProvider wraps to
@@ -143,9 +145,9 @@ class FuzzedDataProvider {
     return ConsumeBytes<T>(remaining_bytes_);
   }
 
+  // Returns a std::string containing all remaining bytes of the input data.
   // Prefer using |ConsumeRemainingBytes| unless you actually need a std::string
   // object.
-  // Returns a std::vector containing all remaining bytes of the input data.
   std::string ConsumeRemainingBytesAsString() {
     return ConsumeBytesAsString(remaining_bytes_);
   }
@@ -161,7 +163,7 @@ class FuzzedDataProvider {
   // Reads one byte and returns a bool, or false when no data remains.
   bool ConsumeBool() { return 1 & ConsumeIntegral<uint8_t>(); }
 
-  // Returns a copy of a value selected from a fixed-size |array|.
+  // Returns a copy of the value selected from the given fixed-size |array|.
   template <typename T, size_t size>
   T PickValueInArray(const T (&array)[size]) {
     static_assert(size > 0, "The array must be non empty.");
@@ -170,17 +172,70 @@ class FuzzedDataProvider {
 
   template <typename T>
   T PickValueInArray(std::initializer_list<const T> list) {
-    // static_assert(list.size() > 0, "The array must be non empty.");
+    // TODO(Dor1s): switch to static_assert once C++14 is allowed.
+    if (!list.size())
+      abort();
+
     return *(list.begin() + ConsumeIntegralInRange<size_t>(0, list.size() - 1));
   }
 
-  // Return an enum value. The enum must start at 0 and be contiguous. It must
+  // Returns an enum value. The enum must start at 0 and be contiguous. It must
   // also contain |kMaxValue| aliased to its largest (inclusive) value. Such as:
   // enum class Foo { SomeValue, OtherValue, kMaxValue = OtherValue };
   template <typename T> T ConsumeEnum() {
     static_assert(std::is_enum<T>::value, "|T| must be an enum type.");
     return static_cast<T>(ConsumeIntegralInRange<uint32_t>(
         0, static_cast<uint32_t>(T::kMaxValue)));
+  }
+
+  // Returns a floating point number in the range [0.0, 1.0]. If there's no
+  // input data left, always returns 0.
+  template <typename T> T ConsumeProbability() {
+    static_assert(std::is_floating_point<T>::value,
+                  "A floating point type is required.");
+
+    // Use different integral types for different floating point types in order
+    // to provide better density of the resulting values.
+    using IntegralType =
+        typename std::conditional<sizeof(T) <= sizeof(uint32_t), uint32_t,
+                                  uint64_t>::type;
+
+    T result = static_cast<T>(ConsumeIntegral<IntegralType>());
+    result /= static_cast<T>(std::numeric_limits<IntegralType>::max());
+    return result;
+  }
+
+  // Returns a floating point value in the range [Type's lowest, Type's max] by
+  // consuming bytes from the input data. If there's no input data left, always
+  // returns approximately 0.
+  template <typename T> T ConsumeFloatingPoint() {
+    return ConsumeFloatingPointInRange<T>(std::numeric_limits<T>::lowest(),
+                                          std::numeric_limits<T>::max());
+  }
+
+  // Returns a floating point value in the given range by consuming bytes from
+  // the input data. If there's no input data left, returns |min|. Note that
+  // |min| must be less than or equal to |max|.
+  template <typename T> T ConsumeFloatingPointInRange(T min, T max) {
+    if (min > max)
+      abort();
+
+    T range = .0;
+    T result = min;
+    constexpr T zero(.0);
+    if (max > zero && min < zero && max > min + std::numeric_limits<T>::max()) {
+      // The diff |max - min| would overflow the given floating point type. Use
+      // the half of the diff as the range and consume a bool to decide whether
+      // the result is in the first of the second part of the diff.
+      range = (max / 2.0) - (min / 2.0);
+      if (ConsumeBool()) {
+        result += range;
+      }
+    } else {
+      range = max - min;
+    }
+
+    return result + range * ConsumeProbability<T>();
   }
 
   // Reports the remaining bytes available for fuzzed input.

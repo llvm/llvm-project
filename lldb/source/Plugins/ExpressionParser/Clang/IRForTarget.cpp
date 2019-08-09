@@ -164,38 +164,37 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
 
-  std::string result_name_str;
-  const char *result_name = nullptr;
+  llvm::StringRef result_name;
+  bool found_result = false;
 
   for (ValueSymbolTable::iterator vi = value_symbol_table.begin(),
                                   ve = value_symbol_table.end();
        vi != ve; ++vi) {
-    result_name_str = vi->first().str();
-    const char *value_name = result_name_str.c_str();
+    result_name = vi->first();
 
-    if (strstr(value_name, "$__lldb_expr_result_ptr") &&
-        strncmp(value_name, "_ZGV", 4)) {
-      result_name = value_name;
+    if (result_name.contains("$__lldb_expr_result_ptr") &&
+        !result_name.startswith("_ZGV")) {
+      found_result = true;
       m_result_is_pointer = true;
       break;
     }
 
-    if (strstr(value_name, "$__lldb_expr_result") &&
-        strncmp(value_name, "_ZGV", 4)) {
-      result_name = value_name;
+    if (result_name.contains("$__lldb_expr_result") &&
+        !result_name.startswith("_ZGV")) {
+      found_result = true;
       m_result_is_pointer = false;
       break;
     }
   }
 
-  if (!result_name) {
+  if (!found_result) {
     if (log)
       log->PutCString("Couldn't find result variable");
 
     return true;
   }
 
-  LLDB_LOGF(log, "Result name: \"%s\"", result_name);
+  LLDB_LOG(log, "Result name: \"{0}\"", result_name);
 
   Value *result_value = m_module->getNamedValue(result_name);
 
@@ -203,8 +202,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable had no data");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable's "
-                          "name (%s) exists, but not its definition\n",
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable's "
+                          "name ({0}) exists, but not its definition\n",
                           result_name);
 
     return false;
@@ -219,7 +218,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable isn't a GlobalVariable");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable ({0}) "
                           "is defined, but is not a global variable\n",
                           result_name);
 
@@ -231,7 +230,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable doesn't have a corresponding Decl");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable ({0}) "
                           "does not have a corresponding Clang entity\n",
                           result_name);
 
@@ -252,8 +251,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (log)
       log->PutCString("Result variable Decl isn't a VarDecl");
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Result variable "
-                          "(%s)'s corresponding Clang entity isn't a "
+    m_error_stream.Format("Internal error [IRForTarget]: Result variable "
+                          "({0})'s corresponding Clang entity isn't a "
                           "variable\n",
                           result_name);
 
@@ -293,7 +292,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       if (log)
         log->PutCString("Expected result to have pointer type, but it did not");
 
-      m_error_stream.Printf("Internal error [IRForTarget]: Lvalue result (%s) "
+      m_error_stream.Format("Internal error [IRForTarget]: Lvalue result ({0}) "
                             "is not a pointer variable\n",
                             result_name);
 
@@ -382,8 +381,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     if (!result_global->hasInitializer()) {
       LLDB_LOGF(log, "Couldn't find initializer for unused variable");
 
-      m_error_stream.Printf("Internal error [IRForTarget]: Result variable "
-                            "(%s) has no writes and no initializer\n",
+      m_error_stream.Format("Internal error [IRForTarget]: Result variable "
+                            "({0}) has no writes and no initializer\n",
                             result_name);
 
       return false;
@@ -1342,7 +1341,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       return false;
     }
 
-    std::string name(named_decl->getName().str());
+    llvm::StringRef name(named_decl->getName());
 
     clang::ValueDecl *value_decl = dyn_cast<clang::ValueDecl>(named_decl);
     if (value_decl == nullptr)
@@ -1353,7 +1352,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
 
     const Type *value_type = nullptr;
 
-    if (name[0] == '$') {
+    if (name.startswith("$")) {
       // The $__lldb_expr_result name indicates the return value has allocated
       // as a static variable.  Per the comment at
       // ASTResultSynthesizer::SynthesizeBodyResult, accesses to this static
@@ -1377,20 +1376,19 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
         (compiler_type.GetTypeBitAlign() + 7ull) / 8ull;
 
     if (log) {
-      LLDB_LOGF(log,
-                "Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64
-                ", align %" PRIu64 "]",
-                name.c_str(),
-                lldb_private::ClangUtil::GetQualType(compiler_type)
-                    .getAsString()
-                    .c_str(),
-                PrintType(value_type).c_str(), *value_size, value_alignment);
+      LLDB_LOG(
+          log,
+          "Type of \"{0}\" is [clang \"{1}\", llvm \"{2}\"] [size {3}, "
+          "align {4}]",
+          name,
+          lldb_private::ClangUtil::GetQualType(compiler_type).getAsString(),
+          PrintType(value_type), *value_size, value_alignment);
     }
 
     if (named_decl)
-      m_decl_map->AddValueToStruct(
-          named_decl, lldb_private::ConstString(name.c_str()), llvm_value_ptr,
-          *value_size, value_alignment);
+      m_decl_map->AddValueToStruct(named_decl, lldb_private::ConstString(name),
+                                   llvm_value_ptr, *value_size,
+                                   value_alignment);
   } else if (dyn_cast<llvm::Function>(llvm_value_ptr)) {
     if (log)
       LLDB_LOGF(log, "Function pointers aren't handled right now");
@@ -1580,31 +1578,28 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   for (GlobalVariable &global_var : m_module->globals()) {
-    std::string global_name = global_var.getName().str();
+    llvm::StringRef global_name = global_var.getName();
 
     if (log)
-      LLDB_LOGF(log, "Examining %s, DeclForGlobalValue returns %p",
-                global_name.c_str(),
-                static_cast<void *>(DeclForGlobal(&global_var)));
+      LLDB_LOG(log, "Examining {0}, DeclForGlobalValue returns {1}",
+               global_name, static_cast<void *>(DeclForGlobal(&global_var)));
 
-    if (global_name.find("OBJC_IVAR") == 0) {
+    if (global_name.startswith("OBJC_IVAR")) {
       if (!HandleSymbol(&global_var)) {
-        m_error_stream.Printf("Error [IRForTarget]: Couldn't find Objective-C "
-                              "indirect ivar symbol %s\n",
-                              global_name.c_str());
+        m_error_stream.Format("Error [IRForTarget]: Couldn't find Objective-C "
+                              "indirect ivar symbol {0}\n",
+                              global_name);
 
         return false;
       }
-    } else if (global_name.find("OBJC_CLASSLIST_REFERENCES_$") !=
-               global_name.npos) {
+    } else if (global_name.contains("OBJC_CLASSLIST_REFERENCES_$")) {
       if (!HandleObjCClass(&global_var)) {
         m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class "
                               "for an Objective-C static method call\n");
 
         return false;
       }
-    } else if (global_name.find("OBJC_CLASSLIST_SUP_REFS_$") !=
-               global_name.npos) {
+    } else if (global_name.contains("OBJC_CLASSLIST_SUP_REFS_$")) {
       if (!HandleObjCClass(&global_var)) {
         m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class "
                               "for an Objective-C static method call\n");
@@ -1613,9 +1608,9 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
       }
     } else if (DeclForGlobal(&global_var)) {
       if (!MaybeHandleVariable(&global_var)) {
-        m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "
-                              "external variable %s\n",
-                              global_name.c_str());
+        m_error_stream.Format("Internal error [IRForTarget]: Couldn't rewrite "
+                              "external variable {0}\n",
+                              global_name);
 
         return false;
       }
@@ -1873,9 +1868,9 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     if (!iter->getName().equals("_cmd")) {
-      m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes '%s' "
+      m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes '{0}' "
                             "after 'self' argument (should take '_cmd')",
-                            iter->getName().str().c_str());
+                            iter->getName());
 
       return false;
     }
@@ -1894,15 +1889,15 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (!argument->getName().equals("$__lldb_arg")) {
-    m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes an "
-                          "argument named '%s' instead of the struct pointer",
-                          argument->getName().str().c_str());
+    m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes an "
+                          "argument named '{0}' instead of the struct pointer",
+                          argument->getName());
 
     return false;
   }
 
   if (log)
-    LLDB_LOGF(log, "Arg: \"%s\"", PrintValue(argument).c_str());
+    LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
   Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
@@ -1940,12 +1935,12 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     if (log)
-      LLDB_LOGF(log, "  \"%s\" (\"%s\") placed at %" PRIu64, name.GetCString(),
-                decl->getNameAsString().c_str(), offset);
+      LLDB_LOG(log, "  \"{0}\" (\"{1}\") placed at %" PRIu64, name,
+               decl->getNameAsString(), offset);
 
     if (value) {
       if (log)
-        LLDB_LOGF(log, "    Replacing [%s]", PrintValue(value).c_str());
+        LLDB_LOG(log, "    Replacing [{0}]", PrintValue(value));
 
       FunctionValueCache body_result_maker(
           [this, name, offset_type, offset, argument,
@@ -1995,8 +1990,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             body_result_maker.GetValue(instruction->getParent()->getParent()));
       } else {
         if (log)
-          LLDB_LOGF(log, "Unhandled non-constant type: \"%s\"",
-                    PrintValue(value).c_str());
+          LLDB_LOG(log, "Unhandled non-constant type: \"{0}\"",
+                   PrintValue(value));
         return false;
       }
 
@@ -2006,8 +2001,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (log)
-    LLDB_LOGF(log, "Total structure [align %" PRId64 ", size %" PRIu64 "]",
-              (int64_t)alignment, (uint64_t)size);
+    LLDB_LOG(log, "Total structure [align {0}, size {1}]", (int64_t)alignment,
+             (uint64_t)size);
 
   return true;
 }
@@ -2051,7 +2046,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module as passed in to IRForTarget: \n\"%s\"", s.c_str());
+    LLDB_LOG(log, "Module as passed in to IRForTarget: \n\"{0}\"", s);
   }
 
   Function *const main_function =
@@ -2060,12 +2055,11 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
   if (!m_func_name.IsEmpty() && !main_function) {
     if (log)
-      LLDB_LOGF(log, "Couldn't find \"%s()\" in the module",
-                m_func_name.AsCString());
+      LLDB_LOG(log, "Couldn't find \"{0}()\" in the module", m_func_name);
 
-    m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find wrapper "
-                          "'%s' in the module",
-                          m_func_name.AsCString());
+    m_error_stream.Format("Internal error [IRForTarget]: Couldn't find wrapper "
+                          "'{0}' in the module",
+                          m_func_name);
 
     return false;
   }
@@ -2110,8 +2104,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module after creating the result variable: \n\"%s\"",
-              s.c_str());
+    LLDB_LOG(log, "Module after creating the result variable: \n\"{0}\"", s);
   }
 
   for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
@@ -2245,7 +2238,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    LLDB_LOGF(log, "Module after preparing for execution: \n\"%s\"", s.c_str());
+    LLDB_LOG(log, "Module after preparing for execution: \n\"{0}\"", s);
   }
 
   return true;

@@ -726,9 +726,6 @@ void HexagonMCChecker::reportNote(SMLoc Loc, llvm::Twine const &Msg) {
 }
 
 void HexagonMCChecker::reportWarning(Twine const &Msg) {
-  if (ReportErrors) {
-    auto SM = Context.getSourceManager();
-    if (SM)
-      SM->PrintMessage(MCB.getLoc(), SourceMgr::DK_Warning, Msg);
-  }
+  if (ReportErrors)
+    Context.reportWarning(MCB.getLoc(), Msg);
 }

@@ -1742,6 +1742,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::FSHR, VT, Custom);
       }
     }
+
+    setOperationAction(ISD::TRUNCATE, MVT::v16i32, Custom);
+    setOperationAction(ISD::TRUNCATE, MVT::v8i64, Custom);
   }
 
   // We want to custom lower some of our intrinsics.
@@ -19017,8 +19020,26 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
          "Invalid TRUNCATE operation");
 
   // If called by the legalizer just return.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT))
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT)) {
+    if ((InVT == MVT::v8i64 || InVT == MVT::v16i32) && VT.is128BitVector()) {
+      assert(Subtarget.hasVLX() && "Unexpected subtarget!");
+      // The default behavior is to truncate one step, concatenate, and then
+      // truncate the remainder. We'd rather produce two 64-bit results and
+      // concatenate those.
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(In, DL);
+
+      EVT LoVT, HiVT;
+      std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+
+      Lo = DAG.getNode(ISD::TRUNCATE, DL, LoVT, Lo);
+      Hi = DAG.getNode(ISD::TRUNCATE, DL, HiVT, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    // Otherwise let default legalization handle it.
     return SDValue();
+  }
 
   if (VT.getVectorElementType() == MVT::i1)
     return LowerTruncateVecI1(Op, DAG, Subtarget);

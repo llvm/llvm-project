@@ -118,7 +118,7 @@ my $ResultFile;
 
 # Remove any stale files at exit.
 END {
-  if (defined $ResultFile && $ResultFile ne "") {
+  if (defined $ResultFile && -z $ResultFile) {
     unlink($ResultFile);
   }
   if (defined $CleanupFile) {

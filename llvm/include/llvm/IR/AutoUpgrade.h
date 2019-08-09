@@ -58,6 +58,10 @@ namespace llvm {
   /// returns true if module is modified.
   bool UpgradeRetainReleaseMarker(Module &M);
 
+  /// Convert calls to ARC runtime functions to intrinsic calls if the bitcode
+  /// has the arm64 retainAutoreleasedReturnValue marker.
+  void UpgradeARCRuntimeCalls(Module &M);
+
   void UpgradeSectionAttributes(Module &M);
 
   /// If the given TBAA tag uses the scalar TBAA format, create a new node
