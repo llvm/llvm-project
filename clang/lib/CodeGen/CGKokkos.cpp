@@ -140,6 +140,16 @@ void CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
   // first step is to extract the lambda, which we will then be 
   // transformed into a parallel-for loop body when we have 
   // completed lowering. 
+  //
+  /*
+  const Expr *E = nullptr;
+  for(int i = 0; i < CE->getNumArgs(); i++) {
+    const Expr *E = CE->getArg(i);
+    if (E) {
+      E->dump();
+    }
+  }
+  */
   const LambdaExpr *LE = ExtractLambdaExpr(CE->getArg(1));
   assert(LE && "EmitKokkosParallelFor -- unable to extract lambda!");  
   
