@@ -36,10 +36,12 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
     return true;
-
-  auto I = serialize::emitInfo(
-      D, getComment(D, D->getASTContext()), getLine(D, D->getASTContext()),
-      getFile(D, D->getASTContext()), CDCtx.PublicOnly);
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
+                               getLine(D, D->getASTContext()), File,
+                               IsFileInRootDir, CDCtx.PublicOnly);
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
@@ -87,11 +89,26 @@ int MapASTVisitor::getLine(const NamedDecl *D,
   return Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
 }
 
-llvm::StringRef MapASTVisitor::getFile(const NamedDecl *D,
-                                       const ASTContext &Context) const {
-  return Context.getSourceManager()
-      .getPresumedLoc(D->getBeginLoc())
-      .getFilename();
+llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
+                                              const ASTContext &Context,
+                                              llvm::StringRef RootDir,
+                                              bool &IsFileInRootDir) const {
+  llvm::SmallString<128> File(Context.getSourceManager()
+                                  .getPresumedLoc(D->getBeginLoc())
+                                  .getFilename());
+  IsFileInRootDir = false;
+  if (RootDir.empty() || !File.startswith(RootDir))
+    return File;
+  IsFileInRootDir = true;
+  llvm::SmallString<128> Prefix(RootDir);
+  // replace_path_prefix removes the exact prefix provided. The result of
+  // calling that function on ("A/B/C.c", "A/B", "") would be "/C.c", which
+  // starts with a / that is not needed. This is why we fix Prefix so it always
+  // ends with a / and the result has the desired format.
+  if (!llvm::sys::path::is_separator(Prefix.back()))
+    Prefix += llvm::sys::path::get_separator();
+  llvm::sys::path::replace_path_prefix(File, Prefix, "");
+  return File;
 }
 
 } // namespace doc

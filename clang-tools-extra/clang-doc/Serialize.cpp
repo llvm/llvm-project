@@ -348,19 +348,21 @@ static void populateInfo(Info &I, const T *D, const FullComment *C,
 template <typename T>
 static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
                                int LineNumber, StringRef Filename,
+                               bool IsFileInRootDir,
                                bool &IsInAnonymousNamespace) {
   populateInfo(I, D, C, IsInAnonymousNamespace);
   if (D->isThisDeclarationADefinition())
-    I.DefLoc.emplace(LineNumber, Filename);
+    I.DefLoc.emplace(LineNumber, Filename, IsFileInRootDir);
   else
-    I.Loc.emplace_back(LineNumber, Filename);
+    I.Loc.emplace_back(LineNumber, Filename, IsFileInRootDir);
 }
 
 static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  const FullComment *FC, int LineNumber,
-                                 StringRef Filename,
+                                 StringRef Filename, bool IsFileInRootDir,
                                  bool &IsInAnonymousNamespace) {
-  populateSymbolInfo(I, D, FC, LineNumber, Filename, IsInAnonymousNamespace);
+  populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
+                     IsInAnonymousNamespace);
   if (const auto *T = getDeclForType(D->getReturnType())) {
     if (dyn_cast<EnumDecl>(T))
       I.ReturnType = TypeInfo(getUSRForDecl(T), T->getNameAsString(),
@@ -376,7 +378,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool PublicOnly) {
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   auto I = llvm::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*I, D, FC, IsInAnonymousNamespace);
@@ -402,10 +404,11 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool PublicOnly) {
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   auto I = llvm::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(*I, D, FC, LineNumber, File, IsInAnonymousNamespace);
+  populateSymbolInfo(*I, D, FC, LineNumber, File, IsFileInRootDir,
+                     IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
     return {};
@@ -452,10 +455,11 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool PublicOnly) {
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
-  populateFunctionInfo(Func, D, FC, LineNumber, File, IsInAnonymousNamespace);
+  populateFunctionInfo(Func, D, FC, LineNumber, File, IsFileInRootDir,
+                       IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
     return {};
@@ -477,10 +481,11 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool PublicOnly) {
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
-  populateFunctionInfo(Func, D, FC, LineNumber, File, IsInAnonymousNamespace);
+  populateFunctionInfo(Func, D, FC, LineNumber, File, IsFileInRootDir,
+                       IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
     return {};
@@ -511,10 +516,11 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool PublicOnly) {
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   EnumInfo Enum;
   bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(Enum, D, FC, LineNumber, File, IsInAnonymousNamespace);
+  populateSymbolInfo(Enum, D, FC, LineNumber, File, IsFileInRootDir,
+                     IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
     return {};

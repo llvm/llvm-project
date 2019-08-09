@@ -40,9 +40,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <future>
 #include <memory>
 #include <mutex>
+#include <type_traits>
 
 namespace clang {
 namespace clangd {
@@ -117,8 +119,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      : nullptr),
       GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
-      TweakFilter(Opts.TweakFilter),
-      WorkspaceRoot(Opts.WorkspaceRoot),
+      TweakFilter(Opts.TweakFilter), WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
@@ -144,7 +145,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
         Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
-            [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }));
+            [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
+        std::max(Opts.AsyncThreadsCount, 1u));
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)

@@ -361,6 +361,8 @@ TEST(SelectionTest, Implicit) {
   EXPECT_EQ("CXXConstructExpr", nodeKind(Str->Parent->Parent));
   EXPECT_EQ(Str, &Str->Parent->Parent->ignoreImplicit())
       << "Didn't unwrap " << nodeKind(&Str->Parent->Parent->ignoreImplicit());
+
+  EXPECT_EQ("CXXConstructExpr", nodeKind(&Str->outerImplicit()));
 }
 
 } // namespace
