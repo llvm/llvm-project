@@ -3160,7 +3160,6 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     case swift::Demangle::Node::Kind::Class:
       return !qual_type->isObjCObjectOrInterfaceType();
     case swift::Demangle::Node::Kind::TypeAlias:
-      // Not Implemented.
       return !qual_type->getAs<clang::TypedefType>();
       // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
     case swift::Demangle::Node::Kind::Structure:
