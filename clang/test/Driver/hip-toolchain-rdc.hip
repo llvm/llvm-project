@@ -16,7 +16,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fcuda-force-lambda-odr" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
@@ -26,7 +26,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fcuda-force-lambda-odr" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
@@ -46,7 +46,7 @@
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[OBJ_DEV1]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
