@@ -1,10 +1,8 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
-# RUN: ld.lld --gdb-index %t1.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld --gdb-index %t1.o -o %t 2>&1 | FileCheck %s
 
-# FIXME: ld.lld should return non-zero (add a "NOT" to start once this bug is fixed)
-
-# CHECK: error: invalid contribution to string offsets table
+# CHECK: error: {{.*}}:(.debug_info): invalid reference to or invalid content in .debug_str_offsets[.dwo]: insufficient space for 32 bit header prefix
 
 .section .debug_abbrev,"",@progbits
   .byte  1                           # Abbreviation Code

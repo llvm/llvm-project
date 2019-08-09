@@ -467,10 +467,9 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm4
 ; AVX1-NEXT:    vblendvpd %ymm0, %ymm4, %ymm1, %ymm0
@@ -486,8 +485,7 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; AVX2-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm3
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; AVX2-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm0, %ymm4, %ymm1, %ymm0
 ; AVX2-NEXT:    vmaskmovpd 32(%rdi), %ymm3, %ymm1
@@ -1792,10 +1790,9 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm4
 ; AVX1-NEXT:    vblendvpd %ymm0, %ymm4, %ymm1, %ymm0
@@ -1811,8 +1808,7 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ; AVX2-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm3
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; AVX2-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm0, %ymm4, %ymm1, %ymm0
 ; AVX2-NEXT:    vpmaskmovq 32(%rdi), %ymm3, %ymm1

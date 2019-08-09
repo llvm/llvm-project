@@ -492,8 +492,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     break;
   }
   case MachineOperand::MO_Immediate: {
-    int64_t Imm = MO.getImm();
-    O << '#' << Imm;
+    O << MO.getImm();
     break;
   }
   case MachineOperand::MO_GlobalAddress: {

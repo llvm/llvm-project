@@ -194,9 +194,9 @@ void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
-  : ImmutablePass(ID), TM(*TM),
-    Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-            TM->getObjFileLowering(), nullptr, false) {
+    : ImmutablePass(ID), TM(*TM),
+      Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+              TM->getObjFileLowering(), nullptr, nullptr, false) {
   initializeMachineModuleInfoPass(*PassRegistry::getPassRegistry());
 }
 

@@ -1461,6 +1461,91 @@ TEST(HasImplicitDestinationType, DoesNotMatchIncorrectly) {
                            unless(anything())))));
 }
 
+TEST(Matcher, IgnoresElidableConstructors) {
+  EXPECT_TRUE(
+      matches("struct H {};"
+              "template<typename T> H B(T A);"
+              "void f() {"
+              "  H D1;"
+              "  D1 = B(B(1));"
+              "}",
+              cxxOperatorCallExpr(hasArgument(
+                  1, callExpr(hasArgument(
+                         0, ignoringElidableConstructorCall(callExpr()))))),
+              LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(
+      matches("struct H {};"
+              "template<typename T> H B(T A);"
+              "void f() {"
+              "  H D1;"
+              "  D1 = B(1);"
+              "}",
+              cxxOperatorCallExpr(hasArgument(
+                  1, callExpr(hasArgument(0, ignoringElidableConstructorCall(
+                                                 integerLiteral()))))),
+              LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(matches(
+      "struct H {};"
+      "H G();"
+      "void f() {"
+      "  H D = G();"
+      "}",
+      varDecl(hasInitializer(anyOf(
+          ignoringElidableConstructorCall(callExpr()),
+          exprWithCleanups(has(ignoringElidableConstructorCall(callExpr())))))),
+      LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoresElidableInReturn) {
+  auto matcher = expr(ignoringElidableConstructorCall(declRefExpr()));
+  EXPECT_TRUE(matches("struct H {};"
+                      "H f() {"
+                      "  H g;"
+                      "  return g;"
+                      "}",
+                      matcher, LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(notMatches("struct H {};"
+                         "H f() {"
+                         "  return H();"
+                         "}",
+                         matcher, LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoreElidableConstructorDoesNotMatchConstructors) {
+  EXPECT_TRUE(matches("struct H {};"
+                      "void f() {"
+                      "  H D;"
+                      "}",
+                      varDecl(hasInitializer(
+                          ignoringElidableConstructorCall(cxxConstructExpr()))),
+                      LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoresElidableDoesNotPreventMatches) {
+  EXPECT_TRUE(matches("void f() {"
+                      "  int D = 10;"
+                      "}",
+                      expr(ignoringElidableConstructorCall(integerLiteral())),
+                      LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoresElidableInVarInit) {
+  auto matcher =
+      varDecl(hasInitializer(ignoringElidableConstructorCall(callExpr())));
+  EXPECT_TRUE(matches("struct H {};"
+                      "H G();"
+                      "void f(H D = G()) {"
+                      "  return;"
+                      "}",
+                      matcher, LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(matches("struct H {};"
+                      "H G();"
+                      "void f() {"
+                      "  H D = G();"
+                      "}",
+                      matcher, LanguageMode::Cxx11OrLater));
+}
+
 TEST(IgnoringImplicit, MatchesImplicit) {
   EXPECT_TRUE(matches("class C {}; C a = C();",
                       varDecl(has(ignoringImplicit(cxxConstructExpr())))));

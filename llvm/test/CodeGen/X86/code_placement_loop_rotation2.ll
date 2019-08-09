@@ -5,13 +5,13 @@ define void @foo() {
 ; Test a nested loop case when profile data is not available.
 ;
 ; CHECK-LABEL: foo:
-; CHECK: callq g
-; CHECK: callq h
 ; CHECK: callq b
-; CHECK: callq e
-; CHECK: callq f
 ; CHECK: callq c
 ; CHECK: callq d
+; CHECK: callq e
+; CHECK: callq f
+; CHECK: callq g
+; CHECK: callq h
 
 entry:
   br label %header

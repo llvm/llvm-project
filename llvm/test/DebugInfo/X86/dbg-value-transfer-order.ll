@@ -24,12 +24,6 @@
 ; with the Orders insertion point vector.
 
 ; CHECK-LABEL: f: # @f
-; CHECK: .LBB0_4:
-;        Check that this DEBUG_VALUE comes before the left shift.
-; CHECK:         #DEBUG_VALUE: bit_offset <- $ecx
-; CHECK:         .cv_loc 0 1 8 28                # t.c:8:28
-; CHECK:         movl    $1, %[[reg:[^ ]*]]
-; CHECK:         shll    %cl, %[[reg]]
 ; CHECK: .LBB0_2:                                # %while.body
 ; CHECK:         movl    $32, %ecx
 ; CHECK:         testl   {{.*}}
@@ -37,7 +31,12 @@
 ; CHECK: # %bb.3:                                 # %if.then
 ; CHECK:         callq   if_then
 ; CHECK:         movl    %eax, %ecx
-; CHECK:         jmp     .LBB0_4
+; CHECK: .LBB0_4:                                # %if.end
+;        Check that this DEBUG_VALUE comes before the left shift.
+; CHECK:         #DEBUG_VALUE: bit_offset <- $ecx
+; CHECK:         .cv_loc 0 1 8 28                # t.c:8:28
+; CHECK:         movl    $1, %[[reg:[^ ]*]]
+; CHECK:         shll    %cl, %[[reg]]
 
 ; ModuleID = 't.c'
 source_filename = "t.c"

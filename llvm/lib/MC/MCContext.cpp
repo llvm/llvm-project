@@ -58,11 +58,11 @@ AsSecureLogFileName("as-secure-log-file-name",
 
 MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
                      const MCObjectFileInfo *mofi, const SourceMgr *mgr,
-                     bool DoAutoReset)
+                     MCTargetOptions const *TargetOpts, bool DoAutoReset)
     : SrcMgr(mgr), InlineSrcMgr(nullptr), MAI(mai), MRI(mri), MOFI(mofi),
       Symbols(Allocator), UsedNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset) {
+      AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SecureLogFile = AsSecureLogFileName;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -689,6 +689,21 @@ void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
     InlineSrcMgr->PrintMessage(Loc, SourceMgr::DK_Error, Msg);
   else
     report_fatal_error(Msg, false);
+}
+
+void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
+  if (TargetOptions && TargetOptions->MCNoWarn)
+    return;
+  if (TargetOptions && TargetOptions->MCFatalWarnings)
+    reportError(Loc, Msg);
+  else {
+    // If we have a source manager use it. Otherwise, try using the inline
+    // source manager.
+    if (SrcMgr)
+      SrcMgr->PrintMessage(Loc, SourceMgr::DK_Warning, Msg);
+    else if (InlineSrcMgr)
+      InlineSrcMgr->PrintMessage(Loc, SourceMgr::DK_Warning, Msg);
+  }
 }
 
 void MCContext::reportFatalError(SMLoc Loc, const Twine &Msg) {

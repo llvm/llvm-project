@@ -22,7 +22,7 @@ namespace llvm {
 
 class Constant;
 class Function;
-class GlobalAlias;
+class GlobalIndirectSymbol;
 class GlobalVariable;
 class Instruction;
 class MDNode;
@@ -120,7 +120,7 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 /// instance:
 /// - \a scheduleMapGlobalInitializer()
 /// - \a scheduleMapAppendingVariable()
-/// - \a scheduleMapGlobalAliasee()
+/// - \a scheduleMapGlobalIndirectSymbol()
 /// - \a scheduleRemapFunction()
 ///
 /// Sometimes a callback needs a different mapping context.  Such a context can
@@ -180,8 +180,9 @@ public:
                                     bool IsOldCtorDtor,
                                     ArrayRef<Constant *> NewMembers,
                                     unsigned MappingContextID = 0);
-  void scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
-                                unsigned MappingContextID = 0);
+  void scheduleMapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS,
+                                       Constant &Target,
+                                       unsigned MappingContextID = 0);
   void scheduleRemapFunction(Function &F, unsigned MappingContextID = 0);
 };
 

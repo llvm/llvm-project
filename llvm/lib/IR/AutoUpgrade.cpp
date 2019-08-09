@@ -3854,28 +3854,26 @@ bool llvm::UpgradeRetainReleaseMarker(Module &M) {
   return Changed;
 }
 
-bool llvm::UpgradeARCRuntimeCalls(Module &M) {
+void llvm::UpgradeARCRuntimeCalls(Module &M) {
   auto UpgradeToIntrinsic = [&](const char *OldFunc,
                                 llvm::Intrinsic::ID IntrinsicFunc) {
     Function *Fn = M.getFunction(OldFunc);
 
     if (!Fn)
-      return false;
+      return;
 
     Function *NewFn = llvm::Intrinsic::getDeclaration(&M, IntrinsicFunc);
     Fn->replaceAllUsesWith(NewFn);
     Fn->eraseFromParent();
-    return true;
   };
 
   // Unconditionally convert "clang.arc.use" to "llvm.objc.clang.arc.use".
-  bool Changed =
-      UpgradeToIntrinsic("clang.arc.use", llvm::Intrinsic::objc_clang_arc_use);
+  UpgradeToIntrinsic("clang.arc.use", llvm::Intrinsic::objc_clang_arc_use);
 
   // Return if the bitcode doesn't have the arm64 retainAutoreleasedReturnValue
   // marker. We don't know for sure that it was compiled with ARC in that case.
   if (!M.getModuleFlag("clang.arc.retainAutoreleasedReturnValueMarker"))
-    return false;
+    return;
 
   std::pair<const char *, llvm::Intrinsic::ID> RuntimeFuncs[] = {
       {"objc_autorelease", llvm::Intrinsic::objc_autorelease},
@@ -3917,9 +3915,7 @@ bool llvm::UpgradeARCRuntimeCalls(Module &M) {
        llvm::Intrinsic::objc_arc_annotation_bottomup_bbend}};
 
   for (auto &I : RuntimeFuncs)
-    Changed |= UpgradeToIntrinsic(I.first, I.second);
-
-  return Changed;
+    UpgradeToIntrinsic(I.first, I.second);
 }
 
 bool llvm::UpgradeModuleFlags(Module &M) {

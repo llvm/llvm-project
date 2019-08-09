@@ -60,7 +60,7 @@ namespace llvm {
 
   /// Convert calls to ARC runtime functions to intrinsic calls if the bitcode
   /// has the arm64 retainAutoreleasedReturnValue marker.
-  bool UpgradeARCRuntimeCalls(Module &M);
+  void UpgradeARCRuntimeCalls(Module &M);
 
   void UpgradeSectionAttributes(Module &M);
 

@@ -772,6 +772,14 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
   if ((sec->flags & SHF_ALLOC) && sec->addrExpr)
     setDot(sec->addrExpr, sec->location, false);
 
+  // If the address of the section has been moved forward by an explicit
+  // expression so that it now starts past the current curPos of the enclosing
+  // region, we need to expand the current region to account for the space
+  // between the previous section, if any, and the start of this section.
+  if (ctx->memRegion && ctx->memRegion->curPos < dot)
+    expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
+                       ctx->memRegion->name, sec->name);
+
   switchTo(sec);
 
   if (sec->lmaExpr)
