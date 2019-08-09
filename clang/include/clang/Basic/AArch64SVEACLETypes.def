@@ -1,0 +1,70 @@
+//===-- AArch64SVEACLETypes.def - Metadata about SVE types ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines various SVE builtin types.  The macros are:
+//
+//    SVE_TYPE(Name, Id, SingletonId) - A builtin type that has not been
+//    covered by any other #define.  Defining this macro covers all
+//    the builtins.
+//
+//    SVE_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP) -
+//    An SVE scalable vector.
+//
+//    SVE_PREDICATE_TYPE(Name, Id, SingletonId, ElKind) - An SVE scalable
+//    predicate.
+//
+// where:
+//
+//  - Name is the name of the builtin type.
+//
+//  - BuiltinType::Id is the enumerator defining the type.
+//
+//  - Context.SingletonId is the global singleton of this type.
+//
+//  - ElKind enumerates the type of the elements.
+//
+//  - ElBits is the size of one element in bits.
+//
+//  - IsSigned is true for vectors of signed integer elements and
+//    for vectors of floating-point elements.
+//
+//  - IsFP is true for vectors of floating-point elements.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SVE_VECTOR_TYPE
+#define SVE_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP)\
+  SVE_TYPE(Name, Id, SingletonId)
+#endif
+
+#ifndef SVE_PREDICATE_TYPE
+#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, ElKind)\
+  SVE_TYPE(Name, Id, SingletonId)
+#endif
+
+//===- Vector point types -----------------------------------------------===//
+
+SVE_VECTOR_TYPE("__SVInt8_t",  SveInt8, SveInt8Ty, SveElSInt8, 8, true, false)
+SVE_VECTOR_TYPE("__SVInt16_t", SveInt16, SveInt16Ty, SveElSInt16, 16, true, false)
+SVE_VECTOR_TYPE("__SVInt32_t", SveInt32, SveInt32Ty, SveElSInt32, 32, true, false)
+SVE_VECTOR_TYPE("__SVInt64_t", SveInt64, SveInt64Ty, SveElSInt64, 64, true, false)
+
+SVE_VECTOR_TYPE("__SVUint8_t",  SveUint8, SveUint8Ty, SveElUInt8, 8, false, false)
+SVE_VECTOR_TYPE("__SVUint16_t", SveUint16, SveUint16Ty, SveElUInt16, 16, false, false)
+SVE_VECTOR_TYPE("__SVUint32_t", SveUint32, SveUint32Ty, SveElUInt32, 32, false, false)
+SVE_VECTOR_TYPE("__SVUint64_t", SveUint64, SveUint64Ty, SveElUInt64, 64, false, false)
+
+SVE_VECTOR_TYPE("__SVFloat16_t", SveFloat16, SveFloat16Ty, SveElHalf, 16, true, true)
+SVE_VECTOR_TYPE("__SVFloat32_t", SveFloat32, SveFloat32Ty, SveElFloat, 32, true, true)
+SVE_VECTOR_TYPE("__SVFloat64_t", SveFloat64, SveFloat64Ty, SveElDouble, 64, true, true)
+
+SVE_PREDICATE_TYPE("__SVBool_t", SveBool, SveBoolTy, SveElBool)
+
+#undef SVE_VECTOR_TYPE
+#undef SVE_PREDICATE_TYPE
+#undef SVE_TYPE

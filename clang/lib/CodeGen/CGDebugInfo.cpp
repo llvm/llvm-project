@@ -697,6 +697,22 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id: \
     return getOrCreateStructPtrType("opencl_" #ExtType, Id##Ty);
 #include "clang/Basic/OpenCLExtensionTypes.def"
+  // TODO: real support for SVE types requires more infrastructure
+  // to be added first.  The types have a variable length and are
+  // represented in debug info as types whose length depends on a
+  // target-specific pseudo register.
+#define SVE_TYPE(Name, Id, SingletonId) \
+  case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
+  {
+    unsigned DiagID = CGM.getDiags().getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "cannot yet generate debug info for SVE type '%0'");
+    auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
+    CGM.getDiags().Report(DiagID) << Name;
+    // Return something safe.
+    return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
+  }
 
   case BuiltinType::UChar:
   case BuiltinType::Char_U:

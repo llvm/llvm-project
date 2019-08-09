@@ -5,7 +5,7 @@
 ; CHECK: [[A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[B:%[^ ]+]] = load i32, i32* [[CAST_B]]
-; CHECK  call i32 @llvm.arm.smlad(i32 [[A]], i32 [[B]], i32 %acc)
+; CHECK: call i32 @llvm.arm.smlad(i32 [[A]], i32 [[B]], i32 %acc)
 define i32 @single_block(i16* %a, i16* %b, i32 %acc) {
 entry:
   %ld.a.0 = load i16, i16* %a
@@ -30,7 +30,7 @@ entry:
 ; CHECK: [[A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[B:%[^ ]+]] = load i32, i32* [[CAST_B]]
-; CHECK  call i32 @llvm.arm.smlad(i32 [[A]], i32 [[B]], i32 0)
+; CHECK:  call i32 @llvm.arm.smlad(i32 [[A]], i32 [[B]], i32 0)
 define i32 @multi_block(i16* %a, i16* %b, i32 %acc) {
 entry:
   %ld.a.0 = load i16, i16* %a

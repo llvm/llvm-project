@@ -1162,14 +1162,20 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
       if (ArgVT == MVT::f32) {
         VA.convertToReg(Mips::F12);
       } else if (ArgVT == MVT::f64) {
-        VA.convertToReg(Mips::D6);
+        if (Subtarget->isFP64bit())
+          VA.convertToReg(Mips::D6_64);
+        else
+          VA.convertToReg(Mips::D6);
       }
     } else if (i == 1) {
       if ((firstMVT == MVT::f32) || (firstMVT == MVT::f64)) {
         if (ArgVT == MVT::f32) {
           VA.convertToReg(Mips::F14);
         } else if (ArgVT == MVT::f64) {
-          VA.convertToReg(Mips::D7);
+          if (Subtarget->isFP64bit())
+            VA.convertToReg(Mips::D7_64);
+          else
+            VA.convertToReg(Mips::D7);
         }
       }
     }

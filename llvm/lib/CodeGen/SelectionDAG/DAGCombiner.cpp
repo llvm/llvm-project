@@ -12043,10 +12043,6 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
      !isConstantFPBuildVectorOrConstantFP(N1))
     return DAG.getNode(ISD::FMUL, DL, VT, N1, N0, Flags);
 
-  // fold (fmul A, 1.0) -> A
-  if (N1CFP && N1CFP->isExactlyValue(1.0))
-    return N0;
-
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 

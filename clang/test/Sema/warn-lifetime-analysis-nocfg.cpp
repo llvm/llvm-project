@@ -2,7 +2,6 @@
 struct [[gsl::Owner(int)]] MyIntOwner {
   MyIntOwner();
   int &operator*();
-  int *c_str() const;
 };
 
 struct [[gsl::Pointer(int)]] MyIntPointer {
@@ -52,16 +51,6 @@ long *ownershipTransferToRawPointer() {
   return t.releaseAsRawPointer(); // ok
 }
 
-int *danglingRawPtrFromLocal() {
-  MyIntOwner t;
-  return t.c_str(); // TODO
-}
-
-int *danglingRawPtrFromTemp() {
-  MyIntPointer p;
-  return p.toOwner().c_str(); // TODO
-}
-
 struct Y {
   int a[4];
 };
@@ -103,6 +92,12 @@ MyIntPointer danglingGslPtrFromTemporary() {
   return MyIntOwner{}; // expected-warning {{returning address of local temporary object}}
 }
 
+MyIntOwner makeTempOwner();
+
+MyIntPointer danglingGslPtrFromTemporary2() {
+  return makeTempOwner(); // expected-warning {{returning address of local temporary object}}
+}
+
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
   return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}}
 }
@@ -124,12 +119,52 @@ void initLocalGslPtrWithTempOwner() {
   global2 = MyLongOwnerWithConversion{}; // TODO ?
 }
 
-struct IntVector {
-  int *begin();
-  int *end();
+namespace std {
+template <typename T>
+struct basic_iterator {};
+
+template <typename T>
+struct vector {
+  typedef basic_iterator<T> iterator;
+  iterator begin();
+  T *data();
 };
 
+template<typename T>
+struct basic_string {
+  const T *c_str() const;
+};
+
+template<typename T>
+struct unique_ptr {
+  T *get() const;
+};
+}
+
 void modelIterators() {
-  int *it = IntVector{}.begin(); // TODO ?
+  std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
   (void)it;
+}
+
+std::vector<int>::iterator modelIteratorReturn() {
+  return std::vector<int>().begin(); // expected-warning {{returning address of local temporary object}}
+}
+
+const char *danglingRawPtrFromLocal() {
+  std::basic_string<char> s;
+  return s.c_str(); // expected-warning {{address of stack memory associated with local variable 's' returned}}
+}
+
+const char *danglingRawPtrFromTemp() {
+  return std::basic_string<char>().c_str(); // expected-warning {{returning address of local temporary object}}
+}
+
+std::unique_ptr<int> getUniquePtr();
+
+int *danglingUniquePtrFromTemp() {
+  return getUniquePtr().get(); // expected-warning {{returning address of local temporary object}}
+}
+
+int *danglingUniquePtrFromTemp2() {
+  return std::unique_ptr<int>().get(); // expected-warning {{returning address of local temporary object}}
 }

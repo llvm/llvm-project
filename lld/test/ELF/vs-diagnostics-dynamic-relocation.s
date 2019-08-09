@@ -7,11 +7,22 @@
 // CHECK-NEXT: >>> referenced by dyn.s:15
 // CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})
 
+// CHECK: /tmp{{/|\\}}dyn.s(20): error: can't create dynamic relocation {{.*}}
+// CHECK-NEXT: >>> defined in {{.*}}.o
+// CHECK-NEXT: >>> referenced by dyn.s:20 (/tmp{{/|\\}}dyn.s:20)
+// CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})
+
 .file 1 "dyn.s"
 .loc 1 15
 
 foo:
 .quad foo
+
+.file 2 "/tmp" "dyn.s"
+.loc 2 20
+
+bar:
+.quad bar
 
 .section .debug_abbrev,"",@progbits
   .byte  1                      # Abbreviation Code

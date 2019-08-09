@@ -1018,6 +1018,9 @@ namespace serialization {
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
       PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/OpenCLExtensionTypes.def"
+      // \brief SVE types with auto numeration
+#define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/AArch64SVEACLETypes.def"
     };
 
     /// The number of predefined type IDs that are reserved for

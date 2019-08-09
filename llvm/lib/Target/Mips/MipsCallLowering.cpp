@@ -500,23 +500,19 @@ bool MipsCallLowering::lowerFormalArguments(
 }
 
 bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
-                                 CallingConv::ID CallConv,
-                                 const MachineOperand &Callee,
-                                 const ArgInfo &OrigRet,
-                                 ArrayRef<ArgInfo> OrigArgs,
-                                 const MDNode *KnownCallees) const {
+                                 CallLoweringInfo &Info) const {
 
-  if (CallConv != CallingConv::C)
+  if (Info.CallConv != CallingConv::C)
     return false;
 
-  for (auto &Arg : OrigArgs) {
+  for (auto &Arg : Info.OrigArgs) {
     if (!isSupportedType(Arg.Ty))
       return false;
     if (Arg.Flags.isByVal() || Arg.Flags.isSRet())
       return false;
   }
 
-  if (!OrigRet.Ty->isVoidTy() && !isSupportedType(OrigRet.Ty))
+  if (!Info.OrigRet.Ty->isVoidTy() && !isSupportedType(Info.OrigRet.Ty))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -530,31 +526,31 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.buildInstr(Mips::ADJCALLSTACKDOWN);
 
   const bool IsCalleeGlobalPIC =
-      Callee.isGlobal() && TM.isPositionIndependent();
+      Info.Callee.isGlobal() && TM.isPositionIndependent();
 
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
-      Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
+      Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
   MIB.addDef(Mips::SP, RegState::Implicit);
   if (IsCalleeGlobalPIC) {
     Register CalleeReg =
         MF.getRegInfo().createGenericVirtualRegister(LLT::pointer(0, 32));
     MachineInstr *CalleeGlobalValue =
-        MIRBuilder.buildGlobalValue(CalleeReg, Callee.getGlobal());
-    if (!Callee.getGlobal()->hasLocalLinkage())
+        MIRBuilder.buildGlobalValue(CalleeReg, Info.Callee.getGlobal());
+    if (!Info.Callee.getGlobal()->hasLocalLinkage())
       CalleeGlobalValue->getOperand(1).setTargetFlags(MipsII::MO_GOT_CALL);
     MIB.addUse(CalleeReg);
   } else
-    MIB.add(Callee);
+    MIB.add(Info.Callee);
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
 
   TargetLowering::ArgListTy FuncOrigArgs;
-  FuncOrigArgs.reserve(OrigArgs.size());
+  FuncOrigArgs.reserve(Info.OrigArgs.size());
 
   SmallVector<ArgInfo, 8> ArgInfos;
   SmallVector<unsigned, 8> OrigArgIndices;
   unsigned i = 0;
-  for (auto &Arg : OrigArgs) {
+  for (auto &Arg : Info.OrigArgs) {
 
     TargetLowering::ArgListEntry Entry;
     Entry.Ty = Arg.Ty;
@@ -571,8 +567,9 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                      F.getContext());
 
-  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
-  const char *Call = Callee.isSymbol() ? Callee.getSymbolName() : nullptr;
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv), 1);
+  const char *Call =
+      Info.Callee.isSymbol() ? Info.Callee.getSymbolName() : nullptr;
   CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);
   setLocInfo(ArgLocs, Outs);
 
@@ -601,11 +598,11 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                          *STI.getRegBankInfo());
   }
 
-  if (!OrigRet.Ty->isVoidTy()) {
+  if (!Info.OrigRet.Ty->isVoidTy()) {
     ArgInfos.clear();
     SmallVector<unsigned, 8> OrigRetIndices;
 
-    splitToValueTypes(OrigRet, 0, ArgInfos, OrigRetIndices);
+    splitToValueTypes(Info.OrigRet, 0, ArgInfos, OrigRetIndices);
 
     SmallVector<ISD::InputArg, 8> Ins;
     subTargetRegTypeForCallingConv(F, ArgInfos, OrigRetIndices, Ins);
@@ -614,7 +611,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                        F.getContext());
 
-    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), OrigRet.Ty, Call);
+    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), Info.OrigRet.Ty, Call);
     setLocInfo(ArgLocs, Ins);
 
     CallReturnHandler Handler(MIRBuilder, MF.getRegInfo(), MIB);

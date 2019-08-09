@@ -95,6 +95,15 @@ INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
                                   struct Bar { friend class Foo<int>; };
                                   template <> struct ^Foo<int> {};)cpp",
                                 {"<int>"}},
+                            {
+                                R"cpp(
+                                  template<class T>
+                                  T S = T(10);
+                                  template <class T>
+                                  int ^S<T*> = 0;
+                                  template <>
+                                  int ^S<double> = 0;)cpp",
+                                {"<T *>", "<double>"}},
                         })),);
 } // namespace
 } // namespace clangd

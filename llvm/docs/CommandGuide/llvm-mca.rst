@@ -174,6 +174,10 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable the instruction info view. This is enabled by default.
 
+.. option:: -show-encoding
+
+  Enable the printing of instruction encodings within the instruction info view.
+
 .. option:: -all-stats
 
   Print all hardware statistics. This enables extra statistics related to the
@@ -415,10 +419,10 @@ an indicator of a performance bottleneck caused by the lack of hardware
 resources, and the *Resource pressure view* can help to identify the problematic
 resource usage.
 
-The second section of the report shows the latency and reciprocal
-throughput of every instruction in the sequence. That section also reports
-extra information related to the number of micro opcodes, and opcode properties
-(i.e., 'MayLoad', 'MayStore', and 'HasSideEffects').
+The second section of the report is the `instruction info view`. It shows the
+latency and reciprocal throughput of every instruction in the sequence. It also
+reports extra information related to the number of micro opcodes, and opcode
+properties (i.e., 'MayLoad', 'MayStore', and 'HasSideEffects').
 
 Field *RThroughput* is the reciprocal of the instruction throughput. Throughput
 is computed as the maximum number of instructions of a same type that can be
@@ -426,6 +430,31 @@ executed per clock cycle in the absence of operand dependencies. In this
 example, the reciprocal throughput of a vector float multiply is 1
 cycles/instruction.  That is because the FP multiplier JFPM is only available
 from pipeline JFPU1.
+
+Instruction encodings are displayed within the instruction info view when flag
+`-show-encoding` is specified.
+
+Below is an example of `-show-encoding` output for the dot-product kernel:
+
+.. code-block:: none
+
+  Instruction Info:
+  [1]: #uOps
+  [2]: Latency
+  [3]: RThroughput
+  [4]: MayLoad
+  [5]: MayStore
+  [6]: HasSideEffects (U)
+  [7]: Encoding Size
+
+  [1]    [2]    [3]    [4]    [5]    [6]    [7]    Encodings:                    Instructions:
+   1      2     1.00                         4     c5 f0 59 d0                   vmulps	%xmm0, %xmm1, %xmm2
+   1      4     1.00                         4     c5 eb 7c da                   vhaddps	%xmm2, %xmm2, %xmm3
+   1      4     1.00                         4     c5 e3 7c e3                   vhaddps	%xmm3, %xmm3, %xmm4
+
+The `Encoding Size` column shows the size in bytes of instructions.  The
+`Encodings` column shows the actual instruction encodings (byte sequences in
+hex).
 
 The third section is the *Resource pressure view*.  This view reports
 the average number of resource cycles consumed every iteration by instructions
