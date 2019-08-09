@@ -1,5 +1,9 @@
 @import ObjCModule;
 
+@interface ProtoImpl : NSObject <ObjCProtocol>
+- (NSString *)name;
+@end
+
 @implementation ObjCClass {
   int private_ivar;
 }
@@ -12,3 +16,14 @@
   return self;
 }
 @end
+
+id<ObjCProtocol> getProto() {
+  return [ProtoImpl new];
+}
+
+@implementation ProtoImpl
+- (NSString *)name {
+  return @"I am implementing an Objective-C protocol.";
+}
+@end
+
