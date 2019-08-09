@@ -178,7 +178,9 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
         assert(!(D == &DI) &&
                "Detached CFG reaches its own Detach instruction.");
 
-        // Ignore sync instructions in this analysis
+        // No need to recursively check nested syncs or detaches, as nested
+        // tasks are wholly contained in the detached sub-CFG we're iterating
+        // through.
         if (isa<SyncInst>(DI) || isa<DetachInst>(DI))
           continue;
 
