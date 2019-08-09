@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Views/InstructionInfoView.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 namespace mca {
@@ -26,10 +27,17 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
 
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
-             << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n\n";
+             << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n";
+  if (PrintEncodings) {
+    TempStream << "[7]: Encoding Size\n";
+    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
+               << "Encodings:                    Instructions:\n";
+  } else {
+    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
+  }
 
-  TempStream << "[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
-  for (const MCInst &Inst : Source) {
+  for (unsigned I = 0, E = Source.size(); I < E; ++I) {
+    const MCInst &Inst = Source[I];
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
 
     // Obtain the scheduling class information from the instruction.
@@ -72,7 +80,20 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
     TempStream << (MCDesc.mayLoad() ? " *     " : "       ");
     TempStream << (MCDesc.mayStore() ? " *     " : "       ");
-    TempStream << (MCDesc.hasUnmodeledSideEffects() ? " U " : "   ");
+    TempStream << (MCDesc.hasUnmodeledSideEffects() ? " U     " : "       ");
+
+    if (PrintEncodings) {
+      StringRef Encoding(CE.getEncoding(I));
+      unsigned EncodingSize = Encoding.size();
+      TempStream << " " << EncodingSize
+                 << (EncodingSize < 10 ? "     " : "    ");
+      TempStream.flush();
+      formatted_raw_ostream FOS(TempStream);
+      for (unsigned i = 0, e = Encoding.size(); i != e; ++i)
+        FOS << format("%02x ", (uint8_t)Encoding[i]);
+      FOS.PadToColumn(30);
+      FOS.flush();
+    }
 
     MCIP.printInst(&Inst, InstrStream, "", STI);
     InstrStream.flush();
@@ -80,7 +101,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     // Consume any tabs or spaces at the beginning of the string.
     StringRef Str(Instruction);
     Str = Str.ltrim();
-    TempStream << "    " << Str << '\n';
+    TempStream << Str << '\n';
     Instruction = "";
   }
 

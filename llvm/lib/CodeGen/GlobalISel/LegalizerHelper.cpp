@@ -297,8 +297,13 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
   const char *Name = TLI.getLibcallName(Libcall);
 
   MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
-  if (!CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(Libcall),
-                     MachineOperand::CreateES(Name), Result, Args))
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(Libcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = Result;
+  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
   return LegalizerHelper::Legalized;
@@ -358,9 +363,13 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
 
   MIRBuilder.setInstr(MI);
   MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
-  if (!CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(RTLibcall),
-                     MachineOperand::CreateES(Name),
-                     CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx)), Args))
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx));
+  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
   return LegalizerHelper::Legalized;

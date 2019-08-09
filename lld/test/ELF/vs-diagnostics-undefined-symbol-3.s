@@ -10,13 +10,21 @@
 // CHECK:      >>> referenced by undef3.s:15
 // CHECK-NEXT: >>> {{.*}}1.o:(.text+0x{{.+}})
 
-.file 1 "undef3.s"
+// ERR:        /tmp{{/|\\}}undef3.s(20): error: undefined symbol: bar
+// WARN:       /tmp{{/|\\}}undef3.s(20): warning: undefined symbol: bar
+// CHECK:      >>> referenced by undef3.s:20 (/tmp{{/|\\}}undef3.s:20)
+// CHECK-NEXT: >>> {{.*}}1.o:(.text+0x{{.+}})
 
-.global _start, foo
+.file 1 "undef3.s"
+.file 2 "/tmp" "undef3.s"
+
+.global _start, foo, bar
 .text
 _start:
 .loc 1 15
   jmp foo
+.loc 2 20
+  jmp bar
 
 .section .debug_abbrev,"",@progbits
   .byte  1                      # Abbreviation Code

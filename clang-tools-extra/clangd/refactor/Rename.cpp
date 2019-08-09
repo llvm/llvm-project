@@ -10,44 +10,14 @@
 #include "AST.h"
 #include "Logger.h"
 #include "index/SymbolCollector.h"
-#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
+#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
+#include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 
 namespace clang {
 namespace clangd {
 namespace {
-
-class RefactoringResultCollector final
-    : public tooling::RefactoringResultConsumer {
-public:
-  void handleError(llvm::Error Err) override {
-    assert(!Result.hasValue());
-    Result = std::move(Err);
-  }
-
-  // Using the handle(SymbolOccurrences) from parent class.
-  using tooling::RefactoringResultConsumer::handle;
-
-  void handle(tooling::AtomicChanges SourceReplacements) override {
-    assert(!Result.hasValue());
-    Result = std::move(SourceReplacements);
-  }
-
-  llvm::Optional<llvm::Expected<tooling::AtomicChanges>> Result;
-};
-
-// Expand a DiagnosticError to make it print-friendly (print the detailed
-// message, rather than "clang diagnostic").
-llvm::Error expandDiagnostics(llvm::Error Err, DiagnosticsEngine &DE) {
-  if (auto Diag = DiagnosticError::take(Err)) {
-    llvm::cantFail(std::move(Err));
-    SmallVector<char, 128> DiagMessage;
-    Diag->second.EmitToString(DE, DiagMessage);
-    return llvm::make_error<llvm::StringError>(DiagMessage,
-                                               llvm::inconvertibleErrorCode());
-  }
-  return Err;
-}
 
 llvm::Optional<std::string> filePath(const SymbolLocation &Loc,
                                      llvm::StringRef HintFilePath) {
@@ -89,6 +59,7 @@ llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
 }
 
 enum ReasonToReject {
+  NoSymbolFound,
   NoIndexProvided,
   NonIndexable,
   UsedOutsideFile,
@@ -138,6 +109,8 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
 llvm::Error makeError(ReasonToReject Reason) {
   auto Message = [](ReasonToReject Reason) {
     switch (Reason) {
+    case NoSymbolFound:
+      return "there is no symbol at the given location";
     case NoIndexProvided:
       return "symbol may be used in other files (no index available)";
     case UsedOutsideFile:
@@ -154,50 +127,62 @@ llvm::Error makeError(ReasonToReject Reason) {
       llvm::inconvertibleErrorCode());
 }
 
+// Return all rename occurrences in the main file.
+tooling::SymbolOccurrences
+findOccurrencesWithinFile(ParsedAST &AST, const NamedDecl *RenameDecl) {
+  const NamedDecl *CanonicalRenameDecl =
+      tooling::getCanonicalSymbolDeclaration(RenameDecl);
+  assert(CanonicalRenameDecl && "RenameDecl must be not null");
+  std::vector<std::string> RenameUSRs =
+      tooling::getUSRsForDeclaration(CanonicalRenameDecl, AST.getASTContext());
+  std::string OldName = CanonicalRenameDecl->getNameAsString();
+  tooling::SymbolOccurrences Result;
+  for (Decl *TopLevelDecl : AST.getLocalTopLevelDecls()) {
+    tooling::SymbolOccurrences RenameInDecl =
+        tooling::getOccurrencesOfUSRs(RenameUSRs, OldName, TopLevelDecl);
+    Result.insert(Result.end(), std::make_move_iterator(RenameInDecl.begin()),
+                  std::make_move_iterator(RenameInDecl.end()));
+  }
+  return Result;
+}
+
 } // namespace
 
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
                  llvm::StringRef NewName, const SymbolIndex *Index) {
-  RefactoringResultCollector ResultCollector;
-  ASTContext &ASTCtx = AST.getASTContext();
   SourceLocation SourceLocationBeg = clangd::getBeginningOfIdentifier(
       AST, Pos, AST.getSourceManager().getMainFileID());
   // FIXME: renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))
     return makeError(UnsupportedSymbol);
-  tooling::RefactoringRuleContext Context(AST.getSourceManager());
-  Context.setASTContext(ASTCtx);
-  auto Rename = clang::tooling::RenameOccurrences::initiate(
-      Context, SourceRange(SourceLocationBeg), NewName);
-  if (!Rename)
-    return expandDiagnostics(Rename.takeError(), ASTCtx.getDiagnostics());
 
-  const auto *RenameDecl = Rename->getRenameDecl();
-  assert(RenameDecl && "symbol must be found at this point");
+  const auto *RenameDecl =
+      tooling::getNamedDeclAt(AST.getASTContext(), SourceLocationBeg);
+  if (!RenameDecl)
+    return makeError(NoSymbolFound);
+
   if (auto Reject =
           renamableWithinFile(*RenameDecl->getCanonicalDecl(), File, Index))
     return makeError(*Reject);
 
-  Rename->invoke(ResultCollector, Context);
-
-  assert(ResultCollector.Result.hasValue());
-  if (!ResultCollector.Result.getValue())
-    return expandDiagnostics(ResultCollector.Result->takeError(),
-                             ASTCtx.getDiagnostics());
-
-  tooling::Replacements FilteredChanges;
-  // Right now we only support renaming the main file, so we
-  // drop replacements not for the main file. In the future, we might
-  // also support rename with wider scope.
   // Rename sometimes returns duplicate edits (which is a bug). A side-effect of
   // adding them to a single Replacements object is these are deduplicated.
-  for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
-    for (const auto &Rep : Change.getReplacements()) {
-      if (Rep.getFilePath() == File)
-        cantFail(FilteredChanges.add(Rep));
-    }
+  tooling::Replacements FilteredChanges;
+  for (const tooling::SymbolOccurrence &Rename :
+       findOccurrencesWithinFile(AST, RenameDecl)) {
+    // Currently, we only support normal rename (one range) for C/C++.
+    // FIXME: support multiple-range rename for objective-c methods.
+    if (Rename.getNameRanges().size() > 1)
+      continue;
+    // We shouldn't have conflicting replacements. If there are conflicts, it
+    // means that we have bugs either in clangd or in Rename library, therefore
+    // we refuse to perform the rename.
+    if (auto Err = FilteredChanges.add(tooling::Replacement(
+            AST.getASTContext().getSourceManager(),
+            CharSourceRange::getCharRange(Rename.getNameRanges()[0]), NewName)))
+      return std::move(Err);
   }
   return FilteredChanges;
 }

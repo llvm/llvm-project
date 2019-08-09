@@ -760,9 +760,8 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   }
 }
 
-bool llvm::hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
-                           LibFunc DoubleFn, LibFunc FloatFn,
-                           LibFunc LongDoubleFn) {
+bool llvm::hasFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                      LibFunc DoubleFn, LibFunc FloatFn, LibFunc LongDoubleFn) {
   switch (Ty->getTypeID()) {
   case Type::HalfTyID:
     return false;
@@ -775,10 +774,10 @@ bool llvm::hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
   }
 }
 
-StringRef llvm::getUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
-                                LibFunc DoubleFn, LibFunc FloatFn,
-                                LibFunc LongDoubleFn) {
-  assert(hasUnaryFloatFn(TLI, Ty, DoubleFn, FloatFn, LongDoubleFn) &&
+StringRef llvm::getFloatFnName(const TargetLibraryInfo *TLI, Type *Ty,
+                               LibFunc DoubleFn, LibFunc FloatFn,
+                               LibFunc LongDoubleFn) {
+  assert(hasFloatFn(TLI, Ty, DoubleFn, FloatFn, LongDoubleFn) &&
          "Cannot get name for unavailable function!");
 
   switch (Ty->getTypeID()) {
@@ -1045,10 +1044,33 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
                                   LibFunc LongDoubleFn, IRBuilder<> &B,
                                   const AttributeList &Attrs) {
   // Get the name of the function according to TLI.
-  StringRef Name = getUnaryFloatFn(TLI, Op->getType(),
-                                   DoubleFn, FloatFn, LongDoubleFn);
+  StringRef Name = getFloatFnName(TLI, Op->getType(),
+                                  DoubleFn, FloatFn, LongDoubleFn);
 
   return emitUnaryFloatFnCallHelper(Op, Name, B, Attrs);
+}
+
+static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
+                                          StringRef Name, IRBuilder<> &B,
+                                          const AttributeList &Attrs) {
+  assert((Name != "") && "Must specify Name to emitBinaryFloatFnCall");
+
+  Module *M = B.GetInsertBlock()->getModule();
+  FunctionCallee Callee = M->getOrInsertFunction(Name, Op1->getType(),
+                                                 Op1->getType(), Op2->getType());
+  CallInst *CI = B.CreateCall(Callee, { Op1, Op2 }, Name);
+
+  // The incoming attribute set may have come from a speculatable intrinsic, but
+  // is being replaced with a library call which is not allowed to be
+  // speculatable.
+  CI->setAttributes(Attrs.removeAttribute(B.getContext(),
+                                          AttributeList::FunctionIndex,
+                                          Attribute::Speculatable));
+  if (const Function *F =
+          dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
 }
 
 Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
@@ -1058,16 +1080,19 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op1, Name, NameBuffer);
 
-  Module *M = B.GetInsertBlock()->getModule();
-  FunctionCallee Callee = M->getOrInsertFunction(
-      Name, Op1->getType(), Op1->getType(), Op2->getType());
-  CallInst *CI = B.CreateCall(Callee, {Op1, Op2}, Name);
-  CI->setAttributes(Attrs);
-  if (const Function *F =
-          dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(F->getCallingConv());
+  return emitBinaryFloatFnCallHelper(Op1, Op2, Name, B, Attrs);
+}
 
-  return CI;
+Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
+                                   const TargetLibraryInfo *TLI,
+                                   LibFunc DoubleFn, LibFunc FloatFn,
+                                   LibFunc LongDoubleFn, IRBuilder<> &B,
+                                   const AttributeList &Attrs) {
+  // Get the name of the function according to TLI.
+  StringRef Name = getFloatFnName(TLI, Op1->getType(),
+                                  DoubleFn, FloatFn, LongDoubleFn);
+
+  return emitBinaryFloatFnCallHelper(Op1, Op2, Name, B, Attrs);
 }
 
 Value *llvm::emitPutChar(Value *Char, IRBuilder<> &B,

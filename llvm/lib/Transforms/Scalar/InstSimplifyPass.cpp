@@ -45,6 +45,7 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ,
         // Don't waste time simplifying dead/unused instructions.
         if (isInstructionTriviallyDead(&I)) {
           DeadInstsInBB.push_back(&I);
+          Changed = true;
         } else if (!I.use_empty()) {
           if (Value *V = SimplifyInstruction(&I, SQ, ORE)) {
             // Mark all uses for resimplification next time round the loop.

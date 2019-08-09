@@ -10,6 +10,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux")
 
   target_link_libraries(DirectoryWatcherTests
     PRIVATE
+    LLVMTestingSupport
     clangDirectoryWatcher
     clangBasic
     )

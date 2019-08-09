@@ -322,11 +322,13 @@ Sections:
 ## tables.
 
 # RUN: llvm-ar rc %t1.a %t01 %t02
-# RUN: llvm-readelf --stack-sizes %t01 %t02 | FileCheck %s --check-prefix=MULTIPLE
+# RUN: llvm-readelf --stack-sizes %t01 %t02 \
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE,OBJECT -DFILE1=%t01 -DFILE2=%t02
 # RUN: llvm-readelf --stack-sizes %t1.a \
-# RUN:   | FileCheck %s --check-prefix=MULTIPLE --check-prefix=ARCHIVE --strict-whitespace\
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE,ARCHIVE --strict-whitespace\
 # RUN:   --match-full-lines -DFILE=%t1.a
 
+#        OBJECT:File: [[FILE1]]
 #       ARCHIVE:File: [[FILE]]({{.*01}})
 #      MULTIPLE:Stack Sizes:
 # MULTIPLE-NEXT:         Size     Function
@@ -334,6 +336,7 @@ Sections:
 # MULTIPLE-NEXT:           32     referenced_via_section_bar
 # MULTIPLE-NEXT:            8     separate_text_section_baz
 # MULTIPLE-EMPTY:
+#        OBJECT:File: [[FILE2]]
 #       ARCHIVE:File: [[FILE]]({{.*02}})
 # MULTIPLE-EMPTY:
 # MULTIPLE-NEXT:Stack Sizes:

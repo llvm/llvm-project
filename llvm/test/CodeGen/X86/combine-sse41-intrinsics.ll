@@ -157,10 +157,9 @@ define <16 x i8> @xor_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: xor_pblendvb:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm3
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm0
+; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %1 = xor <16 x i8> %a2, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %2 = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %1)
@@ -170,11 +169,10 @@ define <16 x i8> @xor_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 define <4 x float> @xor_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
 ; CHECK-LABEL: xor_blendvps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa %xmm0, %xmm3
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    blendvps %xmm0, %xmm1, %xmm3
-; CHECK-NEXT:    movaps %xmm3, %xmm0
+; CHECK-NEXT:    movaps %xmm0, %xmm3
+; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    blendvps %xmm0, %xmm3, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <4 x float> %a2 to <4 x i32>
   %2 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -186,11 +184,10 @@ define <4 x float> @xor_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %
 define <2 x double> @xor_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2) {
 ; CHECK-LABEL: xor_blendvpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa %xmm0, %xmm3
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
-; CHECK-NEXT:    movapd %xmm3, %xmm0
+; CHECK-NEXT:    movapd %xmm0, %xmm3
+; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <2 x double> %a2 to <4 x i32>
   %2 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>

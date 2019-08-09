@@ -9,16 +9,22 @@
 // CHECK:      undef.s(27): error: undefined protected symbol: bar
 // CHECK-NEXT: >>> referenced by undef.s:27
 
+// CHECK:      /tmp{{/|\\}}undef.s(13): error: undefined protected symbol: baz
+// CHECK-NEXT: >>> referenced by undef.s:13 (/tmp{{/|\\}}undef.s:13)
+
 .file 1 "undef.s"
+.file 2 "/tmp" "undef.s"
 
 .hidden foo
-.protected bar
+.protected bar, baz
 .text
 _start:
 .loc 1 15
   jmp foo
 .loc 1 27
   jmp bar
+.loc 2 13
+  jmp baz
 
 .section .debug_abbrev,"",@progbits
   .byte  1                      # Abbreviation Code

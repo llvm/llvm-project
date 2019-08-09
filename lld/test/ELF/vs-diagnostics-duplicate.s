@@ -24,7 +24,14 @@
 // CHECK-NEXT: >>> defined at duplicate3.s
 // CHECK-NEXT: >>>            {{.*}}3.o:(.text+0x{{.+}})
 
-.global _start, foo, bar, baz
+// Check that we prefer using the full path of a source file.
+// CHECK:      /tmp{{/|\\}}duplicate.s(33): error: duplicate symbol: qux
+// CHECK-NEXT: >>> defined at duplicate.s:33 (/tmp{{/|\\}}duplicate.s:33)
+// CHECK-NEXT: >>> {{.*}}1.o:(.text+0x{{.+}})
+// CHECK-NEXT: >>> defined at duplicate3.s
+// CHECK-NEXT: >>>            {{.*}}3.o:(.text+0x{{.+}})
+
+.global _start, foo, bar, baz, qux
 .text
 _start:
   nop
@@ -40,6 +47,11 @@ bar:
 
 .loc 1 30
 baz:
+  nop
+
+.file 2 "/tmp" "duplicate.s"
+.loc 2 33
+qux:
   nop
 
 .section .debug_abbrev,"",@progbits

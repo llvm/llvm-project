@@ -57,6 +57,29 @@ public:
       assert((Ty->isVoidTy() == (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
+
+    ArgInfo() : Ty(nullptr), IsFixed(false) {}
+  };
+
+  struct CallLoweringInfo {
+    /// Calling convention to be used for the call.
+    CallingConv::ID CallConv = CallingConv::C;
+
+    /// Destination of the call. It should be either a register, globaladdress,
+    /// or externalsymbol.
+    MachineOperand Callee = MachineOperand::CreateImm(0);
+
+    /// Descriptor for the return type of the function.
+    ArgInfo OrigRet;
+
+    /// List of descriptors of the arguments passed to the function.
+    SmallVector<ArgInfo, 8> OrigArgs;
+
+    /// Valid if the call has a swifterror inout parameter, and contains the
+    /// vreg that the swifterror should be copied into after the call.
+    Register SwiftErrorVReg = 0;
+
+    MDNode *KnownCallees = nullptr;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -223,39 +246,10 @@ public:
   /// This hook must be implemented to lower the given call instruction,
   /// including argument and return value marshalling.
   ///
-  /// \p CallConv is the calling convention to be used for the call.
-  ///
-  /// \p Callee is the destination of the call. It should be either a register,
-  /// globaladdress, or externalsymbol.
-  ///
-  /// \p OrigRet is a descriptor for the return type of the function.
-  ///
-  /// \p OrigArgs is a list of descriptors of the arguments passed to the
-  /// function.
-  ///
-  /// \p SwiftErrorVReg is non-zero if the call has a swifterror inout
-  /// parameter, and contains the vreg that the swifterror should be copied into
-  /// after the call.
   ///
   /// \return true if the lowering succeeded, false otherwise.
-  virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
-                         const MachineOperand &Callee, const ArgInfo &OrigRet,
-                         ArrayRef<ArgInfo> OrigArgs, Register SwiftErrorVReg,
-                         const MDNode *KnownCallees = nullptr) const {
-    if (!supportSwiftError()) {
-      assert(SwiftErrorVReg == 0 && "trying to use unsupported swifterror");
-      return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs,
-                       KnownCallees);
-    }
-    return false;
-  }
-
-  /// This hook behaves as the extended lowerCall function, but for targets that
-  /// do not support swifterror value promotion.
-  virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
-                         const MachineOperand &Callee, const ArgInfo &OrigRet,
-                         ArrayRef<ArgInfo> OrigArgs,
-                         const MDNode *KnownCallees = nullptr) const {
+  virtual bool lowerCall(MachineIRBuilder &MIRBuilder,
+                         CallLoweringInfo &Info) const {
     return false;
   }
 
