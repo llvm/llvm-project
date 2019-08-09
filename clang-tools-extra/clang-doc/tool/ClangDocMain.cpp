@@ -36,6 +36,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -246,6 +247,7 @@ int main(int argc, const char **argv) {
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
   std::atomic<bool> Error;
   Error = false;
+  llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
   llvm::ThreadPool Pool(ExecutorConcurrency == 0 ? llvm::hardware_concurrency()
                                                  : ExecutorConcurrency);
@@ -289,8 +291,10 @@ int main(int argc, const char **argv) {
         return;
       }
 
+      IndexMutex.lock();
       // Add a reference to this Info in the Index
       clang::doc::Generator::addInfoToIndex(CDCtx.Idx, I);
+      IndexMutex.unlock();
 
       if (auto Err = G->get()->generateDocForInfo(I, InfoOS, CDCtx))
         llvm::errs() << toString(std::move(Err)) << "\n";
