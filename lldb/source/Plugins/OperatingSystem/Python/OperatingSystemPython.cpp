@@ -174,7 +174,7 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
             "data from python for pid %" PRIu64,
             m_process->GetID());
 
-  // The threads that are in "new_thread_list" upon entry are the threads from
+  // The threads that are in "core_thread_list" upon entry are the threads from
   // the lldb_private::Process subclass, no memory threads will be in this
   // list.
   StructuredData::ArraySP threads_list =

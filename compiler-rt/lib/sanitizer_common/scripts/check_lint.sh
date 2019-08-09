@@ -68,7 +68,7 @@ LIT_TESTS=${COMPILER_RT}/test
 SANITIZER_INCLUDES=${COMPILER_RT}/include/sanitizer
 FUZZER_INCLUDES=${COMPILER_RT}/include/fuzzer
 run_lint ${SANITIZER_INCLUDES_LINT_FILTER} ${SANITIZER_INCLUDES}/*.h \
-                                           ${FUZZER_INCLUDES}/*.hpp &
+                                           ${FUZZER_INCLUDES}/*.h &
 
 # Sanitizer_common
 COMMON_RTL=${COMPILER_RT}/lib/sanitizer_common

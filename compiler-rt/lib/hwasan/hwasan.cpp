@@ -240,13 +240,39 @@ struct hwasan_global_note {
   s32 end_relptr;
 };
 
+// Check that the given library meets the code model requirements for tagged
+// globals. These properties are not checked at link time so they need to be
+// checked at runtime.
+static void CheckCodeModel(ElfW(Addr) base, const ElfW(Phdr) * phdr,
+                           ElfW(Half) phnum) {
+  ElfW(Addr) min_addr = -1ull, max_addr = 0;
+  for (unsigned i = 0; i != phnum; ++i) {
+    if (phdr[i].p_type != PT_LOAD)
+      continue;
+    ElfW(Addr) lo = base + phdr[i].p_vaddr, hi = lo + phdr[i].p_memsz;
+    if (min_addr > lo)
+      min_addr = lo;
+    if (max_addr < hi)
+      max_addr = hi;
+  }
+
+  if (max_addr - min_addr > 1ull << 32) {
+    Report("FATAL: HWAddressSanitizer: library size exceeds 2^32\n");
+    Die();
+  }
+  if (max_addr > 1ull << 48) {
+    Report("FATAL: HWAddressSanitizer: library loaded above address 2^48\n");
+    Die();
+  }
+}
+
 static void InitGlobalsFromPhdrs(ElfW(Addr) base, const ElfW(Phdr) * phdr,
                                  ElfW(Half) phnum) {
-  for (; phnum != 0; ++phdr, --phnum) {
-    if (phdr->p_type != PT_NOTE)
+  for (unsigned i = 0; i != phnum; ++i) {
+    if (phdr[i].p_type != PT_NOTE)
       continue;
-    const char *note = reinterpret_cast<const char *>(base + phdr->p_vaddr);
-    const char *nend = note + phdr->p_memsz;
+    const char *note = reinterpret_cast<const char *>(base + phdr[i].p_vaddr);
+    const char *nend = note + phdr[i].p_memsz;
     while (note < nend) {
       auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(note);
       const char *name = note + sizeof(ElfW(Nhdr));
@@ -256,6 +282,10 @@ static void InitGlobalsFromPhdrs(ElfW(Addr) base, const ElfW(Phdr) * phdr,
         note = desc + nhdr->n_descsz;
         continue;
       }
+
+      // Only libraries with instrumented globals need to be checked against the
+      // code model since they use relocations that aren't checked at link time.
+      CheckCodeModel(base, phdr, phnum);
 
       auto *global_note = reinterpret_cast<const hwasan_global_note *>(desc);
       auto *global_begin = reinterpret_cast<const hwasan_global *>(
