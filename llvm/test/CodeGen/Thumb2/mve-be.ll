@@ -29,47 +29,14 @@ define void @load_load_add_store_align1(<4 x i32> *%src1, <4 x i32> *%src2) {
 ;
 ; CHECK-BE-LABEL: load_load_add_store_align1:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-BE-NEXT:    push {r4, r6, r7, lr}
-; CHECK-BE-NEXT:    .setfp r7, sp, #8
-; CHECK-BE-NEXT:    add r7, sp, #8
-; CHECK-BE-NEXT:    .pad #48
-; CHECK-BE-NEXT:    sub sp, #48
-; CHECK-BE-NEXT:    mov r4, sp
-; CHECK-BE-NEXT:    bfc r4, #0, #4
-; CHECK-BE-NEXT:    mov sp, r4
-; CHECK-BE-NEXT:    ldr.w r12, [r1]
-; CHECK-BE-NEXT:    ldr r3, [r1, #4]
-; CHECK-BE-NEXT:    ldr r2, [r1, #8]
-; CHECK-BE-NEXT:    ldr r1, [r1, #12]
-; CHECK-BE-NEXT:    strd r2, r1, [sp, #24]
-; CHECK-BE-NEXT:    mov r1, r0
-; CHECK-BE-NEXT:    strd r12, r3, [sp, #16]
-; CHECK-BE-NEXT:    ldr r2, [r1, #4]!
-; CHECK-BE-NEXT:    str r2, [sp, #4]
-; CHECK-BE-NEXT:    ldr r2, [r0]
-; CHECK-BE-NEXT:    str r2, [sp]
-; CHECK-BE-NEXT:    mov r2, r1
-; CHECK-BE-NEXT:    ldr r3, [r2, #4]!
-; CHECK-BE-NEXT:    str r3, [sp, #8]
-; CHECK-BE-NEXT:    ldr r3, [r2, #4]
-; CHECK-BE-NEXT:    str r3, [sp, #12]
-; CHECK-BE-NEXT:    add r3, sp, #16
-; CHECK-BE-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-BE-NEXT:    mov r3, sp
-; CHECK-BE-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-BE-NEXT:    add r3, sp, #32
+; CHECK-BE-NEXT:    vldrb.u8 q0, [r1]
+; CHECK-BE-NEXT:    vldrb.u8 q1, [r0]
+; CHECK-BE-NEXT:    vrev32.8 q0, q0
+; CHECK-BE-NEXT:    vrev32.8 q1, q1
 ; CHECK-BE-NEXT:    vadd.i32 q0, q1, q0
-; CHECK-BE-NEXT:    vstrw.32 q0, [r3]
-; CHECK-BE-NEXT:    ldrd r3, r4, [sp, #40]
-; CHECK-BE-NEXT:    ldrd r12, lr, [sp, #32]
-; CHECK-BE-NEXT:    str r4, [r2, #4]
-; CHECK-BE-NEXT:    sub.w r4, r7, #8
-; CHECK-BE-NEXT:    str r3, [r2]
-; CHECK-BE-NEXT:    str.w lr, [r1]
-; CHECK-BE-NEXT:    str.w r12, [r0]
-; CHECK-BE-NEXT:    mov sp, r4
-; CHECK-BE-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-BE-NEXT:    vrev32.8 q0, q0
+; CHECK-BE-NEXT:    vstrb.8 q0, [r0]
+; CHECK-BE-NEXT:    bx lr
 entry:
   %l1 = load <4 x i32>, <4 x i32>* %src1, align 1
   %l2 = load <4 x i32>, <4 x i32>* %src2, align 1

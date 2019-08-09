@@ -251,6 +251,7 @@ define double @pow_uitofp_double_base_fast_i32(double %base, i32 %x) {
 define double @pow_sitofp_const_base_fast_i64(i64 %x) {
 ; CHECK-LABEL: @pow_sitofp_const_base_fast_i64(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i64 [[X:%.*]] to float
+; Do not change 0x400675{{.*}} to the exact constant, see PR42740
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x400675{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double

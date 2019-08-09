@@ -57,3 +57,8 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
     S->getAssembler().setRelaxAll(true);
   return S;
 }
+
+void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                            unsigned ByteAlign) {
+  llvm_unreachable("Not implemented yet.");
+}

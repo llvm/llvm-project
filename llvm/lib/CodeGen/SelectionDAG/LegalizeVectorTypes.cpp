@@ -1560,10 +1560,14 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   // Split Mask operand
   SDValue MaskLo, MaskHi;
-  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
-    GetSplitVector(Mask, MaskLo, MaskHi);
-  else
-    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  if (Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  }
 
   EVT MemoryVT = MLD->getMemoryVT();
   EVT LoMemVT, HiMemVT;
@@ -1622,10 +1626,14 @@ void DAGTypeLegalizer::SplitVecRes_MGATHER(MaskedGatherSDNode *MGT,
 
   // Split Mask operand
   SDValue MaskLo, MaskHi;
-  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
-    GetSplitVector(Mask, MaskLo, MaskHi);
-  else
-    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  if (Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  }
 
   EVT MemoryVT = MGT->getMemoryVT();
   EVT LoMemVT, HiMemVT;
@@ -2340,12 +2348,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   else
     std::tie(DataLo, DataHi) = DAG.SplitVector(Data, DL);
 
+  // Split Mask operand
   SDValue MaskLo, MaskHi;
-  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
-    // Split Mask operand
-    GetSplitVector(Mask, MaskLo, MaskHi);
-  else
-    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  if (OpNo == 1 && Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  }
 
   SDValue Lo, Hi;
   MachineMemOperand *MMO = DAG.getMachineFunction().
@@ -2397,12 +2409,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSCATTER(MaskedScatterSDNode *N,
   else
     std::tie(DataLo, DataHi) = DAG.SplitVector(Data, DL);
 
+  // Split Mask operand
   SDValue MaskLo, MaskHi;
-  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
-    // Split Mask operand
-    GetSplitVector(Mask, MaskLo, MaskHi);
-  else
-    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  if (OpNo == 1 && Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  }
 
   SDValue IndexHi, IndexLo;
   if (getTypeAction(Index.getValueType()) == TargetLowering::TypeSplitVector)

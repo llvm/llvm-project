@@ -38,10 +38,8 @@ public:
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<ArrayRef<Register>> VRegs) const override;
 
-  bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
-                 const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs,
-                 const MDNode *KnownCallees = nullptr) const override;
+  bool lowerCall(MachineIRBuilder &MIRBuilder,
+                 CallLoweringInfo &Info) const override;
 
 private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,

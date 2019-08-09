@@ -55,8 +55,8 @@ entry:
 define hidden void @fwd_float16_t(%struct.s_float16_t* noalias nocapture %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: fwd_float16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r0]
-; CHECK-NEXT:    vstrh.16 q0, [r0, #16]
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
+; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %arrayidx3 = getelementptr inbounds %struct.s_float16_t, %struct.s_float16_t* %v, i32 0, i32 1, i32 0
@@ -130,8 +130,8 @@ for.end:
 define hidden void @bwd_float16_t(%struct.s_float16_t* noalias nocapture %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: bwd_float16_t:
 ; CHECK:       @ %bb.0: @ %for.end
-; CHECK-NEXT:    vldrh.u16 q0, [r0]
-; CHECK-NEXT:    vstrh.16 q0, [r0, #-16]
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #-16
+; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 for.end:
   %0 = bitcast %struct.s_float16_t* %v to <8 x half>*

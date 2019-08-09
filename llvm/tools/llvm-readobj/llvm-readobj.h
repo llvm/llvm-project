@@ -33,12 +33,6 @@ namespace llvm {
     return std::move(*E);
   }
 
-  template <class T> T unwrapOrError(ErrorOr<T> EO) {
-    if (EO)
-      return *EO;
-    reportError(EO.getError().message());
-  }
-
   // TODO: This one is deprecated. Use one with a Input name below.
   template <class T> T unwrapOrError(Expected<T> EO) {
     if (EO)

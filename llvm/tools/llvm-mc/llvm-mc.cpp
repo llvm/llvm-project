@@ -279,7 +279,7 @@ static int fillCommandLineSymbols(MCAsmParser &Parser) {
 static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
-                         MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
+                         MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  const MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   setDwarfDebugFlags(argc, argv);
 
   setDwarfDebugProducer();
@@ -368,7 +368,7 @@ int main(int argc, char **argv) {
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
+  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr, &MCOptions);
   MOFI.InitMCObjectFileInfo(TheTriple, PIC, Ctx, LargeCodeModel);
 
   if (SaveTempLabels)

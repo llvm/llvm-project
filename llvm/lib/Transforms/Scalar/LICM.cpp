@@ -330,6 +330,12 @@ bool LoopInvariantCodeMotion::runOnLoop(
 
   assert(L->isLCSSAForm(*DT) && "Loop is not in LCSSA form.");
 
+  // If this loop has metadata indicating that LICM is not to be performed then
+  // just exit.
+  if (hasDisableLICMTransformsHint(L)) {
+    return false;
+  }
+
   std::unique_ptr<AliasSetTracker> CurAST;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   bool NoOfMemAccTooLarge = false;
@@ -1026,7 +1032,8 @@ namespace {
 bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
-          isa<FenceInst>(I) || isa<BinaryOperator>(I) || isa<CastInst>(I) ||
+          isa<FenceInst>(I) || isa<CastInst>(I) ||
+          isa<UnaryOperator>(I) || isa<BinaryOperator>(I) ||
           isa<SelectInst>(I) || isa<GetElementPtrInst>(I) || isa<CmpInst>(I) ||
           isa<InsertElementInst>(I) || isa<ExtractElementInst>(I) ||
           isa<ShuffleVectorInst>(I) || isa<ExtractValueInst>(I) ||

@@ -40,18 +40,8 @@ public:
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<ArrayRef<Register>> VRegs) const override;
 
-  bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
-                 const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs, Register SwiftErrorVReg,
-                 const MDNode *KnownCallees = nullptr) const override;
-
-  bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
-                 const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs,
-                 const MDNode *KnownCallees = nullptr) const override {
-    return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs, 0,
-                     KnownCallees);
-  }
+  bool lowerCall(MachineIRBuilder &MIRBuilder,
+                 CallLoweringInfo &Info) const override;
 
   bool supportSwiftError() const override { return true; }
 

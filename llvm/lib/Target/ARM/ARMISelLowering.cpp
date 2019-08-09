@@ -273,6 +273,13 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FP_TO_SINT, VT, Expand);
       setOperationAction(ISD::FP_TO_UINT, VT, Expand);
     }
+
+    // Pre and Post inc are supported on loads and stores
+    for (unsigned im = (unsigned)ISD::PRE_INC;
+         im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
+      setIndexedLoadAction(im, VT, Legal);
+      setIndexedStoreAction(im, VT, Legal);
+    }
   }
 
   const MVT FloatTypes[] = { MVT::v8f16, MVT::v4f32 };
@@ -290,6 +297,13 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::BUILD_VECTOR, VT.getVectorElementType(), Custom);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
     setOperationAction(ISD::SETCC, VT, Custom);
+
+    // Pre and Post inc are supported on loads and stores
+    for (unsigned im = (unsigned)ISD::PRE_INC;
+         im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
+      setIndexedLoadAction(im, VT, Legal);
+      setIndexedStoreAction(im, VT, Legal);
+    }
 
     if (HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
@@ -337,6 +351,17 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
   setTruncStoreAction(MVT::v4i32, MVT::v4i8,  Legal);
   setTruncStoreAction(MVT::v8i16, MVT::v8i8,  Legal);
+
+  // Pre and Post inc on these are legal, given the correct extends
+  for (unsigned im = (unsigned)ISD::PRE_INC;
+       im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
+    setIndexedLoadAction(im, MVT::v8i8, Legal);
+    setIndexedStoreAction(im, MVT::v8i8, Legal);
+    setIndexedLoadAction(im, MVT::v4i8, Legal);
+    setIndexedStoreAction(im, MVT::v4i8, Legal);
+    setIndexedLoadAction(im, MVT::v4i16, Legal);
+    setIndexedStoreAction(im, MVT::v4i16, Legal);
+  }
 
   // Predicate types
   const MVT pTypes[] = {MVT::v16i1, MVT::v8i1, MVT::v4i1};
@@ -14075,45 +14100,21 @@ bool ARMTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned,
     return true;
   }
 
-  if (Ty != MVT::v16i8 && Ty != MVT::v8i16 && Ty != MVT::v8f16 &&
-      Ty != MVT::v4i32 && Ty != MVT::v4f32 && Ty != MVT::v2i64 &&
-      Ty != MVT::v2f64)
-    return false;
-
-  if (Subtarget->isLittle()) {
-    // In little-endian MVE, the store instructions VSTRB.U8,
-    // VSTRH.U16 and VSTRW.U32 all store the vector register in
-    // exactly the same format, and differ only in the range of
-    // their immediate offset field and the required alignment.
-    //
-    // In particular, VSTRB.U8 can store a vector at byte alignment.
-    // So at this stage we can simply say that loads/stores of all
-    // 128-bit wide vector types are permitted at any alignment,
-    // because we know at least _one_ instruction can manage that.
-    //
-    // Later on we might find that some of those loads are better
-    // generated as VLDRW.U32 if alignment permits, to take
-    // advantage of the larger immediate range. But for the moment,
-    // all that matters is that if we don't lower the load then
-    // _some_ instruction can handle it.
+  // In little-endian MVE, the store instructions VSTRB.U8, VSTRH.U16 and
+  // VSTRW.U32 all store the vector register in exactly the same format, and
+  // differ only in the range of their immediate offset field and the required
+  // alignment. So there is always a store that can be used, regardless of
+  // actual type.
+  //
+  // For big endian, that is not the case. But can still emit a (VSTRB.U8;
+  // VREV64.8) pair and get the same effect. This will likely be better than
+  // aligning the vector through the stack.
+  if (Ty == MVT::v16i8 || Ty == MVT::v8i16 || Ty == MVT::v8f16 ||
+      Ty == MVT::v4i32 || Ty == MVT::v4f32 || Ty == MVT::v2i64 ||
+      Ty == MVT::v2f64) {
     if (Fast)
       *Fast = true;
     return true;
-  } else {
-    // In big-endian MVE, those instructions aren't so similar
-    // after all, because they reorder the bytes of the vector
-    // differently. So this time we can only store a particular
-    // kind of vector if its alignment is at least the element
-    // type. And we can't store vectors of i64 or f64 at all
-    // without having to do some postprocessing, because there's
-    // no VSTRD.U64.
-    if (Ty == MVT::v16i8 ||
-        ((Ty == MVT::v8i16 || Ty == MVT::v8f16) && Alignment >= 2) ||
-        ((Ty == MVT::v4i32 || Ty == MVT::v4f32) && Alignment >= 4)) {
-      if (Fast)
-        *Fast = true;
-      return true;
-    }
   }
 
   return false;
@@ -14644,6 +14645,52 @@ static bool getT2IndexedAddressParts(SDNode *Ptr, EVT VT,
   return false;
 }
 
+static bool getMVEIndexedAddressParts(SDNode *Ptr, EVT VT, unsigned Align,
+                                      bool isSEXTLoad, bool isLE, SDValue &Base,
+                                      SDValue &Offset, bool &isInc,
+                                      SelectionDAG &DAG) {
+  if (Ptr->getOpcode() != ISD::ADD && Ptr->getOpcode() != ISD::SUB)
+    return false;
+  if (!isa<ConstantSDNode>(Ptr->getOperand(1)))
+    return false;
+
+  ConstantSDNode *RHS = cast<ConstantSDNode>(Ptr->getOperand(1));
+  int RHSC = (int)RHS->getZExtValue();
+
+  auto IsInRange = [&](int RHSC, int Limit, int Scale) {
+    if (RHSC < 0 && RHSC > -Limit * Scale && RHSC % Scale == 0) {
+      assert(Ptr->getOpcode() == ISD::ADD);
+      isInc = false;
+      Offset = DAG.getConstant(-RHSC, SDLoc(Ptr), RHS->getValueType(0));
+      return true;
+    } else if (RHSC > 0 && RHSC < Limit * Scale && RHSC % Scale == 0) {
+      isInc = Ptr->getOpcode() == ISD::ADD;
+      Offset = DAG.getConstant(RHSC, SDLoc(Ptr), RHS->getValueType(0));
+      return true;
+    }
+    return false;
+  };
+
+  // Try to find a matching instruction based on s/zext, Alignment, Offset and
+  // (in BE) type.
+  Base = Ptr->getOperand(0);
+  if (VT == MVT::v4i16) {
+    if (Align >= 2 && IsInRange(RHSC, 0x80, 2))
+      return true;
+  } else if (VT == MVT::v4i8 || VT == MVT::v8i8) {
+    if (IsInRange(RHSC, 0x80, 1))
+      return true;
+  } else if (Align >= 4 && (isLE || VT == MVT::v4i32 || VT == MVT::v4f32) &&
+             IsInRange(RHSC, 0x80, 4))
+    return true;
+  else if (Align >= 2 && (isLE || VT == MVT::v8i16 || VT == MVT::v8f16) &&
+           IsInRange(RHSC, 0x80, 2))
+    return true;
+  else if ((isLE || VT == MVT::v16i8) && IsInRange(RHSC, 0x80, 1))
+    return true;
+  return false;
+}
+
 /// getPreIndexedAddressParts - returns true by value, base pointer and
 /// offset pointer and addressing mode by reference if the node's address
 /// can be legally represented as pre-indexed load / store address.
@@ -14657,25 +14704,35 @@ ARMTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
 
   EVT VT;
   SDValue Ptr;
+  unsigned Align;
   bool isSEXTLoad = false;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
-    VT  = LD->getMemoryVT();
+    VT = LD->getMemoryVT();
+    Align = LD->getAlignment();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
-    VT  = ST->getMemoryVT();
+    VT = ST->getMemoryVT();
+    Align = ST->getAlignment();
   } else
     return false;
 
   bool isInc;
   bool isLegal = false;
-  if (Subtarget->isThumb2())
-    isLegal = getT2IndexedAddressParts(Ptr.getNode(), VT, isSEXTLoad, Base,
-                                       Offset, isInc, DAG);
-  else
-    isLegal = getARMIndexedAddressParts(Ptr.getNode(), VT, isSEXTLoad, Base,
-                                        Offset, isInc, DAG);
+  if (VT.isVector())
+    isLegal = Subtarget->hasMVEIntegerOps() &&
+              getMVEIndexedAddressParts(Ptr.getNode(), VT, Align, isSEXTLoad,
+                                        Subtarget->isLittle(), Base, Offset,
+                                        isInc, DAG);
+  else {
+    if (Subtarget->isThumb2())
+      isLegal = getT2IndexedAddressParts(Ptr.getNode(), VT, isSEXTLoad, Base,
+                                         Offset, isInc, DAG);
+    else
+      isLegal = getARMIndexedAddressParts(Ptr.getNode(), VT, isSEXTLoad, Base,
+                                          Offset, isInc, DAG);
+  }
   if (!isLegal)
     return false;
 
@@ -14693,15 +14750,18 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    SelectionDAG &DAG) const {
   EVT VT;
   SDValue Ptr;
+  unsigned Align;
   bool isSEXTLoad = false, isNonExt;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
-    VT  = LD->getMemoryVT();
+    VT = LD->getMemoryVT();
     Ptr = LD->getBasePtr();
+    Align = LD->getAlignment();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
     isNonExt = LD->getExtensionType() == ISD::NON_EXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
-    VT  = ST->getMemoryVT();
+    VT = ST->getMemoryVT();
     Ptr = ST->getBasePtr();
+    Align = ST->getAlignment();
     isNonExt = !ST->isTruncatingStore();
   } else
     return false;
@@ -14724,12 +14784,19 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 
   bool isInc;
   bool isLegal = false;
-  if (Subtarget->isThumb2())
-    isLegal = getT2IndexedAddressParts(Op, VT, isSEXTLoad, Base, Offset,
-                                       isInc, DAG);
-  else
-    isLegal = getARMIndexedAddressParts(Op, VT, isSEXTLoad, Base, Offset,
+  if (VT.isVector())
+    isLegal = Subtarget->hasMVEIntegerOps() &&
+              getMVEIndexedAddressParts(Op, VT, Align, isSEXTLoad,
+                                        Subtarget->isLittle(), Base, Offset,
                                         isInc, DAG);
+  else {
+    if (Subtarget->isThumb2())
+      isLegal = getT2IndexedAddressParts(Op, VT, isSEXTLoad, Base, Offset,
+                                         isInc, DAG);
+    else
+      isLegal = getARMIndexedAddressParts(Op, VT, isSEXTLoad, Base, Offset,
+                                          isInc, DAG);
+  }
   if (!isLegal)
     return false;
 

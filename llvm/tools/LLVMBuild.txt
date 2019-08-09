@@ -48,6 +48,7 @@ subdirectories =
  llvm-pdbutil
  llvm-profdata
  llvm-rc
+ llvm-reduce
  llvm-rtdyld
  llvm-size
  llvm-split

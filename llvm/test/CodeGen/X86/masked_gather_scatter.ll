@@ -2774,12 +2774,12 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <16 x i32> %cmp, <16 x double> %passthru) {
 ; KNL_64-LABEL: test_gather_setcc_split:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; KNL_64-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; KNL_64-NEXT:    vptestnmd %zmm5, %zmm5, %k1
+; KNL_64-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_64-NEXT:    vptestnmd %zmm4, %zmm4, %k1
 ; KNL_64-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; KNL_64-NEXT:    vgatherdpd (%rdi,%ymm0,8), %zmm2 {%k2}
-; KNL_64-NEXT:    vgatherdpd (%rdi,%ymm4,8), %zmm3 {%k1}
+; KNL_64-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; KNL_64-NEXT:    vgatherdpd (%rdi,%ymm0,8), %zmm3 {%k1}
 ; KNL_64-NEXT:    vmovapd %zmm2, %zmm0
 ; KNL_64-NEXT:    vmovapd %zmm3, %zmm1
 ; KNL_64-NEXT:    retq
@@ -2795,12 +2795,12 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ; KNL_32-NEXT:    subl $64, %esp
 ; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm3
 ; KNL_32-NEXT:    movl 8(%ebp), %eax
-; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; KNL_32-NEXT:    vptestnmd %zmm5, %zmm5, %k1
+; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_32-NEXT:    vptestnmd %zmm4, %zmm4, %k1
 ; KNL_32-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm2 {%k2}
-; KNL_32-NEXT:    vgatherdpd (%eax,%ymm4,8), %zmm3 {%k1}
+; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm3 {%k1}
 ; KNL_32-NEXT:    vmovapd %zmm2, %zmm0
 ; KNL_32-NEXT:    vmovapd %zmm3, %zmm1
 ; KNL_32-NEXT:    movl %ebp, %esp
@@ -2810,12 +2810,12 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ;
 ; SKX-LABEL: test_gather_setcc_split:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; SKX-NEXT:    vptestnmd %ymm5, %ymm5, %k1
+; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; SKX-NEXT:    vptestnmd %ymm4, %ymm4, %k1
 ; SKX-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; SKX-NEXT:    vgatherdpd (%rdi,%ymm0,8), %zmm2 {%k2}
-; SKX-NEXT:    vgatherdpd (%rdi,%ymm4,8), %zmm3 {%k1}
+; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; SKX-NEXT:    vgatherdpd (%rdi,%ymm0,8), %zmm3 {%k1}
 ; SKX-NEXT:    vmovapd %zmm2, %zmm0
 ; SKX-NEXT:    vmovapd %zmm3, %zmm1
 ; SKX-NEXT:    retq
@@ -2831,12 +2831,12 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ; SKX_32-NEXT:    subl $64, %esp
 ; SKX_32-NEXT:    vmovapd 72(%ebp), %zmm3
 ; SKX_32-NEXT:    movl 8(%ebp), %eax
-; SKX_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; SKX_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; SKX_32-NEXT:    vptestnmd %ymm5, %ymm5, %k1
+; SKX_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; SKX_32-NEXT:    vptestnmd %ymm4, %ymm4, %k1
 ; SKX_32-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; SKX_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm2 {%k2}
-; SKX_32-NEXT:    vgatherdpd (%eax,%ymm4,8), %zmm3 {%k1}
+; SKX_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; SKX_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm3 {%k1}
 ; SKX_32-NEXT:    vmovapd %zmm2, %zmm0
 ; SKX_32-NEXT:    vmovapd %zmm3, %zmm1
 ; SKX_32-NEXT:    movl %ebp, %esp
@@ -2854,12 +2854,12 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32> %cmp, <16 x double> %src0)  {
 ; KNL_64-LABEL: test_scatter_setcc_split:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; KNL_64-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; KNL_64-NEXT:    vptestnmd %zmm5, %zmm5, %k1
+; KNL_64-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_64-NEXT:    vptestnmd %zmm4, %zmm4, %k1
 ; KNL_64-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; KNL_64-NEXT:    vscatterdpd %zmm2, (%rdi,%ymm0,8) {%k2}
-; KNL_64-NEXT:    vscatterdpd %zmm3, (%rdi,%ymm4,8) {%k1}
+; KNL_64-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; KNL_64-NEXT:    vscatterdpd %zmm3, (%rdi,%ymm0,8) {%k1}
 ; KNL_64-NEXT:    vzeroupper
 ; KNL_64-NEXT:    retq
 ;
@@ -2874,12 +2874,12 @@ define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32>
 ; KNL_32-NEXT:    subl $64, %esp
 ; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm3
 ; KNL_32-NEXT:    movl 8(%ebp), %eax
-; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; KNL_32-NEXT:    vptestnmd %zmm5, %zmm5, %k1
+; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_32-NEXT:    vptestnmd %zmm4, %zmm4, %k1
 ; KNL_32-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; KNL_32-NEXT:    vscatterdpd %zmm2, (%eax,%ymm0,8) {%k2}
-; KNL_32-NEXT:    vscatterdpd %zmm3, (%eax,%ymm4,8) {%k1}
+; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; KNL_32-NEXT:    vscatterdpd %zmm3, (%eax,%ymm0,8) {%k1}
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
 ; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
@@ -2888,12 +2888,12 @@ define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32>
 ;
 ; SKX-LABEL: test_scatter_setcc_split:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; SKX-NEXT:    vptestnmd %ymm5, %ymm5, %k1
+; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; SKX-NEXT:    vptestnmd %ymm4, %ymm4, %k1
 ; SKX-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; SKX-NEXT:    vscatterdpd %zmm2, (%rdi,%ymm0,8) {%k2}
-; SKX-NEXT:    vscatterdpd %zmm3, (%rdi,%ymm4,8) {%k1}
+; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; SKX-NEXT:    vscatterdpd %zmm3, (%rdi,%ymm0,8) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
@@ -2908,12 +2908,12 @@ define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32>
 ; SKX_32-NEXT:    subl $64, %esp
 ; SKX_32-NEXT:    vmovapd 72(%ebp), %zmm3
 ; SKX_32-NEXT:    movl 8(%ebp), %eax
-; SKX_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
-; SKX_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
-; SKX_32-NEXT:    vptestnmd %ymm5, %ymm5, %k1
+; SKX_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; SKX_32-NEXT:    vptestnmd %ymm4, %ymm4, %k1
 ; SKX_32-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; SKX_32-NEXT:    vscatterdpd %zmm2, (%eax,%ymm0,8) {%k2}
-; SKX_32-NEXT:    vscatterdpd %zmm3, (%eax,%ymm4,8) {%k1}
+; SKX_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; SKX_32-NEXT:    vscatterdpd %zmm3, (%eax,%ymm0,8) {%k1}
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    .cfi_def_cfa %esp, 4

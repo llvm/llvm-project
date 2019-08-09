@@ -81,9 +81,9 @@ define i32 @constraint_I(i32 %i, i32 %j) nounwind {
 entry:
   ; CHECK-LABEL: constraint_I:
   %0 = tail call i32 asm sideeffect "add ${0:w}, ${1:w}, $2", "=r,r,I"(i32 %i, i32 16773120) nounwind
-  ; CHECK: add   {{w[0-9]+}}, {{w[0-9]+}}, #16773120
+  ; CHECK: add   {{w[0-9]+}}, {{w[0-9]+}}, 16773120
   %1 = tail call i32 asm sideeffect "add ${0:w}, ${1:w}, $2", "=r,r,I"(i32 %i, i32 4096) nounwind
-  ; CHECK: add   {{w[0-9]+}}, {{w[0-9]+}}, #4096
+  ; CHECK: add   {{w[0-9]+}}, {{w[0-9]+}}, 4096
   ret i32 %1
 }
 
@@ -91,13 +91,13 @@ define i32 @constraint_J(i32 %i, i32 %j, i64 %k) nounwind {
 entry:
   ; CHECK-LABEL: constraint_J:
   %0 = tail call i32 asm sideeffect "sub ${0:w}, ${1:w}, $2", "=r,r,J"(i32 %i, i32 -16773120) nounwind
-  ; CHECK: sub   {{w[0-9]+}}, {{w[0-9]+}}, #-16773120
+  ; CHECK: sub   {{w[0-9]+}}, {{w[0-9]+}}, -16773120
   %1 = tail call i32 asm sideeffect "sub ${0:w}, ${1:w}, $2", "=r,r,J"(i32 %i, i32 -1) nounwind
-  ; CHECK: sub   {{w[0-9]+}}, {{w[0-9]+}}, #-1
+  ; CHECK: sub   {{w[0-9]+}}, {{w[0-9]+}}, -1
   %2 = tail call i64 asm sideeffect "sub ${0:x}, ${1:x}, $2", "=r,r,J"(i64 %k, i32 -1) nounwind
-  ; CHECK: sub   {{x[0-9]+}}, {{x[0-9]+}}, #-1
+  ; CHECK: sub   {{x[0-9]+}}, {{x[0-9]+}}, -1
   %3 = tail call i64 asm sideeffect "sub ${0:x}, ${1:x}, $2", "=r,r,J"(i64 %k, i64 -1) nounwind
-  ; CHECK: sub   {{x[0-9]+}}, {{x[0-9]+}}, #-1
+  ; CHECK: sub   {{x[0-9]+}}, {{x[0-9]+}}, -1
   ret i32 %1
 }
 
@@ -105,9 +105,9 @@ define i32 @constraint_KL(i32 %i, i32 %j) nounwind {
 entry:
   ; CHECK-LABEL: constraint_KL:
   %0 = tail call i32 asm sideeffect "eor ${0:w}, ${1:w}, $2", "=r,r,K"(i32 %i, i32 255) nounwind
-  ; CHECK: eor {{w[0-9]+}}, {{w[0-9]+}}, #255
+  ; CHECK: eor {{w[0-9]+}}, {{w[0-9]+}}, 255
   %1 = tail call i32 asm sideeffect "eor ${0:w}, ${1:w}, $2", "=r,r,L"(i32 %i, i64 16711680) nounwind
-  ; CHECK: eor {{w[0-9]+}}, {{w[0-9]+}}, #16711680
+  ; CHECK: eor {{w[0-9]+}}, {{w[0-9]+}}, 16711680
   ret i32 %1
 }
 
@@ -115,9 +115,9 @@ define i32 @constraint_MN(i32 %i, i32 %j) nounwind {
 entry:
   ; CHECK-LABEL: constraint_MN:
   %0 = tail call i32 asm sideeffect "movk ${0:w}, $1", "=r,M"(i32 65535) nounwind
-  ; CHECK: movk  {{w[0-9]+}}, #65535
+  ; CHECK: movk  {{w[0-9]+}}, 65535
   %1 = tail call i32 asm sideeffect "movz ${0:w}, $1", "=r,N"(i64 0) nounwind
-  ; CHECK: movz  {{w[0-9]+}}, #0
+  ; CHECK: movz  {{w[0-9]+}}, 0
   ret i32 %1
 }
 
@@ -178,13 +178,13 @@ define void @t13() nounwind {
 entry:
   ; CHECK-LABEL: t13:
   tail call void asm sideeffect "mov x4, $0\0A", "N"(i64 1311673391471656960) nounwind
-  ; CHECK: mov x4, #1311673391471656960
+  ; CHECK: mov x4, 1311673391471656960
   tail call void asm sideeffect "mov x4, $0\0A", "N"(i64 -4662) nounwind
-  ; CHECK: mov x4, #-4662
+  ; CHECK: mov x4, -4662
   tail call void asm sideeffect "mov x4, $0\0A", "N"(i64 4660) nounwind
-  ; CHECK: mov x4, #4660
+  ; CHECK: mov x4, 4660
   call void asm sideeffect "mov x4, $0\0A", "N"(i64 -71777214294589696) nounwind
-  ; CHECK: mov x4, #-71777214294589696
+  ; CHECK: mov x4, -71777214294589696
   ret void
 }
 
@@ -192,13 +192,13 @@ define void @t14() nounwind {
 entry:
   ; CHECK-LABEL: t14:
   tail call void asm sideeffect "mov w4, $0\0A", "M"(i32 305397760) nounwind
-  ; CHECK: mov w4, #305397760
+  ; CHECK: mov w4, 305397760
   tail call void asm sideeffect "mov w4, $0\0A", "M"(i32 -4662) nounwind
-  ; CHECK: mov w4, #4294962634
+  ; CHECK: mov w4, 4294962634
   tail call void asm sideeffect "mov w4, $0\0A", "M"(i32 4660) nounwind
-  ; CHECK: mov w4, #4660
+  ; CHECK: mov w4, 4660
   call void asm sideeffect "mov w4, $0\0A", "M"(i32 -16711936) nounwind
-  ; CHECK: mov w4, #4278255360
+  ; CHECK: mov w4, 4278255360
   ret void
 }
 
@@ -269,5 +269,14 @@ entry:
 ; CHECK: mov {{x[0-9]+}}, xzr
 ; CHECK: ldr {{x[0-9]+}}, {{[x[0-9]+]}}
   tail call i32 asm sideeffect "ldr $0, $1 \0A", "=r,*Q"(i32* null)
+  ret void
+}
+
+; No '#' in lane specifier
+define void @test_no_hash_in_lane_specifier() {
+; CHECK-LABEL: test_no_hash_in_lane_specifier
+; CHECK: fmla v2.4s, v0.4s, v1.s[1]
+; CHECK: ret
+  tail call void asm sideeffect "fmla v2.4s, v0.4s, v1.s[$0]", "I"(i32 1) #1
   ret void
 }
