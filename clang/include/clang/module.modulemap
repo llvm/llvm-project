@@ -31,6 +31,7 @@ module Clang_Basic {
   requires cplusplus
   umbrella "Basic"
 
+  textual header "Basic/AArch64SVEACLETypes.def"
   textual header "Basic/BuiltinsAArch64.def"
   textual header "Basic/BuiltinsAMDGPU.def"
   textual header "Basic/BuiltinsARM.def"

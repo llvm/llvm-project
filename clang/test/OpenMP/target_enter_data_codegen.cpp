@@ -40,6 +40,10 @@ double gc[100];
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
 // CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
 
+// CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1057]
+
+// CK1: [[MTYPE06:@.+]] = {{.+}}constant [1 x i64] [i64 1061]
+
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
   int la;
@@ -145,6 +149,56 @@ void foo(int arg) {
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   // CK1-NOT: __tgt_target_data_end
   #pragma omp target enter data map(to: gb.b[:3])
+  {++arg;}
+
+  // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  {++arg;}
+
+  // Region 05
+  // CK1-DAG: call void @__tgt_target_data_begin(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE05]]{{.+}})
+  // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+  // CK1-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
+  // CK1-DAG: store float* [[VAR0]], float** [[CP0]]
+  // CK1-DAG: store i[[sz]] [[CSVAL0:%[^,]+]], i[[sz]]* [[S0]]
+  // CK1-64-DAG: [[CSVAL0]] = mul nuw i64 %{{[^,]+}}, 4
+  // CK1-32-DAG: [[CSVAL0]] = sext i32 [[CSVAL032:%.+]] to i64
+  // CK1-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
+  // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  // CK1-NOT: __tgt_target_data_end
+  #pragma omp target enter data map(close, to: lb)
+  {++arg;}
+
+  // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  {++arg;}
+
+  // Region 06
+  // CK1-DAG: call void @__tgt_target_data_begin(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE06]]{{.+}})
+  // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+  // CK1-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
+  // CK1-DAG: store float* [[VAR0]], float** [[CP0]]
+  // CK1-DAG: store i[[sz]] [[CSVAL0:%[^,]+]], i[[sz]]* [[S0]]
+  // CK1-64-DAG: [[CSVAL0]] = mul nuw i64 %{{[^,]+}}, 4
+  // CK1-32-DAG: [[CSVAL0]] = sext i32 [[CSVAL032:%.+]] to i64
+  // CK1-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
+  // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  // CK1-NOT: __tgt_target_data_end
+  #pragma omp target enter data map(always close, to: lb)
   {++arg;}
 }
 #endif
@@ -297,5 +351,82 @@ void device_side_scan(int arg) {
   #pragma omp target enter data map(to: arg) if(arg) device(4)
   {++arg;}
 }
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK5 --check-prefix CK5-64
+// RUN: %clang_cc1 -DCK5 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK5 --check-prefix CK5-64
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK5 --check-prefix CK5-32
+// RUN: %clang_cc1 -DCK5 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK5 --check-prefix CK5-32
+
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
+#ifdef CK5
+
+// CK5: [[STT:%.+]] = type { i32, double* }
+template <typename T>
+struct STT {
+  T a;
+  double *b;
+
+  T foo(T arg) {
+    // Region 00
+    #pragma omp target enter data map(always close to: b[1:3]) if(a>123) device(arg)
+    {arg++;}
+    return arg;
+  }
+};
+
+// CK5: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976711701]
+
+// CK5-LABEL: _Z3bari
+int bar(int arg){
+  STT<int> A;
+  return A.foo(arg);
+}
+
+// Region 00
+// CK5: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
+// CK5: [[IFTHEN]]
+// CK5-DAG: call void @__tgt_target_data_begin(i64 [[DEV:%[^,]+]], i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz:64|32]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}})
+// CK5-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+// CK5-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
+// CK5-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK5-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK5-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+// CK5-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK5-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK5-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK5-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[STT]]**
+// CK5-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
+// CK5-DAG: store [[STT]]* [[VAR0:%.+]], [[STT]]** [[CBP0]]
+// CK5-DAG: store double** [[SEC0:%.+]], double*** [[CP0]]
+// CK5-DAG: store i[[sz]] {{%.+}}, i[[sz]]* [[S0]]
+// CK5-DAG: [[SEC0]] = getelementptr inbounds {{.*}}[[STT]]* [[VAR0]], i32 0, i32 1
+
+// CK5-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK5-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK5-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double***
+// CK5-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
+// CK5-DAG: store double** [[SEC0]], double*** [[CBP1]]
+// CK5-DAG: store double* [[SEC1:%.+]], double** [[CP1]]
+// CK5-DAG: [[SEC1]] = getelementptr inbounds {{.*}}double* [[SEC11:%[^,]+]], i{{.+}} 1
+// CK5-DAG: [[SEC11]] = load double*, double** [[SEC111:%[^,]+]],
+// CK5-DAG: [[SEC111]] = getelementptr inbounds {{.*}}[[STT]]* [[VAR0]], i32 0, i32 1
+
+// CK5: br label %[[IFEND:[^,]+]]
+
+// CK5: [[IFELSE]]
+// CK5: br label %[[IFEND]]
+// CK5: [[IFEND]]
+// CK5: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+// CK5-NOT: __tgt_target_data_end
 #endif
 #endif

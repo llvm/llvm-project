@@ -6564,6 +6564,39 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return false;
 }
 
+static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
+  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
+    if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()))
+      return true;
+  if (!Callee->getParent()->isInStdNamespace())
+    return false;
+  if (!isRecordWithAttr<PointerAttr>(Callee->getThisObjectType()) &&
+      !isRecordWithAttr<OwnerAttr>(Callee->getThisObjectType()))
+    return false;
+  if (Callee->getReturnType()->isPointerType() ||
+      isRecordWithAttr<PointerAttr>(Callee->getReturnType())) {
+    if (!Callee->getIdentifier())
+      return false;
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
+        .Cases("end", "rend", "cend", "crend", true)
+        .Cases("c_str", "data", "get", true)
+        // Map and set types.
+        .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
+        .Default(false);
+  } else if (Callee->getReturnType()->isReferenceType()) {
+    if (!Callee->getIdentifier()) {
+      auto OO = Callee->getOverloadedOperator();
+      return OO == OverloadedOperatorKind::OO_Subscript ||
+             OO == OverloadedOperatorKind::OO_Star;
+    }
+    return llvm::StringSwitch<bool>(Callee->getName())
+        .Cases("front", "back", "at", true)
+        .Default(false);
+  }
+  return false;
+}
+
 static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
                                     LocalVisitor Visit) {
   auto VisitPointerArg = [&](const Decl *D, Expr *Arg) {
@@ -6577,10 +6610,15 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
   };
 
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    const FunctionDecl *Callee = MCE->getDirectCallee();
-    if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
-      if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()))
-        VisitPointerArg(Callee, MCE->getImplicitObjectArgument());
+    const auto *MD = cast_or_null<CXXMethodDecl>(MCE->getDirectCallee());
+    if (MD && shouldTrackImplicitObjectArg(MD))
+      VisitPointerArg(MD, MCE->getImplicitObjectArgument());
+    return;
+  } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
+    FunctionDecl *Callee = OCE->getDirectCallee();
+    if (Callee && Callee->isCXXInstanceMember() &&
+        shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
+      VisitPointerArg(Callee, OCE->getArg(0));
     return;
   }
 
@@ -7177,6 +7215,11 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // (there's no other way that a default initializer can refer to a
         // local). Don't produce a bogus warning on those cases.
         if (pathContainsInit(Path))
+          return false;
+
+        // Suppress false positives for code like the below:
+        //   Ctor(unique_ptr<T> up) : member(*up), member2(move(up)) {}
+        if (IsLocalGslOwner && pathOnlyInitializesGslPointer(Path))
           return false;
 
         auto *DRE = dyn_cast<DeclRefExpr>(L);

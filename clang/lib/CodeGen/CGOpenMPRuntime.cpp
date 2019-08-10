@@ -7116,6 +7116,9 @@ public:
     OMP_MAP_LITERAL = 0x100,
     /// Implicit map
     OMP_MAP_IMPLICIT = 0x200,
+    /// Close is a hint to the runtime to allocate memory close to
+    /// the target device.
+    OMP_MAP_CLOSE = 0x400,
     /// The 16 MSBs of the flags indicate whether the entry is member of some
     /// struct/class.
     OMP_MAP_MEMBER_OF = 0xffff000000000000,
@@ -7296,6 +7299,9 @@ private:
     if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_always)
         != MapModifiers.end())
       Bits |= OMP_MAP_ALWAYS;
+    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_close)
+        != MapModifiers.end())
+      Bits |= OMP_MAP_CLOSE;
     return Bits;
   }
 
@@ -7724,10 +7730,10 @@ private:
 
           if (!IsExpressionFirstInfo) {
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
-            // then we reset the TO/FROM/ALWAYS/DELETE flags.
+            // then we reset the TO/FROM/ALWAYS/DELETE/CLOSE flags.
             if (IsPointer)
               Flags &= ~(OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_ALWAYS |
-                         OMP_MAP_DELETE);
+                         OMP_MAP_DELETE | OMP_MAP_CLOSE);
 
             if (ShouldBeMemberOf) {
               // Set placeholder value MEMBER_OF=FFFF to indicate that the flag
