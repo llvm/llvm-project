@@ -3,6 +3,7 @@
 --- |
   define void @test_zext_s16_to_s32() { ret void }
   define void @test_sext_s8_to_s32() { ret void }
+  define void @test_sext_inreg_s8_to_s32() { ret void }
   define void @test_anyext_s1_to_s32() { ret void }
 
   define void @test_zext_s8_to_s16() { ret void }
@@ -57,6 +58,32 @@ body:             |
     %2(s32) = G_SEXT %1
     ; G_SEXT with s8 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SEXT {{%[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_sext_inreg_s8_to_s32
+# CHECK-LABEL: name: test_sext_inreg_s8_to_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    %2(s32) = G_SEXT_INREG %1, 8
+    ; G_SEXT_INREG should be lowered to a shift pair
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[T2:%[0-9]+]]:_(s32) = G_SHL {{%[0-9]+}}, [[T1]]
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_ASHR [[T2]], [[T1]]
     $r0 = COPY %2(s32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -188,8 +215,8 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[V8]](s8)
     ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[V8]](s8)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SEXT]]
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[OR]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[BITS]](s32)
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[BITS]](s32)
     ; CHECK: $r0 = COPY [[ASHR]]

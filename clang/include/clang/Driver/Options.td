@@ -1061,6 +1061,13 @@ def fno_sanitize_cfi_cross_dso : Flag<["-"], "fno-sanitize-cfi-cross-dso">,
 def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
                                               Group<f_clang_Group>,
                                               HelpText<"Generalize pointers in CFI indirect call type signature checks">;
+def fsanitize_cfi_canonical_jump_tables : Flag<["-"], "fsanitize-cfi-canonical-jump-tables">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Make the jump table addresses canonical in the symbol table">;
+def fno_sanitize_cfi_canonical_jump_tables : Flag<["-"], "fno-sanitize-cfi-canonical-jump-tables">,
+                                             Group<f_clang_Group>,
+                                             Flags<[CoreOption, DriverOption]>,
+                                             HelpText<"Do not make the jump table addresses canonical in the symbol table">;
 def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
                               Group<f_clang_Group>,
                               HelpText<"Enable sanitizer statistics gathering.">;

@@ -304,6 +304,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
 
   StoreDiags ASTDiags;
   std::string Content = Buffer->getBuffer();
+  std::string Filename = Buffer->getBufferIdentifier(); // Absolute.
 
   auto Clang = prepareCompilerInstance(std::move(CI), PreamblePCH,
                                        std::move(Buffer), VFS, ASTDiags);
@@ -329,7 +330,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   llvm::Optional<tidy::ClangTidyContext> CTContext;
   {
     trace::Span Tracer("ClangTidyInit");
-    dlog("ClangTidy configuration for file {0}: {1}", MainInput.getFile(),
+    dlog("ClangTidy configuration for file {0}: {1}", Filename,
          tidy::configurationAsText(Opts.ClangTidyOpts));
     tidy::ClangTidyCheckFactories CTFactories;
     for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
@@ -338,7 +339,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
         tidy::ClangTidyGlobalOptions(), Opts.ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
-    CTContext->setCurrentFile(MainInput.getFile());
+    CTContext->setCurrentFile(Filename);
     CTFactories.createChecks(CTContext.getPointer(), CTChecks);
     ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
@@ -385,15 +386,15 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();
   if (Opts.SuggestMissingIncludes && Index && !BuildDir.getError()) {
-    auto Style = getFormatStyleForFile(MainInput.getFile(), Content, VFS.get());
+    auto Style = getFormatStyleForFile(Filename, Content, VFS.get());
     auto Inserter = std::make_shared<IncludeInserter>(
-        MainInput.getFile(), Content, Style, BuildDir.get(),
+        Filename, Content, Style, BuildDir.get(),
         &Clang->getPreprocessor().getHeaderSearchInfo());
     if (Preamble) {
       for (const auto &Inc : Preamble->Includes.MainFileIncludes)
         Inserter->addExisting(Inc);
     }
-    FixIncludes.emplace(MainInput.getFile(), Inserter, *Index,
+    FixIncludes.emplace(Filename, Inserter, *Index,
                         /*IndexRequestLimit=*/5);
     ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
                                             const clang::Diagnostic &Info) {

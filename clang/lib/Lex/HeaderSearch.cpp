@@ -316,7 +316,8 @@ const FileEntry *HeaderSearch::getFileAndSuggestModule(
     // message.
     std::error_code EC = File.getError();
     if (EC != std::errc::no_such_file_or_directory &&
-        EC != std::errc::invalid_argument && EC != std::errc::is_a_directory) {
+        EC != std::errc::invalid_argument && EC != std::errc::is_a_directory &&
+        EC != std::errc::not_a_directory) {
       Diags.Report(IncludeLoc, diag::err_cannot_open_file)
           << FileName << EC.message();
     }

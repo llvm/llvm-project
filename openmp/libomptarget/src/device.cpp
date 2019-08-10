@@ -158,7 +158,7 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
 // to do an illegal mapping.
 void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     int64_t Size, bool &IsNew, bool &IsHostPtr, bool IsImplicit,
-    bool UpdateRefCount) {
+    bool UpdateRefCount, bool HasCloseModifier) {
   void *rc = NULL;
   IsHostPtr = false;
   DataMapMtx.lock();
@@ -192,9 +192,9 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     // privatized use host address. Any explicitly mapped variables also use
     // host address where correctness is not impeded. In all other cases
     // maps are respected.
-    // TODO: In addition to the mapping rules above, when the close map
-    // modifier is implemented, foce the mapping of the variable to the device.
-    if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+    // In addition to the mapping rules above, the close map
+    // modifier forces the mapping of the variable to the device.
+    if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier) {
       DP("Return HstPtrBegin " DPxMOD " Size=%ld RefCount=%s\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
       IsHostPtr = true;
@@ -204,8 +204,8 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
       IsNew = true;
       uintptr_t tp = (uintptr_t)RTL->data_alloc(RTLDeviceID, Size, HstPtrBegin);
       DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", "
-          "HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(HstPtrBase),
-          DPxPTR(HstPtrBegin), DPxPTR((uintptr_t)HstPtrBegin + Size), DPxPTR(tp));
+         "HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(HstPtrBase),
+         DPxPTR(HstPtrBegin), DPxPTR((uintptr_t)HstPtrBegin + Size), DPxPTR(tp));
       HostDataToTargetMap.push_front(HostDataToTargetTy((uintptr_t)HstPtrBase,
           (uintptr_t)HstPtrBegin, (uintptr_t)HstPtrBegin + Size, tp));
       rc = (void *)tp;
@@ -241,7 +241,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
         (CONSIDERED_INF(HT.RefCount)) ? "INF" :
             std::to_string(HT.RefCount).c_str());
     rc = (void *)tp;
-  } else if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -269,8 +269,9 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
   return NULL;
 }
 
-int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete) {
-  if (RTLRequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
+                            bool HasCloseModifier) {
+  if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier)
     return OFFLOAD_SUCCESS;
   // Check if the pointer is contained in any sub-nodes.
   int rc;
@@ -305,7 +306,7 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete) {
 void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
-    RTL->init_requires(RTLRequiresFlags);
+    RTL->init_requires(RTLs.RequiresFlags);
   int32_t rc = RTL->init_device(RTLDeviceID);
   if (rc == OFFLOAD_SUCCESS) {
     IsInit = true;

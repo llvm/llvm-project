@@ -431,13 +431,10 @@ class SymbolizationLoop(object):
     assert result
     return result
 
-  def get_symbolized_lines(self, symbolized_lines, inc_frame_counter=True):
+  def get_symbolized_lines(self, symbolized_lines):
     if not symbolized_lines:
-      if inc_frame_counter:
-        self.frame_no += 1
       return [self.current_line]
     else:
-      assert inc_frame_counter
       result = []
       for symbolized_frame in symbolized_lines:
         result.append('    #%s %s' % (str(self.frame_no), symbolized_frame.rstrip()))
@@ -467,17 +464,15 @@ class SymbolizationLoop(object):
     match = re.match(stack_trace_line_format, line)
     if not match:
       logging.debug('Line "{}" does not match regex'.format(line))
-      # Not a frame line so don't increment the frame counter.
-      return self.get_symbolized_lines(None, inc_frame_counter=False)
+      return [self.current_line]
     logging.debug(line)
     _, frameno_str, addr, binary, offset = match.groups()
-
     if not self.using_module_map and not os.path.isabs(binary):
       # Do not try to symbolicate if the binary is just the module file name
       # and a module map is unavailable.
       # FIXME(dliew): This is currently necessary for reports on Darwin that are
       # partially symbolicated by `atos`.
-      return self.get_symbolized_lines(None)
+      return [self.current_line]
     arch = ""
     # Arch can be embedded in the filename, e.g.: "libabc.dylib:x86_64h"
     colon_pos = binary.rfind(":")
@@ -496,7 +491,7 @@ class SymbolizationLoop(object):
     if binary is None:
       # The binary filter has told us this binary can't be symbolized.
       logging.debug('Skipping symbolication of binary "%s"', original_binary)
-      return self.get_symbolized_lines(None)
+      return [self.current_line]
     symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     if not symbolized_line:
       if original_binary != binary:

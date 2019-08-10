@@ -1139,6 +1139,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeCfiCrossDso = Args.hasArg(OPT_fsanitize_cfi_cross_dso);
   Opts.SanitizeCfiICallGeneralizePointers =
       Args.hasArg(OPT_fsanitize_cfi_icall_generalize_pointers);
+  Opts.SanitizeCfiCanonicalJumpTables =
+      Args.hasArg(OPT_fsanitize_cfi_canonical_jump_tables);
   Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
   if (Arg *A = Args.getLastArg(
           OPT_fsanitize_address_poison_custom_array_cookie,

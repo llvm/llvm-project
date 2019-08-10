@@ -1022,14 +1022,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       X86FI->getCalleeSavedFrameSize() - TailCallReturnAddrDelta);
 
   bool UseStackProbe = !STI.getTargetLowering()->getStackProbeSymbolName(MF).empty();
-
-  // The default stack probe size is 4096 if the function has no stackprobesize
-  // attribute.
-  unsigned StackProbeSize = 4096;
-  if (Fn.hasFnAttribute("stack-probe-size"))
-    Fn.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+  unsigned StackProbeSize = STI.getTargetLowering()->getStackProbeSize(MF);
 
   // Re-align the stack on 64-bit if the x86-interrupt calling convention is
   // used and an error code was pushed, since the x86-64 ABI requires a 16-byte

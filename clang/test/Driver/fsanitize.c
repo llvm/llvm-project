@@ -621,6 +621,12 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-AND-CROSS-DSO
 // CHECK-CFI-GENERALIZE-AND-CROSS-DSO: error: invalid argument '-fsanitize-cfi-cross-dso' not allowed with '-fsanitize-cfi-icall-generalize-pointers'
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// CHECK-CFI-CANONICAL-JUMP-TABLES: -fsanitize-cfi-canonical-jump-tables
+// CHECK-NO-CFI-CANONICAL-JUMP-TABLES-NOT: -fsanitize-cfi-canonical-jump-tables
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
 // CHECK-CFI-STATS: -fsanitize-stats
 

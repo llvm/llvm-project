@@ -92,8 +92,8 @@ body:             |
     ; FP32-LABEL: name: i16tof32
     ; FP32: liveins: $a0
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP32: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
@@ -102,8 +102,8 @@ body:             |
     ; FP64-LABEL: name: i16tof32
     ; FP64: liveins: $a0
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP64: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP64: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP64: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
@@ -127,8 +127,8 @@ body:             |
     ; FP32-LABEL: name: i8tof32
     ; FP32: liveins: $a0
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP32: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
@@ -137,8 +137,8 @@ body:             |
     ; FP64-LABEL: name: i8tof32
     ; FP64: liveins: $a0
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP64: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP64: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP64: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
@@ -228,8 +228,8 @@ body:             |
     ; FP32-LABEL: name: i16tof64
     ; FP32: liveins: $a0
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP32: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
@@ -238,8 +238,8 @@ body:             |
     ; FP64-LABEL: name: i16tof64
     ; FP64: liveins: $a0
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; FP64: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP64: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP64: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
@@ -263,8 +263,8 @@ body:             |
     ; FP32-LABEL: name: i8tof64
     ; FP32: liveins: $a0
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP32: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
@@ -273,8 +273,8 @@ body:             |
     ; FP64-LABEL: name: i8tof64
     ; FP64: liveins: $a0
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; FP64: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; FP64: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; FP64: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)

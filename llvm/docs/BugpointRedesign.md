@@ -95,11 +95,8 @@ at all.
 
 ### "Quirky" Interface
 Bugpoint’s current interface overwhelms and confuses the user, the help screen
-alone ends up confusing rather providing guidance, as seen below:
-
-![Bugpoint's help option showcase](https://lh6.googleusercontent.com/sbpaSVHzpVVZKKAgHL9gvfzTWdgh3ju0KiDYql6WmWZfDYrdauOJMcuo9PP_V1dq8JQfMHOSKTv3lJcSpVytUyU8r5tJ2KTlGB0b2ve7jsZ3nVX8K8ItAbsA0JWkFKw67VJnq99m)
-
-And, not only are there numerous features and options, but some of them also
-work in unexpected ways and most of the time the user ends up using a custom
-script. Pruning and simplifying the interface will be worth considering in
-order to make the tool more useful in the general case and easier to maintain.
+alone ends up confusing rather providing guidance. And, not only are there
+numerous features and options, but some of them also work in unexpected ways
+and most of the time the user ends up using a custom script. Pruning and
+simplifying the interface will be worth considering in order to make the tool
+more useful in the general case and easier to maintain.

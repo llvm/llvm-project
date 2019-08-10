@@ -51,8 +51,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]](s32)
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[ASHR]](s32)
@@ -140,8 +140,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]](s32)
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[ASHR]](s32)

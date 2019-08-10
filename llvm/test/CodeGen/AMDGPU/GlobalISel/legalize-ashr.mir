@@ -126,8 +126,8 @@ body: |
     ; SI-LABEL: name: test_ashr_s16_s32
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; SI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; SI: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[COPY1]](s32)
@@ -167,8 +167,8 @@ body: |
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
-    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY3]], [[C1]](s32)
     ; SI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
     ; SI: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[AND]](s32)
@@ -211,8 +211,8 @@ body: |
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
-    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY3]], [[C1]](s32)
     ; SI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
     ; SI: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[AND]](s32)
@@ -261,8 +261,8 @@ body: |
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
-    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY3]], [[C1]](s32)
     ; SI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
     ; SI: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[AND]](s32)
@@ -275,11 +275,11 @@ body: |
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
     ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
     ; VI: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[TRUNC]]
+    ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
-    ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC3]], [[TRUNC2]](s16)
-    ; VI: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[TRUNC2]](s16)
+    ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
+    ; VI: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[TRUNC3]](s16)
+    ; VI: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[TRUNC3]](s16)
     ; VI: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[ASHR]], [[AND]](s16)
     ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASHR1]](s16)
     ; VI: $vgpr0 = COPY [[ANYEXT]](s32)
@@ -290,11 +290,11 @@ body: |
     ; GFX9: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
     ; GFX9: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[TRUNC]]
+    ; GFX9: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
-    ; GFX9: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC3]], [[TRUNC2]](s16)
-    ; GFX9: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[TRUNC2]](s16)
+    ; GFX9: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
+    ; GFX9: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[TRUNC3]](s16)
+    ; GFX9: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[TRUNC3]](s16)
     ; GFX9: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[ASHR]], [[AND]](s16)
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASHR1]](s16)
     ; GFX9: $vgpr0 = COPY [[ANYEXT]](s32)

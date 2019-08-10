@@ -169,10 +169,9 @@ define float @fadd_const_multiuse_attr(float %x) {
 define double @fmul2_negated(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmul2_negated:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d3, #-2.00000000
-; CHECK-NEXT:    fmul d1, d1, d3
+; CHECK-NEXT:    fadd d1, d1, d1
 ; CHECK-NEXT:    fmul d1, d1, d2
-; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    fsub d0, d0, d1
 ; CHECK-NEXT:    ret
   %mul = fmul double %b, 2.0
   %mul1 = fmul double %mul, %c
@@ -183,10 +182,9 @@ define double @fmul2_negated(double %a, double %b, double %c) {
 define <2 x double> @fmul2_negated_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: fmul2_negated_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov v3.2d, #-2.00000000
-; CHECK-NEXT:    fmul v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    fadd v1.2d, v1.2d, v1.2d
 ; CHECK-NEXT:    fmul v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fsub v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %mul = fmul <2 x double> %b, <double 2.0, double 2.0>
   %mul1 = fmul <2 x double> %mul, %c

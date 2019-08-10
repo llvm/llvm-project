@@ -23,9 +23,9 @@ std::unique_ptr<Generator> getHTMLGenerator() {
 }
 
 ClangDocContext
-getClangDocContext(std::vector<std::string> UserStylesheets = {}) {
-  ClangDocContext CDCtx;
-  CDCtx.UserStylesheets = {UserStylesheets.begin(), UserStylesheets.end()};
+getClangDocContext(std::vector<std::string> UserStylesheets = {},
+                   StringRef RepositoryUrl = "") {
+  ClangDocContext CDCtx{{}, {}, {}, {}, RepositoryUrl, UserStylesheets, {}};
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");
@@ -127,7 +127,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   I.Path = "X/Y/Z";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, llvm::SmallString<16>{"dir/test.cpp"}, true);
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   SmallString<16> PathTo;
@@ -147,7 +147,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  ClangDocContext CDCtx = getClangDocContext();
+  ClangDocContext CDCtx = getClangDocContext({}, "http://www.repository.com");
   auto Err = G->generateDocForInfo(&I, Actual, CDCtx);
   assert(!Err);
   std::string Expected = R"raw(<!DOCTYPE html>
@@ -194,7 +194,12 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
 </ul>
 <div>
   <h1>class r</h1>
-  <p>Defined at line 10 of test.cpp</p>
+  <p>
+    Defined at line 
+    <a href="http://www.repository.com/dir/test.cpp#10">10</a>
+     of file 
+    <a href="http://www.repository.com/dir/test.cpp">test.cpp</a>
+  </p>
   <p>
     Inherits from 
     <a href="../../../path/to/F.html">F</a>
@@ -232,7 +237,7 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, llvm::SmallString<16>{"dir/test.cpp"}, false);
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   SmallString<16> PathTo;
@@ -246,7 +251,7 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  ClangDocContext CDCtx = getClangDocContext();
+  ClangDocContext CDCtx = getClangDocContext({}, "https://www.repository.com");
   auto Err = G->generateDocForInfo(&I, Actual, CDCtx);
   assert(!Err);
   std::string Expected = R"raw(<!DOCTYPE html>
@@ -263,7 +268,7 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
     <a href="path/to/int.html">int</a>
      P)
   </p>
-  <p>Defined at line 10 of test.cpp</p>
+  <p>Defined at line 10 of file dir/test.cpp</p>
 </div>
 )raw";
 
@@ -275,7 +280,7 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"}, true);
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   I.Members.emplace_back("X");
@@ -285,7 +290,7 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  ClangDocContext CDCtx = getClangDocContext();
+  ClangDocContext CDCtx = getClangDocContext({}, "www.repository.com");
   auto Err = G->generateDocForInfo(&I, Actual, CDCtx);
   assert(!Err);
   std::string Expected = R"raw(<!DOCTYPE html>
@@ -299,7 +304,12 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
   <ul>
     <li>X</li>
   </ul>
-  <p>Defined at line 10 of test.cpp</p>
+  <p>
+    Defined at line 
+    <a href="https://www.repository.com/test.cpp#10">10</a>
+     of file 
+    <a href="https://www.repository.com/test.cpp">test.cpp</a>
+  </p>
 </div>
 )raw";
 
@@ -368,7 +378,7 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
 <div>
   <h3 id="0000000000000000000000000000000000000000">f</h3>
   <p>void f(int I, int J)</p>
-  <p>Defined at line 10 of test.cpp</p>
+  <p>Defined at line 10 of file test.cpp</p>
   <div>
     <div>
       <p> Brief description.</p>

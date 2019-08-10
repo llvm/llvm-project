@@ -613,8 +613,8 @@ body: |
     ; GFX7: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[UV3]]
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX7: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX7: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX7: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX7: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
@@ -631,8 +631,8 @@ body: |
     ; GFX8: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[UV3]]
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX8: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX8: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
@@ -649,8 +649,8 @@ body: |
     ; GFX9: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[UV3]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX9: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
@@ -679,8 +679,8 @@ body: |
     ; GFX7: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p999), [[UV3]]
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX7: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX7: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX7: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX7: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
@@ -697,8 +697,8 @@ body: |
     ; GFX8: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p999), [[UV3]]
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX8: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX8: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
@@ -715,8 +715,8 @@ body: |
     ; GFX9: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p999), [[UV3]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; GFX9: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
