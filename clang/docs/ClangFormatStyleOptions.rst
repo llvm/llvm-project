@@ -192,20 +192,6 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignConsecutiveMacros** (``bool``)
-  If ``true``, aligns consecutive C/C++ preprocessor macros.
-
-  This will align the C/C++ preprocessor macros of consecutive lines. This
-  will result in formattings like
-
-  .. code-block:: c++
-
-    #define SHORT_NAME       42
-    #define LONGER_NAME      0x007f
-    #define EVEN_LONGER_NAME (2)
-    #define foo(x)           (x * x)
-    #define bar(y, z)        (y + z)
-
 **AlignConsecutiveAssignments** (``bool``)
   If ``true``, aligns consecutive assignments.
 
@@ -229,6 +215,20 @@ the configuration (without a prefix: ``Auto``).
     int         aaaa = 12;
     float       b = 23;
     std::string ccc = 23;
+
+**AlignConsecutiveMacros** (``bool``)
+  If ``true``, aligns consecutive C/C++ preprocessor macros.
+
+  This will align C/C++ preprocessor macros of consecutive lines.
+  Will result in formattings like
+
+  .. code-block:: c++
+
+    #define SHORT_NAME       42
+    #define LONGER_NAME      0x007f
+    #define EVEN_LONGER_NAME (2)
+    #define foo(x)           (x * x)
+    #define bar(y, z)        (y + z)
 
 **AlignEscapedNewlines** (``EscapedNewlineAlignmentStyle``)
   Options for aligning backslashes in escaped newlines.
@@ -1390,24 +1390,6 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
-**TypenameMacros** (``std::vector<std::string>``)
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
-
-  These are expected to be macros of the form:
-
-  .. code-block: c++
-
-    STACK_OF(...)
-
-  In the .clang-format configuration file, this can be configured like:
-
-  .. code-block: yaml
-
-    TypenameMacros: ['STACK_OF', 'LIST']
-
-  For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
-
 **IncludeBlocks** (``IncludeBlocksStyle``)
   Dependent on the value, multiple ``#include`` blocks can be sorted
   as one and divided based on category.
@@ -2134,6 +2116,15 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      for (auto v : values) {}       vs.     for(auto v: values) {}
 
+**SpaceInEmptyBlock** (``bool``)
+  If ``true``, spaces will be inserted into ``{}``.
+
+  .. code-block:: c++
+
+     true:                                false:
+     void f() { }                   vs.   void f() {}
+     while (true) { }                     while (true) {}
+
 **SpaceInEmptyParentheses** (``bool``)
   If ``true``, spaces may be inserted into ``()``.
 
@@ -2240,6 +2231,24 @@ the configuration (without a prefix: ``Auto``).
 
 **TabWidth** (``unsigned``)
   The number of columns used for tab stops.
+
+**TypenameMacros** (``std::vector<std::string>``)
+  A vector of macros that should be interpreted as type declarations
+  instead of as function calls.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    STACK_OF(...)
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    TypenameMacros: ['STACK_OF', 'LIST']
+
+  For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
 
 **UseTab** (``UseTabStyle``)
   The way to use tab characters in the resulting file.

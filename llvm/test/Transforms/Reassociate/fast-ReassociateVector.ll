@@ -282,9 +282,10 @@ define <2 x double> @test9_reassoc_unary_fneg(<2 x double> %b, <2 x double> %a) 
 define <2 x float> @test10(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x float> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[A:%.*]], <float 4.000000e+01, float 4.000000e+01>
-; CHECK-NEXT:    [[F:%.*]] = fmul fast <2 x float> [[E]], [[Z:%.*]]
-; CHECK-NEXT:    ret <2 x float> [[F]]
+; CHECK-NEXT:    [[C:%.*]] = fmul fast <2 x float> [[A:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[C]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[E]], zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %d = fmul fast <2 x float> %z, <float 4.000000e+01, float 4.000000e+01>
   %c = fsub fast <2 x float> <float 0.000000e+00, float 0.000000e+00>, %d
@@ -343,7 +344,7 @@ define <2 x float> @test10_reassoc_unary_fneg(<2 x float> %a, <2 x float> %b, <2
 
 define <2 x double> @test11(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x double> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[FACTOR]], <double 2.000000e+00, double 2.000000e+00>
 ; CHECK-NEXT:    ret <2 x double> [[REASS_MUL]]
 ;
@@ -381,15 +382,13 @@ define <2 x i64> @test12(<2 x i64> %b, <2 x i64> %c) {
   ret <2 x i64> %shl
 }
 
-; FIXME: expressions with a negative const should be canonicalized to assist
-; further reassociation.
-; We would expect (-5*b)+a -> a-(5*b) but only the constant operand is commuted.
+; (-5*b)+a -> a-(5*b)
 
 define <4 x float> @test13(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[B:%.*]], <float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00>
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast <4 x float> [[MUL]], [[A:%.*]]
-; CHECK-NEXT:    ret <4 x float> [[ADD]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[B:%.*]], <float 5.000000e+00, float 5.000000e+00, float 5.000000e+00, float 5.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <4 x float> [[A:%.*]], [[MUL]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %mul = fmul fast <4 x float> <float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00>, %b
   %add = fadd fast <4 x float> %mul, %a
