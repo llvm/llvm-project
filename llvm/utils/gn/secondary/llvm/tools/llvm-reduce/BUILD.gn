@@ -1,0 +1,16 @@
+executable("llvm-reduce") {
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/IRReader",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  sources = [
+    "llvm-reduce.cpp",
+    "TestRunner.cpp",
+    "deltas/Delta.cpp",
+    "deltas/ReduceFunctions.cpp",
+  ]
+}

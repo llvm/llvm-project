@@ -56,7 +56,11 @@ enum OperandType {
   OPERAND_GENERIC_5 = 11,
   OPERAND_LAST_GENERIC = 11,
 
-  OPERAND_FIRST_TARGET = 12,
+  OPERAND_FIRST_GENERIC_IMM = 12,
+  OPERAND_GENERIC_IMM_0 = 12,
+  OPERAND_LAST_GENERIC_IMM = 12,
+
+  OPERAND_FIRST_TARGET = 13,
 };
 
 }
@@ -102,6 +106,16 @@ public:
   unsigned getGenericTypeIndex() const {
     assert(isGenericType() && "non-generic types don't have an index");
     return OperandType - MCOI::OPERAND_FIRST_GENERIC;
+  }
+
+  bool isGenericImm() const {
+    return OperandType >= MCOI::OPERAND_FIRST_GENERIC_IMM &&
+           OperandType <= MCOI::OPERAND_LAST_GENERIC_IMM;
+  }
+
+  unsigned getGenericImmIndex() const {
+    assert(isGenericImm() && "non-generic immediates don't have an index");
+    return OperandType - MCOI::OPERAND_FIRST_GENERIC_IMM;
   }
 };
 

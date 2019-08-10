@@ -362,11 +362,14 @@ private:
   PhiValues &PV;
   PredIteratorCache PredCache;
 
+  unsigned DefaultBlockScanLimit;
+
 public:
   MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
-                          const TargetLibraryInfo &TLI,
-                          DominatorTree &DT, PhiValues &PV)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV) {}
+                          const TargetLibraryInfo &TLI, DominatorTree &DT,
+                          PhiValues &PV, unsigned DefaultBlockScanLimit)
+      : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV),
+        DefaultBlockScanLimit(DefaultBlockScanLimit) {}
 
   /// Handle invalidation in the new PM.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -511,8 +514,13 @@ class MemoryDependenceAnalysis
 
   static AnalysisKey Key;
 
+  unsigned DefaultBlockScanLimit;
+
 public:
   using Result = MemoryDependenceResults;
+
+  MemoryDependenceAnalysis();
+  MemoryDependenceAnalysis(unsigned DefaultBlockScanLimit) : DefaultBlockScanLimit(DefaultBlockScanLimit) { }
 
   MemoryDependenceResults run(Function &F, FunctionAnalysisManager &AM);
 };

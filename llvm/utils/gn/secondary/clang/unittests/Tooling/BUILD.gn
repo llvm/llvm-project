@@ -37,6 +37,7 @@ unittest("ToolingTests") {
     "RecursiveASTVisitorTests/Attr.cpp",
     "RecursiveASTVisitorTests/CXXBoolLiteralExpr.cpp",
     "RecursiveASTVisitorTests/CXXMemberCall.cpp",
+    "RecursiveASTVisitorTests/CXXMethodDecl.cpp",
     "RecursiveASTVisitorTests/CXXOperatorCallExprTraverser.cpp",
     "RecursiveASTVisitorTests/Class.cpp",
     "RecursiveASTVisitorTests/ConstructExpr.cpp",

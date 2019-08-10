@@ -262,10 +262,10 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isImmUnsignedi4() const {
     if (!isImm()) return false;
-    // If this isn't a constant expr, just assume it fits and let relaxation
-    // handle it.
+    // If this isn't a constant expr, reject it. The immediate byte is shared
+    // with a register encoding. We can't have it affected by a relocation.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return true;
+    if (!CE) return false;
     return isImmUnsignedi4Value(CE->getValue());
   }
 

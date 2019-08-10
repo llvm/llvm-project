@@ -139,24 +139,18 @@ public:
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
-    // sext(trunc x) - > ashr (shl (aext/copy/trunc x), c), c
+    // sext(trunc x) - > (sext_inreg (aext/copy/trunc x), c)
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
-      // Guess on the RHS shift amount type, which should be re-legalized if
-      // applicable.
-      if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy, DstTy}}) ||
-          isInstUnsupported({TargetOpcode::G_ASHR, {DstTy, DstTy}}) ||
-          isConstantUnsupported(DstTy))
+      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
-      unsigned ShAmt = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
-      auto MIBShAmt = Builder.buildConstant(DstTy, ShAmt);
-      auto MIBShl = Builder.buildInstr(
-          TargetOpcode::G_SHL, {DstTy},
-          {Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), MIBShAmt});
-      Builder.buildInstr(TargetOpcode::G_ASHR, {DstReg}, {MIBShl, MIBShAmt});
+      uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
+      Builder.buildInstr(
+          TargetOpcode::G_SEXT_INREG, {DstReg},
+          {Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), SizeInBits});
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }

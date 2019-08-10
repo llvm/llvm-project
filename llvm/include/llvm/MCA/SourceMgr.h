@@ -16,12 +16,13 @@
 #define LLVM_MCA_SOURCEMGR_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/MCA/Instruction.h"
 
 namespace llvm {
 namespace mca {
 
-class Instruction;
-
+// MSVC >= 19.15, < 19.20 need to see the definition of class Instruction to
+// prevent compiler error C2139 about intrinsic type trait '__is_assignable'.
 typedef std::pair<unsigned, const Instruction &> SourceRef;
 
 class SourceMgr {

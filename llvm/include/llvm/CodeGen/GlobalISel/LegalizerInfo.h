@@ -331,6 +331,8 @@ class LegalizeRuleSet {
   /// individually handled.
   SmallBitVector TypeIdxsCovered{MCOI::OPERAND_LAST_GENERIC -
                                  MCOI::OPERAND_FIRST_GENERIC + 2};
+  SmallBitVector ImmIdxsCovered{MCOI::OPERAND_LAST_GENERIC_IMM -
+                                MCOI::OPERAND_FIRST_GENERIC_IMM + 2};
 #endif
 
   unsigned typeIdx(unsigned TypeIdx) {
@@ -342,9 +344,21 @@ class LegalizeRuleSet {
 #endif
     return TypeIdx;
   }
-  void markAllTypeIdxsAsCovered() {
+
+  unsigned immIdx(unsigned ImmIdx) {
+    assert(ImmIdx <= (MCOI::OPERAND_LAST_GENERIC_IMM -
+                      MCOI::OPERAND_FIRST_GENERIC_IMM) &&
+           "Imm Index is out of bounds");
+#ifndef NDEBUG
+    ImmIdxsCovered.set(ImmIdx);
+#endif
+    return ImmIdx;
+  }
+
+  void markAllIdxsAsCovered() {
 #ifndef NDEBUG
     TypeIdxsCovered.set();
+    ImmIdxsCovered.set();
 #endif
   }
 
@@ -403,6 +417,15 @@ class LegalizeRuleSet {
     return actionIf(Action, typePairInSet(typeIdx(0), typeIdx(1), Types),
                     Mutation);
   }
+  /// Use the given action when type index 0 is any type in the given list and
+  /// imm index 0 is anything. Action should not be an action that requires
+  /// mutation.
+  LegalizeRuleSet &actionForTypeWithAnyImm(LegalizeAction Action,
+                                           std::initializer_list<LLT> Types) {
+    using namespace LegalityPredicates;
+    immIdx(0); // Inform verifier imm idx 0 is handled.
+    return actionIf(Action, typeInSet(typeIdx(0), Types));
+  }
   /// Use the given action when type indexes 0 and 1 are both in the given list.
   /// That is, the type pair is in the cartesian product of the list.
   /// Action should not be an action that requires mutation.
@@ -454,7 +477,7 @@ public:
   LegalizeRuleSet &legalIf(LegalityPredicate Predicate) {
     // We have no choice but conservatively assume that the free-form
     // user-provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Legal, Predicate);
   }
   /// The instruction is legal when type index 0 is any type in the given list.
@@ -465,6 +488,12 @@ public:
   /// given list.
   LegalizeRuleSet &legalFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
     return actionFor(LegalizeAction::Legal, Types);
+  }
+  /// The instruction is legal when type index 0 is any type in the given list
+  /// and imm index 0 is anything.
+  LegalizeRuleSet &legalForTypeWithAnyImm(std::initializer_list<LLT> Types) {
+    markAllIdxsAsCovered();
+    return actionForTypeWithAnyImm(LegalizeAction::Legal, Types);
   }
   /// The instruction is legal when type indexes 0 and 1 along with the memory
   /// size and minimum alignment is any type and size tuple in the given list.
@@ -497,7 +526,7 @@ public:
 
   LegalizeRuleSet &alwaysLegal() {
     using namespace LegalizeMutations;
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Legal, always);
   }
 
@@ -506,7 +535,7 @@ public:
     using namespace LegalizeMutations;
     // We have no choice but conservatively assume that predicate-less lowering
     // properly handles all type indices by design:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Lower, always);
   }
   /// The instruction is lowered if predicate is true. Keep type index 0 as the
@@ -515,7 +544,7 @@ public:
     using namespace LegalizeMutations;
     // We have no choice but conservatively assume that lowering with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Lower, Predicate);
   }
   /// The instruction is lowered if predicate is true.
@@ -523,7 +552,7 @@ public:
                            LegalizeMutation Mutation) {
     // We have no choice but conservatively assume that lowering with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Lower, Predicate, Mutation);
   }
   /// The instruction is lowered when type index 0 is any type in the given
@@ -571,7 +600,7 @@ public:
   LegalizeRuleSet &libcallIf(LegalityPredicate Predicate) {
     // We have no choice but conservatively assume that a libcall with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Libcall, Predicate);
   }
   LegalizeRuleSet &libcallFor(std::initializer_list<LLT> Types) {
@@ -597,7 +626,7 @@ public:
                                  LegalizeMutation Mutation) {
     // We have no choice but conservatively assume that an action with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::WidenScalar, Predicate, Mutation);
   }
   /// Narrow the scalar to the one selected by the mutation if the predicate is
@@ -606,7 +635,7 @@ public:
                                   LegalizeMutation Mutation) {
     // We have no choice but conservatively assume that an action with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::NarrowScalar, Predicate, Mutation);
   }
 
@@ -616,7 +645,7 @@ public:
                                   LegalizeMutation Mutation) {
     // We have no choice but conservatively assume that an action with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::MoreElements, Predicate, Mutation);
   }
   /// Remove elements to reach the type selected by the mutation if the
@@ -625,7 +654,7 @@ public:
                                    LegalizeMutation Mutation) {
     // We have no choice but conservatively assume that an action with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::FewerElements, Predicate, Mutation);
   }
 
@@ -648,7 +677,7 @@ public:
   LegalizeRuleSet &customIf(LegalityPredicate Predicate) {
     // We have no choice but conservatively assume that a custom action with a
     // free-form user provided Predicate properly handles all type indices:
-    markAllTypeIdxsAsCovered();
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Custom, Predicate);
   }
   LegalizeRuleSet &customFor(std::initializer_list<LLT> Types) {
@@ -886,6 +915,10 @@ public:
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
   bool verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const;
+  /// Check if there is no imm index which is obviously not handled by the
+  /// LegalizeRuleSet in any way at all.
+  /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
+  bool verifyImmIdxsCoverage(unsigned NumImmIdxs) const;
 
   /// Apply the ruleset to the given LegalityQuery.
   LegalizeActionStep apply(const LegalityQuery &Query) const;

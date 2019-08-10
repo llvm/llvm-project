@@ -41,7 +41,7 @@
 namespace llvm {
 namespace object {
 
-constexpr int NumElfSymbolTypes = 8;
+constexpr int NumElfSymbolTypes = 16;
 extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
 
 class elf_symbol_iterator;

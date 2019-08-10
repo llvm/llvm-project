@@ -937,7 +937,8 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
 
 void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
                                             const SectionRef &Section) {
-  StringRef SectionContents = unwrapOrError(Section.getContents());
+  StringRef SectionContents =
+      unwrapOrError(Obj->getFileName(), Section.getContents());
   StringRef Data = SectionContents;
 
   SmallVector<StringRef, 10> FunctionNames;
@@ -1047,7 +1048,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       // To find the active frame description, search this array for the
       // smallest PC range that includes the current PC.
       for (const auto &FD : FrameData) {
-        StringRef FrameFunc = error(CVStringTable.getString(FD.FrameFunc));
+        StringRef FrameFunc = unwrapOrError(
+            Obj->getFileName(), CVStringTable.getString(FD.FrameFunc));
 
         DictScope S(W, "FrameData");
         W.printHex("RvaStart", FD.RvaStart);
@@ -1168,7 +1170,8 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
   for (auto &FC : Checksums) {
     DictScope S(W, "FileChecksum");
 
-    StringRef Filename = error(CVStringTable.getString(FC.FileNameOffset));
+    StringRef Filename = unwrapOrError(
+        Obj->getFileName(), CVStringTable.getString(FC.FileNameOffset));
     W.printHex("Filename", Filename, FC.FileNameOffset);
     W.printHex("ChecksumSize", FC.Checksum.size());
     W.printEnum("ChecksumKind", uint8_t(FC.Kind),
@@ -1210,7 +1213,8 @@ StringRef COFFDumper::getFileNameForFileOffset(uint32_t FileOffset) {
   if (Iter == CVFileChecksumTable.end())
     error(object_error::parse_failed);
 
-  return error(CVStringTable.getString(Iter->FileNameOffset));
+  return unwrapOrError(Obj->getFileName(),
+                       CVStringTable.getString(Iter->FileNameOffset));
 }
 
 void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {
@@ -1226,7 +1230,7 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
     StringRef SectionName;
     error(S.getName(SectionName));
     if (SectionName == ".debug$T") {
-      StringRef Data = unwrapOrError(S.getContents());
+      StringRef Data = unwrapOrError(Obj->getFileName(), S.getContents());
       uint32_t Magic;
       error(consume(Data, Magic));
       if (Magic != 4)
@@ -1262,7 +1266,7 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   ListScope D(W, "CodeViewTypes");
   W.printNumber("Section", SectionName, Obj->getSectionID(Section));
 
-  StringRef Data = unwrapOrError(Section.getContents());
+  StringRef Data = unwrapOrError(Obj->getFileName(), Section.getContents());
   if (opts::CodeViewSubsectionBytes)
     W.printBinaryBlock("Data", Data);
 
@@ -1322,7 +1326,7 @@ void COFFDumper::printSectionHeaders() {
 
     if (opts::SectionData &&
         !(Section->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)) {
-      StringRef Data = unwrapOrError(Sec.getContents());
+      StringRef Data = unwrapOrError(Obj->getFileName(), Sec.getContents());
       W.printBinaryBlock("SectionData", Data);
     }
   }
@@ -1670,7 +1674,8 @@ void COFFDumper::printCOFFDirectives() {
     if (Name != ".drectve")
       continue;
 
-    StringRef Contents = unwrapOrError(Section.getContents());
+    StringRef Contents =
+        unwrapOrError(Obj->getFileName(), Section.getContents());
     W.printString("Directive(s)", Contents);
   }
 }
@@ -1709,11 +1714,11 @@ void COFFDumper::printCOFFResources() {
     if (!Name.startswith(".rsrc"))
       continue;
 
-    StringRef Ref = unwrapOrError(S.getContents());
+    StringRef Ref = unwrapOrError(Obj->getFileName(), S.getContents());
 
     if ((Name == ".rsrc") || (Name == ".rsrc$01")) {
       ResourceSectionRef RSF(Ref);
-      auto &BaseTable = unwrapOrError(RSF.getBaseTable());
+      auto &BaseTable = unwrapOrError(Obj->getFileName(), RSF.getBaseTable());
       W.printNumber("Total Number of Resources",
                     countTotalTableEntries(RSF, BaseTable, "Type"));
       W.printHex("Base Table Address",
@@ -1741,7 +1746,8 @@ COFFDumper::countTotalTableEntries(ResourceSectionRef RSF,
         NextLevel = "Language";
       else
         NextLevel = "Name";
-      auto &NextTable = unwrapOrError(RSF.getEntrySubDir(Entry));
+      auto &NextTable =
+          unwrapOrError(Obj->getFileName(), RSF.getEntrySubDir(Entry));
       TotalEntries += countTotalTableEntries(RSF, NextTable, NextLevel);
     } else {
       TotalEntries += 1;
@@ -1767,7 +1773,7 @@ void COFFDumper::printResourceDirectoryTable(
     raw_svector_ostream OS(IDStr);
     if (i < Table.NumberOfNameEntries) {
       ArrayRef<UTF16> RawEntryNameString =
-          unwrapOrError(RSF.getEntryNameString(Entry));
+          unwrapOrError(Obj->getFileName(), RSF.getEntryNameString(Entry));
       std::vector<UTF16> EndianCorrectedNameString;
       if (llvm::sys::IsBigEndianHost) {
         EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);
@@ -1799,7 +1805,8 @@ void COFFDumper::printResourceDirectoryTable(
         NextLevel = "Language";
       else
         NextLevel = "Name";
-      auto &NextTable = unwrapOrError(RSF.getEntrySubDir(Entry));
+      auto &NextTable =
+          unwrapOrError(Obj->getFileName(), RSF.getEntrySubDir(Entry));
       printResourceDirectoryTable(RSF, NextTable, NextLevel);
     } else {
       W.printHex("Entry Offset", Entry.Offset.value());
@@ -1837,7 +1844,8 @@ void COFFDumper::printStackMap() const {
   if (StackMapSection == object::SectionRef())
     return;
 
-  StringRef StackMapContents = unwrapOrError(StackMapSection.getContents());
+  StringRef StackMapContents =
+      unwrapOrError(Obj->getFileName(), StackMapSection.getContents());
   ArrayRef<uint8_t> StackMapContentsArray =
       arrayRefFromStringRef(StackMapContents);
 
@@ -1863,7 +1871,8 @@ void COFFDumper::printAddrsig() {
   if (AddrsigSection == object::SectionRef())
     return;
 
-  StringRef AddrsigContents = unwrapOrError(AddrsigSection.getContents());
+  StringRef AddrsigContents =
+      unwrapOrError(Obj->getFileName(), AddrsigSection.getContents());
   ArrayRef<uint8_t> AddrsigContentsArray(AddrsigContents.bytes_begin(),
                                          AddrsigContents.size());
 

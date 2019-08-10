@@ -678,6 +678,7 @@ def ImmSExti64i8AsmOperand : ImmSExtAsmOperandClass {
 def ImmUnsignedi4AsmOperand : AsmOperandClass {
   let Name = "ImmUnsignedi4";
   let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidImmUnsignedi4";
 }
 
 // Unsigned immediate used by SSE/AVX instructions
