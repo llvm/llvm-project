@@ -11771,9 +11771,8 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
     return DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), ShMask);
   };
 
-  // Found a valid zext mask! Try various lowering strategies based on the
+  // Found a valid a/zext mask! Try various lowering strategies based on the
   // input type and available ISA extensions.
-  // TODO: Add AnyExt support.
   if (Subtarget.hasSSE41()) {
     // Not worth offsetting 128-bit vectors if scale == 2, a pattern using
     // PUNPCK will catch this in a later shuffle match.
@@ -11782,7 +11781,8 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
     MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * Scale),
                                  NumElements / Scale);
     InputV = ShuffleOffset(InputV);
-    InputV = getExtendInVec(ISD::ZERO_EXTEND, DL, ExtVT, InputV, DAG);
+    InputV = getExtendInVec(AnyExt ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND, DL,
+                            ExtVT, InputV, DAG);
     return DAG.getBitcast(VT, InputV);
   }
 
@@ -34820,6 +34820,24 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineBitcastvxi1(DAG, VT, N0, dl, Subtarget))
       return V;
 
+    // Recognize the IR pattern for the movmsk intrinsic under SSE1 befoer type
+    // legalization destroys the v4i32 type.
+    if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && SrcVT == MVT::v4i1 &&
+        VT.isScalarInteger() && N0.getOpcode() == ISD::SETCC &&
+        N0.getOperand(0).getValueType() == MVT::v4i32 &&
+        ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
+        cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETLT) {
+      SDValue N00 = N0.getOperand(0);
+      // Only do this if we can avoid scalarizing the input.
+      if (ISD::isNormalLoad(N00.getNode()) ||
+          (N00.getOpcode() == ISD::BITCAST &&
+           N00.getOperand(0).getValueType() == MVT::v4f32)) {
+        SDValue V = DAG.getNode(X86ISD::MOVMSK, dl, MVT::i32,
+                                DAG.getBitcast(MVT::v4f32, N00));
+        return DAG.getZExtOrTrunc(V, dl, VT);
+      }
+    }
+
     // If this is a bitcast between a MVT::v4i1/v2i1 and an illegal integer
     // type, widen both sides to avoid a trip through memory.
     if ((VT == MVT::v4i1 || VT == MVT::v2i1) && SrcVT.isScalarInteger() &&
@@ -41775,7 +41793,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
-                             TargetLowering::DAGCombinerInfo &DCI) {
+                             TargetLowering::DAGCombinerInfo &DCI,
+                             const X86Subtarget &Subtarget) {
   SDValue Src = N->getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
   MVT VT = N->getSimpleValueType(0);
@@ -41796,7 +41815,7 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
 
   // Look through int->fp bitcasts that don't change the element width.
   unsigned EltWidth = SrcVT.getScalarSizeInBits();
-  if (Src.getOpcode() == ISD::BITCAST &&
+  if (Subtarget.hasSSE2() && Src.getOpcode() == ISD::BITCAST &&
       Src.getOperand(0).getScalarValueSizeInBits() == EltWidth)
     return DAG.getNode(X86ISD::MOVMSK, SDLoc(N), VT, Src.getOperand(0));
 
@@ -43759,7 +43778,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMSUBADD_RND:
   case X86ISD::FMADDSUB:
   case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, Subtarget);
-  case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI);
+  case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI, Subtarget);
   case X86ISD::MGATHER:
   case X86ISD::MSCATTER:
   case ISD::MGATHER:

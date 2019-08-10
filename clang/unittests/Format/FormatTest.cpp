@@ -3692,6 +3692,11 @@ TEST_F(FormatTest, PutEmptyBlocksIntoOneLine) {
   EXPECT_EQ("{}", format("{}"));
   verifyFormat("enum E {};");
   verifyFormat("enum E {}");
+  EXPECT_EQ("void f() { }", format("void f() {}", getWebKitStyle()));
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = true;
+  Style.SpaceInEmptyBlock = true;
+  EXPECT_EQ("while (true) { }", format("while (true) {}", Style));
 }
 
 TEST_F(FormatTest, FormatBeginBlockEndMacros) {
@@ -11765,6 +11770,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpacesInAngles);
+  CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpaceInEmptyParentheses);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpacesInCStyleCastParentheses);
