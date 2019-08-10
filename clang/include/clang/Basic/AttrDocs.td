@@ -2221,6 +2221,18 @@ to avoid false positives in other places.
   }];
 }
 
+def CFICanonicalJumpTableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "cfi_canonical_jump_table";
+  let Content = [{
+.. _langext-cfi_canonical_jump_table:
+
+Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
+make the function's CFI jump table canonical. See :ref:`the CFI documentation
+<cfi-canonical-jump-tables>` for more details.
+  }];
+}
+
 def DocCatTypeSafety : DocumentationCategory<"Type Safety Checking"> {
   let Content = [{
 Clang supports additional attributes to enable checking type safety properties

@@ -230,6 +230,16 @@ void ByteArrayBuilder::allocate(const std::set<uint64_t> &Bits,
     Bytes[AllocByteOffset + B] |= AllocMask;
 }
 
+bool lowertypetests::isJumpTableCanonical(Function *F) {
+  if (F->isDeclarationForLinker())
+    return false;
+  auto *CI = mdconst::extract_or_null<ConstantInt>(
+      F->getParent()->getModuleFlag("CFI Canonical Jump Tables"));
+  if (!CI || CI->getZExtValue() != 0)
+    return true;
+  return F->hasFnAttribute("cfi-canonical-jump-table");
+}
+
 namespace {
 
 struct ByteArrayInfo {
@@ -251,9 +261,12 @@ class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
   GlobalObject *GO;
   size_t NTypes;
 
-  // For functions: true if this is a definition (either in the merged module or
-  // in one of the thinlto modules).
-  bool IsDefinition;
+  // For functions: true if the jump table is canonical. This essentially means
+  // whether the canonical address (i.e. the symbol table entry) of the function
+  // is provided by the local jump table. This is normally the same as whether
+  // the function is defined locally, but if canonical jump tables are disabled
+  // by the user then the jump table never provides a canonical definition.
+  bool IsJumpTableCanonical;
 
   // For functions: true if this function is either defined or used in a thinlto
   // module and its jumptable entry needs to be exported to thinlto backends.
@@ -263,13 +276,13 @@ class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
 
 public:
   static GlobalTypeMember *create(BumpPtrAllocator &Alloc, GlobalObject *GO,
-                                  bool IsDefinition, bool IsExported,
+                                  bool IsJumpTableCanonical, bool IsExported,
                                   ArrayRef<MDNode *> Types) {
     auto *GTM = static_cast<GlobalTypeMember *>(Alloc.Allocate(
         totalSizeToAlloc<MDNode *>(Types.size()), alignof(GlobalTypeMember)));
     GTM->GO = GO;
     GTM->NTypes = Types.size();
-    GTM->IsDefinition = IsDefinition;
+    GTM->IsJumpTableCanonical = IsJumpTableCanonical;
     GTM->IsExported = IsExported;
     std::uninitialized_copy(Types.begin(), Types.end(),
                             GTM->getTrailingObjects<MDNode *>());
@@ -280,8 +293,8 @@ public:
     return GO;
   }
 
-  bool isDefinition() const {
-    return IsDefinition;
+  bool isJumpTableCanonical() const {
+    return IsJumpTableCanonical;
   }
 
   bool isExported() const {
@@ -318,6 +331,49 @@ struct ICallBranchFunnel final
 
 private:
   size_t NTargets;
+};
+
+struct ScopedSaveAliaseesAndUsed {
+  Module &M;
+  SmallPtrSet<GlobalValue *, 16> Used, CompilerUsed;
+  std::vector<std::pair<GlobalIndirectSymbol *, Function *>> FunctionAliases;
+
+  ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
+    // The users of this class want to replace all function references except
+    // for aliases and llvm.used/llvm.compiler.used with references to a jump
+    // table. We avoid replacing aliases in order to avoid introducing a double
+    // indirection (or an alias pointing to a declaration in ThinLTO mode), and
+    // we avoid replacing llvm.used/llvm.compiler.used because these global
+    // variables describe properties of the global, not the jump table (besides,
+    // offseted references to the jump table in llvm.used are invalid).
+    // Unfortunately, LLVM doesn't have a "RAUW except for these (possibly
+    // indirect) users", so what we do is save the list of globals referenced by
+    // llvm.used/llvm.compiler.used and aliases, erase the used lists, let RAUW
+    // replace the aliasees and then set them back to their original values at
+    // the end.
+    if (GlobalVariable *GV = collectUsedGlobalVariables(M, Used, false))
+      GV->eraseFromParent();
+    if (GlobalVariable *GV = collectUsedGlobalVariables(M, CompilerUsed, true))
+      GV->eraseFromParent();
+
+    for (auto &GIS : concat<GlobalIndirectSymbol>(M.aliases(), M.ifuncs())) {
+      // FIXME: This should look past all aliases not just interposable ones,
+      // see discussion on D65118.
+      if (auto *F =
+              dyn_cast<Function>(GIS.getIndirectSymbol()->stripPointerCasts()))
+        FunctionAliases.push_back({&GIS, F});
+    }
+  }
+
+  ~ScopedSaveAliaseesAndUsed() {
+    appendToUsed(M, std::vector<GlobalValue *>(Used.begin(), Used.end()));
+    appendToCompilerUsed(M, std::vector<GlobalValue *>(CompilerUsed.begin(),
+                                                       CompilerUsed.end()));
+
+    for (auto P : FunctionAliases)
+      P.first->setIndirectSymbol(
+          ConstantExpr::getBitCast(P.second, P.first->getType()));
+  }
 };
 
 class LowerTypeTestsModule {
@@ -387,7 +443,8 @@ class LowerTypeTestsModule {
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
-  void importFunction(Function *F, bool isDefinition);
+  void importFunction(Function *F, bool isJumpTableCanonical,
+                      std::vector<GlobalAlias *> &AliasesToErase);
 
   BitSetInfo
   buildBitSet(Metadata *TypeId,
@@ -421,7 +478,8 @@ class LowerTypeTestsModule {
                               ArrayRef<GlobalTypeMember *> Globals,
                               ArrayRef<ICallBranchFunnel *> ICallBranchFunnels);
 
-  void replaceWeakDeclarationWithJumpTablePtr(Function *F, Constant *JT, bool IsDefinition);
+  void replaceWeakDeclarationWithJumpTablePtr(Function *F, Constant *JT,
+                                              bool IsJumpTableCanonical);
   void moveInitializerToModuleConstructor(GlobalVariable *GV);
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
@@ -433,7 +491,7 @@ class LowerTypeTestsModule {
   /// the block. 'This's use list is expected to have at least one element.
   /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
   /// uses.
-  void replaceCfiUses(Function *Old, Value *New, bool IsDefinition);
+  void replaceCfiUses(Function *Old, Value *New, bool IsJumpTableCanonical);
 
   /// replaceDirectCalls - Go through the uses list for this definition and
   /// replace each use, which is a direct function call.
@@ -982,14 +1040,16 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
 }
 
 // ThinLTO backend: the function F has a jump table entry; update this module
-// accordingly. isDefinition describes the type of the jump table entry.
-void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
+// accordingly. isJumpTableCanonical describes the type of the jump table entry.
+void LowerTypeTestsModule::importFunction(
+    Function *F, bool isJumpTableCanonical,
+    std::vector<GlobalAlias *> &AliasesToErase) {
   assert(F->getType()->getAddressSpace() == 0);
 
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
   std::string Name = F->getName();
 
-  if (F->isDeclarationForLinker() && isDefinition) {
+  if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
     // don't short curcuit them
     if (F->isDSOLocal()) {
@@ -1004,12 +1064,13 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
   }
 
   Function *FDecl;
-  if (F->isDeclarationForLinker() && !isDefinition) {
-    // Declaration of an external function.
+  if (!isJumpTableCanonical) {
+    // Either a declaration of an external function or a reference to a locally
+    // defined jump table.
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name + ".cfi_jt", &M);
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
-  } else if (isDefinition) {
+  } else {
     F->setName(Name + ".cfi");
     F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
@@ -1018,8 +1079,8 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
     Visibility = GlobalValue::HiddenVisibility;
 
     // Delete aliases pointing to this function, they'll be re-created in the
-    // merged output
-    SmallVector<GlobalAlias*, 4> ToErase;
+    // merged output. Don't do it yet though because ScopedSaveAliaseesAndUsed
+    // will want to reset the aliasees first.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
         Function *AliasDecl = Function::Create(
@@ -1027,24 +1088,15 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
             F->getAddressSpace(), "", &M);
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
-        ToErase.push_back(A);
+        AliasesToErase.push_back(A);
       }
     }
-    for (auto *A : ToErase)
-      A->eraseFromParent();
-  } else {
-    // Function definition without type metadata, where some other translation
-    // unit contained a declaration with type metadata. This normally happens
-    // during mixed CFI + non-CFI compilation. We do nothing with the function
-    // so that it is treated the same way as a function defined outside of the
-    // LTO unit.
-    return;
   }
 
-  if (F->isWeakForLinker())
-    replaceWeakDeclarationWithJumpTablePtr(F, FDecl, isDefinition);
+  if (F->hasExternalWeakLinkage())
+    replaceWeakDeclarationWithJumpTablePtr(F, FDecl, isJumpTableCanonical);
   else
-    replaceCfiUses(F, FDecl, isDefinition);
+    replaceCfiUses(F, FDecl, isJumpTableCanonical);
 
   // Set visibility late because it's used in replaceCfiUses() to determine
   // whether uses need to to be replaced.
@@ -1232,7 +1284,7 @@ void LowerTypeTestsModule::findGlobalVariableUsersOf(
 
 // Replace all uses of F with (F ? JT : 0).
 void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
-    Function *F, Constant *JT, bool IsDefinition) {
+    Function *F, Constant *JT, bool IsJumpTableCanonical) {
   // The target expression can not appear in a constant initializer on most
   // (all?) targets. Switch to a runtime initializer.
   SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
@@ -1246,7 +1298,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
       Function::Create(cast<FunctionType>(F->getValueType()),
                        GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
-  replaceCfiUses(F, PlaceholderFn, IsDefinition);
+  replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 
   Constant *Target = ConstantExpr::getSelect(
       ConstantExpr::getICmp(CmpInst::ICMP_NE, F,
@@ -1283,8 +1335,9 @@ selectJumpTableArmEncoding(ArrayRef<GlobalTypeMember *> Functions,
 
   unsigned ArmCount = 0, ThumbCount = 0;
   for (const auto GTM : Functions) {
-    if (!GTM->isDefinition()) {
+    if (!GTM->isJumpTableCanonical()) {
       // PLT stubs are always ARM.
+      // FIXME: This is the wrong heuristic for non-canonical jump tables.
       ++ArmCount;
       continue;
     }
@@ -1445,46 +1498,52 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
-  // Build aliases pointing to offsets into the jump table, and replace
-  // references to the original functions with references to the aliases.
-  for (unsigned I = 0; I != Functions.size(); ++I) {
-    Function *F = cast<Function>(Functions[I]->getGlobal());
-    bool IsDefinition = Functions[I]->isDefinition();
+  {
+    ScopedSaveAliaseesAndUsed S(M);
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
-        ConstantExpr::getInBoundsGetElementPtr(
-            JumpTableType, JumpTable,
-            ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                                 ConstantInt::get(IntPtrTy, I)}),
-        F->getType());
-    if (Functions[I]->isExported()) {
-      if (IsDefinition) {
-        ExportSummary->cfiFunctionDefs().insert(F->getName());
-      } else {
-        GlobalAlias *JtAlias = GlobalAlias::create(
-            F->getValueType(), 0, GlobalValue::ExternalLinkage,
-            F->getName() + ".cfi_jt", CombinedGlobalElemPtr, &M);
-        JtAlias->setVisibility(GlobalValue::HiddenVisibility);
-        ExportSummary->cfiFunctionDecls().insert(F->getName());
+    // Build aliases pointing to offsets into the jump table, and replace
+    // references to the original functions with references to the aliases.
+    for (unsigned I = 0; I != Functions.size(); ++I) {
+      Function *F = cast<Function>(Functions[I]->getGlobal());
+      bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
+
+      Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
+          ConstantExpr::getInBoundsGetElementPtr(
+              JumpTableType, JumpTable,
+              ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
+                                   ConstantInt::get(IntPtrTy, I)}),
+          F->getType());
+      if (Functions[I]->isExported()) {
+        if (IsJumpTableCanonical) {
+          ExportSummary->cfiFunctionDefs().insert(F->getName());
+        } else {
+          GlobalAlias *JtAlias = GlobalAlias::create(
+              F->getValueType(), 0, GlobalValue::ExternalLinkage,
+              F->getName() + ".cfi_jt", CombinedGlobalElemPtr, &M);
+          JtAlias->setVisibility(GlobalValue::HiddenVisibility);
+          ExportSummary->cfiFunctionDecls().insert(F->getName());
+        }
       }
-    }
-    if (!IsDefinition) {
-      if (F->isWeakForLinker())
-        replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr, IsDefinition);
-      else
-        replaceCfiUses(F, CombinedGlobalElemPtr, IsDefinition);
-    } else {
-      assert(F->getType()->getAddressSpace() == 0);
+      if (!IsJumpTableCanonical) {
+        if (F->hasExternalWeakLinkage())
+          replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr,
+                                                 IsJumpTableCanonical);
+        else
+          replaceCfiUses(F, CombinedGlobalElemPtr, IsJumpTableCanonical);
+      } else {
+        assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(
-          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
-      FAlias->setVisibility(F->getVisibility());
-      FAlias->takeName(F);
-      if (FAlias->hasName())
-        F->setName(FAlias->getName() + ".cfi");
-      replaceCfiUses(F, FAlias, IsDefinition);
-      if (!F->hasLocalLinkage())
-        F->setVisibility(GlobalVariable::HiddenVisibility);
+        GlobalAlias *FAlias =
+            GlobalAlias::create(F->getValueType(), 0, F->getLinkage(), "",
+                                CombinedGlobalElemPtr, &M);
+        FAlias->setVisibility(F->getVisibility());
+        FAlias->takeName(F);
+        if (FAlias->hasName())
+          F->setName(FAlias->getName() + ".cfi");
+        replaceCfiUses(F, FAlias, IsJumpTableCanonical);
+        if (!F->hasLocalLinkage())
+          F->setVisibility(GlobalVariable::HiddenVisibility);
+      }
     }
   }
 
@@ -1650,7 +1709,8 @@ static bool isDirectCall(Use& U) {
   return false;
 }
 
-void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New, bool IsDefinition) {
+void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
+                                          bool IsJumpTableCanonical) {
   SmallSetVector<Constant *, 4> Constants;
   auto UI = Old->use_begin(), E = Old->use_end();
   for (; UI != E;) {
@@ -1662,7 +1722,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New, bool IsDefi
       continue;
 
     // Skip direct calls to externally defined or non-dso_local functions
-    if (isDirectCall(U) && (Old->isDSOLocal() || !IsDefinition))
+    if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
@@ -1732,10 +1792,16 @@ bool LowerTypeTestsModule::lower() {
         Decls.push_back(&F);
     }
 
-    for (auto F : Defs)
-      importFunction(F, /*isDefinition*/ true);
-    for (auto F : Decls)
-      importFunction(F, /*isDefinition*/ false);
+    std::vector<GlobalAlias *> AliasesToErase;
+    {
+      ScopedSaveAliaseesAndUsed S(M);
+      for (auto F : Defs)
+        importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
+      for (auto F : Decls)
+        importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
+    }
+    for (GlobalAlias *GA : AliasesToErase)
+      GA->eraseFromParent();
 
     return true;
   }
@@ -1869,24 +1935,26 @@ bool LowerTypeTestsModule::lower() {
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
 
-    bool IsDefinition = !GO.isDeclarationForLinker();
+    bool IsJumpTableCanonical = false;
     bool IsExported = false;
     if (Function *F = dyn_cast<Function>(&GO)) {
+      IsJumpTableCanonical = isJumpTableCanonical(F);
       if (ExportedFunctions.count(F->getName())) {
-        IsDefinition |= ExportedFunctions[F->getName()].Linkage == CFL_Definition;
+        IsJumpTableCanonical |=
+            ExportedFunctions[F->getName()].Linkage == CFL_Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
       // their liveness and emit fewer jumptable entries once monolithic LTO
       // builds also emit summaries.
       } else if (!F->hasAddressTaken()) {
-        if (!CrossDsoCfi || !IsDefinition || F->hasLocalLinkage())
+        if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
     }
 
-    auto *GTM =
-        GlobalTypeMember::create(Alloc, &GO, IsDefinition, IsExported, Types);
+    auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,
+                                         IsExported, Types);
     GlobalTypeMembers[&GO] = GTM;
     for (MDNode *Type : Types) {
       verifyTypeMDNode(&GO, Type);

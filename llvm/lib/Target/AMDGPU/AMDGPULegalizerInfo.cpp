@@ -774,6 +774,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(1);
   }
 
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

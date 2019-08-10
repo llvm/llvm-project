@@ -7,10 +7,10 @@ body:             |
     ; CHECK-LABEL: name: test_gep_small
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY2]], [[C]]
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]]
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY2]], [[C]](s64)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[ASHR]](s64)
     ; CHECK: $x0 = COPY [[GEP]](p0)
     %0:_(p0) = COPY $x0

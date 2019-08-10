@@ -120,6 +120,13 @@ void initLocalGslPtrWithTempOwner() {
 }
 
 namespace std {
+template<class T> struct remove_reference       { typedef T type; };
+template<class T> struct remove_reference<T &>  { typedef T type; };
+template<class T> struct remove_reference<T &&> { typedef T type; };
+
+template<class T>
+typename remove_reference<T>::type &&move(T &&t) noexcept;
+
 template <typename T>
 struct basic_iterator {
   basic_iterator operator++();
@@ -153,6 +160,7 @@ struct basic_string {
 
 template<typename T>
 struct unique_ptr {
+  T &operator*();
   T *get() const;
 };
 
@@ -217,3 +225,10 @@ int &doNotFollowReferencesForLocalOwner() {
 const char *trackThroughMultiplePointer() {
   return std::basic_string_view<char>(std::basic_string<char>()).begin(); // expected-warning {{returning address of local temporary object}}
 }
+
+struct X {
+  X(std::unique_ptr<int> up) : pointee(*up), pointer(std::move(up)) {}
+
+  int &pointee;
+  std::unique_ptr<int> pointer;
+};

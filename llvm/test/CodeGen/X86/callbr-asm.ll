@@ -12,7 +12,7 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .Ltmp00
+; CHECK-NEXT:    jmp .Ltmp0
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB0_1: # %normal
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -87,17 +87,17 @@ define dso_local i32 @test3(i32 %a) {
 ; CHECK-NEXT:    # Parent Loop BB2_3 Depth=3
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=4
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp10
-; CHECK-NEXT:    jmp .Ltmp20
-; CHECK-NEXT:    jmp .Ltmp30
+; CHECK-NEXT:    jmp .Ltmp1
+; CHECK-NEXT:    jmp .Ltmp2
+; CHECK-NEXT:    jmp .Ltmp3
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB2_5: # %normal0
 ; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=4
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp10
-; CHECK-NEXT:    jmp .Ltmp20
-; CHECK-NEXT:    jmp .Ltmp30
-; CHECK-NEXT:    jmp .Ltmp40
+; CHECK-NEXT:    jmp .Ltmp1
+; CHECK-NEXT:    jmp .Ltmp2
+; CHECK-NEXT:    jmp .Ltmp3
+; CHECK-NEXT:    jmp .Ltmp4
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB2_6: # %normal1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax

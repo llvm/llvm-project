@@ -76,6 +76,18 @@ static llvm::cl::list<std::string> UserStylesheets(
     llvm::cl::desc("CSS stylesheets to extend the default styles."),
     llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string> SourceRoot("source-root", llvm::cl::desc(R"(
+Directory where processed files are stored.
+Links to definition locations will only be
+generated if the file is in this dir.)"),
+                                             llvm::cl::cat(ClangDocCategory));
+
+static llvm::cl::opt<std::string>
+    RepositoryUrl("repository", llvm::cl::desc(R"(
+URL of repository that hosts code.
+Used for links to definition locations.)"),
+                  llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy {
   md,
   yaml,
@@ -142,7 +154,7 @@ bool CreateDirectory(const Twine &DirName, bool ClearDirectory = false) {
 // <root>/A/B/C.<ext>
 //
 // namespace A {
-// namesapce B {
+// namespace B {
 //
 // class C {};
 //
@@ -191,10 +203,18 @@ int main(int argc, const char **argv) {
                                   tooling::ArgumentInsertPosition::END),
         ArgAdjuster);
 
+  llvm::SmallString<128> SourceRootDir;
+  // Check if the --source-root flag has a value
+  if (SourceRoot.empty())
+    // If it's empty the current path is used as the default
+    llvm::sys::fs::current_path(SourceRootDir);
+
   clang::doc::ClangDocContext CDCtx = {
       Exec->get()->getExecutionContext(),
       PublicOnly,
       OutDirectory,
+      SourceRootDir.str(),
+      RepositoryUrl,
       {UserStylesheets.begin(), UserStylesheets.end()},
       {"index.js", "index_json.js"}};
 

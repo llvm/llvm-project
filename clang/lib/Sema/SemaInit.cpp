@@ -6616,7 +6616,7 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
     return;
   } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
     FunctionDecl *Callee = OCE->getDirectCallee();
-    if (Callee->isCXXInstanceMember() &&
+    if (Callee && Callee->isCXXInstanceMember() &&
         shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
       VisitPointerArg(Callee, OCE->getArg(0));
     return;
@@ -7215,6 +7215,11 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // (there's no other way that a default initializer can refer to a
         // local). Don't produce a bogus warning on those cases.
         if (pathContainsInit(Path))
+          return false;
+
+        // Suppress false positives for code like the below:
+        //   Ctor(unique_ptr<T> up) : member(*up), member2(move(up)) {}
+        if (IsLocalGslOwner && pathOnlyInitializesGslPointer(Path))
           return false;
 
         auto *DRE = dyn_cast<DeclRefExpr>(L);

@@ -39,30 +39,62 @@
 // Test that assembler options don't cause warnings when there's no assembler
 // stage.
 
-// RUN: %clang -mincremental-linker-compatible -E \
+// RUN: %clang -mincremental-linker-compatible -E -fintegrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mincremental-linker-compatible -E \
+// RUN: %clang -mincremental-linker-compatible -E -fno-integrated-as \
+// RUN:   -o /dev/null -x c++ %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
+
+// RUN: %clang -mincremental-linker-compatible -E -fintegrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+// RUN: %clang -mincremental-linker-compatible -E -fno-integrated-as \
+// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
+
 // RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -o /dev/null -x c++ %s 2>&1 \
+// RUN:   -fintegrated-as -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 // RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN:   -fno-integrated-as -o /dev/null -x c++ %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
+
+// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN:   -fintegrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN:   -fno-integrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
+
+// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fintegrated-as \
+// RUN:   -o /dev/null -x c++ %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fno-integrated-as \
+// RUN:   -o /dev/null -x c++ %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+
+// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E \
+// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fno-integrated-as \
+// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+
+// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E \
+// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E \
+// RUN:   -fno-integrated-as -o /dev/null -x c++ %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+
+// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 // RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E \
-// RUN:   -o /dev/null -x c++ %s 2>&1 \
+// RUN:   -fno-integrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E \
-// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
+
 // NOWARN-NOT: unused
 
 // Test that unsupported arguments do not cause errors when -fno-integrated-as

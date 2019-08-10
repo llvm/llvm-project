@@ -392,6 +392,23 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   return false;
 }
 
+Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,
+                                        uint64_t Imm,
+                                        const MachineRegisterInfo &MRI) {
+  auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
+  if (MaybeOp1Cst) {
+    LLT Ty = MRI.getType(Op1);
+    APInt C1(Ty.getSizeInBits(), *MaybeOp1Cst, true);
+    switch (Opcode) {
+    default:
+      break;
+    case TargetOpcode::G_SEXT_INREG:
+      return C1.trunc(Imm).sext(C1.getBitWidth());
+    }
+  }
+  return None;
+}
+
 void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreserved<StackProtector>();
 }

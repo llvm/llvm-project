@@ -177,6 +177,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     setAction({G_ANYEXT, Ty}, Legal);
   }
   setAction({G_ANYEXT, s128}, Legal);
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   // Comparison
   setAction({G_ICMP, s1}, Legal);

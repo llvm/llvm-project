@@ -368,32 +368,80 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   return Effect::applyEdit(Result);
 }
 
-// Find the CallExpr whose callee is an ancestor of the DeclRef
+// Find the CallExpr whose callee is the (possibly wrapped) DeclRef
 const SelectionTree::Node *getCallExpr(const SelectionTree::Node *DeclRef) {
-  // we maintain a stack of all exprs encountered while traversing the
-  // selectiontree because the callee of the callexpr can be an ancestor of the
-  // DeclRef. e.g. Callee can be an ImplicitCastExpr.
-  std::vector<const clang::Expr *> ExprStack;
-  for (auto *CurNode = DeclRef; CurNode; CurNode = CurNode->Parent) {
-    const Expr *CurExpr = CurNode->ASTNode.get<Expr>();
-    if (const CallExpr *CallPar = CurNode->ASTNode.get<CallExpr>()) {
-      // check whether the callee of the callexpr is present in Expr stack.
-      if (std::find(ExprStack.begin(), ExprStack.end(), CallPar->getCallee()) !=
-          ExprStack.end())
-        return CurNode;
-      return nullptr;
-    }
-    ExprStack.push_back(CurExpr);
-  }
-  return nullptr;
+  const SelectionTree::Node &MaybeCallee = DeclRef->outerImplicit();
+  const SelectionTree::Node *MaybeCall = MaybeCallee.Parent;
+  if (!MaybeCall)
+    return nullptr;
+  const CallExpr *CE =
+      llvm::dyn_cast_or_null<CallExpr>(MaybeCall->ASTNode.get<Expr>());
+  if (!CE)
+    return nullptr;
+  if (CE->getCallee() != MaybeCallee.ASTNode.get<Expr>())
+    return nullptr;
+  return MaybeCall;
 }
 
-// check if Expr can be assigned to a variable i.e. is non-void type
-bool canBeAssigned(const SelectionTree::Node *ExprNode) {
-  const clang::Expr *Expr = ExprNode->ASTNode.get<clang::Expr>();
-  if (const Type *ExprType = Expr->getType().getTypePtrOrNull())
-    // FIXME: check if we need to cover any other types
-    return !ExprType->isVoidType();
+// Returns true if Inner (which is a direct child of Outer) is appearing as
+// a statement rather than an expression whose value can be used.
+bool childExprIsStmt(const Stmt *Outer, const Expr *Inner) {
+  if (!Outer || !Inner)
+    return false;
+  // Blacklist the most common places where an expr can appear but be unused.
+  if (llvm::isa<CompoundStmt>(Outer))
+    return true;
+  if (llvm::isa<SwitchCase>(Outer))
+    return true;
+  // Control flow statements use condition etc, but not the body.
+  if (const auto* WS = llvm::dyn_cast<WhileStmt>(Outer))
+    return Inner == WS->getBody();
+  if (const auto* DS = llvm::dyn_cast<DoStmt>(Outer))
+    return Inner == DS->getBody();
+  if (const auto* FS = llvm::dyn_cast<ForStmt>(Outer))
+    return Inner == FS->getBody();
+  if (const auto* FS = llvm::dyn_cast<CXXForRangeStmt>(Outer))
+    return Inner == FS->getBody();
+  if (const auto* IS = llvm::dyn_cast<IfStmt>(Outer))
+    return Inner == IS->getThen() || Inner == IS->getElse();
+  // Assume all other cases may be actual expressions.
+  // This includes the important case of subexpressions (where Outer is Expr).
+  return false;
+}
+
+// check if N can and should be extracted (e.g. is not void-typed).
+bool eligibleForExtraction(const SelectionTree::Node *N) {
+  const Expr *E = N->ASTNode.get<Expr>();
+  if (!E)
+    return false;
+
+  // Void expressions can't be assigned to variables.
+  if (const Type *ExprType = E->getType().getTypePtrOrNull())
+    if (ExprType->isVoidType())
+      return false;
+
+  // A plain reference to a name (e.g. variable) isn't  worth extracting.
+  // FIXME: really? What if it's e.g. `std::is_same<void, void>::value`?
+  if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
+    return false;
+
+  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  // FIXME: we could still hoist the assignment, and leave the variable there?
+  ParsedBinaryOperator BinOp;
+  if (BinOp.parse(*N) && BinaryOperator::isAssignmentOp(BinOp.Kind))
+    return false;
+
+  // We don't want to extract expressions used as statements, that would leave
+  // a `dummy;` around that has no effect.
+  // Unfortunately because the AST doesn't have ExprStmt, we have to check in
+  // this roundabout way.
+  const SelectionTree::Node &OuterImplicit = N->outerImplicit();
+  if (!OuterImplicit.Parent ||
+      childExprIsStmt(OuterImplicit.Parent->ASTNode.get<Stmt>(),
+                      OuterImplicit.ASTNode.get<Expr>()))
+    return false;
+
+  // FIXME: ban extracting the RHS of an assignment: `a = [[foo()]]`
   return true;
 }
 
@@ -406,32 +454,13 @@ bool ExtractVariable::computeExtractionContext(const SelectionTree::Node *N,
                                                const ASTContext &Ctx) {
   if (!N)
     return false;
-  const clang::Expr *SelectedExpr = N->ASTNode.get<clang::Expr>();
   const SelectionTree::Node *TargetNode = N;
-  if (!SelectedExpr)
-    return false;
-  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
-  if (const BinaryOperator *BinOpExpr =
-          dyn_cast_or_null<BinaryOperator>(SelectedExpr)) {
-    if (BinOpExpr->isAssignmentOp())
-      return false;
-  }
-  // For function and member function DeclRefs, we look for a parent that is a
-  // CallExpr
-  if (const DeclRefExpr *DeclRef =
-          dyn_cast_or_null<DeclRefExpr>(SelectedExpr)) {
-    // Extracting just a variable isn't that useful.
-    if (!isa<FunctionDecl>(DeclRef->getDecl()))
-      return false;
-    TargetNode = getCallExpr(N);
-  }
-  if (const MemberExpr *Member = dyn_cast_or_null<MemberExpr>(SelectedExpr)) {
-    // Extracting just a field member isn't that useful.
-    if (!isa<CXXMethodDecl>(Member->getMemberDecl()))
-      return false;
-    TargetNode = getCallExpr(N);
-  }
-  if (!TargetNode || !canBeAssigned(TargetNode))
+  // For function and member function DeclRefs, extract the whole call.
+  if (const Expr *E = N->ASTNode.get<clang::Expr>())
+    if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
+      if (const SelectionTree::Node *Call = getCallExpr(N))
+        TargetNode = Call;
+  if (!eligibleForExtraction(TargetNode))
     return false;
   Target = llvm::make_unique<ExtractionContext>(TargetNode, SM, Ctx);
   return Target->isExtractable();

@@ -84,13 +84,9 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   for (GlobalObject &GO : M.global_objects()) {
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
-    for (MDNode *Type : Types) {
-      // Sanity check. GO must not be a function declaration.
-      assert(!isa<Function>(&GO) || !cast<Function>(&GO)->isDeclaration());
-
+    for (MDNode *Type : Types)
       if (ConstantInt *TypeId = extractNumericTypeId(Type))
         TypeIds.insert(TypeId->getZExtValue());
-    }
   }
 
   NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
