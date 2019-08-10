@@ -215,7 +215,30 @@ bool LegalizeRuleSet::verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const {
     return true;
   }
   const bool AllCovered = (FirstUncovered >= NumTypeIdxs);
-  LLVM_DEBUG(dbgs() << ".. the first uncovered type index: " << FirstUncovered
+  if (NumTypeIdxs > 0)
+    LLVM_DEBUG(dbgs() << ".. the first uncovered type index: " << FirstUncovered
+                      << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
+  return AllCovered;
+#else
+  return true;
+#endif
+}
+
+bool LegalizeRuleSet::verifyImmIdxsCoverage(unsigned NumImmIdxs) const {
+#ifndef NDEBUG
+  if (Rules.empty()) {
+    LLVM_DEBUG(
+        dbgs() << ".. imm index coverage check SKIPPED: no rules defined\n");
+    return true;
+  }
+  const int64_t FirstUncovered = ImmIdxsCovered.find_first_unset();
+  if (FirstUncovered < 0) {
+    LLVM_DEBUG(dbgs() << ".. imm index coverage check SKIPPED:"
+                         " user-defined predicate detected\n");
+    return true;
+  }
+  const bool AllCovered = (FirstUncovered >= NumImmIdxs);
+  LLVM_DEBUG(dbgs() << ".. the first uncovered imm index: " << FirstUncovered
                     << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
   return AllCovered;
 #else
@@ -387,8 +410,6 @@ unsigned LegalizerInfo::getActionDefinitionsIdx(unsigned Opcode) const {
     LLVM_DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
                       << "\n");
     OpcodeIdx = getOpcodeIdxForOpcode(Alias);
-    LLVM_DEBUG(dbgs() << ".. opcode " << Alias << " is aliased to "
-                      << RulesForOpcode[OpcodeIdx].getAlias() << "\n");
     assert(RulesForOpcode[OpcodeIdx].getAlias() == 0 && "Cannot chain aliases");
   }
 
@@ -677,11 +698,22 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
                      ? std::max(OpInfo.getGenericTypeIndex() + 1U, Acc)
                      : Acc;
         });
+    const unsigned NumImmIdxs = std::accumulate(
+        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        [](unsigned Acc, const MCOperandInfo &OpInfo) {
+          return OpInfo.isGenericImm()
+                     ? std::max(OpInfo.getGenericImmIndex() + 1U, Acc)
+                     : Acc;
+        });
     LLVM_DEBUG(dbgs() << MII.getName(Opcode) << " (opcode " << Opcode
                       << "): " << NumTypeIdxs << " type ind"
-                      << (NumTypeIdxs == 1 ? "ex" : "ices") << "\n");
+                      << (NumTypeIdxs == 1 ? "ex" : "ices") << ", "
+                      << NumImmIdxs << " imm ind"
+                      << (NumImmIdxs == 1 ? "ex" : "ices") << "\n");
     const LegalizeRuleSet &RuleSet = getActionDefinitions(Opcode);
     if (!RuleSet.verifyTypeIdxsCoverage(NumTypeIdxs))
+      FailedOpcodes.push_back(Opcode);
+    else if (!RuleSet.verifyImmIdxsCoverage(NumImmIdxs))
       FailedOpcodes.push_back(Opcode);
   }
   if (!FailedOpcodes.empty()) {

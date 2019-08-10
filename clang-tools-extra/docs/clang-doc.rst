@@ -66,7 +66,7 @@ Options
 
 .. code-block:: console
 
-	$ clang-doc --help
+  $ clang-doc --help
   USAGE: clang-doc [options] <source0> [... <sourceN>]
 
   OPTIONS:
@@ -79,17 +79,27 @@ Options
 
   clang-doc options:
 
-    -doxygen                   - Use only doxygen-style comments to generate docs.
-    -dump                      - Dump intermediate results to bitcode file.
-    -extra-arg=<string>        - Additional argument to append to the compiler command line
-    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
-    --format=<value>           - Format for outputted docs.
-      =yaml                    -   Documentation in YAML format.
-      =md                      -   Documentation in MD format.
-      =html                    -   Documentation in HTML format.
-    -output=<string>           - Directory for outputting generated files.
-    -p=<string>                - Build path
-    --public                   - Document only public declarations.
-    --stylesheets=<string>     - CSS stylesheets to extend the default styles.
+    --doxygen                   - Use only doxygen-style comments to generate docs.
+    --extra-arg=<string>        - Additional argument to append to the compiler command line
+    --extra-arg-before=<string> - Additional argument to prepend to the compiler command line
+    --format=<value>            - Format for outputted docs.
+      =yaml                     -   Documentation in YAML format.
+      =md                       -   Documentation in MD format.
+      =html                     -   Documentation in HTML format.
+    --ignore-map-errors         - Continue if files are not mapped correctly.
+    --output=<string>           - Directory for outputting generated files.
+    -p=<string>                 - Build path
+    --public                    - Document only public declarations.
+    --repository=<string>       -
+                                  URL of repository that hosts code.
+                                  Used for links to definition locations.
+    --source-root=<string>      -
+                                  Directory where processed files are stored.
+                                  Links to definition locations will only be
+                                  generated if the file is in this dir.
+    --stylesheets=<string>      - CSS stylesheets to extend the default styles.
 
-``stylesheets`` should only be used if ``format`` is set to ``html``.
+The following flags shoud only be used if ``format`` is set to ``html``:
+- ``repository``
+- ``source-root``
+- ``stylesheets``

@@ -235,5 +235,21 @@ void Index::sort() {
     C.sort();
 }
 
+ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
+                                 bool PublicOnly, StringRef OutDirectory,
+                                 StringRef SourceRoot, StringRef RepositoryUrl,
+                                 std::vector<std::string> UserStylesheets,
+                                 std::vector<std::string> JsScripts)
+    : ECtx(ECtx), PublicOnly(PublicOnly), OutDirectory(OutDirectory),
+      SourceRoot(SourceRoot), UserStylesheets(UserStylesheets),
+      JsScripts(JsScripts) {
+  if (!RepositoryUrl.empty()) {
+    this->RepositoryUrl = RepositoryUrl;
+    if (!RepositoryUrl.empty() && RepositoryUrl.find("http://") != 0 &&
+        RepositoryUrl.find("https://") != 0)
+      this->RepositoryUrl->insert(0, "https://");
+  }
+}
+
 } // namespace doc
 } // namespace clang

@@ -24,6 +24,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 using namespace llvm;
@@ -323,9 +324,9 @@ void splitAndWriteThinLTOBitcode(
     SmallVector<Metadata *, 4> Elts;
     Elts.push_back(MDString::get(Ctx, F.getName()));
     CfiFunctionLinkage Linkage;
-    if (!F.isDeclarationForLinker())
+    if (lowertypetests::isJumpTableCanonical(&F))
       Linkage = CFL_Definition;
-    else if (F.isWeakForLinker())
+    else if (F.hasExternalWeakLinkage())
       Linkage = CFL_WeakDeclaration;
     else
       Linkage = CFL_Declaration;

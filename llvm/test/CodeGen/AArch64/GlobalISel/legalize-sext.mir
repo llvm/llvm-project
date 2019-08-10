@@ -1,0 +1,18 @@
+# RUN: llc -march=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
+---
+name:            test_sext_inreg
+body: |
+  bb.0.entry:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: test_sext_inreg
+    ; CHECK-DAG: [[COPY:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-DAG: [[I25:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-DAG: [[SEXT1:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[I25]]
+    ; This constant is coming from a custom legalization for G_ASHR rather than G_SEXT_INREG lowering
+    ; CHECK-DAG: [[I25_64:%[0-9]+]]:_(s64) = G_CONSTANT i64 25
+    ; CHECK-DAG: [[SEXT2:%[0-9]+]]:_(s32) = G_ASHR [[SEXT1]], [[I25_64]]
+    ; CHECK-DAG: $w0 = COPY [[SEXT2]](s32)
+    %0:_(s32) = COPY $w1
+    %2:_(s32) = G_SEXT_INREG %0(s32), 7
+    $w0 = COPY %2(s32)
+...

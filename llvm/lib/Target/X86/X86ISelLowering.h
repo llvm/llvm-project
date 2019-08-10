@@ -1207,6 +1207,8 @@ namespace llvm {
 
     StringRef getStackProbeSymbolName(MachineFunction &MF) const override;
 
+    unsigned getStackProbeSize(MachineFunction &MF) const;
+
     bool hasVectorBlend() const override { return true; }
 
     unsigned getMaxSupportedInterleaveFactor() const override { return 4; }

@@ -266,6 +266,22 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   match = mi_match(MIBCSub->getOperand(0).getReg(), MRI, m_ICst(Cst));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 0);
+
+  auto MIBCSext1 =
+      CFB1.buildInstr(TargetOpcode::G_SEXT_INREG, {s32},
+                      {CFB1.buildConstant(s32, 0x01), uint64_t(8)});
+  // This should be a constant now.
+  match = mi_match(MIBCSext1->getOperand(0).getReg(), MRI, m_ICst(Cst));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(1, Cst);
+
+  auto MIBCSext2 =
+      CFB1.buildInstr(TargetOpcode::G_SEXT_INREG, {s32},
+                      {CFB1.buildConstant(s32, 0x80), uint64_t(8)});
+  // This should be a constant now.
+  match = mi_match(MIBCSext2->getOperand(0).getReg(), MRI, m_ICst(Cst));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(-0x80, Cst);
 }
 
 TEST(PatternMatchInstr, MatchFPUnaryOp) {

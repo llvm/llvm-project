@@ -2436,6 +2436,12 @@ def NoSanitizeSpecific : InheritableAttr {
   let ASTNode = 0;
 }
 
+def CFICanonicalJumpTable : InheritableAttr {
+  let Spellings = [Clang<"cfi_canonical_jump_table">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [CFICanonicalJumpTableDocs];
+}
+
 // C/C++ Thread safety attributes (e.g. for deadlock, data race checking)
 // Not all of these attributes will be given a [[]] spelling. The attributes
 // which require access to function parameter names cannot use the [[]] spelling

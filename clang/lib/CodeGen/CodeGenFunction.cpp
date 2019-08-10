@@ -762,6 +762,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   if (CGM.getCodeGenOpts().ProfileSampleAccurate)
     Fn->addFnAttr("profile-sample-accurate");
 
+  if (D && D->hasAttr<CFICanonicalJumpTableAttr>())
+    Fn->addFnAttr("cfi-canonical-jump-table");
+
   if (getLangOpts().OpenCL) {
     // Add metadata for a kernel function.
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))

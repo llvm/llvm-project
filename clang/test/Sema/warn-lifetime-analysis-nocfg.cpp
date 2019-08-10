@@ -120,24 +120,55 @@ void initLocalGslPtrWithTempOwner() {
 }
 
 namespace std {
+template<class T> struct remove_reference       { typedef T type; };
+template<class T> struct remove_reference<T &>  { typedef T type; };
+template<class T> struct remove_reference<T &&> { typedef T type; };
+
+template<class T>
+typename remove_reference<T>::type &&move(T &&t) noexcept;
+
 template <typename T>
-struct basic_iterator {};
+struct basic_iterator {
+  basic_iterator operator++();
+  T& operator*();
+};
+
+template<typename T>
+bool operator!=(basic_iterator<T>, basic_iterator<T>);
 
 template <typename T>
 struct vector {
   typedef basic_iterator<T> iterator;
   iterator begin();
+  iterator end();
   T *data();
+  T &at(int n);
+};
+
+template<typename T>
+struct basic_string_view {
+  basic_string_view(const T *);
+  const T *begin() const;
 };
 
 template<typename T>
 struct basic_string {
   const T *c_str() const;
+  operator basic_string_view<T> () const;
 };
+
 
 template<typename T>
 struct unique_ptr {
+  T &operator*();
   T *get() const;
+};
+
+template<typename T>
+struct optional {
+  optional();
+  optional(const T&);
+  T &operator*();
 };
 }
 
@@ -168,3 +199,36 @@ int *danglingUniquePtrFromTemp() {
 int *danglingUniquePtrFromTemp2() {
   return std::unique_ptr<int>().get(); // expected-warning {{returning address of local temporary object}}
 }
+
+void danglingReferenceFromTempOwner() {
+  int &r = *std::optional<int>(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  int &r2 = *std::optional<int>(5); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  int &r3 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+
+std::vector<int> getTempVec();
+std::optional<std::vector<int>> getTempOptVec();
+
+int &usedToBeFalsePositive(std::vector<int> &v) {
+  std::vector<int>::iterator it = v.begin();
+  int& value = *it;
+  return value; // ok
+}
+
+int &doNotFollowReferencesForLocalOwner() {
+  std::unique_ptr<int> localOwner;
+  int &p = *localOwner.get();
+  // In real world code localOwner is usually moved here.
+  return p; // ok
+}
+
+const char *trackThroughMultiplePointer() {
+  return std::basic_string_view<char>(std::basic_string<char>()).begin(); // expected-warning {{returning address of local temporary object}}
+}
+
+struct X {
+  X(std::unique_ptr<int> up) : pointee(*up), pointer(std::move(up)) {}
+
+  int &pointee;
+  std::unique_ptr<int> pointer;
+};

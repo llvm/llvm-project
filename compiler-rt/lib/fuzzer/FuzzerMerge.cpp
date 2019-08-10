@@ -239,6 +239,8 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     // Show stats.
     if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)))
       PrintStats("pulse ");
+    if (TotalNumberOfRuns == M.NumFilesInFirstCorpus)
+      PrintStats("LOADED");
     // Write the post-run marker and the coverage.
     OF << "FT " << i;
     for (size_t F : UniqFeatures)
@@ -252,7 +254,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     OF << "\n";
     OF.flush();
   }
-  PrintStats("DONE ");
+  PrintStats("DONE  ");
 }
 
 static void WriteNewControlFile(const std::string &CFPath,

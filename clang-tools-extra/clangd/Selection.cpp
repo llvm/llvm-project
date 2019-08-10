@@ -510,5 +510,11 @@ const SelectionTree::Node &SelectionTree::Node::ignoreImplicit() const {
   return *this;
 }
 
+const SelectionTree::Node &SelectionTree::Node::outerImplicit() const {
+  if (Parent && Parent->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+    return Parent->outerImplicit();
+  return *this;
+}
+
 } // namespace clangd
 } // namespace clang

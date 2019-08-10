@@ -122,13 +122,13 @@ body:             |
     ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -228,13 +228,13 @@ body:             |
     ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -414,13 +414,13 @@ body:             |
     ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -526,13 +526,13 @@ body:             |
     ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1

@@ -183,7 +183,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
 MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     CallBase *Call, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
-  unsigned Limit = BlockScanLimit;
+  unsigned Limit = getDefaultBlockScanLimit();
 
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
@@ -443,7 +443,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     OrderedBasicBlock *OBB) {
   bool isInvariantLoad = false;
 
-  unsigned DefaultLimit = BlockScanLimit;
+  unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
     Limit = &DefaultLimit;
 
@@ -1746,6 +1746,9 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
 
 AnalysisKey MemoryDependenceAnalysis::Key;
 
+MemoryDependenceAnalysis::MemoryDependenceAnalysis()
+    : DefaultBlockScanLimit(BlockScanLimit) {}
+
 MemoryDependenceResults
 MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AA = AM.getResult<AAManager>(F);
@@ -1753,7 +1756,7 @@ MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &PV = AM.getResult<PhiValuesAnalysis>(F);
-  return MemoryDependenceResults(AA, AC, TLI, DT, PV);
+  return MemoryDependenceResults(AA, AC, TLI, DT, PV, DefaultBlockScanLimit);
 }
 
 char MemoryDependenceWrapperPass::ID = 0;
@@ -1807,7 +1810,7 @@ bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &P
 }
 
 unsigned MemoryDependenceResults::getDefaultBlockScanLimit() const {
-  return BlockScanLimit;
+  return DefaultBlockScanLimit;
 }
 
 bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
@@ -1816,6 +1819,6 @@ bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &PV = getAnalysis<PhiValuesWrapperPass>().getResult();
-  MemDep.emplace(AA, AC, TLI, DT, PV);
+  MemDep.emplace(AA, AC, TLI, DT, PV, BlockScanLimit);
   return false;
 }

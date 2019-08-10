@@ -109,8 +109,8 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)

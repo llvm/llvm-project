@@ -37,7 +37,7 @@ public:
 
   template <typename T> bool mapDecl(const T *D) {
     auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
-                                 /*File=*/"test.cpp", Public);
+                                 /*File=*/"test.cpp", true, Public);
     if (I.first)
       EmittedInfos.emplace_back(std::move(I.first));
     if (I.second)
