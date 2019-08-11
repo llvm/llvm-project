@@ -130,7 +130,7 @@ typename remove_reference<T>::type &&move(T &&t) noexcept;
 template <typename T>
 struct basic_iterator {
   basic_iterator operator++();
-  T& operator*();
+  T& operator*() const;
 };
 
 template<typename T>
@@ -227,8 +227,16 @@ const char *trackThroughMultiplePointer() {
 }
 
 struct X {
-  X(std::unique_ptr<int> up) : pointee(*up), pointer(std::move(up)) {}
-
+  X(std::unique_ptr<int> up) :
+    pointee(*up), pointee2(up.get()), pointer(std::move(up)) {}
   int &pointee;
+  int *pointee2;
   std::unique_ptr<int> pointer;
 };
+
+std::vector<int>::iterator getIt();
+
+const int &handleGslPtrInitsThroughReference(const std::vector<int> &v) {
+  const auto &it = getIt(); // Ok, it is lifetime extended.
+  return *it;
+}
