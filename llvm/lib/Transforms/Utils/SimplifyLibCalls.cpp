@@ -1319,7 +1319,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
     return nullptr;
 
   // pow(2.0 ** n, x) -> exp2(n * x)
-  if (hasUnaryFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l)) {
+  if (hasFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l)) {
     APFloat BaseR = APFloat(1.0);
     BaseR.convert(BaseF->getSemantics(), APFloat::rmTowardZero, &Ignored);
     BaseR = BaseR / *BaseF;
@@ -1344,7 +1344,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
   // pow(10.0, x) -> exp10(x)
   // TODO: There is no exp10() intrinsic yet, but some day there shall be one.
   if (match(Base, m_SpecificFP(10.0)) &&
-      hasUnaryFloatFn(TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
+      hasFloatFn(TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
     return emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10, LibFunc_exp10f,
                                 LibFunc_exp10l, B, Attrs);
 
@@ -1359,17 +1359,15 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
 
     if (Log) {
       Value *FMul = B.CreateFMul(Log, Expo, "mul");
-      if (Pow->doesNotAccessMemory()) {
+      if (Pow->doesNotAccessMemory())
         return B.CreateCall(Intrinsic::getDeclaration(Mod, Intrinsic::exp2, Ty),
                             FMul, "exp2");
-      } else {
-        if (hasUnaryFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f,
-                            LibFunc_exp2l))
-          return emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2, LibFunc_exp2f,
-                                      LibFunc_exp2l, B, Attrs);
-      }
+      else if (hasFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l))
+        return emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2, LibFunc_exp2f,
+                                    LibFunc_exp2l, B, Attrs);
     }
   }
+
   return nullptr;
 }
 
@@ -1384,8 +1382,7 @@ static Value *getSqrtCall(Value *V, AttributeList Attrs, bool NoErrno,
   }
 
   // Otherwise, use the libcall for sqrt().
-  if (hasUnaryFloatFn(TLI, V->getType(), LibFunc_sqrt, LibFunc_sqrtf,
-                      LibFunc_sqrtl))
+  if (hasFloatFn(TLI, V->getType(), LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl))
     // TODO: We also should check that the target can in fact lower the sqrt()
     // libcall. We currently have no way to ask this question, so we ask if
     // the target has a sqrt() libcall, which is not exactly the same.
@@ -1452,7 +1449,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   bool Ignored;
 
   // Bail out if simplifying libcalls to pow() is disabled.
-  if (!hasUnaryFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
+  if (!hasFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
     return nullptr;
 
   // Propagate the math semantics from the call to any created instructions.
@@ -1575,43 +1572,31 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  Value *Ret = nullptr;
   StringRef Name = Callee->getName();
-  if (UnsafeFPShrink && Name == "exp2" && hasFloatVersion(Name))
+  Value *Ret = nullptr;
+  if (UnsafeFPShrink && Name == TLI->getName(LibFunc_exp2) &&
+      hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
+  Type *Ty = CI->getType();
   Value *Op = CI->getArgOperand(0);
+
   // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= 32
   // Turn exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < 32
-  LibFunc LdExp = LibFunc_ldexpl;
-  if (Op->getType()->isFloatTy())
-    LdExp = LibFunc_ldexpf;
-  else if (Op->getType()->isDoubleTy())
-    LdExp = LibFunc_ldexp;
+  if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
+      hasFloatFn(TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+    Instruction *OpC = cast<Instruction>(Op);
+    Value *Exp = OpC->getOperand(0);
+    unsigned BitWidth = Exp->getType()->getPrimitiveSizeInBits();
 
-  if (TLI->has(LdExp)) {
-    Value *LdExpArg = nullptr;
-    if (SIToFPInst *OpC = dyn_cast<SIToFPInst>(Op)) {
-      if (OpC->getOperand(0)->getType()->getPrimitiveSizeInBits() <= 32)
-        LdExpArg = B.CreateSExt(OpC->getOperand(0), B.getInt32Ty());
-    } else if (UIToFPInst *OpC = dyn_cast<UIToFPInst>(Op)) {
-      if (OpC->getOperand(0)->getType()->getPrimitiveSizeInBits() < 32)
-        LdExpArg = B.CreateZExt(OpC->getOperand(0), B.getInt32Ty());
-    }
+    if (BitWidth < 32 ||
+        (BitWidth == 32 && isa<SIToFPInst>(Op))) {
+      Exp = isa<SIToFPInst>(Op) ? B.CreateSExt(Exp, B.getInt32Ty())
+                                : B.CreateZExt(Exp, B.getInt32Ty());
 
-    if (LdExpArg) {
-      Constant *One = ConstantFP::get(CI->getContext(), APFloat(1.0f));
-      if (!Op->getType()->isFloatTy())
-        One = ConstantExpr::getFPExtend(One, Op->getType());
-
-      Module *M = CI->getModule();
-      FunctionCallee NewCallee = M->getOrInsertFunction(
-          TLI->getName(LdExp), Op->getType(), Op->getType(), B.getInt32Ty());
-      CallInst *CI = B.CreateCall(NewCallee, {One, LdExpArg});
-      if (const Function *F = dyn_cast<Function>(Callee->stripPointerCasts()))
-        CI->setCallingConv(F->getCallingConv());
-
-      return CI;
+      return emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), Exp, TLI,
+                                   LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl,
+                                   B, CI->getCalledFunction()->getAttributes());
     }
   }
   return Ret;

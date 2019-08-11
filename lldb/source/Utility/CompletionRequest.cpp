@@ -16,6 +16,7 @@ CompletionRequest::CompletionRequest(llvm::StringRef command_line,
                                      CompletionResult &result)
     : m_command(command_line), m_raw_cursor_pos(raw_cursor_pos),
       m_result(result) {
+  assert(raw_cursor_pos <= command_line.size() && "Out of bounds cursor?");
 
   // We parse the argument up to the cursor, so the last argument in
   // parsed_line is the one containing the cursor, and the cursor is after the

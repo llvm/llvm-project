@@ -205,6 +205,9 @@ struct Location {
   Location() = default;
   Location(int LineNumber, SmallString<16> Filename)
       : LineNumber(LineNumber), Filename(std::move(Filename)) {}
+  Location(int LineNumber, SmallString<16> Filename, bool IsFileInRootDir)
+      : LineNumber(LineNumber), Filename(std::move(Filename)),
+        IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
     return std::tie(LineNumber, Filename) ==
@@ -220,8 +223,9 @@ struct Location {
            std::tie(Other.LineNumber, Other.Filename);
   }
 
-  int LineNumber;           // Line number of this Location.
-  SmallString<32> Filename; // File for this Location.
+  int LineNumber;               // Line number of this Location.
+  SmallString<32> Filename;     // File for this Location.
+  bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
 
 /// A base struct for Infos.
@@ -375,14 +379,18 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, bool PublicOnly,
-                  StringRef OutDirectory,
+                  StringRef OutDirectory, StringRef SourceRoot,
+                  StringRef RepositoryUrl,
                   std::vector<std::string> UserStylesheets,
-                  std::vector<std::string> JsScripts)
-      : ECtx(ECtx), PublicOnly(PublicOnly), OutDirectory(OutDirectory),
-        UserStylesheets(UserStylesheets), JsScripts(JsScripts) {}
+                  std::vector<std::string> JsScripts);
   tooling::ExecutionContext *ECtx;
-  bool PublicOnly;
-  std::string OutDirectory;
+  bool PublicOnly; // Indicates if only public declarations are documented.
+  std::string OutDirectory; // Directory for outputting generated files.
+  std::string SourceRoot;   // Directory where processed files are stored. Links
+                            // to definition locations will only be generated if
+                            // the file is in this dir.
+  // URL of repository that hosts code used for links to definition locations.
+  llvm::Optional<std::string> RepositoryUrl;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;

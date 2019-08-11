@@ -33,6 +33,20 @@ def G_SEXT : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Sign extend the a value from an arbitrary bit position, copying the sign bit
+// into all bits above it. This is equivalent to a shl + ashr pair with an
+// appropriate shift amount. $sz is an immediate (MachineOperand::isImm()
+// returns true) to allow targets to have some bitwidths legal and others
+// lowered. This opcode is particularly useful if the target has sign-extension
+// instructions that are cheaper than the constituent shifts as the optimizer is
+// able to make decisions on whether it's better to hang on to the G_SEXT_INREG
+// or to lower it and optimize the individual shifts.
+def G_SEXT_INREG : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, untyped_imm_0:$sz);
+  let hasSideEffects = 0;
+}
+
 // Zero extend the underlying scalar type of an operation, putting zero bits
 // into the newly-created space.
 def G_ZEXT : GenericInstruction {

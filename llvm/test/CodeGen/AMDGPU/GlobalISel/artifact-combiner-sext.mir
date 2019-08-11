@@ -10,8 +10,8 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_trunc_v2s32_to_v2s16_to_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY [[COPY]](<2 x s32>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[UV]], [[C]](s32)
     ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[UV1]], [[C]](s32)
@@ -33,10 +33,10 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_trunc_v2s32_to_v2s16_to_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UV]](s32)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[UV1]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
     ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ANYEXT]], [[TRUNC]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
@@ -59,14 +59,13 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
+    ; The G_SEXT_INREG doesn't lower here because G_TRUNC is both illegal and
+    ; unable to legalize. This prevents further legalization.
     ; CHECK-LABEL: name: test_sext_trunc_v2s32_to_v2s8_to_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s16>) = G_SHL [[TRUNC]], [[BUILD_VECTOR]](<2 x s16>)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s16>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s16>)
-    ; CHECK: $vgpr0 = COPY [[ASHR]](<2 x s16>)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(<2 x s16>) = G_SEXT_INREG [[TRUNC]], 8
+    ; CHECK: $vgpr0 = COPY [[SEXT_INREG]](<2 x s16>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_TRUNC %0
     %2:_(<2 x s16>) = G_SEXT %1
@@ -81,8 +80,8 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_trunc_v3s32_to_v3s16_to_v3s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY [[COPY]](<3 x s32>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[UV]], [[C]](s32)
     ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[UV1]], [[C]](s32)

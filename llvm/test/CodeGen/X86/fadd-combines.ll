@@ -247,4 +247,32 @@ define float @fadd_const_multiuse_attr(float %x) #0 {
   ret float %a3
 }
 
+; PR32939 - https://bugs.llvm.org/show_bug.cgi?id=32939
+
+define double @fmul2_negated(double %a, double %b, double %c) {
+; CHECK-LABEL: fmul2_negated:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addsd %xmm1, %xmm1
+; CHECK-NEXT:    mulsd %xmm2, %xmm1
+; CHECK-NEXT:    subsd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %mul = fmul double %b, 2.0
+  %mul1 = fmul double %mul, %c
+  %sub = fsub double %a, %mul1
+  ret double %sub
+}
+
+define <2 x double> @fmul2_negated_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: fmul2_negated_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addpd %xmm1, %xmm1
+; CHECK-NEXT:    mulpd %xmm2, %xmm1
+; CHECK-NEXT:    subpd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %mul = fmul <2 x double> %b, <double 2.0, double 2.0>
+  %mul1 = fmul <2 x double> %mul, %c
+  %sub = fsub <2 x double> %a, %mul1
+  ret <2 x double> %sub
+}
+
 attributes #0 = { "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" "no-signed-zeros-fp-math"="true" }

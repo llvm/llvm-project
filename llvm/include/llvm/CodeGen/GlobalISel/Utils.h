@@ -151,6 +151,9 @@ Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
                                   const unsigned Op2,
                                   const MachineRegisterInfo &MRI);
 
+Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,
+                                  uint64_t Imm, const MachineRegisterInfo &MRI);
+
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
 /// this returns if \p Val can be assumed to never be a signaling NaN.
 bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,

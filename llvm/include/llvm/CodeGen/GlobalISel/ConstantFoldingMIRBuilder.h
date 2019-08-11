@@ -54,6 +54,17 @@ public:
         return buildConstant(Dst, MaybeCst->getSExtValue());
       break;
     }
+    case TargetOpcode::G_SEXT_INREG: {
+      assert(DstOps.size() == 1 && "Invalid dst ops");
+      assert(SrcOps.size() == 2 && "Invalid src ops");
+      const DstOp &Dst = DstOps[0];
+      const SrcOp &Src0 = SrcOps[0];
+      const SrcOp &Src1 = SrcOps[1];
+      if (auto MaybeCst =
+              ConstantFoldExtOp(Opc, Src0.getReg(), Src1.getImm(), *getMRI()))
+        return buildConstant(Dst, MaybeCst->getSExtValue());
+      break;
+    }
     }
     return MachineIRBuilder::buildInstr(Opc, DstOps, SrcOps);
   }

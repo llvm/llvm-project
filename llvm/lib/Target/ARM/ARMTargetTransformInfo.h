@@ -101,9 +101,9 @@ public:
 
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
-  /// is IEEE-754 compliant, but it's not covered in this target.
+  /// and Arm MVE are IEEE-754 compliant.
   bool isFPVectorizationPotentiallyUnsafe() {
-    return !ST->isTargetDarwin();
+    return !ST->isTargetDarwin() && !ST->hasMVEFloatOps();
   }
 
   /// \name Scalar TTI Implementations
@@ -126,6 +126,8 @@ public:
     if (Vector) {
       if (ST->hasNEON())
         return 16;
+      if (ST->hasMVEIntegerOps())
+        return 8;
       return 0;
     }
 
@@ -137,6 +139,8 @@ public:
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
       if (ST->hasNEON())
+        return 128;
+      if (ST->hasMVEIntegerOps())
         return 128;
       return 0;
     }

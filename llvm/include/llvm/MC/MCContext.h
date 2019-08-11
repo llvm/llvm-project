@@ -113,6 +113,9 @@ namespace llvm {
     /// number of section symbols with the same name).
     StringMap<bool, BumpPtrAllocator &> UsedNames;
 
+    /// Keeps track of labels that are used in inline assembly.
+    SymbolTable InlineAsmUsedLabelNames;
+
     /// The next ID to dole out to an unnamed assembler temporary symbol with
     /// a given prefix.
     StringMap<unsigned> NextID;
@@ -381,6 +384,16 @@ namespace llvm {
     /// still want any modifications to the table itself to use the MCContext
     /// APIs.
     const SymbolTable &getSymbols() const { return Symbols; }
+
+    /// isInlineAsmLabel - Return true if the name is a label referenced in
+    /// inline assembly.
+    MCSymbol *getInlineAsmLabel(StringRef Name) const {
+      return InlineAsmUsedLabelNames.lookup(Name);
+    }
+
+    /// registerInlineAsmLabel - Records that the name is a label referenced in
+    /// inline assembly.
+    void registerInlineAsmLabel(MCSymbol *Sym);
 
     /// @}
 

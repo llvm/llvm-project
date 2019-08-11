@@ -36,6 +36,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     (new_path, config.environment.get(dynamic_library_lookup_var, '')))
   config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
+  if platform.system() == 'FreeBSD':
+    dynamic_library_lookup_var = 'LD_32_LIBRARY_PATH'
+    new_ld_32_library_path = os.path.pathsep.join(
+      (new_path, config.environment.get(dynamic_library_lookup_var, '')))
+    config.environment[dynamic_library_lookup_var] = new_ld_32_library_path
+
 # Setup config name.
 config.name = 'AddressSanitizer' + config.name_suffix
 
@@ -111,7 +117,7 @@ config.substitutions.append( ("%clangxx ", build_invocation(target_cxxflags)) )
 config.substitutions.append( ("%clang_asan ", build_invocation(clang_asan_cflags)) )
 config.substitutions.append( ("%clangxx_asan ", build_invocation(clang_asan_cxxflags)) )
 if config.asan_dynamic:
-  if config.host_os in ['Linux', 'NetBSD', 'SunOS']:
+  if config.host_os in ['Linux', 'FreeBSD', 'NetBSD', 'SunOS']:
     shared_libasan_path = os.path.join(config.compiler_rt_libdir, "libclang_rt.asan{}.so".format(config.target_suffix))
   elif config.host_os == 'Darwin':
     shared_libasan_path = os.path.join(config.compiler_rt_libdir, 'libclang_rt.asan_{}_dynamic.dylib'.format(config.apple_platform))

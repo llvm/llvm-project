@@ -958,7 +958,7 @@ struct FuncUnitSorter {
     unsigned F1 = 0, F2 = 0;
     unsigned MFUs1 = minFuncUnits(IS1, F1);
     unsigned MFUs2 = minFuncUnits(IS2, F2);
-    if (MFUs1 == 1 && MFUs2 == 1)
+    if (MFUs1 == MFUs2)
       return Resources.lookup(F1) < Resources.lookup(F2);
     return MFUs1 > MFUs2;
   }

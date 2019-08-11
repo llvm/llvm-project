@@ -50,6 +50,7 @@ add_llvm_library(LLVMAnalysis
   Loads.cpp
   LoopAccessAnalysis.cpp
   LoopAnalysisManager.cpp
+  LoopCacheAnalysis.cpp
   LoopUnrollAnalyzer.cpp
   LoopInfo.cpp
   LoopPass.cpp

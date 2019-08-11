@@ -1,5 +1,6 @@
 ; RUN: opt -mtriple armv7-linux-gnueabihf -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
 ; RUN: opt -mtriple armv8-linux-gnu -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
+; RUN: opt -mtriple armv8.1.m-none-eabi -mattr=+mve.fp -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MVE
 ; RUN: opt -mtriple armv7-unknwon-darwin -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
 ; REQUIRES: asserts
 
@@ -44,6 +45,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; Floating-point loops need fast-math to be vectorizeable
 ; LINUX: Checking a loop in "sumf"
 ; LINUX: Potentially unsafe FP op prevents vectorization
+; MVE: Checking a loop in "sumf"
+; MVE: We can vectorize this loop!
 ; DARWIN: Checking a loop in "sumf"
 ; DARWIN: We can vectorize this loop!
 define void @sumf(float* noalias nocapture readonly %A, float* noalias nocapture readonly %B, float* noalias nocapture %C, i32 %N) {
@@ -110,6 +113,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; Floating-point loops need fast-math to be vectorizeable
 ; LINUX: Checking a loop in "redf"
 ; LINUX: Potentially unsafe FP op prevents vectorization
+; MVE: Checking a loop in "redf"
+; MVE: We can vectorize this loop!
 ; DARWIN: Checking a loop in "redf"
 ; DARWIN: We can vectorize this loop!
 define float @redf(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i32 %N) {

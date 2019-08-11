@@ -285,6 +285,24 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       };
 
       $Class[[A]] &$Class[[A]]::operator=($Class[[A]] &&$Variable[[O]]) = default;
+    )cpp",
+    R"cpp(
+      enum $Enum[[En]] {
+        $EnumConstant[[EC]],
+      };
+      class $Class[[Foo]] {};
+      class $Class[[Bar]] {
+        $Class[[Foo]] $Field[[Fo]];
+        $Enum[[En]] $Field[[E]];
+        $Primitive[[int]] $Field[[I]];
+        $Class[[Bar]] ($Class[[Foo]] $Variable[[F]],
+                $Enum[[En]] $Variable[[E]])
+        : $Field[[Fo]] ($Variable[[F]]), $Field[[E]] ($Variable[[E]]),
+          $Field[[I]] (123) {}
+      };
+      class $Class[[Bar2]] : public $Class[[Bar]] {
+        $Class[[Bar2]]() : $Class[[Bar]]($Class[[Foo]](), $EnumConstant[[EC]]) {}
+      };
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

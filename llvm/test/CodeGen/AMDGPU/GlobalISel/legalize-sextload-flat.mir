@@ -14,8 +14,8 @@ body: |
     ; VI-LABEL: name: test_sextload_flat_i32_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; VI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; VI: $vgpr0 = COPY [[ASHR]](s32)
@@ -36,8 +36,8 @@ body: |
     ; VI-LABEL: name: test_sextload_flat_i32_i16
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 2)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; VI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; VI: $vgpr0 = COPY [[ASHR]](s32)
@@ -59,8 +59,8 @@ body: |
     ; VI-LABEL: name: test_sextload_flat_i31_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; VI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ASHR]](s32)
@@ -84,8 +84,8 @@ body: |
     ; VI-LABEL: name: test_sextload_flat_i64_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; VI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; VI: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
@@ -108,8 +108,8 @@ body: |
     ; VI-LABEL: name: test_sextload_flat_i64_i16
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 2)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; VI: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; VI: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)

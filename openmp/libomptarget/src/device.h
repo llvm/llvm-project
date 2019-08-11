@@ -100,13 +100,10 @@ struct DeviceTy {
   // moved into the target task in libomp.
   std::map<int32_t, uint64_t> LoopTripCnt;
 
-  int64_t RTLRequiresFlags;
-
   DeviceTy(RTLInfoTy *RTL)
       : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
-        HasPendingGlobals(false), HostDataToTargetMap(),
-        PendingCtorsDtors(), ShadowPtrMap(), DataMapMtx(), PendingGlobalsMtx(),
-        ShadowMtx(), RTLRequiresFlags(0) {}
+        HasPendingGlobals(false), HostDataToTargetMap(), PendingCtorsDtors(),
+        ShadowPtrMap(), DataMapMtx(), PendingGlobalsMtx(), ShadowMtx() {}
 
   // The existence of mutexes makes DeviceTy non-copyable. We need to
   // provide a copy constructor and an assignment operator explicitly.
@@ -115,9 +112,8 @@ struct DeviceTy {
         IsInit(d.IsInit), InitFlag(), HasPendingGlobals(d.HasPendingGlobals),
         HostDataToTargetMap(d.HostDataToTargetMap),
         PendingCtorsDtors(d.PendingCtorsDtors), ShadowPtrMap(d.ShadowPtrMap),
-        DataMapMtx(), PendingGlobalsMtx(),
-        ShadowMtx(), LoopTripCnt(d.LoopTripCnt),
-        RTLRequiresFlags(d.RTLRequiresFlags) {}
+        DataMapMtx(), PendingGlobalsMtx(), ShadowMtx(),
+        LoopTripCnt(d.LoopTripCnt) {}
 
   DeviceTy& operator=(const DeviceTy &d) {
     DeviceID = d.DeviceID;
@@ -129,7 +125,6 @@ struct DeviceTy {
     PendingCtorsDtors = d.PendingCtorsDtors;
     ShadowPtrMap = d.ShadowPtrMap;
     LoopTripCnt = d.LoopTripCnt;
-    RTLRequiresFlags = d.RTLRequiresFlags;
 
     return *this;
   }
@@ -137,11 +132,13 @@ struct DeviceTy {
   long getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-      bool &IsNew, bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount = true);
+      bool &IsNew, bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount = true,
+      bool HasCloseModifier = false);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
       bool UpdateRefCount, bool &IsHostPtr);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool ForceDelete);
+  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool ForceDelete,
+                    bool HasCloseModifier = false);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 

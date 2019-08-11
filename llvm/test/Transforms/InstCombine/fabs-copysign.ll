@@ -19,6 +19,17 @@ define double @fabs_copysign(double %x) {
   ret double %div
 }
 
+define double @fabs_copysign_commuted(double %x) {
+; CHECK-LABEL: @fabs_copysign_commuted(
+; CHECK-NEXT:    [[F:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf double [[F]], [[X]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %f = tail call double @llvm.fabs.f64(double %x)
+  %div = fdiv nnan ninf double %f, %x
+  ret double %div
+}
+
 
 define float @fabs_copysignf(float %x) {
 ; CHECK-LABEL: @fabs_copysignf(
@@ -34,10 +45,12 @@ define float @fabs_copysignf(float %x) {
 define double @fabs_copysign_use(double %x) {
 ; CHECK-LABEL: @fabs_copysign_use(
 ; CHECK-NEXT:    [[F:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    call void @use(double [[F]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf double [[X]], [[F]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
   %f = tail call double @llvm.fabs.f64(double %x)
+  call void @use(double %f)
   %div = fdiv nnan ninf double %x, %f
   ret double %div
 }
@@ -52,6 +65,17 @@ define double @fabs_copysign_mismatch(double %x, double %y) {
 ;
   %f = tail call double @llvm.fabs.f64(double %y)
   %div = fdiv double %x, %f
+  ret double %div
+}
+
+define double @fabs_copysign_commuted_mismatch(double %x, double %y) {
+; CHECK-LABEL: @fabs_copysign_commuted_mismatch(
+; CHECK-NEXT:    [[F:%.*]] = tail call double @llvm.fabs.f64(double [[Y:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[F]], [[X:%.*]]
+; CHECK-NEXT:    ret double [[DIV]]
+;
+  %f = tail call double @llvm.fabs.f64(double %y)
+  %div = fdiv double %f, %x
   ret double %div
 }
 

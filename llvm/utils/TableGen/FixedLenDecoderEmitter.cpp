@@ -64,9 +64,10 @@ struct OperandInfo {
   std::vector<EncodingField> Fields;
   std::string Decoder;
   bool HasCompleteDecoder;
+  uint64_t InitValue;
 
   OperandInfo(std::string D, bool HCD)
-      : Decoder(std::move(D)), HasCompleteDecoder(HCD) {}
+      : Decoder(std::move(D)), HasCompleteDecoder(HCD), InitValue(0) {}
 
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
     Fields.push_back(EncodingField(Base, Width, Offset));
@@ -1103,12 +1104,15 @@ void FilterChooser::emitBinaryParser(raw_ostream &o, unsigned &Indentation,
                                      bool &OpHasCompleteDecoder) const {
   const std::string &Decoder = OpInfo.Decoder;
 
-  if (OpInfo.numFields() != 1)
-    o.indent(Indentation) << "tmp = 0;\n";
+  if (OpInfo.numFields() != 1 || OpInfo.InitValue != 0) {
+    o.indent(Indentation) << "tmp = 0x";
+    o.write_hex(OpInfo.InitValue);
+    o << ";\n";
+  }
 
   for (const EncodingField &EF : OpInfo) {
     o.indent(Indentation) << "tmp ";
-    if (OpInfo.numFields() != 1) o << '|';
+    if (OpInfo.numFields() != 1 || OpInfo.InitValue != 0) o << '|';
     o << "= fieldFromInstruction"
       << "(insn, " << EF.Base << ", " << EF.Width << ')';
     if (OpInfo.numFields() != 1 || EF.Offset != 0)
@@ -2026,6 +2030,16 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       HasCompleteDecoderBit->getValue() : true;
 
     OperandInfo OpInfo(Decoder, HasCompleteDecoder);
+
+    // Some bits of the operand may be required to be 1 depending on the
+    // instruction's encoding. Collect those bits.
+    if (const RecordVal *EncodedValue = EncodingDef.getValue(Op.second))
+      if (const BitsInit *OpBits = dyn_cast<BitsInit>(EncodedValue->getValue()))
+        for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
+          if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
+            if (OpBit->getValue())
+              OpInfo.InitValue |= 1ULL << I;
+
     unsigned Base = ~0U;
     unsigned Width = 0;
     unsigned Offset = 0;

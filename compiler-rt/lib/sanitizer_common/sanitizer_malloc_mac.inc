@@ -91,6 +91,15 @@ INTERCEPTOR(malloc_zone_t *, malloc_default_zone, void) {
   return &sanitizer_zone;
 }
 
+INTERCEPTOR(malloc_zone_t *, malloc_zone_from_ptr, const void *ptr) {
+  COMMON_MALLOC_ENTER();
+  size_t size = sanitizer_zone.size(&sanitizer_zone, ptr);
+  if (size) { // Claimed by sanitizer zone?
+    return &sanitizer_zone;
+  }
+  return REAL(malloc_zone_from_ptr)(ptr);
+}
+
 INTERCEPTOR(malloc_zone_t *, malloc_default_purgeable_zone, void) {
   // FIXME: ASan should support purgeable allocations.
   // https://github.com/google/sanitizers/issues/139
@@ -226,7 +235,7 @@ void __sanitizer_mz_free(malloc_zone_t *zone, void *ptr) {
 }
 
 #define GET_ZONE_FOR_PTR(ptr) \
-  malloc_zone_t *zone_ptr = malloc_zone_from_ptr(ptr); \
+  malloc_zone_t *zone_ptr = WRAP(malloc_zone_from_ptr)(ptr); \
   const char *zone_name = (zone_ptr == 0) ? 0 : zone_ptr->zone_name
 
 extern "C"
