@@ -2789,9 +2789,10 @@ void MachineBlockPlacement::optimizeBranches() {
           ChainBB->removeSuccessor(TBB);
 
           // Update the CFG.
-          for (MachineBasicBlock::pred_iterator PI = TBB->pred_begin(),
-               PE = TBB->pred_end(); PI != PE; ++PI)
-            (*PI)->ReplaceUsesOfBlockWith(TBB, ChainBB);
+          while (!TBB->pred_empty()) {
+            MachineBasicBlock *Pred = *(TBB->pred_end()-1);
+            Pred->ReplaceUsesOfBlockWith(TBB, ChainBB);
+          }
 
           for (MachineBasicBlock *Succ : TBB->successors())
             ChainBB->addSuccessor(Succ, MBPI->getEdgeProbability(TBB, Succ));
