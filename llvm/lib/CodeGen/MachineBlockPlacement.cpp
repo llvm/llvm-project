@@ -2790,7 +2790,7 @@ void MachineBlockPlacement::optimizeBranches() {
 
           // Update the CFG.
           for (MachineBasicBlock::pred_iterator PI = TBB->pred_begin(),
-               PE = TBB->pred_end(); PI != PE; PI++)
+               PE = TBB->pred_end(); PI != PE; ++PI)
             (*PI)->ReplaceUsesOfBlockWith(TBB, ChainBB);
 
           for (MachineBasicBlock *Succ : TBB->successors())

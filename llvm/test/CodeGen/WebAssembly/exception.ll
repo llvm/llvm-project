@@ -138,7 +138,8 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK:     catch
 ; CHECK:       block     i32
 ; CHECK:         br_on_exn   0, __cpp_exception
-; CHECK:         call      __clang_call_terminate, 0
+; CHECK:         i32.const  ${{.*}}=, 0
+; CHECK:         call      __clang_call_terminate
 ; CHECK:         unreachable
 ; CHECK:       end_block
 ; CHECK:       call      __clang_call_terminate

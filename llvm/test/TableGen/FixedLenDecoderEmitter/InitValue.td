@@ -28,8 +28,19 @@ def bar : Instruction {
     let Inst{15-8} = factor{7-0};
     }
 
+def bax : Instruction {
+    let InOperandList = (ins i32imm:$factor);
+    field bits<16> Inst;
+    field bits<16> SoftFail = 0;
+    bits<33> factor;
+    let factor{32} = 1; // non-zero initial value
+    let Inst{15-8} = factor{32-25};
+    }
+
 }
 
 // CHECK: tmp = fieldFromInstruction(insn, 9, 7) << 1;
 // CHECK: tmp = 0x1;
 // CHECK: tmp |= fieldFromInstruction(insn, 9, 7) << 1;
+// CHECK: tmp = 0x100000000;
+// CHECK: tmp |= fieldFromInstruction(insn, 8, 7) << 25;
