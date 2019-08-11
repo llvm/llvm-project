@@ -893,6 +893,11 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
         }
         return;
       }
+      // Don't unroll vectorised loop. MVE does not benefit from it as much as
+      // scalar code.
+      if (I.getType()->isVectorTy())
+        return;
+
       SmallVector<const Value*, 4> Operands(I.value_op_begin(),
                                             I.value_op_end());
       Cost += getUserCost(&I, Operands);
