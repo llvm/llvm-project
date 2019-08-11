@@ -141,7 +141,7 @@ struct vector {
   typedef basic_iterator<T> iterator;
   iterator begin();
   iterator end();
-  T *data();
+  const T *data() const;
   T &at(int n);
 };
 
@@ -235,8 +235,14 @@ struct X {
 };
 
 std::vector<int>::iterator getIt();
+std::vector<int> getVec();
 
-const int &handleGslPtrInitsThroughReference(const std::vector<int> &v) {
+const int &handleGslPtrInitsThroughReference() {
   const auto &it = getIt(); // Ok, it is lifetime extended.
   return *it;
+}
+
+void handleGslPtrInitsThroughReference2() {
+  const std::vector<int> &v = getVec();
+  const int *val = v.data(); // Ok, it is lifetime extended.
 }

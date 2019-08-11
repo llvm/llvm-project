@@ -7104,7 +7104,8 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
     SourceLocation DiagLoc = DiagRange.getBegin();
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
-    bool IsTempGslOwner = MTE && isRecordWithAttr<OwnerAttr>(MTE->getType());
+    bool IsTempGslOwner = MTE && !MTE->getExtendingDecl() &&
+                          isRecordWithAttr<OwnerAttr>(MTE->getType());
     bool IsLocalGslOwner =
         isa<DeclRefExpr>(L) && isRecordWithAttr<OwnerAttr>(L->getType());
 

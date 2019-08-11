@@ -42860,13 +42860,15 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
+  if (!VT.isVector())
+    return SDValue();
+
   // PSUBUS is supported, starting from SSE2, but truncation for v8i32
   // is only worth it with SSSE3 (PSHUFB).
-  if (!(Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) &&
+  EVT EltVT = VT.getVectorElementType();
+  if (!(Subtarget.hasSSE2() && (EltVT == MVT::i8 || EltVT == MVT::i16)) &&
       !(Subtarget.hasSSSE3() && (VT == MVT::v8i32 || VT == MVT::v8i64)) &&
-      !(Subtarget.hasAVX() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
-      !(Subtarget.useBWIRegs() && (VT == MVT::v64i8 || VT == MVT::v32i16 ||
-                                   VT == MVT::v16i32 || VT == MVT::v8i64)))
+      !(Subtarget.useBWIRegs() && (VT == MVT::v16i32)))
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
@@ -42896,16 +42898,13 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   } else
     return SDValue();
 
-  auto USUBSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                           ArrayRef<SDValue> Ops) {
-    return DAG.getNode(ISD::USUBSAT, DL, Ops[0].getValueType(), Ops);
-  };
-
   // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
   // special preprocessing in some cases.
-  if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
-    return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                            { SubusLHS, SubusRHS }, USUBSATBuilder);
+  if (EltVT == MVT::i8 || EltVT == MVT::i16)
+    return DAG.getNode(ISD::USUBSAT, SDLoc(N), VT, SubusLHS, SubusRHS);
+
+  assert((VT == MVT::v8i32 || VT == MVT::v16i32 || VT == MVT::v8i64) &&
+         "Unexpected VT!");
 
   // Special preprocessing case can be only applied
   // if the value was zero extended from 16 bit,
@@ -42934,9 +42933,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue NewSubusLHS =
       DAG.getZExtOrTrunc(SubusLHS, SDLoc(SubusLHS), ShrinkedType);
   SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
-  SDValue Psubus =
-      SplitOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
-                       { NewSubusLHS, NewSubusRHS }, USUBSATBuilder);
+  SDValue Psubus = DAG.getNode(ISD::USUBSAT, SDLoc(N), ShrinkedType,
+                               NewSubusLHS, NewSubusRHS);
+
   // Zero extend the result, it may be used somewhere as 32 bit,
   // if not zext and following trunc will shrink.
   return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);
