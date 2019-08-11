@@ -1,6 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 import os
+import platform
 
 # Load common config for all compiler-rt unit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
@@ -22,3 +23,10 @@ if 'LD_LIBRARY_PATH' in os.environ:
   config.environment['LD_LIBRARY_PATH'] = libdirs
 else:
   config.environment['LD_LIBRARY_PATH'] = config.llvm_lib_dir
+
+if platform.system() == 'FreeBSD':
+  if 'LD_32_LIBRARY_PATH' in os.environ:
+    libdirs = os.path.pathsep.join((config.llvm_lib_dir, os.environ['LD_32_LIBRARY_PATH']))
+    config.environment['LD_32_LIBRARY_PATH'] = libdirs
+  else:
+    config.environment['LD_32_LIBRARY_PATH'] = config.llvm_lib_dir
