@@ -3212,7 +3212,7 @@ public:
     SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
     if (!sym_file)
       return;
-    uto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
+    auto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
     if (!ast_ctx)
       return llvm::consumeError(ast_ctx.takeError());
     auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&(*ast_ctx));
