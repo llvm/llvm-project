@@ -1,6 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 import os
+import platform
 
 # Load common config for all compiler-rt unit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
@@ -9,6 +10,11 @@ def push_ld_library_path(config, new_path):
   new_ld_library_path = os.path.pathsep.join(
     (new_path, config.environment.get('LD_LIBRARY_PATH', '')))
   config.environment['LD_LIBRARY_PATH'] = new_ld_library_path
+
+  if platform.system() == 'FreeBSD':
+    new_ld_32_library_path = os.path.pathsep.join(
+      (new_path, config.environment.get('LD_32_LIBRARY_PATH', '')))
+    config.environment['LD_32_LIBRARY_PATH'] = new_ld_32_library_path
 
 # Setup config name.
 config.name = 'AddressSanitizer-Unit'

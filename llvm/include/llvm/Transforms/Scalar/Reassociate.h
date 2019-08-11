@@ -122,7 +122,9 @@ private:
   void EraseInst(Instruction *I);
   void RecursivelyEraseDeadInsts(Instruction *I, OrderedSet &Insts);
   void OptimizeInst(Instruction *I);
-  Instruction *canonicalizeNegConstExpr(Instruction *I);
+  Instruction *canonicalizeNegFPConstantsForOp(Instruction *I, Instruction *Op,
+                                               Value *OtherOp);
+  Instruction *canonicalizeNegFPConstants(Instruction *I);
   void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);
 };
 

@@ -279,8 +279,8 @@ define i1 @t18_const_oneuse0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t18_const_oneuse0(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
@@ -521,15 +521,70 @@ define i1 @t31_var_oneuse6(i32 %x, i32 %y, i32 %shamt0, i32 %shamt1) {
   ret i1 %t3
 }
 
+; Shift-of-const
+
+; Ok, non-truncated shift is of constant;
+define i1 @t32_shift_of_const_oneuse0(i32 %x, i32 %y, i32 %len) {
+; CHECK-LABEL: @t32_shift_of_const_oneuse0(
+; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 -52543054, [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T2]])
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[Y:%.*]], [[T2]]
+; CHECK-NEXT:    call void @use32(i32 [[T3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %t0 = sub i32 32, %len
+  call void @use32(i32 %t0)
+  %t1 = lshr i32 4242424242, %t0 ; shift-of-constant
+  call void @use32(i32 %t1)
+  %t2 = add i32 %len, -1
+  call void @use32(i32 %t2)
+  %t3 = shl i32 %y, %t2
+  call void @use32(i32 %t3)
+  %t4 = and i32 %t1, %t3 ; no extra uses
+  %t5 = icmp ne i32 %t4, 0
+  ret i1 %t5
+}
+; Ok, truncated shift is of constant;
+define i1 @t33_shift_of_const_oneuse1(i32 %x, i32 %y, i32 %len) {
+; CHECK-LABEL: @t33_shift_of_const_oneuse1(
+; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T2]])
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 -52543054, [[T2]]
+; CHECK-NEXT:    call void @use32(i32 [[T3]])
+; CHECK-NEXT:    ret i1 false
+;
+  %t0 = sub i32 32, %len
+  call void @use32(i32 %t0)
+  %t1 = lshr i32 %x, %t0 ; shift-of-constant
+  call void @use32(i32 %t1)
+  %t2 = add i32 %len, -1
+  call void @use32(i32 %t2)
+  %t3 = shl i32 4242424242, %t2
+  call void @use32(i32 %t3)
+  %t4 = and i32 %t1, %t3 ; no extra uses
+  %t5 = icmp ne i32 %t4, 0
+  ret i1 %t5
+}
+
 ; Commutativity with extra uses
 
-define i1 @t32_commutativity0_oneuse0(i32 %x) {
-; CHECK-LABEL: @t32_commutativity0_oneuse0(
+define i1 @t34_commutativity0_oneuse0(i32 %x) {
+; CHECK-LABEL: @t34_commutativity0_oneuse0(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
@@ -541,8 +596,8 @@ define i1 @t32_commutativity0_oneuse0(i32 %x) {
   %t3 = icmp ne i32 %t2, 0
   ret i1 %t3
 }
-define i1 @t33_commutativity0_oneuse1(i32 %x) {
-; CHECK-LABEL: @t33_commutativity0_oneuse1(
+define i1 @t35_commutativity0_oneuse1(i32 %x) {
+; CHECK-LABEL: @t35_commutativity0_oneuse1(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[Y]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
@@ -560,13 +615,13 @@ define i1 @t33_commutativity0_oneuse1(i32 %x) {
   ret i1 %t3
 }
 
-define i1 @t34_commutativity1_oneuse0(i32 %y) {
-; CHECK-LABEL: @t34_commutativity1_oneuse0(
+define i1 @t36_commutativity1_oneuse0(i32 %y) {
+; CHECK-LABEL: @t36_commutativity1_oneuse0(
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 [[X]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
@@ -578,8 +633,8 @@ define i1 @t34_commutativity1_oneuse0(i32 %y) {
   %t3 = icmp ne i32 %t2, 0
   ret i1 %t3
 }
-define i1 @t35_commutativity1_oneuse1(i32 %y) {
-; CHECK-LABEL: @t35_commutativity1_oneuse1(
+define i1 @t37_commutativity1_oneuse1(i32 %y) {
+; CHECK-LABEL: @t37_commutativity1_oneuse1(
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
@@ -598,8 +653,8 @@ define i1 @t35_commutativity1_oneuse1(i32 %y) {
 }
 
 ; Negative tests
-define <2 x i1> @n36_overshift(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @n36_overshift(
+define <2 x i1> @n38_overshift(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @n38_overshift(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 15, i32 1>
 ; CHECK-NEXT:    [[T1:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 17, i32 1>
 ; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[T1]], [[T0]]

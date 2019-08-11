@@ -2038,7 +2038,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
         for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
           if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
             if (OpBit->getValue())
-              OpInfo.InitValue |= 1 << I;
+              OpInfo.InitValue |= 1ULL << I;
 
     unsigned Base = ~0U;
     unsigned Width = 0;

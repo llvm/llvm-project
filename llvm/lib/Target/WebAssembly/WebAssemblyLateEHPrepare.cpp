@@ -233,6 +233,7 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 // it. The pseudo instruction will be deleted later.
 bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   auto *EHInfo = MF.getWasmEHFuncInfo();
   SmallVector<MachineInstr *, 16> ExtractInstrs;
   SmallVector<MachineInstr *, 8> ToDelete;
@@ -339,9 +340,11 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
               WebAssembly::ClangCallTerminateFn);
       assert(ClangCallTerminateFn &&
              "There is no __clang_call_terminate() function");
+      unsigned Reg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+      BuildMI(ElseMBB, DL, TII.get(WebAssembly::CONST_I32), Reg).addImm(0);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL_VOID))
           .addGlobalAddress(ClangCallTerminateFn)
-          .addImm(0);
+          .addReg(Reg);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::UNREACHABLE));
 
     } else {

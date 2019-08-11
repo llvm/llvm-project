@@ -216,10 +216,37 @@ struct FormatStyle {
   /// \endcode
   bool AllowAllParametersOfDeclarationOnNextLine;
 
-  /// Allows contracting simple braced statements to a single line.
-  ///
-  /// E.g., this allows ``if (a) { return; }`` to be put on a single line.
-  bool AllowShortBlocksOnASingleLine;
+  /// Different styles for merging short blocks containing at most one
+  /// statement.
+  enum ShortBlockStyle {
+    /// Never merge blocks into a single line.
+    /// \code
+    ///   while (true) {
+    ///   }
+    ///   while (true) {
+    ///     continue;
+    ///   }
+    /// \endcode
+    SBS_Never,
+    /// Only merge empty blocks.
+    /// \code
+    ///   while (true) {}
+    ///   while (true) {
+    ///     continue;
+    ///   }
+    /// \endcode
+    SBS_Empty,
+    /// Always merge short blocks into a single line.
+    /// \code
+    ///   while (true) {}
+    ///   while (true) { continue; }
+    /// \endcode
+    SBS_Always,
+  };
+
+  /// Dependent on the value, ``while (true) { continue; }`` can be put on a
+  /// single line.
+  ShortBlockStyle AllowShortBlocksOnASingleLine;
 
   /// If ``true``, short case labels will be contracted to a single line.
   /// \code

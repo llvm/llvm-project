@@ -11771,9 +11771,8 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
     return DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), ShMask);
   };
 
-  // Found a valid zext mask! Try various lowering strategies based on the
+  // Found a valid a/zext mask! Try various lowering strategies based on the
   // input type and available ISA extensions.
-  // TODO: Add AnyExt support.
   if (Subtarget.hasSSE41()) {
     // Not worth offsetting 128-bit vectors if scale == 2, a pattern using
     // PUNPCK will catch this in a later shuffle match.
@@ -11782,7 +11781,8 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
     MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * Scale),
                                  NumElements / Scale);
     InputV = ShuffleOffset(InputV);
-    InputV = getExtendInVec(ISD::ZERO_EXTEND, DL, ExtVT, InputV, DAG);
+    InputV = getExtendInVec(AnyExt ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND, DL,
+                            ExtVT, InputV, DAG);
     return DAG.getBitcast(VT, InputV);
   }
 
@@ -33451,66 +33451,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       return HAddSub;
   }
 
-  // During Type Legalization, when promoting illegal vector types,
-  // the backend might introduce new shuffle dag nodes and bitcasts.
-  //
-  // This code performs the following transformation:
-  // fold: (shuffle (bitcast (BINOP A, B)), Undef, <Mask>) ->
-  //       (shuffle (BINOP (bitcast A), (bitcast B)), Undef, <Mask>)
-  //
-  // We do this only if both the bitcast and the BINOP dag nodes have
-  // one use. Also, perform this transformation only if the new binary
-  // operation is legal. This is to avoid introducing dag nodes that
-  // potentially need to be further expanded (or custom lowered) into a
-  // less optimal sequence of dag nodes.
-  if (!DCI.isBeforeLegalize() && DCI.isBeforeLegalizeOps() &&
-      N->getOpcode() == ISD::VECTOR_SHUFFLE &&
-      N->getOperand(0).getOpcode() == ISD::BITCAST &&
-      N->getOperand(1).isUndef() && N->getOperand(0).hasOneUse()) {
-    SDValue N0 = N->getOperand(0);
-    SDValue N1 = N->getOperand(1);
-
-    SDValue BC0 = N0.getOperand(0);
-    EVT SVT = BC0.getValueType();
-    unsigned Opcode = BC0.getOpcode();
-    unsigned NumElts = VT.getVectorNumElements();
-
-    if (BC0.hasOneUse() && SVT.isVector() &&
-        SVT.getVectorNumElements() * 2 == NumElts &&
-        TLI.isOperationLegal(Opcode, VT)) {
-      bool CanFold = false;
-      switch (Opcode) {
-      default : break;
-      case ISD::ADD:
-      case ISD::SUB:
-      case ISD::MUL:
-        // isOperationLegal lies for integer ops on floating point types.
-        CanFold = VT.isInteger();
-        break;
-      case ISD::FADD:
-      case ISD::FSUB:
-      case ISD::FMUL:
-        // isOperationLegal lies for floating point ops on integer types.
-        CanFold = VT.isFloatingPoint();
-        break;
-      }
-
-      unsigned SVTNumElts = SVT.getVectorNumElements();
-      ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
-      for (unsigned i = 0, e = SVTNumElts; i != e && CanFold; ++i)
-        CanFold = SVOp->getMaskElt(i) == (int)(i * 2);
-      for (unsigned i = SVTNumElts, e = NumElts; i != e && CanFold; ++i)
-        CanFold = SVOp->getMaskElt(i) < 0;
-
-      if (CanFold) {
-        SDValue BC00 = DAG.getBitcast(VT, BC0.getOperand(0));
-        SDValue BC01 = DAG.getBitcast(VT, BC0.getOperand(1));
-        SDValue NewBinOp = DAG.getNode(BC0.getOpcode(), dl, VT, BC00, BC01);
-        return DAG.getVectorShuffle(VT, dl, NewBinOp, N1, SVOp->getMask());
-      }
-    }
-  }
-
   // Attempt to combine into a vector load/broadcast.
   if (SDValue LD = combineToConsecutiveLoads(VT, N, dl, DAG, Subtarget, true))
     return LD;
@@ -33603,53 +33543,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                                   MachineMemOperand::MOLoad);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
       return VZLoad;
-    }
-  }
-
-
-  // Look for a truncating shuffle to v2i32 of a PMULUDQ where one of the
-  // operands is an extend from v2i32 to v2i64. Turn it into a pmulld.
-  // FIXME: This can probably go away once we default to widening legalization.
-  if (Subtarget.hasSSE41() && VT == MVT::v4i32 &&
-      N->getOpcode() == ISD::VECTOR_SHUFFLE &&
-      N->getOperand(0).getOpcode() == ISD::BITCAST &&
-      N->getOperand(0).getOperand(0).getOpcode() == X86ISD::PMULUDQ) {
-    SDValue BC = N->getOperand(0);
-    SDValue MULUDQ = BC.getOperand(0);
-    ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
-    ArrayRef<int> Mask = SVOp->getMask();
-    if (BC.hasOneUse() && MULUDQ.hasOneUse() &&
-        Mask[0] == 0 && Mask[1] == 2 && Mask[2] == -1 && Mask[3] == -1) {
-      SDValue Op0 = MULUDQ.getOperand(0);
-      SDValue Op1 = MULUDQ.getOperand(1);
-      if (Op0.getOpcode() == ISD::BITCAST &&
-          Op0.getOperand(0).getOpcode() == ISD::VECTOR_SHUFFLE &&
-          Op0.getOperand(0).getValueType() == MVT::v4i32) {
-        ShuffleVectorSDNode *SVOp0 =
-          cast<ShuffleVectorSDNode>(Op0.getOperand(0));
-        ArrayRef<int> Mask2 = SVOp0->getMask();
-        if (Mask2[0] == 0 && Mask2[1] == -1 &&
-            Mask2[2] == 1 && Mask2[3] == -1) {
-          Op0 = SVOp0->getOperand(0);
-          Op1 = DAG.getBitcast(MVT::v4i32, Op1);
-          Op1 = DAG.getVectorShuffle(MVT::v4i32, dl, Op1, Op1, Mask);
-          return DAG.getNode(ISD::MUL, dl, MVT::v4i32, Op0, Op1);
-        }
-      }
-      if (Op1.getOpcode() == ISD::BITCAST &&
-          Op1.getOperand(0).getOpcode() == ISD::VECTOR_SHUFFLE &&
-          Op1.getOperand(0).getValueType() == MVT::v4i32) {
-        ShuffleVectorSDNode *SVOp1 =
-          cast<ShuffleVectorSDNode>(Op1.getOperand(0));
-        ArrayRef<int> Mask2 = SVOp1->getMask();
-        if (Mask2[0] == 0 && Mask2[1] == -1 &&
-            Mask2[2] == 1 && Mask2[3] == -1) {
-          Op0 = DAG.getBitcast(MVT::v4i32, Op0);
-          Op0 = DAG.getVectorShuffle(MVT::v4i32, dl, Op0, Op0, Mask);
-          Op1 = SVOp1->getOperand(0);
-          return DAG.getNode(ISD::MUL, dl, MVT::v4i32, Op0, Op1);
-        }
-      }
     }
   }
 
@@ -42967,13 +42860,15 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
+  if (!VT.isVector())
+    return SDValue();
+
   // PSUBUS is supported, starting from SSE2, but truncation for v8i32
   // is only worth it with SSSE3 (PSHUFB).
-  if (!(Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) &&
+  EVT EltVT = VT.getVectorElementType();
+  if (!(Subtarget.hasSSE2() && (EltVT == MVT::i8 || EltVT == MVT::i16)) &&
       !(Subtarget.hasSSSE3() && (VT == MVT::v8i32 || VT == MVT::v8i64)) &&
-      !(Subtarget.hasAVX() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
-      !(Subtarget.useBWIRegs() && (VT == MVT::v64i8 || VT == MVT::v32i16 ||
-                                   VT == MVT::v16i32 || VT == MVT::v8i64)))
+      !(Subtarget.useBWIRegs() && (VT == MVT::v16i32)))
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
@@ -43003,16 +42898,13 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   } else
     return SDValue();
 
-  auto USUBSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                           ArrayRef<SDValue> Ops) {
-    return DAG.getNode(ISD::USUBSAT, DL, Ops[0].getValueType(), Ops);
-  };
-
   // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
   // special preprocessing in some cases.
-  if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
-    return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                            { SubusLHS, SubusRHS }, USUBSATBuilder);
+  if (EltVT == MVT::i8 || EltVT == MVT::i16)
+    return DAG.getNode(ISD::USUBSAT, SDLoc(N), VT, SubusLHS, SubusRHS);
+
+  assert((VT == MVT::v8i32 || VT == MVT::v16i32 || VT == MVT::v8i64) &&
+         "Unexpected VT!");
 
   // Special preprocessing case can be only applied
   // if the value was zero extended from 16 bit,
@@ -43041,9 +42933,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue NewSubusLHS =
       DAG.getZExtOrTrunc(SubusLHS, SDLoc(SubusLHS), ShrinkedType);
   SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
-  SDValue Psubus =
-      SplitOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
-                       { NewSubusLHS, NewSubusRHS }, USUBSATBuilder);
+  SDValue Psubus = DAG.getNode(ISD::USUBSAT, SDLoc(N), ShrinkedType,
+                               NewSubusLHS, NewSubusRHS);
+
   // Zero extend the result, it may be used somewhere as 32 bit,
   // if not zext and following trunc will shrink.
   return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);

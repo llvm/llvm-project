@@ -1938,88 +1938,132 @@ void ReassociatePass::EraseInst(Instruction *I) {
   MadeChange = true;
 }
 
-// Canonicalize expressions of the following form:
-//  x + (-Constant * y) -> x - (Constant * y)
-//  x - (-Constant * y) -> x + (Constant * y)
-Instruction *ReassociatePass::canonicalizeNegConstExpr(Instruction *I) {
-  if (!I->hasOneUse() || I->getType()->isVectorTy())
-    return nullptr;
+/// Recursively analyze an expression to build a list of instructions that have
+/// negative floating-point constant operands. The caller can then transform
+/// the list to create positive constants for better reassociation and CSE.
+static void getNegatibleInsts(Value *V,
+                              SmallVectorImpl<Instruction *> &Candidates) {
+  // Handle only one-use instructions. Combining negations does not justify
+  // replicating instructions.
+  Instruction *I;
+  if (!match(V, m_OneUse(m_Instruction(I))))
+    return;
 
-  // Must be a fmul or fdiv instruction.
-  unsigned Opcode = I->getOpcode();
-  if (Opcode != Instruction::FMul && Opcode != Instruction::FDiv)
-    return nullptr;
+  // Handle expressions of multiplications and divisions.
+  // TODO: This could look through floating-point casts.
+  const APFloat *C;
+  switch (I->getOpcode()) {
+    case Instruction::FMul:
+      // Not expecting non-canonical code here. Bail out and wait.
+      if (match(I->getOperand(0), m_Constant()))
+        break;
 
-  auto *C0 = dyn_cast<ConstantFP>(I->getOperand(0));
-  auto *C1 = dyn_cast<ConstantFP>(I->getOperand(1));
+      if (match(I->getOperand(1), m_APFloat(C)) && C->isNegative()) {
+        Candidates.push_back(I);
+        LLVM_DEBUG(dbgs() << "FMul with negative constant: " << *I << '\n');
+      }
+      getNegatibleInsts(I->getOperand(0), Candidates);
+      getNegatibleInsts(I->getOperand(1), Candidates);
+      break;
+    case Instruction::FDiv:
+      // Not expecting non-canonical code here. Bail out and wait.
+      if (match(I->getOperand(0), m_Constant()) &&
+          match(I->getOperand(1), m_Constant()))
+        break;
 
-  // Both operands are constant, let it get constant folded away.
-  if (C0 && C1)
-    return nullptr;
+      if ((match(I->getOperand(0), m_APFloat(C)) && C->isNegative()) ||
+          (match(I->getOperand(1), m_APFloat(C)) && C->isNegative())) {
+        Candidates.push_back(I);
+        LLVM_DEBUG(dbgs() << "FDiv with negative constant: " << *I << '\n');
+      }
+      getNegatibleInsts(I->getOperand(0), Candidates);
+      getNegatibleInsts(I->getOperand(1), Candidates);
+      break;
+    default:
+      break;
+  }
+}
 
-  ConstantFP *CF = C0 ? C0 : C1;
+/// Given an fadd/fsub with an operand that is a one-use instruction
+/// (the fadd/fsub), try to change negative floating-point constants into
+/// positive constants to increase potential for reassociation and CSE.
+Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
+                                                              Instruction *Op,
+                                                              Value *OtherOp) {
+  assert((I->getOpcode() == Instruction::FAdd ||
+          I->getOpcode() == Instruction::FSub) && "Expected fadd/fsub");
 
-  // Must have one constant operand.
-  if (!CF)
-    return nullptr;
-
-  // Must be a negative ConstantFP.
-  if (!CF->isNegative())
-    return nullptr;
-
-  // User must be a binary operator with one or more uses.
-  Instruction *User = I->user_back();
-  if (!isa<BinaryOperator>(User) || User->use_empty())
-    return nullptr;
-
-  unsigned UserOpcode = User->getOpcode();
-  if (UserOpcode != Instruction::FAdd && UserOpcode != Instruction::FSub)
-    return nullptr;
-
-  // Subtraction is not commutative. Explicitly, the following transform is
-  // not valid: (-Constant * y) - x  -> x + (Constant * y)
-  if (!User->isCommutative() && User->getOperand(1) != I)
+  // Collect instructions with negative FP constants from the subtree that ends
+  // in Op.
+  SmallVector<Instruction *, 4> Candidates;
+  getNegatibleInsts(Op, Candidates);
+  if (Candidates.empty())
     return nullptr;
 
   // Don't canonicalize x + (-Constant * y) -> x - (Constant * y), if the
   // resulting subtract will be broken up later.  This can get us into an
   // infinite loop during reassociation.
-  if (UserOpcode == Instruction::FAdd && ShouldBreakUpSubtract(User))
+  bool IsFSub = I->getOpcode() == Instruction::FSub;
+  bool NeedsSubtract = !IsFSub && Candidates.size() % 2 == 1;
+  if (NeedsSubtract && ShouldBreakUpSubtract(I))
     return nullptr;
 
-  // Change the sign of the constant.
-  APFloat Val = CF->getValueAPF();
-  Val.changeSign();
-  I->setOperand(C0 ? 0 : 1, ConstantFP::get(CF->getContext(), Val));
-
-  // Canonicalize I to RHS to simplify the next bit of logic. E.g.,
-  // ((-Const*y) + x) -> (x + (-Const*y)).
-  if (User->getOperand(0) == I && User->isCommutative())
-    cast<BinaryOperator>(User)->swapOperands();
-
-  Value *Op0 = User->getOperand(0);
-  Value *Op1 = User->getOperand(1);
-  BinaryOperator *NI;
-  switch (UserOpcode) {
-  default:
-    llvm_unreachable("Unexpected Opcode!");
-  case Instruction::FAdd:
-    NI = BinaryOperator::CreateFSub(Op0, Op1);
-    NI->setFastMathFlags(cast<FPMathOperator>(User)->getFastMathFlags());
-    break;
-  case Instruction::FSub:
-    NI = BinaryOperator::CreateFAdd(Op0, Op1);
-    NI->setFastMathFlags(cast<FPMathOperator>(User)->getFastMathFlags());
-    break;
+  for (Instruction *Negatible : Candidates) {
+    const APFloat *C;
+    if (match(Negatible->getOperand(0), m_APFloat(C))) {
+      assert(!match(Negatible->getOperand(1), m_Constant()) &&
+             "Expecting only 1 constant operand");
+      assert(C->isNegative() && "Expected negative FP constant");
+      Negatible->setOperand(0, ConstantFP::get(Negatible->getType(), abs(*C)));
+      MadeChange = true;
+    }
+    if (match(Negatible->getOperand(1), m_APFloat(C))) {
+      assert(!match(Negatible->getOperand(0), m_Constant()) &&
+             "Expecting only 1 constant operand");
+      assert(C->isNegative() && "Expected negative FP constant");
+      Negatible->setOperand(1, ConstantFP::get(Negatible->getType(), abs(*C)));
+      MadeChange = true;
+    }
   }
+  assert(MadeChange == true && "Negative constant candidate was not changed");
 
-  NI->insertBefore(User);
-  NI->setName(User->getName());
-  User->replaceAllUsesWith(NI);
-  NI->setDebugLoc(I->getDebugLoc());
+  // Negations cancelled out.
+  if (Candidates.size() % 2 == 0)
+    return I;
+
+  // Negate the final operand in the expression by flipping the opcode of this
+  // fadd/fsub.
+  assert(Candidates.size() % 2 == 1 && "Expected odd number");
+  IRBuilder<> Builder(I);
+  Value *NewInst = IsFSub ? Builder.CreateFAddFMF(OtherOp, Op, I)
+                          : Builder.CreateFSubFMF(OtherOp, Op, I);
+  I->replaceAllUsesWith(NewInst);
   RedoInsts.insert(I);
-  MadeChange = true;
-  return NI;
+  return dyn_cast<Instruction>(NewInst);
+}
+
+/// Canonicalize expressions that contain a negative floating-point constant
+/// of the following form:
+///   OtherOp + (subtree) -> OtherOp {+/-} (canonical subtree)
+///   (subtree) + OtherOp -> OtherOp {+/-} (canonical subtree)
+///   OtherOp - (subtree) -> OtherOp {+/-} (canonical subtree)
+///
+/// The fadd/fsub opcode may be switched to allow folding a negation into the
+/// input instruction.
+Instruction *ReassociatePass::canonicalizeNegFPConstants(Instruction *I) {
+  LLVM_DEBUG(dbgs() << "Combine negations for: " << *I << '\n');
+  Value *X;
+  Instruction *Op;
+  if (match(I, m_FAdd(m_Value(X), m_OneUse(m_Instruction(Op)))))
+    if (Instruction *R = canonicalizeNegFPConstantsForOp(I, Op, X))
+      I = R;
+  if (match(I, m_FAdd(m_OneUse(m_Instruction(Op)), m_Value(X))))
+    if (Instruction *R = canonicalizeNegFPConstantsForOp(I, Op, X))
+      I = R;
+  if (match(I, m_FSub(m_Value(X), m_OneUse(m_Instruction(Op)))))
+    if (Instruction *R = canonicalizeNegFPConstantsForOp(I, Op, X))
+      I = R;
+  return I;
 }
 
 /// Inspect and optimize the given instruction. Note that erasing
@@ -2042,15 +2086,15 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
       I = NI;
     }
 
-  // Canonicalize negative constants out of expressions.
-  if (Instruction *Res = canonicalizeNegConstExpr(I))
-    I = Res;
-
   // Commute binary operators, to canonicalize the order of their operands.
   // This can potentially expose more CSE opportunities, and makes writing other
   // transformations simpler.
   if (I->isCommutative())
     canonicalizeOperands(I);
+
+  // Canonicalize negative constants out of expressions.
+  if (Instruction *Res = canonicalizeNegFPConstants(I))
+    I = Res;
 
   // Don't optimize floating-point instructions unless they are 'fast'.
   if (I->getType()->isFPOrFPVectorTy() && !I->isFast())

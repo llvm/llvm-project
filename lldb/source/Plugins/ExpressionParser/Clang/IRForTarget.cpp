@@ -1265,16 +1265,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     clang::NamedDecl *named_decl = DeclForGlobal(global_variable);
 
     if (!named_decl) {
-      if (IsObjCSelectorRef(llvm_value_ptr))
-        return true;
-
-      if (!global_variable->hasExternalLinkage())
-        return true;
-
       LLDB_LOG(log, "Found global variable \"{0}\" without metadata",
                global_variable->getName());
 
-      return false;
+      return true;
     }
 
     llvm::StringRef name(named_decl->getName());
