@@ -231,6 +231,12 @@ private:
       // FIXME: skip tokens inside macros for now.
       return;
 
+    // Non top level decls that are included from a header are not filtered by
+    // topLevelDecls. (example: method declarations being included from another
+    // file for a class from another file)
+    if (!isInsideMainFile(Loc, SM))
+      return;
+
     auto R = getTokenRange(SM, Ctx.getLangOpts(), Loc);
     if (!R) {
       // R should always have a value, if it doesn't something is very wrong.

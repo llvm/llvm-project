@@ -51,9 +51,15 @@ std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
   return ExpectedTokens;
 }
 
-void checkHighlightings(llvm::StringRef Code) {
+void checkHighlightings(llvm::StringRef Code,
+                        std::vector<std::pair</*FileName*/ llvm::StringRef,
+                                              /*FileContent*/ llvm::StringRef>>
+                            AdditionalFiles = {}) {
   Annotations Test(Code);
-  auto AST = TestTU::withCode(Test.code()).build();
+  auto TU = TestTU::withCode(Test.code());
+  for (auto File : AdditionalFiles)
+    TU.AdditionalFiles.insert({File.first, File.second});
+  auto AST = TU.build();
   std::vector<HighlightingToken> ActualTokens = getSemanticHighlightings(AST);
   EXPECT_THAT(ActualTokens, getExpectedTokens(Test)) << Code;
 }
@@ -321,6 +327,17 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
   }
+
+  checkHighlightings(R"cpp(
+    class $Class[[A]] {
+      #include "imp.h"
+    };
+    #endif
+  )cpp",
+                     {{"imp.h", R"cpp(
+    int someMethod();
+    void otherMethod();
+  )cpp"}});
 }
 
 TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {

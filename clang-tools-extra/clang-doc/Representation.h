@@ -131,6 +131,9 @@ struct Reference {
            std::tie(Other.USR, Other.Name, Other.RefType);
   }
 
+  bool mergeable(const Reference &Other);
+  void merge(Reference &&I);
+
   SymbolID USR = SymbolID(); // Unique identifer for referenced decl
   SmallString<16> Name;      // Name of type (possibly unresolved).
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
