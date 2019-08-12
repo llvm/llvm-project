@@ -708,7 +708,8 @@ public:
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
-  size_t GetTypeBitAlign(lldb::opaque_compiler_type_t type) override;
+  llvm::Optional<size_t>
+  GetTypeBitAlign(lldb::opaque_compiler_type_t type) override;
 
   uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
                           bool omit_empty_base_classes,

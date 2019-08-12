@@ -530,12 +530,15 @@ public:
           return;
         }
 
-        size_t bit_align =
+        llvm::Optional<size_t> opt_bit_align =
             m_variable_sp->GetType()->GetLayoutCompilerType().GetTypeBitAlign();
-        size_t byte_align = (bit_align + 7) / 8;
+        if (!opt_bit_align) {
+          err.SetErrorStringWithFormat("can't get the type alignment for %s",
+                                       m_variable_sp->GetName().AsCString());
+          return;
+        }
 
-        if (!byte_align)
-          byte_align = 1;
+        size_t byte_align = (*opt_bit_align + 7) / 8;
 
         Status alloc_error;
         const bool zero_memory = false;
@@ -788,11 +791,14 @@ public:
         err.SetErrorString("can't get size of type");
         return;
       }
-      size_t bit_align = m_type.GetTypeBitAlign();
-      size_t byte_align = (bit_align + 7) / 8;
 
-      if (!byte_align)
-        byte_align = 1;
+      llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign();
+      if (!opt_bit_align) {
+        err.SetErrorStringWithFormat("can't get the type alignment");
+        return;
+      }
+
+      size_t byte_align = (*opt_bit_align + 7) / 8;
 
       Status alloc_error;
       const bool zero_memory = true;
