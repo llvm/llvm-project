@@ -437,17 +437,17 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       default:
         llvm_unreachable("Unsupported OpenCL version");
       }
-      Builder.defineMacro("CL_VERSION_1_0", "100");
-      Builder.defineMacro("CL_VERSION_1_1", "110");
-      Builder.defineMacro("CL_VERSION_1_2", "120");
-      Builder.defineMacro("CL_VERSION_2_0", "200");
-
-      if (TI.isLittleEndian())
-        Builder.defineMacro("__ENDIAN_LITTLE__");
-
-      if (LangOpts.FastRelaxedMath)
-        Builder.defineMacro("__FAST_RELAXED_MATH__");
     }
+    Builder.defineMacro("CL_VERSION_1_0", "100");
+    Builder.defineMacro("CL_VERSION_1_1", "110");
+    Builder.defineMacro("CL_VERSION_1_2", "120");
+    Builder.defineMacro("CL_VERSION_2_0", "200");
+
+    if (TI.isLittleEndian())
+      Builder.defineMacro("__ENDIAN_LITTLE__");
+
+    if (LangOpts.FastRelaxedMath)
+      Builder.defineMacro("__FAST_RELAXED_MATH__");
   }
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)

@@ -226,8 +226,6 @@ static __itt_api_info api_list[] = {
 #pragma warning(pop)
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 
-static char dll_path[PATH_MAX] = { 0 };
-
 /* static part descriptor which handles. all notification api attributes. */
 __itt_global _N_(_ittapi_global) = {
     ITT_MAGIC,                                     /* identification info */
@@ -238,7 +236,7 @@ __itt_global _N_(_ittapi_global) = {
     MUTEX_INITIALIZER,                             /* mutex */
     NULL,                                          /* dynamic library handle */
     NULL,                                          /* error_handler */
-    (const char**)&dll_path,                       /* dll_path_ptr */
+    NULL,                                          /* dll_path_ptr */
     (__itt_api_info*)&api_list,                    /* api_list_ptr */
     NULL,                                          /* next __itt_global */
     NULL,                                          /* thread_list */

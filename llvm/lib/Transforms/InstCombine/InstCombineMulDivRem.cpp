@@ -1234,6 +1234,17 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     return &I;
   }
 
+  // X / fabs(X) -> copysign(1.0, X)
+  // fabs(X) / X -> copysign(1.0, X)
+  if (I.hasNoNaNs() && I.hasNoInfs() &&
+      (match(&I,
+             m_FDiv(m_Value(X), m_Intrinsic<Intrinsic::fabs>(m_Deferred(X)))) ||
+       match(&I, m_FDiv(m_Intrinsic<Intrinsic::fabs>(m_Value(X)),
+                        m_Deferred(X))))) {
+    Value *V = Builder.CreateBinaryIntrinsic(
+        Intrinsic::copysign, ConstantFP::get(I.getType(), 1.0), X, &I);
+    return replaceInstUsesWith(I, V);
+  }
   return nullptr;
 }
 

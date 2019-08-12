@@ -1439,9 +1439,11 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     return;
 
   if (DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
-      ObjF->getMemoryBufferRef().getBufferSize())
-    reportError(
+      ObjF->getMemoryBufferRef().getBufferSize()) {
+    reportWarning(
         "PT_DYNAMIC segment offset + size exceeds the size of the file");
+    return;
+  }
 
   if (!DynamicSec) {
     DynamicTable = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));

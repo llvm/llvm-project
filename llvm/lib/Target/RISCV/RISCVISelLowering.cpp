@@ -1031,12 +1031,14 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // We can materialise `c1 << c2` into an add immediate, so it's "free",
       // and the combine should happen, to potentially allow further combines
       // later.
-      if (isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
+      if (ShiftedC1Int.getMinSignedBits() <= 64 &&
+          isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
         return true;
 
       // We can materialise `c1` in an add immediate, so it's "free", and the
       // combine should be prevented.
-      if (isLegalAddImmediate(C1Int.getSExtValue()))
+      if (C1Int.getMinSignedBits() <= 64 &&
+          isLegalAddImmediate(C1Int.getSExtValue()))
         return false;
 
       // Neither constant will fit into an immediate, so find materialisation

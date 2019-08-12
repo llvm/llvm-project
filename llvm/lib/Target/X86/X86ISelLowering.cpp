@@ -30974,12 +30974,21 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One |= Known2.One;
     break;
   }
+  case X86ISD::PSADBW: {
+    assert(VT.getScalarType() == MVT::i64 &&
+           Op.getOperand(0).getValueType().getScalarType() == MVT::i8 &&
+           "Unexpected PSADBW types");
+
+    // PSADBW - fills low 16 bits and zeros upper 48 bits of each i64 result.
+    Known.Zero.setBitsFrom(16);
+    break;
+  }
   case X86ISD::CMOV: {
-    Known = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
+    Known = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
-    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth+1);
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     // Only known if known in both the LHS and RHS.
     Known.One &= Known2.One;

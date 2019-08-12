@@ -319,55 +319,6 @@ SourceRange ExtractionContext::getExtractionChars() const {
   return *toHalfOpenFileRange(SM, Ctx.getLangOpts(), Expr->getSourceRange());
 }
 
-/// Extracts an expression to the variable dummy
-/// Before:
-/// int x = 5 + 4 * 3;
-///         ^^^^^
-/// After:
-/// auto dummy = 5 + 4;
-/// int x = dummy * 3;
-class ExtractVariable : public Tweak {
-public:
-  const char *id() const override final;
-  bool prepare(const Selection &Inputs) override;
-  Expected<Effect> apply(const Selection &Inputs) override;
-  std::string title() const override {
-    return "Extract subexpression to variable";
-  }
-  Intent intent() const override { return Refactor; }
-  // Compute the extraction context for the Selection
-  bool computeExtractionContext(const SelectionTree::Node *N,
-                                const SourceManager &SM, const ASTContext &Ctx);
-
-private:
-  // the expression to extract
-  std::unique_ptr<ExtractionContext> Target;
-};
-REGISTER_TWEAK(ExtractVariable)
-bool ExtractVariable::prepare(const Selection &Inputs) {
-  // we don't trigger on empty selections for now
-  if (Inputs.SelectionBegin == Inputs.SelectionEnd)
-    return false;
-  const ASTContext &Ctx = Inputs.AST.getASTContext();
-  const SourceManager &SM = Inputs.AST.getSourceManager();
-  const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
-  return computeExtractionContext(N, SM, Ctx);
-}
-
-Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
-  tooling::Replacements Result;
-  // FIXME: get variable name from user or suggest based on type
-  std::string VarName = "dummy";
-  SourceRange Range = Target->getExtractionChars();
-  // insert new variable declaration
-  if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))
-    return std::move(Err);
-  // replace expression with variable name
-  if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
-    return std::move(Err);
-  return Effect::applyEdit(Result);
-}
-
 // Find the CallExpr whose callee is the (possibly wrapped) DeclRef
 const SelectionTree::Node *getCallExpr(const SelectionTree::Node *DeclRef) {
   const SelectionTree::Node &MaybeCallee = DeclRef->outerImplicit();
@@ -445,25 +396,79 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   return true;
 }
 
-// Find the node that will form our ExtractionContext.
+// Find the Expr node that we're going to extract.
 // We don't want to trigger for assignment expressions and variable/field
 // DeclRefs. For function/member function, we want to extract the entire
 // function call.
-bool ExtractVariable::computeExtractionContext(const SelectionTree::Node *N,
-                                               const SourceManager &SM,
-                                               const ASTContext &Ctx) {
+const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
   if (!N)
-    return false;
+    return nullptr;
   const SelectionTree::Node *TargetNode = N;
+  const clang::Expr *SelectedExpr = N->ASTNode.get<clang::Expr>();
+  if (!SelectedExpr)
+    return nullptr;
   // For function and member function DeclRefs, extract the whole call.
-  if (const Expr *E = N->ASTNode.get<clang::Expr>())
-    if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
-      if (const SelectionTree::Node *Call = getCallExpr(N))
-        TargetNode = Call;
-  if (!eligibleForExtraction(TargetNode))
+  if (llvm::isa<DeclRefExpr>(SelectedExpr) ||
+      llvm::isa<MemberExpr>(SelectedExpr))
+    if (const SelectionTree::Node *Call = getCallExpr(N))
+      TargetNode = Call;
+  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  if (const BinaryOperator *BinOpExpr =
+          dyn_cast_or_null<BinaryOperator>(SelectedExpr)) {
+    if (BinOpExpr->getOpcode() == BinaryOperatorKind::BO_Assign)
+      return nullptr;
+  }
+  if (!TargetNode || !eligibleForExtraction(TargetNode))
+    return nullptr;
+  return TargetNode;
+}
+
+/// Extracts an expression to the variable dummy
+/// Before:
+/// int x = 5 + 4 * 3;
+///         ^^^^^
+/// After:
+/// auto dummy = 5 + 4;
+/// int x = dummy * 3;
+class ExtractVariable : public Tweak {
+public:
+  const char *id() const override final;
+  bool prepare(const Selection &Inputs) override;
+  Expected<Effect> apply(const Selection &Inputs) override;
+  std::string title() const override {
+    return "Extract subexpression to variable";
+  }
+  Intent intent() const override { return Refactor; }
+
+private:
+  // the expression to extract
+  std::unique_ptr<ExtractionContext> Target;
+};
+REGISTER_TWEAK(ExtractVariable)
+bool ExtractVariable::prepare(const Selection &Inputs) {
+  // we don't trigger on empty selections for now
+  if (Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
-  Target = llvm::make_unique<ExtractionContext>(TargetNode, SM, Ctx);
-  return Target->isExtractable();
+  const ASTContext &Ctx = Inputs.AST.getASTContext();
+  const SourceManager &SM = Inputs.AST.getSourceManager();
+  if (const SelectionTree::Node *N =
+          computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))
+    Target = llvm::make_unique<ExtractionContext>(N, SM, Ctx);
+  return Target && Target->isExtractable();
+}
+
+Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
+  tooling::Replacements Result;
+  // FIXME: get variable name from user or suggest based on type
+  std::string VarName = "dummy";
+  SourceRange Range = Target->getExtractionChars();
+  // insert new variable declaration
+  if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))
+    return std::move(Err);
+  // replace expression with variable name
+  if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
+    return std::move(Err);
+  return Effect::applyEdit(Result);
 }
 
 } // namespace

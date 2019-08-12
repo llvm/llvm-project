@@ -1700,6 +1700,11 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     Known = Known.trunc(BitWidth);
 
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, TruncMask, DemandedElts, TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, NewSrc));
+
     // If the input is only used by this truncate, see if we can shrink it based
     // on the known demanded bits.
     if (Src.getNode()->hasOneUse()) {

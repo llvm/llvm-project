@@ -166,30 +166,29 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}test_loop_with_if:
-; GCN:   BB{{.*}}: ; %bb2
+; GFX1032: s_or_b32 s{{[0-9]+}}, vcc_lo, s{{[0-9]+}}
+; GFX1032: s_andn2_b32 exec_lo, exec_lo, s{{[0-9]+}}
+; GFX1064: s_or_b64 s[{{[0-9:]+}}], vcc, s[{{[0-9:]+}}]
+; GFX1064: s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
+; GCN:     s_cbranch_execz
+; GCN:   BB{{.*}}:
 ; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, vcc_lo
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], vcc{{$}}
 ; GCN:     s_cbranch_execz
-; GCN:   BB{{.*}}: ; %bb5
-; GCN:   BB{{.*}}: ; %Flow
+; GCN:   BB{{.*}}:
+; GCN:   BB{{.*}}:
 ; GFX1032: s_xor_b32 s{{[0-9]+}}, exec_lo, s{{[0-9]+}}
 ; GFX1064: s_xor_b64 s[{{[0-9:]+}}], exec, s[{{[0-9:]+}}]
 ; GCN:     ; mask branch BB
-; GCN:   BB{{.*}}: ; %bb11
-; GCN:   BB{{.*}}: ; %Flow1
+; GCN:   BB{{.*}}:
+; GCN:   BB{{.*}}:
 ; GFX1032: s_or_b32 exec_lo, exec_lo, s{{[0-9]+}}
 ; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX1064: s_or_b64 exec, exec, s[{{[0-9:]+}}]
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 ; GCN:     ; mask branch BB
-; GCN:   BB{{.*}}: ; %bb10
-; GCN:   BB{{.*}}: ; %bb13
-; GFX1032: s_or_b32 s{{[0-9]+}}, vcc_lo, s{{[0-9]+}}
-; GFX1032: s_andn2_b32 exec_lo, exec_lo, s{{[0-9]+}}
-; GFX1064: s_or_b64 s[{{[0-9:]+}}], vcc, s[{{[0-9:]+}}]
-; GFX1064: s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
-; GCN:     s_cbranch_execnz
-; GCN:   ; %bb1
+; GCN:   BB{{.*}}:
+; GCN:   BB{{.*}}:
 ; GCN:     s_endpgm
 define amdgpu_kernel void @test_loop_with_if(i32 addrspace(1)* %arg) #0 {
 bb:
@@ -231,17 +230,16 @@ bb13:
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], vcc{{$}}
 ; GCN:     ; mask branch
 ; GCN:     s_cbranch_execz
-; GCN:   BB{{.*}}: ; %.preheader
-; GCN:   ; %bb8
+; GCN:   BB{{.*}}:
+; GCN:   BB{{.*}}:
 ; GFX1032: s_andn2_b32 s{{[0-9]+}}, s{{[0-9]+}}, exec_lo
 ; GFX1064: s_andn2_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], exec
 ; GFX1032: s_or_b32 s{{[0-9]+}}, vcc_lo, s{{[0-9]+}}
 ; GFX1032: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX1064: s_or_b64 s[{{[0-9:]+}}], vcc, s[{{[0-9:]+}}]
 ; GFX1064: s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
-; GCN:   BB{{.*}}: ; %Flow
-; GCN:     s_cbranch_execnz
-; GCN:   BB{{.*}}: ; %.loopexit
+; GCN:     s_cbranch_execz
+; GCN:   BB{{.*}}:
 define amdgpu_kernel void @test_loop_with_if_else_break(i32 addrspace(1)* %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -657,7 +655,7 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GCN-LABEL: {{^}}test_loop_vcc:
 ; GFX1032: v_cmp_lt_f32_e32 vcc_lo,
 ; GFX1064: v_cmp_lt_f32_e32 vcc,
-; GCN: s_cbranch_vccz
+; GCN: s_cbranch_vccnz
 define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 entry:
   br label %loop

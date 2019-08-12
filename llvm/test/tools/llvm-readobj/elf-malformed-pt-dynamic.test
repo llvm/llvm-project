@@ -1,5 +1,5 @@
 # If the offset and/or size fields of the PT_DYNAMIC field become corrupted,
-# we should report a sensible error message.
+# we should report a sensible message.
 
 # Creating such a malformed file is hard. The easiest way to simulate it is to
 # truncate the file. Note that the section headers must first be stripped or
@@ -13,14 +13,14 @@
 # within the file.
 # RUN: cp %t.stripped %t.truncated1
 # RUN: %python -c "with open(r'%t.truncated1', 'r+') as f: f.truncate(0x1001)"
-# RUN: not llvm-readobj %t.truncated1 --dynamic-table 2>&1 | FileCheck %s
+# RUN: llvm-readobj %t.truncated1 --dynamic-table 2>&1 | FileCheck %s
 
 # Test case where the offset is too large to be in the file.
 # RUN: cp %t.stripped %t.truncated2
 # RUN: %python -c "with open(r'%t.truncated2', 'r+') as f: f.truncate(0xFFF)"
-# RUN: not llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck %s
+# RUN: llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck %s
 
-# CHECK: error: PT_DYNAMIC segment offset + size exceeds the size of the file
+# CHECK: warning: PT_DYNAMIC segment offset + size exceeds the size of the file
 
 --- !ELF
 FileHeader:

@@ -948,6 +948,15 @@ TEST(IgnoreDiags, FromNonWrittenSources) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
+TEST(IgnoreDiags, FromNonWrittenInclude) {
+  TestTU TU = TestTU::withCode("");
+  TU.ExtraArgs.push_back("--include=a.h");
+  TU.AdditionalFiles = {{"a.h", "void main();"}};
+  // The diagnostic "main must return int" is from the header, we don't attempt
+  // to render it in the main file as there is no written location there.
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
+}
+
 } // namespace
 
 } // namespace clangd
