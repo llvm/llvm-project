@@ -265,8 +265,6 @@ public:
   llvm::Optional<uint64_t>
   GetByteStride(ExecutionContextScope *exe_scope) const;
 
-  uint64_t GetAlignedBitSize() const;
-
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
   lldb::Format GetFormat() const;
