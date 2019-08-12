@@ -1372,8 +1372,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(nullptr);
     if (!value_size)
       return false;
-    lldb::offset_t value_alignment =
-        (compiler_type.GetTypeBitAlign() + 7ull) / 8ull;
+    llvm::Optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign();
+    if (!opt_alignment)
+      return false;
+    lldb::offset_t value_alignment = (*opt_alignment + 7ull) / 8ull;
 
     if (log) {
       log->Printf("Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64

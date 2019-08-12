@@ -6142,14 +6142,14 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-size_t SwiftASTContext::GetTypeBitAlign(void *type) {
+llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type) {
   if (type) {
     const swift::irgen::FixedTypeInfo *fixed_type_info =
         GetSwiftFixedTypeInfo(type);
     if (fixed_type_info)
       return fixed_type_info->getFixedAlignment().getValue();
   }
-  return 0;
+  return {};
 }
 
 lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
