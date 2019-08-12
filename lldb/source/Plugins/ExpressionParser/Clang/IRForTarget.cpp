@@ -155,12 +155,6 @@ clang::NamedDecl *IRForTarget::DeclForGlobal(GlobalValue *global_val) {
   return DeclForGlobal(global_val, m_module);
 }
 
-/// Returns true iff the mangled symbol is for a static guard variable.
-static bool isGuardVariableSymbol(llvm::StringRef mangled_symbol) {
-  return mangled_symbol.startswith("_ZGV") || // Itanium ABI guard variable
-         mangled_symbol.startswith("@4IA");   // Microsoft ABI guard variable
-}
-
 bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -179,14 +173,14 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     result_name = value_symbol.first();
 
     if (result_name.contains("$__lldb_expr_result_ptr") &&
-        !isGuardVariableSymbol(result_name)) {
+        !result_name.startswith("_ZGV")) {
       found_result = true;
       m_result_is_pointer = true;
       break;
     }
 
     if (result_name.contains("$__lldb_expr_result") &&
-        !isGuardVariableSymbol(result_name)) {
+        !result_name.startswith("_ZGV")) {
       found_result = true;
       m_result_is_pointer = false;
       break;
@@ -1534,12 +1528,14 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
 }
 
 static bool isGuardVariableRef(Value *V) {
-  Constant *Old = dyn_cast<Constant>(V);
+  Constant *Old = nullptr;
 
-  if (!Old)
+  if (!(Old = dyn_cast<Constant>(V)))
     return false;
 
-  if (auto CE = dyn_cast<ConstantExpr>(V)) {
+  ConstantExpr *CE = nullptr;
+
+  if ((CE = dyn_cast<ConstantExpr>(V))) {
     if (CE->getOpcode() != Instruction::BitCast)
       return false;
 
@@ -1548,8 +1544,12 @@ static bool isGuardVariableRef(Value *V) {
 
   GlobalVariable *GV = dyn_cast<GlobalVariable>(Old);
 
-  if (!GV || !GV->hasName() || !isGuardVariableSymbol(GV->getName()))
+  if (!GV || !GV->hasName() ||
+      (!GV->getName().startswith("_ZGV") && // Itanium ABI guard variable
+       !GV->getName().endswith("@4IA")))    // Microsoft ABI guard variable
+  {
     return false;
+  }
 
   return true;
 }
