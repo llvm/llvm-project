@@ -127,7 +127,7 @@ public:
 
   size_t Printf(DiagnosticSeverity severity, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
-  size_t PutString(DiagnosticSeverity severity, llvm::StringRef str);
+  void PutString(DiagnosticSeverity severity, llvm::StringRef str);
 
   void AppendMessageToDiagnostic(llvm::StringRef str) {
     if (!m_diagnostics.empty()) {

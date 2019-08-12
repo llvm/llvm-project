@@ -70,10 +70,9 @@ size_t DiagnosticManager::Printf(DiagnosticSeverity severity,
   return result;
 }
 
-size_t DiagnosticManager::PutString(DiagnosticSeverity severity,
-                                    llvm::StringRef str) {
+void DiagnosticManager::PutString(DiagnosticSeverity severity,
+                                  llvm::StringRef str) {
   if (str.empty())
-    return 0;
+    return;
   AddDiagnostic(str, severity, eDiagnosticOriginLLDB);
-  return str.size();
 }
