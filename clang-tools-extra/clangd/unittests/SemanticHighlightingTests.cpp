@@ -99,9 +99,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct {
       } $Variable[[S]];
       $Primitive[[void]] $Function[[foo]]($Primitive[[int]] $Variable[[A]], $Class[[AS]] $Variable[[As]]) {
-        auto $Variable[[VeryLongVariableName]] = 12312;
+        $Primitive[[auto]] $Variable[[VeryLongVariableName]] = 12312;
         $Class[[AS]]     $Variable[[AA]];
-        auto $Variable[[L]] = $Variable[[AA]].$Field[[SomeMember]] + $Variable[[A]];
+        $Primitive[[auto]] $Variable[[L]] = $Variable[[AA]].$Field[[SomeMember]] + $Variable[[A]];
         auto $Variable[[FN]] = [ $Variable[[AA]]]($Primitive[[int]] $Variable[[A]]) -> $Primitive[[void]] {};
         $Variable[[FN]](12312);
       }
@@ -303,6 +303,20 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       class $Class[[Bar2]] : public $Class[[Bar]] {
         $Class[[Bar2]]() : $Class[[Bar]]($Class[[Foo]](), $EnumConstant[[EC]]) {}
       };
+    )cpp",
+    R"cpp(
+      enum $Enum[[E]] {
+        $EnumConstant[[E]],
+      };
+      class $Class[[Foo]] {};
+      $Enum[[auto]] $Variable[[AE]] = $Enum[[E]]::$EnumConstant[[E]];
+      $Class[[auto]] $Variable[[AF]] = $Class[[Foo]]();
+      $Class[[decltype]](auto) $Variable[[AF2]] = $Class[[Foo]]();
+      $Class[[auto]] *$Variable[[AFP]] = &$Variable[[AF]];
+      $Enum[[auto]] &$Variable[[AER]] = $Variable[[AE]];
+      $Primitive[[auto]] $Variable[[Form]] = 10.2 + 2 * 4;
+      $Primitive[[decltype]]($Variable[[Form]]) $Variable[[F]] = 10;
+      auto $Variable[[Fun]] = []()->$Primitive[[void]]{};
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

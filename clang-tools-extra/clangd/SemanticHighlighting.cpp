@@ -97,8 +97,8 @@ public:
   }
 
   bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
-    if(const auto *TSI = TD->getTypeSourceInfo())
-      addTypeLoc(TD->getLocation(), TSI->getTypeLoc());
+    if (const auto *TSI = TD->getTypeSourceInfo())
+      addType(TD->getLocation(), TSI->getTypeLoc().getTypePtr());
     return true;
   }
 
@@ -120,10 +120,8 @@ public:
     // structs. It also makes us not highlight certain namespace qualifiers
     // twice. For elaborated types the actual type is highlighted as an inner
     // TypeLoc.
-    if (TL.getTypeLocClass() == TypeLoc::TypeLocClass::Elaborated)
-      return true;
-
-    addTypeLoc(TL.getBeginLoc(), TL);
+    if (TL.getTypeLocClass() != TypeLoc::TypeLocClass::Elaborated)
+      addType(TL.getBeginLoc(), TL.getTypePtr());
     return true;
   }
 
@@ -144,15 +142,27 @@ public:
         HighlightingTokenCollector>::TraverseConstructorInitializer(CI);
   }
 
-private:
-  void addTypeLoc(SourceLocation Loc, const TypeLoc &TL) {
-    if (const Type *TP = TL.getTypePtr()) {
-      if (const TagDecl *TD = TP->getAsTagDecl())
-        addToken(Loc, TD);
-      if (TP->isBuiltinType())
-        // Builtins must be special cased as they do not have a TagDecl.
-        addToken(Loc, HighlightingKind::Primitive);
+  bool VisitDeclaratorDecl(DeclaratorDecl *D) {
+    if ((!D->getTypeSourceInfo()))
+      return true;
+
+    if (auto *AT = D->getType()->getContainedAutoType()) {
+      const auto Deduced = AT->getDeducedType();
+      if (!Deduced.isNull())
+        addType(D->getTypeSpecStartLoc(), Deduced.getTypePtr());
     }
+    return true;
+  }
+
+private:
+  void addType(SourceLocation Loc, const Type *TP) {
+    if (!TP)
+      return;
+    if (TP->isBuiltinType())
+      // Builtins must be special cased as they do not have a TagDecl.
+      addToken(Loc, HighlightingKind::Primitive);
+    if (const TagDecl *TD = TP->getAsTagDecl())
+      addToken(Loc, TD);
   }
 
   void addToken(SourceLocation Loc, const NamedDecl *D) {

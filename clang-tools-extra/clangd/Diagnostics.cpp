@@ -122,8 +122,12 @@ bool adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
     return SM.getIncludeLoc(SM.getFileID(SLoc));
   };
   for (auto IncludeLocation = GetIncludeLoc(DiagLoc); IncludeLocation.isValid();
-       IncludeLocation = GetIncludeLoc(IncludeLocation))
-    IncludeInMainFile = IncludeLocation;
+       IncludeLocation = GetIncludeLoc(IncludeLocation)) {
+    if (clangd::isInsideMainFile(IncludeLocation, SM)) {
+      IncludeInMainFile = IncludeLocation;
+      break;
+    }
+  }
   if (IncludeInMainFile.isInvalid())
     return false;
 
