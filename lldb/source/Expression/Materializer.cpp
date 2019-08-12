@@ -531,7 +531,7 @@ public:
         }
 
         llvm::Optional<size_t> opt_bit_align =
-            m_variable_sp->GetType()->GetLayoutCompilerType().GetTypeBitAlign();
+            m_variable_sp->GetType()->GetLayoutCompilerType().GetTypeBitAlign(scope);
         if (!opt_bit_align) {
           err.SetErrorStringWithFormat("can't get the type alignment for %s",
                                        m_variable_sp->GetName().AsCString());
@@ -792,7 +792,7 @@ public:
         return;
       }
 
-      llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign();
+      llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
       if (!opt_bit_align) {
         err.SetErrorStringWithFormat("can't get the type alignment");
         return;
