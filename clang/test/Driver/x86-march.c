@@ -76,6 +76,10 @@
 // RUN:   | FileCheck %s -check-prefix=icelake-server
 // icelake-server: "-target-cpu" "icelake-server"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=tigerlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=tigerlake
+// tigerlake: "-target-cpu" "tigerlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"

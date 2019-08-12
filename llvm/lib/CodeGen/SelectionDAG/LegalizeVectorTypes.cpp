@@ -2735,6 +2735,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_BinaryCanTrap(N);
     break;
 
+  case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
+  case ISD::UMULFIX:
+    // These are binary operations, but with an extra operand that shouldn't
+    // be widened (the scale).
+    Res = WidenVecRes_BinaryWithExtraScalarOp(N);
+    break;
+
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
   case ISD::STRICT_FMUL:
@@ -2880,6 +2888,17 @@ SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(0));
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
   return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_BinaryWithExtraScalarOp(SDNode *N) {
+  // Binary op widening, but with an extra operand that shouldn't be widened.
+  SDLoc dl(N);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue InOp1 = GetWidenedVector(N->getOperand(0));
+  SDValue InOp2 = GetWidenedVector(N->getOperand(1));
+  SDValue InOp3 = N->getOperand(2);
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, InOp3,
+                     N->getFlags());
 }
 
 // Given a vector of operations that have been broken up to widen, see

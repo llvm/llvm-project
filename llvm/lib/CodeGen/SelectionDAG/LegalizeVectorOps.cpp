@@ -831,6 +831,13 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::SMULFIX:
   case ISD::UMULFIX:
     return ExpandFixedPointMul(Op);
+  case ISD::SMULFIXSAT:
+    // FIXME: We do not expand SMULFIXSAT here yet, not sure why. Maybe it
+    // results in worse codegen compared to the default unroll? This should
+    // probably be investigated. And if we still prefer to unroll an explanation
+    // could be helpful, otherwise it just looks like something that hasn't been
+    // "implemented" yet.
+    return DAG.UnrollVectorOp(Op.getNode());
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
   case ISD::STRICT_FMUL:
