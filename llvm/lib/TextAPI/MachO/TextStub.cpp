@@ -534,9 +534,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
     // prope file type when reading.
     if (!IO.outputting()) {
-      if (IO.mapTag("!tapi-tbd-v2", false))
-        Ctx->FileKind = FileType::TBD_V2;
-      else if (IO.mapTag("!tapi-tbd-v3", false))
+      if (IO.mapTag("!tapi-tbd-v3", false))
+        Ctx->FileKind = FileType::TBD_V3;
+      else if (IO.mapTag("!tapi-tbd-v2", false))
         Ctx->FileKind = FileType::TBD_V2;
       else if (IO.mapTag("!tapi-tbd-v1", false) ||
                IO.mapTag("tag:yaml.org,2002:map", false))
@@ -547,7 +547,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
       }
     }
 
-    // Set file tyoe when writing.
+    // Set file type when writing.
     if (IO.outputting()) {
       switch (Ctx->FileKind) {
       default:
