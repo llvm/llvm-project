@@ -157,11 +157,20 @@ bool X86TargetInfo::initFeatureMap(
     // SkylakeServer cores inherits all SKL features, except SGX
     goto SkylakeCommon;
 
+  case CK_Tigerlake:
+    setFeatureEnabledImpl(Features, "avx512vp2intersect", true);
+    setFeatureEnabledImpl(Features, "movdiri", true);
+    setFeatureEnabledImpl(Features, "movdir64b", true);
+    setFeatureEnabledImpl(Features, "shstk", true);
+    // Tigerlake cores inherits IcelakeClient, except pconfig and wbnoinvd
+    goto IcelakeCommon;
+
   case CK_IcelakeServer:
     setFeatureEnabledImpl(Features, "pconfig", true);
     setFeatureEnabledImpl(Features, "wbnoinvd", true);
     LLVM_FALLTHROUGH;
   case CK_IcelakeClient:
+IcelakeCommon:
     setFeatureEnabledImpl(Features, "vaes", true);
     setFeatureEnabledImpl(Features, "gfni", true);
     setFeatureEnabledImpl(Features, "vpclmulqdq", true);
@@ -1000,6 +1009,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Cannonlake:
   case CK_IcelakeClient:
   case CK_IcelakeServer:
+  case CK_Tigerlake:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
