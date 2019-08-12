@@ -561,7 +561,8 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
 TEST_F(FormatTest, FormatShortBracedStatements) {
   FormatStyle AllowSimpleBracedStatements = getLLVMStyle();
   AllowSimpleBracedStatements.ColumnLimit = 40;
-  AllowSimpleBracedStatements.AllowShortBlocksOnASingleLine = true;
+  AllowSimpleBracedStatements.AllowShortBlocksOnASingleLine =
+      FormatStyle::SBS_Always;
 
   AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_WithoutElse;
@@ -714,7 +715,7 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
 
 TEST_F(FormatTest, ShortBlocksInMacrosDontMergeWithCodeAfterMacro) {
   FormatStyle Style = getLLVMStyleWithColumns(60);
-  Style.AllowShortBlocksOnASingleLine = true;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   EXPECT_EQ("#define A                                                  \\\n"
@@ -1163,7 +1164,7 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
 
   FormatStyle Style = getLLVMStyle();
   Style.IndentCaseLabels = true;
-  Style.AllowShortBlocksOnASingleLine = false;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterCaseLabel = true;
   Style.BraceWrapping.AfterControlStatement = true;
@@ -3692,10 +3693,10 @@ TEST_F(FormatTest, PutEmptyBlocksIntoOneLine) {
   EXPECT_EQ("{}", format("{}"));
   verifyFormat("enum E {};");
   verifyFormat("enum E {}");
-  EXPECT_EQ("void f() { }", format("void f() {}", getWebKitStyle()));
   FormatStyle Style = getLLVMStyle();
-  Style.AllowShortBlocksOnASingleLine = true;
   Style.SpaceInEmptyBlock = true;
+  EXPECT_EQ("void f() { }", format("void f() {}", Style));
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
   EXPECT_EQ("while (true) { }", format("while (true) {}", Style));
 }
 
@@ -11745,7 +11746,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllConstructorInitializersOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
-  CHECK_PARSE_BOOL(AllowShortBlocksOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
@@ -11919,6 +11919,19 @@ TEST_F(FormatTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("UseTab: false", UseTab, FormatStyle::UT_Never);
   CHECK_PARSE("UseTab: true", UseTab, FormatStyle::UT_Always);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  CHECK_PARSE("AllowShortBlocksOnASingleLine: Never",
+              AllowShortBlocksOnASingleLine, FormatStyle::SBS_Never);
+  CHECK_PARSE("AllowShortBlocksOnASingleLine: Empty",
+              AllowShortBlocksOnASingleLine, FormatStyle::SBS_Empty);
+  CHECK_PARSE("AllowShortBlocksOnASingleLine: Always",
+              AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
+  // For backward compatibility:
+  CHECK_PARSE("AllowShortBlocksOnASingleLine: false",
+              AllowShortBlocksOnASingleLine, FormatStyle::SBS_Never);
+  CHECK_PARSE("AllowShortBlocksOnASingleLine: true",
+              AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
 
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
@@ -12527,6 +12540,14 @@ TEST_F(FormatTest, FormatsWithWebKitStyle) {
   // Allow functions on a single line.
   verifyFormat("void f() { return; }", Style);
 
+  // Allow empty blocks on a single line and insert a space in empty blocks.
+  EXPECT_EQ("void f() { }", format("void f() {}", Style));
+  EXPECT_EQ("while (true) { }", format("while (true) {}", Style));
+  // However, don't merge non-empty short loops.
+  EXPECT_EQ("while (true) {\n"
+            "    continue;\n"
+            "}", format("while (true) { continue; }", Style));
+
   // Constructor initializers are formatted one per line with the "," on the
   // new line.
   verifyFormat("Constructor()\n"
@@ -13033,7 +13054,7 @@ TEST_F(FormatTest, EmptyLinesInLambdas) {
 
 TEST_F(FormatTest, FormatsBlocks) {
   FormatStyle ShortBlocks = getLLVMStyle();
-  ShortBlocks.AllowShortBlocksOnASingleLine = true;
+  ShortBlocks.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
   verifyFormat("int (^Block)(int, int);", ShortBlocks);
   verifyFormat("int (^Block1)(int, int) = ^(int i, int j)", ShortBlocks);
   verifyFormat("void (^block)(int) = ^(id test) { int i; };", ShortBlocks);
@@ -13191,10 +13212,10 @@ TEST_F(FormatTest, FormatsBlocksWithZeroColumnWidth) {
                "};",
                ZeroColumn);
 
-  ZeroColumn.AllowShortBlocksOnASingleLine = true;
+  ZeroColumn.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
   EXPECT_EQ("void (^largeBlock)(void) = ^{ int i; };",
             format("void   (^largeBlock)(void) = ^{ int   i; };", ZeroColumn));
-  ZeroColumn.AllowShortBlocksOnASingleLine = false;
+  ZeroColumn.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   EXPECT_EQ("void (^largeBlock)(void) = ^{\n"
             "  int i;\n"
             "};",

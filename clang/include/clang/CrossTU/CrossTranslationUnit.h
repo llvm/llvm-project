@@ -219,8 +219,27 @@ private:
     const CompilerInstance &CI;
   };
 
-  /// Storage for ASTUnits, cached access, and providing searchability are the
-  /// concerns of ASTUnitStorage class.
+  /// Maintain number of AST loads and check for reaching the load limit.
+  class ASTLoadGuard {
+  public:
+    ASTLoadGuard(unsigned Limit) : Limit(Limit) {}
+
+    /// Indicates, whether a new load operation is permitted, it is within the
+    /// threshold.
+    operator bool() const { return Count < Limit; }
+
+    /// Tell that a new AST was loaded successfully.
+    void indicateLoadSuccess() { ++Count; }
+
+  private:
+    /// The number of ASTs actually imported.
+    unsigned Count{0u};
+    /// The limit (threshold) value for number of loaded ASTs.
+    const unsigned Limit;
+  };
+
+  /// Storage and load of ASTUnits, cached access, and providing searchability
+  /// are the concerns of ASTUnitStorage class.
   class ASTUnitStorage {
   public:
     ASTUnitStorage(const CompilerInstance &CI);
@@ -231,12 +250,14 @@ private:
     /// \param IndexName Name of the file inside \p CrossTUDir which maps
     /// function USR names to file paths. These files contain the corresponding
     /// AST-dumps.
+    /// \param DisplayCTUProgress Display a message about loading new ASTs.
     ///
     /// \return An Expected instance which contains the ASTUnit pointer or the
     /// error occured during the load.
     llvm::Expected<ASTUnit *> getASTUnitForFunction(StringRef FunctionName,
                                                     StringRef CrossTUDir,
-                                                    StringRef IndexName);
+                                                    StringRef IndexName,
+                                                    bool DisplayCTUProgress);
     /// Identifies the path of the file which can be used to load the ASTUnit
     /// for a given function.
     ///
@@ -253,7 +274,8 @@ private:
 
   private:
     llvm::Error ensureCTUIndexLoaded(StringRef CrossTUDir, StringRef IndexName);
-    llvm::Expected<ASTUnit *> getASTUnitForFile(StringRef FileName);
+    llvm::Expected<ASTUnit *> getASTUnitForFile(StringRef FileName,
+                                                bool DisplayCTUProgress);
 
     template <typename... T> using BaseMapTy = llvm::StringMap<T...>;
     using OwningMapTy = BaseMapTy<std::unique_ptr<clang::ASTUnit>>;
@@ -266,48 +288,17 @@ private:
     IndexMapTy NameFileMap;
 
     ASTFileLoader FileAccessor;
+
+    /// Limit the number of loaded ASTs. Used to limit the  memory usage of the
+    /// CrossTranslationUnitContext.
+    /// The ASTUnitStorage has the knowledge about if the AST to load is
+    /// actually loaded or returned from cache. This information is needed to
+    /// maintain the counter.
+    ASTLoadGuard LoadGuard;
   };
 
   ASTUnitStorage ASTStorage;
 
-  /// \p CTULoadTreshold should serve as an upper limit to the number of TUs
-  /// imported in order to reduce the memory footprint of CTU analysis.
-  const unsigned CTULoadThreshold;
-
-  /// The number successfully loaded ASTs. Used to indicate, and  - with the
-  /// appropriate threshold value - limit the  memory usage of the
-  /// CrossTranslationUnitContext.
-  unsigned NumASTLoaded{0u};
-
-  /// RAII counter to signal 'threshold reached' condition, and to increment the
-  /// NumASTLoaded counter upon a successful load.
-  class LoadGuard {
-  public:
-    LoadGuard(unsigned Limit, unsigned &Counter)
-        : Counter(Counter), Enabled(Counter < Limit), StoreSuccess(false) {}
-    ~LoadGuard() {
-      if (StoreSuccess)
-        ++Counter;
-    }
-    /// Flag the LoadGuard instance as successful, meaning that the load
-    /// operation succeeded, and the memory footprint of the AST storage
-    /// actually increased. In this case, \p Counter should be incremented upon
-    /// destruction.
-    void storedSuccessfully() { StoreSuccess = true; }
-    /// Indicates, whether a new load operation is permitted, it is within the
-    /// threshold.
-    operator bool() const { return Enabled; }
-
-  private:
-    /// The number of ASTs actually imported. LoadGuard does not own the
-    /// counter, just uses on given to it at construction time.
-    unsigned &Counter;
-    /// Indicates whether a load operation can begin, which is equivalent to the
-    /// 'threshold not reached' condition.
-    bool Enabled;
-    /// Shows the state of the current load operation.
-    bool StoreSuccess;
-  };
 };
 
 } // namespace cross_tu

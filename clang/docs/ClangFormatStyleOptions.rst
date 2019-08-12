@@ -344,10 +344,42 @@ the configuration (without a prefix: ``Auto``).
                     int d,
                     int e);
 
-**AllowShortBlocksOnASingleLine** (``bool``)
-  Allows contracting simple braced statements to a single line.
+**AllowShortBlocksOnASingleLine** (``ShortBlockStyle``)
+  Dependent on the value, ``while (true) { continue; }`` can be put on a
+  single line.
 
-  E.g., this allows ``if (a) { return; }`` to be put on a single line.
+  Possible values:
+
+  * ``SBS_Never`` (in configuration: ``Never``)
+    Never merge blocks into a single line.
+
+    .. code-block:: c++
+
+      while (true) {
+      }
+      while (true) {
+        continue;
+      }
+
+  * ``SBS_Empty`` (in configuration: ``Empty``)
+    Only merge empty blocks.
+
+    .. code-block:: c++
+
+      while (true) {}
+      while (true) {
+        continue;
+      }
+
+  * ``SBS_Always`` (in configuration: ``Always``)
+    Always merge short blocks into a single line.
+
+    .. code-block:: c++
+
+      while (true) {}
+      while (true) { continue; }
+
+
 
 **AllowShortCaseLabelsOnASingleLine** (``bool``)
   If ``true``, short case labels will be contracted to a single line.

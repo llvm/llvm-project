@@ -513,7 +513,6 @@ static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
   sym.isPreemptible = true;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
-  sym.used = true;
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -771,8 +770,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
   if (!sym.isUndefined() || sym.isWeak())
     return false;
 
-  bool canBeExternal = !sym.isLocal() && sym.computeBinding() != STB_LOCAL &&
-                       sym.visibility == STV_DEFAULT;
+  bool canBeExternal = !sym.isLocal() && sym.visibility == STV_DEFAULT;
   if (config->unresolvedSymbols == UnresolvedPolicy::Ignore && canBeExternal)
     return false;
 

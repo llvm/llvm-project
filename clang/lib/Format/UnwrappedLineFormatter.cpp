@@ -300,7 +300,7 @@ private:
     // Try to merge a control statement block with left brace unwrapped
     if (TheLine->Last->is(tok::l_brace) && TheLine->First != TheLine->Last &&
         TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
-      return Style.AllowShortBlocksOnASingleLine
+      return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
     }
@@ -317,7 +317,7 @@ private:
         I != AnnotatedLines.begin() &&
         I[-1]->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
       unsigned MergedLines = 0;
-      if (Style.AllowShortBlocksOnASingleLine) {
+      if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never) {
         MergedLines = tryMergeSimpleBlock(I - 1, E, Limit);
         // If we managed to merge the block, discard the first merged line
         // since we are merging starting from I.
@@ -411,7 +411,8 @@ private:
     if (Limit == 0)
       return 0;
     if (Style.BraceWrapping.AfterControlStatement &&
-        (I[1]->First->is(tok::l_brace) && !Style.AllowShortBlocksOnASingleLine))
+        I[1]->First->is(tok::l_brace) &&
+        Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
       return 0;
     if (I[1]->InPPDirective != (*I)->InPPDirective ||
         (I[1]->InPPDirective && I[1]->First->HasUnescapedNewline))
@@ -511,7 +512,7 @@ private:
     if (Line.First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_try,
                             tok::kw___try, tok::kw_catch, tok::kw___finally,
                             tok::kw_for, tok::r_brace, Keywords.kw___except)) {
-      if (!Style.AllowShortBlocksOnASingleLine)
+      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
         return 0;
       // Don't merge when we can't except the case when
       // the control statement block is empty
@@ -607,7 +608,7 @@ private:
         return 0;
       Limit -= 2;
       unsigned MergedLines = 0;
-      if (Style.AllowShortBlocksOnASingleLine ||
+      if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never ||
           (I[1]->First == I[1]->Last && I + 2 != E &&
            I[2]->First->is(tok::r_brace))) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
