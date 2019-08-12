@@ -3165,14 +3165,13 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     clang::QualType qual_type = ClangUtil::GetQualType(fwd_type);
     switch (kind) {
     case swift::Demangle::Node::Kind::Protocol:
-      // Not implemented.
+      // Not implemented since Objective-C protocols aren't yet
+      // described in DWARF.
       return true;
     case swift::Demangle::Node::Kind::Class:
-      // Not implemented.
-      return true;
+      return !qual_type->isObjCObjectOrInterfaceType();
     case swift::Demangle::Node::Kind::TypeAlias:
-      // Not Implemented.
-      return true;
+      return !qual_type->getAs<clang::TypedefType>();
       // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
     case swift::Demangle::Node::Kind::Structure:
     case swift::Demangle::Node::Kind::Enum:
@@ -3181,6 +3180,26 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     default:
       return true;
     }
+  }
+
+  clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
+                                     swift::Demangle::Node::Kind kind) {
+    switch (kind) {
+    case swift::Demangle::Node::Kind::Class:
+      if (auto *obj_type = qual_type->getAsObjCInterfaceType())
+        return obj_type->getInterface();
+      break;
+    case swift::Demangle::Node::Kind::TypeAlias:
+      if (auto *typedef_type = qual_type->getAs<clang::TypedefType>())
+        return typedef_type->getDecl();
+      break;
+    case swift::Demangle::Node::Kind::Structure:
+    case swift::Demangle::Node::Kind::Enum:
+      return qual_type->getAsTagDecl();
+    default:
+      break;
+    }
+    return nullptr;
   }
 
 public:
@@ -3249,14 +3268,21 @@ public:
         continue;
       }
 
-      auto *clang_record_type = (*clang_type)->getAsStructureType();
-      if (!clang_record_type)
-        continue;
-      clang::Decl *clang_decl = clang_record_type->getDecl();
-      if (!clang_decl)
-        continue;
-
-      results.push_back(clang_decl);
+      // Retrieve the imported type's Decl.
+      if (kind) {
+        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, *kind))
+          results.push_back(clang_decl);
+      } else {
+        swift::Demangle::Node::Kind kinds[] = {
+            swift::Demangle::Node::Kind::Protocol,
+            swift::Demangle::Node::Kind::Class,
+            swift::Demangle::Node::Kind::TypeAlias,
+            swift::Demangle::Node::Kind::Structure,
+            swift::Demangle::Node::Kind::TypeAlias};
+        for (auto kind : kinds)
+          if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, kind))
+            results.push_back(clang_decl);
+      }
     }
   }
 };
@@ -4371,33 +4397,6 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
     }
   }
   return CompilerType();
-}
-
-CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (qualified_name && qualified_name[0]) {
-    const char *dot_pos = strchr(qualified_name, '.');
-    if (dot_pos) {
-      ConstString module_name(qualified_name, dot_pos - qualified_name);
-      SourceModule module_info;
-      module_info.path.push_back(module_name);
-      swift::ModuleDecl *swift_module = GetCachedModule(module_info);
-      if (swift_module) {
-        swift::ModuleDecl::AccessPathTy access_path;
-        llvm::SmallVector<swift::ValueDecl *, 4> decls;
-        const char *module_type_name = dot_pos + 1;
-        swift_module->lookupValue(access_path, GetIdentifier(module_type_name),
-                                  swift::NLKind::UnqualifiedLookup, decls);
-        for (auto decl : decls) {
-          CompilerType type = ValueDeclToType(decl, GetASTContext());
-          if (type)
-            return type;
-        }
-      }
-    }
-  }
-  return {};
 }
 
 static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {

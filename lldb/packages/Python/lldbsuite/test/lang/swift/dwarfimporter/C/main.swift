@@ -18,9 +18,11 @@ struct SwiftStructCMember {
 }
 
 let swiftStructCMember = SwiftStructCMember()
+let typedef = TPoint(x: 5, y: 6)
 
 use(pureSwift) // break here
 use(point)
 use(enumerator)
 use(pureSwiftStruct)
 use(swiftStructCMember)
+use(typedef)
