@@ -5162,7 +5162,8 @@ ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
 }
 
 llvm::Optional<size_t>
-ClangASTContext::GetTypeBitAlign(lldb::opaque_compiler_type_t type) {
+ClangASTContext::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
+                                 ExecutionContextScope *exe_scope) {
   if (GetCompleteType(type))
     return getASTContext()->getTypeAlign(GetQualType(type));
   return {};

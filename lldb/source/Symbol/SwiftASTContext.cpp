@@ -6142,7 +6142,8 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type) {
+llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type,
+                                                        ExecutionContextScope *exe_scope) {
   if (type) {
     const swift::irgen::FixedTypeInfo *fixed_type_info =
         GetSwiftFixedTypeInfo(type);

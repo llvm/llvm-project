@@ -673,7 +673,8 @@ public:
 
   bool IsCStringType(void *type, uint32_t &length) override;
 
-  size_t GetTypeBitAlign(void *type) override;
+  llvm::Optional<size_t> GetTypeBitAlign(void *type,
+                                         ExecutionContextScope *exe_scope) override;
 
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
