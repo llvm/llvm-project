@@ -3270,7 +3270,7 @@ public:
 
       // Retrieve the imported type's Decl.
       if (kind) {
-        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, *kind))
+        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, *kind))
           results.push_back(clang_decl);
       } else {
         swift::Demangle::Node::Kind kinds[] = {
@@ -3280,7 +3280,7 @@ public:
             swift::Demangle::Node::Kind::Structure,
             swift::Demangle::Node::Kind::TypeAlias};
         for (auto kind : kinds)
-          if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, kind))
+          if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, kind))
             results.push_back(clang_decl);
       }
     }
