@@ -515,7 +515,7 @@ public:
   GRBugReporter(BugReporterData& d, ExprEngine& eng)
       : BugReporter(d, GRBugReporterKind), Eng(eng) {}
 
-  ~GRBugReporter() override = default;;
+  ~GRBugReporter() override = default;
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
