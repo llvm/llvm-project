@@ -152,8 +152,8 @@ public:
         (TotalQuarantinedBytes == 0)
             ? 0
             : TotalOverheadBytes * 100 / TotalQuarantinedBytes;
-    Printf("Global quarantine stats: batches: %zd; bytes: %zd (user: %zd); "
-           "chunks: %zd (capacity: %zd); %zd%% chunks used; %zd%% memory "
+    Printf("Global quarantine stats: batches: %zu; bytes: %zu (user: %zu); "
+           "chunks: %zu (capacity: %zu); %zu%% chunks used; %zu%% memory "
            "overhead\n",
            BatchCount, TotalBytes, TotalQuarantinedBytes, TotalQuarantineChunks,
            QuarantineChunksCapacity, ChunksUsagePercent, MemoryOverheadPercent);
@@ -220,7 +220,7 @@ public:
 
   void printStats() const {
     // It assumes that the world is stopped, just as the allocator's printStats.
-    Printf("Quarantine limits: global: %zdM; thread local: %zdK\n",
+    Printf("Quarantine limits: global: %zuM; thread local: %zuK\n",
            getMaxSize() >> 20, getCacheSize() >> 10);
     Cache.printStats();
   }

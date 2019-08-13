@@ -106,17 +106,17 @@ template <class Item> struct IntrusiveList {
 
   void checkConsistency() {
     if (Size == 0) {
-      CHECK_EQ(First, 0);
-      CHECK_EQ(Last, 0);
+      CHECK_EQ(First, nullptr);
+      CHECK_EQ(Last, nullptr);
     } else {
-      uptr count = 0;
+      uptr Count = 0;
       for (Item *I = First;; I = I->Next) {
-        count++;
+        Count++;
         if (I == Last)
           break;
       }
-      CHECK_EQ(size(), count);
-      CHECK_EQ(Last->Next, 0);
+      CHECK_EQ(size(), Count);
+      CHECK_EQ(Last->Next, nullptr);
     }
   }
 
