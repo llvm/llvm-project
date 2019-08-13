@@ -112,15 +112,20 @@ void FormattedString::appendInlineCode(std::string Code) {
 
 std::string FormattedString::renderAsMarkdown() const {
   std::string R;
+  auto EnsureWhitespace = [&R]() {
+    // Adds a space for nicer rendering.
+    if (!R.empty() && !isWhitespace(R.back()))
+      R += " ";
+  };
   for (const auto &C : Chunks) {
     switch (C.Kind) {
     case ChunkKind::PlainText:
+      if (!C.Contents.empty() && !isWhitespace(C.Contents.front()))
+        EnsureWhitespace();
       R += renderText(C.Contents);
       continue;
     case ChunkKind::InlineCodeBlock:
-      // Make sure we don't glue two backticks together.
-      if (llvm::StringRef(R).endswith("`"))
-        R += " ";
+      EnsureWhitespace();
       R += renderInlineBlock(C.Contents);
       continue;
     case ChunkKind::CodeBlock:
