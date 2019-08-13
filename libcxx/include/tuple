@@ -69,6 +69,17 @@ public:
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));
 };
 
+template <class ...T>
+tuple(T...) -> tuple<T...>;                                         // since C++17
+template <class T1, class T2>
+tuple(pair<T1, T2>) -> tuple<T1, T2>;                               // since C++17
+template <class Alloc, class ...T>
+tuple(allocator_arg_t, Alloc, T...) -> tuple<T...>;                 // since C++17
+template <class Alloc, class T1, class T2>
+tuple(allocator_arg_t, Alloc, pair<T1, T2>) -> tuple<T1, T2>;       // since C++17
+template <class Alloc, class ...T>
+tuple(allocator_arg_t, Alloc, tuple<T...>) -> tuple<T...>;          // since C++17
+
 inline constexpr unspecified ignore;
 
 template <class... T> tuple<V...>  make_tuple(T&&...); // constexpr in C++14
@@ -943,13 +954,16 @@ public:
 };
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
-// NOTE: These are not yet standardized, but are required to simulate the
-// implicit deduction guide that should be generated had libc++ declared the
-// tuple-like constructors "correctly"
-template <class _Alloc, class ..._Args>
-tuple(allocator_arg_t, const _Alloc&, tuple<_Args...> const&) -> tuple<_Args...>;
-template <class _Alloc, class ..._Args>
-tuple(allocator_arg_t, const _Alloc&, tuple<_Args...>&&) -> tuple<_Args...>;
+template <class ..._Tp>
+tuple(_Tp...) -> tuple<_Tp...>;
+template <class _Tp1, class _Tp2>
+tuple(pair<_Tp1, _Tp2>) -> tuple<_Tp1, _Tp2>;
+template <class _Alloc, class ..._Tp>
+tuple(allocator_arg_t, _Alloc, _Tp...) -> tuple<_Tp...>;
+template <class _Alloc, class _Tp1, class _Tp2>
+tuple(allocator_arg_t, _Alloc, pair<_Tp1, _Tp2>) -> tuple<_Tp1, _Tp2>;
+template <class _Alloc, class ..._Tp>
+tuple(allocator_arg_t, _Alloc, tuple<_Tp...>) -> tuple<_Tp...>;
 #endif
 
 template <class ..._Tp>

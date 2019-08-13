@@ -43,7 +43,7 @@ void NORETURN die() { abort(); }
 
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
-  int MmapFlags = MAP_PRIVATE | MAP_ANON;
+  int MmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
   int MmapProt;
   if (Flags & MAP_NOACCESS) {
     MmapFlags |= MAP_NORESERVE;

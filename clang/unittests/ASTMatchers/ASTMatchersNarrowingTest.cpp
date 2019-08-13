@@ -573,6 +573,111 @@ TEST(DeclarationMatcher, IsDerivedFromEmptyName) {
   EXPECT_TRUE(notMatches(Code, cxxRecordDecl(isSameOrDerivedFrom(""))));
 }
 
+TEST(DeclarationMatcher, ObjCClassIsDerived) {
+  DeclarationMatcher IsDerivedFromX = objcInterfaceDecl(isDerivedFrom("X"));
+  EXPECT_TRUE(
+      matchesObjC("@interface X @end @interface Y : X @end", IsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @interface Y<__covariant ObjectType> : X @end",
+      IsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @compatibility_alias Y X; @interface Z : Y @end",
+      IsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end typedef X Y; @interface Z : Y @end", IsDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end", IsDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@class X;", IsDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@class Y;", IsDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end @compatibility_alias Y X;",
+                             IsDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end typedef X Y;", IsDerivedFromX));
+
+  DeclarationMatcher IsDirectlyDerivedFromX =
+      objcInterfaceDecl(isDirectlyDerivedFrom("X"));
+  EXPECT_TRUE(
+      matchesObjC("@interface X @end @interface Y : X @end", IsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @interface Y<__covariant ObjectType> : X @end",
+      IsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @compatibility_alias Y X; @interface Z : Y @end",
+      IsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end typedef X Y; @interface Z : Y @end",
+      IsDirectlyDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end", IsDirectlyDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@class X;", IsDirectlyDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@class Y;", IsDirectlyDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end @compatibility_alias Y X;",
+                             IsDirectlyDerivedFromX));
+  EXPECT_TRUE(notMatchesObjC("@interface X @end typedef X Y;",
+                             IsDirectlyDerivedFromX));
+
+  DeclarationMatcher IsAX = objcInterfaceDecl(isSameOrDerivedFrom("X"));
+  EXPECT_TRUE(matchesObjC("@interface X @end @interface Y : X @end", IsAX));
+  EXPECT_TRUE(matchesObjC("@interface X @end", IsAX));
+  EXPECT_TRUE(matchesObjC("@class X;", IsAX));
+  EXPECT_TRUE(notMatchesObjC("@interface Y @end", IsAX));
+  EXPECT_TRUE(notMatchesObjC("@class Y;", IsAX));
+
+  DeclarationMatcher ZIsDerivedFromX =
+      objcInterfaceDecl(hasName("Z"), isDerivedFrom("X"));
+  DeclarationMatcher ZIsDirectlyDerivedFromX =
+      objcInterfaceDecl(hasName("Z"), isDirectlyDerivedFrom("X"));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @interface Y : X @end @interface Z : Y @end",
+      ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC("@interface X @end @interface Y : X @end typedef Y "
+                          "V; typedef V W; @interface Z : W @end",
+                          ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end typedef X Y; @interface Z : Y @end", ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end typedef X Y; @interface Z : Y @end",
+      ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end typedef A X; typedef A Y; @interface Z : Y @end",
+      ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end typedef A X; typedef A Y; @interface Z : Y @end",
+      ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @compatibility_alias Y X; @interface Z : Y @end",
+      ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface X @end @compatibility_alias Y X; @interface Z : Y @end",
+      ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface Y @end @compatibility_alias X Y; @interface Z : Y @end",
+      ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface Y @end @compatibility_alias X Y; @interface Z : Y @end",
+      ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end @compatibility_alias X A; @compatibility_alias Y A;"
+      "@interface Z : Y @end", ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end @compatibility_alias X A; @compatibility_alias Y A;"
+      "@interface Z : Y @end", ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface Y @end typedef Y X; @interface Z : X @end", ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface Y @end typedef Y X; @interface Z : X @end",
+      ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end @compatibility_alias Y A; typedef Y X;"
+      "@interface Z : A @end", ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end @compatibility_alias Y A; typedef Y X;"
+      "@interface Z : A @end", ZIsDirectlyDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end typedef A Y; @compatibility_alias X Y;"
+      "@interface Z : A @end", ZIsDerivedFromX));
+  EXPECT_TRUE(matchesObjC(
+      "@interface A @end typedef A Y; @compatibility_alias X Y;"
+      "@interface Z : A @end", ZIsDirectlyDerivedFromX));
+}
+
 TEST(DeclarationMatcher, IsLambda) {
   const auto IsLambda = cxxMethodDecl(ofClass(cxxRecordDecl(isLambda())));
   EXPECT_TRUE(matches("auto x = []{};", IsLambda));

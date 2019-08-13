@@ -5191,6 +5191,50 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInGlobalScope) {
   EXPECT_TRUE(ToF);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportExistingFriendClassTemplateDef) {
+  auto Code =
+      R"(
+        template <class T1, class T2>
+        struct Base {
+          template <class U1, class U2>
+          friend struct Class;
+        };
+        template <class T1, class T2>
+        struct Class { };
+        )";
+
+  TranslationUnitDecl *ToTU = getToTuDecl(Code, Lang_CXX);
+  TranslationUnitDecl *FromTU = getTuDecl(Code, Lang_CXX, "input.cc");
+
+  auto *ToClassProto = FirstDeclMatcher<ClassTemplateDecl>().match(
+      ToTU, classTemplateDecl(hasName("Class")));
+  auto *ToClassDef = LastDeclMatcher<ClassTemplateDecl>().match(
+      ToTU, classTemplateDecl(hasName("Class")));
+  ASSERT_FALSE(ToClassProto->isThisDeclarationADefinition());
+  ASSERT_TRUE(ToClassDef->isThisDeclarationADefinition());
+  // Previous friend decl is not linked to it!
+  ASSERT_FALSE(ToClassDef->getPreviousDecl());
+  ASSERT_EQ(ToClassDef->getMostRecentDecl(), ToClassDef);
+  ASSERT_EQ(ToClassProto->getMostRecentDecl(), ToClassProto);
+
+  auto *FromClassProto = FirstDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("Class")));
+  auto *FromClassDef = LastDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("Class")));
+  ASSERT_FALSE(FromClassProto->isThisDeclarationADefinition());
+  ASSERT_TRUE(FromClassDef->isThisDeclarationADefinition());
+  ASSERT_FALSE(FromClassDef->getPreviousDecl());
+  ASSERT_EQ(FromClassDef->getMostRecentDecl(), FromClassDef);
+  ASSERT_EQ(FromClassProto->getMostRecentDecl(), FromClassProto);
+
+  auto *ImportedDef = Import(FromClassDef, Lang_CXX);
+  // At import we should find the definition for 'Class' even if the
+  // prototype (inside 'friend') for it comes first in the AST and is not
+  // linked to the definition.
+  EXPECT_EQ(ImportedDef, ToClassDef);
+}  
+  
 struct LLDBLookupTest : ASTImporterOptionSpecificTestBase {
   LLDBLookupTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,

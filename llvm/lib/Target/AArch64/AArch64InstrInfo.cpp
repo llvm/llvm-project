@@ -575,7 +575,7 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       CC = AArch64CC::NE;
       break;
     }
-    unsigned SrcReg = Cond[2].getReg();
+    Register SrcReg = Cond[2].getReg();
     if (Is64Bit) {
       // cmp reg, #0 is actually subs xzr, reg, #0.
       MRI.constrainRegClass(SrcReg, &AArch64::GPR64spRegClass);
@@ -1072,7 +1072,7 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
     assert(MO.isReg() &&
            "Operand has register constraints without being a register!");
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Register::isPhysicalRegister(Reg)) {
       if (!OpRegCstraints->contains(Reg))
         return false;
@@ -1498,7 +1498,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
 
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MI.memoperands_begin())->getValue());
   const TargetMachine &TM = MBB.getParent()->getTarget();
@@ -1582,7 +1582,7 @@ bool AArch64InstrInfo::isGPRCopy(const MachineInstr &MI) {
     break;
   case TargetOpcode::COPY: {
     // GPR32 copies will by lowered to ORRXrs
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     return (AArch64::GPR32RegClass.contains(DstReg) ||
             AArch64::GPR64RegClass.contains(DstReg));
   }
@@ -1612,7 +1612,7 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
     break;
   case TargetOpcode::COPY: {
     // FPR64 copies will by lowered to ORR.16b
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     return (AArch64::FPR64RegClass.contains(DstReg) ||
             AArch64::FPR128RegClass.contains(DstReg));
   }
@@ -1918,7 +1918,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // e.g., ldr x0, [x0]
   // This case will never occur with an FI base.
   if (MI.getOperand(1).isReg()) {
-    unsigned BaseReg = MI.getOperand(1).getReg();
+    Register BaseReg = MI.getOperand(1).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
     if (MI.modifiesRegister(BaseReg, TRI))
       return false;
@@ -3111,8 +3111,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // <rdar://problem/11522048>
   //
   if (MI.isFullCopy()) {
-    unsigned DstReg = MI.getOperand(0).getReg();
-    unsigned SrcReg = MI.getOperand(1).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
     if (SrcReg == AArch64::SP && Register::isVirtualRegister(DstReg)) {
       MF.getRegInfo().constrainRegClass(DstReg, &AArch64::GPR64RegClass);
       return nullptr;
@@ -3157,8 +3157,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     MachineBasicBlock &MBB = *MI.getParent();
     const MachineOperand &DstMO = MI.getOperand(0);
     const MachineOperand &SrcMO = MI.getOperand(1);
-    unsigned DstReg = DstMO.getReg();
-    unsigned SrcReg = SrcMO.getReg();
+    Register DstReg = DstMO.getReg();
+    Register SrcReg = SrcMO.getReg();
     // This is slightly expensive to compute for physical regs since
     // getMinimalPhysRegClass is slow.
     auto getRegClass = [&](unsigned Reg) {
@@ -3963,15 +3963,15 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
                  SmallVectorImpl<MachineInstr *> &InsInstrs, unsigned IdxMulOpd,
                  unsigned MaddOpc, const TargetRegisterClass *RC,
                  FMAInstKind kind = FMAInstKind::Default,
-                 const unsigned *ReplacedAddend = nullptr) {
+                 const Register *ReplacedAddend = nullptr) {
   assert(IdxMulOpd == 1 || IdxMulOpd == 2);
 
   unsigned IdxOtherOpd = IdxMulOpd == 1 ? 2 : 1;
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
-  unsigned ResultReg = Root.getOperand(0).getReg();
-  unsigned SrcReg0 = MUL->getOperand(1).getReg();
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MUL->getOperand(1).getReg();
   bool Src0IsKill = MUL->getOperand(1).isKill();
-  unsigned SrcReg1 = MUL->getOperand(2).getReg();
+  Register SrcReg1 = MUL->getOperand(2).getReg();
   bool Src1IsKill = MUL->getOperand(2).isKill();
 
   unsigned SrcReg2;
@@ -4045,10 +4045,10 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   assert(IdxMulOpd == 1 || IdxMulOpd == 2);
 
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
-  unsigned ResultReg = Root.getOperand(0).getReg();
-  unsigned SrcReg0 = MUL->getOperand(1).getReg();
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MUL->getOperand(1).getReg();
   bool Src0IsKill = MUL->getOperand(1).isKill();
-  unsigned SrcReg1 = MUL->getOperand(2).getReg();
+  Register SrcReg1 = MUL->getOperand(2).getReg();
   bool Src1IsKill = MUL->getOperand(2).isKill();
 
   if (Register::isVirtualRegister(ResultReg))
@@ -4146,7 +4146,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
       Opc = AArch64::MADDXrrr;
       RC = &AArch64::GPR64RegClass;
     }
-    unsigned NewVR = MRI.createVirtualRegister(OrrRC);
+    Register NewVR = MRI.createVirtualRegister(OrrRC);
     uint64_t Imm = Root.getOperand(2).getImm();
 
     if (Root.getOperand(3).isImm()) {
@@ -4188,7 +4188,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
       Opc = AArch64::MADDXrrr;
       RC = &AArch64::GPR64RegClass;
     }
-    unsigned NewVR = MRI.createVirtualRegister(SubRC);
+    Register NewVR = MRI.createVirtualRegister(SubRC);
     // SUB NewVR, 0, C
     MachineInstrBuilder MIB1 =
         BuildMI(MF, Root.getDebugLoc(), TII->get(SubOpc), NewVR)
@@ -4238,7 +4238,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
       Opc = AArch64::MADDXrrr;
       RC = &AArch64::GPR64RegClass;
     }
-    unsigned NewVR = MRI.createVirtualRegister(OrrRC);
+    Register NewVR = MRI.createVirtualRegister(OrrRC);
     uint64_t Imm = Root.getOperand(2).getImm();
     if (Root.getOperand(3).isImm()) {
       unsigned Val = Root.getOperand(3).getImm();
@@ -4506,7 +4506,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   case MachineCombinerPattern::FMLSv2f32_OP1:
   case MachineCombinerPattern::FMLSv2i32_indexed_OP1: {
     RC = &AArch64::FPR64RegClass;
-    unsigned NewVR = MRI.createVirtualRegister(RC);
+    Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
         BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f32), NewVR)
             .add(Root.getOperand(2));
@@ -4526,7 +4526,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   case MachineCombinerPattern::FMLSv4f32_OP1:
   case MachineCombinerPattern::FMLSv4i32_indexed_OP1: {
     RC = &AArch64::FPR128RegClass;
-    unsigned NewVR = MRI.createVirtualRegister(RC);
+    Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
         BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv4f32), NewVR)
             .add(Root.getOperand(2));
@@ -4546,7 +4546,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   case MachineCombinerPattern::FMLSv2f64_OP1:
   case MachineCombinerPattern::FMLSv2i64_indexed_OP1: {
     RC = &AArch64::FPR128RegClass;
-    unsigned NewVR = MRI.createVirtualRegister(RC);
+    Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
         BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f64), NewVR)
             .add(Root.getOperand(2));
@@ -4647,7 +4647,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
-  unsigned VReg = MI.getOperand(0).getReg();
+  Register VReg = MI.getOperand(0).getReg();
   if (!Register::isVirtualRegister(VReg))
     return false;
 
@@ -4655,7 +4655,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
 
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
-    unsigned CopyVReg = DefMI->getOperand(1).getReg();
+    Register CopyVReg = DefMI->getOperand(1).getReg();
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
     if (!MRI->hasOneDef(CopyVReg))
@@ -4683,7 +4683,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
       return false;
 
     MachineOperand &MO = DefMI->getOperand(1);
-    unsigned NewReg = MO.getReg();
+    Register NewReg = MO.getReg();
     if (!Register::isVirtualRegister(NewReg))
       return false;
 

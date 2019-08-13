@@ -1,2 +1,0 @@
-RUN: echo -n abcdefg | llvm-strings - | FileCheck %s
-CHECK: abcdefg

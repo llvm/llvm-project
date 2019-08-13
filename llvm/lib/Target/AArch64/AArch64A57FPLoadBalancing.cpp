@@ -552,7 +552,7 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
     std::vector<unsigned> ToErase;
     for (auto &U : I.operands()) {
       if (U.isReg() && U.isUse() && Substs.find(U.getReg()) != Substs.end()) {
-        unsigned OrigReg = U.getReg();
+        Register OrigReg = U.getReg();
         U.setReg(Substs[OrigReg]);
         if (U.isKill())
           // Don't erase straight away, because there may be other operands
@@ -611,7 +611,7 @@ void AArch64A57FPLoadBalancing::scanInstruction(
 
     // Create a new chain. Multiplies don't require forwarding so can go on any
     // unit.
-    unsigned DestReg = MI->getOperand(0).getReg();
+    Register DestReg = MI->getOperand(0).getReg();
 
     LLVM_DEBUG(dbgs() << "New chain started for register "
                       << printReg(DestReg, TRI) << " at " << *MI);
@@ -624,8 +624,8 @@ void AArch64A57FPLoadBalancing::scanInstruction(
 
     // It is beneficial to keep MLAs on the same functional unit as their
     // accumulator operand.
-    unsigned DestReg  = MI->getOperand(0).getReg();
-    unsigned AccumReg = MI->getOperand(3).getReg();
+    Register DestReg = MI->getOperand(0).getReg();
+    Register AccumReg = MI->getOperand(3).getReg();
 
     maybeKillChain(MI->getOperand(1), Idx, ActiveChains);
     maybeKillChain(MI->getOperand(2), Idx, ActiveChains);

@@ -386,7 +386,9 @@ public:
   virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
                              uint32_t &length) = 0;
 
-  virtual size_t GetTypeBitAlign(lldb::opaque_compiler_type_t type) = 0;
+  virtual llvm::Optional<size_t>
+  GetTypeBitAlign(lldb::opaque_compiler_type_t type,
+                  ExecutionContextScope *exe_scope) = 0;
 
   virtual CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) = 0;
 

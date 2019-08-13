@@ -32,7 +32,7 @@ bool WebAssembly::isChild(const MachineInstr &MI,
   const MachineOperand &MO = MI.getOperand(0);
   if (!MO.isReg() || MO.isImplicit() || !MO.isDef())
     return false;
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   return Register::isVirtualRegister(Reg) && MFI.isVRegStackified(Reg);
 }
 

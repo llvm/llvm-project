@@ -106,7 +106,7 @@ public:
     }
   }
 
-  bool HasFixIts() {
+  bool HasFixIts() const {
     for (Diagnostic *diag : m_diagnostics) {
       if (diag->HasFixIts())
         return true;
@@ -127,12 +127,11 @@ public:
 
   size_t Printf(DiagnosticSeverity severity, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
-  size_t PutString(DiagnosticSeverity severity, llvm::StringRef str);
+  void PutString(DiagnosticSeverity severity, llvm::StringRef str);
 
   void AppendMessageToDiagnostic(llvm::StringRef str) {
-    if (!m_diagnostics.empty()) {
+    if (!m_diagnostics.empty())
       m_diagnostics.back()->AppendMessage(str);
-    }
   }
 
   // Returns a string containing errors in this format:
@@ -149,7 +148,6 @@ public:
   // Moves fixed_expression to the internal storage.
   void SetFixedExpression(std::string fixed_expression) {
     m_fixed_expression = std::move(fixed_expression);
-    fixed_expression.clear();
   }
 
 protected:

@@ -80,15 +80,14 @@ void VirtRegMap::grow() {
   Virt2SplitMap.resize(NumRegs);
 }
 
-void VirtRegMap::assignVirt2Phys(unsigned virtReg, MCPhysReg physReg) {
-  assert(Register::isVirtualRegister(virtReg) &&
-         Register::isPhysicalRegister(physReg));
-  assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
+void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
+  assert(virtReg.isVirtual() && Register::isPhysicalRegister(physReg));
+  assert(Virt2PhysMap[virtReg.id()] == NO_PHYS_REG &&
          "attempt to assign physical register to already mapped "
          "virtual register");
   assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
-  Virt2PhysMap[virtReg] = physReg;
+  Virt2PhysMap[virtReg.id()] = physReg;
 }
 
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
@@ -99,16 +98,16 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   return SS;
 }
 
-bool VirtRegMap::hasPreferredPhys(unsigned VirtReg) {
-  unsigned Hint = MRI->getSimpleHint(VirtReg);
-  if (!Hint)
+bool VirtRegMap::hasPreferredPhys(Register VirtReg) {
+  Register Hint = MRI->getSimpleHint(VirtReg);
+  if (!Hint.isValid())
     return false;
-  if (Register::isVirtualRegister(Hint))
+  if (Hint.isVirtual())
     Hint = getPhys(Hint);
   return getPhys(VirtReg) == Hint;
 }
 
-bool VirtRegMap::hasKnownPreference(unsigned VirtReg) {
+bool VirtRegMap::hasKnownPreference(Register VirtReg) {
   std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(VirtReg);
   if (Register::isPhysicalRegister(Hint.second))
     return true;
@@ -117,22 +116,22 @@ bool VirtRegMap::hasKnownPreference(unsigned VirtReg) {
   return false;
 }
 
-int VirtRegMap::assignVirt2StackSlot(unsigned virtReg) {
-  assert(Register::isVirtualRegister(virtReg));
-  assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
+int VirtRegMap::assignVirt2StackSlot(Register virtReg) {
+  assert(virtReg.isVirtual());
+  assert(Virt2StackSlotMap[virtReg.id()] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   const TargetRegisterClass* RC = MF->getRegInfo().getRegClass(virtReg);
-  return Virt2StackSlotMap[virtReg] = createSpillSlot(RC);
+  return Virt2StackSlotMap[virtReg.id()] = createSpillSlot(RC);
 }
 
-void VirtRegMap::assignVirt2StackSlot(unsigned virtReg, int SS) {
-  assert(Register::isVirtualRegister(virtReg));
-  assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
+void VirtRegMap::assignVirt2StackSlot(Register virtReg, int SS) {
+  assert(virtReg.isVirtual());
+  assert(Virt2StackSlotMap[virtReg.id()] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   assert((SS >= 0 ||
           (SS >= MF->getFrameInfo().getObjectIndexBegin())) &&
          "illegal fixed frame index");
-  Virt2StackSlotMap[virtReg] = SS;
+  Virt2StackSlotMap[virtReg.id()] = SS;
 }
 
 void VirtRegMap::print(raw_ostream &OS, const Module*) const {
@@ -185,10 +184,10 @@ class VirtRegRewriter : public MachineFunctionPass {
   void rewrite();
   void addMBBLiveIns();
   bool readsUndefSubreg(const MachineOperand &MO) const;
-  void addLiveInsForSubRanges(const LiveInterval &LI, unsigned PhysReg) const;
+  void addLiveInsForSubRanges(const LiveInterval &LI, Register PhysReg) const;
   void handleIdentityCopy(MachineInstr &MI) const;
   void expandCopyBundle(MachineInstr &MI) const;
-  bool subRegLiveThrough(const MachineInstr &MI, unsigned SuperPhysReg) const;
+  bool subRegLiveThrough(const MachineInstr &MI, Register SuperPhysReg) const;
 
 public:
   static char ID;
@@ -265,7 +264,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
 }
 
 void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
-                                             unsigned PhysReg) const {
+                                             Register PhysReg) const {
   assert(!LI.empty());
   assert(LI.hasSubRanges());
 
@@ -312,7 +311,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
 // assignments.
 void VirtRegRewriter::addMBBLiveIns() {
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
-    unsigned VirtReg = Register::index2VirtReg(Idx);
+    Register VirtReg = Register::index2VirtReg(Idx);
     if (MRI->reg_nodbg_empty(VirtReg))
       continue;
     LiveInterval &LI = LIS->getInterval(VirtReg);
@@ -320,7 +319,7 @@ void VirtRegRewriter::addMBBLiveIns() {
       continue;
     // This is a virtual register that is live across basic blocks. Its
     // assigned PhysReg must be marked as live-in to those blocks.
-    unsigned PhysReg = VRM->getPhys(VirtReg);
+    Register PhysReg = VRM->getPhys(VirtReg);
     assert(PhysReg != VirtRegMap::NO_PHYS_REG && "Unmapped virtual register.");
 
     if (LI.hasSubRanges()) {
@@ -353,7 +352,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   if (MO.isUndef())
     return true;
 
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   const LiveInterval &LI = LIS->getInterval(Reg);
   const MachineInstr &MI = *MO.getParent();
   SlotIndex BaseIndex = LIS->getInstructionIndex(MI);
@@ -469,7 +468,7 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
 /// \pre \p MI defines a subregister of a virtual register that
 /// has been assigned to \p SuperPhysReg.
 bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
-                                        unsigned SuperPhysReg) const {
+                                        Register SuperPhysReg) const {
   SlotIndex MIIndex = LIS->getInstructionIndex(MI);
   SlotIndex BeforeMIUses = MIIndex.getBaseIndex();
   SlotIndex AfterMIDefs = MIIndex.getBoundaryIndex();
@@ -493,9 +492,9 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
 
 void VirtRegRewriter::rewrite() {
   bool NoSubRegLiveness = !MRI->subRegLivenessEnabled();
-  SmallVector<unsigned, 8> SuperDeads;
-  SmallVector<unsigned, 8> SuperDefs;
-  SmallVector<unsigned, 8> SuperKills;
+  SmallVector<Register, 8> SuperDeads;
+  SmallVector<Register, 8> SuperDefs;
+  SmallVector<Register, 8> SuperKills;
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
@@ -513,10 +512,10 @@ void VirtRegRewriter::rewrite() {
         if (MO.isRegMask())
           MRI->addPhysRegsUsedFromRegMask(MO.getRegMask());
 
-        if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+        if (!MO.isReg() || !MO.getReg().isVirtual())
           continue;
-        unsigned VirtReg = MO.getReg();
-        unsigned PhysReg = VRM->getPhys(VirtReg);
+        Register VirtReg = MO.getReg();
+        Register PhysReg = VRM->getPhys(VirtReg);
         assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
                "Instruction uses unmapped VirtReg");
         assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
@@ -562,7 +561,7 @@ void VirtRegRewriter::rewrite() {
 
           // PhysReg operands cannot have subregister indexes.
           PhysReg = TRI->getSubReg(PhysReg, SubReg);
-          assert(PhysReg && "Invalid SubReg for physical register");
+          assert(PhysReg.isValid() && "Invalid SubReg for physical register");
           MO.setSubReg(0);
         }
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but

@@ -319,14 +319,15 @@ void Fuzzer::RssLimitCallback() {
   _Exit(Options.OOMExitCode); // Stop right now.
 }
 
-void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
+void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
+                        size_t Features) {
   size_t ExecPerSec = execPerSec();
   if (!Options.Verbosity)
     return;
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);
   if (size_t N = TPC.GetTotalPCCoverage())
     Printf(" cov: %zd", N);
-  if (size_t N = Corpus.NumFeatures())
+  if (size_t N = Features ? Features : Corpus.NumFeatures())
     Printf(" ft: %zd", N);
   if (!Corpus.empty()) {
     Printf(" corp: %zd", Corpus.NumActiveUnits());

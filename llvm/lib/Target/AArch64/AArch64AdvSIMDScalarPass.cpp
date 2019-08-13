@@ -201,8 +201,8 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
   unsigned NumNewCopies = 3;
   unsigned NumRemovableCopies = 0;
 
-  unsigned OrigSrc0 = MI.getOperand(1).getReg();
-  unsigned OrigSrc1 = MI.getOperand(2).getReg();
+  Register OrigSrc0 = MI.getOperand(1).getReg();
+  Register OrigSrc1 = MI.getOperand(2).getReg();
   unsigned SubReg0;
   unsigned SubReg1;
   if (!MRI->def_empty(OrigSrc0)) {
@@ -236,7 +236,7 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
   // any of the uses is a transformable instruction, it's likely the tranforms
   // will chain, enabling us to save a copy there, too. This is an aggressive
   // heuristic that approximates the graph based cost analysis described above.
-  unsigned Dst = MI.getOperand(0).getReg();
+  Register Dst = MI.getOperand(0).getReg();
   bool AllUsesAreCopies = true;
   for (MachineRegisterInfo::use_instr_nodbg_iterator
            Use = MRI->use_instr_nodbg_begin(Dst),
@@ -293,8 +293,8 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
   assert(OldOpc != NewOpc && "transform an instruction to itself?!");
 
   // Check if we need a copy for the source registers.
-  unsigned OrigSrc0 = MI.getOperand(1).getReg();
-  unsigned OrigSrc1 = MI.getOperand(2).getReg();
+  Register OrigSrc0 = MI.getOperand(1).getReg();
+  Register OrigSrc1 = MI.getOperand(2).getReg();
   unsigned Src0 = 0, SubReg0;
   unsigned Src1 = 0, SubReg1;
   bool KillSrc0 = false, KillSrc1 = false;
@@ -354,7 +354,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
   // Create a vreg for the destination.
   // FIXME: No need to do this if the ultimate user expects an FPR64.
   // Check for that and avoid the copy if possible.
-  unsigned Dst = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
+  Register Dst = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
 
   // For now, all of the new instructions have the same simple three-register
   // form, so no need to special case based on what instruction we're

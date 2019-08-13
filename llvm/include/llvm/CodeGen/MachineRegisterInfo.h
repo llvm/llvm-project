@@ -107,16 +107,16 @@ private:
 
   /// getRegUseDefListHead - Return the head pointer for the register use/def
   /// list for the specified virtual or physical register.
-  MachineOperand *&getRegUseDefListHead(unsigned RegNo) {
-    if (Register::isVirtualRegister(RegNo))
-      return VRegInfo[RegNo].second;
-    return PhysRegUseDefLists[RegNo];
+  MachineOperand *&getRegUseDefListHead(Register RegNo) {
+    if (RegNo.isVirtual())
+      return VRegInfo[RegNo.id()].second;
+    return PhysRegUseDefLists[RegNo.id()];
   }
 
-  MachineOperand *getRegUseDefListHead(unsigned RegNo) const {
-    if (Register::isVirtualRegister(RegNo))
-      return VRegInfo[RegNo].second;
-    return PhysRegUseDefLists[RegNo];
+  MachineOperand *getRegUseDefListHead(Register RegNo) const {
+    if (RegNo.isVirtual())
+      return VRegInfo[RegNo.id()].second;
+    return PhysRegUseDefLists[RegNo.id()];
   }
 
   /// Get the next element in the use-def chain.
@@ -214,8 +214,8 @@ public:
   bool shouldTrackSubRegLiveness(const TargetRegisterClass &RC) const {
     return subRegLivenessEnabled() && RC.HasDisjunctSubRegs;
   }
-  bool shouldTrackSubRegLiveness(unsigned VReg) const {
-    assert(Register::isVirtualRegister(VReg) && "Must pass a VReg");
+  bool shouldTrackSubRegLiveness(Register VReg) const {
+    assert(VReg.isVirtual() && "Must pass a VReg");
     return shouldTrackSubRegLiveness(*getRegClass(VReg));
   }
   bool subRegLivenessEnabled() const {
@@ -326,7 +326,7 @@ public:
   /// of the specified register, skipping those marked as Debug.
   using reg_nodbg_iterator =
       defusechain_iterator<true, true, true, true, false, false>;
-  reg_nodbg_iterator reg_nodbg_begin(unsigned RegNo) const {
+  reg_nodbg_iterator reg_nodbg_begin(Register RegNo) const {
     return reg_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
   static reg_nodbg_iterator reg_nodbg_end() {
@@ -374,7 +374,7 @@ public:
 
   /// reg_nodbg_empty - Return true if the only instructions using or defining
   /// Reg are Debug instructions.
-  bool reg_nodbg_empty(unsigned RegNo) const {
+  bool reg_nodbg_empty(Register RegNo) const {
     return reg_nodbg_begin(RegNo) == reg_nodbg_end();
   }
 
@@ -628,10 +628,10 @@ public:
   /// Return the register class of the specified virtual register.
   /// This shouldn't be used directly unless \p Reg has a register class.
   /// \see getRegClassOrNull when this might happen.
-  const TargetRegisterClass *getRegClass(unsigned Reg) const {
-    assert(VRegInfo[Reg].first.is<const TargetRegisterClass *>() &&
+  const TargetRegisterClass *getRegClass(Register Reg) const {
+    assert(VRegInfo[Reg.id()].first.is<const TargetRegisterClass *>() &&
            "Register class not set, wrong accessor");
-    return VRegInfo[Reg].first.get<const TargetRegisterClass *>();
+    return VRegInfo[Reg.id()].first.get<const TargetRegisterClass *>();
   }
 
   /// Return the register class of \p Reg, or null if Reg has not been assigned
@@ -789,17 +789,18 @@ public:
   /// specified virtual register. If there are many hints, this returns the
   /// one with the greatest weight.
   std::pair<unsigned, unsigned>
-  getRegAllocationHint(unsigned VReg) const {
-    assert(Register::isVirtualRegister(VReg));
-    unsigned BestHint = (RegAllocHints[VReg].second.size() ?
-                         RegAllocHints[VReg].second[0] : 0);
-    return std::pair<unsigned, unsigned>(RegAllocHints[VReg].first, BestHint);
+  getRegAllocationHint(Register VReg) const {
+    assert(VReg.isVirtual());
+    unsigned BestHint = (RegAllocHints[VReg.id()].second.size() ?
+                         RegAllocHints[VReg.id()].second[0] : 0);
+    return std::pair<unsigned, unsigned>(RegAllocHints[VReg.id()].first,
+                                         BestHint);
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
   /// a target independent hint.
-  unsigned getSimpleHint(unsigned VReg) const {
-    assert(Register::isVirtualRegister(VReg));
+  Register getSimpleHint(Register VReg) const {
+    assert(VReg.isVirtual());
     std::pair<unsigned, unsigned> Hint = getRegAllocationHint(VReg);
     return Hint.first ? 0 : Hint.second;
   }
@@ -882,8 +883,8 @@ public:
   ///
   /// Reserved registers may belong to an allocatable register class, but the
   /// target has explicitly requested that they are not used.
-  bool isReserved(unsigned PhysReg) const {
-    return getReservedRegs().test(PhysReg);
+  bool isReserved(Register PhysReg) const {
+    return getReservedRegs().test(PhysReg.id());
   }
 
   /// Returns true when the given register unit is considered reserved.

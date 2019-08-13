@@ -39,8 +39,9 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
-                                 InfoType::IT_namespace);
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+                                 InfoType::IT_namespace, "Namespace");
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "Namespace");
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
   I.ChildEnums.emplace_back();
@@ -100,11 +101,15 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   <h1>namespace Namespace</h1>
   <h2 id="Namespaces">Namespaces</h2>
   <ul>
-    <li>ChildNamespace</li>
+    <li>
+      <a href="Namespace/ChildNamespace.html">ChildNamespace</a>
+    </li>
   </ul>
   <h2 id="Records">Records</h2>
   <ul>
-    <li>ChildStruct</li>
+    <li>
+      <a href="Namespace/ChildStruct.html">ChildStruct</a>
+    </li>
   </ul>
   <h2 id="Functions">Functions</h2>
   <div>
@@ -137,7 +142,8 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "X/Y/Z/r");
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
   I.ChildEnums.emplace_back();
@@ -215,7 +221,9 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   </ul>
   <h2 id="Records">Records</h2>
   <ul>
-    <li>ChildStruct</li>
+    <li>
+      <a href="r/ChildStruct.html">ChildStruct</a>
+    </li>
   </ul>
   <h2 id="Functions">Functions</h2>
   <div>

@@ -66,3 +66,14 @@ unreachable:                                      ; preds = %entry
 ; CHECK: popq    %rbx
 ; CHECK: popq    %rbp
 ; CHECK: retq # CATCHRET
+
+; CHECK-LABEL: "$handlerMap$0$?foo@@YAXXZ":
+; CHECK-NEXT: .long   0                       # Adjectives
+; CHECK-NEXT: .long   "??_R0H@8"@IMGREL       # Type
+; CHECK-NEXT: .long   44                      # CatchObjOffset
+; CHECK-NEXT: .long   "?catch${{.*}}??foo@@YAXXZ@4HA"@IMGREL # Handler
+; Sum of:
+;   16 RDX store offset
+;   16 two pushes
+;   72 stack alloc
+; CHECK-NEXT: .long   104                     # ParentFrameOffset

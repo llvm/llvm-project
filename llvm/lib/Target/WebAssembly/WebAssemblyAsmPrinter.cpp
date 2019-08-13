@@ -67,7 +67,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
 }
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
-  unsigned RegNo = MO.getReg();
+  Register RegNo = MO.getReg();
   assert(Register::isVirtualRegister(RegNo) &&
          "Unlowered physical register encountered during assembly printing");
   assert(!MFI->isVRegStackified(RegNo));

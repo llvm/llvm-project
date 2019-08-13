@@ -359,8 +359,8 @@ void A57ChainingConstraint::apply(PBQPRAGraph &G) {
       case AArch64::FMADDDrrr:
       case AArch64::FNMSUBDrrr:
       case AArch64::FNMADDDrrr: {
-        unsigned Rd = MI.getOperand(0).getReg();
-        unsigned Ra = MI.getOperand(3).getReg();
+        Register Rd = MI.getOperand(0).getReg();
+        Register Ra = MI.getOperand(3).getReg();
 
         if (addIntraChainConstraint(G, Rd, Ra))
           addInterChainConstraint(G, Rd, Ra);
@@ -369,7 +369,7 @@ void A57ChainingConstraint::apply(PBQPRAGraph &G) {
 
       case AArch64::FMLAv2f32:
       case AArch64::FMLSv2f32: {
-        unsigned Rd = MI.getOperand(0).getReg();
+        Register Rd = MI.getOperand(0).getReg();
         addInterChainConstraint(G, Rd, Rd);
         break;
       }

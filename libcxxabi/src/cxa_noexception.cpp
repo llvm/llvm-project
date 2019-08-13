@@ -15,8 +15,8 @@
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
-#include "cxa_exception.hpp"
-#include "cxa_handlers.hpp"
+#include "cxa_exception.h"
+#include "cxa_handlers.h"
 
 namespace __cxxabiv1 {
 

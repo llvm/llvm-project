@@ -563,8 +563,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getSameKindOfOperandsMapping(MI);
   }
   case TargetOpcode::COPY: {
-    unsigned DstReg = MI.getOperand(0).getReg();
-    unsigned SrcReg = MI.getOperand(1).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
     // Check if one of the register is not a generic register.
     if ((Register::isPhysicalRegister(DstReg) ||
          !MRI.getType(DstReg).isValid()) ||
@@ -693,7 +693,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_STORE:
     // Check if that store is fed by fp instructions.
     if (OpRegBankIdx[0] == PMI_FirstGPR) {
-      unsigned VReg = MI.getOperand(0).getReg();
+      Register VReg = MI.getOperand(0).getReg();
       if (!VReg)
         break;
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
@@ -745,7 +745,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // This doesn't check the condition, since it's just whatever is in NZCV.
     // This isn't passed explicitly in a register to fcsel/csel.
     for (unsigned Idx = 2; Idx < 4; ++Idx) {
-      unsigned VReg = MI.getOperand(Idx).getReg();
+      Register VReg = MI.getOperand(Idx).getReg();
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
       if (getRegBank(VReg, MRI, TRI) == &AArch64::FPRRegBank ||
           onlyDefinesFP(*DefMI, MRI, TRI))
@@ -813,7 +813,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // sure that we preserve that.
     if (OpRegBankIdx[1] != PMI_FirstGPR)
       break;
-    unsigned VReg = MI.getOperand(1).getReg();
+    Register VReg = MI.getOperand(1).getReg();
     if (!VReg)
       break;
 

@@ -376,12 +376,11 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ;
 ; AVX1-LABEL: bitcast_v32i8_to_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    shll $16, %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -632,13 +631,12 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    shll $16, %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax

@@ -167,6 +167,27 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src);
 
+  // The extend of a load is free
+  if (I && isa<LoadInst>(I->getOperand(0))) {
+    static const TypeConversionCostTblEntry LoadConversionTbl[] = {
+        {ISD::SIGN_EXTEND, MVT::i32, MVT::i16, 0},
+        {ISD::ZERO_EXTEND, MVT::i32, MVT::i16, 0},
+        {ISD::SIGN_EXTEND, MVT::i32, MVT::i8, 0},
+        {ISD::ZERO_EXTEND, MVT::i32, MVT::i8, 0},
+        {ISD::SIGN_EXTEND, MVT::i16, MVT::i8, 0},
+        {ISD::ZERO_EXTEND, MVT::i16, MVT::i8, 0},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i32, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i32, 1},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i16, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i16, 1},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i8, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i8, 1},
+    };
+    if (const auto *Entry = ConvertCostTableLookup(
+            LoadConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return Entry->Cost;
+  }
+
   // Some arithmetic, load and store operations have specific instructions
   // to cast up/down their types automatically at no extra cost.
   // TODO: Get these tables to know at least what the related operations are.
@@ -343,8 +364,8 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
       ValTy->isVectorTy() && ValTy->getScalarSizeInBits() <= 32)
     return 3;
 
-  if ((Opcode == Instruction::InsertElement ||
-       Opcode == Instruction::ExtractElement)) {
+  if (ST->hasNEON() && (Opcode == Instruction::InsertElement ||
+                        Opcode == Instruction::ExtractElement)) {
     // Cross-class copies are expensive on many microarchitectures,
     // so assume they are expensive by default.
     if (ValTy->getVectorElementType()->isIntegerTy())
@@ -397,13 +418,16 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   unsigned NumVectorInstToHideOverhead = 10;
   int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && SE &&
-      !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
-    return NumVectorInstToHideOverhead;
+  if (ST->hasNEON()) {
+    if (Ty->isVectorTy() && SE &&
+        !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
+      return NumVectorInstToHideOverhead;
 
-  // In many cases the address computation is not merged into the instruction
-  // addressing mode.
-  return 1;
+    // In many cases the address computation is not merged into the instruction
+    // addressing mode.
+    return 1;
+  }
+  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
 int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
@@ -442,76 +466,91 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
-  if (Kind == TTI::SK_Broadcast) {
-    static const CostTblEntry NEONDupTbl[] = {
-        // VDUP handles these cases.
-        {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v8i8,  1},
+  if (ST->hasNEON()) {
+    if (Kind == TTI::SK_Broadcast) {
+      static const CostTblEntry NEONDupTbl[] = {
+          // VDUP handles these cases.
+          {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v8i8, 1},
 
-        {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1}};
+          {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1}};
 
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
-    if (const auto *Entry = CostTableLookup(NEONDupTbl, ISD::VECTOR_SHUFFLE,
-                                            LT.second))
-      return LT.first * Entry->Cost;
+      if (const auto *Entry =
+              CostTableLookup(NEONDupTbl, ISD::VECTOR_SHUFFLE, LT.second))
+        return LT.first * Entry->Cost;
+    }
+    if (Kind == TTI::SK_Reverse) {
+      static const CostTblEntry NEONShuffleTbl[] = {
+          // Reverse shuffle cost one instruction if we are shuffling within a
+          // double word (vrev) or two if we shuffle a quad word (vrev, vext).
+          {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v8i8, 1},
 
-    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+          {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
+          {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},
+          {ISD::VECTOR_SHUFFLE, MVT::v8i16, 2},
+          {ISD::VECTOR_SHUFFLE, MVT::v16i8, 2}};
+
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+
+      if (const auto *Entry =
+              CostTableLookup(NEONShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
+        return LT.first * Entry->Cost;
+    }
+    if (Kind == TTI::SK_Select) {
+      static const CostTblEntry NEONSelShuffleTbl[] = {
+          // Select shuffle cost table for ARM. Cost is the number of
+          // instructions
+          // required to create the shuffled vector.
+
+          {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
+
+          {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
+          {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},
+          {ISD::VECTOR_SHUFFLE, MVT::v4i16, 2},
+
+          {ISD::VECTOR_SHUFFLE, MVT::v8i16, 16},
+
+          {ISD::VECTOR_SHUFFLE, MVT::v16i8, 32}};
+
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      if (const auto *Entry = CostTableLookup(NEONSelShuffleTbl,
+                                              ISD::VECTOR_SHUFFLE, LT.second))
+        return LT.first * Entry->Cost;
+    }
   }
-  if (Kind == TTI::SK_Reverse) {
-    static const CostTblEntry NEONShuffleTbl[] = {
-        // Reverse shuffle cost one instruction if we are shuffling within a
-        // double word (vrev) or two if we shuffle a quad word (vrev, vext).
-        {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v8i8,  1},
+  if (ST->hasMVEIntegerOps()) {
+    if (Kind == TTI::SK_Broadcast) {
+      static const CostTblEntry MVEDupTbl[] = {
+          // VDUP handles these cases.
+          {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
+          {ISD::VECTOR_SHUFFLE, MVT::v8f16, 1}};
 
-        {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
-        {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},
-        {ISD::VECTOR_SHUFFLE, MVT::v8i16, 2},
-        {ISD::VECTOR_SHUFFLE, MVT::v16i8, 2}};
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-
-    if (const auto *Entry = CostTableLookup(NEONShuffleTbl, ISD::VECTOR_SHUFFLE,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-
-    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
-  }
-  if (Kind == TTI::SK_Select) {
-    static const CostTblEntry NEONSelShuffleTbl[] = {
-        // Select shuffle cost table for ARM. Cost is the number of instructions
-        // required to create the shuffled vector.
-
-        {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
-
-        {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
-        {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},
-        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 2},
-
-        {ISD::VECTOR_SHUFFLE, MVT::v8i16, 16},
-
-        {ISD::VECTOR_SHUFFLE, MVT::v16i8, 32}};
-
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-    if (const auto *Entry = CostTableLookup(NEONSelShuffleTbl,
-                                            ISD::VECTOR_SHUFFLE, LT.second))
-      return LT.first * Entry->Cost;
-    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+      if (const auto *Entry = CostTableLookup(MVEDupTbl, ISD::VECTOR_SHUFFLE,
+                                              LT.second))
+        return LT.first * Entry->Cost;
+    }
   }
   return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }
@@ -592,7 +631,7 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
                                 unsigned AddressSpace, const Instruction *I) {
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
-  if (Src->isVectorTy() && Alignment != 16 &&
+  if (ST->hasNEON() && Src->isVectorTy() && Alignment != 16 &&
       Src->getVectorElementType()->isDoubleTy()) {
     // Unaligned loads/stores are extremely inefficient.
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.

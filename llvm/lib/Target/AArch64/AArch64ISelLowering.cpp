@@ -1316,9 +1316,9 @@ AArch64TargetLowering::EmitF128CSEL(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction::iterator It = ++MBB->getIterator();
 
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned IfTrueReg = MI.getOperand(1).getReg();
-  unsigned IfFalseReg = MI.getOperand(2).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register IfTrueReg = MI.getOperand(1).getReg();
+  Register IfFalseReg = MI.getOperand(2).getReg();
   unsigned CondCode = MI.getOperand(3).getImm();
   bool NZCVKilled = MI.getOperand(4).isKill();
 
@@ -3299,8 +3299,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         assert(!FuncInfo->getSRetReturnReg());
 
         MVT PtrTy = getPointerTy(DAG.getDataLayout());
-        unsigned Reg =
-          MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
+        Register Reg =
+            MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
         FuncInfo->setSRetReturnReg(Reg);
 
         SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, Reg, InVals[I]);
@@ -12148,7 +12148,7 @@ void AArch64TargetLowering::insertCopiesSplitCSR(
     else
       llvm_unreachable("Unexpected register class in CSRsViaCopy!");
 
-    unsigned NewVR = MRI->createVirtualRegister(RC);
+    Register NewVR = MRI->createVirtualRegister(RC);
     // Create copy from CSR to a virtual register.
     // FIXME: this currently does not emit CFI pseudo-instructions, it works
     // fine for CXX_FAST_TLS since the C++-style TLS access functions should be

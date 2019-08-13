@@ -44,11 +44,12 @@ private:
   bool &Bool;
 };
 
-void defaultPrintStackTrace(uintptr_t *Trace, options::Printf_t Printf) {
-  if (Trace[0] == 0)
+void defaultPrintStackTrace(uintptr_t *Trace, size_t TraceLength,
+                            options::Printf_t Printf) {
+  if (TraceLength == 0)
     Printf("  <unknown (does your allocator support backtracing?)>\n");
 
-  for (size_t i = 0; Trace[i] != 0; ++i) {
+  for (size_t i = 0; i < TraceLength; ++i) {
     Printf("  #%zu 0x%zx in <unknown>\n", i, Trace[i]);
   }
   Printf("\n");
@@ -68,12 +69,12 @@ void GuardedPoolAllocator::AllocationMetadata::RecordAllocation(
   // TODO(hctim): Ask the caller to provide the thread ID, so we don't waste
   // other thread's time getting the thread ID under lock.
   AllocationTrace.ThreadID = getThreadID();
+  AllocationTrace.TraceLength = 0;
+  DeallocationTrace.TraceLength = 0;
   DeallocationTrace.ThreadID = kInvalidThreadID;
   if (Backtrace)
-    Backtrace(AllocationTrace.Trace, kMaximumStackFrames);
-  else
-    AllocationTrace.Trace[0] = 0;
-  DeallocationTrace.Trace[0] = 0;
+    AllocationTrace.TraceLength =
+        Backtrace(AllocationTrace.Trace, kMaximumStackFrames);
 }
 
 void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation(
@@ -81,11 +82,11 @@ void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation(
   IsDeallocated = true;
   // Ensure that the unwinder is not called if the recursive flag is set,
   // otherwise non-reentrant unwinders may deadlock.
+  DeallocationTrace.TraceLength = 0;
   if (Backtrace && !ThreadLocals.RecursiveGuard) {
     ScopedBoolean B(ThreadLocals.RecursiveGuard);
-    Backtrace(DeallocationTrace.Trace, kMaximumStackFrames);
-  } else {
-    DeallocationTrace.Trace[0] = 0;
+    DeallocationTrace.TraceLength =
+        Backtrace(DeallocationTrace.Trace, kMaximumStackFrames);
   }
   DeallocationTrace.ThreadID = getThreadID();
 }
@@ -442,7 +443,8 @@ void printAllocDeallocTraces(uintptr_t AccessPtr, AllocationMetadata *Meta,
       Printf("0x%zx was deallocated by thread %zu here:\n", AccessPtr,
              Meta->DeallocationTrace.ThreadID);
 
-    PrintBacktrace(Meta->DeallocationTrace.Trace, Printf);
+    PrintBacktrace(Meta->DeallocationTrace.Trace,
+                   Meta->DeallocationTrace.TraceLength, Printf);
   }
 
   if (Meta->AllocationTrace.ThreadID == GuardedPoolAllocator::kInvalidThreadID)
@@ -451,7 +453,8 @@ void printAllocDeallocTraces(uintptr_t AccessPtr, AllocationMetadata *Meta,
     Printf("0x%zx was allocated by thread %zu here:\n", Meta->Addr,
            Meta->AllocationTrace.ThreadID);
 
-  PrintBacktrace(Meta->AllocationTrace.Trace, Printf);
+  PrintBacktrace(Meta->AllocationTrace.Trace, Meta->AllocationTrace.TraceLength,
+                 Printf);
 }
 
 struct ScopedEndOfReportDecorator {
@@ -491,11 +494,11 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr, Error E) {
   uint64_t ThreadID = getThreadID();
   printErrorType(E, AccessPtr, Meta, Printf, ThreadID);
   if (Backtrace) {
-    static constexpr unsigned kMaximumStackFramesForCrashTrace = 128;
+    static constexpr unsigned kMaximumStackFramesForCrashTrace = 512;
     uintptr_t Trace[kMaximumStackFramesForCrashTrace];
-    Backtrace(Trace, kMaximumStackFramesForCrashTrace);
+    size_t TraceLength = Backtrace(Trace, kMaximumStackFramesForCrashTrace);
 
-    PrintBacktrace(Trace, Printf);
+    PrintBacktrace(Trace, TraceLength, Printf);
   } else {
     Printf("  <unknown (does your allocator support backtracing?)>\n\n");
   }

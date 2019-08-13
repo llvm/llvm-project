@@ -3434,8 +3434,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     MFI.setFrameAddressIsTaken(true);
 
     const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-    unsigned FramePtr = RegInfo->getFrameRegister(*(FuncInfo.MF));
-    unsigned SrcReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    Register FramePtr = RegInfo->getFrameRegister(*(FuncInfo.MF));
+    Register SrcReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), SrcReg).addReg(FramePtr);
     // Recursively load frame address
@@ -3842,7 +3842,7 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
       return false;
 
     unsigned SrcReg = Reg + VA.getValNo();
-    unsigned DestReg = VA.getLocReg();
+    Register DestReg = VA.getLocReg();
     // Avoid a cross-class copy. This is very unlikely.
     if (!MRI.getRegClass(SrcReg)->contains(DestReg))
       return false;
@@ -3970,7 +3970,7 @@ unsigned AArch64FastISel::emiti1Ext(unsigned SrcReg, MVT DestVT, bool IsZExt) {
     if (DestVT == MVT::i64) {
       // We're ZExt i1 to i64.  The ANDWri Wd, Ws, #1 implicitly clears the
       // upper 32 bits.  Emit a SUBREG_TO_REG to extend from Wd to Xd.
-      unsigned Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+      Register Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(AArch64::SUBREG_TO_REG), Reg64)
           .addImm(0)
@@ -4123,7 +4123,7 @@ unsigned AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, unsigned Op0,
   };
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
-    unsigned TmpReg = MRI.createVirtualRegister(RC);
+    Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
         .addImm(0)
@@ -4244,7 +4244,7 @@ unsigned AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, unsigned Op0,
   };
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
-    unsigned TmpReg = MRI.createVirtualRegister(RC);
+    Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
         .addImm(0)
@@ -4353,7 +4353,7 @@ unsigned AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, unsigned Op0,
   };
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
-    unsigned TmpReg = MRI.createVirtualRegister(RC);
+    Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
         .addImm(0)
@@ -4412,7 +4412,7 @@ unsigned AArch64FastISel::emitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT,
   if (DestVT == MVT::i8 || DestVT == MVT::i16)
     DestVT = MVT::i32;
   else if (DestVT == MVT::i64) {
-    unsigned Src64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    Register Src64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(AArch64::SUBREG_TO_REG), Src64)
         .addImm(0)
@@ -4495,7 +4495,7 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
   const auto *LoadMI = MI;
   if (LoadMI->getOpcode() == TargetOpcode::COPY &&
       LoadMI->getOperand(1).getSubReg() == AArch64::sub_32) {
-    unsigned LoadReg = MI->getOperand(1).getReg();
+    Register LoadReg = MI->getOperand(1).getReg();
     LoadMI = MRI.getUniqueVRegDef(LoadReg);
     assert(LoadMI && "Expected valid instruction");
   }
