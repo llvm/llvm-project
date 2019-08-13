@@ -124,8 +124,7 @@ public:
     const NamedDecl &ND =
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
     const SourceManager &SM = AST->getSourceManager();
-    bool MainFile =
-        SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getBeginLoc()));
+    bool MainFile = isInsideMainFile(ND.getBeginLoc(), SM);
     return SymbolCollector::shouldCollectSymbol(
         ND, AST->getASTContext(), SymbolCollector::Options(), MainFile);
   }

@@ -35,7 +35,7 @@ public:
                           llvm::StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
-    if (SM.isWrittenInMainFile(HashLoc)) {
+    if (isInsideMainFile(HashLoc, SM)) {
       Out->MainFileIncludes.emplace_back();
       auto &Inc = Out->MainFileIncludes.back();
       Inc.R = halfOpenToRange(SM, FilenameRange);

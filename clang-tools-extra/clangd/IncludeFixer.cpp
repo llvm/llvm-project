@@ -338,7 +338,7 @@ public:
     assert(SemaPtr && "Sema must have been set.");
     if (SemaPtr->isSFINAEContext())
       return TypoCorrection();
-    if (!SemaPtr->SourceMgr.isWrittenInMainFile(Typo.getLoc()))
+    if (!isInsideMainFile(Typo.getLoc(), SemaPtr->SourceMgr))
       return clang::TypoCorrection();
 
     auto Extracted = extractUnresolvedNameCheaply(

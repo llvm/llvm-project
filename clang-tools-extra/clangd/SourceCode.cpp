@@ -369,6 +369,10 @@ static SourceRange getTokenFileRange(SourceLocation Loc,
   return FileRange;
 }
 
+bool isInsideMainFile(SourceLocation Loc, const SourceManager &SM) {
+  return Loc.isValid() && SM.isWrittenInMainFile(SM.getExpansionLoc(Loc));
+}
+
 llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
                                                 const LangOptions &LangOpts,
                                                 SourceRange R) {
