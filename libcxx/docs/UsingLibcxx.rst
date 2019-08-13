@@ -345,3 +345,4 @@ which no dialect declares as such (See the second form described above).
 * ``search``
 * ``unique``
 * ``upper_bound``
+* ``lock_guard``'s constructors

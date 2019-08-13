@@ -4,14 +4,28 @@
 # RUN: echo '.globl ifunc; .type ifunc, %gnu_indirect_function; ifunc:' | \
 # RUN:   llvm-mc -filetype=obj -triple=powerpc64le - -o %t1.o
 # RUN: ld.lld %t.o %t1.o -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s
+# RUN: llvm-readelf -S -s %t | FileCheck --check-prefix=SEC %s
+# RUN: llvm-readelf -x .toc %t | FileCheck --check-prefix=HEX %s
+# RUN: llvm-objdump -d %t | FileCheck --check-prefix=DIS %s
 
-## ifunc is a non-preemptable STT_GNU_IFUNC. Its toc entry will be
-## relocated by R_PPC64_IRELATIVE, not representable by a toc-relative value.
-## Check the toc-indirect access is not relaxed.
+## ifunc is a non-preemptable STT_GNU_IFUNC. The R_PPC64_ADDR64 in .toc
+## creates a canonical PLT for it and changes its type to STT_FUNC. We can thus
+## still perform toc-indirect to toc-relative relaxation because the distance
+## to the address of the canonical PLT is fixed.
 
-# CHECK:      nop
-# CHECK-NEXT: ld 3, -32768(2)
+# SEC: .text PROGBITS 0000000010010000
+# SEC: .plt  NOBITS   0000000010030000
+# SEC: 0000000010010010 0 FUNC GLOBAL DEFAULT 3 ifunc
+
+## .toc[0] stores the address of the canonical PLT.
+# HEX:      section '.toc':
+# HEX-NEXT: 0x10020000 10000110 00000000
+
+# REL:      .rela.dyn {
+# REL-NEXT:   0x10030000 R_PPC64_IRELATIVE - 0x10010008
+# REL-NEXT: }
+
+# DIS: addi 3, 3,
 
 addis 3, 2, .toc@toc@ha
 ld 3, .toc@toc@l(3)
