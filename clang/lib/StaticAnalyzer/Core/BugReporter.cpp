@@ -90,9 +90,10 @@ void BugReporterContext::anchor() {}
 
 namespace {
 
-using StackDiagPair =
+/// A (CallPiece, node assiciated with its CallEnter) pair.
+using CallWithEntry =
     std::pair<PathDiagnosticCallPiece *, const ExplodedNode *>;
-using StackDiagVector = SmallVector<StackDiagPair, 6>;
+using CallWithEntryStack = SmallVector<CallWithEntry, 6>;
 
 /// Map from each node to the diagnostic pieces visitors emit for them.
 using VisitorsDiagnosticsTy =
@@ -108,7 +109,7 @@ using LocationContextMap =
 /// A helper class that contains everything needed to construct a
 /// PathDiagnostic object. It does no much more then providing convenient
 /// getters and some well placed asserts for extra security.
-class BugReportConstruct {
+class PathDiagnosticConstruct {
   /// The consumer we're constructing the bug report for.
   const PathDiagnosticConsumer *Consumer;
   /// Our current position in the bug path, which is owned by
@@ -124,7 +125,7 @@ public:
   /// We keep stack of calls to functions as we're ascending the bug path.
   /// TODO: PathDiagnostic has a stack doing the same thing, shouldn't we use
   /// that instead?
-  StackDiagVector CallStack;
+  CallWithEntryStack CallStack;
   InterestingExprs IE;
   /// The bug report we're constructing. For ease of use, this field is kept
   /// public, though some "shortcut" getters are provided for commonly used
@@ -132,8 +133,8 @@ public:
   std::unique_ptr<PathDiagnostic> PD;
 
 public:
-  BugReportConstruct(const PathDiagnosticConsumer *PDC,
-                     const ExplodedNode *ErrorNode, const BugReport *R);
+  PathDiagnosticConstruct(const PathDiagnosticConsumer *PDC,
+                          const ExplodedNode *ErrorNode, const BugReport *R);
 
   /// \returns the location context associated with the current position in the
   /// bug path.
@@ -234,29 +235,30 @@ public:
   generate(const PathDiagnosticConsumer *PDC) const;
 
 private:
-  void generatePathDiagnosticsForNode(BugReportConstruct &C,
+  void generatePathDiagnosticsForNode(PathDiagnosticConstruct &C,
                                       PathDiagnosticLocation &PrevLoc) const;
 
-  void generateMinimalDiagForBlockEdge(BugReportConstruct &C,
+  void generateMinimalDiagForBlockEdge(PathDiagnosticConstruct &C,
                                        BlockEdge BE) const;
 
   PathDiagnosticPieceRef
-  generateDiagForGotoOP(const BugReportConstruct &C, const Stmt *S,
+  generateDiagForGotoOP(const PathDiagnosticConstruct &C, const Stmt *S,
                         PathDiagnosticLocation &Start) const;
 
   PathDiagnosticPieceRef
-  generateDiagForSwitchOP(const BugReportConstruct &C, const CFGBlock *Dst,
+  generateDiagForSwitchOP(const PathDiagnosticConstruct &C, const CFGBlock *Dst,
                           PathDiagnosticLocation &Start) const;
 
-  PathDiagnosticPieceRef generateDiagForBinaryOP(const BugReportConstruct &C,
-                                                 const Stmt *T,
-                                                 const CFGBlock *Src,
-                                                 const CFGBlock *DstC) const;
+  PathDiagnosticPieceRef
+  generateDiagForBinaryOP(const PathDiagnosticConstruct &C, const Stmt *T,
+                          const CFGBlock *Src, const CFGBlock *DstC) const;
 
-  PathDiagnosticLocation ExecutionContinues(const BugReportConstruct &C) const;
+  PathDiagnosticLocation
+  ExecutionContinues(const PathDiagnosticConstruct &C) const;
 
-  PathDiagnosticLocation ExecutionContinues(llvm::raw_string_ostream &os,
-                                            const BugReportConstruct &C) const;
+  PathDiagnosticLocation
+  ExecutionContinues(llvm::raw_string_ostream &os,
+                     const PathDiagnosticConstruct &C) const;
 
   BugReport *getBugReport() const { return R; }
 };
@@ -364,8 +366,8 @@ static void removeRedundantMsgs(PathPieces &path) {
 /// Recursively scan through a path and prune out calls and macros pieces
 /// that aren't needed.  Return true if afterwards the path contains
 /// "interesting stuff" which means it shouldn't be pruned from the parent path.
-static bool removeUnneededCalls(const BugReportConstruct &C, PathPieces &pieces,
-                                const BugReport *R,
+static bool removeUnneededCalls(const PathDiagnosticConstruct &C,
+                                PathPieces &pieces, const BugReport *R,
                                 bool IsInteresting = false) {
   bool containsSomethingInteresting = IsInteresting;
   const unsigned N = pieces.size();
@@ -519,8 +521,8 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
   }
 }
 
-PathDiagnosticLocation
-PathDiagnosticBuilder::ExecutionContinues(const BugReportConstruct &C) const {
+PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
+    const PathDiagnosticConstruct &C) const {
   if (const Stmt *S = PathDiagnosticLocation::getNextStmt(C.getCurrentNode()))
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
@@ -529,9 +531,8 @@ PathDiagnosticBuilder::ExecutionContinues(const BugReportConstruct &C) const {
                                                getSourceManager());
 }
 
-PathDiagnosticLocation
-PathDiagnosticBuilder::ExecutionContinues(llvm::raw_string_ostream &os,
-                                          const BugReportConstruct &C) const {
+PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
+    llvm::raw_string_ostream &os, const PathDiagnosticConstruct &C) const {
   // Slow, but probably doesn't matter.
   if (os.str().empty())
     os << ' ';
@@ -665,7 +666,7 @@ getEnclosingStmtLocation(const Stmt *S, const LocationContext *LC,
 ///     void *ptr = my_malloc(); // returned allocated memory
 ///   } // leak
 static void updateStackPiecesWithMessage(PathDiagnosticPiece &P,
-                                         const StackDiagVector &CallStack) {
+                                         const CallWithEntryStack &CallStack) {
   if (auto *ep = dyn_cast<PathDiagnosticEventPiece>(&P)) {
     if (ep->hasCallStackHint())
       for (const auto &I : CallStack) {
@@ -686,7 +687,7 @@ static void CompactMacroExpandedPieces(PathPieces &path,
                                        const SourceManager& SM);
 
 PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
-    const BugReportConstruct &C, const CFGBlock *Dst,
+    const PathDiagnosticConstruct &C, const CFGBlock *Dst,
     PathDiagnosticLocation &Start) const {
 
   const SourceManager &SM = getSourceManager();
@@ -744,7 +745,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
 }
 
 PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForGotoOP(
-    const BugReportConstruct &C, const Stmt *S,
+    const PathDiagnosticConstruct &C, const Stmt *S,
     PathDiagnosticLocation &Start) const {
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
@@ -755,7 +756,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForGotoOP(
 }
 
 PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForBinaryOP(
-    const BugReportConstruct &C, const Stmt *T, const CFGBlock *Src,
+    const PathDiagnosticConstruct &C, const Stmt *T, const CFGBlock *Src,
     const CFGBlock *Dst) const {
 
   const SourceManager &SM = getSourceManager();
@@ -803,7 +804,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForBinaryOP(
 }
 
 void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
-    BugReportConstruct &C, BlockEdge BE) const {
+    PathDiagnosticConstruct &C, BlockEdge BE) const {
   const SourceManager &SM = getSourceManager();
   const LocationContext *LC = C.getCurrLocationContext();
   const CFGBlock *Src = BE.getSrc();
@@ -1135,7 +1136,7 @@ static std::unique_ptr<FilesToLineNumsMap>
 findExecutedLines(const SourceManager &SM, const ExplodedNode *N);
 
 void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
-    BugReportConstruct &C, PathDiagnosticLocation &PrevLoc) const {
+    PathDiagnosticConstruct &C, PathDiagnosticLocation &PrevLoc) const {
   ProgramPoint P = C.getCurrentNode()->getLocation();
   const SourceManager &SM = getSourceManager();
 
@@ -1235,7 +1236,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     // Make the contents of the call the active path for now.
     C.PD->pushActivePath(&P->path);
-    C.CallStack.push_back(StackDiagPair(P, C.getCurrentNode()));
+    C.CallStack.push_back(CallWithEntry(P, C.getCurrentNode()));
     return;
   }
 
@@ -1784,7 +1785,7 @@ static void removeIdenticalEvents(PathPieces &path) {
   }
 }
 
-static bool optimizeEdges(const BugReportConstruct &C, PathPieces &path,
+static bool optimizeEdges(const PathDiagnosticConstruct &C, PathPieces &path,
                           OptimizedCallsSet &OCS) {
   bool hasChanges = false;
   const LocationContext *LC = C.getLocationContextFor(&path);
@@ -1966,7 +1967,7 @@ static bool optimizeEdges(const BugReportConstruct &C, PathPieces &path,
 /// statement had an invalid source location), this function does nothing.
 // FIXME: We should just generate invalid edges anyway and have the optimizer
 // deal with them.
-static void dropFunctionEntryEdge(const BugReportConstruct &C,
+static void dropFunctionEntryEdge(const PathDiagnosticConstruct &C,
                                   PathPieces &Path) {
   const auto *FirstEdge =
       dyn_cast<PathDiagnosticControlFlowPiece>(Path.front().get());
@@ -1997,9 +1998,9 @@ static void updateExecutedLinesWithDiagnosticPieces(PathDiagnostic &PD) {
   }
 }
 
-BugReportConstruct::BugReportConstruct(const PathDiagnosticConsumer *PDC,
-                                       const ExplodedNode *ErrorNode,
-                                       const BugReport *R)
+PathDiagnosticConstruct::PathDiagnosticConstruct(
+    const PathDiagnosticConsumer *PDC, const ExplodedNode *ErrorNode,
+    const BugReport *R)
     : Consumer(PDC), CurrentNode(ErrorNode),
       SM(CurrentNode->getCodeDecl().getASTContext().getSourceManager()),
       PD(generateEmptyDiagnosticForReport(R, getSourceManager())) {
@@ -2020,7 +2021,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (!PDC->shouldGenerateDiagnostics())
     return generateEmptyDiagnosticForReport(R, getSourceManager());
 
-  BugReportConstruct Construct(PDC, ErrorNode, R);
+  PathDiagnosticConstruct Construct(PDC, ErrorNode, R);
 
   const SourceManager &SM = getSourceManager();
   const BugReport *R = getBugReport();
