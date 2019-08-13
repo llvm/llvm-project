@@ -34,7 +34,7 @@ public:
   ARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                          const ARMRegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
+  bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -833,8 +833,7 @@ void ARMInstructionSelector::renderVFPF64Imm(
   NewInstBuilder.addImm(FPImmEncoding);
 }
 
-bool ARMInstructionSelector::select(MachineInstr &I,
-                                    CodeGenCoverage &CoverageInfo) const {
+bool ARMInstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -851,7 +850,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
 
   using namespace TargetOpcode;
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I, *CoverageInfo))
     return true;
 
   MachineInstrBuilder MIB{MF, I};

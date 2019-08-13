@@ -79,6 +79,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <queue>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -185,6 +186,74 @@ private:
   /// keyed by FunctionSamples pointers, but these stats are cleared after
   /// every function, so we just need to keep a single counter.
   uint64_t TotalUsedSamples = 0;
+};
+
+class GUIDToFuncNameMapper {
+public:
+  GUIDToFuncNameMapper(Module &M, SampleProfileReader &Reader,
+                        DenseMap<uint64_t, StringRef> &GUIDToFuncNameMap)
+      : CurrentReader(Reader), CurrentModule(M), 
+      CurrentGUIDToFuncNameMap(GUIDToFuncNameMap) {
+    if (CurrentReader.getFormat() != SPF_Compact_Binary)
+      return;
+
+    for (const auto &F : CurrentModule) {
+      StringRef OrigName = F.getName();
+      CurrentGUIDToFuncNameMap.insert(
+          {Function::getGUID(OrigName), OrigName});
+
+      // Local to global var promotion used by optimization like thinlto
+      // will rename the var and add suffix like ".llvm.xxx" to the
+      // original local name. In sample profile, the suffixes of function
+      // names are all stripped. Since it is possible that the mapper is
+      // built in post-thin-link phase and var promotion has been done,
+      // we need to add the substring of function name without the suffix
+      // into the GUIDToFuncNameMap.
+      StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+      if (CanonName != OrigName)
+        CurrentGUIDToFuncNameMap.insert(
+            {Function::getGUID(CanonName), CanonName});
+    }
+
+    // Update GUIDToFuncNameMap for each function including inlinees.
+    SetGUIDToFuncNameMapForAll(&CurrentGUIDToFuncNameMap);
+  }
+
+  ~GUIDToFuncNameMapper() {
+    if (CurrentReader.getFormat() != SPF_Compact_Binary)
+      return;
+
+    CurrentGUIDToFuncNameMap.clear();
+
+    // Reset GUIDToFuncNameMap for of each function as they're no
+    // longer valid at this point.
+    SetGUIDToFuncNameMapForAll(nullptr);
+  }
+
+private:
+  void SetGUIDToFuncNameMapForAll(DenseMap<uint64_t, StringRef> *Map) {
+    std::queue<FunctionSamples *> FSToUpdate;
+    for (auto &IFS : CurrentReader.getProfiles()) {
+      FSToUpdate.push(&IFS.second);
+    }
+
+    while (!FSToUpdate.empty()) {
+      FunctionSamples *FS = FSToUpdate.front();
+      FSToUpdate.pop();
+      FS->GUIDToFuncNameMap = Map;
+      for (const auto &ICS : FS->getCallsiteSamples()) {
+        const FunctionSamplesMap &FSMap = ICS.second;
+        for (auto &IFS : FSMap) {
+          FunctionSamples &FS = const_cast<FunctionSamples &>(IFS.second);
+          FSToUpdate.push(&FS);
+        }
+      }
+    }
+  }
+
+  SampleProfileReader &CurrentReader;
+  Module &CurrentModule;
+  DenseMap<uint64_t, StringRef> &CurrentGUIDToFuncNameMap;
 };
 
 /// Sample profile pass.
@@ -326,6 +395,10 @@ protected:
     uint64_t entryCount;
   };
   DenseMap<Function *, NotInlinedProfileInfo> notInlinedCallInfo;
+
+  // GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
+  // all the function symbols defined or declared in current module.
+  DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -1594,7 +1667,7 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI) {
-  FunctionSamples::GUIDToFuncNameMapper Mapper(M);
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
   if (!ProfileIsValid)
     return false;
 

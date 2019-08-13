@@ -1028,7 +1028,7 @@ public:
   /// Return true if the instruction is a debug value which describes a part of
   /// a variable as unavailable.
   bool isUndefDebugValue() const {
-    return isDebugValue() && getOperand(0).isReg() && !getOperand(0).getReg();
+    return isDebugValue() && getOperand(0).isReg() && !getOperand(0).getReg().isValid();
   }
 
   bool isPHI() const {

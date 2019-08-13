@@ -286,6 +286,6 @@ const RegisterBankInfo *MipsSubtarget::getRegBankInfo() const {
   return RegBankInfo.get();
 }
 
-const InstructionSelector *MipsSubtarget::getInstructionSelector() const {
+InstructionSelector *MipsSubtarget::getInstructionSelector() const {
   return InstSelector.get();
 }

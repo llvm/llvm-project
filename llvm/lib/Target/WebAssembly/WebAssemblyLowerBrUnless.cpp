@@ -68,7 +68,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       if (MI->getOpcode() != WebAssembly::BR_UNLESS)
         continue;
 
-      unsigned Cond = MI->getOperand(1).getReg();
+      Register Cond = MI->getOperand(1).getReg();
       bool Inverted = false;
 
       // Attempt to invert the condition in place.
@@ -188,7 +188,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // If we weren't able to invert the condition in place. Insert an
       // instruction to invert it.
       if (!Inverted) {
-        unsigned Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+        Register Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
         BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
             .addReg(Cond);
         MFI.stackifyVReg(Tmp);

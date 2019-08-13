@@ -114,6 +114,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_log10);
     TLI.setUnavailable(LibFunc_log10f);
     TLI.setUnavailable(LibFunc_log10l);
+    TLI.setUnavailable(LibFunc_printf);
   }
 
   // There are no library implementations of memcpy and memset for AMD gpus and

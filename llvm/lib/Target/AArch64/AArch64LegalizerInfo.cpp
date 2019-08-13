@@ -705,7 +705,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     auto Bitcast = MIRBuilder.buildBitcast({NewTy}, {ValReg});
     MIRBuilder.buildStore(Bitcast.getReg(0), MI.getOperand(1).getReg(), MMO);
   } else {
-    unsigned NewReg = MRI.createGenericVirtualRegister(NewTy);
+    Register NewReg = MRI.createGenericVirtualRegister(NewTy);
     auto NewLoad = MIRBuilder.buildLoad(NewReg, MI.getOperand(1).getReg(), MMO);
     MIRBuilder.buildBitcast({ValReg}, {NewLoad});
   }

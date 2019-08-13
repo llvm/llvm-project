@@ -418,6 +418,7 @@ private:
   void visitBasicBlock(BasicBlock &BB);
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
+  void visitProfMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -3996,6 +3997,45 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
          "dereferenceable_or_null metadata value must be an i64!", &I);
 }
 
+void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
+  Assert(MD->getNumOperands() >= 2,
+         "!prof annotations should have no less than 2 operands", MD);
+
+  // Check first operand.
+  Assert(MD->getOperand(0) != nullptr, "first operand should not be null", MD);
+  Assert(isa<MDString>(MD->getOperand(0)),
+         "expected string with name of the !prof annotation", MD);
+  MDString *MDS = cast<MDString>(MD->getOperand(0));
+  StringRef ProfName = MDS->getString();
+
+  // Check consistency of !prof branch_weights metadata.
+  if (ProfName.equals("branch_weights")) {
+    unsigned ExpectedNumOperands = 0;
+    if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+      ExpectedNumOperands = BI->getNumSuccessors();
+    else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
+      ExpectedNumOperands = SI->getNumSuccessors();
+    else if (isa<CallInst>(&I) || isa<InvokeInst>(&I))
+      ExpectedNumOperands = 1;
+    else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
+      ExpectedNumOperands = IBI->getNumDestinations();
+    else if (isa<SelectInst>(&I))
+      ExpectedNumOperands = 2;
+    else
+      CheckFailed("!prof branch_weights are not allowed for this instruction",
+                  MD);
+
+    Assert(MD->getNumOperands() == 1 + ExpectedNumOperands,
+           "Wrong number of operands", MD);
+    for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
+      auto &MDO = MD->getOperand(i);
+      Assert(MDO, "second operand should not be null", MD);
+      Assert(mdconst::dyn_extract<ConstantInt>(MDO),
+             "!prof brunch_weights operand is not a const int");
+    }
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -4152,6 +4192,9 @@ void Verifier::visitInstruction(Instruction &I) {
     Assert(Align <= Value::MaximumAlignment,
            "alignment is larger that implementation defined limit", &I);
   }
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_prof))
+    visitProfMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     AssertDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);

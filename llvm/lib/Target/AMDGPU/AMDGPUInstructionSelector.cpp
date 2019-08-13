@@ -563,8 +563,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_INTRINSIC(
-  MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
+bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   unsigned IntrinsicID =  I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_if_break: {
@@ -593,7 +592,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(
     return true;
   }
   default:
-    return selectImpl(I, CoverageInfo);
+    return selectImpl(I, *CoverageInfo);
   }
 }
 
@@ -733,7 +732,7 @@ buildEXP(const TargetInstrInfo &TII, MachineInstr *Insert, unsigned Tgt,
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
-  MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
+    MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -787,7 +786,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return true;
   }
   default:
-    return selectImpl(I, CoverageInfo);
+    return selectImpl(I, *CoverageInfo);
   }
 }
 
@@ -840,10 +839,9 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   return Ret;
 }
 
-bool AMDGPUInstructionSelector::selectG_STORE(
-  MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
+bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
   initM0(I);
-  return selectImpl(I, CoverageInfo);
+  return selectImpl(I, *CoverageInfo);
 }
 
 static int sizeToSubRegIndex(unsigned Size) {
@@ -1215,10 +1213,9 @@ void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
   }
 }
 
-bool AMDGPUInstructionSelector::selectG_LOAD_ATOMICRMW(MachineInstr &I,
-                                                       CodeGenCoverage &CoverageInfo) const {
+bool AMDGPUInstructionSelector::selectG_LOAD_ATOMICRMW(MachineInstr &I) const {
   initM0(I);
-  return selectImpl(I, CoverageInfo);
+  return selectImpl(I, *CoverageInfo);
 }
 
 bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
@@ -1282,8 +1279,7 @@ bool AMDGPUInstructionSelector::selectG_FRAME_INDEX(MachineInstr &I) const {
     DstReg, IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass, MRI);
 }
 
-bool AMDGPUInstructionSelector::select(MachineInstr &I,
-                                       CodeGenCoverage &CoverageInfo) const {
+bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   if (I.isPHI())
     return selectPHI(I);
 
@@ -1299,14 +1295,14 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_XOR:
     if (selectG_AND_OR_XOR(I))
       return true;
-    return selectImpl(I, CoverageInfo);
+    return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
     if (selectG_ADD_SUB(I))
       return true;
     LLVM_FALLTHROUGH;
   default:
-    return selectImpl(I, CoverageInfo);
+    return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
     return selectCOPY(I);
@@ -1328,13 +1324,13 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);
   case TargetOpcode::G_INTRINSIC:
-    return selectG_INTRINSIC(I, CoverageInfo);
+    return selectG_INTRINSIC(I);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectG_INTRINSIC_W_SIDE_EFFECTS(I, CoverageInfo);
+    return selectG_INTRINSIC_W_SIDE_EFFECTS(I);
   case TargetOpcode::G_ICMP:
     if (selectG_ICMP(I))
       return true;
-    return selectImpl(I, CoverageInfo);
+    return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMICRMW_XCHG:
@@ -1348,11 +1344,11 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_ATOMICRMW_UMIN:
   case TargetOpcode::G_ATOMICRMW_UMAX:
   case TargetOpcode::G_ATOMICRMW_FADD:
-    return selectG_LOAD_ATOMICRMW(I, CoverageInfo);
+    return selectG_LOAD_ATOMICRMW(I);
   case TargetOpcode::G_SELECT:
     return selectG_SELECT(I);
   case TargetOpcode::G_STORE:
-    return selectG_STORE(I, CoverageInfo);
+    return selectG_STORE(I);
   case TargetOpcode::G_TRUNC:
     return selectG_TRUNC(I);
   case TargetOpcode::G_SEXT:

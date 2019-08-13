@@ -262,6 +262,9 @@ private:
   DependenceInfo &DI;
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
+raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
+
 /// Printer pass for the \c CacheCost results.
 class LoopCachePrinterPass : public PassInfoMixin<LoopCachePrinterPass> {
   raw_ostream &OS;

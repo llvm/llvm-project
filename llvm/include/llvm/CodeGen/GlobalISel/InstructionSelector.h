@@ -372,7 +372,16 @@ public:
   ///   if returns true:
   ///     for I in all mutated/inserted instructions:
   ///       !isPreISelGenericOpcode(I.getOpcode())
-  virtual bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const = 0;
+  virtual bool select(MachineInstr &I) = 0;
+
+  CodeGenCoverage *CoverageInfo = nullptr;
+  MachineFunction *MF = nullptr;
+
+  /// Setup per-MF selector state.
+  virtual void setupMF(MachineFunction &mf, CodeGenCoverage &covinfo) {
+    CoverageInfo = &covinfo;
+    MF = &mf;
+  }
 
 protected:
   using ComplexRendererFns =

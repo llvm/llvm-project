@@ -48,7 +48,7 @@ struct XCOFFFileHeader64 {
 };
 
 struct XCOFFSectionHeader32 {
-  char Name[XCOFF::SectionNameSize];
+  char Name[XCOFF::NameSize];
   support::ubig32_t PhysicalAddress;
   support::ubig32_t VirtualAddress;
   support::ubig32_t SectionSize;
@@ -63,7 +63,7 @@ struct XCOFFSectionHeader32 {
 };
 
 struct XCOFFSectionHeader64 {
-  char Name[XCOFF::SectionNameSize];
+  char Name[XCOFF::NameSize];
   support::ubig64_t PhysicalAddress;
   support::ubig64_t VirtualAddress;
   support::ubig64_t SectionSize;
@@ -91,7 +91,7 @@ struct XCOFFSymbolEntry {
   } CFileLanguageIdAndTypeIdType;
 
   union {
-    char SymbolName[XCOFF::SymbolNameSize];
+    char SymbolName[XCOFF::NameSize];
     NameInStrTblType NameInStrTbl;
   };
 

@@ -444,3 +444,46 @@ define <2 x i32> @t21_ult_slt_vec_nonsplat(<2 x i32> %x, <2 x i32> %replacement_
   %r = select <2 x i1> %t3, <2 x i32> %x, <2 x i32> %t1
   ret <2 x i32> %r
 }
+
+; Non-canonical predicates
+
+declare void @use2xi1(<2 x i1>)
+
+declare void @use(<2 x i1>)
+define <2 x i32> @t22_uge_slt(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
+; CHECK-LABEL: @t22_uge_slt(
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[T1:%.*]] = select <2 x i1> [[T0]], <2 x i32> [[REPLACEMENT_LOW:%.*]], <2 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[X]], <i32 16, i32 16>
+; CHECK-NEXT:    [[T3:%.*]] = icmp uge <2 x i32> [[T2]], <i32 144, i32 0>
+; CHECK-NEXT:    call void @use2xi1(<2 x i1> [[T3]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[T1]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %t0 = icmp slt <2 x i32> %x, <i32 128, i32 128>
+  %t1 = select <2 x i1> %t0, <2 x i32> %replacement_low, <2 x i32> %replacement_high
+  %t2 = add <2 x i32> %x, <i32 16, i32 16>
+  %t3 = icmp uge <2 x i32> %t2, <i32 144, i32 0>
+  call void @use2xi1(<2 x i1> %t3)
+  %r = select <2 x i1> %t3, <2 x i32> %t1, <2 x i32> %x
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @t23_ult_sge(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
+; CHECK-LABEL: @t23_ult_sge(
+; CHECK-NEXT:    [[T0:%.*]] = icmp sge <2 x i32> [[X:%.*]], <i32 128, i32 -2147483648>
+; CHECK-NEXT:    call void @use2xi1(<2 x i1> [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = select <2 x i1> [[T0]], <2 x i32> [[REPLACEMENT_HIGH:%.*]], <2 x i32> [[REPLACEMENT_LOW:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[X]], <i32 16, i32 -2147483648>
+; CHECK-NEXT:    [[T3:%.*]] = icmp ult <2 x i32> [[T2]], <i32 144, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[X]], <2 x i32> [[T1]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %t0 = icmp sge <2 x i32> %x, <i32 128, i32 -2147483648>
+  call void @use2xi1(<2 x i1> %t0)
+  %t1 = select <2 x i1> %t0, <2 x i32> %replacement_high, <2 x i32> %replacement_low
+  %t2 = add <2 x i32> %x, <i32 16, i32 -2147483648>
+  %t3 = icmp ult <2 x i32> %t2, <i32 144, i32 -1>
+  %r = select <2 x i1> %t3, <2 x i32> %x, <2 x i32> %t1
+  ret <2 x i32> %r
+}

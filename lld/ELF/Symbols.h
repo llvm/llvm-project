@@ -116,11 +116,20 @@ public:
   // are unreferenced except by other bitcode objects.
   unsigned isUsedInRegularObj : 1;
 
-  // If this flag is true and the symbol has protected or default visibility, it
-  // will appear in .dynsym. This flag is set by interposable DSO symbols in
-  // executables, by most symbols in DSOs and executables built with
-  // --export-dynamic, and by dynamic lists.
+  // Used by a Defined symbol with protected or default visibility, to record
+  // whether it is required to be exported into .dynsym. This is set when any of
+  // the following conditions hold:
+  //
+  // - If there is an interposable symbol from a DSO.
+  // - If -shared or --export-dynamic is specified, any symbol in an object
+  //   file/bitcode sets this property, unless suppressed by LTO
+  //   canBeOmittedFromSymbolTable().
   unsigned exportDynamic : 1;
+
+  // True if the symbol is in the --dynamic-list file. A Defined symbol with
+  // protected or default visibility with this property is required to be
+  // exported into .dynsym.
+  unsigned inDynamicList : 1;
 
   // False if LTO shouldn't inline whatever this symbol points to. If a symbol
   // is overwritten after LTO, LTO shouldn't inline the symbol because it
@@ -233,10 +242,11 @@ protected:
       : file(file), nameData(name.data), nameSize(name.size), binding(binding),
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        exportDynamic(isExportDynamic(k, visibility)), canInline(false),
-        referenced(false), traced(false), needsPltAddr(false), isInIplt(false),
-        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
-        needsTocRestore(false), scriptDefined(false) {}
+        exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
+        canInline(false), referenced(false), traced(false), needsPltAddr(false),
+        isInIplt(false), gotInIgot(false), isPreemptible(false),
+        used(!config->gcSections), needsTocRestore(false),
+        scriptDefined(false) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -531,6 +541,7 @@ void Symbol::replace(const Symbol &newSym) {
   visibility = old.visibility;
   isUsedInRegularObj = old.isUsedInRegularObj;
   exportDynamic = old.exportDynamic;
+  inDynamicList = old.inDynamicList;
   canInline = old.canInline;
   referenced = old.referenced;
   traced = old.traced;

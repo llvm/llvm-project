@@ -1,11 +1,11 @@
-; RUN: llc  -mcpu=corei7 -mtriple=x86_64-linux --force-precise-rotation-cost < %s | FileCheck %s
+; RUN: llc  -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; The block latch should be moved before header.
 ;CHECK-LABEL: test1:
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test1(i32* %p) !prof !0 {
+define i32 @test1(i32* %p) {
 entry:
   br label %header
 
@@ -39,7 +39,7 @@ exit:
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test2(i32* %p) !prof !0 {
+define i32 @test2(i32* %p) {
 entry:
   br label %header
 
@@ -107,7 +107,7 @@ exit:
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test3(i32* %p) !prof !0 {
+define i32 @test3(i32* %p) {
 entry:
   br label %header
 
@@ -173,9 +173,9 @@ exit:
 ;CHECK:       %header
 ;CHECK:       %true
 ;CHECK:       %latch
-;CHECK:       %exit
 ;CHECK:       %false
-define i32 @test4(i32 %t, i32* %p) !prof !0 {
+;CHECK:       %exit
+define i32 @test4(i32 %t, i32* %p) {
 entry:
   br label %header
 
@@ -207,7 +207,6 @@ exit:
   ret i32 %count4
 }
 
-!0 = !{!"function_entry_count", i32 1000}
 !1 = !{!"branch_weights", i32 100, i32 1}
 !2 = !{!"branch_weights", i32 16, i32 16}
 !3 = !{!"branch_weights", i32 51, i32 49}
@@ -217,7 +216,7 @@ exit:
 ;CHECK:       %entry
 ;CHECK:       %header
 ;CHECK:       %latch
-define void @test5(i32* %p) !prof !0 {
+define void @test5(i32* %p) {
 entry:
   br label %header
 
@@ -237,3 +236,4 @@ latch:
 exit:
   ret void
 }
+

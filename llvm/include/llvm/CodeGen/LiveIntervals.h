@@ -111,30 +111,31 @@ class VirtRegMap;
                                 const MachineBlockFrequencyInfo *MBFI,
                                 const MachineBasicBlock *MBB);
 
-    LiveInterval &getInterval(unsigned Reg) {
+    LiveInterval &getInterval(Register Reg) {
       if (hasInterval(Reg))
-        return *VirtRegIntervals[Reg];
+        return *VirtRegIntervals[Reg.id()];
       else
         return createAndComputeVirtRegInterval(Reg);
     }
 
-    const LiveInterval &getInterval(unsigned Reg) const {
+    const LiveInterval &getInterval(Register Reg) const {
       return const_cast<LiveIntervals*>(this)->getInterval(Reg);
     }
 
-    bool hasInterval(unsigned Reg) const {
-      return VirtRegIntervals.inBounds(Reg) && VirtRegIntervals[Reg];
+    bool hasInterval(Register Reg) const {
+      return VirtRegIntervals.inBounds(Reg.id()) &&
+             VirtRegIntervals[Reg.id()];
     }
 
     /// Interval creation.
-    LiveInterval &createEmptyInterval(unsigned Reg) {
+    LiveInterval &createEmptyInterval(Register Reg) {
       assert(!hasInterval(Reg) && "Interval already exists!");
-      VirtRegIntervals.grow(Reg);
-      VirtRegIntervals[Reg] = createInterval(Reg);
-      return *VirtRegIntervals[Reg];
+      VirtRegIntervals.grow(Reg.id());
+      VirtRegIntervals[Reg.id()] = createInterval(Reg);
+      return *VirtRegIntervals[Reg.id()];
     }
 
-    LiveInterval &createAndComputeVirtRegInterval(unsigned Reg) {
+    LiveInterval &createAndComputeVirtRegInterval(Register Reg) {
       LiveInterval &LI = createEmptyInterval(Reg);
       computeVirtRegInterval(LI);
       return LI;

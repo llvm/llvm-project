@@ -125,7 +125,7 @@ const CallLowering *ARMSubtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }
 
-const InstructionSelector *ARMSubtarget::getInstructionSelector() const {
+InstructionSelector *ARMSubtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
 

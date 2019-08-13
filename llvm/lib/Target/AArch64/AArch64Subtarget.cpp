@@ -196,7 +196,7 @@ const CallLowering *AArch64Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }
 
-const InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
+InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
 

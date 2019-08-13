@@ -106,6 +106,8 @@ public:
     return Reg;
   }
 
+  unsigned id() const { return Reg; }
+
   operator MCRegister() const {
     return MCRegister(Reg);
   }
@@ -117,6 +119,8 @@ public:
   /// Comparisons between register objects
   bool operator==(const Register &Other) const { return Reg == Other.Reg; }
   bool operator!=(const Register &Other) const { return Reg != Other.Reg; }
+  bool operator==(const MCRegister &Other) const { return Reg == Other.id(); }
+  bool operator!=(const MCRegister &Other) const { return Reg != Other.id(); }
 
   /// Comparisons against register constants. E.g.
   /// * R == AArch64::WZR
@@ -140,10 +144,10 @@ template<> struct DenseMapInfo<Register> {
     return DenseMapInfo<unsigned>::getTombstoneKey();
   }
   static unsigned getHashValue(const Register &Val) {
-    return DenseMapInfo<unsigned>::getHashValue(Val);
+    return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }
   static bool isEqual(const Register &LHS, const Register &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS, RHS);
+    return DenseMapInfo<unsigned>::isEqual(LHS.id(), RHS.id());
   }
 };
 

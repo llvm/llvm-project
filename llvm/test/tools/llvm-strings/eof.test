@@ -1,0 +1,5 @@
+## Show that llvm-strings prints the last string in the input even if no
+## unprintable character follows it.
+
+RUN: echo -n abcdefg | llvm-strings - | FileCheck %s
+CHECK: abcdefg

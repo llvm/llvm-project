@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64"
 ; it has a TBAA tag which declares that it is unrelated.
 
 ; CHECK: @foo
-; CHECK-NEXT: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %p, i8* align 1 %q, i64 16, i1 false), !tbaa !0
+; CHECK-NEXT: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(16) %p, i8* align 1 dereferenceable(16) %q, i64 16, i1 false), !tbaa !0
 ; CHECK-NEXT: store i8 2, i8* %s, align 1, !tbaa [[TAGA:!.*]]
 ; CHECK-NEXT: ret void
 define void @foo(i8* nocapture %p, i8* nocapture %q, i8* nocapture %s) nounwind {

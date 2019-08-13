@@ -247,15 +247,14 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   llvm_unreachable("Expected enum or string attribute!");
 }
 
-ChangeStatus AbstractAttribute::update(Attributor &A,
-                                       InformationCache &InfoCache) {
+ChangeStatus AbstractAttribute::update(Attributor &A) {
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
   if (getState().isAtFixpoint())
     return HasChanged;
 
   LLVM_DEBUG(dbgs() << "[Attributor] Update: " << *this << "\n");
 
-  HasChanged = updateImpl(A, InfoCache);
+  HasChanged = updateImpl(A);
 
   LLVM_DEBUG(dbgs() << "[Attributor] Update " << HasChanged << " " << *this
                     << "\n");
@@ -324,7 +323,7 @@ struct AANoUnwindImpl : AANoUnwind {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 };
 
 struct AANoUnwindFunction final : public AANoUnwindImpl {
@@ -336,8 +335,7 @@ struct AANoUnwindFunction final : public AANoUnwindImpl {
   }
 };
 
-ChangeStatus AANoUnwindImpl::updateImpl(Attributor &A,
-                                        InformationCache &InfoCache) {
+ChangeStatus AANoUnwindImpl::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   // The map from instruction opcodes to those instructions in the function.
@@ -354,8 +352,7 @@ ChangeStatus AANoUnwindImpl::updateImpl(Attributor &A,
     return NoUnwindAA && NoUnwindAA->isAssumedNoUnwind();
   };
 
-  if (!A.checkForAllInstructions(F, CheckForNoUnwind, *this, InfoCache,
-                                 Opcodes))
+  if (!A.checkForAllInstructions(F, CheckForNoUnwind, *this, Opcodes))
     return indicatePessimisticFixpoint();
 
   return ChangeStatus::UNCHANGED;
@@ -411,7 +408,7 @@ public:
   IRPositionConstructorForward(AAReturnedValuesImpl, AAReturnedValues);
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     // Reset the state.
     setAssociatedValue(nullptr);
     IsFixed = false;
@@ -422,7 +419,7 @@ public:
     Function &F = getAnchorScope();
 
     // The map from instruction opcodes to those instructions in the function.
-    auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+    auto &OpcodeInstMap = A.getInfoCache().getOpcodeInstMapForFunction(F);
 
     // Look through all arguments, if one is marked as returned we are done.
     for (Argument &Arg : F.args()) {
@@ -456,7 +453,7 @@ public:
   const AbstractState &getState() const override { return *this; }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// Return the number of potential return values, -1 if unknown.
   size_t getNumReturnValues() const {
@@ -595,8 +592,7 @@ bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
   return true;
 }
 
-ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A,
-                                              InformationCache &InfoCache) {
+ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
 
   // Check if we know of any values returned by the associated function,
   // if not, we are done.
@@ -726,7 +722,7 @@ struct AANoSyncImpl : AANoSync {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// Helper function used to determine whether an instruction is non-relaxed
   /// atomic. In other words, if an atomic instruction does not have unordered
@@ -837,8 +833,7 @@ bool AANoSyncImpl::isVolatile(Instruction *I) {
   }
 }
 
-ChangeStatus AANoSyncImpl::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   auto CheckRWInstForNoSync = [&](Instruction &I) {
@@ -874,9 +869,8 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A,
     return !ImmutableCallSite(&I).isConvergent();
   };
 
-  if (!A.checkForAllReadWriteInstructions(F, CheckRWInstForNoSync, *this,
-                                          InfoCache) ||
-      !A.checkForAllCallLikeInstructions(F, CheckForNoSync, *this, InfoCache))
+  if (!A.checkForAllReadWriteInstructions(F, CheckRWInstForNoSync, *this) ||
+      !A.checkForAllCallLikeInstructions(F, CheckForNoSync, *this))
     return indicatePessimisticFixpoint();
 
   return ChangeStatus::UNCHANGED;
@@ -893,7 +887,7 @@ struct AANoFreeImpl : public AANoFree {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 };
 
 struct AANoFreeFunction final : public AANoFreeImpl {
@@ -903,8 +897,7 @@ struct AANoFreeFunction final : public AANoFreeImpl {
   void trackStatistics() const override { STATS_DECL_AND_TRACK_FN_ATTR(nofree) }
 };
 
-ChangeStatus AANoFreeImpl::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AANoFreeImpl::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   auto CheckForNoFree = [&](Instruction &I) {
@@ -915,7 +908,7 @@ ChangeStatus AANoFreeImpl::updateImpl(Attributor &A,
     return NoFreeAA && NoFreeAA->isAssumedNoFree();
   };
 
-  if (!A.checkForAllCallLikeInstructions(F, CheckForNoFree, *this, InfoCache))
+  if (!A.checkForAllCallLikeInstructions(F, CheckForNoFree, *this))
     return indicatePessimisticFixpoint();
   return ChangeStatus::UNCHANGED;
 }
@@ -948,9 +941,8 @@ AANonNullImpl::generatePredicate(Attributor &A) {
 
   std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> Pred =
       [&](Value &RV, const SmallPtrSetImpl<ReturnInst *> &RetInsts) -> bool {
-    Function &F = getAnchorScope();
 
-    if (isKnownNonZero(&RV, F.getParent()->getDataLayout()))
+    if (isKnownNonZero(&RV, A.getDataLayout()))
       return true;
 
     auto *NonNullAA = A.getAAFor<AANonNull>(*this, RV);
@@ -972,7 +964,7 @@ struct AANonNullReturned final : AANonNullImpl {
   AANonNullReturned(Function &F) : AANonNullImpl(F, IRP_RETURNED) {}
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     Function &F = getAnchorScope();
 
     // Already nonnull.
@@ -984,7 +976,7 @@ struct AANonNullReturned final : AANonNullImpl {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -992,8 +984,7 @@ struct AANonNullReturned final : AANonNullImpl {
   }
 };
 
-ChangeStatus AANonNullReturned::updateImpl(Attributor &A,
-                                           InformationCache &InfoCache) {
+ChangeStatus AANonNullReturned::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   std::function<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)> Pred =
@@ -1009,14 +1000,14 @@ struct AANonNullArgument final : AANonNullImpl {
   AANonNullArgument(Argument &A) : AANonNullImpl(A) {}
 
   /// See AbstractAttriubute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     Argument *Arg = cast<Argument>(getAssociatedValue());
     if (Arg->hasNonNullAttr())
       indicateOptimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1030,17 +1021,16 @@ struct AANonNullCallSiteArgument final : AANonNullImpl {
       : AANonNullImpl(CallSite(&I).getArgOperand(ArgNo), I, ArgNo) {}
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     CallSite CS(&getAnchorValue());
     if (CS.paramHasAttr(getArgNo(), getAttrKind()) ||
         CS.paramHasAttr(getArgNo(), Attribute::Dereferenceable) ||
-        isKnownNonZero(getAssociatedValue(),
-                       getAnchorScope().getParent()->getDataLayout()))
+        isKnownNonZero(getAssociatedValue(), A.getDataLayout()))
       indicateOptimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1048,8 +1038,7 @@ struct AANonNullCallSiteArgument final : AANonNullImpl {
   }
 };
 
-ChangeStatus AANonNullArgument::updateImpl(Attributor &A,
-                                           InformationCache &InfoCache) {
+ChangeStatus AANonNullArgument::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
   unsigned ArgNo = getArgNo();
 
@@ -1072,7 +1061,7 @@ ChangeStatus AANonNullArgument::updateImpl(Attributor &A,
       return true;
 
     Value *V = CS.getArgOperand(ArgNo);
-    if (isKnownNonZero(V, getAnchorScope().getParent()->getDataLayout()))
+    if (isKnownNonZero(V, A.getDataLayout()))
       return true;
 
     return false;
@@ -1082,9 +1071,7 @@ ChangeStatus AANonNullArgument::updateImpl(Attributor &A,
   return ChangeStatus::UNCHANGED;
 }
 
-ChangeStatus
-AANonNullCallSiteArgument::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AANonNullCallSiteArgument::updateImpl(Attributor &A) {
   // NOTE: Never look at the argument of the callee in this method.
   //       If we do this, "nonnull" is always deduced because of the assumption.
 
@@ -1113,10 +1100,10 @@ struct AAWillReturnFunction final : AAWillReturnImpl {
   AAWillReturnFunction(Function &F) : AAWillReturnImpl(F, IRP_FUNCTION) {}
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override;
+  void initialize(Attributor &A) override;
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1146,16 +1133,14 @@ bool containsCycle(Function &F) {
 //        We have to allow some patterns.
 bool containsPossiblyEndlessLoop(Function &F) { return containsCycle(F); }
 
-void AAWillReturnFunction::initialize(Attributor &A,
-                                      InformationCache &InfoCache) {
+void AAWillReturnFunction::initialize(Attributor &A) {
   Function &F = getAnchorScope();
 
   if (containsPossiblyEndlessLoop(F))
     indicatePessimisticFixpoint();
 }
 
-ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A,
-                                              InformationCache &InfoCache) {
+ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A) {
   const Function &F = getAnchorScope();
   // The map from instruction opcodes to those instructions in the function.
 
@@ -1176,8 +1161,7 @@ ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A,
     return NoRecurseAA && NoRecurseAA->isAssumedNoRecurse();
   };
 
-  if (!A.checkForAllCallLikeInstructions(F, CheckForWillReturn, *this,
-                                         InfoCache))
+  if (!A.checkForAllCallLikeInstructions(F, CheckForWillReturn, *this))
     return indicatePessimisticFixpoint();
 
   return ChangeStatus::UNCHANGED;
@@ -1198,7 +1182,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
   AANoAliasReturned(Function &F) : AANoAliasImpl(F, IRP_RETURNED) {}
 
   /// See AbstractAttriubute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     Function &F = getAnchorScope();
 
     // Already noalias.
@@ -1209,8 +1193,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  virtual ChangeStatus updateImpl(Attributor &A,
-                                  InformationCache &InfoCache) override;
+  virtual ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1218,8 +1201,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
   }
 };
 
-ChangeStatus AANoAliasReturned::updateImpl(Attributor &A,
-                                           InformationCache &InfoCache) {
+ChangeStatus AANoAliasReturned::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   auto CheckReturnValue = [&](Value &RV) -> bool {
@@ -1260,7 +1242,7 @@ ChangeStatus AANoAliasReturned::updateImpl(Attributor &A,
 struct AAIsDeadImpl : public AAIsDead {
   IRPositionConstructorForward(AAIsDeadImpl, AAIsDead);
 
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     const Function &F = getAnchorScope();
 
     ToBeExploredPaths.insert(&(F.getEntryBlock().front()));
@@ -1351,7 +1333,7 @@ struct AAIsDeadImpl : public AAIsDead {
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AAIsDead::isAssumedDead(BasicBlock *).
   bool isAssumedDead(const BasicBlock *BB) const override {
@@ -1484,8 +1466,7 @@ const Instruction *AAIsDeadImpl::findNextNoReturn(Attributor &A,
   return nullptr;
 }
 
-ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A) {
   // Temporary collection to iterate over existing noreturn instructions. This
   // will alow easier modification of NoReturnCalls collection
   SmallVector<const Instruction *, 8> NoReturnChanged;
@@ -1662,7 +1643,7 @@ struct AADereferenceableImpl : AADereferenceable, DerefState {
   uint64_t computeAssumedDerefenceableBytes(Attributor &A, Value &V,
                                             bool &IsNonNull, bool &IsGlobal);
 
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     Function &F = getAnchorScope();
     unsigned AttrIdx = getIRPosition().getAttrIdx();
 
@@ -1689,7 +1670,7 @@ struct AADereferenceableReturned final : AADereferenceableImpl {
       : AADereferenceableImpl(F, IRP_RETURNED) {}
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1717,7 +1698,7 @@ uint64_t AADereferenceableImpl::computeAssumedDerefenceableBytes(
   }
 
   // Otherwise, we try to compute assumed bytes from base pointer.
-  const DataLayout &DL = getAnchorScope().getParent()->getDataLayout();
+  const DataLayout &DL = A.getDataLayout();
   unsigned IdxWidth =
       DL.getIndexSizeInBits(V.getType()->getPointerAddressSpace());
   APInt Offset(IdxWidth, 0);
@@ -1743,9 +1724,7 @@ uint64_t AADereferenceableImpl::computeAssumedDerefenceableBytes(
   return 0;
 }
 
-ChangeStatus
-AADereferenceableReturned::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AADereferenceableReturned::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
   auto BeforeState = static_cast<DerefState>(*this);
 
@@ -1773,7 +1752,7 @@ struct AADereferenceableArgument final : AADereferenceableImpl {
   AADereferenceableArgument(Argument &A) : AADereferenceableImpl(A) {}
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1781,9 +1760,7 @@ struct AADereferenceableArgument final : AADereferenceableImpl {
   }
 };
 
-ChangeStatus
-AADereferenceableArgument::updateImpl(Attributor &A,
-                                      InformationCache &InfoCache) {
+ChangeStatus AADereferenceableArgument::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
   Argument &Arg = cast<Argument>(getAnchorValue());
 
@@ -1835,7 +1812,7 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableImpl {
       : AADereferenceableImpl(CallSite(&I).getArgOperand(ArgNo), I, ArgNo) {}
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     CallSite CS(&getAnchorValue());
     if (CS.paramHasAttr(getArgNo(), Attribute::Dereferenceable))
       takeKnownDerefBytesMaximum(CS.getDereferenceableBytes(getArgNo()));
@@ -1845,7 +1822,7 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableImpl {
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1853,9 +1830,7 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableImpl {
   }
 };
 
-ChangeStatus
-AADereferenceableCallSiteArgument::updateImpl(Attributor &A,
-                                              InformationCache &InfoCache) {
+ChangeStatus AADereferenceableCallSiteArgument::updateImpl(Attributor &A) {
   // NOTE: Never look at the argument of the callee in this method.
   //       If we do this, "dereferenceable" is always deduced because of the
   //       assumption.
@@ -1891,7 +1866,7 @@ struct AAAlignImpl : AAAlign {
   }
 
   /// See AbstractAttriubute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     takeAssumedMinimum(MAX_ALIGN);
 
     Function &F = getAnchorScope();
@@ -1916,7 +1891,7 @@ struct AAAlignReturned final : AAAlignImpl {
   AAAlignReturned(Function &F) : AAAlignImpl(F, IRP_RETURNED) {}
 
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -1924,8 +1899,7 @@ struct AAAlignReturned final : AAAlignImpl {
   }
 };
 
-ChangeStatus AAAlignReturned::updateImpl(Attributor &A,
-                                         InformationCache &InfoCache) {
+ChangeStatus AAAlignReturned::updateImpl(Attributor &A) {
   Function &F = getAnchorScope();
 
   // Currently, align<n> is deduced if alignments in return values are assumed
@@ -1942,8 +1916,7 @@ ChangeStatus AAAlignReturned::updateImpl(Attributor &A,
       takeAssumedMinimum(AlignAA->getAssumedAlign());
     else
       // Use IR information.
-      takeAssumedMinimum(RV.getPointerAlignment(
-          getAnchorScope().getParent()->getDataLayout()));
+      takeAssumedMinimum(RV.getPointerAlignment(A.getDataLayout()));
 
     return isValidState();
   };
@@ -1960,21 +1933,19 @@ struct AAAlignArgument final : AAAlignImpl {
   AAAlignArgument(Argument &A) : AAAlignImpl(A) {}
 
   /// See AbstractAttribute::updateImpl(...).
-  virtual ChangeStatus updateImpl(Attributor &A,
-                                  InformationCache &InfoCache) override;
+  virtual ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override{STATS_DECL_AND_TRACK_ARG_ATTR(aligned)};
 };
 
-ChangeStatus AAAlignArgument::updateImpl(Attributor &A,
-                                         InformationCache &InfoCache) {
+ChangeStatus AAAlignArgument::updateImpl(Attributor &A) {
 
   Function &F = getAnchorScope();
   Argument &Arg = cast<Argument>(getAnchorValue());
 
   unsigned ArgNo = Arg.getArgNo();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = A.getDataLayout();
 
   auto BeforeState = getAssumed();
 
@@ -2010,14 +1981,14 @@ struct AAAlignCallSiteArgument final : AAAlignImpl {
       : AAAlignImpl(CallSite(&I).getArgOperand(ArgNo), I, ArgNo) {}
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     CallSite CS(&getAnchorValue());
-    takeKnownMaximum(getAssociatedValue()->getPointerAlignment(
-        getAnchorScope().getParent()->getDataLayout()));
+    takeKnownMaximum(
+        getAssociatedValue()->getPointerAlignment(A.getDataLayout()));
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  ChangeStatus updateImpl(Attributor &A, InformationCache &InfoCache) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -2025,8 +1996,7 @@ struct AAAlignCallSiteArgument final : AAAlignImpl {
   }
 };
 
-ChangeStatus AAAlignCallSiteArgument::updateImpl(Attributor &A,
-                                                 InformationCache &InfoCache) {
+ChangeStatus AAAlignCallSiteArgument::updateImpl(Attributor &A) {
   // NOTE: Never look at the argument of the callee in this method.
   //       If we do this, "align" is always deduced because of the assumption.
 
@@ -2055,18 +2025,17 @@ struct AANoReturnImpl : public AANoReturn {
   }
 
   /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A, InformationCache &InfoCache) override {
+  void initialize(Attributor &A) override {
     Function &F = getAnchorScope();
     if (F.hasFnAttribute(getAttrKind()))
       indicateOptimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  virtual ChangeStatus updateImpl(Attributor &A,
-                                  InformationCache &InfoCache) override {
+  virtual ChangeStatus updateImpl(Attributor &A) override {
     const Function &F = getAnchorScope();
     auto CheckForNoReturn = [](Instruction &) { return false; };
-    if (!A.checkForAllInstructions(F, CheckForNoReturn, *this, InfoCache,
+    if (!A.checkForAllInstructions(F, CheckForNoReturn, *this,
                                    {(unsigned)Instruction::Ret}))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
@@ -2187,8 +2156,7 @@ bool Attributor::checkForAllReturnedValues(
 
 bool Attributor::checkForAllInstructions(
     const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
-    const AbstractAttribute &QueryingAA, InformationCache &InfoCache,
-    const ArrayRef<unsigned> &Opcodes) {
+    const AbstractAttribute &QueryingAA, const ArrayRef<unsigned> &Opcodes) {
 
   auto *LivenessAA = getAAFor<AAIsDead>(QueryingAA, F);
 
@@ -2209,7 +2177,7 @@ bool Attributor::checkForAllInstructions(
 
 bool Attributor::checkForAllReadWriteInstructions(
     const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
-    AbstractAttribute &QueryingAA, InformationCache &InfoCache) {
+    AbstractAttribute &QueryingAA) {
 
   auto *LivenessAA = getAAFor<AAIsDead>(QueryingAA, F);
 
@@ -2225,10 +2193,10 @@ bool Attributor::checkForAllReadWriteInstructions(
   return true;
 }
 
-ChangeStatus Attributor::run(InformationCache &InfoCache) {
+ChangeStatus Attributor::run() {
   // Initialize all abstract attributes.
   for (AbstractAttribute *AA : AllAbstractAttributes)
-    AA->initialize(*this, InfoCache);
+    AA->initialize(*this);
 
   LLVM_DEBUG(dbgs() << "[Attributor] Identified and initialized "
                     << AllAbstractAttributes.size()
@@ -2260,7 +2228,7 @@ ChangeStatus Attributor::run(InformationCache &InfoCache) {
     // Update all abstract attribute in the work list and record the ones that
     // changed.
     for (AbstractAttribute *AA : Worklist)
-      if (AA->update(*this, InfoCache) == ChangeStatus::CHANGED)
+      if (AA->update(*this) == ChangeStatus::CHANGED)
         ChangedAAs.push_back(AA);
 
     // Reset the work list and repopulate with the changed abstract attributes.
@@ -2347,7 +2315,7 @@ ChangeStatus Attributor::run(InformationCache &InfoCache) {
   if (VerifyAttributor && FinishedAtFixpoint &&
       ManifestChange == ChangeStatus::CHANGED) {
     VerifyAttributor = false;
-    ChangeStatus VerifyStatus = run(InfoCache);
+    ChangeStatus VerifyStatus = run();
     if (VerifyStatus != ChangeStatus::UNCHANGED)
       llvm_unreachable(
           "Attributor verification failed, re-run did result in an IR change "
@@ -2381,8 +2349,7 @@ static AAType *checkAndRegisterAA(const Function &F, Attributor &A,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(
-    Function &F, InformationCache &InfoCache,
-    DenseSet<const char *> *Whitelist) {
+    Function &F, DenseSet<const char *> *Whitelist) {
 
   // Check for dead BasicBlocks in every function.
   // We need dead instruction detection because we do not want to deal with
@@ -2528,6 +2495,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
             << Pos.getAnchorValue().getName() << "@" << Pos.getArgNo() << "]}";
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, const IntegerState &S) {
+  return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
+            << static_cast<const AbstractState &>(S);
+}
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const AbstractState &S) {
   return OS << (!S.isValidState() ? "top" : (S.isAtFixpoint() ? "fix" : ""));
 }
@@ -2556,8 +2528,8 @@ static bool runAttributorOnModule(Module &M) {
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  Attributor A;
-  InformationCache InfoCache;
+  InformationCache InfoCache(M.getDataLayout());
+  Attributor A(InfoCache);
 
   for (Function &F : M) {
     // TODO: Not all attributes require an exact definition. Find a way to
@@ -2581,10 +2553,10 @@ static bool runAttributorOnModule(Module &M) {
 
     // Populate the Attributor with abstract attribute opportunities in the
     // function and the information cache with IR information.
-    A.identifyDefaultAbstractAttributes(F, InfoCache);
+    A.identifyDefaultAbstractAttributes(F);
   }
 
-  return A.run(InfoCache) == ChangeStatus::CHANGED;
+  return A.run() == ChangeStatus::CHANGED;
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {

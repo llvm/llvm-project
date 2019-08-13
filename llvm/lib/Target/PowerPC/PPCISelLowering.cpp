@@ -10052,9 +10052,11 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::TRUNCATE: {
     EVT TrgVT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
     if (TrgVT.isVector() &&
         isOperationCustom(N->getOpcode(), TrgVT) &&
-        N->getOperand(0).getValueType().getSizeInBits() <= 128)
+        OpVT.getSizeInBits() <= 128 &&
+        isPowerOf2_32(OpVT.getVectorElementType().getSizeInBits()))
       Results.push_back(LowerTRUNCATEVector(SDValue(N, 0), DAG));
     return;
   }

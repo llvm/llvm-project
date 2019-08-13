@@ -474,8 +474,9 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
   outs() << Name << "\n";
 }
 
-static StringRef normalizePath(StringRef Path) {
-  return CompareFullPath ? Path : sys::path::filename(Path);
+static std::string normalizePath(StringRef Path) {
+  return CompareFullPath ? sys::path::convert_to_slash(Path)
+                         : std::string(sys::path::filename(Path));
 }
 
 // Implement the 'x' operation. This function extracts files back to the file
@@ -698,9 +699,8 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     return IA_MoveOldMember;
 
   if (Operation == ReplaceOrInsert) {
-    StringRef PosName = normalizePath(RelPos);
     if (!OnlyUpdate) {
-      if (PosName.empty())
+      if (RelPos.empty())
         return IA_AddNewMember;
       return IA_MoveNewMember;
     }
@@ -712,12 +712,12 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     auto ModTimeOrErr = Member.getLastModified();
     failIfError(ModTimeOrErr.takeError());
     if (Status.getLastModificationTime() < ModTimeOrErr.get()) {
-      if (PosName.empty())
+      if (RelPos.empty())
         return IA_AddOldMember;
       return IA_MoveOldMember;
     }
 
-    if (PosName.empty())
+    if (RelPos.empty())
       return IA_AddNewMember;
     return IA_MoveNewMember;
   }
@@ -732,8 +732,8 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   std::vector<NewArchiveMember> Ret;
   std::vector<NewArchiveMember> Moved;
   int InsertPos = -1;
-  StringRef PosName = normalizePath(RelPos);
   if (OldArchive) {
+    std::string PosName = normalizePath(RelPos);
     Error Err = Error::success();
     StringMap<int> MemberCount;
     for (auto &Child : OldArchive->children(Err)) {
@@ -1009,7 +1009,7 @@ static void runMRIScript() {
       ArchiveName = Rest;
       break;
     case MRICommand::Delete: {
-      StringRef Name = normalizePath(Rest);
+      std::string Name = normalizePath(Rest);
       llvm::erase_if(NewMembers,
                      [=](NewArchiveMember &M) { return M.MemberName == Name; });
       break;

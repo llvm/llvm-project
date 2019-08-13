@@ -1700,6 +1700,11 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     Known = Known.trunc(BitWidth);
 
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, TruncMask, DemandedElts, TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, NewSrc));
+
     // If the input is only used by this truncate, see if we can shrink it based
     // on the known demanded bits.
     if (Src.getNode()->hasOneUse()) {
@@ -1778,17 +1783,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts, Known2, TLO,
                              Depth + 1))
       return true;
-
-    // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedSrcBits.isAllOnesValue() ||
-        !DemandedSrcElts.isAllOnesValue()) {
-      if (SDValue DemandedSrc = SimplifyMultipleUseDemandedBits(
-              Src, DemandedSrcBits, DemandedSrcElts, TLO.DAG, Depth + 1)) {
-        SDValue NewOp =
-            TLO.DAG.getNode(Op.getOpcode(), dl, VT, DemandedSrc, Idx);
-        return TLO.CombineTo(Op, NewOp);
-      }
-    }
 
     Known = Known2;
     if (BitWidth > EltBitWidth)

@@ -489,9 +489,9 @@ Sections:
 ## than the object size. Check llvm-readobj reports it.
 
 # RUN: yaml2obj %s --docnum=23 -o %t23
-# RUN: not llvm-readobj --dyn-relocations %t23 2>&1 | FileCheck --check-prefix=DYN-TABLE-PHDR %s
+# RUN: llvm-readobj --dyn-relocations %t23 2>&1 | FileCheck --check-prefix=DYN-TABLE-PHDR %s
 
-# DYN-TABLE-PHDR: error: PT_DYNAMIC segment offset + size exceeds the size of the file
+# DYN-TABLE-PHDR: warning: PT_DYNAMIC segment offset + size exceeds the size of the file
 
 --- !ELF
 FileHeader:
@@ -515,7 +515,7 @@ ProgramHeaders:
 ## than the object size. Check llvm-readobj reports it.
 
 # RUN: yaml2obj %s --docnum=24 -o %t24
-# RUN: not llvm-readobj --dyn-relocations %t24 2>&1 \
+# RUN: llvm-readobj --dyn-relocations %t24 2>&1 \
 # RUN:  | FileCheck --check-prefix=DYN-TABLE-PHDR %s
 
 --- !ELF

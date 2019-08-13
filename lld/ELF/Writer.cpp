@@ -1653,12 +1653,12 @@ static bool computeIsPreemptible(const Symbol &b) {
   if (!b.isDefined())
     return true;
 
-  // If we have a dynamic list it specifies which local symbols are preemptible.
-  if (config->hasDynamicList)
-    return false;
-
   if (!config->shared)
     return false;
+
+  // If the dynamic list is present, it specifies preemptable symbols in a DSO.
+  if (config->hasDynamicList)
+    return b.inDynamicList;
 
   // -Bsymbolic means that definitions are not preempted.
   if (config->bsymbolic || (config->bsymbolicFunctions && b.isFunc()))
@@ -1728,10 +1728,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (Partition &part : partitions)
     finalizeSynthetic(part.ehFrame);
 
-  symtab->forEachSymbol([](Symbol *s) {
-    if (!s->isPreemptible)
-      s->isPreemptible = computeIsPreemptible(*s);
-  });
+  symtab->forEachSymbol(
+      [](Symbol *s) { s->isPreemptible = computeIsPreemptible(*s); });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.

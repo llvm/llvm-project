@@ -936,7 +936,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   // of the function with a local.get and a rethrow instruction.
   if (NeedAppendixBlock) {
     auto *AppendixBB = getAppendixBlock(MF);
-    unsigned ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
+    Register ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
     BuildMI(AppendixBB, DebugLoc(), TII.get(WebAssembly::RETHROW))
         .addReg(ExnReg);
     // These instruction ranges should branch to this appendix BB.

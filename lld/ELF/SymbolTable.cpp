@@ -77,6 +77,7 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->visibility = STV_DEFAULT;
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
+  sym->inDynamicList = false;
   sym->canInline = true;
   sym->scriptDefined = false;
   sym->partition = 1;
@@ -162,12 +163,8 @@ void SymbolTable::handleDynamicList() {
     else
       syms = findByVersion(ver);
 
-    for (Symbol *b : syms) {
-      if (!config->shared)
-        b->exportDynamic = true;
-      else if (b->includeInDynsym())
-        b->isPreemptible = true;
-    }
+    for (Symbol *sym : syms)
+      sym->inDynamicList = true;
   }
 }
 

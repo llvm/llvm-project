@@ -1,450 +1,838 @@
-; RUN: opt < %s  -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -mcpu=cortex-a9 | FileCheck %s
-
-define <2 x i8> @sdiv_v2_i8(<2 x i8>  %a, <2 x i8> %b) {
-  ; CHECK: sdiv_v2_i8
-  ; CHECK: cost of 40 {{.*}} sdiv
-
-  %1 = sdiv <2 x i8>  %a, %b
-  ret <2 x i8> %1
-}
-define <2 x i16> @sdiv_v2_i16(<2 x i16>  %a, <2 x i16> %b) {
-  ; CHECK: sdiv_v2_i16
-  ; CHECK: cost of 40 {{.*}} sdiv
-
-  %1 = sdiv <2 x i16>  %a, %b
-  ret <2 x i16> %1
-}
-define <2 x i32> @sdiv_v2_i32(<2 x i32>  %a, <2 x i32> %b) {
-  ; CHECK: sdiv_v2_i32
-  ; CHECK: cost of 40 {{.*}} sdiv
-
-  %1 = sdiv <2 x i32>  %a, %b
-  ret <2 x i32> %1
-}
-define <2 x i64> @sdiv_v2_i64(<2 x i64>  %a, <2 x i64> %b) {
-  ; CHECK: sdiv_v2_i64
-  ; CHECK: cost of 40 {{.*}} sdiv
-
-  %1 = sdiv <2 x i64>  %a, %b
-  ret <2 x i64> %1
-}
-define <4 x i8> @sdiv_v4_i8(<4 x i8>  %a, <4 x i8> %b) {
-  ; CHECK: sdiv_v4_i8
-  ; CHECK: cost of 10 {{.*}} sdiv
-
-  %1 = sdiv <4 x i8>  %a, %b
-  ret <4 x i8> %1
-}
-define <4 x i16> @sdiv_v4_i16(<4 x i16>  %a, <4 x i16> %b) {
-  ; CHECK: sdiv_v4_i16
-  ; CHECK: cost of 10 {{.*}} sdiv
-
-  %1 = sdiv <4 x i16>  %a, %b
-  ret <4 x i16> %1
-}
-define <4 x i32> @sdiv_v4_i32(<4 x i32>  %a, <4 x i32> %b) {
-  ; CHECK: sdiv_v4_i32
-  ; CHECK: cost of 80 {{.*}} sdiv
-
-  %1 = sdiv <4 x i32>  %a, %b
-  ret <4 x i32> %1
-}
-define <4 x i64> @sdiv_v4_i64(<4 x i64>  %a, <4 x i64> %b) {
-  ; CHECK: sdiv_v4_i64
-  ; CHECK: cost of 80 {{.*}} sdiv
-
-  %1 = sdiv <4 x i64>  %a, %b
-  ret <4 x i64> %1
-}
-define <8 x i8> @sdiv_v8_i8(<8 x i8>  %a, <8 x i8> %b) {
-  ; CHECK: sdiv_v8_i8
-  ; CHECK: cost of 10 {{.*}} sdiv
-
-  %1 = sdiv <8 x i8>  %a, %b
-  ret <8 x i8> %1
-}
-define <8 x i16> @sdiv_v8_i16(<8 x i16>  %a, <8 x i16> %b) {
-  ; CHECK: sdiv_v8_i16
-  ; CHECK: cost of 160 {{.*}} sdiv
-
-  %1 = sdiv <8 x i16>  %a, %b
-  ret <8 x i16> %1
-}
-define <8 x i32> @sdiv_v8_i32(<8 x i32>  %a, <8 x i32> %b) {
-  ; CHECK: sdiv_v8_i32
-  ; CHECK: cost of 160 {{.*}} sdiv
-
-  %1 = sdiv <8 x i32>  %a, %b
-  ret <8 x i32> %1
-}
-define <8 x i64> @sdiv_v8_i64(<8 x i64>  %a, <8 x i64> %b) {
-  ; CHECK: sdiv_v8_i64
-  ; CHECK: cost of 160 {{.*}} sdiv
-
-  %1 = sdiv <8 x i64>  %a, %b
-  ret <8 x i64> %1
-}
-define <16 x i8> @sdiv_v16_i8(<16 x i8>  %a, <16 x i8> %b) {
-  ; CHECK: sdiv_v16_i8
-  ; CHECK: cost of 320 {{.*}} sdiv
-
-  %1 = sdiv <16 x i8>  %a, %b
-  ret <16 x i8> %1
-}
-define <16 x i16> @sdiv_v16_i16(<16 x i16>  %a, <16 x i16> %b) {
-  ; CHECK: sdiv_v16_i16
-  ; CHECK: cost of 320 {{.*}} sdiv
-
-  %1 = sdiv <16 x i16>  %a, %b
-  ret <16 x i16> %1
-}
-define <16 x i32> @sdiv_v16_i32(<16 x i32>  %a, <16 x i32> %b) {
-  ; CHECK: sdiv_v16_i32
-  ; CHECK: cost of 320 {{.*}} sdiv
-
-  %1 = sdiv <16 x i32>  %a, %b
-  ret <16 x i32> %1
-}
-define <16 x i64> @sdiv_v16_i64(<16 x i64>  %a, <16 x i64> %b) {
-  ; CHECK: sdiv_v16_i64
-  ; CHECK: cost of 320 {{.*}} sdiv
-
-  %1 = sdiv <16 x i64>  %a, %b
-  ret <16 x i64> %1
-}
-define <2 x i8> @udiv_v2_i8(<2 x i8>  %a, <2 x i8> %b) {
-  ; CHECK: udiv_v2_i8
-  ; CHECK: cost of 40 {{.*}} udiv
-
-  %1 = udiv <2 x i8>  %a, %b
-  ret <2 x i8> %1
-}
-define <2 x i16> @udiv_v2_i16(<2 x i16>  %a, <2 x i16> %b) {
-  ; CHECK: udiv_v2_i16
-  ; CHECK: cost of 40 {{.*}} udiv
-
-  %1 = udiv <2 x i16>  %a, %b
-  ret <2 x i16> %1
-}
-define <2 x i32> @udiv_v2_i32(<2 x i32>  %a, <2 x i32> %b) {
-  ; CHECK: udiv_v2_i32
-  ; CHECK: cost of 40 {{.*}} udiv
-
-  %1 = udiv <2 x i32>  %a, %b
-  ret <2 x i32> %1
-}
-define <2 x i64> @udiv_v2_i64(<2 x i64>  %a, <2 x i64> %b) {
-  ; CHECK: udiv_v2_i64
-  ; CHECK: cost of 40 {{.*}} udiv
-
-  %1 = udiv <2 x i64>  %a, %b
-  ret <2 x i64> %1
-}
-define <4 x i8> @udiv_v4_i8(<4 x i8>  %a, <4 x i8> %b) {
-  ; CHECK: udiv_v4_i8
-  ; CHECK: cost of 10 {{.*}} udiv
-
-  %1 = udiv <4 x i8>  %a, %b
-  ret <4 x i8> %1
-}
-define <4 x i16> @udiv_v4_i16(<4 x i16>  %a, <4 x i16> %b) {
-  ; CHECK: udiv_v4_i16
-  ; CHECK: cost of 10 {{.*}} udiv
-
-  %1 = udiv <4 x i16>  %a, %b
-  ret <4 x i16> %1
-}
-define <4 x i32> @udiv_v4_i32(<4 x i32>  %a, <4 x i32> %b) {
-  ; CHECK: udiv_v4_i32
-  ; CHECK: cost of 80 {{.*}} udiv
-
-  %1 = udiv <4 x i32>  %a, %b
-  ret <4 x i32> %1
-}
-define <4 x i64> @udiv_v4_i64(<4 x i64>  %a, <4 x i64> %b) {
-  ; CHECK: udiv_v4_i64
-  ; CHECK: cost of 80 {{.*}} udiv
-
-  %1 = udiv <4 x i64>  %a, %b
-  ret <4 x i64> %1
-}
-define <8 x i8> @udiv_v8_i8(<8 x i8>  %a, <8 x i8> %b) {
-  ; CHECK: udiv_v8_i8
-  ; CHECK: cost of 10 {{.*}} udiv
-
-  %1 = udiv <8 x i8>  %a, %b
-  ret <8 x i8> %1
-}
-define <8 x i16> @udiv_v8_i16(<8 x i16>  %a, <8 x i16> %b) {
-  ; CHECK: udiv_v8_i16
-  ; CHECK: cost of 160 {{.*}} udiv
-
-  %1 = udiv <8 x i16>  %a, %b
-  ret <8 x i16> %1
-}
-define <8 x i32> @udiv_v8_i32(<8 x i32>  %a, <8 x i32> %b) {
-  ; CHECK: udiv_v8_i32
-  ; CHECK: cost of 160 {{.*}} udiv
-
-  %1 = udiv <8 x i32>  %a, %b
-  ret <8 x i32> %1
-}
-define <8 x i64> @udiv_v8_i64(<8 x i64>  %a, <8 x i64> %b) {
-  ; CHECK: udiv_v8_i64
-  ; CHECK: cost of 160 {{.*}} udiv
-
-  %1 = udiv <8 x i64>  %a, %b
-  ret <8 x i64> %1
-}
-define <16 x i8> @udiv_v16_i8(<16 x i8>  %a, <16 x i8> %b) {
-  ; CHECK: udiv_v16_i8
-  ; CHECK: cost of 320 {{.*}} udiv
-
-  %1 = udiv <16 x i8>  %a, %b
-  ret <16 x i8> %1
-}
-define <16 x i16> @udiv_v16_i16(<16 x i16>  %a, <16 x i16> %b) {
-  ; CHECK: udiv_v16_i16
-  ; CHECK: cost of 320 {{.*}} udiv
-
-  %1 = udiv <16 x i16>  %a, %b
-  ret <16 x i16> %1
-}
-define <16 x i32> @udiv_v16_i32(<16 x i32>  %a, <16 x i32> %b) {
-  ; CHECK: udiv_v16_i32
-  ; CHECK: cost of 320 {{.*}} udiv
-
-  %1 = udiv <16 x i32>  %a, %b
-  ret <16 x i32> %1
-}
-define <16 x i64> @udiv_v16_i64(<16 x i64>  %a, <16 x i64> %b) {
-  ; CHECK: udiv_v16_i64
-  ; CHECK: cost of 320 {{.*}} udiv
-
-  %1 = udiv <16 x i64>  %a, %b
-  ret <16 x i64> %1
-}
-define <2 x i8> @srem_v2_i8(<2 x i8>  %a, <2 x i8> %b) {
-  ; CHECK: srem_v2_i8
-  ; CHECK: cost of 40 {{.*}} srem
-
-  %1 = srem <2 x i8>  %a, %b
-  ret <2 x i8> %1
-}
-define <2 x i16> @srem_v2_i16(<2 x i16>  %a, <2 x i16> %b) {
-  ; CHECK: srem_v2_i16
-  ; CHECK: cost of 40 {{.*}} srem
-
-  %1 = srem <2 x i16>  %a, %b
-  ret <2 x i16> %1
-}
-define <2 x i32> @srem_v2_i32(<2 x i32>  %a, <2 x i32> %b) {
-  ; CHECK: srem_v2_i32
-  ; CHECK: cost of 40 {{.*}} srem
-
-  %1 = srem <2 x i32>  %a, %b
-  ret <2 x i32> %1
-}
-define <2 x i64> @srem_v2_i64(<2 x i64>  %a, <2 x i64> %b) {
-  ; CHECK: srem_v2_i64
-  ; CHECK: cost of 40 {{.*}} srem
-
-  %1 = srem <2 x i64>  %a, %b
-  ret <2 x i64> %1
-}
-define <4 x i8> @srem_v4_i8(<4 x i8>  %a, <4 x i8> %b) {
-  ; CHECK: srem_v4_i8
-  ; CHECK: cost of 80 {{.*}} srem
-
-  %1 = srem <4 x i8>  %a, %b
-  ret <4 x i8> %1
-}
-define <4 x i16> @srem_v4_i16(<4 x i16>  %a, <4 x i16> %b) {
-  ; CHECK: srem_v4_i16
-  ; CHECK: cost of 80 {{.*}} srem
-
-  %1 = srem <4 x i16>  %a, %b
-  ret <4 x i16> %1
-}
-define <4 x i32> @srem_v4_i32(<4 x i32>  %a, <4 x i32> %b) {
-  ; CHECK: srem_v4_i32
-  ; CHECK: cost of 80 {{.*}} srem
-
-  %1 = srem <4 x i32>  %a, %b
-  ret <4 x i32> %1
-}
-define <4 x i64> @srem_v4_i64(<4 x i64>  %a, <4 x i64> %b) {
-  ; CHECK: srem_v4_i64
-  ; CHECK: cost of 80 {{.*}} srem
-
-  %1 = srem <4 x i64>  %a, %b
-  ret <4 x i64> %1
-}
-define <8 x i8> @srem_v8_i8(<8 x i8>  %a, <8 x i8> %b) {
-  ; CHECK: srem_v8_i8
-  ; CHECK: cost of 160 {{.*}} srem
-
-  %1 = srem <8 x i8>  %a, %b
-  ret <8 x i8> %1
-}
-define <8 x i16> @srem_v8_i16(<8 x i16>  %a, <8 x i16> %b) {
-  ; CHECK: srem_v8_i16
-  ; CHECK: cost of 160 {{.*}} srem
-
-  %1 = srem <8 x i16>  %a, %b
-  ret <8 x i16> %1
-}
-define <8 x i32> @srem_v8_i32(<8 x i32>  %a, <8 x i32> %b) {
-  ; CHECK: srem_v8_i32
-  ; CHECK: cost of 160 {{.*}} srem
-
-  %1 = srem <8 x i32>  %a, %b
-  ret <8 x i32> %1
-}
-define <8 x i64> @srem_v8_i64(<8 x i64>  %a, <8 x i64> %b) {
-  ; CHECK: srem_v8_i64
-  ; CHECK: cost of 160 {{.*}} srem
-
-  %1 = srem <8 x i64>  %a, %b
-  ret <8 x i64> %1
-}
-define <16 x i8> @srem_v16_i8(<16 x i8>  %a, <16 x i8> %b) {
-  ; CHECK: srem_v16_i8
-  ; CHECK: cost of 320 {{.*}} srem
-
-  %1 = srem <16 x i8>  %a, %b
-  ret <16 x i8> %1
-}
-define <16 x i16> @srem_v16_i16(<16 x i16>  %a, <16 x i16> %b) {
-  ; CHECK: srem_v16_i16
-  ; CHECK: cost of 320 {{.*}} srem
-
-  %1 = srem <16 x i16>  %a, %b
-  ret <16 x i16> %1
-}
-define <16 x i32> @srem_v16_i32(<16 x i32>  %a, <16 x i32> %b) {
-  ; CHECK: srem_v16_i32
-  ; CHECK: cost of 320 {{.*}} srem
-
-  %1 = srem <16 x i32>  %a, %b
-  ret <16 x i32> %1
-}
-define <16 x i64> @srem_v16_i64(<16 x i64>  %a, <16 x i64> %b) {
-  ; CHECK: srem_v16_i64
-  ; CHECK: cost of 320 {{.*}} srem
-
-  %1 = srem <16 x i64>  %a, %b
-  ret <16 x i64> %1
-}
-define <2 x i8> @urem_v2_i8(<2 x i8>  %a, <2 x i8> %b) {
-  ; CHECK: urem_v2_i8
-  ; CHECK: cost of 40 {{.*}} urem
-
-  %1 = urem <2 x i8>  %a, %b
-  ret <2 x i8> %1
-}
-define <2 x i16> @urem_v2_i16(<2 x i16>  %a, <2 x i16> %b) {
-  ; CHECK: urem_v2_i16
-  ; CHECK: cost of 40 {{.*}} urem
-
-  %1 = urem <2 x i16>  %a, %b
-  ret <2 x i16> %1
-}
-define <2 x i32> @urem_v2_i32(<2 x i32>  %a, <2 x i32> %b) {
-  ; CHECK: urem_v2_i32
-  ; CHECK: cost of 40 {{.*}} urem
-
-  %1 = urem <2 x i32>  %a, %b
-  ret <2 x i32> %1
-}
-define <2 x i64> @urem_v2_i64(<2 x i64>  %a, <2 x i64> %b) {
-  ; CHECK: urem_v2_i64
-  ; CHECK: cost of 40 {{.*}} urem
-
-  %1 = urem <2 x i64>  %a, %b
-  ret <2 x i64> %1
-}
-define <4 x i8> @urem_v4_i8(<4 x i8>  %a, <4 x i8> %b) {
-  ; CHECK: urem_v4_i8
-  ; CHECK: cost of 80 {{.*}} urem
-
-  %1 = urem <4 x i8>  %a, %b
-  ret <4 x i8> %1
-}
-define <4 x i16> @urem_v4_i16(<4 x i16>  %a, <4 x i16> %b) {
-  ; CHECK: urem_v4_i16
-  ; CHECK: cost of 80 {{.*}} urem
-
-  %1 = urem <4 x i16>  %a, %b
-  ret <4 x i16> %1
-}
-define <4 x i32> @urem_v4_i32(<4 x i32>  %a, <4 x i32> %b) {
-  ; CHECK: urem_v4_i32
-  ; CHECK: cost of 80 {{.*}} urem
-
-  %1 = urem <4 x i32>  %a, %b
-  ret <4 x i32> %1
-}
-define <4 x i64> @urem_v4_i64(<4 x i64>  %a, <4 x i64> %b) {
-  ; CHECK: urem_v4_i64
-  ; CHECK: cost of 80 {{.*}} urem
-
-  %1 = urem <4 x i64>  %a, %b
-  ret <4 x i64> %1
-}
-define <8 x i8> @urem_v8_i8(<8 x i8>  %a, <8 x i8> %b) {
-  ; CHECK: urem_v8_i8
-  ; CHECK: cost of 160 {{.*}} urem
-
-  %1 = urem <8 x i8>  %a, %b
-  ret <8 x i8> %1
-}
-define <8 x i16> @urem_v8_i16(<8 x i16>  %a, <8 x i16> %b) {
-  ; CHECK: urem_v8_i16
-  ; CHECK: cost of 160 {{.*}} urem
-
-  %1 = urem <8 x i16>  %a, %b
-  ret <8 x i16> %1
-}
-define <8 x i32> @urem_v8_i32(<8 x i32>  %a, <8 x i32> %b) {
-  ; CHECK: urem_v8_i32
-  ; CHECK: cost of 160 {{.*}} urem
-
-  %1 = urem <8 x i32>  %a, %b
-  ret <8 x i32> %1
-}
-define <8 x i64> @urem_v8_i64(<8 x i64>  %a, <8 x i64> %b) {
-  ; CHECK: urem_v8_i64
-  ; CHECK: cost of 160 {{.*}} urem
-
-  %1 = urem <8 x i64>  %a, %b
-  ret <8 x i64> %1
-}
-define <16 x i8> @urem_v16_i8(<16 x i8>  %a, <16 x i8> %b) {
-  ; CHECK: urem_v16_i8
-  ; CHECK: cost of 320 {{.*}} urem
-
-  %1 = urem <16 x i8>  %a, %b
-  ret <16 x i8> %1
-}
-define <16 x i16> @urem_v16_i16(<16 x i16>  %a, <16 x i16> %b) {
-  ; CHECK: urem_v16_i16
-  ; CHECK: cost of 320 {{.*}} urem
-
-  %1 = urem <16 x i16>  %a, %b
-  ret <16 x i16> %1
-}
-define <16 x i32> @urem_v16_i32(<16 x i32>  %a, <16 x i32> %b) {
-  ; CHECK: urem_v16_i32
-  ; CHECK: cost of 320 {{.*}} urem
-
-  %1 = urem <16 x i32>  %a, %b
-  ret <16 x i32> %1
+; NOTE: Assertions have been autogenerated by utils/update_analyze_test_checks.py
+; RUN: opt < %s  -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -mcpu=cortex-a9 | FileCheck %s --check-prefix=CHECK-NEON
+; RUN: opt -cost-model -analyze -mtriple=thumbv8.1-m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK-MVE
+
+define void @i8() {
+; CHECK-NEON-LABEL: 'i8'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i8 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i8 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'i8'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i8 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i8 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i8 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i8 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i8 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i8 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i8 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i8 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = sdiv i8 undef, undef
+  %2 = udiv i8 undef, undef
+  %3 = srem i8 undef, undef
+  %4 = urem i8 undef, undef
+  %5 = sdiv i8 undef, 2
+  %6 = udiv i8 undef, 2
+  %7 = srem i8 undef, 2
+  %8 = urem i8 undef, 2
+  ret void
+}
+
+define void @i16() {
+; CHECK-NEON-LABEL: 'i16'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i16 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i16 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'i16'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i16 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i16 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i16 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i16 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i16 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i16 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i16 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i16 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = sdiv i16 undef, undef
+  %2 = udiv i16 undef, undef
+  %3 = srem i16 undef, undef
+  %4 = urem i16 undef, undef
+  %5 = sdiv i16 undef, 2
+  %6 = udiv i16 undef, 2
+  %7 = srem i16 undef, 2
+  %8 = urem i16 undef, 2
+  ret void
+}
+
+define void @i32() {
+; CHECK-NEON-LABEL: 'i32'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i32 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i32 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'i32'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i32 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = udiv i32 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i32 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i32 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = sdiv i32 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = udiv i32 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i32 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i32 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = sdiv i32 undef, undef
+  %2 = udiv i32 undef, undef
+  %3 = srem i32 undef, undef
+  %4 = urem i32 undef, undef
+  %5 = sdiv i32 undef, 2
+  %6 = udiv i32 undef, 2
+  %7 = srem i32 undef, 2
+  %8 = urem i32 undef, 2
+  ret void
+}
+
+define void @i64() {
+; CHECK-NEON-LABEL: 'i64'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = sdiv i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = udiv i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i64 undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = sdiv i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = udiv i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i64 undef, 2
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'i64'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = sdiv i64 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = udiv i64 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = srem i64 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = urem i64 undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = sdiv i64 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = udiv i64 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = srem i64 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = urem i64 undef, 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = sdiv i64 undef, undef
+  %2 = udiv i64 undef, undef
+  %3 = srem i64 undef, undef
+  %4 = urem i64 undef, undef
+  %5 = sdiv i64 undef, 2
+  %6 = udiv i64 undef, 2
+  %7 = srem i64 undef, 2
+  %8 = urem i64 undef, 2
+  ret void
+}
+
+define void @f16() {
+; CHECK-NEON-LABEL: 'f16'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv half undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem half undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv half undef, 0xH4000
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem half undef, 0xH4000
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'f16'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv half undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem half undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv half undef, 0xH4000
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem half undef, 0xH4000
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv half undef, undef
+  %2 = frem half undef, undef
+  %3 = fdiv half undef, 2.
+  %4 = frem half undef, 2.
+  ret void
+}
+
+define void @f32() {
+; CHECK-NEON-LABEL: 'f32'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv float undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem float undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv float undef, 2.000000e+00
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem float undef, 2.000000e+00
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'f32'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv float undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem float undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv float undef, 2.000000e+00
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem float undef, 2.000000e+00
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv float undef, undef
+  %2 = frem float undef, undef
+  %3 = fdiv float undef, 2.
+  %4 = frem float undef, 2.
+  ret void
+}
+
+define void @f64() {
+; CHECK-NEON-LABEL: 'f64'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv double undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem double undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv double undef, 2.000000e+00
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem double undef, 2.000000e+00
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'f64'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = fdiv double undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = frem double undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = fdiv double undef, 2.000000e+00
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = frem double undef, 2.000000e+00
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv double undef, undef
+  %2 = frem double undef, undef
+  %3 = fdiv double undef, 2.
+  %4 = frem double undef, 2.
+  ret void
+}
+
+define void @vi8() {
+; CHECK-NEON-LABEL: 'vi8'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f1 = sdiv <4 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f2 = udiv <4 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %e1 = sdiv <8 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %e2 = udiv <8 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i8> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi8'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t1 = sdiv <2 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t2 = udiv <2 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t3 = srem <2 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t4 = urem <2 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i8> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i8> undef, undef
+  %t2 = udiv <2 x i8> undef, undef
+  %t3 = srem <2 x i8> undef, undef
+  %t4 = urem <2 x i8> undef, undef
+  %f1 = sdiv <4 x i8> undef, undef
+  %f2 = udiv <4 x i8> undef, undef
+  %f3 = srem <4 x i8> undef, undef
+  %f4 = urem <4 x i8> undef, undef
+  %e1 = sdiv <8 x i8> undef, undef
+  %e2 = udiv <8 x i8> undef, undef
+  %e3 = srem <8 x i8> undef, undef
+  %e4 = urem <8 x i8> undef, undef
+  %s1 = sdiv <16 x i8> undef, undef
+  %s2 = udiv <16 x i8> undef, undef
+  %s3 = srem <16 x i8> undef, undef
+  %s4 = urem <16 x i8> undef, undef
+  ret void
+}
+
+define void @vi16() {
+; CHECK-NEON-LABEL: 'vi16'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f1 = sdiv <4 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f2 = udiv <4 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i16> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi16'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t1 = sdiv <2 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t2 = udiv <2 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t3 = srem <2 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t4 = urem <2 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i16> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i16> undef, undef
+  %t2 = udiv <2 x i16> undef, undef
+  %t3 = srem <2 x i16> undef, undef
+  %t4 = urem <2 x i16> undef, undef
+  %f1 = sdiv <4 x i16> undef, undef
+  %f2 = udiv <4 x i16> undef, undef
+  %f3 = srem <4 x i16> undef, undef
+  %f4 = urem <4 x i16> undef, undef
+  %e1 = sdiv <8 x i16> undef, undef
+  %e2 = udiv <8 x i16> undef, undef
+  %e3 = srem <8 x i16> undef, undef
+  %e4 = urem <8 x i16> undef, undef
+  %s1 = sdiv <16 x i16> undef, undef
+  %s2 = udiv <16 x i16> undef, undef
+  %s3 = srem <16 x i16> undef, undef
+  %s4 = urem <16 x i16> undef, undef
+  ret void
+}
+
+define void @vi32() {
+; CHECK-NEON-LABEL: 'vi32'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f1 = sdiv <4 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f2 = udiv <4 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i32> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi32'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t1 = sdiv <2 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t2 = udiv <2 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t3 = srem <2 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %t4 = urem <2 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i32> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i32> undef, undef
+  %t2 = udiv <2 x i32> undef, undef
+  %t3 = srem <2 x i32> undef, undef
+  %t4 = urem <2 x i32> undef, undef
+  %f1 = sdiv <4 x i32> undef, undef
+  %f2 = udiv <4 x i32> undef, undef
+  %f3 = srem <4 x i32> undef, undef
+  %f4 = urem <4 x i32> undef, undef
+  %e1 = sdiv <8 x i32> undef, undef
+  %e2 = udiv <8 x i32> undef, undef
+  %e3 = srem <8 x i32> undef, undef
+  %e4 = urem <8 x i32> undef, undef
+  %s1 = sdiv <16 x i32> undef, undef
+  %s2 = udiv <16 x i32> undef, undef
+  %s3 = srem <16 x i32> undef, undef
+  %s4 = urem <16 x i32> undef, undef
+  ret void
+}
+
+define void @vi64() {
+; CHECK-NEON-LABEL: 'vi64'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f1 = sdiv <4 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f2 = udiv <4 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i64> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi64'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t1 = sdiv <2 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t2 = udiv <2 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t3 = srem <2 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t4 = urem <2 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %f1 = sdiv <4 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %f2 = udiv <4 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %f3 = srem <4 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %f4 = urem <4 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %e1 = sdiv <8 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %e2 = udiv <8 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %e3 = srem <8 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %e4 = urem <8 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %s1 = sdiv <16 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %s2 = udiv <16 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %s3 = srem <16 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %s4 = urem <16 x i64> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i64> undef, undef
+  %t2 = udiv <2 x i64> undef, undef
+  %t3 = srem <2 x i64> undef, undef
+  %t4 = urem <2 x i64> undef, undef
+  %f1 = sdiv <4 x i64> undef, undef
+  %f2 = udiv <4 x i64> undef, undef
+  %f3 = srem <4 x i64> undef, undef
+  %f4 = urem <4 x i64> undef, undef
+  %e1 = sdiv <8 x i64> undef, undef
+  %e2 = udiv <8 x i64> undef, undef
+  %e3 = srem <8 x i64> undef, undef
+  %e4 = urem <8 x i64> undef, undef
+  %s1 = sdiv <16 x i64> undef, undef
+  %s2 = udiv <16 x i64> undef, undef
+  %s3 = srem <16 x i64> undef, undef
+  %s4 = urem <16 x i64> undef, undef
+  ret void
+}
+
+define void @vf16() {
+; CHECK-NEON-LABEL: 'vf16'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = fdiv <2 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = fdiv <2 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %3 = fdiv <4 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %4 = fdiv <4 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %5 = fdiv <8 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %6 = fdiv <8 x half> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf16'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x half> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x half> undef, undef
+  %2 = fdiv <2 x half> undef, undef
+  %3 = fdiv <4 x half> undef, undef
+  %4 = fdiv <4 x half> undef, undef
+  %5 = fdiv <8 x half> undef, undef
+  %6 = fdiv <8 x half> undef, undef
+  ret void
+}
+
+define void @vf32() {
+; CHECK-NEON-LABEL: 'vf32'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %1 = fdiv <2 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %2 = fdiv <2 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %3 = fdiv <4 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %4 = fdiv <4 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %5 = fdiv <8 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %6 = fdiv <8 x float> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf32'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x float> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x float> undef, undef
+  %2 = fdiv <2 x float> undef, undef
+  %3 = fdiv <4 x float> undef, undef
+  %4 = fdiv <4 x float> undef, undef
+  %5 = fdiv <8 x float> undef, undef
+  %6 = fdiv <8 x float> undef, undef
+  ret void
+}
+
+define void @vf64() {
+; CHECK-NEON-LABEL: 'vf64'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x double> undef, undef
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf64'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x double> undef, undef
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x double> undef, undef
+  %2 = fdiv <2 x double> undef, undef
+  %3 = fdiv <4 x double> undef, undef
+  %4 = fdiv <4 x double> undef, undef
+  %5 = fdiv <8 x double> undef, undef
+  %6 = fdiv <8 x double> undef, undef
+  ret void
+}
+
+define void @vi8_2() {
+; CHECK-NEON-LABEL: 'vi8_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i8> undef, <i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i8> undef, <i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i8> undef, <i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i8> undef, <i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f1 = sdiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f2 = udiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %e1 = sdiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %e2 = udiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi8_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t1 = sdiv <2 x i8> undef, <i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t2 = udiv <2 x i8> undef, <i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t3 = srem <2 x i8> undef, <i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t4 = urem <2 x i8> undef, <i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i8> undef, <i8 2, i8 2>
+  %t2 = udiv <2 x i8> undef, <i8 2, i8 2>
+  %t3 = srem <2 x i8> undef, <i8 2, i8 2>
+  %t4 = urem <2 x i8> undef, <i8 2, i8 2>
+  %f1 = sdiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+  %f2 = udiv <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+  %f3 = srem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+  %f4 = urem <4 x i8> undef, <i8 2, i8 2, i8 2, i8 2>
+  %e1 = sdiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %e2 = udiv <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %e3 = srem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %e4 = urem <8 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %s1 = sdiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %s2 = udiv <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %s3 = srem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %s4 = urem <16 x i8> undef, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret void
+}
+
+define void @vi16_2() {
+; CHECK-NEON-LABEL: 'vi16_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i16> undef, <i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i16> undef, <i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i16> undef, <i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i16> undef, <i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f1 = sdiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f2 = udiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi16_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t1 = sdiv <2 x i16> undef, <i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t2 = udiv <2 x i16> undef, <i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t3 = srem <2 x i16> undef, <i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t4 = urem <2 x i16> undef, <i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i16> undef, <i16 2, i16 2>
+  %t2 = udiv <2 x i16> undef, <i16 2, i16 2>
+  %t3 = srem <2 x i16> undef, <i16 2, i16 2>
+  %t4 = urem <2 x i16> undef, <i16 2, i16 2>
+  %f1 = sdiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+  %f2 = udiv <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+  %f3 = srem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+  %f4 = urem <4 x i16> undef, <i16 2, i16 2, i16 2, i16 2>
+  %e1 = sdiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %e2 = udiv <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %e3 = srem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %e4 = urem <8 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %s1 = sdiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %s2 = udiv <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %s3 = srem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %s4 = urem <16 x i16> undef, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  ret void
+}
+
+define void @vi32_2() {
+; CHECK-NEON-LABEL: 'vi32_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i32> undef, <i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i32> undef, <i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i32> undef, <i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i32> undef, <i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f1 = sdiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f2 = udiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi32_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t1 = sdiv <2 x i32> undef, <i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %t2 = udiv <2 x i32> undef, <i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t3 = srem <2 x i32> undef, <i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %t4 = urem <2 x i32> undef, <i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f1 = sdiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f2 = udiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f3 = srem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f4 = urem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e1 = sdiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %e2 = udiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e3 = srem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %e4 = urem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s1 = sdiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %s2 = udiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s3 = srem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %s4 = urem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i32> undef, <i32 2, i32 2>
+  %t2 = udiv <2 x i32> undef, <i32 2, i32 2>
+  %t3 = srem <2 x i32> undef, <i32 2, i32 2>
+  %t4 = urem <2 x i32> undef, <i32 2, i32 2>
+  %f1 = sdiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+  %f2 = udiv <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+  %f3 = srem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+  %f4 = urem <4 x i32> undef, <i32 2, i32 2, i32 2, i32 2>
+  %e1 = sdiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %e2 = udiv <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %e3 = srem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %e4 = urem <8 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %s1 = sdiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %s2 = udiv <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %s3 = srem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %s4 = urem <16 x i32> undef, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  ret void
+}
+
+define void @vi64_2() {
+; CHECK-NEON-LABEL: 'vi64_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t1 = sdiv <2 x i64> undef, <i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t2 = udiv <2 x i64> undef, <i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t3 = srem <2 x i64> undef, <i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t4 = urem <2 x i64> undef, <i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f1 = sdiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f2 = udiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f3 = srem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %f4 = urem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e1 = sdiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e2 = udiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e3 = srem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %e4 = urem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s1 = sdiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s2 = udiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s3 = srem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %s4 = urem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vi64_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %t1 = sdiv <2 x i64> undef, <i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %t2 = udiv <2 x i64> undef, <i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %t3 = srem <2 x i64> undef, <i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %t4 = urem <2 x i64> undef, <i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %f1 = sdiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %f2 = udiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %f3 = srem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %f4 = urem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %e1 = sdiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %e2 = udiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %e3 = srem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %e4 = urem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %s1 = sdiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %s2 = udiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %s3 = srem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %s4 = urem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t1 = sdiv <2 x i64> undef, <i64 2, i64 2>
+  %t2 = udiv <2 x i64> undef, <i64 2, i64 2>
+  %t3 = srem <2 x i64> undef, <i64 2, i64 2>
+  %t4 = urem <2 x i64> undef, <i64 2, i64 2>
+  %f1 = sdiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+  %f2 = udiv <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+  %f3 = srem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+  %f4 = urem <4 x i64> undef, <i64 2, i64 2, i64 2, i64 2>
+  %e1 = sdiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %e2 = udiv <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %e3 = srem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %e4 = urem <8 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %s1 = sdiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %s2 = udiv <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %s3 = srem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %s4 = urem <16 x i64> undef, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  ret void
+}
+
+define void @vf16_2() {
+; CHECK-NEON-LABEL: 'vf16_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = fdiv <2 x half> undef, <half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = fdiv <2 x half> undef, <half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %3 = fdiv <4 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %4 = fdiv <4 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %5 = fdiv <8 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %6 = fdiv <8 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf16_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x half> undef, <half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x half> undef, <half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x half> undef, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x half> undef, <half 2., half 2.>
+  %2 = fdiv <2 x half> undef, <half 2., half 2.>
+  %3 = fdiv <4 x half> undef, <half 2., half 2., half 2., half 2.>
+  %4 = fdiv <4 x half> undef, <half 2., half 2., half 2., half 2.>
+  %5 = fdiv <8 x half> undef, <half 2., half 2., half 2., half 2., half 2., half 2., half 2., half 2.>
+  %6 = fdiv <8 x half> undef, <half 2., half 2., half 2., half 2., half 2., half 2., half 2., half 2.>
+  ret void
+}
+
+define void @vf32_2() {
+; CHECK-NEON-LABEL: 'vf32_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %1 = fdiv <2 x float> undef, <float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %2 = fdiv <2 x float> undef, <float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %3 = fdiv <4 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %4 = fdiv <4 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %5 = fdiv <8 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %6 = fdiv <8 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf32_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x float> undef, <float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x float> undef, <float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x float> undef, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x float> undef, <float 2., float 2.>
+  %2 = fdiv <2 x float> undef, <float 2., float 2.>
+  %3 = fdiv <4 x float> undef, <float 2., float 2., float 2., float 2.>
+  %4 = fdiv <4 x float> undef, <float 2., float 2., float 2., float 2.>
+  %5 = fdiv <8 x float> undef, <float 2., float 2., float 2., float 2., float 2., float 2., float 2., float 2.>
+  %6 = fdiv <8 x float> undef, <float 2., float 2., float 2., float 2., float 2., float 2., float 2., float 2.>
+  ret void
+}
+
+define void @vf64_2() {
+; CHECK-NEON-LABEL: 'vf64_2'
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x double> undef, <double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x double> undef, <double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'vf64_2'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = fdiv <2 x double> undef, <double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = fdiv <2 x double> undef, <double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = fdiv <4 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = fdiv <4 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %5 = fdiv <8 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = fdiv <8 x double> undef, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %1 = fdiv <2 x double> undef, <double 2., double 2.>
+  %2 = fdiv <2 x double> undef, <double 2., double 2.>
+  %3 = fdiv <4 x double> undef, <double 2., double 2., double 2., double 2.>
+  %4 = fdiv <4 x double> undef, <double 2., double 2., double 2., double 2.>
+  %5 = fdiv <8 x double> undef, <double 2., double 2., double 2., double 2., double 2., double 2., double 2., double 2.>
+  %6 = fdiv <8 x double> undef, <double 2., double 2., double 2., double 2., double 2., double 2., double 2., double 2.>
+  ret void
 }
-define <16 x i64> @urem_v16_i64(<16 x i64>  %a, <16 x i64> %b) {
-  ; CHECK: urem_v16_i64
-  ; CHECK: cost of 320 {{.*}} urem
 
-  %1 = urem <16 x i64>  %a, %b
-  ret <16 x i64> %1
-}

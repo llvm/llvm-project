@@ -3348,7 +3348,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     // Find the largest legal vector type.
     MVT VecVT = MVT::Other;
     // FIXME: Only some x86_32 calling conventions support AVX512.
-    if (Subtarget.hasAVX512() &&
+    if (Subtarget.useAVX512Regs() &&
         (Is64Bit || (CallConv == CallingConv::X86_VectorCall ||
                      CallConv == CallingConv::Intel_OCL_BI)))
       VecVT = MVT::v16f32;
@@ -19050,6 +19050,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
             truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
       return V;
 
+  // Handle truncation of V256 to V128 using shuffles.
+  assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
+
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
     // On AVX2, v4i64 -> v4i32 becomes VPERMD.
     if (Subtarget.hasInt256()) {
@@ -19126,22 +19129,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::PACKUS, DL, VT, InLo, InHi);
   }
 
-  // Handle truncation of V256 to V128 using shuffles.
-  assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
-
-  assert(Subtarget.hasAVX() && "256-bit vector without AVX!");
-
-  unsigned NumElems = VT.getVectorNumElements();
-  MVT NVT = MVT::getVectorVT(VT.getVectorElementType(), NumElems * 2);
-
-  SmallVector<int, 16> MaskVec(NumElems * 2, -1);
-  // Prepare truncation shuffle mask
-  for (unsigned i = 0; i != NumElems; ++i)
-    MaskVec[i] = i * 2;
-  In = DAG.getBitcast(NVT, In);
-  SDValue V = DAG.getVectorShuffle(NVT, DL, In, In, MaskVec);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V,
-                     DAG.getIntPtrConstant(0, DL));
+  llvm_unreachable("All 256->128 cases should have been handled above!");
 }
 
 SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
@@ -30974,12 +30962,21 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One |= Known2.One;
     break;
   }
+  case X86ISD::PSADBW: {
+    assert(VT.getScalarType() == MVT::i64 &&
+           Op.getOperand(0).getValueType().getScalarType() == MVT::i8 &&
+           "Unexpected PSADBW types");
+
+    // PSADBW - fills low 16 bits and zeros upper 48 bits of each i64 result.
+    Known.Zero.setBitsFrom(16);
+    break;
+  }
   case X86ISD::CMOV: {
-    Known = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
+    Known = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
-    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth+1);
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     // Only known if known in both the LHS and RHS.
     Known.One &= Known2.One;
@@ -33923,23 +33920,6 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
   }
 
-  // If we don't demand all elements, then attempt to combine to a simpler
-  // shuffle.
-  // TODO: Handle other depths, but first we need to handle the fact that
-  // it might combine to the same shuffle.
-  if (!DemandedElts.isAllOnesValue() && Depth == 0) {
-    SmallVector<int, 32> DemandedMask(NumElts, SM_SentinelUndef);
-    for (int i = 0; i != NumElts; ++i)
-      if (DemandedElts[i])
-        DemandedMask[i] = i;
-
-    SDValue NewShuffle = combineX86ShufflesRecursively(
-        {Op}, 0, Op, DemandedMask, {}, Depth, /*HasVarMask*/ false,
-        /*AllowVarMask*/ true, TLO.DAG, Subtarget);
-    if (NewShuffle)
-      return TLO.CombineTo(Op, NewShuffle);
-  }
-
   // Extract known zero/undef elements.
   // TODO - Propagate input undef/zero elts.
   for (int i = 0; i != NumElts; ++i) {
@@ -34310,9 +34290,8 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
 /// folded into a single element load.
 /// Similar handling for VECTOR_SHUFFLE is performed by DAGCombiner, but
 /// shuffles have been custom lowered so we need to handle those here.
-static SDValue
-XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -34324,17 +34303,13 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT OriginalVT = InVec.getValueType();
-  unsigned NumOriginalElts = OriginalVT.getVectorNumElements();
 
   // Peek through bitcasts, don't duplicate a load with other uses.
   InVec = peekThroughOneUseBitcasts(InVec);
 
   EVT CurrentVT = InVec.getValueType();
-  if (!CurrentVT.isVector())
-    return SDValue();
-
-  unsigned NumCurrentElts = CurrentVT.getVectorNumElements();
-  if ((NumOriginalElts % NumCurrentElts) != 0)
+  if (!CurrentVT.isVector() ||
+      CurrentVT.getVectorNumElements() != OriginalVT.getVectorNumElements())
     return SDValue();
 
   if (!isTargetShuffle(InVec.getOpcode()))
@@ -34351,17 +34326,10 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
                             ShuffleOps, ShuffleMask, UnaryShuffle))
     return SDValue();
 
-  unsigned Scale = NumOriginalElts / NumCurrentElts;
-  if (Scale > 1) {
-    SmallVector<int, 16> ScaledMask;
-    scaleShuffleMask<int>(Scale, ShuffleMask, ScaledMask);
-    ShuffleMask = std::move(ScaledMask);
-  }
-  assert(ShuffleMask.size() == NumOriginalElts && "Shuffle mask size mismatch");
-
   // Select the input vector, guarding against out of range extract vector.
+  unsigned NumElems = CurrentVT.getVectorNumElements();
   int Elt = cast<ConstantSDNode>(EltNo)->getZExtValue();
-  int Idx = (Elt > (int)NumOriginalElts) ? SM_SentinelUndef : ShuffleMask[Elt];
+  int Idx = (Elt > (int)NumElems) ? SM_SentinelUndef : ShuffleMask[Elt];
 
   if (Idx == SM_SentinelZero)
     return EltVT.isInteger() ? DAG.getConstant(0, SDLoc(N), EltVT)
@@ -34374,9 +34342,8 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
   if (llvm::any_of(ShuffleMask, [](int M) { return M == SM_SentinelZero; }))
     return SDValue();
 
-  assert(0 <= Idx && Idx < (int)(2 * NumOriginalElts) &&
-         "Shuffle index out of range");
-  SDValue LdNode = (Idx < (int)NumOriginalElts) ? ShuffleOps[0] : ShuffleOps[1];
+  assert(0 <= Idx && Idx < (int)(2 * NumElems) && "Shuffle index out of range");
+  SDValue LdNode = (Idx < (int)NumElems) ? ShuffleOps[0] : ShuffleOps[1];
 
   // If inputs to shuffle are the same for both ops, then allow 2 uses
   unsigned AllowedUses =
@@ -34396,7 +34363,7 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
 
   LoadSDNode *LN0 = cast<LoadSDNode>(LdNode);
 
-  if (!LN0 || !LN0->hasNUsesOfValue(AllowedUses, 0) || LN0->isVolatile())
+  if (!LN0 ||!LN0->hasNUsesOfValue(AllowedUses, 0) || LN0->isVolatile())
     return SDValue();
 
   // If there's a bitcast before the shuffle, check if the load type and
@@ -34414,11 +34381,10 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   // Create shuffle node taking into account the case that its a unary shuffle
-  SDValue Shuffle = UnaryShuffle ? DAG.getUNDEF(OriginalVT)
-                                 : DAG.getBitcast(OriginalVT, ShuffleOps[1]);
-  Shuffle = DAG.getVectorShuffle(OriginalVT, dl,
-                                 DAG.getBitcast(OriginalVT, ShuffleOps[0]),
-                                 Shuffle, ShuffleMask);
+  SDValue Shuffle = (UnaryShuffle) ? DAG.getUNDEF(CurrentVT) : ShuffleOps[1];
+  Shuffle = DAG.getVectorShuffle(CurrentVT, dl, ShuffleOps[0], Shuffle,
+                                 ShuffleMask);
+  Shuffle = DAG.getBitcast(OriginalVT, Shuffle);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, N->getValueType(0), Shuffle,
                      EltNo);
 }
@@ -39012,36 +38978,6 @@ static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
   return SDValue();
 }
 
-/// Detect a pattern of truncation with signed saturation.
-/// The types should allow to use VPMOVSS* instruction on AVX512.
-/// Return the source value to be truncated or SDValue() if the pattern was not
-/// matched.
-static SDValue detectAVX512SSatPattern(SDValue In, EVT VT,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
-  if (!TLI.isTypeLegal(In.getValueType()))
-    return SDValue();
-  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
-    return SDValue();
-  return detectSSatPattern(In, VT);
-}
-
-/// Detect a pattern of truncation with saturation:
-/// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
-/// The types should allow to use VPMOVUS* instruction on AVX512.
-/// Return the source value to be truncated or SDValue() if the pattern was not
-/// matched.
-static SDValue detectAVX512USatPattern(SDValue In, EVT VT, SelectionDAG &DAG,
-                                       const SDLoc &DL,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
-  if (!TLI.isTypeLegal(In.getValueType()))
-    return SDValue();
-  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
-    return SDValue();
-  return detectUSatPattern(In, VT, DAG, DL);
-}
-
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
@@ -39057,7 +38993,8 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
   if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
-      !Subtarget.hasAVX512() &&
+      !(Subtarget.hasAVX512() && InSVT == MVT::i32) &&
+      !(Subtarget.hasBWI() && InSVT == MVT::i16) &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (auto USatVal = detectSSatPattern(In, VT, true)) {
@@ -39624,7 +39561,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (!St->isTruncatingStore() && VT == MVT::v16i8 && !Subtarget.hasBWI() &&
       St->getValue().getOpcode() == ISD::TRUNCATE &&
       St->getValue().getOperand(0).getValueType() == MVT::v16i16 &&
-      TLI.isTruncStoreLegalOrCustom(MVT::v16i32, MVT::v16i8) &&
+      TLI.isTruncStoreLegal(MVT::v16i32, MVT::v16i8) &&
       !DCI.isBeforeLegalizeOps()) {
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32, St->getValue());
     return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
@@ -39638,23 +39575,24 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     // Check if we can detect an AVG pattern from the truncation. If yes,
     // replace the trunc store by a normal store with the result of X86ISD::AVG
     // instruction.
-    if (SDValue Avg = detectAVGPattern(St->getValue(), St->getMemoryVT(), DAG,
-                                       Subtarget, dl))
-      return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
-                          St->getPointerInfo(), St->getAlignment(),
-                          St->getMemOperand()->getFlags());
+    if (DCI.isBeforeLegalize() || TLI.isTypeLegal(St->getMemoryVT()))
+      if (SDValue Avg = detectAVGPattern(St->getValue(), St->getMemoryVT(), DAG,
+                                         Subtarget, dl))
+        return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
+                            St->getPointerInfo(), St->getAlignment(),
+                            St->getMemOperand()->getFlags());
 
-    if (SDValue Val =
-        detectAVX512SSatPattern(St->getValue(), St->getMemoryVT(), Subtarget,
-                                TLI))
-      return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
-                             dl, Val, St->getBasePtr(),
-                             St->getMemoryVT(), St->getMemOperand(), DAG);
-    if (SDValue Val = detectAVX512USatPattern(St->getValue(), St->getMemoryVT(),
-                                              DAG, dl, Subtarget, TLI))
-      return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
-                             dl, Val, St->getBasePtr(),
-                             St->getMemoryVT(), St->getMemOperand(), DAG);
+    if (TLI.isTruncStoreLegal(VT, StVT)) {
+      if (SDValue Val = detectSSatPattern(St->getValue(), St->getMemoryVT()))
+        return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
+                               dl, Val, St->getBasePtr(),
+                               St->getMemoryVT(), St->getMemOperand(), DAG);
+      if (SDValue Val = detectUSatPattern(St->getValue(), St->getMemoryVT(),
+                                          DAG, dl))
+        return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
+                               dl, Val, St->getBasePtr(),
+                               St->getMemoryVT(), St->getMemOperand(), DAG);
+    }
 
     return SDValue();
   }
