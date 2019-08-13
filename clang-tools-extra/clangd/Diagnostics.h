@@ -145,6 +145,8 @@ private:
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;
+  /// Set iff adjustDiagFromHeader resulted in changes to LastDiag.
+  bool LastDiagWasAdjusted = false;
   llvm::DenseSet<int> IncludeLinesWithErrors;
   bool LastPrimaryDiagnosticWasSuppressed = false;
 };
