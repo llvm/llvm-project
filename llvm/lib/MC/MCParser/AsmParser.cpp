@@ -1142,7 +1142,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
       }
     }
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(SymbolName);
+    MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
+    if (!Sym)
+      Sym = getContext().getOrCreateSymbol(SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
