@@ -210,6 +210,9 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
 
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
   Set<size_t> AllFeatures;
+  auto PrintStatsWrapper = [this, &AllFeatures](const char* Where) {
+    this->PrintStats(Where, "\n", 0, AllFeatures.size());
+  };
   Set<const TracePC::PCTableEntry *> AllPCs;
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     Fuzzer::MaybeExitGracefully();
@@ -238,9 +241,9 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     TPC.UpdateObservedPCs();
     // Show stats.
     if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)))
-      PrintStats("pulse ");
+      PrintStatsWrapper("pulse ");
     if (TotalNumberOfRuns == M.NumFilesInFirstCorpus)
-      PrintStats("LOADED");
+      PrintStatsWrapper("LOADED");
     // Write the post-run marker and the coverage.
     OF << "FT " << i;
     for (size_t F : UniqFeatures)
@@ -254,7 +257,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     OF << "\n";
     OF.flush();
   }
-  PrintStats("DONE  ");
+  PrintStatsWrapper("DONE  ");
 }
 
 static void WriteNewControlFile(const std::string &CFPath,

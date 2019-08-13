@@ -511,8 +511,8 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
                         const MachineRegisterInfo &MRI,
                         const TargetRegisterInfo &TRI,
                         const RegisterBankInfo &RBI) {
-  const unsigned DstReg = I.getOperand(0).getReg();
-  const unsigned SrcReg = I.getOperand(1).getReg();
+  const Register DstReg = I.getOperand(0).getReg();
+  const Register SrcReg = I.getOperand(1).getReg();
   const unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
 
@@ -572,8 +572,8 @@ static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
 getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
                      MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                      const RegisterBankInfo &RBI) {
-  unsigned DstReg = I.getOperand(0).getReg();
-  unsigned SrcReg = I.getOperand(1).getReg();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
   unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
@@ -598,8 +598,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
 
-  unsigned DstReg = I.getOperand(0).getReg();
-  unsigned SrcReg = I.getOperand(1).getReg();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
@@ -675,7 +675,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                SrcSize == 16) {
         // Special case for FPR16 to GPR32.
         // FIXME: This can probably be generalized like the above case.
-        unsigned PromoteReg =
+        Register PromoteReg =
             MRI.createVirtualRegister(&AArch64::FPR32RegClass);
         BuildMI(*I.getParent(), I, I.getDebugLoc(),
                 TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
@@ -1115,8 +1115,8 @@ void AArch64InstructionSelector::preISelLower(MachineInstr &I) const {
     // some reason we receive input GMIR that has an s64 shift amount that's not
     // a G_CONSTANT, insert a truncate so that we can still select the s32
     // register-register variant.
-    unsigned SrcReg = I.getOperand(1).getReg();
-    unsigned ShiftReg = I.getOperand(2).getReg();
+    Register SrcReg = I.getOperand(1).getReg();
+    Register ShiftReg = I.getOperand(2).getReg();
     const LLT ShiftTy = MRI.getType(ShiftReg);
     const LLT SrcTy = MRI.getType(SrcReg);
     if (SrcTy.isVector())
@@ -1767,7 +1767,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
         const unsigned Size = MemSizeInBits / 8;
         const unsigned Scale = Log2_32(Size);
         if ((Imm & (Size - 1)) == 0 && Imm >= 0 && Imm < (0x1000 << Scale)) {
-          unsigned Ptr2Reg = PtrMI->getOperand(1).getReg();
+          Register Ptr2Reg = PtrMI->getOperand(1).getReg();
           I.getOperand(1).setReg(Ptr2Reg);
           PtrMI = MRI.getVRegDef(Ptr2Reg);
           Offset = Imm / Size;

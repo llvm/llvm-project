@@ -1,2 +1,0 @@
-RUN: echo -n abc | llvm-strings - | FileCheck -allow-empty %s
-CHECK-NOT: abc

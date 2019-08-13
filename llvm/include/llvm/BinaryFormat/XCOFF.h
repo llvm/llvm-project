@@ -19,7 +19,7 @@ namespace llvm {
 namespace XCOFF {
 
 // Constants used in the XCOFF definition.
-enum { SectionNameSize = 8, SymbolNameSize = 8 };
+enum { NameSize = 8 };
 enum ReservedSectionNum { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
 // x_smclas field of x_csect from system header: /usr/include/syms.h

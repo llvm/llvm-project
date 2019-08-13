@@ -297,7 +297,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
     unsigned SrcBitWidth = SrcTy.isPointer()
-                               ? DL.getIndexSize(SrcTy.getAddressSpace())
+                               ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
                                : SrcTy.getSizeInBits();
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth, true);

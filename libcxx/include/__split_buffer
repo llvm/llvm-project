@@ -161,6 +161,19 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void __move_assign_alloc(__split_buffer&, false_type) _NOEXCEPT
         {}
+
+    struct _ConstructTransaction {
+      explicit _ConstructTransaction(pointer* __p, size_type __n) _NOEXCEPT
+      : __pos_(*__p), __end_(*__p + __n), __dest_(__p) {
+      }
+      ~_ConstructTransaction() {
+        *__dest_ = __pos_;
+      }
+      pointer __pos_;
+     const pointer __end_;
+    private:
+     pointer *__dest_;
+    };
 };
 
 template <class _Tp, class _Allocator>
@@ -197,13 +210,10 @@ template <class _Tp, class _Allocator>
 void
 __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n)
 {
-    __alloc_rr& __a = this->__alloc();
-    do
-    {
-        __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(this->__end_));
-        ++this->__end_;
-        --__n;
-    } while (__n > 0);
+    _ConstructTransaction __tx(&this->__end_, __n);
+    for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
+        __alloc_traits::construct(this->__alloc(), _VSTD::__to_raw_pointer(__tx.__pos_));
+    }
 }
 
 //  Copy constructs __n objects starting at __end_ from __x
@@ -216,13 +226,11 @@ template <class _Tp, class _Allocator>
 void
 __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x)
 {
-    __alloc_rr& __a = this->__alloc();
-    do
-    {
-        __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(this->__end_), __x);
-        ++this->__end_;
-        --__n;
-    } while (__n > 0);
+    _ConstructTransaction __tx(&this->__end_, __n);
+    for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
+        __alloc_traits::construct(this->__alloc(),
+            _VSTD::__to_raw_pointer(__tx.__pos_), __x);
+    }
 }
 
 template <class _Tp, class _Allocator>
@@ -262,11 +270,10 @@ typename enable_if
 >::type
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
-    __alloc_rr& __a = this->__alloc();
-    for (; __first != __last; ++__first)
-    {
-        __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(this->__end_), *__first);
-        ++this->__end_;
+    _ConstructTransaction __tx(&this->__end_, std::distance(__first, __last));
+    for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, ++__first) {
+        __alloc_traits::construct(this->__alloc(),
+            _VSTD::__to_raw_pointer(__tx.__pos_), *__first);
     }
 }
 

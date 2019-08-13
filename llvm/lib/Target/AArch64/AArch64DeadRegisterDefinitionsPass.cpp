@@ -145,7 +145,7 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         continue;
       // We should not have any relevant physreg defs that are replacable by
       // zero before register allocation. So we just check for dead vreg defs.
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Register::isVirtualRegister(Reg) ||
           (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
         continue;

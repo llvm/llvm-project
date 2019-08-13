@@ -54,13 +54,15 @@ int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
   return -1;
 }
 
-// For References, we don't need to actually merge them, we just don't want
-// duplicates.
 void reduceChildren(std::vector<Reference> &Children,
                     std::vector<Reference> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
-    if (getChildIndexIfExists(Children, ChildToMerge) == -1)
+    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
+    if (mergeIdx == -1) {
       Children.push_back(std::move(ChildToMerge));
+      continue;
+    }
+    Children[mergeIdx].merge(std::move(ChildToMerge));
   }
 }
 
@@ -110,6 +112,20 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return llvm::make_error<llvm::StringError>("Unexpected info type.\n",
                                                llvm::inconvertibleErrorCode());
   }
+}
+
+bool Reference::mergeable(const Reference &Other) {
+  return RefType == Other.RefType && USR == Other.USR;
+}
+
+void Reference::merge(Reference &&Other) {
+  assert(mergeable(Other));
+  if (Name.empty())
+    Name = Other.Name;
+  if (Path.empty())
+    Path = Other.Path;
+  if (!IsInGlobalNamespace)
+    IsInGlobalNamespace = Other.IsInGlobalNamespace;
 }
 
 void Info::mergeBase(Info &&Other) {

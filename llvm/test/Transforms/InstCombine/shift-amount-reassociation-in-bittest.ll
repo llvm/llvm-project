@@ -667,3 +667,15 @@ define <2 x i1> @n38_overshift(<2 x i32> %x, <2 x i32> %y) {
   %t3 = icmp ne <2 x i32> %t2, <i32 0, i32 0>
   ret <2 x i1> %t3
 }
+
+; As usual, don't crash given constantexpr's :/
+@f.a = internal global i16 0
+define i1 @constantexpr() {
+entry:
+  %0 = load i16, i16* @f.a
+  %shr = ashr i16 %0, 1
+  %shr1 = ashr i16 %shr, zext (i1 icmp ne (i16 ptrtoint (i16* @f.a to i16), i16 1) to i16)
+  %and = and i16 %shr1, 1
+  %tobool = icmp ne i16 %and, 0
+  ret i1 %tobool
+}

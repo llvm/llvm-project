@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===////
 
-#ifndef TIMER_HPP
-#define TIMER_HPP
+#ifndef TIMER_H
+#define TIMER_H
 
 // Define LIBCXXABI_NO_TIMER to disable testing with a timer.
 #ifndef LIBCXXABI_NO_TIMER
@@ -51,4 +51,4 @@ public:
 
 #endif /* LIBCXXABI_NO_TIMER */
 
-#endif /* TIMER_HPP */
+#endif /* TIMER_H */

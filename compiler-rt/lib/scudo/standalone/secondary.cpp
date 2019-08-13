@@ -124,8 +124,8 @@ void MapAllocator::deallocate(void *Ptr) {
 }
 
 void MapAllocator::printStats() const {
-  Printf("Stats: MapAllocator: allocated %zd times (%zdK), freed %zd times "
-         "(%zdK), remains %zd (%zdK) max %zdM\n",
+  Printf("Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
+         "(%zuK), remains %zu (%zuK) max %zuM\n",
          NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
          NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
          LargestSize >> 20);

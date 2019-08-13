@@ -808,7 +808,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       //   STRWui %w1, ...
       //   USE kill %w1   ; need to clear kill flag when moving STRWui downwards
       //   STRW %w0
-      unsigned Reg = getLdStRegOp(*I).getReg();
+      Register Reg = getLdStRegOp(*I).getReg();
       for (MachineInstr &MI : make_range(std::next(I), Paired))
         MI.clearRegisterKills(Reg, TRI);
     }
@@ -837,9 +837,9 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     MachineOperand &DstMO = MIB->getOperand(SExtIdx);
     // Right now, DstMO has the extended register, since it comes from an
     // extended opcode.
-    unsigned DstRegX = DstMO.getReg();
+    Register DstRegX = DstMO.getReg();
     // Get the W variant of that register.
-    unsigned DstRegW = TRI->getSubReg(DstRegX, AArch64::sub_32);
+    Register DstRegW = TRI->getSubReg(DstRegX, AArch64::sub_32);
     // Update the result of LDP to use the W instead of the X variant.
     DstMO.setReg(DstRegW);
     LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
@@ -882,9 +882,9 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
 
   int LoadSize = getMemScale(*LoadI);
   int StoreSize = getMemScale(*StoreI);
-  unsigned LdRt = getLdStRegOp(*LoadI).getReg();
+  Register LdRt = getLdStRegOp(*LoadI).getReg();
   const MachineOperand &StMO = getLdStRegOp(*StoreI);
-  unsigned StRt = getLdStRegOp(*StoreI).getReg();
+  Register StRt = getLdStRegOp(*StoreI).getReg();
   bool IsStoreXReg = TRI->getRegClass(AArch64::GPR64RegClassID)->contains(StRt);
 
   assert((IsStoreXReg ||
@@ -933,10 +933,10 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                                ? getLdStOffsetOp(*StoreI).getImm()
                                : getLdStOffsetOp(*StoreI).getImm() * StoreSize;
     int Width = LoadSize * 8;
-    unsigned DestReg = IsStoreXReg
-                           ? TRI->getMatchingSuperReg(LdRt, AArch64::sub_32,
-                                                      &AArch64::GPR64RegClass)
-                           : LdRt;
+    unsigned DestReg =
+        IsStoreXReg ? Register(TRI->getMatchingSuperReg(
+                          LdRt, AArch64::sub_32, &AArch64::GPR64RegClass))
+                    : LdRt;
 
     assert((UnscaledLdOffset >= UnscaledStOffset &&
             (UnscaledLdOffset + LoadSize) <= UnscaledStOffset + StoreSize) &&
@@ -1042,7 +1042,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
   MachineBasicBlock::iterator B = I->getParent()->begin();
   MachineBasicBlock::iterator MBBI = I;
   MachineInstr &LoadMI = *I;
-  unsigned BaseReg = getLdStBaseOp(LoadMI).getReg();
+  Register BaseReg = getLdStBaseOp(LoadMI).getReg();
 
   // If the load is the first instruction in the block, there's obviously
   // not any matching store.
@@ -1156,8 +1156,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
   bool MayLoad = FirstMI.mayLoad();
   bool IsUnscaled = TII->isUnscaledLdSt(FirstMI);
-  unsigned Reg = getLdStRegOp(FirstMI).getReg();
-  unsigned BaseReg = getLdStBaseOp(FirstMI).getReg();
+  Register Reg = getLdStRegOp(FirstMI).getReg();
+  Register BaseReg = getLdStBaseOp(FirstMI).getReg();
   int Offset = getLdStOffsetOp(FirstMI).getImm();
   int OffsetStride = IsUnscaled ? getMemScale(FirstMI) : 1;
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
@@ -1188,7 +1188,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
       // check for +1/-1. Make sure to check the new instruction offset is
       // actually an immediate and not a symbolic reference destined for
       // a relocation.
-      unsigned MIBaseReg = getLdStBaseOp(MI).getReg();
+      Register MIBaseReg = getLdStBaseOp(MI).getReg();
       int MIOffset = getLdStOffsetOp(MI).getImm();
       bool MIIsUnscaled = TII->isUnscaledLdSt(MI);
       if (IsUnscaled != MIIsUnscaled) {
@@ -1433,7 +1433,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   MachineInstr &MemMI = *I;
   MachineBasicBlock::iterator MBBI = I;
 
-  unsigned BaseReg = getLdStBaseOp(MemMI).getReg();
+  Register BaseReg = getLdStBaseOp(MemMI).getReg();
   int MIUnscaledOffset = getLdStOffsetOp(MemMI).getImm() * getMemScale(MemMI);
 
   // Scan forward looking for post-index opportunities.  Updating instructions
@@ -1446,7 +1446,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   // merge the update.
   bool IsPairedInsn = isPairedLdSt(MemMI);
   for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
-    unsigned DestReg = getLdStRegOp(MemMI, i).getReg();
+    Register DestReg = getLdStRegOp(MemMI, i).getReg();
     if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
       return E;
   }
@@ -1487,7 +1487,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   MachineInstr &MemMI = *I;
   MachineBasicBlock::iterator MBBI = I;
 
-  unsigned BaseReg = getLdStBaseOp(MemMI).getReg();
+  Register BaseReg = getLdStBaseOp(MemMI).getReg();
   int Offset = getLdStOffsetOp(MemMI).getImm();
 
   // If the load/store is the first instruction in the block, there's obviously
@@ -1498,7 +1498,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   // merge the update.
   bool IsPairedInsn = isPairedLdSt(MemMI);
   for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
-    unsigned DestReg = getLdStRegOp(MemMI, i).getReg();
+    Register DestReg = getLdStRegOp(MemMI, i).getReg();
     if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
       return E;
   }

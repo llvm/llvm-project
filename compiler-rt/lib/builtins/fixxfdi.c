@@ -24,6 +24,13 @@
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
+#if defined(_MSC_VER) && !defined(__clang__)
+// MSVC throws a warning about 'unitialized variable use' here,
+// disable it for builds that warn-as-error
+#pragma warning(push)
+#pragma warning(disable : 4700)
+#endif
+
 COMPILER_RT_ABI di_int __fixxfdi(long double a) {
   const di_int di_max = (di_int)((~(du_int)0) / 2);
   const di_int di_min = -di_max - 1;
@@ -39,5 +46,9 @@ COMPILER_RT_ABI di_int __fixxfdi(long double a) {
   r = (du_int)r >> (63 - e);
   return (r ^ s) - s;
 }
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 #endif // !_ARCH_PPC

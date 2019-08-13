@@ -37,10 +37,11 @@ template <typename T> static const T *viewAs(uintptr_t in) {
   return reinterpret_cast<const T *>(in);
 }
 
-static StringRef generateStringRef(const char *Name, uint64_t Size) {
-  auto NulCharPtr = static_cast<const char *>(memchr(Name, '\0', Size));
+static StringRef generateStringRef(const char *Name) {
+  auto NulCharPtr =
+      static_cast<const char *>(memchr(Name, '\0', XCOFF::NameSize));
   return NulCharPtr ? StringRef(Name, NulCharPtr - Name)
-                    : StringRef(Name, Size);
+                    : StringRef(Name, XCOFF::NameSize);
 }
 
 void XCOFFObjectFile::checkSectionAddress(uintptr_t Addr,
@@ -114,7 +115,7 @@ Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
   const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
 
   if (SymEntPtr->NameInStrTbl.Magic != XCOFFSymbolEntry::NAME_IN_STR_TBL_MAGIC)
-    return generateStringRef(SymEntPtr->SymbolName, XCOFF::SymbolNameSize);
+    return generateStringRef(SymEntPtr->SymbolName);
 
   // A storage class value with the high-order bit on indicates that the name is
   // a symbolic debugger stabstring.
@@ -180,7 +181,7 @@ void XCOFFObjectFile::moveSectionNext(DataRefImpl &Sec) const {
 }
 
 Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
-  return generateStringRef(getSectionNameInternal(Sec), XCOFF::SectionNameSize);
+  return generateStringRef(getSectionNameInternal(Sec));
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
@@ -388,8 +389,7 @@ XCOFFObjectFile::getSymbolSectionName(const XCOFFSymbolEntry *SymEntPtr) const {
   default:
     Expected<DataRefImpl> SecRef = getSectionByNum(SectionNum);
     if (SecRef)
-      return generateStringRef(getSectionNameInternal(SecRef.get()),
-                               XCOFF::SectionNameSize);
+      return generateStringRef(getSectionNameInternal(SecRef.get()));
     return SecRef.takeError();
   }
 }
@@ -568,11 +568,11 @@ ObjectFile::createXCOFFObjectFile(MemoryBufferRef MemBufRef,
 }
 
 StringRef XCOFFSectionHeader32::getName() const {
-  return generateStringRef(Name, XCOFF::SectionNameSize);
+  return generateStringRef(Name);
 }
 
 StringRef XCOFFSectionHeader64::getName() const {
-  return generateStringRef(Name, XCOFF::SectionNameSize);
+  return generateStringRef(Name);
 }
 
 } // namespace object

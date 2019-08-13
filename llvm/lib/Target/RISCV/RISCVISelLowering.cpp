@@ -663,7 +663,7 @@ SDValue RISCVTargetLowering::lowerFRAMEADDR(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
-  unsigned FrameReg = RI.getFrameRegister(MF);
+  Register FrameReg = RI.getFrameRegister(MF);
   int XLenInBytes = Subtarget.getXLen() / 8;
 
   EVT VT = Op.getValueType();
@@ -1031,12 +1031,14 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // We can materialise `c1 << c2` into an add immediate, so it's "free",
       // and the combine should happen, to potentially allow further combines
       // later.
-      if (isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
+      if (ShiftedC1Int.getMinSignedBits() <= 64 &&
+          isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
         return true;
 
       // We can materialise `c1` in an add immediate, so it's "free", and the
       // combine should be prevented.
-      if (isLegalAddImmediate(C1Int.getSExtValue()))
+      if (C1Int.getMinSignedBits() <= 64 &&
+          isLegalAddImmediate(C1Int.getSExtValue()))
         return false;
 
       // Neither constant will fit into an immediate, so find materialisation
@@ -1109,9 +1111,9 @@ MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
   BB->addSuccessor(LoopMBB);
 
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
-  unsigned ReadAgainReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
-  unsigned LoReg = MI.getOperand(0).getReg();
-  unsigned HiReg = MI.getOperand(1).getReg();
+  Register ReadAgainReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
+  Register LoReg = MI.getOperand(0).getReg();
+  Register HiReg = MI.getOperand(1).getReg();
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -1146,9 +1148,9 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  unsigned LoReg = MI.getOperand(0).getReg();
-  unsigned HiReg = MI.getOperand(1).getReg();
-  unsigned SrcReg = MI.getOperand(2).getReg();
+  Register LoReg = MI.getOperand(0).getReg();
+  Register HiReg = MI.getOperand(1).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
   const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex();
 
@@ -1178,9 +1180,9 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned LoReg = MI.getOperand(1).getReg();
-  unsigned HiReg = MI.getOperand(2).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register LoReg = MI.getOperand(1).getReg();
+  Register HiReg = MI.getOperand(2).getReg();
   const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex();
 
@@ -1239,8 +1241,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // previous selects in the sequence.
   // These conditions could be further relaxed. See the X86 target for a
   // related approach and more information.
-  unsigned LHS = MI.getOperand(1).getReg();
-  unsigned RHS = MI.getOperand(2).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
   auto CC = static_cast<ISD::CondCode>(MI.getOperand(3).getImm());
 
   SmallVector<MachineInstr *, 4> SelectDebugValues;
@@ -1697,7 +1699,7 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
     break;
   }
 
-  unsigned VReg = RegInfo.createVirtualRegister(RC);
+  Register VReg = RegInfo.createVirtualRegister(RC);
   RegInfo.addLiveIn(VA.getLocReg(), VReg);
   Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
 
@@ -1775,7 +1777,7 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 
   assert(VA.isRegLoc() && "Expected register VA assignment");
 
-  unsigned LoVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
+  Register LoVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
   RegInfo.addLiveIn(VA.getLocReg(), LoVReg);
   SDValue Lo = DAG.getCopyFromReg(Chain, DL, LoVReg, MVT::i32);
   SDValue Hi;
@@ -1787,7 +1789,7 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
                      MachinePointerInfo::getFixedStack(MF, FI));
   } else {
     // Second half of f64 is passed in another GPR.
-    unsigned HiVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
+    Register HiVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
     RegInfo.addLiveIn(VA.getLocReg() + 1, HiVReg);
     Hi = DAG.getCopyFromReg(Chain, DL, HiVReg, MVT::i32);
   }
@@ -1910,7 +1912,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     // to the vararg save area.
     for (unsigned I = Idx; I < ArgRegs.size();
          ++I, VaArgOffset += XLenInBytes) {
-      const unsigned Reg = RegInfo.createVirtualRegister(RC);
+      const Register Reg = RegInfo.createVirtualRegister(RC);
       RegInfo.addLiveIn(ArgRegs[I], Reg);
       SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, XLenVT);
       FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
@@ -2098,7 +2100,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
 
-      unsigned RegLo = VA.getLocReg();
+      Register RegLo = VA.getLocReg();
       RegsToPass.push_back(std::make_pair(RegLo, Lo));
 
       if (RegLo == RISCV::X17) {
@@ -2326,7 +2328,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                      DAG.getVTList(MVT::i32, MVT::i32), Val);
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
-      unsigned RegLo = VA.getLocReg();
+      Register RegLo = VA.getLocReg();
       unsigned RegHi = RegLo + 1;
       Chain = DAG.getCopyToReg(Chain, DL, RegLo, Lo, Glue);
       Glue = Chain.getValue(1);

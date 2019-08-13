@@ -394,8 +394,8 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
 
   auto ParentI = llvm::make_unique<NamespaceInfo>();
   ParentI->USR = I->Namespace.empty() ? SymbolID() : I->Namespace[0].USR;
-  ParentI->ChildNamespaces.emplace_back(I->USR, I->Name,
-                                        InfoType::IT_namespace);
+  ParentI->ChildNamespaces.emplace_back(I->USR, I->Name, InfoType::IT_namespace,
+                                        getInfoRelativePath(I->Namespace));
   if (I->Namespace.empty())
     ParentI->Path = getInfoRelativePath(ParentI->Namespace);
   return {std::unique_ptr<Info>{std::move(I)},
@@ -427,7 +427,8 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   if (I->Namespace.empty()) {
     auto ParentI = llvm::make_unique<NamespaceInfo>();
     ParentI->USR = SymbolID();
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
+                                       getInfoRelativePath(I->Namespace));
     ParentI->Path = getInfoRelativePath(ParentI->Namespace);
     return {std::unique_ptr<Info>{std::move(I)},
             std::unique_ptr<Info>{std::move(ParentI)}};
@@ -437,14 +438,16 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   case InfoType::IT_namespace: {
     auto ParentI = llvm::make_unique<NamespaceInfo>();
     ParentI->USR = I->Namespace[0].USR;
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
+                                       getInfoRelativePath(I->Namespace));
     return {std::unique_ptr<Info>{std::move(I)},
             std::unique_ptr<Info>{std::move(ParentI)}};
   }
   case InfoType::IT_record: {
     auto ParentI = llvm::make_unique<RecordInfo>();
     ParentI->USR = I->Namespace[0].USR;
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
+                                       getInfoRelativePath(I->Namespace));
     return {std::unique_ptr<Info>{std::move(I)},
             std::unique_ptr<Info>{std::move(ParentI)}};
   }

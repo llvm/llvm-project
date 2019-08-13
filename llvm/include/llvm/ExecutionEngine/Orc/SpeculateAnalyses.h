@@ -18,30 +18,6 @@
 
 #include <vector>
 
-namespace {
-using namespace llvm;
-std::vector<const BasicBlock *> findBBwithCalls(const Function &F,
-                                                bool IndirectCall = false) {
-  std::vector<const BasicBlock *> BBs;
-
-  auto findCallInst = [&IndirectCall](const Instruction &I) {
-    if (auto Call = dyn_cast<CallBase>(&I)) {
-      if (Call->isIndirectCall())
-        return IndirectCall;
-      else
-        return true;
-    } else
-      return false;
-  };
-  for (auto &BB : F)
-    if (findCallInst(*BB.getTerminator()) ||
-        llvm::any_of(BB.instructionsWithoutDebug(), findCallInst))
-      BBs.emplace_back(&BB);
-
-  return BBs;
-}
-} // namespace
-
 namespace llvm {
 
 namespace orc {

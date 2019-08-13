@@ -14,22 +14,62 @@
 
 namespace gwp_asan {
 namespace options {
-// The function pointer type for printf(). Follows the standard format from the
-// sanitizers library. If the supported allocator exposes printing via a
-// different function signature, please provide a wrapper which has this
-// printf() signature, and pass the wrapper instead.
+// ================================ Requirements ===============================
+// This function is required to be implemented by the supporting allocator. The
+// sanitizer::Printf() function can be simply used here.
+// ================================ Description ================================
+// This function shall produce output according to a strict subset of the C
+// standard library's printf() family. This function must support printing the
+// following formats:
+//   1. integers: "%([0-9]*)?(z|ll)?{d,u,x,X}"
+//   2. pointers: "%p"
+//   3. strings:  "%[-]([0-9]*)?(\\.\\*)?s"
+//   4. chars:    "%c"
+// =================================== Notes ===================================
+// This function has a slightly different signature than the C standard
+// library's printf(). Notably, it returns 'void' rather than 'int'.
 typedef void (*Printf_t)(const char *Format, ...);
 
-// The function pointer type for backtrace information. Required to be
-// implemented by the supporting allocator. The callee should elide itself and
-// all frames below itself from TraceBuffer, i.e. the caller's frame should be
-// in TraceBuffer[0], and subsequent frames 1..n into TraceBuffer[1..n], where a
-// maximum of `MaximumDepth - 1` frames are stored. TraceBuffer should be
-// nullptr-terminated (i.e. if there are 5 frames; TraceBuffer[5] == nullptr).
-// If the allocator cannot supply backtrace information, it should set
-// TraceBuffer[0] == nullptr.
-typedef void (*Backtrace_t)(uintptr_t *TraceBuffer, size_t Size);
-typedef void (*PrintBacktrace_t)(uintptr_t *TraceBuffer, Printf_t Print);
+// ================================ Requirements ===============================
+// This function is required to be either implemented by the supporting
+// allocator, or one of the two provided implementations may be used
+// (RTGwpAsanBacktraceLibc or RTGwpAsanBacktraceSanitizerCommon).
+// ================================ Description ================================
+// This function shall collect the backtrace for the calling thread and place
+// the result in `TraceBuffer`. This function should elide itself and all frames
+// below itself from `TraceBuffer`, i.e. the caller's frame should be in
+// TraceBuffer[0], and subsequent frames 1..n into TraceBuffer[1..n], where a
+// maximum of `Size` frames are stored. Returns the number of frames stored into
+// `TraceBuffer`, and zero on failure. If the return value of this function is
+// equal to `Size`, it may indicate that the backtrace is truncated.
+// =================================== Notes ===================================
+// This function may directly or indirectly call malloc(), as the
+// GuardedPoolAllocator contains a reentrancy barrier to prevent infinite
+// recursion. Any allocation made inside this function will be served by the
+// supporting allocator, and will not have GWP-ASan protections.
+typedef size_t (*Backtrace_t)(uintptr_t *TraceBuffer, size_t Size);
+
+// ================================ Requirements ===============================
+// This function is optional for the supporting allocator, but one of the two
+// provided implementations may be used (RTGwpAsanBacktraceLibc or
+// RTGwpAsanBacktraceSanitizerCommon). If not provided, a default implementation
+// is used which prints the raw pointers only.
+// ================================ Description ================================
+// This function shall take the backtrace provided in `TraceBuffer`, and print
+// it in a human-readable format using `Print`. Generally, this function shall
+// resolve raw pointers to section offsets and print them with the following
+// sanitizer-common format:
+//      "  #{frame_number} {pointer} in {function name} ({binary name}+{offset}"
+// e.g. "  #5 0x420459 in _start (/tmp/uaf+0x420459)"
+// This format allows the backtrace to be symbolized offline successfully using
+// llvm-symbolizer.
+// =================================== Notes ===================================
+// This function may directly or indirectly call malloc(), as the
+// GuardedPoolAllocator contains a reentrancy barrier to prevent infinite
+// recursion. Any allocation made inside this function will be served by the
+// supporting allocator, and will not have GWP-ASan protections.
+typedef void (*PrintBacktrace_t)(uintptr_t *TraceBuffer, size_t TraceLength,
+                                 Printf_t Print);
 
 struct Options {
   Printf_t Printf = nullptr;

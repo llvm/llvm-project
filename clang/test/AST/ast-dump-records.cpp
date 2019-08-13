@@ -65,7 +65,7 @@ struct C {
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+12]]:3> line:[[@LINE-1]]:3 union definition
-    // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
+    // CHECK-NEXT: DefinitionData is_anonymous pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
@@ -87,7 +87,7 @@ struct C {
 
   struct {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+11]]:3> line:[[@LINE-1]]:3 struct definition
-    // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
+    // CHECK-NEXT: DefinitionData is_anonymous pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
@@ -194,7 +194,7 @@ union G {
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+13]]:3> line:[[@LINE-1]]:3 union definition
-    // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
+    // CHECK-NEXT: DefinitionData is_anonymous pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
@@ -217,7 +217,7 @@ union G {
 
   struct {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+12]]:3> line:[[@LINE-1]]:3 struct definition
-    // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
+    // CHECK-NEXT: DefinitionData is_anonymous pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit

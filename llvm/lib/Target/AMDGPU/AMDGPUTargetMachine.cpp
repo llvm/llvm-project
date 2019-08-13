@@ -238,6 +238,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUInlinerPass(*PR);
+  initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeGCNRegBankReassignPass(*PR);
   initializeGCNNSAReassignPass(*PR);
 }
@@ -412,6 +413,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createAMDGPUExternalAAWrapperPass());
       }
       PM.add(createAMDGPUUnifyMetadataPass());
+      PM.add(createAMDGPUPrintfRuntimeBinding());
       PM.add(createAMDGPUPropagateAttributesLatePass(this));
       if (Internalize) {
         PM.add(createInternalizePass(mustPreserveGV));
@@ -658,6 +660,8 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&StackMapLivenessID);
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
+
+  addPass(createAMDGPUPrintfRuntimeBinding());
 
   // This must occur before inlining, as the inliner will not look through
   // bitcast calls.

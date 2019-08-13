@@ -17,33 +17,23 @@
 #include "gwp_asan/options.h"
 
 namespace {
-void Backtrace(uintptr_t *TraceBuffer, size_t Size) {
-  // Grab (what seems to be) one more trace than we need. TraceBuffer needs to
-  // be null-terminated, but we wish to remove the frame of this function call.
+size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
   static_assert(sizeof(uintptr_t) == sizeof(void *), "uintptr_t is not void*");
-  int NumTraces =
-      backtrace(reinterpret_cast<void **>(TraceBuffer), Size);
 
-  // Now shift the entire trace one place to the left and null-terminate.
-  memmove(TraceBuffer, TraceBuffer + 1, NumTraces * sizeof(void *));
-  TraceBuffer[NumTraces - 1] = 0;
+  return backtrace(reinterpret_cast<void **>(TraceBuffer), Size);
 }
 
-static void PrintBacktrace(uintptr_t *Trace,
+static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
                            gwp_asan::options::Printf_t Printf) {
-  size_t NumTraces = 0;
-  for (; Trace[NumTraces] != 0; ++NumTraces) {
-  }
-
-  if (NumTraces == 0) {
+  if (TraceLength == 0) {
     Printf("  <not found (does your allocator support backtracing?)>\n\n");
     return;
   }
 
   char **BacktraceSymbols =
-      backtrace_symbols(reinterpret_cast<void **>(Trace), NumTraces);
+      backtrace_symbols(reinterpret_cast<void **>(Trace), TraceLength);
 
-  for (size_t i = 0; i < NumTraces; ++i) {
+  for (size_t i = 0; i < TraceLength; ++i) {
     if (!BacktraceSymbols)
       Printf("  #%zu %p\n", i, Trace[i]);
     else

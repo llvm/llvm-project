@@ -85,7 +85,7 @@ bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
       HiLUI.getOperand(1).getOffset() != 0 ||
       !MRI->hasOneUse(HiLUI.getOperand(0).getReg()))
     return false;
-  unsigned HiLuiDestReg = HiLUI.getOperand(0).getReg();
+  Register HiLuiDestReg = HiLUI.getOperand(0).getReg();
   LoADDI = MRI->use_begin(HiLuiDestReg)->getParent();
   if (LoADDI->getOpcode() != RISCV::ADDI ||
       LoADDI->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
@@ -135,8 +135,8 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
                                                unsigned GAReg,
                                                int64_t &Offset) {
   assert((TailAdd.getOpcode() == RISCV::ADD) && "Expected ADD instruction!");
-  unsigned Rs = TailAdd.getOperand(1).getReg();
-  unsigned Rt = TailAdd.getOperand(2).getReg();
+  Register Rs = TailAdd.getOperand(1).getReg();
+  Register Rt = TailAdd.getOperand(2).getReg();
   unsigned Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
@@ -178,7 +178,7 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
 
 bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
                                                   MachineInstr &LoADDI) {
-  unsigned DestReg = LoADDI.getOperand(0).getReg();
+  Register DestReg = LoADDI.getOperand(0).getReg();
   assert(MRI->hasOneUse(DestReg) && "expected one use for LoADDI");
   // LoADDI has only one use.
   MachineInstr &Tail = *MRI->use_begin(DestReg)->getParent();
@@ -232,7 +232,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
       return false;
     // Register defined by LoADDI should be used in the base part of the
     // load\store instruction. Otherwise, no folding possible.
-    unsigned BaseAddrReg = Tail.getOperand(1).getReg();
+    Register BaseAddrReg = Tail.getOperand(1).getReg();
     if (DestReg != BaseAddrReg)
       return false;
     MachineOperand &TailImmOp = Tail.getOperand(2);

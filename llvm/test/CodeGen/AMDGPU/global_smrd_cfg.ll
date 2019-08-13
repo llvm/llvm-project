@@ -1,16 +1,5 @@
 ; RUN: llc -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=true -verify-machineinstrs  < %s | FileCheck %s
 
-; CHECK-LABEL: %bb11
-
-; Load from %arg in a Loop body has alias store
-
-; CHECK: flat_load_dword
-
-; CHECK-LABEL: %bb20
-; CHECK: flat_store_dword
-
-; #####################################################################
-
 ; CHECK-LABEL: %bb22
 
 ; Load from %arg has alias store in Loop
@@ -22,6 +11,18 @@
 ; Load from %arg1 has no-alias store in Loop - arg1[i+1] never alias arg1[i]
 
 ; CHECK: s_load_dword
+
+; #####################################################################
+
+; CHECK-LABEL: %bb11
+
+; Load from %arg in a Loop body has alias store
+
+; CHECK: flat_load_dword
+
+; CHECK-LABEL: %bb20
+
+; CHECK: flat_store_dword
 
 define amdgpu_kernel void @cfg(i32 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) #0 {
 bb:

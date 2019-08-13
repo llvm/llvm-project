@@ -166,8 +166,8 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   if (!LibInfo.getLibFunc(Name, Func))
     return false;
 
-  unsigned FromReg = MI.getOperand(2).getReg();
-  unsigned ToReg = MI.getOperand(0).getReg();
+  Register FromReg = MI.getOperand(2).getReg();
+  Register ToReg = MI.getOperand(0).getReg();
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
     report_fatal_error("Memory Intrinsic results: call to builtin function "
                        "with wrong signature, from/to mismatch");

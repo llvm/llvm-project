@@ -956,6 +956,74 @@ public:
     typedef __deque_iterator<value_type, const_pointer, const_reference, __map_const_pointer,
                              difference_type>    const_iterator;
 
+    struct __deque_block_range {
+      explicit __deque_block_range(pointer __b, pointer __e) _NOEXCEPT : __begin_(__b), __end_(__e) {}
+      const pointer __begin_;
+      const pointer __end_;
+    };
+
+    struct __deque_range {
+      iterator __pos_;
+      const iterator __end_;
+
+      __deque_range(iterator __pos, iterator __e) _NOEXCEPT
+        : __pos_(__pos), __end_(__e) {}
+
+      explicit operator bool() const _NOEXCEPT {
+        return __pos_ != __end_;
+      }
+
+      __deque_range begin() const {
+        return *this;
+      }
+
+      __deque_range end() const {
+        return __deque_range(__end_, __end_);
+      }
+      __deque_block_range operator*() const _NOEXCEPT {
+         if (__pos_.__m_iter_ == __end_.__m_iter_) {
+          return __deque_block_range(__pos_.__ptr_, __end_.__ptr_);
+        }
+        return __deque_block_range(__pos_.__ptr_, *__pos_.__m_iter_ + __block_size);
+      }
+
+      __deque_range& operator++() _NOEXCEPT {
+        if (__pos_.__m_iter_ == __end_.__m_iter_) {
+          __pos_ = __end_;
+        } else {
+          ++__pos_.__m_iter_;
+          __pos_.__ptr_ = *__pos_.__m_iter_;
+        }
+        return *this;
+      }
+
+
+      friend bool operator==(__deque_range const& __lhs, __deque_range const& __rhs) {
+        return __lhs.__pos_ == __rhs.__pos_;
+      }
+      friend bool operator!=(__deque_range const& __lhs, __deque_range const& __rhs) {
+        return !(__lhs == __rhs);
+      }
+    };
+
+
+
+    struct _ConstructTransaction {
+      _ConstructTransaction(__deque_base* __db, __deque_block_range& __r)
+        : __pos_(__r.__begin_), __end_(__r.__end_), __begin_(__r.__begin_), __base_(__db) {}
+
+
+      ~_ConstructTransaction() {
+        __base_->size() += (__pos_ - __begin_);
+      }
+
+      pointer __pos_;
+      const pointer __end_;
+    private:
+      const pointer __begin_;
+      __deque_base * const __base_;
+    };
+
 protected:
     __map __map_;
     size_type __start_;
@@ -1221,6 +1289,10 @@ public:
     typedef typename __base::const_pointer         const_pointer;
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
+
+    using typename __base::__deque_range;
+    using typename __base::__deque_block_range;
+    using typename __base::_ConstructTransaction;
 
     // construct/copy/destroy:
     _LIBCPP_INLINE_VISIBILITY
@@ -2299,8 +2371,12 @@ deque<_Tp, _Allocator>::__append(_ForIter __f, _ForIter __l,
     if (__n > __back_capacity)
         __add_back_capacity(__n - __back_capacity);
     // __n <= __back_capacity
-    for (iterator __i = __base::end(); __f != __l; ++__i, (void) ++__f, ++__base::size())
-        __alloc_traits::construct(__a, _VSTD::addressof(*__i), *__f);
+    for (__deque_block_range __br : __deque_range(__base::end(), __base::end() + __n)) {
+      _ConstructTransaction __tx(this, __br);
+      for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, (void)++__f) {
+        __alloc_traits::construct(__a, std::__to_raw_pointer(__tx.__pos_), *__f);
+      }
+    }
 }
 
 template <class _Tp, class _Allocator>
@@ -2312,8 +2388,12 @@ deque<_Tp, _Allocator>::__append(size_type __n)
     if (__n > __back_capacity)
         __add_back_capacity(__n - __back_capacity);
     // __n <= __back_capacity
-    for (iterator __i = __base::end(); __n; --__n, ++__i, ++__base::size())
-        __alloc_traits::construct(__a, _VSTD::addressof(*__i));
+    for (__deque_block_range __br : __deque_range(__base::end(), __base::end() + __n)) {
+      _ConstructTransaction __tx(this, __br);
+      for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
+        __alloc_traits::construct(__a, std::__to_raw_pointer(__tx.__pos_));
+      }
+    }
 }
 
 template <class _Tp, class _Allocator>
@@ -2325,8 +2405,13 @@ deque<_Tp, _Allocator>::__append(size_type __n, const value_type& __v)
     if (__n > __back_capacity)
         __add_back_capacity(__n - __back_capacity);
     // __n <= __back_capacity
-    for (iterator __i = __base::end(); __n; --__n, ++__i, ++__base::size())
-        __alloc_traits::construct(__a, _VSTD::addressof(*__i), __v);
+    for (__deque_block_range __br : __deque_range(__base::end(), __base::end() + __n)) {
+      _ConstructTransaction __tx(this, __br);
+      for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
+        __alloc_traits::construct(__a, std::__to_raw_pointer(__tx.__pos_), __v);
+      }
+    }
+
 }
 
 // Create front capacity for one block of elements.

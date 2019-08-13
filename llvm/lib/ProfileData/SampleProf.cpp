@@ -28,8 +28,6 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
-DenseMap<uint64_t, StringRef> FunctionSamples::GUIDToFuncNameMap;
-Module *FunctionSamples::CurrentModule;
 } // namespace sampleprof
 } // namespace llvm
 

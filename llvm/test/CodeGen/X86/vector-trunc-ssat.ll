@@ -2941,19 +2941,15 @@ define <16 x i8> @trunc_ssat_v16i16_v16i8(<16 x i16> %a0) {
 ;
 ; AVX512F-LABEL: trunc_ssat_v16i16_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmaxsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: trunc_ssat_v16i16_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmaxsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -3004,32 +3000,14 @@ define <32 x i8> @trunc_ssat_v32i16_v32i8(<32 x i16> %a0) {
 ;
 ; AVX512F-LABEL: trunc_ssat_v32i16_v32i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512F-NEXT:    vpminsw %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpminsw %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408]
-; AVX512F-NEXT:    vpmaxsw %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaxsw %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: trunc_ssat_v32i16_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512VL-NEXT:    vpminsw %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpminsw %ymm2, %ymm1, %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408]
-; AVX512VL-NEXT:    vpmaxsw %ymm2, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpmaxsw %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: trunc_ssat_v32i16_v32i8:
