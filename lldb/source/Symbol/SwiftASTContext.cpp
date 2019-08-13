@@ -6142,14 +6142,35 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-size_t SwiftASTContext::GetTypeBitAlign(void *type) {
-  if (type) {
-    const swift::irgen::FixedTypeInfo *fixed_type_info =
-        GetSwiftFixedTypeInfo(type);
-    if (fixed_type_info)
-      return fixed_type_info->getFixedAlignment().getValue();
+llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type,
+                                                        ExecutionContextScope *exe_scope) {
+  if (!type)
+    return {};
+
+  // If the type has type parameters, bind them first.
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  if (swift_can_type->hasTypeParameter()) {
+    if (!exe_scope)
+      return {};
+    ExecutionContext exe_ctx;
+    exe_scope->CalculateExecutionContext(exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    // Note thay the bound type may be in a different AST context.
+    return bound_type.GetTypeBitAlign(exe_scope);
   }
-  return 0;
+
+  const swift::irgen::FixedTypeInfo *fixed_type_info =
+      GetSwiftFixedTypeInfo(type);
+  if (fixed_type_info)
+    return fixed_type_info->getFixedAlignment().getValue();
+
+  // Ask the dynamic type system.
+  if (!exe_scope)
+    return {};
+  if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
+    return runtime->GetBitAlignment({this, type});
+  return {};
 }
 
 lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {

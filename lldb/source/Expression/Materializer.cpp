@@ -46,20 +46,6 @@ uint32_t Materializer::AddStructMember(Entity &entity) {
   return ret;
 }
 
-void Materializer::Entity::SetSizeAndAlignmentFromType(CompilerType &type) {
-  if (llvm::Optional<uint64_t> size = type.GetByteSize(nullptr))
-    m_size = *size;
-
-  uint32_t bit_alignment = type.GetTypeBitAlign();
-
-  if (bit_alignment % 8) {
-    bit_alignment += 8;
-    bit_alignment &= ~((uint32_t)0x111u);
-  }
-
-  m_alignment = bit_alignment / 8;
-}
-
 class EntityPersistentVariable : public Materializer::Entity {
 public:
   EntityPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
@@ -598,11 +584,15 @@ public:
                 *frame_sp, layout_type);
         }
 
-        size_t bit_align = layout_type.GetTypeBitAlign();
-        size_t byte_align = (bit_align + 7) / 8;
+        llvm::Optional<size_t> opt_bit_align =
+            m_variable_sp->GetType()->GetLayoutCompilerType().GetTypeBitAlign(scope);
+        if (!opt_bit_align) {
+          err.SetErrorStringWithFormat("can't get the type alignment for %s",
+                                       m_variable_sp->GetName().AsCString());
+          return;
+        }
 
-        if (!byte_align)
-          byte_align = 1;
+        size_t byte_align = (*opt_bit_align + 7) / 8;
 
         Status alloc_error;
         const bool zero_memory = false;
@@ -873,11 +863,14 @@ public:
         err.SetErrorString("can't get size of type");
         return;
       }
-      size_t bit_align = m_type.GetTypeBitAlign();
-      size_t byte_align = (bit_align + 7) / 8;
 
-      if (!byte_align)
-        byte_align = 1;
+      llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
+      if (!opt_bit_align) {
+        err.SetErrorStringWithFormat("can't get the type alignment");
+        return;
+      }
+
+      size_t byte_align = (*opt_bit_align + 7) / 8;
 
       Status alloc_error;
       const bool zero_memory = true;

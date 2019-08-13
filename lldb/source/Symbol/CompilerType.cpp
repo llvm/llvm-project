@@ -560,10 +560,10 @@ CompilerType::GetByteStride(ExecutionContextScope *exe_scope) const {
 
 uint64_t CompilerType::GetAlignedBitSize() const { return 0; }
 
-size_t CompilerType::GetTypeBitAlign() const {
+llvm::Optional<size_t> CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    return m_type_system->GetTypeBitAlign(m_type);
-  return 0;
+    return m_type_system->GetTypeBitAlign(m_type, exe_scope);
+  return {};
 }
 
 lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
