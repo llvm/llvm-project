@@ -4,6 +4,7 @@
 // UNSUPPORTED: system-windows
 
 // CHECK: <b>Store: </b>
+// CHECK-SAME: <font color="gray">(0x2)</font>
 // CHECK-SAME: <table border="0">
 // CHECK-SAME:   <tr>
 // CHECK-SAME:     <td align="left">

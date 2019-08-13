@@ -644,6 +644,10 @@ class DotDumpVisitor(object):
         if st is None:
             self._dump('<i> Nothing!</i>')
         else:
+            if self._dark_mode:
+                self._dump(' <font color="gray30">(%s)</font>' % st.ptr)
+            else:
+                self._dump(' <font color="gray">(%s)</font>' % st.ptr)
             if prev_st is not None:
                 if s.store.is_different(prev_st):
                     self._dump('</td></tr><tr><td align="left">')
