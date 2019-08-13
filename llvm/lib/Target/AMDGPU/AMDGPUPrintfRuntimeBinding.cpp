@@ -65,8 +65,6 @@ private:
                                StringRef fmt, size_t num_ops) const;
 
   bool shouldPrintAsStr(char Specifier, Type *OpType) const;
-  bool confirmSpirModule(Module &M) const;
-  bool confirmOpenCLVersion200(Module &M) const;
   bool lowerPrintfForGpu(Module &M);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -106,20 +104,6 @@ ModulePass *createAMDGPUPrintfRuntimeBinding() {
 AMDGPUPrintfRuntimeBinding::AMDGPUPrintfRuntimeBinding()
     : ModulePass(ID), TD(nullptr), DT(nullptr), TLI(nullptr) {
   initializeAMDGPUPrintfRuntimeBindingPass(*PassRegistry::getPassRegistry());
-}
-
-bool AMDGPUPrintfRuntimeBinding::confirmOpenCLVersion200(Module &M) const {
-  NamedMDNode *OCLVersion = M.getNamedMetadata("opencl.ocl.version");
-  if (!OCLVersion || OCLVersion->getNumOperands() != 1)
-    return false;
-  MDNode *Ver = OCLVersion->getOperand(0);
-  if (Ver->getNumOperands() != 2)
-    return false;
-  ConstantInt *Major = mdconst::dyn_extract<ConstantInt>(Ver->getOperand(0));
-  ConstantInt *Minor = mdconst::dyn_extract<ConstantInt>(Ver->getOperand(1));
-  if (!Major || !Minor)
-    return false;
-  return Major->getZExtValue() == 2;
 }
 
 void AMDGPUPrintfRuntimeBinding::getConversionSpecifiers(
@@ -166,11 +150,6 @@ bool AMDGPUPrintfRuntimeBinding::shouldPrintAsStr(char Specifier,
     return false;
   IntegerType *ElemIType = cast<IntegerType>(ElemType);
   return ElemIType->getBitWidth() == 8;
-}
-
-bool AMDGPUPrintfRuntimeBinding::confirmSpirModule(Module &M) const {
-  NamedMDNode *SPIRVersion = M.getNamedMetadata("opencl.spir.version");
-  return SPIRVersion ? true : false;
 }
 
 bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
@@ -558,8 +537,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
         } else {
           WhatToStore.push_back(Arg);
         }
-        for (auto W : WhatToStore) {
-          Value *TheBtCast = W;
+        for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
+          Value *TheBtCast = WhatToStore[I];
           unsigned ArgSize =
               TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
           SmallVector<Value *, 1> BuffOffset;
@@ -572,9 +551,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
           LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                             << *StBuff << '\n');
           (void)StBuff;
-          ++W;
-          if (W == *WhatToStore.end() &&
-              ArgCount + 1 == CI->getNumArgOperands())
+          if (I + 1 == E && ArgCount + 1 == CI->getNumArgOperands())
             break;
           BufferIdx = dyn_cast<GetElementPtrInst>(GetElementPtrInst::Create(
               nullptr, BufferIdx, BuffOffset, "PrintBuffNextPtr", Brnch));

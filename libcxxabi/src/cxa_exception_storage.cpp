@@ -10,7 +10,7 @@
 //  
 //===----------------------------------------------------------------------===//
 
-#include "cxa_exception.hpp"
+#include "cxa_exception.h"
 
 #include <__threading_support>
 

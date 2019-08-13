@@ -53,8 +53,8 @@ public:
         ModifiedRegUnits.addRegsInMask(O->getRegMask());
       if (!O->isReg())
         continue;
-      unsigned Reg = O->getReg();
-      if (!Register::isPhysicalRegister(Reg))
+      Register Reg = O->getReg();
+      if (!Reg.isPhysical())
         continue;
       if (O->isDef()) {
         // Some architectures (e.g. AArch64 XZR/WZR) have registers that are

@@ -407,12 +407,14 @@ TEST(SerializeTest, emitChildRecords) {
 
   RecordInfo *ParentB = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedParentB(EmptySID);
-  ExpectedParentB.ChildRecords.emplace_back(EmptySID, "B", InfoType::IT_record);
+  ExpectedParentB.ChildRecords.emplace_back(EmptySID, "B", InfoType::IT_record,
+                                            "A");
   CheckRecordInfo(&ExpectedParentB, ParentB);
 
   NamespaceInfo *ParentC = InfoAsNamespace(Infos[7].get());
   NamespaceInfo ExpectedParentC(EmptySID);
-  ExpectedParentC.ChildRecords.emplace_back(EmptySID, "C", InfoType::IT_record);
+  ExpectedParentC.ChildRecords.emplace_back(EmptySID, "C", InfoType::IT_record,
+                                            "@nonymous_namespace");
   CheckNamespaceInfo(&ExpectedParentC, ParentC);
 }
 
@@ -431,7 +433,7 @@ TEST(SerializeTest, emitChildNamespaces) {
   NamespaceInfo *ParentB = InfoAsNamespace(Infos[3].get());
   NamespaceInfo ExpectedParentB(EmptySID);
   ExpectedParentB.ChildNamespaces.emplace_back(EmptySID, "B",
-                                               InfoType::IT_namespace);
+                                               InfoType::IT_namespace, "A");
   CheckNamespaceInfo(&ExpectedParentB, ParentB);
 }
 

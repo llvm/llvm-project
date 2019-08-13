@@ -235,10 +235,10 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
                                    MachineBasicBlock *LoopMBB,
                                    MachineBasicBlock *DoneMBB,
                                    AtomicRMWInst::BinOp BinOp, int Width) {
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned ScratchReg = MI.getOperand(1).getReg();
-  unsigned AddrReg = MI.getOperand(2).getReg();
-  unsigned IncrReg = MI.getOperand(3).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg = MI.getOperand(1).getReg();
+  Register AddrReg = MI.getOperand(2).getReg();
+  Register IncrReg = MI.getOperand(3).getReg();
   AtomicOrdering Ordering =
       static_cast<AtomicOrdering>(MI.getOperand(4).getImm());
 
@@ -297,11 +297,11 @@ static void doMaskedAtomicBinOpExpansion(
     MachineBasicBlock *ThisMBB, MachineBasicBlock *LoopMBB,
     MachineBasicBlock *DoneMBB, AtomicRMWInst::BinOp BinOp, int Width) {
   assert(Width == 32 && "Should never need to expand masked 64-bit operations");
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned ScratchReg = MI.getOperand(1).getReg();
-  unsigned AddrReg = MI.getOperand(2).getReg();
-  unsigned IncrReg = MI.getOperand(3).getReg();
-  unsigned MaskReg = MI.getOperand(4).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg = MI.getOperand(1).getReg();
+  Register AddrReg = MI.getOperand(2).getReg();
+  Register IncrReg = MI.getOperand(3).getReg();
+  Register MaskReg = MI.getOperand(4).getReg();
   AtomicOrdering Ordering =
       static_cast<AtomicOrdering>(MI.getOperand(5).getImm());
 
@@ -436,12 +436,12 @@ bool RISCVExpandPseudo::expandAtomicMinMaxOp(
   DoneMBB->transferSuccessors(&MBB);
   MBB.addSuccessor(LoopHeadMBB);
 
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned Scratch1Reg = MI.getOperand(1).getReg();
-  unsigned Scratch2Reg = MI.getOperand(2).getReg();
-  unsigned AddrReg = MI.getOperand(3).getReg();
-  unsigned IncrReg = MI.getOperand(4).getReg();
-  unsigned MaskReg = MI.getOperand(5).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register Scratch1Reg = MI.getOperand(1).getReg();
+  Register Scratch2Reg = MI.getOperand(2).getReg();
+  Register AddrReg = MI.getOperand(3).getReg();
+  Register IncrReg = MI.getOperand(4).getReg();
+  Register MaskReg = MI.getOperand(5).getReg();
   bool IsSigned = BinOp == AtomicRMWInst::Min || BinOp == AtomicRMWInst::Max;
   AtomicOrdering Ordering =
       static_cast<AtomicOrdering>(MI.getOperand(IsSigned ? 7 : 6).getImm());
@@ -549,11 +549,11 @@ bool RISCVExpandPseudo::expandAtomicCmpXchg(
   DoneMBB->transferSuccessors(&MBB);
   MBB.addSuccessor(LoopHeadMBB);
 
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned ScratchReg = MI.getOperand(1).getReg();
-  unsigned AddrReg = MI.getOperand(2).getReg();
-  unsigned CmpValReg = MI.getOperand(3).getReg();
-  unsigned NewValReg = MI.getOperand(4).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg = MI.getOperand(1).getReg();
+  Register AddrReg = MI.getOperand(2).getReg();
+  Register CmpValReg = MI.getOperand(3).getReg();
+  Register NewValReg = MI.getOperand(4).getReg();
   AtomicOrdering Ordering =
       static_cast<AtomicOrdering>(MI.getOperand(IsMasked ? 6 : 5).getImm());
 
@@ -582,7 +582,7 @@ bool RISCVExpandPseudo::expandAtomicCmpXchg(
     //   lr.w dest, (addr)
     //   and scratch, dest, mask
     //   bne scratch, cmpval, done
-    unsigned MaskReg = MI.getOperand(5).getReg();
+    Register MaskReg = MI.getOperand(5).getReg();
     BuildMI(LoopHeadMBB, DL, TII->get(getLRForRMW(Ordering, Width)), DestReg)
         .addReg(AddrReg);
     BuildMI(LoopHeadMBB, DL, TII->get(RISCV::AND), ScratchReg)
@@ -629,7 +629,7 @@ bool RISCVExpandPseudo::expandAuipcInstPair(
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   const MachineOperand &Symbol = MI.getOperand(1);
 
   MachineBasicBlock *NewMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());

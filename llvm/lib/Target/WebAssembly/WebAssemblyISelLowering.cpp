@@ -337,8 +337,8 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
                                        bool Float64, unsigned LoweredOpcode) {
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  unsigned OutReg = MI.getOperand(0).getReg();
-  unsigned InReg = MI.getOperand(1).getReg();
+  Register OutReg = MI.getOperand(0).getReg();
+  Register InReg = MI.getOperand(1).getReg();
 
   unsigned Abs = Float64 ? WebAssembly::ABS_F64 : WebAssembly::ABS_F32;
   unsigned FConst = Float64 ? WebAssembly::CONST_F64 : WebAssembly::CONST_F32;
@@ -396,9 +396,9 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   // For unsigned numbers, we have to do a separate comparison with zero.
   if (IsUnsigned) {
     Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
-    unsigned SecondCmpReg =
+    Register SecondCmpReg =
         MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    unsigned AndReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    Register AndReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
     BuildMI(BB, DL, TII.get(FConst), Tmp1)
         .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, 0.0)));
     BuildMI(BB, DL, TII.get(GE), SecondCmpReg).addReg(Tmp0).addReg(Tmp1);
@@ -915,7 +915,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
   // the buffer is passed as an argument.
   if (IsVarArg) {
     MVT PtrVT = getPointerTy(MF.getDataLayout());
-    unsigned VarargVreg =
+    Register VarargVreg =
         MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrVT));
     MFI->setVarargBufferVreg(VarargVreg);
     Chain = DAG.getCopyToReg(
@@ -1071,7 +1071,7 @@ SDValue WebAssemblyTargetLowering::LowerFRAMEADDR(SDValue Op,
 
   DAG.getMachineFunction().getFrameInfo().setFrameAddressIsTaken(true);
   EVT VT = Op.getValueType();
-  unsigned FP =
+  Register FP =
       Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());
   return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), FP, VT);
 }

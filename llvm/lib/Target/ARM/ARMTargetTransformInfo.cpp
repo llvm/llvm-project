@@ -167,6 +167,27 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src);
 
+  // The extend of a load is free
+  if (I && isa<LoadInst>(I->getOperand(0))) {
+    static const TypeConversionCostTblEntry LoadConversionTbl[] = {
+        {ISD::SIGN_EXTEND, MVT::i32, MVT::i16, 0},
+        {ISD::ZERO_EXTEND, MVT::i32, MVT::i16, 0},
+        {ISD::SIGN_EXTEND, MVT::i32, MVT::i8, 0},
+        {ISD::ZERO_EXTEND, MVT::i32, MVT::i8, 0},
+        {ISD::SIGN_EXTEND, MVT::i16, MVT::i8, 0},
+        {ISD::ZERO_EXTEND, MVT::i16, MVT::i8, 0},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i32, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i32, 1},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i16, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i16, 1},
+        {ISD::SIGN_EXTEND, MVT::i64, MVT::i8, 1},
+        {ISD::ZERO_EXTEND, MVT::i64, MVT::i8, 1},
+    };
+    if (const auto *Entry = ConvertCostTableLookup(
+            LoadConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return Entry->Cost;
+  }
+
   // Some arithmetic, load and store operations have specific instructions
   // to cast up/down their types automatically at no extra cost.
   // TODO: Get these tables to know at least what the related operations are.

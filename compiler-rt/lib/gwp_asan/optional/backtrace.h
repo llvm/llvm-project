@@ -14,7 +14,10 @@
 namespace gwp_asan {
 namespace options {
 // Functions to get the platform-specific and implementation-specific backtrace
-// and backtrace printing functions.
+// and backtrace printing functions when RTGwpAsanBacktraceLibc or
+// RTGwpAsanBacktraceSanitizerCommon are linked. Use these functions to get the
+// backtrace function for populating the Options::Backtrace and
+// Options::PrintBacktrace when initialising the GuardedPoolAllocator.
 Backtrace_t getBacktraceFunction();
 PrintBacktrace_t getPrintBacktraceFunction();
 } // namespace options

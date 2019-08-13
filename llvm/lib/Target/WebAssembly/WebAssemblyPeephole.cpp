@@ -63,7 +63,7 @@ static bool maybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
   bool Changed = false;
   if (OldReg == NewReg) {
     Changed = true;
-    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+    Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
     MO.setReg(NewReg);
     MO.setIsDead();
     MFI.stackifyVReg(NewReg);
@@ -94,9 +94,9 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
     // If the operand isn't stackified, insert a COPY to read the operand and
     // stackify it.
     MachineOperand &MO = MI.getOperand(0);
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!MFI.isVRegStackified(Reg)) {
-      unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+      Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
       BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(CopyLocalOpc), NewReg)
           .addReg(Reg);
       MO.setReg(NewReg);
@@ -143,8 +143,8 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, not consuming reg");
               MachineOperand &MO = MI.getOperand(0);
-              unsigned OldReg = MO.getReg();
-              unsigned NewReg = Op2.getReg();
+              Register OldReg = MO.getReg();
+              Register NewReg = Op2.getReg();
 
               if (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg))
                 report_fatal_error("Peephole: call to builtin function with "

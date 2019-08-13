@@ -220,7 +220,7 @@ bool SSACCmpConv::trivialTailPHIs() {
     // PHI operands come in (VReg, MBB) pairs.
     for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
       MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
-      unsigned Reg = I.getOperand(oi).getReg();
+      Register Reg = I.getOperand(oi).getReg();
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;
@@ -631,7 +631,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     }
     const MCInstrDesc &MCID = TII->get(Opc);
     // Create a dummy virtual register for the SUBS def.
-    unsigned DestReg =
+    Register DestReg =
         MRI->createVirtualRegister(TII->getRegClass(MCID, 0, TRI, *MF));
     // Insert a SUBS Rn, #0 instruction instead of the cbz / cbnz.
     BuildMI(*Head, Head->end(), TermDL, MCID)

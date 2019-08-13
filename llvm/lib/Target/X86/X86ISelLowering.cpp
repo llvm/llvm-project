@@ -3348,7 +3348,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     // Find the largest legal vector type.
     MVT VecVT = MVT::Other;
     // FIXME: Only some x86_32 calling conventions support AVX512.
-    if (Subtarget.hasAVX512() &&
+    if (Subtarget.useAVX512Regs() &&
         (Is64Bit || (CallConv == CallingConv::X86_VectorCall ||
                      CallConv == CallingConv::Intel_OCL_BI)))
       VecVT = MVT::v16f32;
@@ -19050,6 +19050,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
             truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
       return V;
 
+  // Handle truncation of V256 to V128 using shuffles.
+  assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
+
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
     // On AVX2, v4i64 -> v4i32 becomes VPERMD.
     if (Subtarget.hasInt256()) {
@@ -19126,22 +19129,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::PACKUS, DL, VT, InLo, InHi);
   }
 
-  // Handle truncation of V256 to V128 using shuffles.
-  assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
-
-  assert(Subtarget.hasAVX() && "256-bit vector without AVX!");
-
-  unsigned NumElems = VT.getVectorNumElements();
-  MVT NVT = MVT::getVectorVT(VT.getVectorElementType(), NumElems * 2);
-
-  SmallVector<int, 16> MaskVec(NumElems * 2, -1);
-  // Prepare truncation shuffle mask
-  for (unsigned i = 0; i != NumElems; ++i)
-    MaskVec[i] = i * 2;
-  In = DAG.getBitcast(NVT, In);
-  SDValue V = DAG.getVectorShuffle(NVT, DL, In, In, MaskVec);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V,
-                     DAG.getIntPtrConstant(0, DL));
+  llvm_unreachable("All 256->128 cases should have been handled above!");
 }
 
 SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
@@ -39021,36 +39009,6 @@ static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
   return SDValue();
 }
 
-/// Detect a pattern of truncation with signed saturation.
-/// The types should allow to use VPMOVSS* instruction on AVX512.
-/// Return the source value to be truncated or SDValue() if the pattern was not
-/// matched.
-static SDValue detectAVX512SSatPattern(SDValue In, EVT VT,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
-  if (!TLI.isTypeLegal(In.getValueType()))
-    return SDValue();
-  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
-    return SDValue();
-  return detectSSatPattern(In, VT);
-}
-
-/// Detect a pattern of truncation with saturation:
-/// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
-/// The types should allow to use VPMOVUS* instruction on AVX512.
-/// Return the source value to be truncated or SDValue() if the pattern was not
-/// matched.
-static SDValue detectAVX512USatPattern(SDValue In, EVT VT, SelectionDAG &DAG,
-                                       const SDLoc &DL,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
-  if (!TLI.isTypeLegal(In.getValueType()))
-    return SDValue();
-  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
-    return SDValue();
-  return detectUSatPattern(In, VT, DAG, DL);
-}
-
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
@@ -39066,7 +39024,8 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
   if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
-      !Subtarget.hasAVX512() &&
+      !(Subtarget.hasAVX512() && InSVT == MVT::i32) &&
+      !(Subtarget.hasBWI() && InSVT == MVT::i16) &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (auto USatVal = detectSSatPattern(In, VT, true)) {
@@ -39633,7 +39592,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (!St->isTruncatingStore() && VT == MVT::v16i8 && !Subtarget.hasBWI() &&
       St->getValue().getOpcode() == ISD::TRUNCATE &&
       St->getValue().getOperand(0).getValueType() == MVT::v16i16 &&
-      TLI.isTruncStoreLegalOrCustom(MVT::v16i32, MVT::v16i8) &&
+      TLI.isTruncStoreLegal(MVT::v16i32, MVT::v16i8) &&
       !DCI.isBeforeLegalizeOps()) {
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32, St->getValue());
     return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
@@ -39647,23 +39606,24 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     // Check if we can detect an AVG pattern from the truncation. If yes,
     // replace the trunc store by a normal store with the result of X86ISD::AVG
     // instruction.
-    if (SDValue Avg = detectAVGPattern(St->getValue(), St->getMemoryVT(), DAG,
-                                       Subtarget, dl))
-      return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
-                          St->getPointerInfo(), St->getAlignment(),
-                          St->getMemOperand()->getFlags());
+    if (DCI.isBeforeLegalize() || TLI.isTypeLegal(St->getMemoryVT()))
+      if (SDValue Avg = detectAVGPattern(St->getValue(), St->getMemoryVT(), DAG,
+                                         Subtarget, dl))
+        return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
+                            St->getPointerInfo(), St->getAlignment(),
+                            St->getMemOperand()->getFlags());
 
-    if (SDValue Val =
-        detectAVX512SSatPattern(St->getValue(), St->getMemoryVT(), Subtarget,
-                                TLI))
-      return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
-                             dl, Val, St->getBasePtr(),
-                             St->getMemoryVT(), St->getMemOperand(), DAG);
-    if (SDValue Val = detectAVX512USatPattern(St->getValue(), St->getMemoryVT(),
-                                              DAG, dl, Subtarget, TLI))
-      return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
-                             dl, Val, St->getBasePtr(),
-                             St->getMemoryVT(), St->getMemOperand(), DAG);
+    if (TLI.isTruncStoreLegal(VT, StVT)) {
+      if (SDValue Val = detectSSatPattern(St->getValue(), St->getMemoryVT()))
+        return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
+                               dl, Val, St->getBasePtr(),
+                               St->getMemoryVT(), St->getMemOperand(), DAG);
+      if (SDValue Val = detectUSatPattern(St->getValue(), St->getMemoryVT(),
+                                          DAG, dl))
+        return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
+                               dl, Val, St->getBasePtr(),
+                               St->getMemoryVT(), St->getMemOperand(), DAG);
+    }
 
     return SDValue();
   }

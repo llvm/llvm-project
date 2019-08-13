@@ -87,7 +87,7 @@ TEST(MergeTest, mergeRecordInfos) {
   One.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   One.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  One.ChildRecords.emplace_back(NonEmptySID, "ChildStruct",
+  One.ChildRecords.emplace_back(NonEmptySID, "SharedChildStruct",
                                 InfoType::IT_record);
   One.ChildFunctions.emplace_back();
   One.ChildFunctions.back().Name = "OneFunction";
@@ -104,8 +104,8 @@ TEST(MergeTest, mergeRecordInfos) {
 
   Two.TagType = TagTypeKind::TTK_Class;
 
-  Two.ChildRecords.emplace_back(EmptySID, "OtherChildStruct",
-                                InfoType::IT_record);
+  Two.ChildRecords.emplace_back(NonEmptySID, "SharedChildStruct",
+                                InfoType::IT_record, "path");
   Two.ChildFunctions.emplace_back();
   Two.ChildFunctions.back().Name = "TwoFunction";
   Two.ChildEnums.emplace_back();
@@ -127,10 +127,8 @@ TEST(MergeTest, mergeRecordInfos) {
   Expected->Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   Expected->VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  Expected->ChildRecords.emplace_back(NonEmptySID, "ChildStruct",
-                                      InfoType::IT_record);
-  Expected->ChildRecords.emplace_back(EmptySID, "OtherChildStruct",
-                                      InfoType::IT_record);
+  Expected->ChildRecords.emplace_back(NonEmptySID, "SharedChildStruct",
+                                      InfoType::IT_record, "path");
   Expected->ChildFunctions.emplace_back();
   Expected->ChildFunctions.back().Name = "OneFunction";
   Expected->ChildFunctions.back().USR = NonEmptySID;

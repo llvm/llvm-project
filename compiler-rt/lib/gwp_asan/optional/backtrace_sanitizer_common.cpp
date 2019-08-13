@@ -26,7 +26,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
 }
 
 namespace {
-void Backtrace(uintptr_t *TraceBuffer, size_t Size) {
+size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
   __sanitizer::BufferedStackTrace Trace;
   Trace.Reset();
   if (Size > __sanitizer::kStackTraceMax)
@@ -38,19 +38,14 @@ void Backtrace(uintptr_t *TraceBuffer, size_t Size) {
                /* fast unwind */ true, Size - 1);
 
   memcpy(TraceBuffer, Trace.trace, Trace.size * sizeof(uintptr_t));
-  TraceBuffer[Trace.size] = 0;
+  return Trace.size;
 }
 
-static void PrintBacktrace(uintptr_t *Trace,
+static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
                            gwp_asan::options::Printf_t Printf) {
   __sanitizer::StackTrace StackTrace;
   StackTrace.trace = reinterpret_cast<__sanitizer::uptr *>(Trace);
-
-  for (StackTrace.size = 0; StackTrace.size < __sanitizer::kStackTraceMax;
-       ++StackTrace.size) {
-    if (Trace[StackTrace.size] == 0)
-      break;
-  }
+  StackTrace.size = TraceLength;
 
   if (StackTrace.size == 0) {
     Printf("  <unknown (does your allocator support backtracing?)>\n\n");

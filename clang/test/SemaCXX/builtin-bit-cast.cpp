@@ -37,3 +37,12 @@ constexpr unsigned long ul = __builtin_bit_cast(unsigned long, not_trivially_cop
 
 // expected-error@+1 {{__builtin_bit_cast destination type must be trivially copyable}}
 constexpr long us = __builtin_bit_cast(unsigned long &, 0L);
+
+namespace PR42936 {
+template <class T> struct S { int m; };
+
+extern S<int> extern_decl;
+
+int x = __builtin_bit_cast(int, extern_decl);
+S<char> y = __builtin_bit_cast(S<char>, 0);
+}

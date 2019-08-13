@@ -3191,14 +3191,19 @@ void X86FrameLowering::orderFrameObjects(
     std::reverse(ObjectsToAllocate.begin(), ObjectsToAllocate.end());
 }
 
-
-unsigned X86FrameLowering::getWinEHParentFrameOffset(const MachineFunction &MF) const {
+unsigned
+X86FrameLowering::getWinEHParentFrameOffset(const MachineFunction &MF) const {
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // RDX, the parent frame pointer, is homed into 16(%rsp) in the prologue.
   unsigned Offset = 16;
   // RBP is immediately pushed.
   Offset += SlotSize;
   // All callee-saved registers are then pushed.
-  Offset += MF.getInfo<X86MachineFunctionInfo>()->getCalleeSavedFrameSize();
+  Offset += X86FI->getCalleeSavedFrameSize();
+  // Funclets allocate space for however XMM registers are required.
+  int Ignore;
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+    Offset += X86FI->getCalleeSavedXMMFrameInfo(Ignore);
   // Every funclet allocates enough stack space for the largest outgoing call.
   Offset += getWinEHFuncletFrameSize(MF);
   return Offset;

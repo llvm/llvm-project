@@ -476,8 +476,8 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
     Imm = -Imm;
     LLVM_FALLTHROUGH;
   case AArch64::STPXpre: {
-    unsigned Reg0 = MBBI->getOperand(1).getReg();
-    unsigned Reg1 = MBBI->getOperand(2).getReg();
+    Register Reg0 = MBBI->getOperand(1).getReg();
+    Register Reg1 = MBBI->getOperand(2).getReg();
     if (Reg0 == AArch64::FP && Reg1 == AArch64::LR)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFPLR_X))
                 .addImm(Imm * 8)
@@ -525,8 +525,8 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::STPXi:
   case AArch64::LDPXi: {
-    unsigned Reg0 = MBBI->getOperand(0).getReg();
-    unsigned Reg1 = MBBI->getOperand(1).getReg();
+    Register Reg0 = MBBI->getOperand(0).getReg();
+    Register Reg1 = MBBI->getOperand(1).getReg();
     if (Reg0 == AArch64::FP && Reg1 == AArch64::LR)
       MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFPLR))
                 .addImm(Imm * 8)
@@ -1137,7 +1137,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (needsFrameMoves) {
     const DataLayout &TD = MF.getDataLayout();
     const int StackGrowth = -TD.getPointerSize(0);
-    unsigned FramePtr = RegInfo->getFrameRegister(MF);
+    Register FramePtr = RegInfo->getFrameRegister(MF);
     // An example of the prologue:
     //
     //     .globl __foo
