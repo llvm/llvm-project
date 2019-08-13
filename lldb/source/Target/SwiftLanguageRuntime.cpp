@@ -794,26 +794,6 @@ bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
   return swift::Demangle::isClass(name);
 }
 
-const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangled_name)
-{
-#ifndef USE_NEW_MANGLING
-  return std::string(mangled_name);
-#else
-  //FIXME: Check if we need to cache these lookups...
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_ptr = demangle_ctx.demangleSymbolAsNode(mangled_name);
-  if (!node_ptr)
-  {
-    // Sometimes this gets passed the prefix of a name, in which case we
-    // won't be able to demangle it.  In that case return what was passed in.
-    printf ("Couldn't get mangled name for %s.\n", mangled_name);
-    return mangled_name;
-  }
-  else
-    return swift::Demangle::mangleNode(node_ptr);
-#endif
-}
-
 void SwiftLanguageRuntime::MethodName::Clear() {
   m_full.Clear();
   m_basename = llvm::StringRef();
