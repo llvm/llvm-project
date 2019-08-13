@@ -77,15 +77,16 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->visibility = STV_DEFAULT;
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
+  sym->inDynamicList = false;
   sym->canInline = true;
   sym->scriptDefined = false;
   sym->partition = 1;
   return sym;
 }
 
-Symbol *SymbolTable::addSymbol(const Symbol &New) {
-  Symbol *sym = symtab->insert(New.getName());
-  sym->resolve(New);
+Symbol *SymbolTable::addSymbol(const Symbol &newSym) {
+  Symbol *sym = symtab->insert(newSym.getName());
+  sym->resolve(newSym);
   return sym;
 }
 
@@ -162,12 +163,8 @@ void SymbolTable::handleDynamicList() {
     else
       syms = findByVersion(ver);
 
-    for (Symbol *b : syms) {
-      if (!config->shared)
-        b->exportDynamic = true;
-      else if (b->includeInDynsym())
-        b->isPreemptible = true;
-    }
+    for (Symbol *sym : syms)
+      sym->inDynamicList = true;
   }
 }
 

@@ -295,7 +295,7 @@ bool Symbol::includeInDynsym() const {
   if (isUndefWeak() && config->pie && sharedFiles.empty())
     return false;
 
-  return isUndefined() || isShared() || exportDynamic;
+  return isUndefined() || isShared() || exportDynamic || inDynamicList;
 }
 
 // Print out a log message for --trace-symbol.

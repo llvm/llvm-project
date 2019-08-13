@@ -172,12 +172,12 @@ bool elf::tryRelaxPPC64TocIndirection(RelType type, const Relocation &rel,
                    : getRelaTocSymAndAddend<ELF64BE>(tocISB, rel.addend);
 
   // Only non-preemptable defined symbols can be relaxed.
-  //
-  // The toc entry of a non-preemptable ifunc is relocated by R_PPC64_IRELATIVE,
-  // which will run at load time to determine the relocated value. It is not
-  // known until load time, so the access cannot be relaxed.
-  if (!d || d->isPreemptible || d->isGnuIFunc())
+  if (!d || d->isPreemptible)
     return false;
+
+  // R_PPC64_ADDR64 should have created a canonical PLT for the non-preemptable
+  // ifunc and changed its type to STT_FUNC.
+  assert(!d->isGnuIFunc());
 
   // Two instructions can materialize a 32-bit signed offset from the toc base.
   uint64_t tocRelative = d->getVA(addend) - getPPC64TocBase();
