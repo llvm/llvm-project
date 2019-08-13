@@ -394,16 +394,25 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs, dark_mode, gray_mode, topo_mode):
+    def __init__(self, do_diffs, dark_mode, gray_mode,
+                 topo_mode, dump_dot_only):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
         self._topo_mode = topo_mode
+        self._dump_dot_only = dump_dot_only
+        self._output = []
 
-    @staticmethod
-    def _dump_raw(s):
-        print(s, end='')
+    def _dump_raw(self, s):
+        if self._dump_dot_only:
+            print(s, end='')
+        else:
+            self._output.append(s)
+
+    def output(self):
+        assert not self._dump_dot_only
+        return ''.join(self._output)
 
     def _dump(self, s):
         s = s.replace('&', '&amp;') \
@@ -812,6 +821,44 @@ class DotDumpVisitor(object):
     def visit_end_of_graph(self):
         self._dump_raw('}\n')
 
+        if not self._dump_dot_only:
+            import sys
+            import tempfile
+
+            def write_temp_file(suffix, data):
+                fd, filename = tempfile.mkstemp(suffix=suffix)
+                print('Writing "%s"...' % filename)
+                with os.fdopen(fd, 'w') as fp:
+                    fp.write(data)
+                print('Done! Please remember to remove the file.')
+                return filename
+
+            try:
+                import graphviz
+            except ImportError:
+                # The fallback behavior if graphviz is not installed!
+                print('Python graphviz not found. Please invoke')
+                print('  $ pip install graphviz')
+                print('in order to enable automatic conversion to HTML.')
+                print()
+                print('You may also convert DOT to SVG manually via')
+                print('  $ dot -Tsvg input.dot -o output.svg')
+                print()
+                write_temp_file('.dot', self.output())
+                return
+
+            svg = graphviz.pipe('dot', 'svg', self.output())
+
+            filename = write_temp_file(
+                '.html', '<html><body bgcolor="%s">%s</body></html>' % (
+                             '#1a1a1a' if self._dark_mode else 'white', svg))
+            if sys.platform == 'win32':
+                os.startfile(filename)
+            elif sys.platform == 'darwin':
+                os.system('open "%s"' % filename)
+            else:
+                os.system('xdg-open "%s"' % filename)
+
 
 #===-----------------------------------------------------------------------===#
 # Explorers know how to traverse the ExplodedGraph in a certain order.
@@ -874,8 +921,10 @@ class SinglePathExplorer(object):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str)
+    parser = argparse.ArgumentParser(
+        description='Display and manipulate Exploded Graph dumps.')
+    parser.add_argument('filename', type=str,
+                        help='the .dot file produced by the Static Analyzer')
     parser.add_argument('-v', '--verbose', action='store_const',
                         dest='loglevel', const=logging.DEBUG,
                         default=logging.WARNING,
@@ -897,6 +946,11 @@ def main():
     parser.add_argument('--gray', action='store_const', dest='gray',
                         const=True, default=False,
                         help='black-and-white mode')
+    parser.add_argument('--dump-dot-only', action='store_const',
+                        dest='dump_dot_only', const=True, default=False,
+                        help='instead of writing an HTML file and immediately '
+                             'displaying it, dump the rewritten dot file '
+                             'to stdout')
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
@@ -907,7 +961,8 @@ def main():
             graph.add_raw_line(raw_line)
 
     explorer = SinglePathExplorer() if args.single_path else BasicExplorer()
-    visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology)
+    visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology,
+                             args.dump_dot_only)
 
     explorer.explore(graph, visitor)
 
