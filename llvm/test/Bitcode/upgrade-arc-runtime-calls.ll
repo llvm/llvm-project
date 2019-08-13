@@ -3,10 +3,12 @@
 
 ; upgrade-arc-runtime-calls.bc and upgrade-mrr-runtime-calls.bc are identical
 ; except that the former has the arm64 retainAutoreleasedReturnValueMarker
-; metadata.
+; metadata. upgrade-arc-runtime-calls-new.bc has the new module flag format of
+; marker, it should not be upgraded.
 
 ; RUN: llvm-dis < %S/upgrade-arc-runtime-calls.bc | FileCheck -check-prefixes=ARC %s
-; RUN: llvm-dis < %S/upgrade-mrr-runtime-calls.bc | FileCheck -check-prefixes=MRR %s
+; RUN: llvm-dis < %S/upgrade-mrr-runtime-calls.bc | FileCheck -check-prefixes=NOUPGRADE %s
+; RUN: llvm-dis < %S/upgrade-arc-runtime-calls-new.bc | FileCheck -check-prefixes=NOUPGRADE %s
 
 define void @testRuntimeCalls(i8* %a, i8** %b, i8** %c, i32* %d, i32** %e) personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -89,35 +91,35 @@ unwindBlock:
 // ARC-NEXT: tail call void @llvm.objc.arc.annotation.bottomup.bbend(i8** %[[B]], i8** %[[C]])
 // ARC-NEXT: invoke void @objc_autoreleasePoolPop(i8* %[[A]])
 
-// MRR: define void @testRuntimeCalls(i8* %[[A:.*]], i8** %[[B:.*]], i8** %[[C:.*]], i32* %[[D:.*]], i32** %[[E:.*]]) personality
-// MRR: %[[V0:.*]] = tail call i8* @objc_autorelease(i8* %[[A]])
-// MRR-NEXT: tail call void @objc_autoreleasePoolPop(i8* %[[A]])
-// MRR-NEXT: %[[V1:.*]] = tail call i8* @objc_autoreleasePoolPush()
-// MRR-NEXT: %[[V2:.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* %[[A]])
-// MRR-NEXT: tail call void @objc_copyWeak(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: tail call void @objc_destroyWeak(i8** %[[B]])
-// MRR-NEXT: %[[V3:.*]] = tail call i32* @objc_initWeak(i32** %[[E]], i32* %[[D]])
-// MRR-NEXT: %[[V4:.*]] = tail call i8* @objc_loadWeak(i8** %[[B]])
-// MRR-NEXT: %[[V5:.*]] = tail call i8* @objc_loadWeakRetained(i8** %[[B]])
-// MRR-NEXT: tail call void @objc_moveWeak(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: tail call void @objc_release(i8* %[[A]])
-// MRR-NEXT: %[[V6:.*]] = tail call i8* @objc_retain(i8* %[[A]])
-// MRR-NEXT: %[[V7:.*]] = tail call i8* @objc_retainAutorelease(i8* %[[A]])
-// MRR-NEXT: %[[V8:.*]] = tail call i8* @objc_retainAutoreleaseReturnValue(i8* %[[A]])
-// MRR-NEXT: %[[V9:.*]] = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %[[A]])
-// MRR-NEXT: %[[V10:.*]] = tail call i8* @objc_retainBlock(i8* %[[A]])
-// MRR-NEXT: tail call void @objc_storeStrong(i8** %[[B]], i8* %[[A]])
-// MRR-NEXT: %[[V11:.*]] = tail call i8* @objc_storeWeak(i8** %[[B]], i8* %[[A]])
-// MRR-NEXT: tail call void (...) @llvm.objc.clang.arc.use(i8* %[[A]])
-// MRR-NEXT: %[[V12:.*]] = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %[[A]])
-// MRR-NEXT: %[[V13:.*]] = tail call i8* @objc_retainedObject(i8* %[[A]])
-// MRR-NEXT: %[[V14:.*]] = tail call i8* @objc_unretainedObject(i8* %[[A]])
-// MRR-NEXT: %[[V15:.*]] = tail call i8* @objc_unretainedPointer(i8* %[[A]])
-// MRR-NEXT: %[[V16:.*]] = tail call i8* @objc_retain.autorelease(i8* %[[A]])
-// MRR-NEXT: %[[V17:.*]] = tail call i32 @objc_sync.enter(i8* %[[A]])
-// MRR-NEXT: %[[V18:.*]] = tail call i32 @objc_sync.exit(i8* %[[A]])
-// MRR-NEXT: tail call void @objc_arc_annotation_topdown_bbstart(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: tail call void @objc_arc_annotation_topdown_bbend(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: tail call void @objc_arc_annotation_bottomup_bbstart(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: tail call void @objc_arc_annotation_bottomup_bbend(i8** %[[B]], i8** %[[C]])
-// MRR-NEXT: invoke void @objc_autoreleasePoolPop(i8* %[[A]])
+// NOUPGRADE: define void @testRuntimeCalls(i8* %[[A:.*]], i8** %[[B:.*]], i8** %[[C:.*]], i32* %[[D:.*]], i32** %[[E:.*]]) personality
+// NOUPGRADE: %[[V0:.*]] = tail call i8* @objc_autorelease(i8* %[[A]])
+// NOUPGRADE-NEXT: tail call void @objc_autoreleasePoolPop(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V1:.*]] = tail call i8* @objc_autoreleasePoolPush()
+// NOUPGRADE-NEXT: %[[V2:.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* %[[A]])
+// NOUPGRADE-NEXT: tail call void @objc_copyWeak(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: tail call void @objc_destroyWeak(i8** %[[B]])
+// NOUPGRADE-NEXT: %[[V3:.*]] = tail call i32* @objc_initWeak(i32** %[[E]], i32* %[[D]])
+// NOUPGRADE-NEXT: %[[V4:.*]] = tail call i8* @objc_loadWeak(i8** %[[B]])
+// NOUPGRADE-NEXT: %[[V5:.*]] = tail call i8* @objc_loadWeakRetained(i8** %[[B]])
+// NOUPGRADE-NEXT: tail call void @objc_moveWeak(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: tail call void @objc_release(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V6:.*]] = tail call i8* @objc_retain(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V7:.*]] = tail call i8* @objc_retainAutorelease(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V8:.*]] = tail call i8* @objc_retainAutoreleaseReturnValue(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V9:.*]] = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V10:.*]] = tail call i8* @objc_retainBlock(i8* %[[A]])
+// NOUPGRADE-NEXT: tail call void @objc_storeStrong(i8** %[[B]], i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V11:.*]] = tail call i8* @objc_storeWeak(i8** %[[B]], i8* %[[A]])
+// NOUPGRADE-NEXT: tail call void (...) @llvm.objc.clang.arc.use(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V12:.*]] = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V13:.*]] = tail call i8* @objc_retainedObject(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V14:.*]] = tail call i8* @objc_unretainedObject(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V15:.*]] = tail call i8* @objc_unretainedPointer(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V16:.*]] = tail call i8* @objc_retain.autorelease(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V17:.*]] = tail call i32 @objc_sync.enter(i8* %[[A]])
+// NOUPGRADE-NEXT: %[[V18:.*]] = tail call i32 @objc_sync.exit(i8* %[[A]])
+// NOUPGRADE-NEXT: tail call void @objc_arc_annotation_topdown_bbstart(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: tail call void @objc_arc_annotation_topdown_bbend(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: tail call void @objc_arc_annotation_bottomup_bbstart(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: tail call void @objc_arc_annotation_bottomup_bbend(i8** %[[B]], i8** %[[C]])
+// NOUPGRADE-NEXT: invoke void @objc_autoreleasePoolPop(i8* %[[A]])
