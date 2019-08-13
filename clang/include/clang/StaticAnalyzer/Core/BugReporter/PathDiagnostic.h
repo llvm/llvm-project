@@ -125,6 +125,13 @@ public:
   };
 
   virtual PathGenerationScheme getGenerationScheme() const { return Minimal; }
+
+  bool shouldGenerateDiagnostics() const {
+    return getGenerationScheme() != None;
+  }
+
+  bool shouldAddPathEdges() const { return getGenerationScheme() == Extensive; }
+
   virtual bool supportsLogicalOpControlFlow() const { return false; }
 
   /// Return true if the PathDiagnosticConsumer supports individual

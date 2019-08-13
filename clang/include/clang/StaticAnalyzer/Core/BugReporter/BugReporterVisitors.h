@@ -80,7 +80,7 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
 
   /// Generates the default final diagnostic piece.
-  static PathDiagnosticPieceRef getDefaultEndPath(BugReporterContext &BRC,
+  static PathDiagnosticPieceRef getDefaultEndPath(const BugReporterContext &BRC,
                                                   const ExplodedNode *N,
                                                   BugReport &BR);
 };
