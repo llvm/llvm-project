@@ -94,7 +94,7 @@ static void Scan(IvarUsageMap& M, const ObjCContainerDecl *D) {
 }
 
 static void Scan(IvarUsageMap &M, const DeclContext *C, const FileID FID,
-                 SourceManager &SM) {
+                 const SourceManager &SM) {
   for (const auto *I : C->decls())
     if (const auto *FD = dyn_cast<FunctionDecl>(I)) {
       SourceLocation L = FD->getBeginLoc();
@@ -148,7 +148,7 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
   // FIXME: In the future hopefully we can just use the lexical DeclContext
   // to go from the ObjCImplementationDecl to the lexically "nested"
   // C functions.
-  SourceManager &SM = BR.getSourceManager();
+  const SourceManager &SM = BR.getSourceManager();
   Scan(M, D->getDeclContext(), SM.getFileID(D->getLocation()), SM);
 
   // Find ivars that are unused.

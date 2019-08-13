@@ -919,7 +919,6 @@ public:
 };
 
 } // namespace ento
-
 } // namespace clang
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H

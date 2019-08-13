@@ -2250,7 +2250,7 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
     SourceLocation BeginLoc = OriginalExpr->getBeginLoc();
     SourceLocation EndLoc = OriginalExpr->getEndLoc();
     if (BeginLoc.isMacroID() && EndLoc.isMacroID()) {
-      SourceManager &SM = BRC.getSourceManager();
+      const SourceManager &SM = BRC.getSourceManager();
       const LangOptions &LO = BRC.getASTContext().getLangOpts();
       if (Lexer::isAtStartOfMacroExpansion(BeginLoc, SM, LO) &&
           Lexer::isAtEndOfMacroExpansion(EndLoc, SM, LO)) {
@@ -2587,7 +2587,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
     BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
-  AnalyzerOptions &Options = BRC.getAnalyzerOptions();
+  const AnalyzerOptions &Options = BRC.getAnalyzerOptions();
   const Decl *D = N->getLocationContext()->getDecl();
 
   if (AnalysisDeclContext::isInStdNamespace(D)) {
@@ -2654,7 +2654,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
 
   // Skip reports within the sys/queue.h macros as we do not have the ability to
   // reason about data structure shapes.
-  SourceManager &SM = BRC.getSourceManager();
+  const SourceManager &SM = BRC.getSourceManager();
   FullSourceLoc Loc = BR.getLocation(SM).asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();

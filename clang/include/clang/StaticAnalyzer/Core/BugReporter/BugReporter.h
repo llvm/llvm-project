@@ -217,10 +217,10 @@ public:
   void markInteresting(SVal V);
   void markInteresting(const LocationContext *LC);
 
-  bool isInteresting(SymbolRef sym);
-  bool isInteresting(const MemRegion *R);
-  bool isInteresting(SVal V);
-  bool isInteresting(const LocationContext *LC);
+  bool isInteresting(SymbolRef sym) const;
+  bool isInteresting(const MemRegion *R) const;
+  bool isInteresting(SVal V) const;
+  bool isInteresting(const LocationContext *LC) const;
 
   /// Returns whether or not this report should be considered valid.
   ///
@@ -469,9 +469,9 @@ public:
 
   ASTContext &getContext() { return D.getASTContext(); }
 
-  SourceManager &getSourceManager() { return D.getSourceManager(); }
+  const SourceManager &getSourceManager() { return D.getSourceManager(); }
 
-  AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
+  const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   virtual std::unique_ptr<DiagnosticForConsumerMapTy>
   generatePathDiagnostics(ArrayRef<PathDiagnosticConsumer *> consumers,
@@ -519,11 +519,13 @@ public:
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
-  ExplodedGraph &getGraph();
+  const ExplodedGraph &getGraph() const;
 
   /// getStateManager - Return the state manager used by the analysis
   ///  engine.
   ProgramStateManager &getStateManager();
+
+  ProgramStateManager &getStateManager() const;
 
   /// \p bugReports A set of bug reports within a *single* equivalence class
   ///
@@ -566,25 +568,25 @@ public:
 
   GRBugReporter& getBugReporter() { return BR; }
 
-  ExplodedGraph &getGraph() { return BR.getGraph(); }
+  const ExplodedGraph &getGraph() const { return BR.getGraph(); }
 
-  ProgramStateManager& getStateManager() {
+  ProgramStateManager& getStateManager() const {
     return BR.getStateManager();
   }
 
-  SValBuilder &getSValBuilder() {
+  SValBuilder &getSValBuilder() const {
     return getStateManager().getSValBuilder();
   }
 
-  ASTContext &getASTContext() {
+  ASTContext &getASTContext() const {
     return BR.getContext();
   }
 
-  SourceManager& getSourceManager() {
+  const SourceManager& getSourceManager() const {
     return BR.getSourceManager();
   }
 
-  AnalyzerOptions &getAnalyzerOptions() {
+  const AnalyzerOptions &getAnalyzerOptions() const {
     return BR.getAnalyzerOptions();
   }
 

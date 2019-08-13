@@ -134,7 +134,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // Do not collect nodes for non-consumed Stmt or Expr to ensure precise
   // diagnostic generation; specifically, so that we could anchor arrows
   // pointing to the beginning of statements (as written in code).
-  ParentMap &PM = progPoint.getLocationContext()->getParentMap();
+  const ParentMap &PM = progPoint.getLocationContext()->getParentMap();
   if (!PM.isConsumedExpr(Ex))
     return false;
 

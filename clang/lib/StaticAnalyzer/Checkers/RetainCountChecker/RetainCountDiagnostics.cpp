@@ -736,7 +736,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   const MemRegion* FirstBinding = AllocI.R;
   BR.markInteresting(AllocI.InterestingMethodContext);
 
-  SourceManager& SM = BRC.getSourceManager();
+  const SourceManager& SM = BRC.getSourceManager();
 
   // Compute an actual location for the leak.  Sometimes a leak doesn't
   // occur at an actual statement (e.g., transition between blocks; end

@@ -1086,7 +1086,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
   if (!isStandardNewDelete(NE->getOperatorNew(), C.getASTContext()))
     return;
 
-  ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getLocationContext()->getParentMap();
   if (!PM.isConsumedExpr(NE) && treatUnusedNewEscaped(NE))
     return;
 

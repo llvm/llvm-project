@@ -1035,7 +1035,7 @@ getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
 ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   if (!Data) {
     // Find the parent, ignoring implicit casts.
-    ParentMap &PM = getLocationContext()->getParentMap();
+    const ParentMap &PM = getLocationContext()->getParentMap();
     const Stmt *S = PM.getParentIgnoreParenCasts(getOriginExpr());
 
     // Check if parent is a PseudoObjectExpr.
