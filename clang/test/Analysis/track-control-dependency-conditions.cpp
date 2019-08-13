@@ -366,6 +366,30 @@ void f(int y) {
 }
 } // end of namespace tracked_condition_written_in_nested_stackframe
 
+namespace condition_written_in_nested_stackframe_before_assignment {
+int flag = 0;
+int getInt();
+
+void foo() {
+  flag = getInt(); // tracking-note{{Value assigned to 'flag'}}
+}
+
+void f() {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+  int y = 0;
+
+  foo();    // tracking-note{{Calling 'foo'}}
+            // tracking-note@-1{{Returning from 'foo'}}
+  y = flag; // tracking-note{{Value assigned to 'y'}}
+
+  if (y)    // expected-note{{Assuming 'y' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'y'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace condition_written_in_nested_stackframe_before_assignment
+
 namespace collapse_point_not_in_condition {
 
 [[noreturn]] void halt();

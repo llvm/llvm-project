@@ -1394,15 +1394,11 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
   // If we have an expression that provided the value, try to track where it
   // came from.
   if (InitE) {
-    if (V.isUndef() ||
-        V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
-      if (!IsParam)
-        InitE = InitE->IgnoreParenCasts();
-      bugreporter::trackExpressionValue(StoreSite, InitE, BR,
-                                   EnableNullFPSuppression);
-    }
-    ReturnVisitor::addVisitorIfNecessary(StoreSite, InitE->IgnoreParenCasts(),
-                                         BR, EnableNullFPSuppression);
+    if (!IsParam)
+      InitE = InitE->IgnoreParenCasts();
+
+    bugreporter::trackExpressionValue(StoreSite, InitE, BR,
+                                      EnableNullFPSuppression);
   }
 
   // Okay, we've found the binding. Emit an appropriate message.
@@ -1945,19 +1941,20 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     // We should not try to dereference pointers at all when we don't care
     // what is written inside the pointer.
     bool CanDereference = true;
-    if (const auto *SR = dyn_cast<SymbolicRegion>(L->getRegion()))
+    if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
       if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
         CanDereference = false;
+    } else if (const auto *AR = L->getRegionAs<AllocaRegion>())
+      CanDereference = false;
 
     // At this point we are dealing with the region's LValue.
     // However, if the rvalue is a symbolic region, we should track it as well.
     // Try to use the correct type when looking up the value.
     SVal RVal;
-    if (ExplodedGraph::isInterestingLValueExpr(Inner)) {
+    if (ExplodedGraph::isInterestingLValueExpr(Inner))
       RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
-    } else if (CanDereference) {
+    else if (CanDereference)
       RVal = LVState->getSVal(L->getRegion());
-    }
 
     if (CanDereference)
       if (auto KV = RVal.getAs<KnownSVal>())

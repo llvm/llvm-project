@@ -66,8 +66,8 @@ void f6_1(void) {
 
 void f6_2(void) {
   int t;       //expected-note {{'t' declared without an initial value}}
-  int &p = t;
-  int &s = p;
+  int &p = t;  //expected-note {{'p' initialized here}}
+  int &s = p;  //expected-note {{'s' initialized here}}
   int &q = s;  //expected-note {{'q' initialized here}}
   doStuff6(q); //expected-warning {{1st function call argument is an uninitialized value}}
                //expected-note@-1 {{1st function call argument is an uninitialized value}}
@@ -96,7 +96,7 @@ void f6(void) {
 
 
 void f5(void) {
-  int t;
+  int t;               // expected-note {{'t' declared without an initial value}}
   int* tp = &t;        // expected-note {{'tp' initialized here}}
   doStuff_uninit(tp);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                        // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
