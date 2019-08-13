@@ -9,7 +9,7 @@
 // UNSUPPORTED: libcpp-has-no-threads
 
 // [[nodiscard]] on constructors isn't supported by all compilers
-// UNSUPPORTED: clang-6, clang-6, clang-8, clang-9
+// UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 // UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11
 
 // <mutex>
