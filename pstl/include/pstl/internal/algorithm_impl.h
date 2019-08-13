@@ -24,6 +24,8 @@
 #include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __internal
@@ -3619,5 +3621,7 @@ __pattern_lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 _
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_ALGORITHM_IMPL_H */

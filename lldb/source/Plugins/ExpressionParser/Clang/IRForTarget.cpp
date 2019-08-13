@@ -155,6 +155,15 @@ clang::NamedDecl *IRForTarget::DeclForGlobal(GlobalValue *global_val) {
   return DeclForGlobal(global_val, m_module);
 }
 
+/// Returns true iff the mangled symbol is for a static guard variable.
+static bool isGuardVariableSymbol(llvm::StringRef mangled_symbol,
+                                  bool check_ms_abi = true) {
+  bool result = mangled_symbol.startswith("_ZGV"); // Itanium ABI guard variable
+  if (check_ms_abi)
+    result |= mangled_symbol.startswith("@4IA"); // Microsoft ABI
+  return result;
+}
+
 bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -172,15 +181,17 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
     result_name = value_symbol.first();
 
-    if (result_name.contains("$__lldb_expr_result_ptr") &&
-        !result_name.startswith("_ZGV")) {
+    // Check if this is a guard variable. It seems this causes some hiccups
+    // on Windows, so let's only check for Itanium guard variables.
+    bool is_guard_var = isGuardVariableSymbol(result_name, /*MS ABI*/ false);
+
+    if (result_name.contains("$__lldb_expr_result_ptr") && !is_guard_var) {
       found_result = true;
       m_result_is_pointer = true;
       break;
     }
 
-    if (result_name.contains("$__lldb_expr_result") &&
-        !result_name.startswith("_ZGV")) {
+    if (result_name.contains("$__lldb_expr_result") && !is_guard_var) {
       found_result = true;
       m_result_is_pointer = false;
       break;
@@ -1528,14 +1539,12 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
 }
 
 static bool isGuardVariableRef(Value *V) {
-  Constant *Old = nullptr;
+  Constant *Old = dyn_cast<Constant>(V);
 
-  if (!(Old = dyn_cast<Constant>(V)))
+  if (!Old)
     return false;
 
-  ConstantExpr *CE = nullptr;
-
-  if ((CE = dyn_cast<ConstantExpr>(V))) {
+  if (auto CE = dyn_cast<ConstantExpr>(V)) {
     if (CE->getOpcode() != Instruction::BitCast)
       return false;
 
@@ -1544,12 +1553,8 @@ static bool isGuardVariableRef(Value *V) {
 
   GlobalVariable *GV = dyn_cast<GlobalVariable>(Old);
 
-  if (!GV || !GV->hasName() ||
-      (!GV->getName().startswith("_ZGV") && // Itanium ABI guard variable
-       !GV->getName().endswith("@4IA")))    // Microsoft ABI guard variable
-  {
+  if (!GV || !GV->hasName() || !isGuardVariableSymbol(GV->getName()))
     return false;
-  }
 
   return true;
 }

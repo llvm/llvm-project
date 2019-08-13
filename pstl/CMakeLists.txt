@@ -17,6 +17,8 @@ math(EXPR VERSION_PATCH "(${PARALLELSTL_VERSION_SOURCE} % 10)")
 project(ParallelSTL VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} LANGUAGES CXX)
 
 set(PSTL_PARALLEL_BACKEND "serial" CACHE STRING "Threading backend to use. Valid choices are 'serial' and 'tbb'. The default is 'serial'.")
+set(PSTL_HIDE_FROM_ABI_PER_TU OFF CACHE BOOL "Whether to constrain ABI-unstable symbols to each translation unit (basically, mark them with C's static keyword).")
+set(_PSTL_HIDE_FROM_ABI_PER_TU ${PSTL_HIDE_FROM_ABI_PER_TU}) # For __pstl_config_site
 
 if (NOT TBB_DIR)
     get_filename_component(PSTL_DIR_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
