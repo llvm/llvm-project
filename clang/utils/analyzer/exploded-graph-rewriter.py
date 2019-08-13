@@ -882,37 +882,36 @@ class BasicExplorer(object):
         visitor.visit_end_of_graph()
 
 
-# SinglePathExplorer traverses only a single path - the leftmost path
-# from the root. Useful when the trimmed graph is still too large
-# due to a large amount of equivalent reports.
-class SinglePathExplorer(object):
+#===-----------------------------------------------------------------------===#
+# Trimmers cut out parts of the ExplodedGraph so that to focus on other parts.
+# Trimmers can be combined together by applying them sequentially.
+#===-----------------------------------------------------------------------===#
+
+
+# SinglePathTrimmer keeps only a single path - the leftmost path from the root.
+# Useful when the trimmed graph is still too large.
+class SinglePathTrimmer(object):
     def __init__(self):
-        super(SinglePathExplorer, self).__init__()
+        super(SinglePathTrimmer, self).__init__()
 
-    def explore(self, graph, visitor):
-        visitor.visit_begin_graph(graph)
-
-        # Keep track of visited nodes in order to avoid loops.
-        visited = set()
+    def trim(self, graph):
+        visited_nodes = set()
         node_id = graph.root_id
         while True:
-            visited.add(node_id)
+            visited_nodes.add(node_id)
             node = graph.nodes[node_id]
-            logging.debug('Visiting ' + node_id)
-            visitor.visit_node(node)
-            if len(node.successors) == 0:
+            if len(node.successors) > 0:
+                succ_id = node.successors[0]
+                succ = graph.nodes[succ_id]
+                node.successors = [succ_id]
+                succ.predecessors = [node_id]
+                if succ_id in visited_nodes:
+                    break
+                node_id = succ_id
+            else:
                 break
-
-            succ_id = node.successors[0]
-            succ = graph.nodes[succ_id]
-            logging.debug('Visiting edge: %s -> %s ' % (node_id, succ_id))
-            visitor.visit_edge(node, succ)
-            if succ_id in visited:
-                break
-
-            node_id = succ_id
-
-        visitor.visit_end_of_graph()
+        graph.nodes = {node_id: graph.nodes[node_id]
+                       for node_id in visited_nodes}
 
 
 #===-----------------------------------------------------------------------===#
@@ -960,9 +959,17 @@ def main():
             raw_line = raw_line.strip()
             graph.add_raw_line(raw_line)
 
-    explorer = SinglePathExplorer() if args.single_path else BasicExplorer()
+    trimmers = []
+    if args.single_path:
+        trimmers.append(SinglePathTrimmer())
+
+    explorer = BasicExplorer()
+
     visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology,
                              args.dump_dot_only)
+
+    for trimmer in trimmers:
+        trimmer.trim(graph)
 
     explorer.explore(graph, visitor)
 
