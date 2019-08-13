@@ -841,7 +841,7 @@ namespace {
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
 class ReturnVisitor : public BugReporterVisitor {
-  const StackFrameContext *StackFrame;
+  const StackFrameContext *CalleeSFC;
   enum {
     Initial,
     MaybeUnsuppress,
@@ -853,10 +853,9 @@ class ReturnVisitor : public BugReporterVisitor {
   AnalyzerOptions& Options;
 
 public:
-  ReturnVisitor(const StackFrameContext *Frame,
-                bool Suppressed,
+  ReturnVisitor(const StackFrameContext *Frame, bool Suppressed,
                 AnalyzerOptions &Options)
-      : StackFrame(Frame), EnableNullFPSuppression(Suppressed),
+      : CalleeSFC(Frame), EnableNullFPSuppression(Suppressed),
         Options(Options) {}
 
   static void *getTag() {
@@ -866,7 +865,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.AddPointer(ReturnVisitor::getTag());
-    ID.AddPointer(StackFrame);
+    ID.AddPointer(CalleeSFC);
     ID.AddBoolean(EnableNullFPSuppression);
   }
 
@@ -950,7 +949,6 @@ public:
       if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
-    BR.markInteresting(CalleeContext);
     BR.addVisitor(llvm::make_unique<ReturnVisitor>(CalleeContext,
                                                    EnableNullFPSuppression,
                                                    Options));
@@ -960,7 +958,7 @@ public:
                                           BugReporterContext &BRC,
                                           BugReport &BR) {
     // Only print a message at the interesting return statement.
-    if (N->getLocationContext() != StackFrame)
+    if (N->getLocationContext() != CalleeSFC)
       return nullptr;
 
     Optional<StmtPoint> SP = N->getLocationAs<StmtPoint>();
@@ -974,7 +972,7 @@ public:
     // Okay, we're at the right return statement, but do we have the return
     // value available?
     ProgramStateRef State = N->getState();
-    SVal V = State->getSVal(Ret, StackFrame);
+    SVal V = State->getSVal(Ret, CalleeSFC);
     if (V.isUnknownOrUndef())
       return nullptr;
 
@@ -1008,6 +1006,8 @@ public:
     SmallString<64> Msg;
     llvm::raw_svector_ostream Out(Msg);
 
+    bool WouldEventBeMeaningless = false;
+
     if (State->isNull(V).isConstrainedTrue()) {
       if (V.getAs<Loc>()) {
 
@@ -1030,10 +1030,19 @@ public:
     } else {
       if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
         Out << "Returning the value " << CI->getValue();
-      } else if (V.getAs<Loc>()) {
-        Out << "Returning pointer";
       } else {
-        Out << "Returning value";
+        // There is nothing interesting about returning a value, when it is
+        // plain value without any constraints, and the function is guaranteed
+        // to return that every time. We could use CFG::isLinear() here, but
+        // constexpr branches are obvious to the compiler, not necesserily to
+        // the programmer.
+        if (N->getCFG().size() == 3)
+          WouldEventBeMeaningless = true;
+
+        if (V.getAs<Loc>())
+          Out << "Returning pointer";
+        else
+          Out << "Returning value";
       }
     }
 
@@ -1052,11 +1061,20 @@ public:
           Out << " (loaded from '" << *DD << "')";
     }
 
-    PathDiagnosticLocation L(Ret, BRC.getSourceManager(), StackFrame);
+    PathDiagnosticLocation L(Ret, BRC.getSourceManager(), CalleeSFC);
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
-    return std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
+    auto EventPiece = std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
+
+    // If we determined that the note is meaningless, make it prunable, and
+    // don't mark the stackframe interesting.
+    if (WouldEventBeMeaningless)
+      EventPiece->setPrunable(true);
+    else
+      BR.markInteresting(CalleeSFC);
+
+    return EventPiece;
   }
 
   PathDiagnosticPieceRef visitNodeMaybeUnsuppress(const ExplodedNode *N,
@@ -1071,7 +1089,7 @@ public:
     if (!CE)
       return nullptr;
 
-    if (CE->getCalleeContext() != StackFrame)
+    if (CE->getCalleeContext() != CalleeSFC)
       return nullptr;
 
     Mode = Satisfied;
@@ -1083,7 +1101,7 @@ public:
     CallEventManager &CallMgr = StateMgr.getCallEventManager();
 
     ProgramStateRef State = N->getState();
-    CallEventRef<> Call = CallMgr.getCaller(StackFrame, State);
+    CallEventRef<> Call = CallMgr.getCaller(CalleeSFC, State);
     for (unsigned I = 0, E = Call->getNumArgs(); I != E; ++I) {
       Optional<Loc> ArgV = Call->getArgSVal(I).getAs<Loc>();
       if (!ArgV)
@@ -1126,7 +1144,7 @@ public:
   void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
                        BugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
-      BR.markInvalid(ReturnVisitor::getTag(), StackFrame);
+      BR.markInvalid(ReturnVisitor::getTag(), CalleeSFC);
   }
 };
 

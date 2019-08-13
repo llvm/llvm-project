@@ -119,7 +119,7 @@ namespace variable_declaration_in_condition {
 bool coin();
 
 bool foo() {
-  return coin(); // tracking-note{{Returning value}}
+  return coin();
 }
 
 int bar;
@@ -127,12 +127,10 @@ int bar;
 void test() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
 
-  if (int flag = foo()) // tracking-note{{Calling 'foo'}}
-                        // tracking-note@-1{{Returning from 'foo'}}
-                        // tracking-note@-2{{'flag' initialized here}}
-                        // debug-note@-3{{Tracking condition 'flag'}}
-                        // expected-note@-4{{Assuming 'flag' is not equal to 0}}
-                        // expected-note@-5{{Taking true branch}}
+  if (int flag = foo()) // tracking-note{{'flag' initialized here}}
+                        // debug-note@-1{{Tracking condition 'flag'}}
+                        // expected-note@-2{{Assuming 'flag' is not equal to 0}}
+                        // expected-note@-3{{Taking true branch}}
 
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
@@ -143,39 +141,114 @@ namespace conversion_to_bool {
 bool coin();
 
 struct ConvertsToBool {
-  operator bool() const { return coin(); } // tracking-note{{Returning value}}
+  operator bool() const { return coin(); }
 };
 
 void test() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
 
   if (ConvertsToBool())
-    // tracking-note@-1 {{Calling 'ConvertsToBool::operator bool'}}
-    // tracking-note@-2{{Returning from 'ConvertsToBool::operator bool'}}
-    // debug-note@-3{{Tracking condition 'ConvertsToBool()'}}
-    // expected-note@-4{{Assuming the condition is true}}
-    // expected-note@-5{{Taking true branch}}
+    // debug-note@-1{{Tracking condition 'ConvertsToBool()'}}
+    // expected-note@-2{{Assuming the condition is true}}
+    // expected-note@-3{{Taking true branch}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
 
 } // end of namespace variable_declaration_in_condition
 
+namespace important_returning_pointer_loaded_from {
+bool coin();
+
+int *getIntPtr();
+
+void storeValue(int **i) {
+  *i = getIntPtr(); // tracking-note{{Value assigned to 'i'}}
+}
+
+int *conjurePointer() {
+  int *i;
+  storeValue(&i); // tracking-note{{Calling 'storeValue'}}
+                  // tracking-note@-1{{Returning from 'storeValue'}}
+  return i;       // tracking-note{{Returning pointer (loaded from 'i')}}
+}
+
+void f(int *ptr) {
+  if (ptr) // expected-note{{Assuming 'ptr' is null}}
+           // expected-note@-1{{Taking false branch}}
+    ;
+  if (!conjurePointer())
+    // tracking-note@-1{{Calling 'conjurePointer'}}
+    // tracking-note@-2{{Returning from 'conjurePointer'}}
+    // debug-note@-3{{Tracking condition '!conjurePointer()'}}
+    // expected-note@-4{{Assuming the condition is true}}
+    // expected-note@-5{{Taking true branch}}
+    *ptr = 5; // expected-warning{{Dereference of null pointer}}
+              // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace important_returning_pointer_loaded_from
+
+namespace unimportant_returning_pointer_loaded_from {
+bool coin();
+
+int *getIntPtr();
+
+int *conjurePointer() {
+  int *i = getIntPtr(); // tracking-note{{'i' initialized here}}
+  return i;             // tracking-note{{Returning pointer (loaded from 'i')}}
+}
+
+void f(int *ptr) {
+  if (ptr) // expected-note{{Assuming 'ptr' is null}}
+           // expected-note@-1{{Taking false branch}}
+    ;
+  if (!conjurePointer())
+    // tracking-note@-1{{Calling 'conjurePointer'}}
+    // tracking-note@-2{{Returning from 'conjurePointer'}}
+    // debug-note@-3{{Tracking condition '!conjurePointer()'}}
+    // expected-note@-4{{Assuming the condition is true}}
+    // expected-note@-5{{Taking true branch}}
+    *ptr = 5; // expected-warning{{Dereference of null pointer}}
+              // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace unimportant_returning_pointer_loaded_from
+
+namespace unimportant_returning_pointer_loaded_from_through_cast {
+
+void *conjure();
+
+int *cast(void *P) {
+  return static_cast<int *>(P);
+}
+
+void f() {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  if (cast(conjure()))
+    // tracking-note@-1{{Passing value via 1st parameter 'P'}}
+    // debug-note@-2{{Tracking condition 'cast(conjure())'}}
+    // expected-note@-3{{Assuming the condition is false}}
+    // expected-note@-4{{Taking false branch}}
+    return;
+  *x = 5; // expected-warning{{Dereference of null pointer}}
+          // expected-note@-1{{Dereference of null pointer}}
+}
+
+} // end of namespace unimportant_returning_pointer_loaded_from_through_cast
+
 namespace unimportant_returning_value_note {
 bool coin();
 
-bool flipCoin() { return coin(); } // tracking-note{{Returning value}}
+bool flipCoin() { return coin(); }
 
 void i(int *ptr) {
   if (ptr) // expected-note{{Assuming 'ptr' is null}}
            // expected-note@-1{{Taking false branch}}
     ;
   if (!flipCoin())
-    // tracking-note@-1{{Calling 'flipCoin'}}
-    // tracking-note@-2{{Returning from 'flipCoin'}}
-    // debug-note@-3{{Tracking condition '!flipCoin()'}}
-    // expected-note@-4{{Assuming the condition is true}}
-    // expected-note@-5{{Taking true branch}}
+    // debug-note@-1{{Tracking condition '!flipCoin()'}}
+    // expected-note@-2{{Assuming the condition is true}}
+    // expected-note@-3{{Taking true branch}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -206,6 +279,36 @@ void i(int *ptr) {
               // expected-note@-1{{Dereference of null pointer}}
 }
 } // end of namespace important_returning_value_note
+
+namespace important_returning_value_note_in_linear_function {
+bool coin();
+
+struct super_complicated_template_hackery {
+  static constexpr bool value = false;
+};
+
+bool flipCoin() {
+  if (super_complicated_template_hackery::value)
+    // tracking-note@-1{{'value' is false}}
+    // tracking-note@-2{{Taking false branch}}
+    return true;
+  return coin(); // tracking-note{{Returning value}}
+}
+
+void i(int *ptr) {
+  if (ptr) // expected-note{{Assuming 'ptr' is null}}
+           // expected-note@-1{{Taking false branch}}
+    ;
+  if (!flipCoin())
+    // tracking-note@-1{{Calling 'flipCoin'}}
+    // tracking-note@-2{{Returning from 'flipCoin'}}
+    // debug-note@-3{{Tracking condition '!flipCoin()'}}
+    // expected-note@-4{{Assuming the condition is true}}
+    // expected-note@-5{{Taking true branch}}
+    *ptr = 5; // expected-warning{{Dereference of null pointer}}
+              // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace important_returning_value_note_in_linear_function
 
 namespace tracked_condition_is_only_initialized {
 int getInt();
