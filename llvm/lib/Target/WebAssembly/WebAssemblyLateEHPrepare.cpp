@@ -131,7 +131,7 @@ bool WebAssemblyLateEHPrepare::addCatches(MachineFunction &MF) {
       auto InsertPos = MBB.begin();
       if (InsertPos->isEHLabel()) // EH pad starts with an EH label
         ++InsertPos;
-      unsigned DstReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
+      Register DstReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
       BuildMI(MBB, InsertPos, MBB.begin()->getDebugLoc(),
               TII.get(WebAssembly::CATCH), DstReg);
     }
@@ -168,7 +168,7 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       if (CatchPos->isEHLabel()) // EH pad starts with an EH label
         ++CatchPos;
       MachineInstr *Catch = &*CatchPos;
-      unsigned ExnReg = Catch->getOperand(0).getReg();
+      Register ExnReg = Catch->getOperand(0).getReg();
       BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
           .addReg(ExnReg);
       TI->eraseFromParent();
@@ -293,7 +293,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     // thenbb:
     //   %exn:i32 = extract_exception
     //   ... use exn ...
-    unsigned ExnReg = Catch->getOperand(0).getReg();
+    Register ExnReg = Catch->getOperand(0).getReg();
     auto *ThenMBB = MF.CreateMachineBasicBlock();
     auto *ElseMBB = MF.CreateMachineBasicBlock();
     MF.insert(std::next(MachineFunction::iterator(EHPad)), ElseMBB);

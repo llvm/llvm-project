@@ -830,6 +830,7 @@ private:
   SDValue WidenVecRes_Ternary(SDNode *N);
   SDValue WidenVecRes_Binary(SDNode *N);
   SDValue WidenVecRes_BinaryCanTrap(SDNode *N);
+  SDValue WidenVecRes_BinaryWithExtraScalarOp(SDNode *N);
   SDValue WidenVecRes_StrictFP(SDNode *N);
   SDValue WidenVecRes_OverflowOp(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_Convert(SDNode *N);

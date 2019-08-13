@@ -26,7 +26,7 @@ bb1:                                              ; preds = %bb
 
 bb2:                                              ; preds = %bb1, %entry
 ; CHECK: cmp [[REG]], #0
-; CHECK: ble
+; CHECK: bgt
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %entry ]
   %tries.0 = sub i32 2147483647, %indvar
   %tmp1 = icmp sgt i32 %tries.0, 0

@@ -82,7 +82,7 @@ void RISCVFrameLowering::adjustReg(MachineBasicBlock &MBB,
       Opc = RISCV::SUB;
     }
 
-    unsigned ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     TII->movImm32(MBB, MBBI, DL, ScratchReg, Val, Flag);
     BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
         .addReg(SrcReg)
@@ -230,7 +230,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     // To find the instruction restoring FP from stack.
     for (auto &I = LastFrameDestroy; I != MBBI; ++I) {
       if (I->mayLoad() && I->getOperand(0).isReg()) {
-        unsigned DestReg = I->getOperand(0).getReg();
+        Register DestReg = I->getOperand(0).getReg();
         if (DestReg == FPReg) {
           // If there is frame pointer, after restoring $fp registers, we
           // need adjust CFA to ($sp - FPOffset).

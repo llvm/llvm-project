@@ -3,19 +3,19 @@
 
 ; SI-LABEL: {{^}}i1_copy_from_loop:
 ;
+; SI: ; %Flow
+; SI-DAG:  s_andn2_b64       [[LCSSA_ACCUM:s\[[0-9]+:[0-9]+\]]], [[LCSSA_ACCUM]], exec
+; SI-DAG:  s_and_b64         [[CC_MASK2:s\[[0-9]+:[0-9]+\]]], [[CC_ACCUM:s\[[0-9]+:[0-9]+\]]], exec
+; SI:      s_or_b64          [[LCSSA_ACCUM]], [[LCSSA_ACCUM]], [[CC_MASK2]]
+
 ; SI: ; %for.body
 ; SI:      v_cmp_gt_u32_e64  [[CC_SREG:s\[[0-9]+:[0-9]+\]]], 4,
-; SI-DAG:  s_andn2_b64       [[CC_ACCUM:s\[[0-9]+:[0-9]+\]]], [[CC_ACCUM]], exec
+; SI-DAG:  s_andn2_b64       [[CC_ACCUM]], [[CC_ACCUM]], exec
 ; SI-DAG:  s_and_b64         [[CC_MASK:s\[[0-9]+:[0-9]+\]]], [[CC_SREG]], exec
 ; SI:      s_or_b64          [[CC_ACCUM]], [[CC_ACCUM]], [[CC_MASK]]
 
 ; SI: ; %Flow1
 ; SI:      s_or_b64          [[CC_ACCUM]], [[CC_ACCUM]], exec
-
-; SI: ; %Flow
-; SI-DAG:  s_andn2_b64       [[LCSSA_ACCUM:s\[[0-9]+:[0-9]+\]]], [[LCSSA_ACCUM]], exec
-; SI-DAG:  s_and_b64         [[CC_MASK2:s\[[0-9]+:[0-9]+\]]], [[CC_ACCUM]], exec
-; SI:      s_or_b64          [[LCSSA_ACCUM]], [[LCSSA_ACCUM]], [[CC_MASK2]]
 
 ; SI: ; %for.end
 ; SI:      s_and_saveexec_b64 {{s\[[0-9]+:[0-9]+\]}}, [[LCSSA_ACCUM]]

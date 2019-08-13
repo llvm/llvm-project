@@ -236,7 +236,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   uint32_t AccessInfo = MI.getOperand(1).getImm();
   MCSymbol *&Sym = HwasanMemaccessSymbols[{Reg, AccessInfo}];
   if (!Sym) {
@@ -485,7 +485,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
   default:
     llvm_unreachable("<unknown operand type>");
   case MachineOperand::MO_Register: {
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     assert(Register::isPhysicalRegister(Reg));
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
     O << AArch64InstPrinter::getRegisterName(Reg);
@@ -509,7 +509,7 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
 
 bool AArch64AsmPrinter::printAsmMRegister(const MachineOperand &MO, char Mode,
                                           raw_ostream &O) {
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   switch (Mode) {
   default:
     return true; // Unknown mode.
@@ -533,7 +533,7 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
                                            bool isVector, raw_ostream &O) {
   assert(MO.isReg() && "Should only get here with a register!");
   const TargetRegisterInfo *RI = STI->getRegisterInfo();
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   unsigned RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
   assert(RI->regsOverlap(RegToPrint, Reg));
   O << AArch64InstPrinter::getRegisterName(
@@ -604,7 +604,7 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
   // According to ARM, we should emit x and v registers unless we have a
   // modifier.
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
 
     // If this is a w or x register, print an x register.
     if (AArch64::GPR32allRegClass.contains(Reg) ||
@@ -724,12 +724,12 @@ void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
 ///             add xDest, xDest, xScratch, lsl #2
 void AArch64AsmPrinter::LowerJumpTableDestSmall(llvm::MCStreamer &OutStreamer,
                                                 const llvm::MachineInstr &MI) {
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned ScratchReg = MI.getOperand(1).getReg();
-  unsigned ScratchRegW =
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg = MI.getOperand(1).getReg();
+  Register ScratchRegW =
       STI->getRegisterInfo()->getSubReg(ScratchReg, AArch64::sub_32);
-  unsigned TableReg = MI.getOperand(2).getReg();
-  unsigned EntryReg = MI.getOperand(3).getReg();
+  Register TableReg = MI.getOperand(2).getReg();
+  Register EntryReg = MI.getOperand(3).getReg();
   int JTIdx = MI.getOperand(4).getIndex();
   bool IsByteEntry = MI.getOpcode() == AArch64::JumpTableDest8;
 
@@ -799,7 +799,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   if (CallTarget) {
     assert((CallTarget & 0xFFFFFFFFFFFF) == CallTarget &&
            "High 16 bits of call target should be zero.");
-    unsigned ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
+    Register ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
     EncodedBytes = 16;
     // Materialize the jump address:
     EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVZXi)
@@ -829,7 +829,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 }
 
 void AArch64AsmPrinter::EmitFMov0(const MachineInstr &MI) {
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   if (STI->hasZeroCycleZeroingFP() && !STI->hasZeroCycleZeroingFPWorkaround()) {
     // Convert H/S/D register to corresponding Q register
     if (AArch64::H0 <= DestReg && DestReg <= AArch64::H31)
@@ -893,32 +893,32 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   default:
     break;
     case AArch64::MOVMCSym: {
-    unsigned DestReg = MI->getOperand(0).getReg();
-    const MachineOperand &MO_Sym = MI->getOperand(1);
-    MachineOperand Hi_MOSym(MO_Sym), Lo_MOSym(MO_Sym);
-    MCOperand Hi_MCSym, Lo_MCSym;
+      Register DestReg = MI->getOperand(0).getReg();
+      const MachineOperand &MO_Sym = MI->getOperand(1);
+      MachineOperand Hi_MOSym(MO_Sym), Lo_MOSym(MO_Sym);
+      MCOperand Hi_MCSym, Lo_MCSym;
 
-    Hi_MOSym.setTargetFlags(AArch64II::MO_G1 | AArch64II::MO_S);
-    Lo_MOSym.setTargetFlags(AArch64II::MO_G0 | AArch64II::MO_NC);
+      Hi_MOSym.setTargetFlags(AArch64II::MO_G1 | AArch64II::MO_S);
+      Lo_MOSym.setTargetFlags(AArch64II::MO_G0 | AArch64II::MO_NC);
 
-    MCInstLowering.lowerOperand(Hi_MOSym, Hi_MCSym);
-    MCInstLowering.lowerOperand(Lo_MOSym, Lo_MCSym);
+      MCInstLowering.lowerOperand(Hi_MOSym, Hi_MCSym);
+      MCInstLowering.lowerOperand(Lo_MOSym, Lo_MCSym);
 
-    MCInst MovZ;
-    MovZ.setOpcode(AArch64::MOVZXi);
-    MovZ.addOperand(MCOperand::createReg(DestReg));
-    MovZ.addOperand(Hi_MCSym);
-    MovZ.addOperand(MCOperand::createImm(16));
-    EmitToStreamer(*OutStreamer, MovZ);
+      MCInst MovZ;
+      MovZ.setOpcode(AArch64::MOVZXi);
+      MovZ.addOperand(MCOperand::createReg(DestReg));
+      MovZ.addOperand(Hi_MCSym);
+      MovZ.addOperand(MCOperand::createImm(16));
+      EmitToStreamer(*OutStreamer, MovZ);
 
-    MCInst MovK;
-    MovK.setOpcode(AArch64::MOVKXi);
-    MovK.addOperand(MCOperand::createReg(DestReg));
-    MovK.addOperand(MCOperand::createReg(DestReg));
-    MovK.addOperand(Lo_MCSym);
-    MovK.addOperand(MCOperand::createImm(0));
-    EmitToStreamer(*OutStreamer, MovK);
-    return;
+      MCInst MovK;
+      MovK.setOpcode(AArch64::MOVKXi);
+      MovK.addOperand(MCOperand::createReg(DestReg));
+      MovK.addOperand(MCOperand::createReg(DestReg));
+      MovK.addOperand(Lo_MCSym);
+      MovK.addOperand(MCOperand::createImm(0));
+      EmitToStreamer(*OutStreamer, MovK);
+      return;
   }
   case AArch64::MOVIv2d_ns:
     // If the target has <rdar://problem/16473581>, lower this

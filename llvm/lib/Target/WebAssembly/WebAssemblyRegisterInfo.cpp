@@ -91,7 +91,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   if (MI.getOpcode() == WebAssembly::ADD_I32) {
     MachineOperand &OtherMO = MI.getOperand(3 - FIOperandNum);
     if (OtherMO.isReg()) {
-      unsigned OtherMOReg = OtherMO.getReg();
+      Register OtherMOReg = OtherMO.getReg();
       if (Register::isVirtualRegister(OtherMOReg)) {
         MachineInstr *Def = MF.getRegInfo().getUniqueVRegDef(OtherMOReg);
         // TODO: For now we just opportunistically do this in the case where
@@ -117,7 +117,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     // Create i32.add SP, offset and make it the operand.
     const TargetRegisterClass *PtrRC =
         MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
-    unsigned OffsetOp = MRI.createVirtualRegister(PtrRC);
+    Register OffsetOp = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::CONST_I32),
             OffsetOp)
         .addImm(FrameOffset);

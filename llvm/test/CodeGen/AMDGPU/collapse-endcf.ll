@@ -230,6 +230,11 @@ bb.end:                                           ; preds = %bb.then, %bb
 ; Make sure scc liveness is updated if sor_b64 is removed
 ; ALL-LABEL: {{^}}scc_liveness:
 
+; GCN: %bb10
+; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
+; GCN: s_andn2_b64
+; GCN-NEXT: s_cbranch_execz
+
 ; GCN: [[BB1_LOOP:BB[0-9]+_[0-9]+]]:
 ; GCN: s_andn2_b64 exec, exec,
 ; GCN-NEXT: s_cbranch_execnz [[BB1_LOOP]]
@@ -238,10 +243,6 @@ bb.end:                                           ; preds = %bb.then, %bb
 ; GCN: s_and_b64 exec, exec, {{vcc|s\[[0-9:]+\]}}
 
 ; GCN-NOT: s_or_b64 exec, exec
-
-; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
-; GCN: s_andn2_b64
-; GCN-NEXT: s_cbranch_execnz
 
 ; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: buffer_store_dword

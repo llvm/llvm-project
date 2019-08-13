@@ -29,8 +29,9 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
-                                 InfoType::IT_namespace);
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+                                 InfoType::IT_namespace, "path/to/A/Namespace");
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "path/to/A/Namespace");
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
   I.ChildEnums.emplace_back();
@@ -53,9 +54,11 @@ Namespace:
 ChildNamespaces:
   - Type:            Namespace
     Name:            'ChildNamespace'
+    Path:            'path/to/A/Namespace'
 ChildRecords:
   - Type:            Record
     Name:            'ChildStruct'
+    Path:            'path/to/A/Namespace'
 ChildFunctions:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
@@ -71,7 +74,7 @@ ChildEnums:
 TEST(YAMLGeneratorTest, emitRecordYAML) {
   RecordInfo I;
   I.Name = "r";
-  I.Path = "path/to/r";
+  I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
@@ -85,7 +88,8 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
                                 "path/to/G");
 
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "path/to/A/r");
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
   I.ChildEnums.emplace_back();
@@ -101,7 +105,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'r'
-Path:            'path/to/r'
+Path:            'path/to/A'
 Namespace:
   - Type:            Namespace
     Name:            'A'
@@ -129,6 +133,7 @@ VirtualParents:
 ChildRecords:
   - Type:            Record
     Name:            'ChildStruct'
+    Path:            'path/to/A/r'
 ChildFunctions:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'

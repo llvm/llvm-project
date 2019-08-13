@@ -6452,17 +6452,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512F-NEXT:    vpminsw %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpminsw %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408,65408]
-; AVX512F-NEXT:    vpmaxsw %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaxsw %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512F-NEXT:    vpmovmskb %ymm2, %eax
 ; AVX512F-NEXT:    notl %eax
 ; AVX512F-NEXT:    testb $1, %al
@@ -7200,10 +7191,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; AVX512F-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmaxsw {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX512F-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX512F-NEXT:    testb $1, %al
@@ -7558,8 +7547,6 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %p, <8 x i16> %mask) 
 ; AVX512F-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    vpminsw {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpmaxsw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al

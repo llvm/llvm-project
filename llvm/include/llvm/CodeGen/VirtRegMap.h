@@ -49,7 +49,7 @@ class TargetInstrInfo;
     /// it; even spilled virtual registers (the register mapped to a
     /// spilled register is the temporary used to load it from the
     /// stack).
-    IndexedMap<unsigned, VirtReg2IndexFunctor> Virt2PhysMap;
+    IndexedMap<Register, VirtReg2IndexFunctor> Virt2PhysMap;
 
     /// Virt2StackSlotMap - This is virtual register to stack slot
     /// mapping. Each spilled virtual register has an entry in it
@@ -93,7 +93,7 @@ class TargetInstrInfo;
 
     /// returns true if the specified virtual register is
     /// mapped to a physical register
-    bool hasPhys(unsigned virtReg) const {
+    bool hasPhys(Register virtReg) const {
       return getPhys(virtReg) != NO_PHYS_REG;
     }
 
@@ -101,20 +101,20 @@ class TargetInstrInfo;
     /// virtual register
     Register getPhys(Register virtReg) const {
       assert(virtReg.isVirtual());
-      return Virt2PhysMap[virtReg];
+      return Virt2PhysMap[virtReg.id()];
     }
 
     /// creates a mapping for the specified virtual register to
     /// the specified physical register
-    void assignVirt2Phys(unsigned virtReg, MCPhysReg physReg);
+    void assignVirt2Phys(Register virtReg, MCPhysReg physReg);
 
     /// clears the specified virtual register's, physical
     /// register mapping
-    void clearVirt(unsigned virtReg) {
-      assert(Register::isVirtualRegister(virtReg));
-      assert(Virt2PhysMap[virtReg] != NO_PHYS_REG &&
+    void clearVirt(Register virtReg) {
+      assert(virtReg.isVirtual());
+      assert(Virt2PhysMap[virtReg.id()] != NO_PHYS_REG &&
              "attempt to clear a not assigned virtual register");
-      Virt2PhysMap[virtReg] = NO_PHYS_REG;
+      Virt2PhysMap[virtReg.id()] = NO_PHYS_REG;
     }
 
     /// clears all virtual to physical register mappings
@@ -124,21 +124,21 @@ class TargetInstrInfo;
     }
 
     /// returns true if VirtReg is assigned to its preferred physreg.
-    bool hasPreferredPhys(unsigned VirtReg);
+    bool hasPreferredPhys(Register VirtReg);
 
     /// returns true if VirtReg has a known preferred register.
     /// This returns false if VirtReg has a preference that is a virtual
     /// register that hasn't been assigned yet.
-    bool hasKnownPreference(unsigned VirtReg);
+    bool hasKnownPreference(Register VirtReg);
 
     /// records virtReg is a split live interval from SReg.
-    void setIsSplitFromReg(unsigned virtReg, unsigned SReg) {
-      Virt2SplitMap[virtReg] = SReg;
+    void setIsSplitFromReg(Register virtReg, unsigned SReg) {
+      Virt2SplitMap[virtReg.id()] = SReg;
     }
 
     /// returns the live interval virtReg is split from.
-    unsigned getPreSplitReg(unsigned virtReg) const {
-      return Virt2SplitMap[virtReg];
+    unsigned getPreSplitReg(Register virtReg) const {
+      return Virt2SplitMap[virtReg.id()];
     }
 
     /// getOriginal - Return the original virtual register that VirtReg descends
@@ -152,28 +152,29 @@ class TargetInstrInfo;
 
     /// returns true if the specified virtual register is not
     /// mapped to a stack slot or rematerialized.
-    bool isAssignedReg(unsigned virtReg) const {
+    bool isAssignedReg(Register virtReg) const {
       if (getStackSlot(virtReg) == NO_STACK_SLOT)
         return true;
       // Split register can be assigned a physical register as well as a
       // stack slot or remat id.
-      return (Virt2SplitMap[virtReg] && Virt2PhysMap[virtReg] != NO_PHYS_REG);
+      return (Virt2SplitMap[virtReg.id()] &&
+              Virt2PhysMap[virtReg.id()] != NO_PHYS_REG);
     }
 
     /// returns the stack slot mapped to the specified virtual
     /// register
-    int getStackSlot(unsigned virtReg) const {
-      assert(Register::isVirtualRegister(virtReg));
-      return Virt2StackSlotMap[virtReg];
+    int getStackSlot(Register virtReg) const {
+      assert(virtReg.isVirtual());
+      return Virt2StackSlotMap[virtReg.id()];
     }
 
     /// create a mapping for the specifed virtual register to
     /// the next available stack slot
-    int assignVirt2StackSlot(unsigned virtReg);
+    int assignVirt2StackSlot(Register virtReg);
 
     /// create a mapping for the specified virtual register to
     /// the specified stack slot
-    void assignVirt2StackSlot(unsigned virtReg, int SS);
+    void assignVirt2StackSlot(Register virtReg, int SS);
 
     void print(raw_ostream &OS, const Module* M = nullptr) const override;
     void dump() const;

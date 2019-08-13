@@ -173,6 +173,10 @@ PROC(IcelakeClient, "icelake-client", PROC_64_BIT)
 /// Icelake server microarchitecture based processors.
 PROC(IcelakeServer, "icelake-server", PROC_64_BIT)
 
+/// \name Tigerlake
+/// Tigerlake microarchitecture based processors.
+PROC(Tigerlake, "tigerlake", PROC_64_BIT)
+
 /// \name Knights Landing
 /// Knights Landing processor.
 PROC_WITH_FEAT(KNL, "knl", PROC_64_BIT, FEATURE_AVX512F)
@@ -297,6 +301,7 @@ FEATURE(FEATURE_VPCLMULQDQ)
 FEATURE(FEATURE_AVX512VNNI)
 FEATURE(FEATURE_AVX512BITALG)
 FEATURE(FEATURE_AVX512BF16)
+FEATURE(FEATURE_AVX512VP2INTERSECT)
 
 
 // FIXME: When commented out features are supported in LLVM, enable them here.

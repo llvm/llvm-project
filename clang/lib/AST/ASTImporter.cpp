@@ -5082,11 +5082,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (IsStructuralMatch(D, FoundTemplate)) {
           ClassTemplateDecl *TemplateWithDef =
               getTemplateDefinition(FoundTemplate);
-          if (D->isThisDeclarationADefinition() && TemplateWithDef) {
+          if (D->isThisDeclarationADefinition() && TemplateWithDef)
             return Importer.MapImported(D, TemplateWithDef);
-          }
-          FoundByLookup = FoundTemplate;
-          break;
+          if (!FoundByLookup)
+            FoundByLookup = FoundTemplate;
+          // Search in all matches because there may be multiple decl chains,
+          // see ASTTests test ImportExistingFriendClassTemplateDef.
+          continue;
         }
       }
 

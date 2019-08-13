@@ -11,9 +11,13 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; WIDE-NEXT:    jmp .LBB0_1
 ; WIDE-NEXT:    .p2align 4, 0x90
-; WIDE-NEXT:  .LBB0_2: # %forbody
+; WIDE-NEXT:  .LBB0_1: # %forcond
+; WIDE-NEXT:    # =>This Inner Loop Header: Depth=1
+; WIDE-NEXT:    movl (%esp), %eax
+; WIDE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; WIDE-NEXT:    jge .LBB0_3
+; WIDE-NEXT:  # %bb.2: # %forbody
 ; WIDE-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; WIDE-NEXT:    movl (%esp), %eax
 ; WIDE-NEXT:    leal (,%eax,8), %ecx
@@ -30,12 +34,8 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    psubb %xmm2, %xmm3
 ; WIDE-NEXT:    movq %xmm3, (%edx,%eax,8)
 ; WIDE-NEXT:    incl (%esp)
-; WIDE-NEXT:  .LBB0_1: # %forcond
-; WIDE-NEXT:    # =>This Inner Loop Header: Depth=1
-; WIDE-NEXT:    movl (%esp), %eax
-; WIDE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; WIDE-NEXT:    jl .LBB0_2
-; WIDE-NEXT:  # %bb.3: # %afterfor
+; WIDE-NEXT:    jmp .LBB0_1
+; WIDE-NEXT:  .LBB0_3: # %afterfor
 ; WIDE-NEXT:    addl $12, %esp
 ; WIDE-NEXT:    retl
 entry:

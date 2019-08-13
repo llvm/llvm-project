@@ -51,11 +51,12 @@ public:
     void RecordDeallocation(options::Backtrace_t Backtrace);
 
     struct CallSiteInfo {
-      // The backtrace to the allocation/deallocation. If the first value is
-      // zero, we did not collect a trace.
+      // The backtrace to the allocation/deallocation.
       uintptr_t Trace[kMaximumStackFrames] = {};
       // The thread ID for this trace, or kInvalidThreadID if not available.
       uint64_t ThreadID = kInvalidThreadID;
+      // The length of the trace. Zero indicates that no trace was collected.
+      size_t TraceLength = 0;
     };
 
     // The address of this allocation.

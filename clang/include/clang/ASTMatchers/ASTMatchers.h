@@ -2611,8 +2611,9 @@ hasOverloadedOperatorName(StringRef Name) {
       AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>(Name);
 }
 
-/// Matches C++ classes that are directly or indirectly derived from
-/// a class matching \c Base.
+/// Matches C++ classes that are directly or indirectly derived from a class
+/// matching \c Base, or Objective-C classes that directly or indirectly
+/// subclass a class matching \c Base.
 ///
 /// Note that a class is not considered to be derived from itself.
 ///
@@ -2632,36 +2633,80 @@ hasOverloadedOperatorName(StringRef Name) {
 ///   typedef Foo X;
 ///   class Bar : public Foo {};  // derived from a type that X is a typedef of
 /// \endcode
-AST_MATCHER_P(CXXRecordDecl, isDerivedFrom,
-              internal::Matcher<NamedDecl>, Base) {
-  return Finder->classIsDerivedFrom(&Node, Base, Builder, /*Directly=*/false);
+///
+/// In the following example, Bar matches isDerivedFrom(hasName("NSObject"))
+/// \code
+///   @interface NSObject @end
+///   @interface Bar : NSObject @end
+/// \endcode
+///
+/// Usable as: Matcher<CXXRecordDecl>, Matcher<ObjCInterfaceDecl>
+AST_POLYMORPHIC_MATCHER_P(
+    isDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    internal::Matcher<NamedDecl>, Base) {
+  // Check if the node is a C++ struct/union/class.
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Finder->classIsDerivedFrom(RD, Base, Builder, /*Directly=*/false);
+
+  // The node must be an Objective-C class.
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Finder->objcClassIsDerivedFrom(InterfaceDecl, Base, Builder,
+                                        /*Directly=*/false);
 }
 
 /// Overloaded method as shortcut for \c isDerivedFrom(hasName(...)).
-AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDerivedFrom, std::string, BaseName, 1) {
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    isDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    std::string, BaseName, 1) {
   if (BaseName.empty())
     return false;
-  return isDerivedFrom(hasName(BaseName)).matches(Node, Finder, Builder);
+
+  const auto M = isDerivedFrom(hasName(BaseName));
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Matcher<CXXRecordDecl>(M).matches(*RD, Finder, Builder);
+
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
 }
 
 /// Similar to \c isDerivedFrom(), but also matches classes that directly
 /// match \c Base.
-AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isSameOrDerivedFrom,
-                       internal::Matcher<NamedDecl>, Base, 0) {
-  return Matcher<CXXRecordDecl>(anyOf(Base, isDerivedFrom(Base)))
-      .matches(Node, Finder, Builder);
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    isSameOrDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    internal::Matcher<NamedDecl>, Base, 0) {
+  const auto M = anyOf(Base, isDerivedFrom(Base));
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Matcher<CXXRecordDecl>(M).matches(*RD, Finder, Builder);
+
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
 }
 
 /// Overloaded method as shortcut for
 /// \c isSameOrDerivedFrom(hasName(...)).
-AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isSameOrDerivedFrom, std::string,
-                       BaseName, 1) {
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    isSameOrDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    std::string, BaseName, 1) {
   if (BaseName.empty())
     return false;
-  return isSameOrDerivedFrom(hasName(BaseName)).matches(Node, Finder, Builder);
+
+  const auto M = isSameOrDerivedFrom(hasName(BaseName));
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Matcher<CXXRecordDecl>(M).matches(*RD, Finder, Builder);
+
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
 }
 
-/// Matches C++ classes that are directly derived from a class matching \c Base.
+/// Matches C++ or Objective-C classes that are directly derived from a class
+/// matching \c Base.
 ///
 /// Note that a class is not considered to be derived from itself.
 ///
@@ -2681,18 +2726,34 @@ AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isSameOrDerivedFrom, std::string,
 ///   typedef Foo X;
 ///   class Bar : public Foo {};  // derived from a type that X is a typedef of
 /// \endcode
-AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDirectlyDerivedFrom,
-                       internal::Matcher<NamedDecl>, Base, 0) {
-  return Finder->classIsDerivedFrom(&Node, Base, Builder, /*Directly=*/true);
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    isDirectlyDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    internal::Matcher<NamedDecl>, Base, 0) {
+  // Check if the node is a C++ struct/union/class.
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Finder->classIsDerivedFrom(RD, Base, Builder, /*Directly=*/true);
+
+  // The node must be an Objective-C class.
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Finder->objcClassIsDerivedFrom(InterfaceDecl, Base, Builder,
+                                        /*Directly=*/true);
 }
 
 /// Overloaded method as shortcut for \c isDirectlyDerivedFrom(hasName(...)).
-AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDirectlyDerivedFrom, std::string,
-                       BaseName, 1) {
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    isDirectlyDerivedFrom,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
+    std::string, BaseName, 1) {
   if (BaseName.empty())
     return false;
-  return isDirectlyDerivedFrom(hasName(BaseName))
-      .matches(Node, Finder, Builder);
+  const auto M = isDirectlyDerivedFrom(hasName(BaseName));
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(&Node))
+    return Matcher<CXXRecordDecl>(M).matches(*RD, Finder, Builder);
+
+  const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
+  return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
 }
 /// Matches the first method of a class or struct that satisfies \c
 /// InnerMatcher.

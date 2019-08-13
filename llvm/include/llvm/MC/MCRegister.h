@@ -64,6 +64,10 @@ public:
     return Reg;
   }
 
+  unsigned id() const {
+    return Reg;
+  }
+
   bool isValid() const {
     return Reg != 0;
   }
@@ -94,10 +98,10 @@ template<> struct DenseMapInfo<MCRegister> {
     return DenseMapInfo<unsigned>::getTombstoneKey();
   }
   static unsigned getHashValue(const MCRegister &Val) {
-    return DenseMapInfo<unsigned>::getHashValue(Val);
+    return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }
   static bool isEqual(const MCRegister &LHS, const MCRegister &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS, RHS);
+    return DenseMapInfo<unsigned>::isEqual(LHS.id(), RHS.id());
   }
 };
 

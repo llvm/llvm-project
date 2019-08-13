@@ -2576,13 +2576,13 @@ class y;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDerivedFrom1')"><a name="isDerivedFrom1Anchor">isDerivedFrom</a></td><td>std::string BaseName</td></tr>
-<tr><td colspan="4" class="doc" id="isDerivedFrom1"><pre>Overloaded method as shortcut for isDerivedFrom(hasName(...)).
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDerivedFrom2')"><a name="isDerivedFrom2Anchor">isDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isDerivedFrom2"><pre>Overloaded method as shortcut for isDerivedFrom(hasName(...)).
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom1')"><a name="isDirectlyDerivedFrom1Anchor">isDirectlyDerivedFrom</a></td><td>std::string BaseName</td></tr>
-<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom1"><pre>Overloaded method as shortcut for isDirectlyDerivedFrom(hasName(...)).
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom2')"><a name="isDirectlyDerivedFrom2Anchor">isDirectlyDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom2"><pre>Overloaded method as shortcut for isDirectlyDerivedFrom(hasName(...)).
 </pre></td></tr>
 
 
@@ -2628,8 +2628,8 @@ decltype(x)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom1')"><a name="isSameOrDerivedFrom1Anchor">isSameOrDerivedFrom</a></td><td>std::string BaseName</td></tr>
-<tr><td colspan="4" class="doc" id="isSameOrDerivedFrom1"><pre>Overloaded method as shortcut for
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom2')"><a name="isSameOrDerivedFrom2Anchor">isSameOrDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isSameOrDerivedFrom2"><pre>Overloaded method as shortcut for
 isSameOrDerivedFrom(hasName(...)).
 </pre></td></tr>
 
@@ -3590,6 +3590,22 @@ Given
 
 ``ompExecutableDirective(isStandaloneDirective()))`` matches
 ``omp taskyield``.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isDerivedFrom3')"><a name="isDerivedFrom3Anchor">isDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isDerivedFrom3"><pre>Overloaded method as shortcut for isDerivedFrom(hasName(...)).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom3')"><a name="isDirectlyDerivedFrom3Anchor">isDirectlyDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom3"><pre>Overloaded method as shortcut for isDirectlyDerivedFrom(hasName(...)).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom3')"><a name="isSameOrDerivedFrom3Anchor">isSameOrDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isSameOrDerivedFrom3"><pre>Overloaded method as shortcut for
+isSameOrDerivedFrom(hasName(...)).
 </pre></td></tr>
 
 
@@ -5248,8 +5264,9 @@ A but not B.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDerivedFrom0')"><a name="isDerivedFrom0Anchor">isDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
-<tr><td colspan="4" class="doc" id="isDerivedFrom0"><pre>Matches C++ classes that are directly or indirectly derived from
-a class matching Base.
+<tr><td colspan="4" class="doc" id="isDerivedFrom0"><pre>Matches C++ classes that are directly or indirectly derived from a class
+matching Base, or Objective-C classes that directly or indirectly
+subclass a class matching Base.
 
 Note that a class is not considered to be derived from itself.
 
@@ -5265,11 +5282,18 @@ In the following example, Bar matches isDerivedFrom(hasName("X")):
   class Foo;
   typedef Foo X;
   class Bar : public Foo {};  // derived from a type that X is a typedef of
+
+In the following example, Bar matches isDerivedFrom(hasName("NSObject"))
+  @interface NSObject @end
+  @interface Bar : NSObject @end
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;
 </pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom0')"><a name="isDirectlyDerivedFrom0Anchor">isDirectlyDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
-<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom0"><pre>Matches C++ classes that are directly derived from a class matching Base.
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom0"><pre>Matches C++ or Objective-C classes that are directly derived from a class
+matching Base.
 
 Note that a class is not considered to be derived from itself.
 
@@ -6465,6 +6489,61 @@ Given
    {}
 
 ``ompExecutableDirective(hasStructuredBlock(nullStmt()))`` will match ``;``
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isDerivedFrom1')"><a name="isDerivedFrom1Anchor">isDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
+<tr><td colspan="4" class="doc" id="isDerivedFrom1"><pre>Matches C++ classes that are directly or indirectly derived from a class
+matching Base, or Objective-C classes that directly or indirectly
+subclass a class matching Base.
+
+Note that a class is not considered to be derived from itself.
+
+Example matches Y, Z, C (Base == hasName("X"))
+  class X;
+  class Y : public X {};  // directly derived
+  class Z : public Y {};  // indirectly derived
+  typedef X A;
+  typedef A B;
+  class C : public B {};  // derived from a typedef of X
+
+In the following example, Bar matches isDerivedFrom(hasName("X")):
+  class Foo;
+  typedef Foo X;
+  class Bar : public Foo {};  // derived from a type that X is a typedef of
+
+In the following example, Bar matches isDerivedFrom(hasName("NSObject"))
+  @interface NSObject @end
+  @interface Bar : NSObject @end
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom1')"><a name="isDirectlyDerivedFrom1Anchor">isDirectlyDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom1"><pre>Matches C++ or Objective-C classes that are directly derived from a class
+matching Base.
+
+Note that a class is not considered to be derived from itself.
+
+Example matches Y, C (Base == hasName("X"))
+  class X;
+  class Y : public X {};  // directly derived
+  class Z : public Y {};  // indirectly derived
+  typedef X A;
+  typedef A B;
+  class C : public B {};  // derived from a typedef of X
+
+In the following example, Bar matches isDerivedFrom(hasName("X")):
+  class Foo;
+  typedef Foo X;
+  class Bar : public Foo {};  // derived from a type that X is a typedef of
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom1')"><a name="isSameOrDerivedFrom1Anchor">isSameOrDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
+<tr><td colspan="4" class="doc" id="isSameOrDerivedFrom1"><pre>Similar to isDerivedFrom(), but also matches classes that directly
+match Base.
 </pre></td></tr>
 
 

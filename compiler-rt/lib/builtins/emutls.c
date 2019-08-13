@@ -26,11 +26,22 @@
 #define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+// MSVC raises a warning about a nonstandard extension being used for the 0
+// sized element in this array. Disable this for warn-as-error builds.
+#pragma warning(push)
+#pragma warning(disable : 4206)
+#endif
+
 typedef struct emutls_address_array {
   uintptr_t skip_destructor_rounds;
   uintptr_t size; // number of elements in the 'data' array
   void *data[];
 } emutls_address_array;
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 static void emutls_shutdown(emutls_address_array *array);
 

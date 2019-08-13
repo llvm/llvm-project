@@ -3312,10 +3312,10 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
 
   // Look for an 'and' of two (opposite) logical shifts.
   // Pick the single-use shift as XShift.
-  Value *XShift, *YShift;
+  Instruction *XShift, *YShift;
   if (!match(I.getOperand(0),
-             m_c_And(m_CombineAnd(m_AnyLogicalShift, m_Value(XShift)),
-                     m_CombineAnd(m_AnyLogicalShift, m_Value(YShift)))))
+             m_c_And(m_CombineAnd(m_AnyLogicalShift, m_Instruction(XShift)),
+                     m_CombineAnd(m_AnyLogicalShift, m_Instruction(YShift)))))
     return nullptr;
 
   // If YShift is a 'lshr', swap the shifts around.
@@ -3323,9 +3323,8 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
     std::swap(XShift, YShift);
 
   // The shifts must be in opposite directions.
-  Instruction::BinaryOps XShiftOpcode =
-      cast<BinaryOperator>(XShift)->getOpcode();
-  if (XShiftOpcode == cast<BinaryOperator>(YShift)->getOpcode())
+  auto XShiftOpcode = XShift->getOpcode();
+  if (XShiftOpcode == YShift->getOpcode())
     return nullptr; // Do not care about same-direction shifts here.
 
   Value *X, *XShAmt, *Y, *YShAmt;

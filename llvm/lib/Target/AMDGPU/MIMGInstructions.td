@@ -26,7 +26,7 @@ def MIMGEncoding : GenericEnum {
 
 // Represent an ISA-level opcode, independent of the encoding and the
 // vdata/vaddr size.
-class MIMGBaseOpcode {
+class MIMGBaseOpcode : PredicateControl {
   MIMGBaseOpcode BaseOpcode = !cast<MIMGBaseOpcode>(NAME);
   bit Store = 0;
   bit Atomic = 0;
@@ -291,7 +291,7 @@ multiclass MIMG_NoSampler_Src_Helper <bits<8> op, string asm,
 
 multiclass MIMG_NoSampler <bits<8> op, string asm, bit has_d16, bit mip = 0,
                            bit isResInfo = 0> {
-  def "" : MIMGBaseOpcode, PredicateControl {
+  def "" : MIMGBaseOpcode {
     let Coordinates = !if(isResInfo, 0, 1);
     let LodOrClampOrMip = mip;
     let HasD16 = has_d16;

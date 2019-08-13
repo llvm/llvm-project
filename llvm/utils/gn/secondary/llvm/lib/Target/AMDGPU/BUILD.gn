@@ -114,6 +114,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMacroFusion.cpp",
     "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
+    "AMDGPUPrintfRuntimeBinding.cpp",
     "AMDGPUPromoteAlloca.cpp",
     "AMDGPUPropagateAttributes.cpp",
     "AMDGPURegisterBankInfo.cpp",

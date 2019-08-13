@@ -510,7 +510,6 @@ static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
   sym.gotIndex = old.gotIndex;
   sym.verdefIndex = old.verdefIndex;
   sym.ppc64BranchltIndex = old.ppc64BranchltIndex;
-  sym.isPreemptible = true;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
 }
