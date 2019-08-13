@@ -2594,6 +2594,12 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetByteStride(CompilerType type) 
   return {};
 }
 
+llvm::Optional<size_t> SwiftLanguageRuntime::GetBitAlignment(CompilerType type) {
+  if (auto *type_info = GetTypeInfo(type))
+    return type_info->getAlignment();
+  return {};
+}
+
 bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
   return name == g_self;
 }

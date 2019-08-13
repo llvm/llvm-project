@@ -6164,6 +6164,12 @@ llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type,
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
     return fixed_type_info->getFixedAlignment().getValue();
+
+  // Ask the dynamic type system.
+  if (!exe_scope)
+    return {};
+  if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
+    return runtime->GetBitAlignment({this, type});
   return {};
 }
 
