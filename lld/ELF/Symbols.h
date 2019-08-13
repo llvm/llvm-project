@@ -135,7 +135,7 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   unsigned traced : 1;
 
-  inline void replace(const Symbol &New);
+  inline void replace(const Symbol &newSym);
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
@@ -511,7 +511,7 @@ size_t Symbol::getSymbolSize() const {
 // replace() replaces "this" object with a given symbol by memcpy'ing
 // it over to "this". This function is called as a result of name
 // resolution, e.g. to replace an undefind symbol with a defined symbol.
-void Symbol::replace(const Symbol &New) {
+void Symbol::replace(const Symbol &newSym) {
   using llvm::ELF::STT_TLS;
 
   // Symbols representing thread-local variables must be referenced by
@@ -519,16 +519,13 @@ void Symbol::replace(const Symbol &New) {
   // non-TLS relocations, so there's a clear distinction between TLS
   // and non-TLS symbols. It is an error if the same symbol is defined
   // as a TLS symbol in one file and as a non-TLS symbol in other file.
-  if (symbolKind != PlaceholderKind && !isLazy() && !New.isLazy()) {
-    bool tlsMismatch = (type == STT_TLS && New.type != STT_TLS) ||
-                       (type != STT_TLS && New.type == STT_TLS);
-    if (tlsMismatch)
-      error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
-            toString(New.file) + "\n>>> defined in " + toString(file));
-  }
+  if (symbolKind != PlaceholderKind && !isLazy() && !newSym.isLazy() &&
+      (type == STT_TLS) != (newSym.type == STT_TLS))
+    error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
+          toString(newSym.file) + "\n>>> defined in " + toString(file));
 
   Symbol old = *this;
-  memcpy(this, &New, New.getSymbolSize());
+  memcpy(this, &newSym, newSym.getSymbolSize());
 
   versionId = old.versionId;
   visibility = old.visibility;

@@ -3292,6 +3292,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setVirtualAsWritten(D->isVirtualAsWritten());
   ToFunction->setTrivial(D->isTrivial());
   ToFunction->setPure(D->isPure());
+  ToFunction->setDefaulted(D->isDefaulted());
+  ToFunction->setExplicitlyDefaulted(D->isExplicitlyDefaulted());
+  ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
   ToFunction->setRangeEnd(ToEndLoc);
 
   // Set the parameters.
@@ -5082,11 +5085,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (IsStructuralMatch(D, FoundTemplate)) {
           ClassTemplateDecl *TemplateWithDef =
               getTemplateDefinition(FoundTemplate);
-          if (D->isThisDeclarationADefinition() && TemplateWithDef) {
+          if (D->isThisDeclarationADefinition() && TemplateWithDef)
             return Importer.MapImported(D, TemplateWithDef);
-          }
-          FoundByLookup = FoundTemplate;
-          break;
+          if (!FoundByLookup)
+            FoundByLookup = FoundTemplate;
+          // Search in all matches because there may be multiple decl chains,
+          // see ASTTests test ImportExistingFriendClassTemplateDef.
+          continue;
         }
       }
 

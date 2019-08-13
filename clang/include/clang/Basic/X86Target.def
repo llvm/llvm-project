@@ -173,8 +173,8 @@ PROC(IcelakeClient, "icelake-client", PROC_64_BIT)
 /// Icelake server microarchitecture based processors.
 PROC(IcelakeServer, "icelake-server", PROC_64_BIT)
 
-/// \name Tigerlake Server
-/// Tigerlake Server microarchitecture based processors.
+/// \name Tigerlake
+/// Tigerlake microarchitecture based processors.
 PROC(Tigerlake, "tigerlake", PROC_64_BIT)
 
 /// \name Knights Landing

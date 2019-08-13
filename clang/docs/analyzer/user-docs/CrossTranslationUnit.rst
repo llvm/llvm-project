@@ -173,15 +173,6 @@ Or we can use `CodeChecker parse -e html` to export the results into HTML format
   $ CodeChecker parse -e html -o html_out reports
   $ firefox html_out/index.html
 
-If you experience that Clang crashes during the visitation of the BugPath then please disable macro expansion when CTU is used:
-
-.. code-block:: bash
-
-  $ echo "-Xclang -analyzer-stats -Xclang -analyzer-config -Xclang expand-macros=false" >./saargs_file
-  $ CodeChecker analyze --ctu --saargs ./saargs_file compile_commands.json -o reports
-
-We have a patch which will solve this issue soon.
-
 Automated CTU Analysis with scan-build-py (don't do it)
 -------------------------------------------------------
 We actively develop CTU with CodeChecker as a "runner" script, `scan-build-py` is not actively developed for CTU.

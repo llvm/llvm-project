@@ -83,9 +83,9 @@ Symbol *SymbolTable::insert(StringRef name) {
   return sym;
 }
 
-Symbol *SymbolTable::addSymbol(const Symbol &New) {
-  Symbol *sym = symtab->insert(New.getName());
-  sym->resolve(New);
+Symbol *SymbolTable::addSymbol(const Symbol &newSym) {
+  Symbol *sym = symtab->insert(newSym.getName());
+  sym->resolve(newSym);
   return sym;
 }
 

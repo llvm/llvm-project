@@ -1537,6 +1537,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     FLAG(isGenericLambda, generic);
     FLAG(isLambda, lambda);
 
+    FLAG(isAnonymousStructOrUnion, is_anonymous);
     FLAG(canPassInRegisters, pass_in_registers);
     FLAG(isEmpty, empty);
     FLAG(isAggregate, aggregate);
