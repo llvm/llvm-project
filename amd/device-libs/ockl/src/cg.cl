@@ -72,7 +72,7 @@ __ockl_gws_barrier(uint nwm1, uint rid)
     __builtin_amdgcn_ds_gws_barrier(nwm1, rid);
 }
 
-__attribute__((convergent)) int
+__attribute__((const)) int
 __ockl_grid_is_valid(void)
 {
     return get_mg_info_arg() != 0UL;
@@ -95,19 +95,19 @@ __ockl_multi_grid_num_grids(void)
     return ((__constant struct mg_info *)get_mg_info_arg())->num_grids;
 }
 
-__attribute__((convergent)) uint
+__attribute__((const)) uint
 __ockl_multi_grid_grid_rank(void)
 {
     return ((__constant struct mg_info *)get_mg_info_arg())->grid_id;
 }
 
-__attribute__((convergent)) uint
+__attribute__((const)) uint
 __ockl_multi_grid_size(void)
 {
     return ((__constant struct mg_info *)get_mg_info_arg())->all_sum;
 }
 
-__attribute__((convergent)) uint
+__attribute__((const)) uint
 __ockl_multi_grid_thread_rank(void)
 {
     size_t r = ((__constant struct mg_info *)get_mg_info_arg())->prev_sum;
@@ -115,7 +115,7 @@ __ockl_multi_grid_thread_rank(void)
     return r;
 }
 
-__attribute__((convergent)) int
+__attribute__((const)) int
 __ockl_multi_grid_is_valid(void)
 {
     size_t mi = get_mg_info_arg();
