@@ -62,7 +62,8 @@ void TransformerClangTidyCheck::registerPPCallbacks(
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   if (Rule)
-    Finder->addDynamicMatcher(tooling::detail::buildMatcher(*Rule), this);
+    for (auto &Matcher : tooling::detail::buildMatchers(*Rule))
+      Finder->addDynamicMatcher(Matcher, this);
 }
 
 void TransformerClangTidyCheck::check(

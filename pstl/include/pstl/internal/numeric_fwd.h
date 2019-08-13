@@ -15,6 +15,8 @@
 
 #include "pstl_config.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __internal
@@ -135,4 +137,7 @@ __pattern_adjacent_difference(_ExecutionPolicy&&, _ForwardIterator, _ForwardIter
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
+
 #endif /* _PSTL_NUMERIC_FWD_H */
