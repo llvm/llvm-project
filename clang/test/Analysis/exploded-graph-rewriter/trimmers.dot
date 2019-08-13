@@ -1,7 +1,17 @@
 // RUN: %exploded_graph_rewriter %s \
-// RUN:     | FileCheck %s -check-prefixes=CHECK,BASIC
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,FOUR
 // RUN: %exploded_graph_rewriter -s %s \
-// RUN:     | FileCheck %s -check-prefixes=CHECK,SINGLE
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,FOUR
+// RUN: %exploded_graph_rewriter --to=0x2 %s \
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,NOFOUR
+// RUN: %exploded_graph_rewriter --to 2 %s \
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,NOFOUR
+// RUN: %exploded_graph_rewriter --to 2,3 %s \
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,NOFOUR
+// RUN: %exploded_graph_rewriter --to 4 %s \
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,FOUR
+// RUN: %exploded_graph_rewriter --to 4 -s %s \
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,FOUR
 
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
@@ -22,16 +32,16 @@ Node0x4 [shape=record,label=
  "{{ "node_id": 4, "pointer": "0x4", "has_report": false, "is_sink": false,
       "program_state": null, "program_points": []}\l}"];
 
-// CHECK: Node0x1 -> Node0x2;
 Node0x1 -> Node0x2;
-
-// BASIC: Node0x1 -> Node0x3;
-// SINGLE-NOT: Node0x1 -> Node0x3;
 Node0x1 -> Node0x3;
-
-// CHECK: Node0x2 -> Node0x4;
 Node0x2 -> Node0x4;
-
-// BASIC: Node0x3 -> Node0x4;
-// SINGLE-NOT: Node0x3 -> Node0x4;
 Node0x3 -> Node0x4;
+
+// ONE: Node0x1
+// NOTONE-NOT: Node0x1
+// TWO: Node0x2
+// NOTTWO-NOT: Node0x2
+// THREE: Node0x3
+// NOTTHREE-NOT: Node0x3
+// FOUR: Node0x4
+// NOTFOUR-NOT: Node0x4

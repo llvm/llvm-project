@@ -914,6 +914,52 @@ class SinglePathTrimmer(object):
                        for node_id in visited_nodes}
 
 
+# TargetedTrimmer keeps paths that lead to specific nodes and discards all
+# other paths. Useful when you cannot use -trim-egraph (e.g. when debugging
+# a crash).
+class TargetedTrimmer(object):
+    def __init__(self, target_nodes):
+        super(TargetedTrimmer, self).__init__()
+        self._target_nodes = target_nodes
+
+    @staticmethod
+    def parse_target_node(node, graph):
+        if node.startswith('0x'):
+            ret = 'Node' + node
+            assert ret in graph.nodes
+            return ret
+        else:
+            for other_id in graph.nodes:
+                other = graph.nodes[other_id]
+                if other.node_id == int(node):
+                    return other_id
+
+    @staticmethod
+    def parse_target_nodes(target_nodes, graph):
+        return [TargetedTrimmer.parse_target_node(node, graph)
+                for node in target_nodes.split(',')]
+
+    def trim(self, graph):
+        queue = self._target_nodes
+        visited_nodes = set()
+
+        while len(queue) > 0:
+            node_id = queue.pop()
+            visited_nodes.add(node_id)
+            node = graph.nodes[node_id]
+            for pred_id in node.predecessors:
+                if pred_id not in visited_nodes:
+                    queue.append(pred_id)
+        graph.nodes = {node_id: graph.nodes[node_id]
+                       for node_id in visited_nodes}
+        for node_id in graph.nodes:
+            node = graph.nodes[node_id]
+            node.successors = [succ_id for succ_id in node.successors
+                               if succ_id in visited_nodes]
+            node.predecessors = [succ_id for succ_id in node.predecessors
+                                 if succ_id in visited_nodes]
+
+
 #===-----------------------------------------------------------------------===#
 # The entry point to the script.
 #===-----------------------------------------------------------------------===#
@@ -939,6 +985,11 @@ def main():
                         help='only display the leftmost path in the graph '
                              '(useful for trimmed graphs that still '
                              'branch too much)')
+    parser.add_argument('--to', type=str, default=None,
+                        help='only display execution paths from the root '
+                             'to the given comma-separated list of nodes '
+                             'identified by a pointer or a stable ID; '
+                             'compatible with --single-path')
     parser.add_argument('--dark', action='store_const', dest='dark',
                         const=True, default=False,
                         help='dark mode')
@@ -960,6 +1011,9 @@ def main():
             graph.add_raw_line(raw_line)
 
     trimmers = []
+    if args.to is not None:
+        trimmers.append(TargetedTrimmer(
+            TargetedTrimmer.parse_target_nodes(args.to, graph)))
     if args.single_path:
         trimmers.append(SinglePathTrimmer())
 
