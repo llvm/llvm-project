@@ -1288,8 +1288,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     if (value_decl == nullptr)
       return false;
 
-    lldb_private::CompilerType compiler_type(&value_decl->getASTContext(),
-                                             value_decl->getType());
+    lldb_private::CompilerType compiler_type(
+        lldb_private::ClangASTContext::GetASTContext(
+            &value_decl->getASTContext()),
+        value_decl->getType().getAsOpaquePtr());
 
     const Type *value_type = nullptr;
 

@@ -40,6 +40,20 @@ static void reportUndefined(const Symbol* sym) {
     error(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
 }
 
+static void addGOTEntry(Symbol *sym) {
+  // In PIC mode a GOT entry is an imported global that the dynamic linker
+  // will assign.
+  // In non-PIC mode (i.e. when code compiled as fPIC is linked into a static
+  // binary) we create an internal wasm global with a fixed value that takes the
+  // place of th GOT entry and effectivly acts as an i32 const. This can
+  // potentially be optimized away at runtime or with a post-link tool.
+  // TODO(sbc): Linker relaxation might also be able to optimize this away.
+  if (config->isPic)
+    out.importSec->addGOTEntry(sym);
+  else
+    out.globalSec->addDummyGOTEntry(sym);
+}
+
 void lld::wasm::scanRelocations(InputChunk *chunk) {
   if (!chunk->live)
     return;
@@ -67,7 +81,7 @@ void lld::wasm::scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_GLOBAL_INDEX_LEB:
       if (!isa<GlobalSymbol>(sym))
-        out.importSec->addGOTEntry(sym);
+        addGOTEntry(sym);
       break;
     }
 
@@ -88,7 +102,7 @@ void lld::wasm::scanRelocations(InputChunk *chunk) {
         // will be converted into code by `generateRelocationCode`.  This code
         // requires the symbols to have GOT entires.
         if (requiresGOTAccess(sym))
-          out.importSec->addGOTEntry(sym);
+          addGOTEntry(sym);
         break;
       }
     } else {
