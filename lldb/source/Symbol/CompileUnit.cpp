@@ -156,6 +156,10 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
   m_line_table_up.reset(line_table);
 }
 
+void CompileUnit::SetSupportFiles(const FileSpecList &support_files) {
+  m_support_files = support_files;
+}
+
 DebugMacros *CompileUnit::GetDebugMacros() {
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {
