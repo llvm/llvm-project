@@ -255,20 +255,19 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
 // Implementation of BugReporterVisitor.
 //===----------------------------------------------------------------------===//
 
-std::shared_ptr<PathDiagnosticPiece>
-BugReporterVisitor::getEndPath(BugReporterContext &,
-                               const ExplodedNode *, BugReport &) {
+PathDiagnosticPieceRef BugReporterVisitor::getEndPath(BugReporterContext &,
+                                                      const ExplodedNode *,
+                                                      BugReport &) {
   return nullptr;
 }
 
-void
-BugReporterVisitor::finalizeVisitor(BugReporterContext &,
-                                    const ExplodedNode *, BugReport &) {}
+void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
+                                         const ExplodedNode *, BugReport &) {}
 
-std::shared_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
+PathDiagnosticPieceRef BugReporterVisitor::getDefaultEndPath(
     BugReporterContext &BRC, const ExplodedNode *EndPathNode, BugReport &BR) {
-  PathDiagnosticLocation L =
-    PathDiagnosticLocation::createEndOfPath(EndPathNode,BRC.getSourceManager());
+  PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(
+      EndPathNode, BRC.getSourceManager());
 
   const auto &Ranges = BR.getRanges();
 
@@ -333,9 +332,9 @@ public:
     return static_cast<void *>(&Tag);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BR,
-                                                 BugReport &R) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BR,
+                                   BugReport &R) override;
 
 private:
   /// Attempts to find the region of interest in a given record decl,
@@ -368,7 +367,7 @@ private:
   /// either emit a note or suppress the report enirely.
   /// \return Diagnostics piece for region not modified in the current function,
   /// if it decides to emit one.
-  std::shared_ptr<PathDiagnosticPiece>
+  PathDiagnosticPieceRef
   maybeEmitNote(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
                 const RegionVector &FieldChain, const MemRegion *MatchedRegion,
                 StringRef FirstElement, bool FirstIsReferenceType,
@@ -501,9 +500,9 @@ NoStoreFuncVisitor::findRegionOfInterestInRecord(
   return None;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-NoStoreFuncVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BR,
-                              BugReport &R) {
+PathDiagnosticPieceRef NoStoreFuncVisitor::VisitNode(const ExplodedNode *N,
+                                                     BugReporterContext &BR,
+                                                     BugReport &R) {
 
   const LocationContext *Ctx = N->getLocationContext();
   const StackFrameContext *SCtx = Ctx->getStackFrame();
@@ -611,7 +610,7 @@ void NoStoreFuncVisitor::findModifyingFrames(const ExplodedNode *N) {
   } while (N);
 }
 
-std::shared_ptr<PathDiagnosticPiece> NoStoreFuncVisitor::maybeEmitNote(
+PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     BugReport &R, const CallEvent &Call, const ExplodedNode *N,
     const RegionVector &FieldChain, const MemRegion *MatchedRegion,
     StringRef FirstElement, bool FirstIsReferenceType,
@@ -752,13 +751,12 @@ class MacroNullReturnSuppressionVisitor final : public BugReporterVisitor {
   bool WasModified = false;
 
 public:
-  MacroNullReturnSuppressionVisitor(const SubRegion *R,
-                                    const SVal V) : RegionOfInterest(R),
-                                                    ValueAtDereference(V) {}
+  MacroNullReturnSuppressionVisitor(const SubRegion *R, const SVal V)
+      : RegionOfInterest(R), ValueAtDereference(V) {}
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override {
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override {
     if (WasModified)
       return nullptr;
 
@@ -956,9 +954,9 @@ public:
                                                    Options));
   }
 
-  std::shared_ptr<PathDiagnosticPiece>
-  visitNodeInitial(const ExplodedNode *N,
-                   BugReporterContext &BRC, BugReport &BR) {
+  PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
+                                          BugReporterContext &BRC,
+                                          BugReport &BR) {
     // Only print a message at the interesting return statement.
     if (N->getLocationContext() != StackFrame)
       return nullptr;
@@ -1059,9 +1057,9 @@ public:
     return std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
   }
 
-  std::shared_ptr<PathDiagnosticPiece>
-  visitNodeMaybeUnsuppress(const ExplodedNode *N,
-                           BugReporterContext &BRC, BugReport &BR) {
+  PathDiagnosticPieceRef visitNodeMaybeUnsuppress(const ExplodedNode *N,
+                                                  BugReporterContext &BRC,
+                                                  BugReport &BR) {
 #ifndef NDEBUG
     assert(Options.ShouldAvoidSuppressingNullArgumentPaths);
 #endif
@@ -1108,9 +1106,9 @@ public:
     return nullptr;
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override {
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override {
     switch (Mode) {
     case Initial:
       return visitNodeInitial(N, BRC, BR);
@@ -1291,7 +1289,7 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream& os,
   }
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
                                   BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
@@ -1467,7 +1465,7 @@ bool TrackConstraintBRVisitor::isUnderconstrained(const ExplodedNode *N) const {
   return (bool)N->getState()->assume(Constraint, !Assumption);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 TrackConstraintBRVisitor::VisitNode(const ExplodedNode *N,
                                     BugReporterContext &BRC, BugReport &) {
   const ExplodedNode *PrevN = N->getFirstPred();
@@ -1547,10 +1545,8 @@ const char *SuppressInlineDefensiveChecksVisitor::getTag() {
   return "IDCVisitor";
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
-                                                BugReporterContext &BRC,
-                                                BugReport &BR) {
+PathDiagnosticPieceRef SuppressInlineDefensiveChecksVisitor::VisitNode(
+    const ExplodedNode *Succ, BugReporterContext &BRC, BugReport &BR) {
   const ExplodedNode *Pred = Succ->getFirstPred();
   if (IsSatisfied)
     return nullptr;
@@ -1649,9 +1645,9 @@ public:
     ID.AddPointer(&x);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 } // end of anonymous namespace
 
@@ -1687,10 +1683,8 @@ constructDebugPieceForTrackedCondition(const Expr *Cond,
           (Twine() + "Tracking condition '" + ConditionText + "'").str());
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
-                                               BugReporterContext &BRC,
-                                               BugReport &BR) {
+PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
   // We can only reason about control dependencies within the same stack frame.
   if (Origin->getStackFrame() != N->getStackFrame())
     return nullptr;
@@ -1978,9 +1972,9 @@ const Expr *NilReceiverBRVisitor::getNilReceiver(const Stmt *S,
   return nullptr;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
-                                BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
+                                                       BugReporterContext &BRC,
+                                                       BugReport &BR) {
   Optional<PreStmt> P = N->getLocationAs<PreStmt>();
   if (!P)
     return nullptr;
@@ -2059,13 +2053,11 @@ void FindLastStoreBRVisitor::registerStatementVarDecls(BugReport &BR,
 
 /// Return the tag associated with this visitor.  This tag will be used
 /// to make all PathDiagnosticPieces created by this visitor.
-const char *ConditionBRVisitor::getTag() {
-  return "ConditionBRVisitor";
-}
+const char *ConditionBRVisitor::getTag() { return "ConditionBRVisitor"; }
 
-std::shared_ptr<PathDiagnosticPiece>
-ConditionBRVisitor::VisitNode(const ExplodedNode *N,
-                              BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef ConditionBRVisitor::VisitNode(const ExplodedNode *N,
+                                                     BugReporterContext &BRC,
+                                                     BugReport &BR) {
   auto piece = VisitNodeImpl(N, BRC, BR);
   if (piece) {
     piece->setTag(getTag());
@@ -2075,7 +2067,7 @@ ConditionBRVisitor::VisitNode(const ExplodedNode *N,
   return piece;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
                                   BugReporterContext &BRC, BugReport &BR) {
   ProgramPoint ProgPoint = N->getLocation();
@@ -2113,7 +2105,7 @@ ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
   return nullptr;
 }
 
-std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTerminator(
+PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
     const Stmt *Term, const ExplodedNode *N, const CFGBlock *srcBlk,
     const CFGBlock *dstBlk, BugReport &R, BugReporterContext &BRC) {
   const Expr *Cond = nullptr;
@@ -2170,7 +2162,7 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTerminator(
   return VisitTrueTest(Cond, BRC, R, N, TookTrue);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
                                   BugReport &R, const ExplodedNode *N,
                                   bool TookTrue) {
@@ -2326,7 +2318,7 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
   return false;
 }
 
-std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
+PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const BinaryOperator *BExpr, BugReporterContext &BRC,
     BugReport &R, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
   bool shouldInvert = false;
@@ -2441,7 +2433,7 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
   return event;
 }
 
-std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitConditionVariable(
+PathDiagnosticPieceRef ConditionBRVisitor::VisitConditionVariable(
     StringRef LhsString, const Expr *CondVarExpr, BugReporterContext &BRC,
     BugReport &report, const ExplodedNode *N, bool TookTrue) {
   // FIXME: If there's already a constraint tracker for this variable,
@@ -2471,7 +2463,7 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitConditionVariable(
   return event;
 }
 
-std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
+PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const DeclRefExpr *DRE, BugReporterContext &BRC,
     BugReport &report, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
   const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
@@ -2509,7 +2501,7 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
   return std::move(event);
 }
 
-std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTrueTest(
+PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const MemberExpr *ME, BugReporterContext &BRC,
     BugReport &report, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
   SmallString<256> Buf;
@@ -2677,9 +2669,9 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
 // Implementation of UndefOrNullArgVisitor.
 //===----------------------------------------------------------------------===//
 
-std::shared_ptr<PathDiagnosticPiece>
-UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
-                                 BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
+                                                        BugReporterContext &BRC,
+                                                        BugReport &BR) {
   ProgramStateRef State = N->getState();
   ProgramPoint ProgLoc = N->getLocation();
 
@@ -2770,10 +2762,9 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
-                                            BugReporterContext &,
-                                            BugReport &) {
+                                            BugReporterContext &, BugReport &) {
   // Collect new constraints
   const ConstraintRangeTy &NewCs = N->getState()->get<ConstraintRange>();
   ConstraintRangeTy::Factory &CF =
@@ -2807,9 +2798,9 @@ void TagVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddPointer(&Tag);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-TagVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
-                      BugReport &R) {
+PathDiagnosticPieceRef TagVisitor::VisitNode(const ExplodedNode *N,
+                                             BugReporterContext &BRC,
+                                             BugReport &R) {
   ProgramPoint PP = N->getLocation();
   const NoteTag *T = dyn_cast_or_null<NoteTag>(PP.getTag());
   if (!T)

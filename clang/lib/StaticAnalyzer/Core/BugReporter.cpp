@@ -1881,12 +1881,11 @@ static void dropFunctionEntryEdge(PathPieces &Path, LocationContextMap &LCM,
   Path.pop_front();
 }
 
-using VisitorsDiagnosticsTy = llvm::DenseMap<const ExplodedNode *,
-                   std::vector<std::shared_ptr<PathDiagnosticPiece>>>;
+using VisitorsDiagnosticsTy =
+    llvm::DenseMap<const ExplodedNode *, std::vector<PathDiagnosticPieceRef>>;
 
 /// Populate executes lines with lines containing at least one diagnostics.
-static void updateExecutedLinesWithDiagnosticPieces(
-  PathDiagnostic &PD) {
+static void updateExecutedLinesWithDiagnosticPieces(PathDiagnostic &PD) {
 
   PathPieces path = PD.path.flatten(/*ShouldFlattenMacros=*/true);
   FilesToLineNumsMap &ExecutedLines = PD.getExecutedLines();
@@ -1930,7 +1929,7 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
 
   if (GenerateDiagnostics) {
     auto EndNotes = VisitorsDiagnostics.find(ErrorNode);
-    std::shared_ptr<PathDiagnosticPiece> LastPiece;
+    PathDiagnosticPieceRef LastPiece;
     if (EndNotes != VisitorsDiagnostics.end()) {
       assert(!EndNotes->second.empty());
       LastPiece = EndNotes->second[0];
@@ -1957,7 +1956,7 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
     std::set<llvm::FoldingSetNodeID> DeduplicationSet;
 
     // Add pieces from custom visitors.
-    for (const auto &Note : VisitorNotes->second) {
+    for (const PathDiagnosticPieceRef &Note : VisitorNotes->second) {
       llvm::FoldingSetNodeID ID;
       Note->Profile(ID);
       auto P = DeduplicationSet.insert(ID);
@@ -2430,11 +2429,10 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 /// object and collapses PathDiagosticPieces that are expanded by macros.
 static void CompactMacroExpandedPieces(PathPieces &path,
                                        const SourceManager& SM) {
-  using MacroStackTy =
-      std::vector<
-          std::pair<std::shared_ptr<PathDiagnosticMacroPiece>, SourceLocation>>;
+  using MacroStackTy = std::vector<
+      std::pair<std::shared_ptr<PathDiagnosticMacroPiece>, SourceLocation>>;
 
-  using PiecesTy = std::vector<std::shared_ptr<PathDiagnosticPiece>>;
+  using PiecesTy = std::vector<PathDiagnosticPieceRef>;
 
   MacroStackTy MacroStack;
   PiecesTy Pieces;
@@ -2546,7 +2544,7 @@ generateVisitorsDiagnostics(BugReport *R, const ExplodedNode *ErrorNode,
 
     const ExplodedNode *Pred = NextNode->getFirstPred();
     if (!Pred) {
-      std::shared_ptr<PathDiagnosticPiece> LastPiece;
+      PathDiagnosticPieceRef LastPiece;
       for (auto &V : visitors) {
         V->finalizeVisitor(BRC, ErrorNode, *R);
 

@@ -139,9 +139,9 @@ private:
       ID.AddPointer(Sym);
     }
 
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     BugReport &BR) override;
   };
 };
 }
@@ -613,7 +613,7 @@ ProgramStateRef MacOSKeychainAPIChecker::checkPointerEscape(
   return State;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
   const AllocationState *AS = N->getState()->get<AllocatedData>(Sym);

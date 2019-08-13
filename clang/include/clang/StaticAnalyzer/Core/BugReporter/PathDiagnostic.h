@@ -446,7 +446,9 @@ public:
   virtual void dump() const = 0;
 };
 
-class PathPieces : public std::list<std::shared_ptr<PathDiagnosticPiece>> {
+using PathDiagnosticPieceRef = std::shared_ptr<PathDiagnosticPiece>;
+
+class PathPieces : public std::list<PathDiagnosticPieceRef> {
   void flattenTo(PathPieces &Primary, PathPieces &Current,
                  bool ShouldFlattenMacros) const;
 
@@ -836,7 +838,7 @@ public:
 
   bool isWithinCall() const { return !pathStack.empty(); }
 
-  void setEndOfPath(std::shared_ptr<PathDiagnosticPiece> EndPiece) {
+  void setEndOfPath(PathDiagnosticPieceRef EndPiece) {
     assert(!Loc.isValid() && "End location already set!");
     Loc = EndPiece->getLocation();
     assert(Loc.isValid() && "Invalid location for end-of-path piece");

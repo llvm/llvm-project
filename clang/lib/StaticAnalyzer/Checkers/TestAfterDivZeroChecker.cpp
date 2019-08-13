@@ -69,9 +69,9 @@ public:
     ID.Add(SFC);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 
 class TestAfterDivZeroChecker
@@ -92,9 +92,9 @@ public:
 
 REGISTER_SET_WITH_PROGRAMSTATE(DivZeroMap, ZeroState)
 
-std::shared_ptr<PathDiagnosticPiece>
-DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, 
-                             BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef DivisionBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                                    BugReporterContext &BRC,
+                                                    BugReport &BR) {
   if (Satisfied)
     return nullptr;
 

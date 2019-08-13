@@ -38,6 +38,7 @@ class BugReporterContext;
 class ExplodedNode;
 class MemRegion;
 class PathDiagnosticPiece;
+using PathDiagnosticPieceRef = std::shared_ptr<PathDiagnosticPiece>;
 
 /// BugReporterVisitors are used to add custom diagnostics along a path.
 class BugReporterVisitor : public llvm::FoldingSetNode {
@@ -57,9 +58,9 @@ public:
   ///
   /// The last parameter can be used to register a new visitor with the given
   /// BugReport while processing a node.
-  virtual std::shared_ptr<PathDiagnosticPiece>
-  VisitNode(const ExplodedNode *Succ, 
-            BugReporterContext &BRC, BugReport &BR) = 0;
+  virtual PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
+                                           BugReporterContext &BRC,
+                                           BugReport &BR) = 0;
 
   /// Last function called on the visitor, no further calls to VisitNode
   /// would follow.
@@ -72,15 +73,15 @@ public:
   ///
   /// NOTE that this function can be implemented on at most one used visitor,
   /// and otherwise it crahes at runtime.
-  virtual std::shared_ptr<PathDiagnosticPiece>
+  virtual PathDiagnosticPieceRef
   getEndPath(BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR);
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
 
   /// Generates the default final diagnostic piece.
-  static std::shared_ptr<PathDiagnosticPiece>
-  getDefaultEndPath(BugReporterContext &BRC, const ExplodedNode *N,
-                    BugReport &BR);
+  static PathDiagnosticPieceRef getDefaultEndPath(BugReporterContext &BRC,
+                                                  const ExplodedNode *N,
+                                                  BugReport &BR);
 };
 
 /// Finds last store into the given region,
@@ -106,9 +107,9 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 
 class TrackConstraintBRVisitor final : public BugReporterVisitor {
@@ -132,9 +133,9 @@ public:
   /// to make all PathDiagnosticPieces created by this visitor.
   static const char *getTag();
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
 private:
   /// Checks if the constraint is valid in the current state.
@@ -150,9 +151,9 @@ public:
     ID.AddPointer(&x);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
   /// If the statement is a message send expression with nil receiver, returns
   /// the receiver expression. Returns NULL otherwise.
@@ -175,39 +176,40 @@ public:
   /// to make all PathDiagnosticPieces created by this visitor.
   static const char *getTag();
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNodeImpl(const ExplodedNode *N,
-                                                     BugReporterContext &BRC,
-                                                     BugReport &BR);
+  PathDiagnosticPieceRef VisitNodeImpl(const ExplodedNode *N,
+                                       BugReporterContext &BRC, BugReport &BR);
 
-  std::shared_ptr<PathDiagnosticPiece>
-  VisitTerminator(const Stmt *Term, const ExplodedNode *N,
-                  const CFGBlock *srcBlk, const CFGBlock *dstBlk, BugReport &R,
-                  BugReporterContext &BRC);
+  PathDiagnosticPieceRef VisitTerminator(const Stmt *Term,
+                                         const ExplodedNode *N,
+                                         const CFGBlock *SrcBlk,
+                                         const CFGBlock *DstBlk, BugReport &R,
+                                         BugReporterContext &BRC);
 
-  std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, BugReporterContext &BRC, BugReport &R,
-                const ExplodedNode *N, bool TookTrue);
+  PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond,
+                                       BugReporterContext &BRC, BugReport &R,
+                                       const ExplodedNode *N, bool TookTrue);
 
-  std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, const DeclRefExpr *DR,
-                BugReporterContext &BRC, BugReport &R, const ExplodedNode *N,
-                bool TookTrue, bool IsAssuming);
+  PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond, const DeclRefExpr *DR,
+                                       BugReporterContext &BRC, BugReport &R,
+                                       const ExplodedNode *N, bool TookTrue,
+                                       bool IsAssuming);
 
-  std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, const BinaryOperator *BExpr,
-                BugReporterContext &BRC, BugReport &R, const ExplodedNode *N,
-                bool TookTrue, bool IsAssuming);
+  PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond,
+                                       const BinaryOperator *BExpr,
+                                       BugReporterContext &BRC, BugReport &R,
+                                       const ExplodedNode *N, bool TookTrue,
+                                       bool IsAssuming);
 
-  std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, const MemberExpr *ME, BugReporterContext &BRC,
-                BugReport &R, const ExplodedNode *N, bool TookTrue,
-                bool IsAssuming);
+  PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond, const MemberExpr *ME,
+                                       BugReporterContext &BRC, BugReport &R,
+                                       const ExplodedNode *N, bool TookTrue,
+                                       bool IsAssuming);
 
-  std::shared_ptr<PathDiagnosticPiece>
+  PathDiagnosticPieceRef
   VisitConditionVariable(StringRef LhsString, const Expr *CondVarExpr,
                          BugReporterContext &BRC, BugReport &R,
                          const ExplodedNode *N, bool TookTrue);
@@ -251,9 +253,8 @@ public:
     ID.AddPointer(getTag());
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *,
-                                                 BugReporterContext &,
-                                                 BugReport &) override {
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *, BugReporterContext &,
+                                   BugReport &) override {
     return nullptr;
   }
 
@@ -279,9 +280,9 @@ public:
     ID.AddPointer(R);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 
 class SuppressInlineDefensiveChecksVisitor final : public BugReporterVisitor {
@@ -308,9 +309,9 @@ public:
   /// to make all PathDiagnosticPieces created by this visitor.
   static const char *getTag();
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 
 /// The bug visitor will walk all the nodes in a path and collect all the
@@ -326,9 +327,9 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
   void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
                        BugReport &BR) override;
@@ -340,9 +341,9 @@ class TagVisitor : public BugReporterVisitor {
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &R) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &R) override;
 };
 
 namespace bugreporter {
