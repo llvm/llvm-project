@@ -3150,43 +3150,41 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   SwiftASTContext &m_swift_ast_ctx;
 
   /// Used to filter out types with mismatching kinds.
-  bool HasTypeKind(TypeSP clang_type_sp, swift::Demangle::Node::Kind kind) {
+  bool HasTypeKind(TypeSP clang_type_sp, swift::ClangTypeKind kind) {
     CompilerType fwd_type = clang_type_sp->GetForwardCompilerType();
     clang::QualType qual_type = ClangUtil::GetQualType(fwd_type);
     switch (kind) {
-    case swift::Demangle::Node::Kind::Protocol:
+    case swift::ClangTypeKind::Typedef:
+      /*=swift::ClangTypeKind::ObjCClass:*/
+      return !qual_type->isObjCObjectOrInterfaceType() &&
+             !qual_type->getAs<clang::TypedefType>();
+    case swift::ClangTypeKind::Tag:
+      return !qual_type->isStructureOrClassType() &&
+             !qual_type->isEnumeralType();
+    case swift::ClangTypeKind::ObjCProtocol:
       // Not implemented since Objective-C protocols aren't yet
       // described in DWARF.
       return true;
-    case swift::Demangle::Node::Kind::Class:
-      return !qual_type->isObjCObjectOrInterfaceType();
-    case swift::Demangle::Node::Kind::TypeAlias:
-      return !qual_type->getAs<clang::TypedefType>();
-      // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
-    case swift::Demangle::Node::Kind::Structure:
-    case swift::Demangle::Node::Kind::Enum:
-      return !qual_type->isStructureOrClassType() &&
-             !qual_type->isEnumeralType();
     default:
       return true;
     }
   }
 
   clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
-                                     swift::Demangle::Node::Kind kind) {
+                                     swift::ClangTypeKind kind) {
     switch (kind) {
-    case swift::Demangle::Node::Kind::Class:
+    case swift::ClangTypeKind::Typedef:
+      /*=swift::ClangTypeKind::ObjCClass:*/
       if (auto *obj_type = qual_type->getAsObjCInterfaceType())
         return obj_type->getInterface();
-      break;
-    case swift::Demangle::Node::Kind::TypeAlias:
       if (auto *typedef_type = qual_type->getAs<clang::TypedefType>())
         return typedef_type->getDecl();
       break;
-    case swift::Demangle::Node::Kind::Structure:
-    case swift::Demangle::Node::Kind::Enum:
+    case swift::ClangTypeKind::Tag:
       return qual_type->getAsTagDecl();
-    default:
+    case swift::ClangTypeKind::ObjCProtocol:
+      // Not implemented since Objective-C protocols aren't yet
+      // described in DWARF.
       break;
     }
     return nullptr;
@@ -3197,7 +3195,7 @@ public:
       : m_swift_ast_ctx(swift_ast_ctx) {}
 
   void lookupValue(StringRef name,
-                   llvm::Optional<swift::Demangle::Node::Kind> kind,
+                   llvm::Optional<swift::ClangTypeKind> kind,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     std::vector<CompilerContext> decl_context;
     ConstString name_cs(name);
@@ -3258,12 +3256,9 @@ public:
         if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, *kind))
           results.push_back(clang_decl);
       } else {
-        swift::Demangle::Node::Kind kinds[] = {
-            swift::Demangle::Node::Kind::Protocol,
-            swift::Demangle::Node::Kind::Class,
-            swift::Demangle::Node::Kind::TypeAlias,
-            swift::Demangle::Node::Kind::Structure,
-            swift::Demangle::Node::Kind::TypeAlias};
+        swift::ClangTypeKind kinds[] = {
+            swift::ClangTypeKind::Typedef, // =swift::ClangTypeKind::ObjCClass,
+            swift::ClangTypeKind::Tag, swift::ClangTypeKind::ObjCProtocol};
         for (auto kind : kinds)
           if (clang::Decl *clang_decl = GetDeclForTypeAndKind(clang_type, kind))
             results.push_back(clang_decl);
