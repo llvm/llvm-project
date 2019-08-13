@@ -2058,12 +2058,6 @@ void BugReport::clearVisitors() {
   Callbacks.clear();
 }
 
-BugReport::~BugReport() {
-  while (!interestingSymbols.empty()) {
-    popInterestingSymbolsAndRegions();
-  }
-}
-
 const Decl *BugReport::getDeclWithIssue() const {
   if (DeclWithIssue)
     return DeclWithIssue;
@@ -2101,10 +2095,10 @@ void BugReport::markInteresting(SymbolRef sym) {
   if (!sym)
     return;
 
-  getInterestingSymbols().insert(sym);
+  InterestingSymbols.insert(sym);
 
   if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
-    getInterestingRegions().insert(meta->getRegion());
+    InterestingRegions.insert(meta->getRegion());
 }
 
 void BugReport::markInteresting(const MemRegion *R) {
@@ -2112,10 +2106,10 @@ void BugReport::markInteresting(const MemRegion *R) {
     return;
 
   R = R->getBaseRegion();
-  getInterestingRegions().insert(R);
+  InterestingRegions.insert(R);
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
-    getInterestingSymbols().insert(SR->getSymbol());
+    InterestingSymbols.insert(SR->getSymbol());
 }
 
 void BugReport::markInteresting(SVal V) {
@@ -2138,18 +2132,18 @@ bool BugReport::isInteresting(SymbolRef sym) {
     return false;
   // We don't currently consider metadata symbols to be interesting
   // even if we know their region is interesting. Is that correct behavior?
-  return getInterestingSymbols().count(sym);
+  return InterestingSymbols.count(sym);
 }
 
 bool BugReport::isInteresting(const MemRegion *R) {
   if (!R)
     return false;
   R = R->getBaseRegion();
-  bool b = getInterestingRegions().count(R);
+  bool b = InterestingRegions.count(R);
   if (b)
     return true;
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
-    return getInterestingSymbols().count(SR->getSymbol());
+    return InterestingSymbols.count(SR->getSymbol());
   return false;
 }
 
@@ -2157,33 +2151,6 @@ bool BugReport::isInteresting(const LocationContext *LC) {
   if (!LC)
     return false;
   return InterestingLocationContexts.count(LC);
-}
-
-void BugReport::lazyInitializeInterestingSets() {
-  if (interestingSymbols.empty()) {
-    interestingSymbols.push_back(new Symbols());
-    interestingRegions.push_back(new Regions());
-  }
-}
-
-BugReport::Symbols &BugReport::getInterestingSymbols() {
-  lazyInitializeInterestingSets();
-  return *interestingSymbols.back();
-}
-
-BugReport::Regions &BugReport::getInterestingRegions() {
-  lazyInitializeInterestingSets();
-  return *interestingRegions.back();
-}
-
-void BugReport::pushInterestingSymbolsAndRegions() {
-  interestingSymbols.push_back(new Symbols(getInterestingSymbols()));
-  interestingRegions.push_back(new Regions(getInterestingRegions()));
-}
-
-void BugReport::popInterestingSymbolsAndRegions() {
-  delete interestingSymbols.pop_back_val();
-  delete interestingRegions.pop_back_val();
 }
 
 const Stmt *BugReport::getStmt() const {
@@ -2235,12 +2202,6 @@ PathDiagnosticLocation BugReport::getLocation(const SourceManager &SM) const {
 //===----------------------------------------------------------------------===//
 // Methods for BugReporter and subclasses.
 //===----------------------------------------------------------------------===//
-
-BugReportEquivClass::~BugReportEquivClass() = default;
-
-GRBugReporter::~GRBugReporter() = default;
-
-BugReporterData::~BugReporterData() = default;
 
 ExplodedGraph &GRBugReporter::getGraph() { return Eng.getGraph(); }
 

@@ -107,22 +107,19 @@ protected:
   ExtraTextList ExtraText;
   NoteList Notes;
 
-  using Symbols = llvm::DenseSet<SymbolRef>;
-  using Regions = llvm::DenseSet<const MemRegion *>;
-
   /// A (stack of) a set of symbols that are registered with this
   /// report as being "interesting", and thus used to help decide which
   /// diagnostics to include when constructing the final path diagnostic.
   /// The stack is largely used by BugReporter when generating PathDiagnostics
   /// for multiple PathDiagnosticConsumers.
-  SmallVector<Symbols *, 2> interestingSymbols;
+  llvm::DenseSet<SymbolRef> InterestingSymbols;
 
   /// A (stack of) set of regions that are registered with this report as being
   /// "interesting", and thus used to help decide which diagnostics
   /// to include when constructing the final path diagnostic.
   /// The stack is largely used by BugReporter when generating PathDiagnostics
   /// for multiple PathDiagnosticConsumers.
-  SmallVector<Regions *, 2> interestingRegions;
+  llvm::DenseSet<const MemRegion *> InterestingRegions;
 
   /// A set of location contexts that correspoind to call sites which should be
   /// considered "interesting".
@@ -156,15 +153,6 @@ protected:
   /// Conditions we're already tracking.
   llvm::SmallSet<const ExplodedNode *, 4> TrackedConditions;
 
-private:
-  // Used internally by BugReporter.
-  Symbols &getInterestingSymbols();
-  Regions &getInterestingRegions();
-
-  void lazyInitializeInterestingSets();
-  void pushInterestingSymbolsAndRegions();
-  void popInterestingSymbolsAndRegions();
-
 public:
   BugReport(const BugType& bt, StringRef desc, const ExplodedNode *errornode)
       : BT(bt), Description(desc), ErrorNode(errornode) {}
@@ -189,7 +177,7 @@ public:
       : BT(bt), Description(desc), UniqueingLocation(LocationToUnique),
         UniqueingDecl(DeclToUnique), ErrorNode(errornode) {}
 
-  virtual ~BugReport();
+  virtual ~BugReport() = default;
 
   const BugType& getBugType() const { return BT; }
   //BugType& getBugType() { return BT; }
@@ -381,7 +369,6 @@ class BugReportEquivClass : public llvm::FoldingSetNode {
 
 public:
   BugReportEquivClass(std::unique_ptr<BugReport> R) { AddReport(std::move(R)); }
-  ~BugReportEquivClass();
 
   void Profile(llvm::FoldingSetNodeID& ID) const {
     assert(!Reports.empty());
@@ -404,7 +391,7 @@ public:
 
 class BugReporterData {
 public:
-  virtual ~BugReporterData();
+  virtual ~BugReporterData() = default;
 
   virtual DiagnosticsEngine& getDiagnostic() = 0;
   virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
@@ -526,7 +513,7 @@ public:
   GRBugReporter(BugReporterData& d, ExprEngine& eng)
       : BugReporter(d, GRBugReporterKind), Eng(eng) {}
 
-  ~GRBugReporter() override;
+  ~GRBugReporter() override = default;;
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
