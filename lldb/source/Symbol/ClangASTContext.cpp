@@ -77,7 +77,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -5157,7 +5156,8 @@ ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
 }
 
 llvm::Optional<size_t>
-ClangASTContext::GetTypeBitAlign(lldb::opaque_compiler_type_t type) {
+ClangASTContext::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
+                                 ExecutionContextScope *exe_scope) {
   if (GetCompleteType(type))
     return getASTContext()->getTypeAlign(GetQualType(type));
   return {};

@@ -547,7 +547,7 @@ CompilerType::GetByteStride(ExecutionContextScope *exe_scope) const {
 
 llvm::Optional<size_t> CompilerType::GetTypeBitAlign() const {
   if (IsValid())
-    return m_type_system->GetTypeBitAlign(m_type);
+    return m_type_system->GetTypeBitAlign(m_type, exe_scope);
   return {};
 }
 
