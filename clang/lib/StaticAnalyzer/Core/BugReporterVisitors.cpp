@@ -267,7 +267,7 @@ void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
 PathDiagnosticPieceRef
 BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
                                       const ExplodedNode *EndPathNode,
-                                      BugReport &BR) {
+                                      const BugReport &BR) {
   PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(
       EndPathNode, BRC.getSourceManager());
 

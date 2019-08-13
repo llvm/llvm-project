@@ -105,6 +105,7 @@ protected:
 
   const ExplodedNode *ErrorNode = nullptr;
   SmallVector<SourceRange, 4> Ranges;
+  const SourceRange ErrorNodeRange;
   ExtraTextList ExtraText;
   NoteList Notes;
 
@@ -155,16 +156,22 @@ protected:
   llvm::SmallSet<const ExplodedNode *, 4> TrackedConditions;
 
 public:
-  BugReport(const BugType& bt, StringRef desc, const ExplodedNode *errornode)
-      : BT(bt), Description(desc), ErrorNode(errornode) {}
+  BugReport(const BugType &bt, StringRef desc, const ExplodedNode *errornode)
+      : BT(bt), Description(desc), ErrorNode(errornode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
-  BugReport(const BugType& bt, StringRef shortDesc, StringRef desc,
+  BugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
             const ExplodedNode *errornode)
       : BT(bt), ShortDescription(shortDesc), Description(desc),
-        ErrorNode(errornode) {}
+        ErrorNode(errornode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
   BugReport(const BugType &bt, StringRef desc, PathDiagnosticLocation l)
-      : BT(bt), Description(desc), Location(l) {}
+      : BT(bt), Description(desc), Location(l),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
   /// Create a BugReport with a custom uniqueing location.
   ///
@@ -323,7 +330,7 @@ public:
   }
 
   /// Get the SourceRanges associated with the report.
-  virtual llvm::iterator_range<ranges_iterator> getRanges();
+  virtual llvm::iterator_range<ranges_iterator> getRanges() const;
 
   /// Add custom or predefined bug report visitors to this report.
   ///

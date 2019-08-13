@@ -82,7 +82,7 @@ public:
   /// Generates the default final diagnostic piece.
   static PathDiagnosticPieceRef getDefaultEndPath(const BugReporterContext &BRC,
                                                   const ExplodedNode *N,
-                                                  BugReport &BR);
+                                                  const BugReport &BR);
 };
 
 /// Finds last store into the given region,
