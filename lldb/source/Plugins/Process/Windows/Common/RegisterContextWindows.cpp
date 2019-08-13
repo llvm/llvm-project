@@ -123,7 +123,9 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
     return false;
   }
   memcpy(&m_context, tmpContext, sizeof(m_context));
-  if (!::SuspendThread(wthread.GetHostThread().GetNativeThread().GetSystemHandle())) {
+  if (::SuspendThread(
+          wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
+      (DWORD)-1) {
     return false;
   }
   if (!::GetThreadContext(
@@ -135,7 +137,9 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
         ::GetLastError());
     return false;
   }
-  if (!::ResumeThread(wthread.GetHostThread().GetNativeThread().GetSystemHandle())) {
+  if (::ResumeThread(
+          wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
+      (DWORD)-1) {
     return false;
   }
   LLDB_LOG(log, "successfully updated the register values.");

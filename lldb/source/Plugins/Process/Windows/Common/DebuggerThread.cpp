@@ -29,6 +29,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifndef STATUS_WX86_BREAKPOINT
+#define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64 
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -350,7 +354,8 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
     // we use simply to wake up the DebuggerThread so that we can close out the
     // debug loop.
     if (m_pid_to_detach != 0 &&
-        info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
+        (info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
+         info.ExceptionRecord.ExceptionCode == STATUS_WX86_BREAKPOINT)) {
       LLDB_LOG(log, "Breakpoint exception is cue to detach from process {0:x}",
                m_pid_to_detach.load());
       ::DebugActiveProcessStop(m_pid_to_detach);
