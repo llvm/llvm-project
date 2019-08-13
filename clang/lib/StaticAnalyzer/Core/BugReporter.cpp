@@ -99,8 +99,6 @@ using CallWithEntryStack = SmallVector<CallWithEntry, 6>;
 using VisitorsDiagnosticsTy =
     llvm::DenseMap<const ExplodedNode *, std::vector<PathDiagnosticPieceRef>>;
 
-using InterestingExprs = llvm::DenseSet<const Expr *>;
-
 /// A map from PathDiagnosticPiece to the LocationContext of the inlined
 /// function call it represents.
 using LocationContextMap =
@@ -126,7 +124,6 @@ public:
   /// TODO: PathDiagnostic has a stack doing the same thing, shouldn't we use
   /// that instead?
   CallWithEntryStack CallStack;
-  InterestingExprs IE;
   /// The bug report we're constructing. For ease of use, this field is kept
   /// public, though some "shortcut" getters are provided for commonly used
   /// methods of PathDiagnostic.
@@ -943,74 +940,6 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
   }
 }
 
-// Cone-of-influence: support the reverse propagation of "interesting" symbols
-// and values by tracing interesting calculations backwards through evaluated
-// expressions along a path.  This is probably overly complicated, but the idea
-// is that if an expression computed an "interesting" value, the child
-// expressions are also likely to be "interesting" as well (which then
-// propagates to the values they in turn compute).  This reverse propagation
-// is needed to track interesting correlations across function call boundaries,
-// where formal arguments bind to actual arguments, etc.  This is also needed
-// because the constraint solver sometimes simplifies certain symbolic values
-// into constants when appropriate, and this complicates reasoning about
-// interesting values.
-
-static void reversePropagateIntererstingSymbols(BugReport &R,
-                                                InterestingExprs &IE,
-                                                const ProgramState *State,
-                                                const Expr *Ex,
-                                                const LocationContext *LCtx) {
-  SVal V = State->getSVal(Ex, LCtx);
-  if (!(R.isInteresting(V) || IE.count(Ex)))
-    return;
-
-  switch (Ex->getStmtClass()) {
-    default:
-      if (!isa<CastExpr>(Ex))
-        break;
-      LLVM_FALLTHROUGH;
-    case Stmt::BinaryOperatorClass:
-    case Stmt::UnaryOperatorClass: {
-      for (const Stmt *SubStmt : Ex->children()) {
-        if (const auto *child = dyn_cast_or_null<Expr>(SubStmt)) {
-          IE.insert(child);
-          SVal ChildV = State->getSVal(child, LCtx);
-          R.markInteresting(ChildV);
-        }
-      }
-      break;
-    }
-  }
-
-  R.markInteresting(V);
-}
-
-static void reversePropagateInterestingSymbols(BugReport &R,
-                                               InterestingExprs &IE,
-                                               const ProgramState *State,
-                                               const LocationContext *CalleeCtx)
-{
-  // FIXME: Handle non-CallExpr-based CallEvents.
-  const StackFrameContext *Callee = CalleeCtx->getStackFrame();
-  const Stmt *CallSite = Callee->getCallSite();
-  if (const auto *CE = dyn_cast_or_null<CallExpr>(CallSite)) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(CalleeCtx->getDecl())) {
-      FunctionDecl::param_const_iterator PI = FD->param_begin(),
-                                         PE = FD->param_end();
-      CallExpr::const_arg_iterator AI = CE->arg_begin(), AE = CE->arg_end();
-      for (; AI != AE && PI != PE; ++AI, ++PI) {
-        if (const Expr *ArgE = *AI) {
-          if (const ParmVarDecl *PD = *PI) {
-            Loc LV = State->getLValue(PD, CalleeCtx);
-            if (R.isInteresting(LV) || R.isInteresting(State->getRawSVal(LV)))
-              IE.insert(ArgE);
-          }
-        }
-      }
-    }
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Functions for determining if a loop was executed 0 times.
 //===----------------------------------------------------------------------===//
@@ -1219,13 +1148,6 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     C.updateLocCtxMap(&Call->path, CE->getCalleeContext());
 
     if (C.shouldAddPathEdges()) {
-      const Stmt *S = CE->getCalleeContext()->getCallSite();
-      // Propagate the interesting symbols accordingly.
-      if (const auto *Ex = dyn_cast_or_null<Expr>(S)) {
-        reversePropagateIntererstingSymbols(
-            *getBugReport(), C.IE, C.getCurrentNode()->getState().get(), Ex,
-            C.getCurrLocationContext());
-      }
       // Add the edge to the return site.
       addEdgeToPath(C.getActivePath(), PrevLoc, Call->callReturn);
       PrevLoc.invalidate();
@@ -1244,13 +1166,6 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     if (!C.shouldAddPathEdges())
       return;
 
-    // For expressions, make sure we propagate the
-    // interesting symbols correctly.
-    if (const Expr *Ex = PS->getStmtAs<Expr>())
-      reversePropagateIntererstingSymbols(*getBugReport(), C.IE,
-                                          C.getCurrentNode()->getState().get(),
-                                          Ex, C.getCurrLocationContext());
-
     // Add an edge.  If this is an ObjCForCollectionStmt do
     // not add an edge here as it appears in the CFG both
     // as a terminator and as a terminator condition.
@@ -1265,18 +1180,6 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     if (!C.shouldAddPathEdges()) {
       generateMinimalDiagForBlockEdge(C, *BE);
       return;
-    }
-
-    // Does this represent entering a call?  If so, look at propagating
-    // interesting symbols across call boundaries.
-    if (const ExplodedNode *NextNode = C.getCurrentNode()->getFirstPred()) {
-      const LocationContext *CallerCtx = NextNode->getLocationContext();
-      const LocationContext *CalleeCtx = C.getCurrLocationContext();
-      if (CallerCtx != CalleeCtx && C.shouldAddPathEdges()) {
-        reversePropagateInterestingSymbols(*getBugReport(), C.IE,
-                                           C.getCurrentNode()->getState().get(),
-                                           CalleeCtx);
-      }
     }
 
     // Are we jumping to the head of a loop?  Add a special diagnostic.
