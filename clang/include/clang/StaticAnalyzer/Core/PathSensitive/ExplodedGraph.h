@@ -219,12 +219,20 @@ public:
 
   // Iterators over successor and predecessor vertices.
   using succ_iterator = ExplodedNode * const *;
+  using succ_range = llvm::iterator_range<succ_iterator>;
+
   using const_succ_iterator = const ExplodedNode * const *;
+  using const_succ_range = llvm::iterator_range<const_succ_iterator>;
+
   using pred_iterator = ExplodedNode * const *;
+  using pred_range = llvm::iterator_range<pred_iterator>;
+
   using const_pred_iterator = const ExplodedNode * const *;
+  using const_pred_range = llvm::iterator_range<const_pred_iterator>;
 
   pred_iterator pred_begin() { return Preds.begin(); }
   pred_iterator pred_end() { return Preds.end(); }
+  pred_range preds() { return {Preds.begin(), Preds.end()}; }
 
   const_pred_iterator pred_begin() const {
     return const_cast<ExplodedNode*>(this)->pred_begin();
@@ -232,9 +240,11 @@ public:
   const_pred_iterator pred_end() const {
     return const_cast<ExplodedNode*>(this)->pred_end();
   }
+  const_pred_range preds() const { return {Preds.begin(), Preds.end()}; }
 
   succ_iterator succ_begin() { return Succs.begin(); }
   succ_iterator succ_end() { return Succs.end(); }
+  succ_range succs() { return {Succs.begin(), Succs.end()}; }
 
   const_succ_iterator succ_begin() const {
     return const_cast<ExplodedNode*>(this)->succ_begin();
@@ -242,6 +252,7 @@ public:
   const_succ_iterator succ_end() const {
     return const_cast<ExplodedNode*>(this)->succ_end();
   }
+  const_succ_range succs() const { return {Succs.begin(), Succs.end()}; }
 
   int64_t getID(ExplodedGraph *G) const;
 

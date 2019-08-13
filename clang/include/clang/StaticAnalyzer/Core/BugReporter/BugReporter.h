@@ -87,6 +87,7 @@ public:
   using ranges_iterator = const SourceRange *;
   using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
   using visitor_iterator = VisitorList::iterator;
+  using visitor_range = llvm::iterator_range<visitor_iterator>;
   using ExtraTextList = SmallVector<StringRef, 2>;
   using NoteList = SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4>;
 
@@ -339,6 +340,7 @@ public:
   /// Iterators through the custom diagnostic visitors.
   visitor_iterator visitor_begin() { return Callbacks.begin(); }
   visitor_iterator visitor_end() { return Callbacks.end(); }
+  visitor_range visitors() { return {visitor_begin(), visitor_end()}; }
 
   /// Notes that the condition of the CFGBlock associated with \p Cond is
   /// being tracked.
