@@ -14,45 +14,15 @@
 #define REQUIRES_GFX9_INSTS __attribute__((target("gfx9-insts")))
 
 // Generic intrinsics
-extern __attribute__((const)) half __llvm_sqrt_f16(half) __asm("llvm.sqrt.f16");
-extern __attribute__((const)) half __llvm_exp2_f16(half) __asm("llvm.exp2.f16");
-extern __attribute__((const)) half __llvm_exp_f16(half) __asm("llvm.exp.f16");
-extern __attribute__((const)) half __llvm_log_f16(half) __asm("llvm.log.f16");
-extern __attribute__((const)) half __llvm_log2_f16(half) __asm("llvm.log2.f16");
-extern __attribute__((const)) half __llvm_log10_f16(half) __asm("llvm.log10.f16");
-
-extern __attribute__((const)) half __llvm_sin_f16(half) __asm("llvm.sin.f16");
-extern __attribute__((const)) half __llvm_cos_f16(half) __asm("llvm.cos.f16");
-
-extern __attribute__((const)) half __llvm_fma_f16(half, half, half) __asm("llvm.fma.f16");
 extern __attribute__((const)) half2 __llvm_fma_2f16(half2, half2, half2) __asm("llvm.fma.v2f16");
-
-extern __attribute__((const)) half __llvm_fabs_f16(half) __asm("llvm.fabs.f16");
 extern __attribute__((const)) half2 __llvm_fabs_2f16(half2) __asm("llvm.fabs.v2f16");
-
-extern __attribute__((const)) half __llvm_minnum_f16(half, half) __asm("llvm.minnum.f16");
 extern __attribute__((const)) half2 __llvm_minnum_2f16(half2, half2) __asm("llvm.minnum.v2f16");
-
-extern __attribute__((const)) half __llvm_maxnum_f16(half, half) __asm("llvm.maxnum.f16");
 extern __attribute__((const)) half2 __llvm_maxnum_2f16(half2, half2) __asm("llvm.maxnum.v2f16");
-
-extern __attribute__((const)) half __llvm_copysign_f16(half, half) __asm("llvm.copysign.f16");
 extern __attribute__((const)) half2 __llvm_copysign_2f16(half2, half2) __asm("llvm.copysign.v2f16");
-
-extern __attribute__((const)) half __llvm_floor_f16(half) __asm("llvm.floor.f16");
 extern __attribute__((const)) half2 __llvm_floor_2f16(half2) __asm("llvm.floor.v2f16");
-
-extern __attribute__((const)) half __llvm_ceil_f16(half) __asm("llvm.ceil.f16");
 extern __attribute__((const)) half2 __llvm_ceil_2f16(half2) __asm("llvm.ceil.v2f16");
-
-extern __attribute__((const)) half __llvm_trunc_f16(half) __asm("llvm.trunc.f16");
 extern __attribute__((const)) half2 __llvm_trunc_2f16(half2) __asm("llvm.trunc.v2f16");
-
-extern __attribute__((const)) half __llvm_rint_f16(half) __asm("llvm.rint.f16");
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
-
-
-extern __attribute__((const)) half __llvm_canonicalize_f16(half) __asm("llvm.canonicalize.f16");
 extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
 
 // Intrinsics requiring wrapping

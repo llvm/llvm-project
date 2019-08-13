@@ -72,7 +72,7 @@ OCKL_MANGLE_F32(min3)(float a, float b, float c)
 CATTR half
 OCKL_MANGLE_F16(max3)(half a, half b, half c)
 {
-    return __llvm_maxnum_f16(__llvm_maxnum_f16(a, b), c);
+    return __builtin_fmaxf16(__builtin_fmaxf16(a, b), c);
 }
 
 REQUIRES_GFX9_INSTS
@@ -87,16 +87,16 @@ OCKL_MANGLE_F16(median3)(half a, half b, half c)
     if (__oclc_ISA_version >= 9000)
         return median3_f16_gfx9_impl(a, b, c);
 
-    half a1 = __llvm_minnum_f16(a, b);
-    half b1 = __llvm_maxnum_f16(a, b);
-    half c1 = __llvm_maxnum_f16(a1, c);
-    return __llvm_minnum_f16(b1, c1);
+    half a1 = __builtin_fminf16(a, b);
+    half b1 = __builtin_fmaxf16(a, b);
+    half c1 = __builtin_fmaxf16(a1, c);
+    return __builtin_fminf16(b1, c1);
 }
 
 CATTR half
 OCKL_MANGLE_F16(min3)(half a, half b, half c)
 {
-    return __llvm_minnum_f16(__llvm_minnum_f16(a, b), c);
+    return __builtin_fminf16(__builtin_fminf16(a, b), c);
 }
 
 CATTR int

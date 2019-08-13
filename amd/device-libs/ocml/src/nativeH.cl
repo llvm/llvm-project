@@ -18,7 +18,7 @@ MATH_MANGLE(native_rcp)(half x)
 CONSTATTR half
 MATH_MANGLE(native_sqrt)(half x)
 {
-    return __llvm_sqrt_f16(x);
+    return __builtin_sqrtf16(x);
 }
 
 REQUIRES_16BIT_INSTS CONSTATTR half
@@ -30,42 +30,42 @@ MATH_MANGLE(native_rsqrt)(half x)
 CONSTATTR half
 MATH_MANGLE(native_sin)(half x)
 {
-    return __llvm_sin_f16(x);
+    return __builtin_sinf16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_cos)(half x)
 {
-    return __llvm_cos_f16(x);
+    return __builtin_cosf16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_exp)(half x)
 {
-    return __llvm_exp_f16(x);
+    return __builtin_expf16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_exp2)(half x)
 {
-    return __llvm_exp2_f16(x);
+    return __builtin_exp2f16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_log)(half x)
 {
-    return __llvm_log_f16(x);
+    return __builtin_logf16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_log2)(half x)
 {
-    return __llvm_log2_f16(x);
+    return __builtin_log2f16(x);
 }
 
 CONSTATTR half
 MATH_MANGLE(native_log10)(half x)
 {
-    return __llvm_log10_f16(x);
+    return __builtin_log10f16(x);
 
 }

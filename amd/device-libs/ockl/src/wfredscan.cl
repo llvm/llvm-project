@@ -172,7 +172,7 @@ GENMIN(long)
 GENMIN(ulong)
 #define float_min(A,B) __builtin_fminf(A,B)
 #define double_min(A,B) __builtin_fmin(A,B)
-#define half_min(A,B) __llvm_minnum_f16(A,B)
+#define half_min(A,B) __builtin_fminf16(A,B)
 
 #define GENMAX(T) CATTR static T T##_max(T a, T b) { return a < b ? b : a; }
 GENMAX(int)
@@ -181,7 +181,7 @@ GENMAX(long)
 GENMAX(ulong)
 #define float_max(A,B) __builtin_fmaxf(A,B)
 #define double_max(A,B) __builtin_fmax(A,B)
-#define half_max(A,B) __llvm_maxnum_f16(A,B)
+#define half_max(A,B) __builtin_fmaxf16(A,B)
 
 #define ADD(X,Y) (X + Y)
 #define uint_add(X,Y) ADD(X,Y)
