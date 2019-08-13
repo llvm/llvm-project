@@ -3288,25 +3288,34 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
 
   // Look for an 'and' of two (opposite) logical shifts.
   // Pick the single-use shift as XShift.
-  Value *XShift, *YShift;
+  Instruction *XShift, *YShift;
   if (!match(I.getOperand(0),
-             m_c_And(m_OneUse(m_CombineAnd(m_AnyLogicalShift, m_Value(XShift))),
-                     m_CombineAnd(m_AnyLogicalShift, m_Value(YShift)))))
+             m_c_And(m_CombineAnd(m_AnyLogicalShift, m_Instruction(XShift)),
+                     m_CombineAnd(m_AnyLogicalShift, m_Instruction(YShift)))))
     return nullptr;
 
-  // If YShift is a single-use 'lshr', swap the shifts around.
-  if (match(YShift, m_OneUse(m_AnyLShr)))
+  // If YShift is a 'lshr', swap the shifts around.
+  if (match(YShift, m_AnyLShr))
     std::swap(XShift, YShift);
 
   // The shifts must be in opposite directions.
-  Instruction::BinaryOps XShiftOpcode =
-      cast<BinaryOperator>(XShift)->getOpcode();
-  if (XShiftOpcode == cast<BinaryOperator>(YShift)->getOpcode())
+  auto XShiftOpcode = XShift->getOpcode();
+  if (XShiftOpcode == YShift->getOpcode())
     return nullptr; // Do not care about same-direction shifts here.
 
   Value *X, *XShAmt, *Y, *YShAmt;
   match(XShift, m_BinOp(m_Value(X), m_Value(XShAmt)));
   match(YShift, m_BinOp(m_Value(Y), m_Value(YShAmt)));
+
+  // If one of the values being shifted is a constant, then we will end with
+  // and+icmp, and shift instr will be constant-folded. If they are not,
+  // however, we will need to ensure that we won't increase instruction count.
+  if (!isa<Constant>(X) && !isa<Constant>(Y)) {
+    // At least one of the hands of the 'and' should be one-use shift.
+    if (!match(I.getOperand(0),
+               m_c_And(m_OneUse(m_AnyLogicalShift), m_Value())))
+      return nullptr;
+  }
 
   // Can we fold (XShAmt+YShAmt) ?
   Value *NewShAmt = SimplifyBinOp(Instruction::BinaryOps::Add, XShAmt, YShAmt,
