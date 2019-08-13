@@ -198,18 +198,22 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
       continue;
     }
 
+    auto maybe_path_style = FileSpec::GuessPathStyle(original_file);
+    FileSpec::Style style =
+        maybe_path_style ? *maybe_path_style : FileSpec::Style::native;
+
     std::string remapped_file;
     if (!prologue.getFileNameByIndex(
             idx, compile_dir,
             llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             remapped_file)) {
       // Always add an entry so the indexes remain correct.
-      support_files.EmplaceBack(original_file, FileSpec::Style::native);
+      support_files.EmplaceBack(original_file, style);
       continue;
     }
 
     module->RemapSourceFile(llvm::StringRef(original_file), remapped_file);
-    support_files.EmplaceBack(remapped_file, FileSpec::Style::native);
+    support_files.EmplaceBack(remapped_file, style);
   }
 
   return support_files;
