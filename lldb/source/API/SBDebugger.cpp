@@ -88,7 +88,7 @@ public:
       file = absolute_path.GetPath();
     }
 
-    return llvm::make_unique<CommandLoader>(std::move(files));
+    return std::make_unique<CommandLoader>(std::move(files));
   }
 
   FILE *GetNextFile() {
@@ -204,7 +204,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
 
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          llvm::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
     error.SetError(Status(std::move(e)));
   }
   return LLDB_RECORD_RESULT(error);
@@ -599,18 +599,18 @@ const char *SBDebugger::StateAsCString(StateType state) {
 static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
                                llvm::StringRef name, bool value,
                                llvm::StringRef description) {
-  auto entry_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
   entry_up->AddBooleanItem("value", value);
   entry_up->AddStringItem("description", description);
   dict.AddItem(name, std::move(entry_up));
 }
 
 static void AddLLVMTargets(StructuredData::Dictionary &dict) {
-  auto array_up = llvm::make_unique<StructuredData::Array>();
+  auto array_up = std::make_unique<StructuredData::Array>();
 #define LLVM_TARGET(target)                                                    \
-  array_up->AddItem(llvm::make_unique<StructuredData::String>(#target));
+  array_up->AddItem(std::make_unique<StructuredData::String>(#target));
 #include "llvm/Config/Targets.def"
-  auto entry_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
   entry_up->AddItem("value", std::move(array_up));
   entry_up->AddStringItem("description", "A list of configured LLVM targets.");
   dict.AddItem("targets", std::move(entry_up));
@@ -620,7 +620,7 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBStructuredData, SBDebugger,
                                     GetBuildConfiguration);
 
-  auto config_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto config_up = std::make_unique<StructuredData::Dictionary>();
   AddBoolConfigEntry(
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
@@ -1012,7 +1012,7 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
                      GetAvailablePlatformInfoAtIndex, (uint32_t), idx);
 
   SBStructuredData data;
-  auto platform_dict = llvm::make_unique<StructuredData::Dictionary>();
+  auto platform_dict = std::make_unique<StructuredData::Dictionary>();
   llvm::StringRef name_str("name"), desc_str("description");
 
   if (idx == 0) {

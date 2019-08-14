@@ -21,7 +21,7 @@ SBStringList::SBStringList() : m_opaque_up() {
 SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr)
     : m_opaque_up() {
   if (lldb_strings_ptr)
-    m_opaque_up = llvm::make_unique<StringList>(*lldb_strings_ptr);
+    m_opaque_up = std::make_unique<StringList>(*lldb_strings_ptr);
 }
 
 SBStringList::SBStringList(const SBStringList &rhs) : m_opaque_up() {

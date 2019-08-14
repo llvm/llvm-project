@@ -28,7 +28,7 @@ SBAddress::SBAddress() : m_opaque_up(new Address()) {
 SBAddress::SBAddress(const Address *lldb_object_ptr)
     : m_opaque_up(new Address()) {
   if (lldb_object_ptr)
-    m_opaque_up = llvm::make_unique<Address>(*lldb_object_ptr);
+    m_opaque_up = std::make_unique<Address>(*lldb_object_ptr);
 }
 
 SBAddress::SBAddress(const SBAddress &rhs) : m_opaque_up(new Address()) {

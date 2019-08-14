@@ -91,10 +91,10 @@ static std::unique_ptr<PDBFile> loadPDBFile(std::string PdbPath,
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
 
   llvm::StringRef Path = Buffer->getBufferIdentifier();
-  auto Stream = llvm::make_unique<llvm::MemoryBufferByteStream>(
+  auto Stream = std::make_unique<llvm::MemoryBufferByteStream>(
       std::move(Buffer), llvm::support::little);
 
-  auto File = llvm::make_unique<PDBFile>(Path, std::move(Stream), Allocator);
+  auto File = std::make_unique<PDBFile>(Path, std::move(Stream), Allocator);
   if (auto EC = File->parseFileHeaders()) {
     llvm::consumeError(std::move(EC));
     return nullptr;
@@ -333,7 +333,7 @@ void SymbolFileNativePDB::InitializeObject() {
     ts_or_err->SetSymbolFile(this);
     auto *clang = llvm::cast_or_null<ClangASTContext>(&ts_or_err.get());
     lldbassert(clang);
-    m_ast = llvm::make_unique<PdbAstBuilder>(*m_objfile_sp, *m_index, *clang);
+    m_ast = std::make_unique<PdbAstBuilder>(*m_objfile_sp, *m_index, *clang);
   }
 }
 
@@ -1068,7 +1068,7 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   CompilandIndexItem *cci =
       m_index->compilands().GetCompiland(cu_id.asCompiland().modi);
   lldbassert(cci);
-  auto line_table = llvm::make_unique<LineTable>(&comp_unit);
+  auto line_table = std::make_unique<LineTable>(&comp_unit);
 
   // This is basically a copy of the .debug$S subsections from all original COFF
   // object files merged together with address relocations applied.  We are

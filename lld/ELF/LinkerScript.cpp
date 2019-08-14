@@ -460,7 +460,7 @@ void LinkerScript::processSectionCommands() {
   // This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
   // script parser.
-  auto deleter = make_unique<AddressState>();
+  auto deleter = std::make_unique<AddressState>();
   ctx = deleter.get();
   ctx->outSec = aether;
 
@@ -1057,7 +1057,7 @@ static uint64_t getInitialDot() {
 void LinkerScript::assignAddresses() {
   dot = getInitialDot();
 
-  auto deleter = make_unique<AddressState>();
+  auto deleter = std::make_unique<AddressState>();
   ctx = deleter.get();
   errorOnMissingSection = true;
   switchTo(aether);

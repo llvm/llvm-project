@@ -309,7 +309,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     }
   }
 
-  auto bp_options = llvm::make_unique<BreakpointOptions>(
+  auto bp_options = std::make_unique<BreakpointOptions>(
       condition_ref.str().c_str(), enabled, 
       ignore_count, one_shot, auto_continue);
   if (cmd_data_up) {

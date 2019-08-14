@@ -41,7 +41,7 @@ using namespace lldb_private;
 SBBreakpointCallbackBaton::SBBreakpointCallbackBaton(SBBreakpointHitCallback 
                                                          callback,
                                                      void *baton)
-      : TypedBaton(llvm::make_unique<CallbackData>()) {
+      : TypedBaton(std::make_unique<CallbackData>()) {
     getItem()->callback = callback;
     getItem()->callback_baton = baton;
   }
