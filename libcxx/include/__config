@@ -479,9 +479,10 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
 
-// No apple compilers support ""d and ""y at this time.
-#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) || defined(__apple_build_version__)
-#define	_LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
+// Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
+#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) || \
+    (defined(__apple_build_version__) && __apple_build_version__ < 10010000)
+#define _LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
 #endif
 
 #elif defined(_LIBCPP_COMPILER_GCC)
