@@ -72,10 +72,8 @@ const char *SBCommandReturnObject::GetOutput() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetOutput);
 
   if (m_opaque_up) {
-    llvm::StringRef output = m_opaque_up->GetOutputData();
-    ConstString result(output.empty() ? llvm::StringRef("") : output);
-
-    return result.AsCString();
+    ConstString output(m_opaque_up->GetOutputData());
+    return output.AsCString(/*value_if_empty*/ "");
   }
 
   return nullptr;
@@ -85,9 +83,8 @@ const char *SBCommandReturnObject::GetError() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetError);
 
   if (m_opaque_up) {
-    llvm::StringRef output = m_opaque_up->GetErrorData();
-    ConstString result(output.empty() ? llvm::StringRef("") : output);
-    return result.AsCString();
+    ConstString output(m_opaque_up->GetErrorData());
+    return output.AsCString(/*value_if_empty*/ "");
   }
 
   return nullptr;
