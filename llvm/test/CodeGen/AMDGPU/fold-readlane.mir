@@ -15,7 +15,7 @@ body:             |
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
 # GCN: %1:sreg_32_xm0 = S_MOV_B32 123
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-# GCN: %3:sreg_32_xm0 = S_MOV_B32 123
+# GCN: %3:sreg_32_xm0 = COPY %1
 
 ---
 name: fold-imm-readfirstlane-readfirstlane
@@ -33,7 +33,7 @@ body:             |
 # GCN-LABEL: name: fold-copy-readfirstlane{{$}}
 # GCN: %0:sreg_32_xm0 = COPY $sgpr10
 # GCN: %1:vgpr_32 = COPY %0
-# GCN: %2:sreg_32_xm0 = COPY %1
+# GCN: %2:sreg_32_xm0 = COPY %0
 ---
 name: fold-copy-readfirstlane
 tracksRegLiveness: true

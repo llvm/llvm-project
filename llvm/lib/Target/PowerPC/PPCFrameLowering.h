@@ -143,15 +143,15 @@ public:
 
   /// getTOCSaveOffset - Return the previous frame offset to save the
   /// TOC register -- 64-bit SVR4 ABI only.
-  unsigned getTOCSaveOffset() const { return TOCSaveOffset; }
+  unsigned getTOCSaveOffset() const;
 
   /// getFramePointerSaveOffset - Return the previous frame offset to save the
   /// frame pointer.
-  unsigned getFramePointerSaveOffset() const { return FramePointerSaveOffset; }
+  unsigned getFramePointerSaveOffset() const;
 
   /// getBasePointerSaveOffset - Return the previous frame offset to save the
   /// base pointer.
-  unsigned getBasePointerSaveOffset() const { return BasePointerSaveOffset; }
+  unsigned getBasePointerSaveOffset() const;
 
   /// getCRSaveOffset - Return the previous frame offset to save the
   /// CR register.

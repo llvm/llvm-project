@@ -1387,6 +1387,56 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_SEXT_INREG size must be less than source bit width", MI);
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    const MachineOperand &MaskOp = MI->getOperand(3);
+    if (!MaskOp.isShuffleMask()) {
+      report("Incorrect mask operand type for G_SHUFFLE_VECTOR", MI);
+      break;
+    }
+
+    const Constant *Mask = MaskOp.getShuffleMask();
+    auto *MaskVT = dyn_cast<VectorType>(Mask->getType());
+    if (!MaskVT || !MaskVT->getElementType()->isIntegerTy(32)) {
+      report("Invalid shufflemask constant type", MI);
+      break;
+    }
+
+    if (!Mask->getAggregateElement(0u)) {
+      report("Invalid shufflemask constant type", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT Src0Ty = MRI->getType(MI->getOperand(1).getReg());
+    LLT Src1Ty = MRI->getType(MI->getOperand(2).getReg());
+
+    if (Src0Ty != Src1Ty)
+      report("Source operands must be the same type", MI);
+
+    if (Src0Ty.getScalarType() != DstTy.getScalarType())
+      report("G_SHUFFLE_VECTOR cannot change element type", MI);
+
+    // Don't check that all operands are vector because scalars are used in
+    // place of 1 element vectors.
+    int SrcNumElts = Src0Ty.isVector() ? Src0Ty.getNumElements() : 1;
+    int DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+
+    SmallVector<int, 32> MaskIdxes;
+    ShuffleVectorInst::getShuffleMask(Mask, MaskIdxes);
+
+    if (static_cast<int>(MaskIdxes.size()) != DstNumElts)
+      report("Wrong result type for shufflemask", MI);
+
+    for (int Idx : MaskIdxes) {
+      if (Idx < 0)
+        continue;
+
+      if (Idx >= 2 * SrcNumElts)
+        report("Out of bounds shuffle index", MI);
+    }
+
+    break;
+  }
   default:
     break;
   }

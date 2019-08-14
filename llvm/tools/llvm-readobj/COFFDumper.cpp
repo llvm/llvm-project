@@ -912,26 +912,33 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
     // The section consists of a number of subsection in the following format:
     // |SubSectionType|SubSectionSize|Contents...|
     uint32_t SubType, SubSectionSize;
-    error(Reader.readInteger(SubType));
-    error(Reader.readInteger(SubSectionSize));
+
+    if (Error E = Reader.readInteger(SubType))
+      reportError(std::move(E), Obj->getFileName());
+    if (Error E = Reader.readInteger(SubSectionSize))
+      reportError(std::move(E), Obj->getFileName());
 
     StringRef Contents;
-    error(Reader.readFixedString(Contents, SubSectionSize));
+    if (Error E = Reader.readFixedString(Contents, SubSectionSize))
+      reportError(std::move(E), Obj->getFileName());
 
     BinaryStreamRef ST(Contents, support::little);
     switch (DebugSubsectionKind(SubType)) {
     case DebugSubsectionKind::FileChecksums:
-      error(CVFileChecksumTable.initialize(ST));
+      if (Error E = CVFileChecksumTable.initialize(ST))
+        reportError(std::move(E), Obj->getFileName());
       break;
     case DebugSubsectionKind::StringTable:
-      error(CVStringTable.initialize(ST));
+      if (Error E = CVStringTable.initialize(ST))
+        reportError(std::move(E), Obj->getFileName());
       break;
     default:
       break;
     }
 
     uint32_t PaddedSize = alignTo(SubSectionSize, 4);
-    error(Reader.skip(PaddedSize - SubSectionSize));
+    if (Error E = Reader.skip(PaddedSize - SubSectionSize))
+      reportError(std::move(E), Obj->getFileName());
   }
 }
 
@@ -949,7 +956,9 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
   W.printNumber("Section", SectionName, Obj->getSectionID(Section));
 
   uint32_t Magic;
-  error(consume(Data, Magic));
+  if (Error E = consume(Data, Magic))
+    reportError(std::move(E), Obj->getFileName());
+
   W.printHex("Magic", Magic);
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
@@ -962,8 +971,10 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     // The section consists of a number of subsection in the following format:
     // |SubSectionType|SubSectionSize|Contents...|
     uint32_t SubType, SubSectionSize;
-    error(consume(Data, SubType));
-    error(consume(Data, SubSectionSize));
+    if (Error E = consume(Data, SubType))
+      reportError(std::move(E), Obj->getFileName());
+    if (Error E = consume(Data, SubSectionSize))
+      reportError(std::move(E), Obj->getFileName());
 
     ListScope S(W, "Subsection");
     // Dump the subsection as normal even if the ignore bit is set.
@@ -1038,7 +1049,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       BinaryStreamReader SR(Contents, llvm::support::little);
 
       DebugFrameDataSubsectionRef FrameData;
-      error(FrameData.initialize(SR));
+      if (Error E = FrameData.initialize(SR))
+        reportError(std::move(E), Obj->getFileName());
 
       StringRef LinkageName;
       error(resolveSymbolName(Obj->getCOFFSection(Section), SectionContents,
@@ -1100,7 +1112,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     BinaryStreamReader Reader(FunctionLineTables[Name], support::little);
 
     DebugLinesSubsectionRef LineInfo;
-    error(LineInfo.initialize(Reader));
+    if (Error E = LineInfo.initialize(Reader))
+      reportError(std::move(E), Obj->getFileName());
 
     W.printHex("Flags", LineInfo.header()->Flags);
     W.printHex("CodeSize", LineInfo.header()->CodeSize);
@@ -1154,9 +1167,9 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     error(object_error::parse_failed);
   }
 
-  if (auto EC = CVSD.dump(Symbols)) {
+  if (Error E = CVSD.dump(Symbols)) {
     W.flush();
-    error(std::move(EC));
+    reportError(std::move(E), Obj->getFileName());
   }
   CompilationCPUType = CVSD.getCompilationCPUType();
   W.flush();
@@ -1165,7 +1178,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
   BinaryStreamRef Stream(Subsection, llvm::support::little);
   DebugChecksumsSubsectionRef Checksums;
-  error(Checksums.initialize(Stream));
+  if (Error E = Checksums.initialize(Stream))
+    reportError(std::move(E), Obj->getFileName());
 
   for (auto &FC : Checksums) {
     DictScope S(W, "FileChecksum");
@@ -1184,7 +1198,8 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
 void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
   BinaryStreamReader SR(Subsection, llvm::support::little);
   DebugInlineeLinesSubsectionRef Lines;
-  error(Lines.initialize(SR));
+  if (Error E = Lines.initialize(SR))
+    reportError(std::move(E), Obj->getFileName());
 
   for (auto &Line : Lines) {
     DictScope S(W, "InlineeSourceLine");
@@ -1232,7 +1247,9 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
     if (SectionName == ".debug$T") {
       StringRef Data = unwrapOrError(Obj->getFileName(), S.getContents());
       uint32_t Magic;
-      error(consume(Data, Magic));
+      if (Error E = consume(Data, Magic))
+        reportError(std::move(E), Obj->getFileName());
+
       if (Magic != 4)
         error(object_error::parse_failed);
 
@@ -1248,14 +1265,14 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
       if (GHash) {
         std::vector<GloballyHashedType> Hashes =
             GloballyHashedType::hashTypes(Types);
-        if (auto EC =
+        if (Error E =
                 mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest,
                                       Types, Hashes, PCHSignature))
-          return error(std::move(EC));
+          return reportError(std::move(E), Obj->getFileName());
       } else {
-        if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
+        if (Error E = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
                                             PCHSignature))
-          return error(std::move(EC));
+          return reportError(std::move(E), Obj->getFileName());
       }
     }
   }
@@ -1271,7 +1288,9 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
     W.printBinaryBlock("Data", Data);
 
   uint32_t Magic;
-  error(consume(Data, Magic));
+  if (Error E = consume(Data, Magic))
+    reportError(std::move(E), Obj->getFileName());
+
   W.printHex("Magic", Magic);
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
@@ -1279,7 +1298,9 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   Types.reset(Data, 100);
 
   TypeDumpVisitor TDV(Types, &W, opts::CodeViewSubsectionBytes);
-  error(codeview::visitTypeStream(Types, TDV));
+  if (Error E = codeview::visitTypeStream(Types, TDV))
+    reportError(std::move(E), Obj->getFileName());
+
   W.flush();
 }
 
@@ -1504,7 +1525,7 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
           error(EC);
         Expected<StringRef> Res = getSectionName(Obj, AuxNumber, Assoc);
         if (!Res)
-          error(Res.takeError());
+          reportError(Res.takeError(), Obj->getFileName());
         AssocName = *Res;
 
         W.printNumber("AssocSection", AssocName, AuxNumber);
@@ -1906,7 +1927,8 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
   {
     ListScope S(Writer, "MergedTypeStream");
     TypeDumpVisitor TDV(TpiTypes, &Writer, opts::CodeViewSubsectionBytes);
-    error(codeview::visitTypeStream(TpiTypes, TDV));
+    if (Error Err = codeview::visitTypeStream(TpiTypes, TDV))
+      reportError(std::move(Err), "<?>");
     Writer.flush();
   }
 
@@ -1917,7 +1939,8 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
     ListScope S(Writer, "MergedIDStream");
     TypeDumpVisitor TDV(TpiTypes, &Writer, opts::CodeViewSubsectionBytes);
     TDV.setIpiTypes(IpiTypes);
-    error(codeview::visitTypeStream(IpiTypes, TDV));
+    if (Error Err = codeview::visitTypeStream(IpiTypes, TDV))
+      reportError(std::move(Err), "<?>");
     Writer.flush();
   }
 }

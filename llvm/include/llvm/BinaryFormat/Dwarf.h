@@ -80,7 +80,7 @@ const uint64_t DW64_CIE_ID = UINT64_MAX;
 const uint32_t DW_INVALID_OFFSET = UINT32_MAX;
 
 enum Tag : uint16_t {
-#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR) DW_TAG_##NAME = ID,
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR, KIND) DW_TAG_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_TAG_lo_user = 0x4080,
   DW_TAG_hi_user = 0xffff,
@@ -89,29 +89,12 @@ enum Tag : uint16_t {
 
 inline bool isType(Tag T) {
   switch (T) {
-  case DW_TAG_array_type:
-  case DW_TAG_class_type:
-  case DW_TAG_interface_type:
-  case DW_TAG_enumeration_type:
-  case DW_TAG_pointer_type:
-  case DW_TAG_reference_type:
-  case DW_TAG_rvalue_reference_type:
-  case DW_TAG_string_type:
-  case DW_TAG_structure_type:
-  case DW_TAG_subroutine_type:
-  case DW_TAG_union_type:
-  case DW_TAG_ptr_to_member_type:
-  case DW_TAG_set_type:
-  case DW_TAG_subrange_type:
-  case DW_TAG_base_type:
-  case DW_TAG_const_type:
-  case DW_TAG_file_type:
-  case DW_TAG_packed_type:
-  case DW_TAG_volatile_type:
-  case DW_TAG_typedef:
-    return true;
   default:
     return false;
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR, KIND)                         \
+  case DW_TAG_##NAME:                                                          \
+    return (KIND == DW_KIND_TYPE);
+#include "llvm/BinaryFormat/Dwarf.def"
   }
 }
 

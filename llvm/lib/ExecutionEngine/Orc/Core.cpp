@@ -694,7 +694,7 @@ ReexportsGenerator::ReexportsGenerator(JITDylib &SourceJD,
       Allow(std::move(Allow)) {}
 
 Expected<SymbolNameSet>
-ReexportsGenerator::operator()(JITDylib &JD, const SymbolNameSet &Names) {
+ReexportsGenerator::tryToGenerate(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolAliasMap AliasMap;
 
@@ -714,6 +714,19 @@ ReexportsGenerator::operator()(JITDylib &JD, const SymbolNameSet &Names) {
     cantFail(JD.define(reexports(SourceJD, AliasMap, MatchNonExported)));
 
   return Added;
+}
+
+JITDylib::DefinitionGenerator::~DefinitionGenerator() {}
+
+void JITDylib::removeGenerator(DefinitionGenerator &G) {
+  ES.runSessionLocked([&]() {
+    auto I = std::find_if(DefGenerators.begin(), DefGenerators.end(),
+                          [&](const std::unique_ptr<DefinitionGenerator> &H) {
+                            return H.get() == &G;
+                          });
+    assert(I != DefGenerators.end() && "Generator not found");
+    DefGenerators.erase(I);
+  });
 }
 
 Error JITDylib::defineMaterializing(const SymbolFlagsMap &SymbolFlags) {
@@ -1159,10 +1172,18 @@ Expected<SymbolFlagsMap> JITDylib::lookupFlags(const SymbolNameSet &Names) {
     if (!Unresolved)
       return Unresolved.takeError();
 
-    if (DefGenerator && !Unresolved->empty()) {
-      auto NewDefs = DefGenerator(*this, *Unresolved);
+    /// Run any definition generators.
+    for (auto &DG : DefGenerators) {
+
+      // Bail out early if we've resolved everything.
+      if (Unresolved->empty())
+        break;
+
+      // Run this generator.
+      auto NewDefs = DG->tryToGenerate(*this, *Unresolved);
       if (!NewDefs)
         return NewDefs.takeError();
+
       if (!NewDefs->empty()) {
         auto Unresolved2 = lookupFlagsImpl(Result, *NewDefs);
         if (!Unresolved2)
@@ -1171,7 +1192,10 @@ Expected<SymbolFlagsMap> JITDylib::lookupFlags(const SymbolNameSet &Names) {
         assert(Unresolved2->empty() &&
                "All fallback defs should have been found by lookupFlagsImpl");
       }
-    };
+
+      for (auto &Name : *NewDefs)
+        Unresolved->erase(Name);
+    }
     return Result;
   });
 }
@@ -1198,13 +1222,25 @@ Error JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
   assert(Q && "Query can not be null");
 
   lodgeQueryImpl(Q, Unresolved, MatchNonExported, MUs);
-  if (DefGenerator && !Unresolved.empty()) {
-    auto NewDefs = DefGenerator(*this, Unresolved);
+
+  // Run any definition generators.
+  for (auto &DG : DefGenerators) {
+
+    // Bail out early if we have resolved everything.
+    if (Unresolved.empty())
+      break;
+
+    // Run the generator.
+    auto NewDefs = DG->tryToGenerate(*this, Unresolved);
+
     if (!NewDefs)
       return NewDefs.takeError();
+
+    llvm::dbgs() << "NewDefs is " << *NewDefs << "\n";
     if (!NewDefs->empty()) {
       for (auto &D : *NewDefs)
         Unresolved.erase(D);
+      llvm::dbgs() << "NewDefs is now " << *NewDefs << "\n";
       lodgeQueryImpl(Q, *NewDefs, MatchNonExported, MUs);
       assert(NewDefs->empty() &&
              "All fallback defs should have been found by lookupImpl");
@@ -1292,9 +1328,16 @@ JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   SymbolNameSet Unresolved = std::move(Names);
   auto Err = ES.runSessionLocked([&, this]() -> Error {
     QueryComplete = lookupImpl(Q, MUs, Unresolved);
-    if (DefGenerator && !Unresolved.empty()) {
+
+    // Run any definition generators.
+    for (auto &DG : DefGenerators) {
+
+      // Bail out early if we have resolved everything.
+      if (Unresolved.empty())
+        break;
+
       assert(!QueryComplete && "query complete but unresolved symbols remain?");
-      auto NewDefs = DefGenerator(*this, Unresolved);
+      auto NewDefs = DG->tryToGenerate(*this, Unresolved);
       if (!NewDefs)
         return NewDefs.takeError();
       if (!NewDefs->empty()) {

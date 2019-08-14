@@ -186,6 +186,8 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   FileSpecList support_files;
   support_files.Append(first_file);
 
+  llvm::Optional<FileSpec::Style> compile_dir_style =
+      FileSpec::GuessPathStyle(compile_dir);
   const size_t number_of_files = prologue.FileNames.size();
   for (size_t idx = 1; idx <= number_of_files; ++idx) {
     std::string original_file;
@@ -198,9 +200,13 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
       continue;
     }
 
-    auto maybe_path_style = FileSpec::GuessPathStyle(original_file);
-    FileSpec::Style style =
-        maybe_path_style ? *maybe_path_style : FileSpec::Style::native;
+    FileSpec::Style style = FileSpec::Style::native;
+    if (compile_dir_style) {
+      style = *compile_dir_style;
+    } else if (llvm::Optional<FileSpec::Style> file_style =
+                   FileSpec::GuessPathStyle(original_file)) {
+      style = *file_style;
+    }
 
     std::string remapped_file;
     if (!prologue.getFileNameByIndex(

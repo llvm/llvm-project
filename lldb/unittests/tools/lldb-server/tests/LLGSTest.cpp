@@ -14,6 +14,10 @@ using namespace llgs_tests;
 using namespace lldb_private;
 using namespace llvm;
 
+#ifdef SendMessage
+#undef SendMessage
+#endif
+
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 

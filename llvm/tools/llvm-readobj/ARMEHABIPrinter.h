@@ -370,7 +370,7 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
     return readobj_error::unknown_symbol;
   auto StrTableOrErr = ELF->getStringTableForSymtab(*Symtab);
   if (!StrTableOrErr)
-    error(StrTableOrErr.takeError());
+    reportError(StrTableOrErr.takeError(), FileName);
   StringRef StrTable = *StrTableOrErr;
 
   for (const Elf_Sym &Sym : unwrapOrError(FileName, ELF->symbols(Symtab)))
@@ -405,7 +405,7 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
 
     auto SymTabOrErr = ELF->getSection(Sec.sh_link);
     if (!SymTabOrErr)
-      error(SymTabOrErr.takeError());
+      reportError(SymTabOrErr.takeError(), FileName);
     const Elf_Shdr *SymTab = *SymTabOrErr;
 
     for (const Elf_Rel &R : unwrapOrError(FileName, ELF->rels(&Sec))) {

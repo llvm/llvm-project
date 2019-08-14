@@ -14,17 +14,18 @@ class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
 
     def attach_commandline_kill_after_initial_stop(self):
+        reg_expr = r"^\$[XW][0-9a-fA-F]+([^#]*)#[0-9A-Fa-f]{2}"
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines([
             "read packet: $k#6b",
-            {"direction": "send", "regex": r"^\$X[0-9a-fA-F]+([^#]*)#[0-9A-Fa-f]{2}"},
+            {"direction": "send", "regex": reg_expr},
         ], True)
 
         if self.stub_sends_two_stop_notifications_on_kill:
             # Add an expectation for a second X result for stubs that send two
             # of these.
             self.test_sequence.add_log_lines([
-                {"direction": "send", "regex": r"^\$X[0-9a-fA-F]+([^#]*)#[0-9A-Fa-f]{2}"},
+                {"direction": "send", "regex": reg_expr},
             ], True)
 
         self.expect_gdbremote_sequence()

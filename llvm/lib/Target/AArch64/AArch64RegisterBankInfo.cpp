@@ -768,7 +768,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands()-1).getReg());
     // UNMERGE into scalars from a vector should always use FPR.
     // Likewise if any of the uses are FP instructions.
-    if (SrcTy.isVector() ||
+    if (SrcTy.isVector() || SrcTy == LLT::scalar(128) ||
         any_of(MRI.use_instructions(MI.getOperand(0).getReg()),
                [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); })) {
       // Set the register bank of every operand to FPR.

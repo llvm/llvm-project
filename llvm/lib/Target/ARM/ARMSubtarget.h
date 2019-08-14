@@ -472,6 +472,11 @@ protected:
   /// What alignment is preferred for loop bodies, in log2(bytes).
   unsigned PrefLoopAlignment = 0;
 
+  /// The cost factor for MVE instructions, representing the multiple beats an
+  // instruction can take. The default is 2, (set in initSubtargetFeatures so
+  // that we can use subtarget features less than 2).
+  unsigned MVEVectorCostFactor = 0;
+
   /// OptMinSize - True if we're optimising for minimum code size, equal to
   /// the function attribute.
   bool OptMinSize = false;
@@ -857,6 +862,8 @@ public:
   unsigned getPrefLoopAlignment() const {
     return PrefLoopAlignment;
   }
+
+  unsigned getMVEVectorCostFactor() const { return MVEVectorCostFactor; }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
                                    unsigned PhysReg) const override;

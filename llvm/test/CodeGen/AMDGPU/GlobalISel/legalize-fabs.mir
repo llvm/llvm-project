@@ -294,28 +294,46 @@ body: |
 
     ; SI-LABEL: name: test_fabs_v4s16
     ; SI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; SI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
+    ; SI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; SI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
+    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; SI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FABS:%[0-9]+]]:_(s32) = G_FABS [[FPEXT]]
     ; SI: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FABS]](s32)
-    ; SI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
+    ; SI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
     ; SI: [[FABS1:%[0-9]+]]:_(s32) = G_FABS [[FPEXT1]]
     ; SI: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FABS1]](s32)
-    ; SI: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
+    ; SI: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
     ; SI: [[FABS2:%[0-9]+]]:_(s32) = G_FABS [[FPEXT2]]
     ; SI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FABS2]](s32)
-    ; SI: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
+    ; SI: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; SI: [[FABS3:%[0-9]+]]:_(s32) = G_FABS [[FPEXT3]]
     ; SI: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FABS3]](s32)
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
     ; SI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
     ; VI-LABEL: name: test_fabs_v4s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; VI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; VI: [[FABS:%[0-9]+]]:_(s16) = G_FABS [[UV]]
-    ; VI: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[UV1]]
-    ; VI: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[UV2]]
-    ; VI: [[FABS3:%[0-9]+]]:_(s16) = G_FABS [[UV3]]
+    ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
+    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; VI: [[FABS:%[0-9]+]]:_(s16) = G_FABS [[TRUNC]]
+    ; VI: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[TRUNC1]]
+    ; VI: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[TRUNC2]]
+    ; VI: [[FABS3:%[0-9]+]]:_(s16) = G_FABS [[TRUNC3]]
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FABS]](s16), [[FABS1]](s16), [[FABS2]](s16), [[FABS3]](s16)
     ; VI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
     ; GFX9-LABEL: name: test_fabs_v4s16

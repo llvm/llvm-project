@@ -514,7 +514,7 @@ int main_gdbserver(int argc, char *argv[]) {
     handle_launch(gdb_server, argc, argv);
 
   // Print version info.
-  printf("%s-%s", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
+  printf("%s-%s\n", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
 
   ConnectToRemote(mainloop, gdb_server, reverse_connect, host_and_port,
                   progname, subcommand, named_pipe_path.c_str(), 

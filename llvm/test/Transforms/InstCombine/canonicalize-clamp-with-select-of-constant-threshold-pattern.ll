@@ -7,11 +7,10 @@
 
 define i32 @t0_select_cond_and_v0(i32 %X) {
 ; CHECK-LABEL: @t0_select_cond_and_v0(
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_POSITIVE:%.*]] = icmp slt i32 [[X:%.*]], 32768
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[DONT_NEED_TO_CLAMP_POSITIVE]], i32 -32768, i32 32767
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32768
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dont_need_to_clamp_positive = icmp sle i32 %X, 32767
@@ -23,11 +22,10 @@ define i32 @t0_select_cond_and_v0(i32 %X) {
 }
 define i32 @t1_select_cond_and_v1(i32 %X) {
 ; CHECK-LABEL: @t1_select_cond_and_v1(
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_NEGATIVE:%.*]] = icmp sgt i32 [[X:%.*]], -32769
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[DONT_NEED_TO_CLAMP_NEGATIVE]], i32 32767, i32 -32768
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32768
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dont_need_to_clamp_positive = icmp sle i32 %X, 32767
@@ -42,11 +40,10 @@ define i32 @t1_select_cond_and_v1(i32 %X) {
 
 define i32 @t2_select_cond_or_v0(i32 %X) {
 ; CHECK-LABEL: @t2_select_cond_or_v0(
-; CHECK-NEXT:    [[NEED_TO_CLAMP_POSITIVE:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[NEED_TO_CLAMP_POSITIVE]], i32 32767, i32 -32768
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32768
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X_OFF]], 65535
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[CLAMP_LIMIT]], i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %need_to_clamp_positive = icmp sgt i32 %X, 32767
@@ -58,11 +55,10 @@ define i32 @t2_select_cond_or_v0(i32 %X) {
 }
 define i32 @t3_select_cond_or_v1(i32 %X) {
 ; CHECK-LABEL: @t3_select_cond_or_v1(
-; CHECK-NEXT:    [[NEED_TO_CLAMP_NEGATIVE:%.*]] = icmp slt i32 [[X:%.*]], -32768
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[NEED_TO_CLAMP_NEGATIVE]], i32 -32768, i32 32767
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32768
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X_OFF]], 65535
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[CLAMP_LIMIT]], i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %need_to_clamp_positive = icmp sgt i32 %X, 32767
@@ -77,11 +73,10 @@ define i32 @t3_select_cond_or_v1(i32 %X) {
 
 define i32 @t4_select_cond_xor_v0(i32 %X) {
 ; CHECK-LABEL: @t4_select_cond_xor_v0(
-; CHECK-NEXT:    [[NEED_TO_CLAMP_POSITIVE:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_NEGATIVE:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[NEED_TO_CLAMP_POSITIVE]], i32 32767, i32 -32768
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP:%.*]] = xor i1 [[NEED_TO_CLAMP_POSITIVE]], [[DONT_NEED_TO_CLAMP_NEGATIVE]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[DONT_NEED_TO_CLAMP]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %need_to_clamp_positive = icmp sgt i32 %X, 32767
@@ -93,11 +88,10 @@ define i32 @t4_select_cond_xor_v0(i32 %X) {
 }
 define i32 @t4_select_cond_xor_v1(i32 %X) {
 ; CHECK-LABEL: @t4_select_cond_xor_v1(
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_NEGATIVE:%.*]] = icmp sgt i32 [[X:%.*]], -32768
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[DONT_NEED_TO_CLAMP_NEGATIVE]], i32 32767, i32 -32768
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %need_to_clamp_positive = icmp sgt i32 %X, 32767
@@ -110,11 +104,10 @@ define i32 @t4_select_cond_xor_v1(i32 %X) {
 
 define i32 @t5_select_cond_xor_v2(i32 %X) {
 ; CHECK-LABEL: @t5_select_cond_xor_v2(
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_POSITIVE:%.*]] = icmp slt i32 [[X:%.*]], 32768
-; CHECK-NEXT:    [[NEED_TO_CLAMP_NEGATIVE:%.*]] = icmp slt i32 [[X]], -32767
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[NEED_TO_CLAMP_NEGATIVE]], i32 -32768, i32 32767
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP:%.*]] = xor i1 [[DONT_NEED_TO_CLAMP_POSITIVE]], [[NEED_TO_CLAMP_NEGATIVE]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[DONT_NEED_TO_CLAMP]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dont_need_to_clamp_positive = icmp sle i32 %X, 32767
@@ -126,11 +119,10 @@ define i32 @t5_select_cond_xor_v2(i32 %X) {
 }
 define i32 @t5_select_cond_xor_v3(i32 %X) {
 ; CHECK-LABEL: @t5_select_cond_xor_v3(
-; CHECK-NEXT:    [[DONT_NEED_TO_CLAMP_POSITIVE:%.*]] = icmp slt i32 [[X:%.*]], 32768
-; CHECK-NEXT:    [[CLAMP_LIMIT:%.*]] = select i1 [[DONT_NEED_TO_CLAMP_POSITIVE]], i32 -32768, i32 32767
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[CLAMP_LIMIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -32768
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 -32768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[TMP3]], i32 32767
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dont_need_to_clamp_positive = icmp sle i32 %X, 32767

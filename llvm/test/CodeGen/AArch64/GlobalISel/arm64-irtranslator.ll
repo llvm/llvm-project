@@ -1622,9 +1622,7 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK-DAG: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK-DAG: [[MASK:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C0]](s32), [[C0]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], [[MASK]](<2 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0, 0)
 ; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %res = shufflevector <1 x i32> %vec, <1 x i32> undef, <2 x i32> zeroinitializer
@@ -1634,25 +1632,40 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_s32
 ; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-; CHECK-DAG: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[C1]](s32)
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(1)
 ; CHECK: $w0 = COPY [[RES]](s32)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <1 x i32> <i32 1>
   %res = extractelement <1 x i32> %vec, i32 0
   ret i32 %res
 }
 
-define <2 x i32> @test_shufflevector_v2s32_v2s32(<2 x i32> %arg) {
-; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32
+define <2 x i32> @test_shufflevector_v2s32_v2s32_undef(<2 x i32> %arg) {
+; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32_undef
 ; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-; CHECK-DAG: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK-DAG: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK-DAG: [[MASK:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C0]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[MASK]](<2 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(undef, undef)
 ; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
-  %res = shufflevector <2 x i32> %arg, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  %res = shufflevector <2 x i32> %arg, <2 x i32> undef, <2 x i32> undef
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_shufflevector_v2s32_v2s32_undef_0(<2 x i32> %arg) {
+; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32_undef_0
+; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(undef, 0)
+; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
+  %res = shufflevector <2 x i32> %arg, <2 x i32> undef, <2 x i32> <i32 undef, i32 0>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_shufflevector_v2s32_v2s32_0_undef(<2 x i32> %arg) {
+; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32_0_undef
+; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(0, undef)
+; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
+  %res = shufflevector <2 x i32> %arg, <2 x i32> undef, <2 x i32> <i32 0, i32 undef>
   ret <2 x i32> %res
 }
 
@@ -1660,10 +1673,7 @@ define i32 @test_shufflevector_v2s32_v3s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v3s32
 ; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-; CHECK-DAG: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK-DAG: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK-DAG: [[MASK:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C0]](s32), [[C1]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<3 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[MASK]](<3 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<3 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(1, 0, 1)
 ; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<3 x s32>)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <3 x i32> <i32 1, i32 0, i32 1>
   %res = extractelement <3 x i32> %vec, i32 0
@@ -1674,12 +1684,7 @@ define <4 x i32> @test_shufflevector_v2s32_v4s32(<2 x i32> %arg1, <2 x i32> %arg
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v4s32
 ; CHECK: [[ARG1:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[ARG2:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-; CHECK: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-; CHECK: [[MASK:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C0]](s32), [[C1]](s32), [[C2]](s32), [[C3]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[ARG1]](<2 x s32>), [[ARG2]], [[MASK]](<4 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[ARG1]](<2 x s32>), [[ARG2]], shufflemask(0, 1, 2, 3)
 ; CHECK: $q0 = COPY [[VEC]](<4 x s32>)
   %res = shufflevector <2 x i32> %arg1, <2 x i32> %arg2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %res
@@ -1689,10 +1694,7 @@ define <2 x i32> @test_shufflevector_v4s32_v2s32(<4 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v4s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(<4 x s32>) = COPY $q0
 ; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-; CHECK-DAG: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK-DAG: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-; CHECK-DAG: [[MASK:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C3]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<4 x s32>), [[UNDEF]], [[MASK]](<2 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<4 x s32>), [[UNDEF]], shufflemask(1, 3)
 ; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
   %res = shufflevector <4 x i32> %arg, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
   ret <2 x i32> %res
@@ -1703,24 +1705,7 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
 ; CHECK-LABEL: name: test_shufflevector_v8s8_v16s8
 ; CHECK: [[ARG1:%[0-9]+]]:_(<8 x s8>) = COPY $d0
 ; CHECK: [[ARG2:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-; CHECK: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-; CHECK: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-; CHECK: [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK: [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-; CHECK: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-; CHECK: [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
-; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-; CHECK: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
-; CHECK: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-; CHECK: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-; CHECK: [[MASK:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[C0]](s32), [[C8]](s32), [[C1]](s32), [[C9]](s32), [[C2]](s32), [[C10]](s32), [[C3]](s32), [[C11]](s32), [[C4]](s32), [[C12]](s32), [[C5]](s32), [[C13]](s32), [[C6]](s32), [[C14]](s32), [[C7]](s32), [[C15]](s32)
-; CHECK: [[VEC:%[0-9]+]]:_(<16 x s8>) = G_SHUFFLE_VECTOR [[ARG1]](<8 x s8>), [[ARG2]], [[MASK]](<16 x s32>)
+; CHECK: [[VEC:%[0-9]+]]:_(<16 x s8>) = G_SHUFFLE_VECTOR [[ARG1]](<8 x s8>), [[ARG2]], shufflemask(0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15)
 ; CHECK: $q0 = COPY [[VEC]](<16 x s8>)
   %res = shufflevector <8 x i8> %arg1, <8 x i8> %arg2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   ret <16 x i8> %res

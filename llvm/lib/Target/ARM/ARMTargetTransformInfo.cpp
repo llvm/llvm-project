@@ -353,7 +353,10 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       return Entry->Cost;
   }
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src);
+  int BaseCost = ST->hasMVEIntegerOps() && Src->isVectorTy()
+                     ? ST->getMVEVectorCostFactor()
+                     : 1;
+  return BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src);
 }
 
 int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
@@ -376,6 +379,17 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
       return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index), 2U);
+  }
+
+  if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||
+                                 Opcode == Instruction::ExtractElement)) {
+    // We say MVE moves costs at least the MVEVectorCostFactor, even though
+    // they are scalar instructions. This helps prevent mixing scalar and
+    // vector, to prevent vectorising where we end up just scalarising the
+    // result anyway.
+    return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index),
+                    ST->getMVEVectorCostFactor()) *
+           ValTy->getVectorNumElements() / 2;
   }
 
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
@@ -406,7 +420,10 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return LT.first;
   }
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
+  int BaseCost = ST->hasMVEIntegerOps() && ValTy->isVectorTy()
+                     ? ST->getMVEVectorCostFactor()
+                     : 1;
+  return BaseCost * BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
 int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
@@ -549,10 +566,13 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 
       if (const auto *Entry = CostTableLookup(MVEDupTbl, ISD::VECTOR_SHUFFLE,
                                               LT.second))
-        return LT.first * Entry->Cost;
+        return LT.first * Entry->Cost * ST->getMVEVectorCostFactor();
     }
   }
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  int BaseCost = ST->hasMVEIntegerOps() && Tp->isVectorTy()
+                     ? ST->getMVEVectorCostFactor()
+                     : 1;
+  return BaseCost * BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }
 
 int ARMTTIImpl::getArithmeticInstrCost(
@@ -606,25 +626,48 @@ int ARMTTIImpl::getArithmeticInstrCost(
     // Multiplication.
   };
 
-  if (ST->hasNEON())
+  if (ST->hasNEON()) {
     if (const auto *Entry = CostTableLookup(CostTbl, ISDOpcode, LT.second))
       return LT.first * Entry->Cost;
 
-  int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
-                                           Opd1PropInfo, Opd2PropInfo);
+    int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
+                                             Opd1PropInfo, Opd2PropInfo);
 
-  // This is somewhat of a hack. The problem that we are facing is that SROA
-  // creates a sequence of shift, and, or instructions to construct values.
-  // These sequences are recognized by the ISel and have zero-cost. Not so for
-  // the vectorized code. Because we have support for v2i64 but not i64 those
-  // sequences look particularly beneficial to vectorize.
-  // To work around this we increase the cost of v2i64 operations to make them
-  // seem less beneficial.
-  if (LT.second == MVT::v2i64 &&
-      Op2Info == TargetTransformInfo::OK_UniformConstantValue)
-    Cost += 4;
+    // This is somewhat of a hack. The problem that we are facing is that SROA
+    // creates a sequence of shift, and, or instructions to construct values.
+    // These sequences are recognized by the ISel and have zero-cost. Not so for
+    // the vectorized code. Because we have support for v2i64 but not i64 those
+    // sequences look particularly beneficial to vectorize.
+    // To work around this we increase the cost of v2i64 operations to make them
+    // seem less beneficial.
+    if (LT.second == MVT::v2i64 &&
+        Op2Info == TargetTransformInfo::OK_UniformConstantValue)
+      Cost += 4;
 
-  return Cost;
+    return Cost;
+  }
+
+  int BaseCost = ST->hasMVEIntegerOps() && Ty->isVectorTy()
+                     ? ST->getMVEVectorCostFactor()
+                     : 1;
+
+  // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
+  // without treating floats as more expensive that scalars or increasing the
+  // costs for custom operations. The results is also multiplied by the
+  // MVEVectorCostFactor where appropriate.
+  if (TLI->isOperationLegalOrCustomOrPromote(ISDOpcode, LT.second))
+    return LT.first * BaseCost;
+
+  // Else this is expand, assume that we need to scalarize this op.
+  if (Ty->isVectorTy()) {
+    unsigned Num = Ty->getVectorNumElements();
+    unsigned Cost = getArithmeticInstrCost(Opcode, Ty->getScalarType());
+    // Return the cost of multiple scalar invocation plus the cost of
+    // inserting and extracting the values.
+    return BaseT::getScalarizationOverhead(Ty, Args) + Num * Cost;
+  }
+
+  return BaseCost;
 }
 
 int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
@@ -637,7 +680,10 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.
     return LT.first * 4;
   }
-  return LT.first;
+  int BaseCost = ST->hasMVEIntegerOps() && Src->isVectorTy()
+                     ? ST->getMVEVectorCostFactor()
+                     : 1;
+  return BaseCost * LT.first;
 }
 
 int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,

@@ -249,6 +249,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("successors", MIToken::kw_successors)
       .Case("floatpred", MIToken::kw_floatpred)
       .Case("intpred", MIToken::kw_intpred)
+      .Case("shufflemask", MIToken::kw_shufflemask)
       .Case("pre-instr-symbol", MIToken::kw_pre_instr_symbol)
       .Case("post-instr-symbol", MIToken::kw_post_instr_symbol)
       .Case("unknown-size", MIToken::kw_unknown_size)

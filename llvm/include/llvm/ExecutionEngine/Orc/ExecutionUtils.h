@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <algorithm>
 #include <cstdint>
@@ -36,6 +37,8 @@ class TargetMachine;
 class Value;
 
 namespace orc {
+
+class ObjectLayer;
 
 /// This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.
@@ -237,7 +240,7 @@ public:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the given DynamicLibrary that
 /// passes the 'Allow' predicate will be added to the JITDylib.
-class DynamicLibrarySearchGenerator {
+class DynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
 
@@ -253,24 +256,59 @@ public:
   /// Permanently loads the library at the given path and, on success, returns
   /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
   /// in the library. On failure returns the reason the library failed to load.
-  static Expected<DynamicLibrarySearchGenerator>
+  static Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
   Load(const char *FileName, char GlobalPrefix,
        SymbolPredicate Allow = SymbolPredicate());
 
   /// Creates a DynamicLibrarySearchGenerator that searches for symbols in
   /// the current process.
-  static Expected<DynamicLibrarySearchGenerator>
+  static Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
   GetForCurrentProcess(char GlobalPrefix,
                        SymbolPredicate Allow = SymbolPredicate()) {
     return Load(nullptr, GlobalPrefix, std::move(Allow));
   }
 
-  Expected<SymbolNameSet> operator()(JITDylib &JD, const SymbolNameSet &Names);
+  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
+                                        const SymbolNameSet &Names) override;
 
 private:
   sys::DynamicLibrary Dylib;
   SymbolPredicate Allow;
   char GlobalPrefix;
+};
+
+/// A utility class to expose symbols from a static library.
+///
+/// If an instance of this class is attached to a JITDylib as a fallback
+/// definition generator, then any symbol found in the archive will result in
+/// the containing object being added to the JITDylib.
+class StaticLibraryDefinitionGenerator : public JITDylib::DefinitionGenerator {
+public:
+  /// Try to create a StaticLibraryDefinitionGenerator from the given path.
+  ///
+  /// This call will succeed if the file at the given path is a static library
+  /// is a valid archive, otherwise it will return an error.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Load(ObjectLayer &L, const char *FileName);
+
+  /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
+  /// Thhis call will succeed if the buffer contains a valid archive, otherwise
+  /// it will return an error.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer);
+
+  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
+                                        const SymbolNameSet &Names) override;
+
+private:
+  StaticLibraryDefinitionGenerator(ObjectLayer &L,
+                                   std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+                                   Error &Err);
+
+  ObjectLayer &L;
+  std::unique_ptr<MemoryBuffer> ArchiveBuffer;
+  object::Archive Archive;
+  size_t UnrealizedObjects = 0;
 };
 
 } // end namespace orc
