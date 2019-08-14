@@ -127,10 +127,9 @@ int bar;
 void test() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
 
-  if (int flag = foo()) // tracking-note{{'flag' initialized here}}
-                        // debug-note@-1{{Tracking condition 'flag'}}
-                        // expected-note@-2{{Assuming 'flag' is not equal to 0}}
-                        // expected-note@-3{{Taking true branch}}
+  if (int flag = foo()) // debug-note{{Tracking condition 'flag'}}
+                        // expected-note@-1{{Assuming 'flag' is not equal to 0}}
+                        // expected-note@-2{{Taking true branch}}
 
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
@@ -156,6 +155,28 @@ void test() {
 }
 
 } // end of namespace variable_declaration_in_condition
+
+namespace note_from_different_but_not_nested_stackframe {
+
+void nullptrDeref(int *ptr, bool True) {
+  if (True) // expected-note{{'True' is true}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'True}}
+    *ptr = 5;
+  // expected-note@-1{{Dereference of null pointer (loaded from variable 'ptr')}}
+  // expected-warning@-2{{Dereference of null pointer (loaded from variable 'ptr')}}
+}
+
+void f() {
+  int *ptr = nullptr;
+  // expected-note@-1{{'ptr' initialized to a null pointer value}}
+  bool True = true;
+  nullptrDeref(ptr, True);
+  // expected-note@-1{{Passing null pointer value via 1st parameter 'ptr'}}
+  // expected-note@-2{{Calling 'nullptrDeref'}}
+}
+
+} // end of namespace note_from_different_but_not_nested_stackframe
 
 namespace important_returning_pointer_loaded_from {
 bool coin();
@@ -194,8 +215,8 @@ bool coin();
 int *getIntPtr();
 
 int *conjurePointer() {
-  int *i = getIntPtr(); // tracking-note{{'i' initialized here}}
-  return i;             // tracking-note{{Returning pointer (loaded from 'i')}}
+  int *i = getIntPtr();
+  return i;
 }
 
 void f(int *ptr) {
@@ -203,11 +224,9 @@ void f(int *ptr) {
            // expected-note@-1{{Taking false branch}}
     ;
   if (!conjurePointer())
-    // tracking-note@-1{{Calling 'conjurePointer'}}
-    // tracking-note@-2{{Returning from 'conjurePointer'}}
-    // debug-note@-3{{Tracking condition '!conjurePointer()'}}
-    // expected-note@-4{{Assuming the condition is true}}
-    // expected-note@-5{{Taking true branch}}
+    // debug-note@-1{{Tracking condition '!conjurePointer()'}}
+    // expected-note@-2{{Assuming the condition is true}}
+    // expected-note@-3{{Taking true branch}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -225,10 +244,9 @@ void f() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
 
   if (cast(conjure()))
-    // tracking-note@-1{{Passing value via 1st parameter 'P'}}
-    // debug-note@-2{{Tracking condition 'cast(conjure())'}}
-    // expected-note@-3{{Assuming the condition is false}}
-    // expected-note@-4{{Taking false branch}}
+    // debug-note@-1{{Tracking condition 'cast(conjure())'}}
+    // expected-note@-2{{Assuming the condition is false}}
+    // expected-note@-3{{Taking false branch}}
     return;
   *x = 5; // expected-warning{{Dereference of null pointer}}
           // expected-note@-1{{Dereference of null pointer}}
@@ -314,7 +332,7 @@ namespace tracked_condition_is_only_initialized {
 int getInt();
 
 void f() {
-  int flag = getInt(); // tracking-note{{'flag' initialized here}}
+  int flag = getInt();
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
   if (flag) // expected-note{{Assuming 'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
@@ -329,8 +347,8 @@ int flag;
 int getInt();
 
 void f(int y) {
-  y = 1; // tracking-note{{The value 1 is assigned to 'y'}}
-  flag = y; // tracking-note{{The value 1 is assigned to 'flag'}}
+  y = 1;
+  flag = y;
 
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
   if (flag) // expected-note{{'flag' is 1}}
@@ -347,9 +365,8 @@ int getInt();
 
 void foo() {
   int y;
-  y = 1; // tracking-note{{The value 1 is assigned to 'y'}}
+  y = 1;
   flag = y; // tracking-note{{The value 1 is assigned to 'flag'}}
-
 }
 
 void f(int y) {
@@ -378,9 +395,9 @@ void f() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
   int y = 0;
 
-  foo();    // tracking-note{{Calling 'foo'}}
-            // tracking-note@-1{{Returning from 'foo'}}
-  y = flag; // tracking-note{{Value assigned to 'y'}}
+  foo(); // tracking-note{{Calling 'foo'}}
+         // tracking-note@-1{{Returning from 'foo'}}
+  y = flag;
 
   if (y)    // expected-note{{Assuming 'y' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
@@ -429,7 +446,7 @@ int getInt();
 void f(int flag) {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
 
-  flag = getInt(); // tracking-note{{Value assigned to 'flag'}}
+  flag = getInt();
   assert(flag); // tracking-note{{Calling 'assert'}}
                 // tracking-note@-1{{Returning from 'assert'}}
 

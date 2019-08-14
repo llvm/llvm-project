@@ -1440,6 +1440,10 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         StoreSite, InitE, BR, TKind, EnableNullFPSuppression);
   }
 
+  if (TKind == TrackingKind::Condition &&
+      !OriginSFC->isParentOf(StoreSite->getStackFrame()))
+    return nullptr;
+
   // Okay, we've found the binding. Emit an appropriate message.
   SmallString<256> sbuf;
   llvm::raw_svector_ostream os(sbuf);
@@ -1465,7 +1469,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
             if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
               BR.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
-                  *KV, OriginalR, EnableNullFPSuppression, TKind));
+                  *KV, OriginalR, EnableNullFPSuppression, TKind, OriginSFC));
           }
         }
       }
@@ -1890,6 +1894,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     return false;
 
   ProgramStateRef LVState = LVNode->getState();
+  const StackFrameContext *SFC = LVNode->getStackFrame();
 
   // We only track expressions if we believe that they are important. Chances
   // are good that control dependencies to the tracking point are also improtant
@@ -1926,7 +1931,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     if (RR && !LVIsNull)
       if (auto KV = LVal.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
-              *KV, RR, EnableNullFPSuppression, TKind));
+            *KV, RR, EnableNullFPSuppression, TKind, SFC));
 
     // In case of C++ references, we want to differentiate between a null
     // reference and reference to null pointer.
@@ -1963,7 +1968,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
       if (auto KV = V.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
-              *KV, R, EnableNullFPSuppression, TKind));
+            *KV, R, EnableNullFPSuppression, TKind, SFC));
       return true;
     }
   }
@@ -2002,7 +2007,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     if (CanDereference)
       if (auto KV = RVal.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
-            *KV, L->getRegion(), EnableNullFPSuppression, TKind));
+            *KV, L->getRegion(), EnableNullFPSuppression, TKind, SFC));
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
