@@ -140,7 +140,6 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     break;
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
-  case TemplateName::AssumedTemplate:
   case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:

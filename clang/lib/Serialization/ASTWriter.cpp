@@ -5925,12 +5925,6 @@ void ASTRecordWriter::AddTemplateName(TemplateName Name) {
     break;
   }
 
-  case TemplateName::AssumedTemplate: {
-    AssumedTemplateStorage *ADLT = Name.getAsAssumedTemplateName();
-    AddDeclarationName(ADLT->getDeclName());
-    break;
-  }
-
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QualT = Name.getAsQualifiedTemplateName();
     AddNestedNameSpecifier(QualT->getQualifier());

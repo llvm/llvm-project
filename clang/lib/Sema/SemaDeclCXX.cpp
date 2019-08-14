@@ -3911,8 +3911,6 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
 
   if (TemplateTypeTy) {
     BaseType = GetTypeFromParser(TemplateTypeTy, &TInfo);
-    if (BaseType.isNull())
-      return true;
   } else if (DS.getTypeSpecType() == TST_decltype) {
     BaseType = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {

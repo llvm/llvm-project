@@ -18,7 +18,9 @@ int test_broken() {
   int *ip = 0;
   f1(ip); // expected-error{{use of undeclared identifier 'f1'}}
 
-  vector<int> vec; // expected-error{{no template named 'vector'}}
+  vector<int> vec; // expected-error{{use of undeclared identifier 'vector'}} \
+  // expected-error{{expected '(' for function-style cast or type construction}} \
+  // expected-error{{use of undeclared identifier 'vec'}}
 
   VisibleStruct vs;
   vs.field = 0; // expected-error{{no member named 'field' in 'VisibleStruct'}}

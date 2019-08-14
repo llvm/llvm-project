@@ -8113,14 +8113,6 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
                                                ToTemplates.end());
   }
 
-  case TemplateName::AssumedTemplate: {
-    AssumedTemplateStorage *FromStorage = From.getAsAssumedTemplateName();
-    auto DeclNameOrErr = Import(FromStorage->getDeclName());
-    if (!DeclNameOrErr)
-      return DeclNameOrErr.takeError();
-    return ToContext.getAssumedTemplateName(*DeclNameOrErr);
-  }
-
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QTN = From.getAsQualifiedTemplateName();
     auto QualifierOrErr = Import(QTN->getQualifier());

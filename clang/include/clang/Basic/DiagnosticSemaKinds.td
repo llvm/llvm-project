@@ -4068,15 +4068,6 @@ def err_template_member_noparams : Error<
 def err_template_tag_noparams : Error<
   "extraneous 'template<>' in declaration of %0 %1">;
 
-def warn_cxx17_compat_adl_only_template_id : Warning<
-  "use of function template name with no prior function template "
-  "declaration in function call with explicit template arguments "
-  "is incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
-def ext_adl_only_template_id : ExtWarn<
-  "use of function template name with no prior declaration in function call "
-  "with explicit template arguments is a C++2a extension">, InGroup<CXX2a>;
-
 // C++ Template Argument Lists
 def err_template_missing_args : Error<
   "use of "

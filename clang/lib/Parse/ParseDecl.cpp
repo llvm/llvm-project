@@ -2960,7 +2960,6 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case Sema::NC_Expression:
       case Sema::NC_VarTemplate:
       case Sema::NC_FunctionTemplate:
-      case Sema::NC_UndeclaredTemplate:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -3435,8 +3434,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // type-name
     case tok::annot_template_id: {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-      if (TemplateId->Kind != TNK_Type_template &&
-          TemplateId->Kind != TNK_Undeclared_template) {
+      if (TemplateId->Kind != TNK_Type_template) {
         // This template-id does not refer to a type name, so we're
         // done with the type-specifiers.
         goto DoneWithDeclSpec;

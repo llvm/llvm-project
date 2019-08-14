@@ -128,13 +128,8 @@ void f2() {
 
 
 // PR3844
-template <> struct S<int> { }; // expected-error{{explicit specialization of undeclared template struct 'S'}}
-template <> union U<int> { }; // expected-error{{explicit specialization of undeclared template union 'U'}}
-
-struct SS;
-union UU;
-template <> struct SS<int> { }; // expected-error{{explicit specialization of non-template struct 'SS'}}
-template <> union UU<int> { }; // expected-error{{explicit specialization of non-template union 'UU'}}
+template <> struct S<int> { }; // expected-error{{explicit specialization of non-template struct 'S'}}
+template <> union U<int> { }; // expected-error{{explicit specialization of non-template union 'U'}}
 
 namespace PR6184 {
   namespace N {
@@ -235,11 +230,11 @@ struct base { };
 
 struct t1 : base<int,
   public:  // expected-error {{expected expression}}
-};
+};  // expected-error {{expected class name}}
 // expected-error@-1 {{expected '{' after base class list}}
 struct t2 : base<int,
   public  // expected-error {{expected expression}}
-};
+};  // expected-error {{expected class name}}
 // expected-error@-1 {{expected '{' after base class list}}
 
 }

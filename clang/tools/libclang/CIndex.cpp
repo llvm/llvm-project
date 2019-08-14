@@ -1430,10 +1430,6 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
 
     return false;
 
-  case TemplateName::AssumedTemplate:
-    // FIXME: Visit DeclarationName?
-    return false;
-
   case TemplateName::DependentTemplate:
     // FIXME: Visit nested-name-specifier.
     return false;

@@ -888,7 +888,7 @@ bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
                                        CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
-                                       TemplateTy OpaqueTemplate,
+                                       TemplateTy Template,
                                        SourceLocation TemplateNameLoc,
                                        SourceLocation LAngleLoc,
                                        ASTTemplateArgsPtr TemplateArgsIn,
@@ -898,13 +898,11 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
   if (SS.isInvalid())
     return true;
 
-  TemplateName Template = OpaqueTemplate.get();
-
   // Translate the parser's template argument list in our AST format.
   TemplateArgumentListInfo TemplateArgs(LAngleLoc, RAngleLoc);
   translateTemplateArguments(TemplateArgsIn, TemplateArgs);
 
-  DependentTemplateName *DTN = Template.getAsDependentTemplateName();
+  DependentTemplateName *DTN = Template.get().getAsDependentTemplateName();
   if (DTN && DTN->isIdentifier()) {
     // Handle a dependent template specialization for which we cannot resolve
     // the template name.
@@ -932,28 +930,23 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
     return false;
   }
 
-  // If we assumed an undeclared identifier was a template name, try to
-  // typo-correct it now.
-  if (Template.getAsAssumedTemplateName() &&
-      resolveAssumedTemplateNameAsType(S, Template, TemplateNameLoc))
-    return true;
-
-  TemplateDecl *TD = Template.getAsTemplateDecl();
-  if (Template.getAsOverloadedTemplate() || DTN ||
+  TemplateDecl *TD = Template.get().getAsTemplateDecl();
+  if (Template.get().getAsOverloadedTemplate() || DTN ||
       isa<FunctionTemplateDecl>(TD) || isa<VarTemplateDecl>(TD)) {
     SourceRange R(TemplateNameLoc, RAngleLoc);
     if (SS.getRange().isValid())
       R.setBegin(SS.getRange().getBegin());
 
     Diag(CCLoc, diag::err_non_type_template_in_nested_name_specifier)
-      << (TD && isa<VarTemplateDecl>(TD)) << Template << R;
-    NoteAllFoundTemplates(Template);
+      << (TD && isa<VarTemplateDecl>(TD)) << Template.get() << R;
+    NoteAllFoundTemplates(Template.get());
     return true;
   }
 
   // We were able to resolve the template name to an actual template.
   // Build an appropriate nested-name-specifier.
-  QualType T = CheckTemplateIdType(Template, TemplateNameLoc, TemplateArgs);
+  QualType T =
+      CheckTemplateIdType(Template.get(), TemplateNameLoc, TemplateArgs);
   if (T.isNull())
     return true;
 
@@ -961,7 +954,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
   // nested name specifiers.
   if (!T->isDependentType() && !T->getAs<TagType>()) {
     Diag(TemplateNameLoc, diag::err_nested_name_spec_non_tag) << T;
-    NoteAllFoundTemplates(Template);
+    NoteAllFoundTemplates(Template.get());
     return true;
   }
 
