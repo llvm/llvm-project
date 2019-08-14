@@ -1,24 +1,8 @@
-// RUN: llvm-tblgen -warn-on-skipped-patterns -gen-global-isel -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: llvm-tblgen -warn-on-skipped-patterns -gen-global-isel -I %p/../../include %s -I %p/Common -o /dev/null 2>&1 | FileCheck %s
 include "llvm/Target/Target.td"
+include "GlobalISelEmitterCommon.td"
 
 //===- Boiler plate target code -===//
-def MyTargetISA : InstrInfo;
-def MyTarget : Target { let InstructionSet = MyTargetISA; }
-
-let TargetPrefix = "mytarget" in {
-def int_mytarget_nop : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-}
-
-def R0 : Register<"r0"> { let Namespace = "MyTarget"; }
-def GPR32 : RegisterClass<"MyTarget", [i32], 32, (add R0)>;
-
-class I<dag OOps, dag IOps, list<dag> Pat>
-  : Instruction {
-  let Namespace = "MyTarget";
-  let OutOperandList = OOps;
-  let InOperandList = IOps;
-  let Pattern = Pat;
-}
 
 def complex : Operand<i32>, ComplexPattern<i32, 2, "SelectComplexPattern", []> {
   let MIOperandInfo = (ops i32imm, i32imm);

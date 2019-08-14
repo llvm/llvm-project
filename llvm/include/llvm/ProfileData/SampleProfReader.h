@@ -462,6 +462,8 @@ private:
   DenseMap<StringRef, uint64_t> FuncOffsetTable;
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
+  /// Use all functions from the input profile.
+  bool UseAllFuncs = true;
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readNameTable() override;
   /// Read a string indirectly via the name table.

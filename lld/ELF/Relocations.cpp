@@ -1089,15 +1089,6 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
               getLocation(sec, sym, offset));
 }
 
-struct IRelativeReloc {
-  RelType type;
-  InputSectionBase *sec;
-  uint64_t offset;
-  Symbol *sym;
-};
-
-static std::vector<IRelativeReloc> iRelativeRelocs;
-
 template <class ELFT, class RelTy>
 static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
                       RelTy *end) {
@@ -1265,12 +1256,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     //   correctly, the IRELATIVE relocations are stored in an array which a
     //   statically linked executable's startup code must enumerate using the
     //   linker-defined symbols __rela?_iplt_{start,end}.
-    //
-    // - An absolute relocation to a non-preemptible ifunc (such as a global
-    //   variable containing a pointer to the ifunc) needs to be relocated in
-    //   the exact same way as a GOT entry, so we can avoid needing to make the
-    //   PLT entry canonical by translating such relocations into IRELATIVE
-    //   relocations in the relaIplt.
     if (!sym.isInPlt()) {
       // Create PLT and GOTPLT slots for the symbol.
       sym.isInIplt = true;
@@ -1286,17 +1271,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
       addPltEntry<ELFT>(in.iplt, in.igotPlt, in.relaIplt, target->iRelativeRel,
                         *directSym);
       sym.pltIndex = directSym->pltIndex;
-    }
-    if (expr == R_ABS && addend == 0 && (sec.flags & SHF_WRITE)) {
-      // We might be able to represent this as an IRELATIVE. But we don't know
-      // yet whether some later relocation will make the symbol point to a
-      // canonical PLT, which would make this either a dynamic RELATIVE (PIC) or
-      // static (non-PIC) relocation. So we keep a record of the information
-      // required to process the relocation, and after scanRelocs() has been
-      // called on all relocations, the relocation is resolved by
-      // addIRelativeRelocs().
-      iRelativeRelocs.push_back({type, &sec, offset, &sym});
-      return;
     }
     if (needsGot(expr)) {
       // Redirect GOT accesses to point to the Igot.
@@ -1363,21 +1337,6 @@ template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
     scanRelocs<ELFT>(s, s.relas<ELFT>());
   else
     scanRelocs<ELFT>(s, s.rels<ELFT>());
-}
-
-// Figure out which representation to use for any absolute relocs to
-// non-preemptible ifuncs that we visited during scanRelocs().
-void elf::addIRelativeRelocs() {
-  for (IRelativeReloc &r : iRelativeRelocs) {
-    if (r.sym->type == STT_GNU_IFUNC)
-      in.relaIplt->addReloc(
-          {target->iRelativeRel, r.sec, r.offset, true, r.sym, 0});
-    else if (config->isPic)
-      addRelativeReloc(r.sec, r.offset, r.sym, 0, R_ABS, r.type);
-    else
-      r.sec->relocations.push_back({R_ABS, r.type, r.offset, 0, r.sym});
-  }
-  iRelativeRelocs.clear();
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {

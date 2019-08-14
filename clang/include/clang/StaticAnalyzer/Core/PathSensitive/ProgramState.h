@@ -507,6 +507,10 @@ public:
     return *svalBuilder;
   }
 
+  const SValBuilder &getSValBuilder() const {
+    return *svalBuilder;
+  }
+
   SymbolManager &getSymbolManager() {
     return svalBuilder->getSymbolManager();
   }

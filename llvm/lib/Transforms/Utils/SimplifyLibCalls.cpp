@@ -186,6 +186,24 @@ static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
   return true;
 }
 
+static void annotateDereferenceableBytes(CallInst *CI,
+                                         ArrayRef<unsigned> ArgNos,
+                                         uint64_t DereferenceableBytes) {
+  for (unsigned ArgNo : ArgNos) {
+    uint64_t DerefBytes = std::max(
+        CI->getDereferenceableOrNullBytes(ArgNo + AttributeList::FirstArgIndex),
+        DereferenceableBytes);
+
+    if (CI->getDereferenceableBytes(ArgNo + AttributeList::FirstArgIndex) <
+        DerefBytes) {
+      CI->removeParamAttr(ArgNo, Attribute::Dereferenceable);
+      CI->removeParamAttr(ArgNo, Attribute::DereferenceableOrNull);
+      CI->addParamAttr(ArgNo, Attribute::getWithDereferenceableBytes(
+                                  CI->getContext(), DerefBytes));
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // String and Memory Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -442,6 +460,9 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilder<> &B) {
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
 
+  CI->addParamAttr(0, Attribute::NoAlias);
+  CI->addParamAttr(1, Attribute::NoAlias);
+
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
   if (Len == 0)
@@ -483,6 +504,9 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *LenOp = CI->getArgOperand(2);
+
+  CI->addParamAttr(0, Attribute::NoAlias);
+  CI->addParamAttr(1, Attribute::NoAlias);
 
   // See if we can get the length of the input string.
   uint64_t SrcLen = GetStringLength(Src);
@@ -765,9 +789,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
   ConstantInt *LenC = dyn_cast<ConstantInt>(CI->getArgOperand(2));
 
   // memchr(x, y, 0) -> null
-  if (LenC && LenC->isZero())
-    return Constant::getNullValue(CI->getType());
-
+  if (LenC) {
+    if (LenC->isZero())
+      return Constant::getNullValue(CI->getType());
+    annotateDereferenceableBytes(CI, {0}, LenC->getZExtValue());
+  }
   // From now on we need at least constant length and string.
   StringRef Str;
   if (!LenC || !getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
@@ -926,10 +952,12 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
     return Constant::getNullValue(CI->getType());
 
   // Handle constant lengths.
-  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
+  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size)) {
     if (Value *Res = optimizeMemCmpConstantSize(CI, LHS, RHS,
                                                 LenC->getZExtValue(), B, DL))
       return Res;
+    annotateDereferenceableBytes(CI, {0, 1}, LenC->getZExtValue());
+  }
 
   return nullptr;
 }
@@ -955,18 +983,34 @@ Value *LibCallSimplifier::optimizeBCmp(CallInst *CI, IRBuilder<> &B) {
   return optimizeMemCmpBCmpCommon(CI, B);
 }
 
-Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B) {
+Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B,
+                                         bool isIntrinsic) {
+  Value *Size = CI->getArgOperand(2);
+  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
+    annotateDereferenceableBytes(CI, {0, 1}, LenC->getZExtValue());
+
+  CI->addParamAttr(0, Attribute::NoAlias);
+  CI->addParamAttr(1, Attribute::NoAlias);
+
+  if (isIntrinsic)
+    return nullptr;
+
   // memcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n)
-  B.CreateMemCpy(CI->getArgOperand(0), 1, CI->getArgOperand(1), 1,
-                 CI->getArgOperand(2));
+  B.CreateMemCpy(CI->getArgOperand(0), 1, CI->getArgOperand(1), 1, Size);
   return CI->getArgOperand(0);
 }
 
-Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B) {
+Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B, bool isIntrinsic) {
+  Value *Size = CI->getArgOperand(2);
+  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
+    annotateDereferenceableBytes(CI, {0, 1}, LenC->getZExtValue());
+
+  if (isIntrinsic)
+    return nullptr;
+
   // memmove(x, y, n) -> llvm.memmove(align 1 x, align 1 y, n)
-  B.CreateMemMove(CI->getArgOperand(0), 1, CI->getArgOperand(1), 1,
-                  CI->getArgOperand(2));
-  return CI->getArgOperand(0);
+  B.CreateMemMove( CI->getArgOperand(0), 1, CI->getArgOperand(1), 1, Size);
+  return  CI->getArgOperand(0);
 }
 
 /// Fold memset[_chk](malloc(n), 0, n) --> calloc(1, n).
@@ -1015,13 +1059,21 @@ Value *LibCallSimplifier::foldMallocMemset(CallInst *Memset, IRBuilder<> &B) {
   return Calloc;
 }
 
-Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B) {
+Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B,
+                                         bool isIntrinsic) {
+  Value *Size = CI->getArgOperand(2);
+  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
+    annotateDereferenceableBytes(CI, {0}, LenC->getZExtValue());
+
+  if (isIntrinsic)
+    return nullptr;
+
   if (auto *Calloc = foldMallocMemset(CI, B))
     return Calloc;
 
   // memset(p, v, n) -> llvm.memset(align 1 p, v, n)
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
-  B.CreateMemSet(CI->getArgOperand(0), Val, CI->getArgOperand(2), 1);
+  B.CreateMemSet(CI->getArgOperand(0), Val, Size, 1);
   return CI->getArgOperand(0);
 }
 
@@ -2710,6 +2762,12 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     case Intrinsic::sqrt:
       return optimizeSqrt(CI, Builder);
     // TODO: Use foldMallocMemset() with memset intrinsic.
+    case Intrinsic::memset:
+      return optimizeMemSet(CI, Builder, true);
+    case Intrinsic::memcpy:
+      return optimizeMemCpy(CI, Builder, true);
+    case Intrinsic::memmove:
+      return optimizeMemMove(CI, Builder, true);
     default:
       return nullptr;
     }

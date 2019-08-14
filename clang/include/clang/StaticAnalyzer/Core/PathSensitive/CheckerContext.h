@@ -103,7 +103,7 @@ public:
     return Eng.getBugReporter();
   }
 
-  SourceManager &getSourceManager() {
+  const SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
   }
 

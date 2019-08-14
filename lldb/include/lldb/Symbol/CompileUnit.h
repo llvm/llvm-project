@@ -298,6 +298,8 @@ public:
   ///     A line table object pointer that this object now owns.
   void SetLineTable(LineTable *line_table);
 
+  void SetSupportFiles(const FileSpecList &support_files);
+
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 
   /// Set accessor for the variable list.

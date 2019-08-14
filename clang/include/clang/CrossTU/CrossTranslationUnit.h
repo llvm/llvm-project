@@ -245,7 +245,7 @@ private:
     ASTUnitStorage(const CompilerInstance &CI);
     /// Loads an ASTUnit for a function.
     ///
-    /// \param FuncitionName USR name of the function.
+    /// \param FunctionName USR name of the function.
     /// \param CrossTUDir Path to the directory used to store CTU related files.
     /// \param IndexName Name of the file inside \p CrossTUDir which maps
     /// function USR names to file paths. These files contain the corresponding
@@ -261,7 +261,7 @@ private:
     /// Identifies the path of the file which can be used to load the ASTUnit
     /// for a given function.
     ///
-    /// \param FuncitionName USR name of the function.
+    /// \param FunctionName USR name of the function.
     /// \param CrossTUDir Path to the directory used to store CTU related files.
     /// \param IndexName Name of the file inside \p CrossTUDir which maps
     /// function USR names to file paths. These files contain the corresponding

@@ -2,6 +2,12 @@
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
+  NativeProcessWindows.cpp
+  NativeRegisterContextWindows.cpp
+  NativeRegisterContextWindows_i386.cpp
+  NativeRegisterContextWindows_WoW64.cpp
+  NativeRegisterContextWindows_x86_64.cpp
+  NativeThreadWindows.cpp
   ProcessDebugger.cpp
   ProcessWindows.cpp
   ProcessWindowsLog.cpp

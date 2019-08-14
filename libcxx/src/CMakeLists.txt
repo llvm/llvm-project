@@ -204,6 +204,7 @@ function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
   endif()
+  target_compile_options(${name} PRIVATE -fvisibility=hidden)
   if(WIN32 AND NOT MINGW)
     target_compile_definitions(${name}
                                PRIVATE
@@ -355,7 +356,6 @@ if (LIBCXX_ENABLE_STATIC)
   cxx_set_common_defines(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
-    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
     # If the hermetic library doesn't define the operator new/delete functions
     # then its code shouldn't declare them with hidden visibility.  They might
     # actually be provided by a shared library at link time.

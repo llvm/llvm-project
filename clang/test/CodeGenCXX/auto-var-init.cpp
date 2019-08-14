@@ -830,7 +830,7 @@ TEST_UNINIT(paddedpackednested, paddedpackednested);
 // PATTERN-LABEL: @test_paddedpackednested_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddedpackednested_uninit.uninit
 // PATTERN-O1: getelementptr
-// PATTERN-O1: call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %0, i8 [[I8]], i64 10, i1 false
+// PATTERN-O1: call void @llvm.memset.p0i8.i64(i8* nonnull align 1 dereferenceable(10) %0, i8 [[I8]], i64 10, i1 false
 // ZERO-LABEL: @test_paddedpackednested_uninit()
 // ZERO: call void @llvm.memset{{.*}}, i8 0,
 
@@ -1043,7 +1043,7 @@ TEST_UNINIT(intptr4, int*[4]);
 // CHECK-NEXT:       call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-O1-LABEL: @test_intptr4_uninit()
 // PATTERN-O1:       %1 = bitcast [4 x i32*]* %uninit to i8*
-// PATTERN-O1-NEXT:  call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %1, i8 -86, i64 32, i1 false)
+// PATTERN-O1-NEXT:  call void @llvm.memset.p0i8.i64(i8* nonnull align 16  dereferenceable(32) %1, i8 -86, i64 32, i1 false)
 // ZERO-LABEL:       @test_intptr4_uninit()
 // ZERO:             call void @llvm.memset{{.*}}, i8 0,
 

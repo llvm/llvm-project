@@ -17,6 +17,8 @@
 
 #include "pstl_config.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 
@@ -138,5 +140,7 @@ struct __serial_move_merge
 
 } // namespace __utils
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_PARALLEL_BACKEND_UTILS_H */

@@ -47,18 +47,11 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; X86-LABEL: test_optsize:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $1717986919, %edx # imm = 0x66666667
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    imull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    sarl %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    leal (%edx,%edx,4), %eax
-; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    imull $-858993459, {{[0-9]+}}(%esp), %eax # imm = 0xCCCCCCCD
+; X86-NEXT:    addl $429496729, %eax # imm = 0x19999999
+; X86-NEXT:    cmpl $858993459, %eax # imm = 0x33333333
 ; X86-NEXT:    movl $42, %eax
-; X86-NEXT:    je .LBB1_2
+; X86-NEXT:    jb .LBB1_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl $-10, %eax
 ; X86-NEXT:  .LBB1_2:
@@ -66,17 +59,12 @@ define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ;
 ; X64-LABEL: test_optsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    imulq $1717986919, %rax, %rcx # imm = 0x66666667
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    shrq $63, %rdx
-; X64-NEXT:    sarq $33, %rcx
-; X64-NEXT:    addl %edx, %ecx
-; X64-NEXT:    leal (%rcx,%rcx,4), %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    imull $-858993459, %edi, %eax # imm = 0xCCCCCCCD
+; X64-NEXT:    addl $429496729, %eax # imm = 0x19999999
+; X64-NEXT:    cmpl $858993459, %eax # imm = 0x33333333
 ; X64-NEXT:    movl $42, %ecx
 ; X64-NEXT:    movl $-10, %eax
-; X64-NEXT:    cmovel %ecx, %eax
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    retq
   %rem = srem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0

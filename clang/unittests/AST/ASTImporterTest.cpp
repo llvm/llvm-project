@@ -5314,6 +5314,54 @@ TEST_P(SVEBuiltins, ImportTypes) {
   }
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportOfDefaultImplicitFunctions) {
+  // Test that import of implicit functions works and the functions
+  // are merged into one chain.
+  auto GetDeclToImport = [this](StringRef File) {
+    Decl *FromTU = getTuDecl(
+        R"(
+        struct X { };
+        // Force generating some implicit operator definitions for X.
+        void f() { X x1, x2; x1 = x2; X *x3 = new X; delete x3; }
+        )",
+        Lang_CXX11, File);
+    auto *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("X"), unless(isImplicit())));
+    // Destructor is picked as one example of implicit function.
+    return FromD->getDestructor();
+  };
+
+  auto *ToD1 = Import(GetDeclToImport("input1.cc"), Lang_CXX11);
+  ASSERT_TRUE(ToD1);
+
+  auto *ToD2 = Import(GetDeclToImport("input2.cc"), Lang_CXX11);
+  ASSERT_TRUE(ToD2);
+
+  EXPECT_EQ(ToD1->getCanonicalDecl(), ToD2->getCanonicalDecl());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportOfExplicitlyDefaultedOrDeleted) {
+  Decl *FromTU = getTuDecl(
+      R"(
+        struct X { X() = default; X(const X&) = delete; };
+      )",
+      Lang_CXX11);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+  auto *Constr1 = FirstDeclMatcher<CXXConstructorDecl>().match(
+      ImportedX, cxxConstructorDecl(hasName("X"), unless(isImplicit())));
+  auto *Constr2 = LastDeclMatcher<CXXConstructorDecl>().match(
+      ImportedX, cxxConstructorDecl(hasName("X"), unless(isImplicit())));
+
+  ASSERT_TRUE(ImportedX);
+  EXPECT_TRUE(Constr1->isDefaulted());
+  EXPECT_TRUE(Constr1->isExplicitlyDefaulted());
+  EXPECT_TRUE(Constr2->isDeletedAsWritten());
+  EXPECT_EQ(ImportedX->isAggregate(), FromX->isAggregate());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, SVEBuiltins,
                         ::testing::Values(ArgVector{"-target",
                                                     "aarch64-linux-gnu"}), );
@@ -5369,6 +5417,7 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportVariables,
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, LLDBLookupTest,
                         DefaultTestValuesForRunOptions, );
+
 
 } // end namespace ast_matchers
 } // end namespace clang

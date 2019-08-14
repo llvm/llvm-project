@@ -98,62 +98,60 @@ enum FloatingRank {
   Float16Rank, HalfRank, FloatRank, DoubleRank, LongDoubleRank, Float128Rank
 };
 
-RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
+/// \returns location that is relevant when searching for Doc comments related
+/// to \p D.
+static SourceLocation getDeclLocForCommentSearch(const Decl *D,
+                                                 SourceManager &SourceMgr) {
   assert(D);
-
-  // If we already tried to load comments but there are none,
-  // we won't find anything.
-  if (CommentsLoaded && Comments.getComments().empty())
-    return nullptr;
 
   // User can not attach documentation to implicit declarations.
   if (D->isImplicit())
-    return nullptr;
+    return {};
 
   // User can not attach documentation to implicit instantiations.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return nullptr;
+      return {};
   }
 
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (VD->isStaticDataMember() &&
         VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return nullptr;
+      return {};
   }
 
   if (const auto *CRD = dyn_cast<CXXRecordDecl>(D)) {
     if (CRD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return nullptr;
+      return {};
   }
 
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     TemplateSpecializationKind TSK = CTSD->getSpecializationKind();
     if (TSK == TSK_ImplicitInstantiation ||
         TSK == TSK_Undeclared)
-      return nullptr;
+      return {};
   }
 
   if (const auto *ED = dyn_cast<EnumDecl>(D)) {
     if (ED->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return nullptr;
+      return {};
   }
   if (const auto *TD = dyn_cast<TagDecl>(D)) {
     // When tag declaration (but not definition!) is part of the
     // decl-specifier-seq of some other declaration, it doesn't get comment
     if (TD->isEmbeddedInDeclarator() && !TD->isCompleteDefinition())
-      return nullptr;
+      return {};
   }
   // TODO: handle comments for function parameters properly.
   if (isa<ParmVarDecl>(D))
-    return nullptr;
+    return {};
 
   // TODO: we could look up template parameter documentation in the template
   // documentation.
   if (isa<TemplateTypeParmDecl>(D) ||
       isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTemplateParmDecl>(D))
-    return nullptr;
+    return {};
 
   // Find declaration location.
   // For Objective-C declarations we generally don't expect to have multiple
@@ -161,20 +159,19 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   // location".
   // For all other declarations multiple declarators are used quite frequently,
   // so we use the location of the identifier as the "declaration location".
-  SourceLocation DeclLoc;
   if (isa<ObjCMethodDecl>(D) || isa<ObjCContainerDecl>(D) ||
       isa<ObjCPropertyDecl>(D) ||
       isa<RedeclarableTemplateDecl>(D) ||
       isa<ClassTemplateSpecializationDecl>(D))
-    DeclLoc = D->getBeginLoc();
+    return D->getBeginLoc();
   else {
-    DeclLoc = D->getLocation();
+    const SourceLocation DeclLoc = D->getLocation();
     if (DeclLoc.isMacroID()) {
       if (isa<TypedefDecl>(D)) {
         // If location of the typedef name is in a macro, it is because being
         // declared via a macro. Try using declaration's starting location as
         // the "declaration location".
-        DeclLoc = D->getBeginLoc();
+        return D->getBeginLoc();
       } else if (const auto *TD = dyn_cast<TagDecl>(D)) {
         // If location of the tag decl is inside a macro, but the spelling of
         // the tag name comes from a macro argument, it looks like a special
@@ -183,102 +180,73 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
         // attach the comment to the tag decl.
         if (SourceMgr.isMacroArgExpansion(DeclLoc) &&
             TD->isCompleteDefinition())
-          DeclLoc = SourceMgr.getExpansionLoc(DeclLoc);
+          return SourceMgr.getExpansionLoc(DeclLoc);
       }
     }
+    return DeclLoc;
   }
 
+  return {};
+}
+
+RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
+    const Decl *D, const SourceLocation RepresentativeLocForDecl,
+    const std::map<unsigned, RawComment *> &CommentsInTheFile) const {
   // If the declaration doesn't map directly to a location in a file, we
   // can't find the comment.
-  if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+  if (RepresentativeLocForDecl.isInvalid() ||
+      !RepresentativeLocForDecl.isFileID())
     return nullptr;
 
-  if (!CommentsLoaded && ExternalSource) {
-    ExternalSource->ReadComments();
-
-#ifndef NDEBUG
-    ArrayRef<RawComment *> RawComments = Comments.getComments();
-    assert(std::is_sorted(RawComments.begin(), RawComments.end(),
-                          BeforeThanCompare<RawComment>(SourceMgr)));
-#endif
-
-    CommentsLoaded = true;
-  }
-
-  ArrayRef<RawComment *> RawComments = Comments.getComments();
   // If there are no comments anywhere, we won't find anything.
-  if (RawComments.empty())
+  if (CommentsInTheFile.empty())
     return nullptr;
-
-  // Find the comment that occurs just after this declaration.
-  ArrayRef<RawComment *>::iterator Comment;
-  {
-    // When searching for comments during parsing, the comment we are looking
-    // for is usually among the last two comments we parsed -- check them
-    // first.
-    RawComment CommentAtDeclLoc(
-        SourceMgr, SourceRange(DeclLoc), LangOpts.CommentOpts, false);
-    BeforeThanCompare<RawComment> Compare(SourceMgr);
-    ArrayRef<RawComment *>::iterator MaybeBeforeDecl = RawComments.end() - 1;
-    bool Found = Compare(*MaybeBeforeDecl, &CommentAtDeclLoc);
-    if (!Found && RawComments.size() >= 2) {
-      MaybeBeforeDecl--;
-      Found = Compare(*MaybeBeforeDecl, &CommentAtDeclLoc);
-    }
-
-    if (Found) {
-      Comment = MaybeBeforeDecl + 1;
-      assert(Comment ==
-             llvm::lower_bound(RawComments, &CommentAtDeclLoc, Compare));
-    } else {
-      // Slow path.
-      Comment = llvm::lower_bound(RawComments, &CommentAtDeclLoc, Compare);
-    }
-  }
 
   // Decompose the location for the declaration and find the beginning of the
   // file buffer.
-  std::pair<FileID, unsigned> DeclLocDecomp = SourceMgr.getDecomposedLoc(DeclLoc);
+  const std::pair<FileID, unsigned> DeclLocDecomp =
+      SourceMgr.getDecomposedLoc(RepresentativeLocForDecl);
+
+  // Slow path.
+  auto OffsetCommentBehindDecl =
+      CommentsInTheFile.lower_bound(DeclLocDecomp.second);
 
   // First check whether we have a trailing comment.
-  if (Comment != RawComments.end() &&
-      ((*Comment)->isDocumentation() || LangOpts.CommentOpts.ParseAllComments)
-      && (*Comment)->isTrailingComment() &&
-      (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
-       isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
-    std::pair<FileID, unsigned> CommentBeginDecomp
-      = SourceMgr.getDecomposedLoc((*Comment)->getSourceRange().getBegin());
-    // Check that Doxygen trailing comment comes after the declaration, starts
-    // on the same line and in the same file as the declaration.
-    if (DeclLocDecomp.first == CommentBeginDecomp.first &&
-        SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second)
-          == SourceMgr.getLineNumber(CommentBeginDecomp.first,
-                                     CommentBeginDecomp.second)) {
-      (**Comment).setAttached();
-      return *Comment;
+  if (OffsetCommentBehindDecl != CommentsInTheFile.end()) {
+    RawComment *CommentBehindDecl = OffsetCommentBehindDecl->second;
+    if ((CommentBehindDecl->isDocumentation() ||
+         LangOpts.CommentOpts.ParseAllComments) &&
+        CommentBehindDecl->isTrailingComment() &&
+        (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
+         isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
+
+      // Check that Doxygen trailing comment comes after the declaration, starts
+      // on the same line and in the same file as the declaration.
+      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) ==
+          Comments.getCommentBeginLine(CommentBehindDecl, DeclLocDecomp.first,
+                                       OffsetCommentBehindDecl->first)) {
+        return CommentBehindDecl;
+      }
     }
   }
 
   // The comment just after the declaration was not a trailing comment.
   // Let's look at the previous comment.
-  if (Comment == RawComments.begin())
+  if (OffsetCommentBehindDecl == CommentsInTheFile.begin())
     return nullptr;
-  --Comment;
+
+  auto OffsetCommentBeforeDecl = --OffsetCommentBehindDecl;
+  RawComment *CommentBeforeDecl = OffsetCommentBeforeDecl->second;
 
   // Check that we actually have a non-member Doxygen comment.
-  if (!((*Comment)->isDocumentation() ||
+  if (!(CommentBeforeDecl->isDocumentation() ||
         LangOpts.CommentOpts.ParseAllComments) ||
-      (*Comment)->isTrailingComment())
+      CommentBeforeDecl->isTrailingComment())
     return nullptr;
 
   // Decompose the end of the comment.
-  std::pair<FileID, unsigned> CommentEndDecomp
-    = SourceMgr.getDecomposedLoc((*Comment)->getSourceRange().getEnd());
-
-  // If the comment and the declaration aren't in the same file, then they
-  // aren't related.
-  if (DeclLocDecomp.first != CommentEndDecomp.first)
-    return nullptr;
+  const unsigned CommentEndOffset =
+      Comments.getCommentEndOffset(CommentBeforeDecl);
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -288,26 +256,49 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
     return nullptr;
 
   // Extract text between the comment and declaration.
-  StringRef Text(Buffer + CommentEndDecomp.second,
-                 DeclLocDecomp.second - CommentEndDecomp.second);
+  StringRef Text(Buffer + CommentEndOffset,
+                 DeclLocDecomp.second - CommentEndOffset);
 
   // There should be no other declarations or preprocessor directives between
   // comment and declaration.
   if (Text.find_first_of(";{}#@") != StringRef::npos)
     return nullptr;
 
-  (**Comment).setAttached();
-  return *Comment;
+  return CommentBeforeDecl;
+}
+
+RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
+  const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
+
+  // If the declaration doesn't map directly to a location in a file, we
+  // can't find the comment.
+  if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+    return nullptr;
+
+  if (ExternalSource && !CommentsLoaded) {
+    ExternalSource->ReadComments();
+    CommentsLoaded = true;
+  }
+
+  if (Comments.empty())
+    return nullptr;
+
+  const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+  const auto CommentsInThisFile = Comments.getCommentsInFile(File);
+  if (!CommentsInThisFile || CommentsInThisFile->empty())
+    return nullptr;
+
+  return getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile);
 }
 
 /// If we have a 'templated' declaration for a template, adjust 'D' to
 /// refer to the actual template.
 /// If we have an implicit instantiation, adjust 'D' to refer to template.
-static const Decl *adjustDeclToTemplate(const Decl *D) {
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+static const Decl &adjustDeclToTemplate(const Decl &D) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(&D)) {
     // Is this function declaration part of a function template?
     if (const FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
-      return FTD;
+      return *FTD;
 
     // Nothing to do if function is not an implicit instantiation.
     if (FD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation)
@@ -315,28 +306,28 @@ static const Decl *adjustDeclToTemplate(const Decl *D) {
 
     // Function is an implicit instantiation of a function template?
     if (const FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
-      return FTD;
+      return *FTD;
 
     // Function is instantiated from a member definition of a class template?
     if (const FunctionDecl *MemberDecl =
             FD->getInstantiatedFromMemberFunction())
-      return MemberDecl;
+      return *MemberDecl;
 
     return D;
   }
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+  if (const auto *VD = dyn_cast<VarDecl>(&D)) {
     // Static data member is instantiated from a member definition of a class
     // template?
     if (VD->isStaticDataMember())
       if (const VarDecl *MemberDecl = VD->getInstantiatedFromStaticDataMember())
-        return MemberDecl;
+        return *MemberDecl;
 
     return D;
   }
-  if (const auto *CRD = dyn_cast<CXXRecordDecl>(D)) {
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(&D)) {
     // Is this class declaration part of a class template?
     if (const ClassTemplateDecl *CTD = CRD->getDescribedClassTemplate())
-      return CTD;
+      return *CTD;
 
     // Class is an implicit instantiation of a class template or partial
     // specialization?
@@ -346,23 +337,23 @@ static const Decl *adjustDeclToTemplate(const Decl *D) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *>
           PU = CTSD->getSpecializedTemplateOrPartial();
-      return PU.is<ClassTemplateDecl*>() ?
-          static_cast<const Decl*>(PU.get<ClassTemplateDecl *>()) :
-          static_cast<const Decl*>(
-              PU.get<ClassTemplatePartialSpecializationDecl *>());
+      return PU.is<ClassTemplateDecl *>()
+                 ? *static_cast<const Decl *>(PU.get<ClassTemplateDecl *>())
+                 : *static_cast<const Decl *>(
+                       PU.get<ClassTemplatePartialSpecializationDecl *>());
     }
 
     // Class is instantiated from a member definition of a class template?
     if (const MemberSpecializationInfo *Info =
-                   CRD->getMemberSpecializationInfo())
-      return Info->getInstantiatedFrom();
+            CRD->getMemberSpecializationInfo())
+      return *Info->getInstantiatedFrom();
 
     return D;
   }
-  if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+  if (const auto *ED = dyn_cast<EnumDecl>(&D)) {
     // Enum is instantiated from a member definition of a class template?
     if (const EnumDecl *MemberDecl = ED->getInstantiatedFromMemberEnum())
-      return MemberDecl;
+      return *MemberDecl;
 
     return D;
   }
@@ -373,72 +364,81 @@ static const Decl *adjustDeclToTemplate(const Decl *D) {
 const RawComment *ASTContext::getRawCommentForAnyRedecl(
                                                 const Decl *D,
                                                 const Decl **OriginalDecl) const {
-  D = adjustDeclToTemplate(D);
+  if (!D) {
+    if (OriginalDecl)
+      OriginalDecl = nullptr;
+    return nullptr;
+  }
 
-  // Check whether we have cached a comment for this declaration already.
+  D = &adjustDeclToTemplate(*D);
+
+  // Any comment directly attached to D?
   {
-    llvm::DenseMap<const Decl *, RawCommentAndCacheFlags>::iterator Pos =
-        RedeclComments.find(D);
-    if (Pos != RedeclComments.end()) {
-      const RawCommentAndCacheFlags &Raw = Pos->second;
-      if (Raw.getKind() != RawCommentAndCacheFlags::NoCommentInDecl) {
-        if (OriginalDecl)
-          *OriginalDecl = Raw.getOriginalDecl();
-        return Raw.getRaw();
-      }
+    auto DeclComment = DeclRawComments.find(D);
+    if (DeclComment != DeclRawComments.end()) {
+      if (OriginalDecl)
+        *OriginalDecl = D;
+      return DeclComment->second;
     }
   }
 
-  // Search for comments attached to declarations in the redeclaration chain.
-  const RawComment *RC = nullptr;
-  const Decl *OriginalDeclForRC = nullptr;
-  for (auto I : D->redecls()) {
-    llvm::DenseMap<const Decl *, RawCommentAndCacheFlags>::iterator Pos =
-        RedeclComments.find(I);
-    if (Pos != RedeclComments.end()) {
-      const RawCommentAndCacheFlags &Raw = Pos->second;
-      if (Raw.getKind() != RawCommentAndCacheFlags::NoCommentInDecl) {
-        RC = Raw.getRaw();
-        OriginalDeclForRC = Raw.getOriginalDecl();
-        break;
-      }
-    } else {
-      RC = getRawCommentForDeclNoCache(I);
-      OriginalDeclForRC = I;
-      RawCommentAndCacheFlags Raw;
-      if (RC) {
-        // Call order swapped to work around ICE in VS2015 RTM (Release Win32)
-        // https://connect.microsoft.com/VisualStudio/feedback/details/1741530
-        Raw.setKind(RawCommentAndCacheFlags::FromDecl);
-        Raw.setRaw(RC);
-      } else
-        Raw.setKind(RawCommentAndCacheFlags::NoCommentInDecl);
-      Raw.setOriginalDecl(I);
-      RedeclComments[I] = Raw;
-      if (RC)
-        break;
+  // Any comment attached to any redeclaration of D?
+  const Decl *CanonicalD = D->getCanonicalDecl();
+  if (!CanonicalD)
+    return nullptr;
+
+  {
+    auto RedeclComment = RedeclChainComments.find(CanonicalD);
+    if (RedeclComment != RedeclChainComments.end()) {
+      if (OriginalDecl)
+        *OriginalDecl = RedeclComment->second;
+      auto CommentAtRedecl = DeclRawComments.find(RedeclComment->second);
+      assert(CommentAtRedecl != DeclRawComments.end() &&
+             "This decl is supposed to have comment attached.");
+      return CommentAtRedecl->second;
     }
   }
 
-  // If we found a comment, it should be a documentation comment.
-  assert(!RC || RC->isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
+  // Any redeclarations of D that we haven't checked for comments yet?
+  // We can't use DenseMap::iterator directly since it'd get invalid.
+  auto LastCheckedRedecl = [this, CanonicalD]() -> const Decl * {
+    auto LookupRes = CommentlessRedeclChains.find(CanonicalD);
+    if (LookupRes != CommentlessRedeclChains.end())
+      return LookupRes->second;
+    return nullptr;
+  }();
+
+  for (const auto Redecl : D->redecls()) {
+    assert(Redecl);
+    // Skip all redeclarations that have been checked previously.
+    if (LastCheckedRedecl) {
+      if (LastCheckedRedecl == Redecl) {
+        LastCheckedRedecl = nullptr;
+      }
+      continue;
+    }
+    const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
+    if (RedeclComment) {
+      cacheRawCommentForDecl(*Redecl, *RedeclComment);
+      if (OriginalDecl)
+        *OriginalDecl = Redecl;
+      return RedeclComment;
+    }
+    CommentlessRedeclChains[CanonicalD] = Redecl;
+  }
 
   if (OriginalDecl)
-    *OriginalDecl = OriginalDeclForRC;
+    *OriginalDecl = nullptr;
+  return nullptr;
+}
 
-  // Update cache for every declaration in the redeclaration chain.
-  RawCommentAndCacheFlags Raw;
-  Raw.setRaw(RC);
-  Raw.setKind(RawCommentAndCacheFlags::FromRedecl);
-  Raw.setOriginalDecl(OriginalDeclForRC);
-
-  for (auto I : D->redecls()) {
-    RawCommentAndCacheFlags &R = RedeclComments[I];
-    if (R.getKind() == RawCommentAndCacheFlags::NoCommentInDecl)
-      R = Raw;
-  }
-
-  return RC;
+void ASTContext::cacheRawCommentForDecl(const Decl &OriginalD,
+                                        const RawComment &Comment) const {
+  assert(Comment.isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
+  DeclRawComments.try_emplace(&OriginalD, &Comment);
+  const Decl *const CanonicalDecl = OriginalD.getCanonicalDecl();
+  RedeclChainComments.try_emplace(CanonicalDecl, &OriginalD);
+  CommentlessRedeclChains.erase(CanonicalDecl);
 }
 
 static void addRedeclaredMethods(const ObjCMethodDecl *ObjCMethod,
@@ -454,6 +454,52 @@ static void addRedeclaredMethods(const ObjCMethodDecl *ObjCMethod,
             Ext->getMethod(ObjCMethod->getSelector(),
                                   ObjCMethod->isInstanceMethod()))
         Redeclared.push_back(RedeclaredMethod);
+    }
+  }
+}
+
+void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
+                                                 const Preprocessor *PP) {
+  if (Comments.empty() || Decls.empty())
+    return;
+
+  // See if there are any new comments that are not attached to a decl.
+  // The location doesn't have to be precise - we care only about the file.
+  const FileID File =
+      SourceMgr.getDecomposedLoc((*Decls.begin())->getLocation()).first;
+  auto CommentsInThisFile = Comments.getCommentsInFile(File);
+  if (!CommentsInThisFile || CommentsInThisFile->empty() ||
+      CommentsInThisFile->rbegin()->second->isAttached())
+    return;
+
+  // There is at least one comment not attached to a decl.
+  // Maybe it should be attached to one of Decls?
+  //
+  // Note that this way we pick up not only comments that precede the
+  // declaration, but also comments that *follow* the declaration -- thanks to
+  // the lookahead in the lexer: we've consumed the semicolon and looked
+  // ahead through comments.
+
+  for (const Decl *D : Decls) {
+    assert(D);
+    if (D->isInvalidDecl())
+      continue;
+
+    D = &adjustDeclToTemplate(*D);
+
+    const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
+
+    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+      continue;
+
+    if (DeclRawComments.count(D) > 0)
+      continue;
+
+    if (RawComment *const DocComment =
+            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+      cacheRawCommentForDecl(*D, *DocComment);
+      comments::FullComment *FC = DocComment->parse(*this, PP, D);
+      ParsedComments[D->getCanonicalDecl()] = FC;
     }
   }
 }
@@ -481,9 +527,9 @@ comments::FullComment *ASTContext::getLocalCommentForDeclUncached(const Decl *D)
 comments::FullComment *ASTContext::getCommentForDecl(
                                               const Decl *D,
                                               const Preprocessor *PP) const {
-  if (D->isInvalidDecl())
+  if (!D || D->isInvalidDecl())
     return nullptr;
-  D = adjustDeclToTemplate(D);
+  D = &adjustDeclToTemplate(*D);
 
   const Decl *Canonical = D->getCanonicalDecl();
   llvm::DenseMap<const Decl *, comments::FullComment *>::iterator Pos =
@@ -498,7 +544,7 @@ comments::FullComment *ASTContext::getCommentForDecl(
     return Pos->second;
   }
 
-  const Decl *OriginalDecl;
+  const Decl *OriginalDecl = nullptr;
 
   const RawComment *RC = getRawCommentForAnyRedecl(D, &OriginalDecl);
   if (!RC) {
@@ -577,7 +623,7 @@ comments::FullComment *ASTContext::getCommentForDecl(
   // should parse the comment in context of that other Decl.  This is important
   // because comments can contain references to parameter names which can be
   // different across redeclarations.
-  if (D != OriginalDecl)
+  if (D != OriginalDecl && OriginalDecl)
     return getCommentForDecl(OriginalDecl, PP);
 
   comments::FullComment *FC = RC->parse(*this, PP, D);

@@ -1521,7 +1521,7 @@ bool PPC::isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
 bool PPC::isVPKUDUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                                SelectionDAG &DAG) {
   const PPCSubtarget& Subtarget =
-    static_cast<const PPCSubtarget&>(DAG.getSubtarget());
+      static_cast<const PPCSubtarget&>(DAG.getSubtarget());
   if (!Subtarget.hasP8Vector())
     return false;
 
@@ -2671,12 +2671,14 @@ static void setUsesTOCBasePtr(SelectionDAG &DAG) {
   setUsesTOCBasePtr(DAG.getMachineFunction());
 }
 
-static SDValue getTOCEntry(SelectionDAG &DAG, const SDLoc &dl, bool Is64Bit,
-                           SDValue GA) {
+SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
+                                       SDValue GA) const {
+  const bool Is64Bit = Subtarget.isPPC64();
   EVT VT = Is64Bit ? MVT::i64 : MVT::i32;
-  SDValue Reg = Is64Bit ? DAG.getRegister(PPC::X2, VT) :
-                DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
-
+  SDValue Reg = Is64Bit ? DAG.getRegister(PPC::X2, VT)
+                        : Subtarget.isAIXABI()
+                              ? DAG.getRegister(PPC::R2, VT)
+                              : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
@@ -2695,7 +2697,7 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0);
-    return getTOCEntry(DAG, SDLoc(CP), true, GA);
+    return getTOCEntry(DAG, SDLoc(CP), GA);
   }
 
   unsigned MOHiFlag, MOLoFlag;
@@ -2705,7 +2707,7 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   if (IsPIC && Subtarget.isSVR4ABI()) {
     SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(),
                                            PPCII::MO_PIC_FLAG);
-    return getTOCEntry(DAG, SDLoc(CP), false, GA);
+    return getTOCEntry(DAG, SDLoc(CP), GA);
   }
 
   SDValue CPIHi =
@@ -2771,7 +2773,7 @@ SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetJumpTable(JT->getIndex(), PtrVT);
-    return getTOCEntry(DAG, SDLoc(JT), true, GA);
+    return getTOCEntry(DAG, SDLoc(JT), GA);
   }
 
   unsigned MOHiFlag, MOLoFlag;
@@ -2781,7 +2783,7 @@ SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   if (IsPIC && Subtarget.isSVR4ABI()) {
     SDValue GA = DAG.getTargetJumpTable(JT->getIndex(), PtrVT,
                                         PPCII::MO_PIC_FLAG);
-    return getTOCEntry(DAG, SDLoc(GA), false, GA);
+    return getTOCEntry(DAG, SDLoc(GA), GA);
   }
 
   SDValue JTIHi = DAG.getTargetJumpTable(JT->getIndex(), PtrVT, MOHiFlag);
@@ -2802,7 +2804,7 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
     if (Subtarget.isPPC64())
       setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset());
-    return getTOCEntry(DAG, SDLoc(BASDN), Subtarget.isPPC64(), GA);
+    return getTOCEntry(DAG, SDLoc(BASDN), GA);
   }
 
   unsigned MOHiFlag, MOLoFlag;
@@ -2917,12 +2919,12 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
   SDLoc DL(GSDN);
   const GlobalValue *GV = GSDN->getGlobal();
 
-  // 64-bit SVR4 ABI code is always position-independent.
+  // 64-bit SVR4 ABI & AIX ABI code is always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
+  if ((Subtarget.isSVR4ABI() && Subtarget.isPPC64()) || Subtarget.isAIXABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, PtrVT, GSDN->getOffset());
-    return getTOCEntry(DAG, DL, true, GA);
+    return getTOCEntry(DAG, DL, GA);
   }
 
   unsigned MOHiFlag, MOLoFlag;
@@ -2933,7 +2935,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, PtrVT,
                                             GSDN->getOffset(),
                                             PPCII::MO_PIC_FLAG);
-    return getTOCEntry(DAG, DL, false, GA);
+    return getTOCEntry(DAG, DL, GA);
   }
 
   SDValue GAHi =
@@ -10052,9 +10054,11 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::TRUNCATE: {
     EVT TrgVT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
     if (TrgVT.isVector() &&
         isOperationCustom(N->getOpcode(), TrgVT) &&
-        N->getOperand(0).getValueType().getSizeInBits() <= 128)
+        OpVT.getSizeInBits() <= 128 &&
+        isPowerOf2_32(OpVT.getVectorElementType().getSizeInBits()))
       Results.push_back(LowerTRUNCATEVector(SDValue(N, 0), DAG));
     return;
   }
@@ -14405,11 +14409,14 @@ bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
   if (Subtarget.isSVR4ABI() && !Subtarget.isPPC64())
     return true;
 
+  // AIX accesses everything indirectly through the TOC, which is similar to
+  // the GOT.
+  if (Subtarget.isAIXABI())
+    return true;
+
   CodeModel::Model CModel = getTargetMachine().getCodeModel();
   // If it is small or large code model, module locals are accessed
-  // indirectly by loading their address from .toc/.got. The difference
-  // is that for large code model we have ADDIStocHA8 + LDtocL and for
-  // small code model we simply have LDtoc.
+  // indirectly by loading their address from .toc/.got.
   if (CModel == CodeModel::Small || CModel == CodeModel::Large)
     return true;
 

@@ -1720,7 +1720,6 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
   unsigned Reg = MI.getOperand(Op).getReg();
   bool SPRRegs = ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg);
   bool DPRRegs = ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg);
-  bool CLRMRegs = MI.getOpcode() == ARM::t2CLRM;
 
   unsigned Binary = 0;
 
@@ -1739,21 +1738,13 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
       Binary |= NumRegs * 2;
   } else {
     const MCRegisterInfo &MRI = *CTX.getRegisterInfo();
-    if (!CLRMRegs) {
-      assert(std::is_sorted(MI.begin() + Op, MI.end(),
-                            [&](const MCOperand &LHS, const MCOperand &RHS) {
-                              return MRI.getEncodingValue(LHS.getReg()) <
-                                     MRI.getEncodingValue(RHS.getReg());
-                            }));
-    }
-
+    assert(std::is_sorted(MI.begin() + Op, MI.end(),
+                          [&](const MCOperand &LHS, const MCOperand &RHS) {
+                            return MRI.getEncodingValue(LHS.getReg()) <
+                              MRI.getEncodingValue(RHS.getReg());
+                          }));
     for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
-      unsigned RegNo;
-      if (CLRMRegs && MI.getOperand(I).getReg() == ARM::APSR) {
-        RegNo = 15;
-      } else {
-        RegNo = MRI.getEncodingValue(MI.getOperand(I).getReg());
-      }
+      unsigned RegNo = MRI.getEncodingValue(MI.getOperand(I).getReg());
       Binary |= 1 << RegNo;
     }
   }

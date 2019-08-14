@@ -171,6 +171,26 @@ bool LegalizerHelper::extractParts(Register Reg, LLT RegTy,
   return true;
 }
 
+static LLT getGCDType(LLT OrigTy, LLT TargetTy) {
+  if (OrigTy.isVector() && TargetTy.isVector()) {
+    assert(OrigTy.getElementType() == TargetTy.getElementType());
+    int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
+                                    TargetTy.getNumElements());
+    return LLT::scalarOrVector(GCD, OrigTy.getElementType());
+  }
+
+  if (OrigTy.isVector() && !TargetTy.isVector()) {
+    assert(OrigTy.getElementType() == TargetTy);
+    return TargetTy;
+  }
+
+  assert(!OrigTy.isVector() && !TargetTy.isVector());
+
+  int GCD = greatestCommonDivisor(OrigTy.getSizeInBits(),
+                                  TargetTy.getSizeInBits());
+  return LLT::scalar(GCD);
+}
+
 void LegalizerHelper::insertParts(Register DstReg,
                                   LLT ResultTy, LLT PartTy,
                                   ArrayRef<Register> PartRegs,
@@ -2096,6 +2116,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_SHUFFLE_VECTOR:
+    return lowerShuffleVector(MI);
   }
 }
 
@@ -2572,6 +2594,46 @@ LegalizerHelper::fewerElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorUnmergeValues(MachineInstr &MI,
+                                                  unsigned TypeIdx,
+                                                  LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  const int NumDst = MI.getNumOperands() - 1;
+  const Register SrcReg = MI.getOperand(NumDst).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  // TODO: Create sequence of extracts.
+  if (DstTy == NarrowTy)
+    return UnableToLegalize;
+
+  LLT GCDTy = getGCDType(SrcTy, NarrowTy);
+  if (DstTy == GCDTy) {
+    // This would just be a copy of the same unmerge.
+    // TODO: Create extracts, pad with undef and create intermediate merges.
+    return UnableToLegalize;
+  }
+
+  auto Unmerge = MIRBuilder.buildUnmerge(GCDTy, SrcReg);
+  const int NumUnmerge = Unmerge->getNumOperands() - 1;
+  const int PartsPerUnmerge = NumDst / NumUnmerge;
+
+  for (int I = 0; I != NumUnmerge; ++I) {
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+
+    for (int J = 0; J != PartsPerUnmerge; ++J)
+      MIB.addDef(MI.getOperand(I * PartsPerUnmerge + J).getReg());
+    MIB.addUse(Unmerge.getReg(I));
+  }
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
                                       LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
@@ -2742,6 +2804,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorSelect(MI, TypeIdx, NarrowTy);
   case G_PHI:
     return fewerElementsVectorPhi(MI, TypeIdx, NarrowTy);
+  case G_UNMERGE_VALUES:
+    return fewerElementsVectorUnmergeValues(MI, TypeIdx, NarrowTy);
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);
@@ -3750,4 +3814,47 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   }
 
   return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src0Reg = MI.getOperand(1).getReg();
+  Register Src1Reg = MI.getOperand(2).getReg();
+  LLT Src0Ty = MRI.getType(Src0Reg);
+  LLT DstTy = MRI.getType(DstReg);
+  LLT EltTy = DstTy.getElementType();
+  LLT IdxTy = LLT::scalar(32);
+
+  const Constant *ShufMask = MI.getOperand(3).getShuffleMask();
+
+  SmallVector<int, 32> Mask;
+  ShuffleVectorInst::getShuffleMask(ShufMask, Mask);
+
+  Register Undef;
+  SmallVector<Register, 32> BuildVec;
+
+  for (int Idx : Mask) {
+    if (Idx < 0) {
+      if (!Undef.isValid())
+        Undef = MIRBuilder.buildUndef(EltTy).getReg(0);
+      BuildVec.push_back(Undef);
+      continue;
+    }
+
+    if (Src0Ty.isScalar()) {
+      BuildVec.push_back(Idx == 0 ? Src0Reg : Src1Reg);
+    } else {
+      int NumElts = Src0Ty.getNumElements();
+      Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
+      int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
+      auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
+      auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
+      BuildVec.push_back(Extract.getReg(0));
+    }
+  }
+
+  MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  MI.eraseFromParent();
+  return Legalized;
 }

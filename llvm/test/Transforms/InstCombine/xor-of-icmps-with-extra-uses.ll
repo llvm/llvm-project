@@ -7,12 +7,12 @@
 ; %cond0 is extra-used in select, which is freely invertible.
 define i1 @v0_select_of_consts(i32 %X, i32* %selected) {
 ; CHECK-LABEL: @v0_select_of_consts(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 32767, i32 -32768
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 -32768, i32 32767
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cond0 = icmp sgt i32 %X, 32767
   %cond1 = icmp sgt i32 %X, -32768
@@ -23,12 +23,12 @@ define i1 @v0_select_of_consts(i32 %X, i32* %selected) {
 }
 define i1 @v1_select_of_var_and_const(i32 %X, i32 %Y, i32* %selected) {
 ; CHECK-LABEL: @v1_select_of_var_and_const(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 [[Y:%.*]], i32 -32768
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 -32768, i32 [[Y:%.*]]
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cond0 = icmp sgt i32 %X, 32767
   %cond1 = icmp sgt i32 %X, -32768
@@ -39,12 +39,12 @@ define i1 @v1_select_of_var_and_const(i32 %X, i32 %Y, i32* %selected) {
 }
 define i1 @v2_select_of_const_and_var(i32 %X, i32 %Y, i32* %selected) {
 ; CHECK-LABEL: @v2_select_of_const_and_var(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 32767, i32 [[Y:%.*]]
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 [[Y:%.*]], i32 32767
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cond0 = icmp sgt i32 %X, 32767
   %cond1 = icmp sgt i32 %X, -32768
@@ -58,9 +58,8 @@ define i1 @v2_select_of_const_and_var(i32 %X, i32 %Y, i32* %selected) {
 define i1 @v3_branch(i32 %X, i32* %dst0, i32* %dst1) {
 ; CHECK-LABEL: @v3_branch(
 ; CHECK-NEXT:  begin:
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    br i1 [[COND0]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    br i1 [[COND0]], label [[BB1:%.*]], label [[BB0:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    store i32 0, i32* [[DST0:%.*]], align 4
 ; CHECK-NEXT:    br label [[END:%.*]]
@@ -68,8 +67,9 @@ define i1 @v3_branch(i32 %X, i32* %dst0, i32* %dst1) {
 ; CHECK-NEXT:    store i32 0, i32* [[DST1:%.*]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 begin:
   %cond0 = icmp sgt i32 %X, 32767
@@ -89,12 +89,11 @@ end:
 ; Can invert 'not'.
 define i1 @v4_not_store(i32 %X, i1* %not_cond) {
 ; CHECK-LABEL: @v4_not_store(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[NOT_COND0:%.*]] = xor i1 [[COND0]], true
-; CHECK-NEXT:    store i1 [[NOT_COND0]], i1* [[NOT_COND:%.*]], align 1
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    store i1 [[COND0]], i1* [[NOT_COND:%.*]], align 1
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cond0 = icmp sgt i32 %X, 32767
   %not_cond0 = xor i1 %cond0, -1
@@ -108,14 +107,13 @@ define i1 @v4_not_store(i32 %X, i1* %not_cond) {
 ; All extra uses are invertible.
 define i1 @v5_select_and_not(i32 %X, i32 %Y, i32* %selected, i1* %not_cond) {
 ; CHECK-LABEL: @v5_select_and_not(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp sgt i32 [[X:%.*]], 32767
-; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[X]], -32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 32767, i32 [[Y:%.*]]
-; CHECK-NEXT:    [[NOT_COND0:%.*]] = xor i1 [[COND0]], true
-; CHECK-NEXT:    store i1 [[NOT_COND0]], i1* [[NOT_COND:%.*]], align 1
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 [[Y:%.*]], i32 32767
+; CHECK-NEXT:    store i1 [[COND0]], i1* [[NOT_COND:%.*]], align 1
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[COND0]], [[COND1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cond0 = icmp sgt i32 %X, 32767
   %cond1 = icmp sgt i32 %X, -32768

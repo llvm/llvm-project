@@ -27,13 +27,13 @@
 ; ALIGN-NEXT:<<<<<<
 ; ALIGN-NEXT:           1: hello world
 ; ALIGN-NEXT:check:1       ^~~~~
-; ALIGN-NEXT:check:2'0           X~~~~
+; ALIGN-NEXT:check:2'0           X~~~~ error: no match found
 ; ALIGN-NEXT:           2: goodbye
 ; ALIGN-NEXT:check:2'0     ~~~~~~~
 ; ALIGN-NEXT:           3: world
 ; ALIGN-NEXT:check:2'0     ~~~~~
 ; ALIGN-NEXT:           4: unicorn
-; ALIGN-NEXT:check:2'0     ~~~~~~~ error: no match found
+; ALIGN-NEXT:check:2'0     ~~~~~~~
 ; ALIGN-NEXT:check:2'1     ?       possible intended match
 ; ALIGN-NEXT:>>>>>>
 ; ALIGN-NOT:{{.}}
@@ -69,9 +69,9 @@
 ; CHK-NEXT:              1: hello
 ; CHK-V-NEXT: check:1       ^~~~~
 ; CHK-NEXT:              2: again
-; CHK-NEXT:   check:2'0     X~~~~
+; CHK-NEXT:   check:2'0     X~~~~ error: no match found
 ; CHK-NEXT:              3: whirled
-; CHK-NEXT:   check:2'0     ~~~~~~~ error: no match found
+; CHK-NEXT:   check:2'0     ~~~~~~~
 ; CHK-NEXT:   check:2'1     ?       possible intended match
 ; CHK-NEXT:   >>>>>>
 ; CHK-NOT:    {{.}}
@@ -260,9 +260,9 @@
 ; EMP-NEXT:            2:
 ; EMP-V-NEXT: empty:2     ^
 ; EMP-NEXT:            3: world
-; EMP-NEXT:   empty:3     X~~~~
+; EMP-NEXT:   empty:3     X~~~~ error: no match found
 ; EMP-NEXT:            4: label
-; EMP-NEXT:   empty:3     ~~~~~ error: no match found
+; EMP-NEXT:   empty:3     ~~~~~
 ; EMP-V-NEXT: label:4     ^~~~~
 ; EMP-NEXT:   >>>>>>
 ; EMP-NOT:    {{.}}
@@ -453,11 +453,11 @@
 ; LAB-V-NEXT:  label:1'0     ^~~~
 ; LAB-V-NEXT:  label:1'1     ^~~~
 ; LAB-NEXT:               2: foo
-; LAB-NEXT:    label:3'0     X~~
+; LAB-NEXT:    label:3'0     X~~ error: no match found
 ; LAB-NEXT:               3: lab1
 ; LAB-NEXT:    label:3'0     ~~~~
 ; LAB-NEXT:    label:3'1     ?    possible intended match
 ; LAB-NEXT:               4: bar
-; LAB-NEXT:    label:3'0     ~~~ error: no match found
+; LAB-NEXT:    label:3'0     ~~~
 ; LAB-NEXT:    >>>>>>
 ; LAB-NOT:     {{.}}

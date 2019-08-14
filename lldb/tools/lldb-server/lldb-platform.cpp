@@ -15,8 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(_WIN32)
 #include <sys/wait.h>
-
+#endif
 #include <fstream>
 
 #include "llvm/Support/FileSystem.h"
@@ -67,6 +68,7 @@ static struct option g_long_options[] = {
 #define HIGH_PORT (49151u)
 #endif
 
+#if !defined(_WIN32)
 // Watch for signals
 static void signal_handler(int signo) {
   switch (signo) {
@@ -81,6 +83,7 @@ static void signal_handler(int signo) {
     break;
   }
 }
+#endif
 
 static void display_usage(const char *progname, const char *subcommand) {
   fprintf(stderr, "Usage:\n  %s %s [--log-file log-file-name] [--log-channels "
@@ -131,8 +134,10 @@ int main_platform(int argc, char *argv[]) {
   const char *subcommand = argv[1];
   argc--;
   argv++;
+#if !defined(_WIN32)
   signal(SIGPIPE, SIG_IGN);
   signal(SIGHUP, signal_handler);
+#endif
   int long_option_index = 0;
   Status error;
   std::string listen_host_port;
@@ -309,8 +314,10 @@ int main_platform(int argc, char *argv[]) {
     printf("Connection established.\n");
     if (g_server) {
       // Collect child zombie processes.
+#if !defined(_WIN32)
       while (waitpid(-1, nullptr, WNOHANG) > 0)
         ;
+#endif
       if (fork()) {
         // Parent doesn't need a connection to the lldb client
         delete conn;

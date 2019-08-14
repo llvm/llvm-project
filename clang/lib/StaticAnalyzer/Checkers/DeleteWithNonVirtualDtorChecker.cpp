@@ -45,9 +45,9 @@ class DeleteWithNonVirtualDtorChecker
       static int X = 0;
       ID.AddPointer(&X);
     }
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     BugReport &BR) override;
 
   private:
     bool Satisfied;
@@ -100,10 +100,9 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
   C.emitReport(std::move(R));
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC,
-    BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
   // Stop traversal after the first conversion was found on a path.
   if (Satisfied)
     return nullptr;

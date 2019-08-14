@@ -14,6 +14,8 @@
 
 #include "pstl_config.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace execution
@@ -154,5 +156,7 @@ using __enable_if_execution_policy =
 } // namespace __internal
 
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_POLICY_DEFS_H */

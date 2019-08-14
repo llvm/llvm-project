@@ -166,17 +166,17 @@ static ArchTreeEdge archTree[] = {
     {EF_MIPS_ARCH_2, EF_MIPS_ARCH_1},
 };
 
-static bool isArchMatched(uint32_t New, uint32_t res) {
-  if (New == res)
+static bool isArchMatched(uint32_t newFlags, uint32_t res) {
+  if (newFlags == res)
     return true;
-  if (New == EF_MIPS_ARCH_32 && isArchMatched(EF_MIPS_ARCH_64, res))
+  if (newFlags == EF_MIPS_ARCH_32 && isArchMatched(EF_MIPS_ARCH_64, res))
     return true;
-  if (New == EF_MIPS_ARCH_32R2 && isArchMatched(EF_MIPS_ARCH_64R2, res))
+  if (newFlags == EF_MIPS_ARCH_32R2 && isArchMatched(EF_MIPS_ARCH_64R2, res))
     return true;
   for (const auto &edge : archTree) {
     if (res == edge.child) {
       res = edge.parent;
-      if (res == New)
+      if (res == newFlags)
         return true;
     }
   }
@@ -278,18 +278,18 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> files) {
   uint32_t ret = files[0].flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
 
   for (const FileFlags &f : files.slice(1)) {
-    uint32_t New = f.flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
+    uint32_t newFlags = f.flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
 
     // Check ISA compatibility.
-    if (isArchMatched(New, ret))
+    if (isArchMatched(newFlags, ret))
       continue;
-    if (!isArchMatched(ret, New)) {
+    if (!isArchMatched(ret, newFlags)) {
       error("incompatible target ISA:\n>>> " + toString(files[0].file) + ": " +
             getFullArchName(ret) + "\n>>> " + toString(f.file) + ": " +
-            getFullArchName(New));
+            getFullArchName(newFlags));
       return 0;
     }
-    ret = New;
+    ret = newFlags;
   }
   return ret;
 }

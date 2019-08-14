@@ -180,7 +180,7 @@ def Q15 : ARMReg<15, "q15", [D30, D31]>;
 // models the APSR when it's accessed by some special instructions. In such cases
 // it has the same encoding as PC.
 def CPSR       : ARMReg<0,  "cpsr">;
-def APSR       : ARMReg<1,  "apsr">;
+def APSR       : ARMReg<15, "apsr">;
 def APSR_NZCV  : ARMReg<15, "apsr_nzcv">;
 def SPSR       : ARMReg<2,  "spsr">;
 def FPSCR      : ARMReg<3,  "fpscr">;

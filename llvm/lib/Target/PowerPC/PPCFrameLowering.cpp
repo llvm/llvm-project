@@ -47,13 +47,15 @@ static const MCPhysReg VRRegNo[] = {
 };
 
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
-  if (STI.isDarwinABI())
+  if (STI.isDarwinABI() || STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
   // SVR4 ABI:
   return STI.isPPC64() ? 16 : 4;
 }
 
 static unsigned computeTOCSaveOffset(const PPCSubtarget &STI) {
+  if (STI.isAIXABI())
+    return STI.isPPC64() ? 40 : 20;
   return STI.isELFv2ABI() ? 24 : 40;
 }
 
@@ -787,15 +789,18 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool isPPC64 = Subtarget.isPPC64();
   // Get the ABI.
   bool isSVR4ABI = Subtarget.isSVR4ABI();
+  bool isAIXABI = Subtarget.isAIXABI();
   bool isELFv2ABI = Subtarget.isELFv2ABI();
-  assert((Subtarget.isDarwinABI() || isSVR4ABI) &&
-         "Currently only Darwin and SVR4 ABIs are supported for PowerPC.");
+  assert((Subtarget.isDarwinABI() || isSVR4ABI || isAIXABI) &&
+         "Unsupported PPC ABI.");
 
   // Scan the prolog, looking for an UPDATE_VRSAVE instruction.  If we find it,
   // process it.
   if (!isSVR4ABI)
     for (unsigned i = 0; MBBI != MBB.end(); ++i, ++MBBI) {
       if (MBBI->getOpcode() == PPC::UPDATE_VRSAVE) {
+        if (isAIXABI)
+          report_fatal_error("UPDATE_VRSAVE is unexpected on AIX.");
         HandleVRSaveUpdate(*MBBI, TII);
         break;
       }
@@ -913,6 +918,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   assert((isPPC64 || !MustSaveCR) &&
          "Prologue CR saving supported only in 64-bit mode");
+
+  if (MustSaveCR && isAIXABI)
+    report_fatal_error("Prologue CR saving is unimplemented on AIX.");
 
   // Check if we can move the stack update instruction (stdu) down the prologue
   // past the callee saves. Hopefully this will avoid the situation where the
@@ -2432,6 +2440,26 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   }
 
   return true;
+}
+
+unsigned PPCFrameLowering::getTOCSaveOffset() const {
+  if (Subtarget.isAIXABI())
+    // TOC save/restore is normally handled by the linker.
+    // Indirect calls should hit this limitation.
+    report_fatal_error("TOC save is not implemented on AIX yet.");
+  return TOCSaveOffset;
+}
+
+unsigned PPCFrameLowering::getFramePointerSaveOffset() const {
+  if (Subtarget.isAIXABI())
+    report_fatal_error("FramePointer is not implemented on AIX yet.");
+  return FramePointerSaveOffset;
+}
+
+unsigned PPCFrameLowering::getBasePointerSaveOffset() const {
+  if (Subtarget.isAIXABI())
+    report_fatal_error("BasePointer is not implemented on AIX yet.");
+  return BasePointerSaveOffset;
 }
 
 bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {

@@ -18,6 +18,8 @@
 #include "numeric_fwd.h"
 #include "execution_impl.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace std
 {
 
@@ -227,5 +229,7 @@ adjacent_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _Forwa
 }
 
 } // namespace std
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_GLUE_NUMERIC_IMPL_H_ */

@@ -676,6 +676,9 @@ void SIFoldOperands::foldOperand(
         // =>
         // %sgpr1 = COPY %sgpr0
         UseMI->setDesc(TII->get(AMDGPU::COPY));
+        UseMI->getOperand(1).setReg(OpToFold.getReg());
+        UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
+        UseMI->getOperand(1).setIsKill(false);
         UseMI->RemoveOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }

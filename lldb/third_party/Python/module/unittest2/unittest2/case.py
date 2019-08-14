@@ -753,7 +753,7 @@ class TestCase(unittest.TestCase):
             elements = (seq_type_name.capitalize(), seq1_repr, seq2_repr)
             differing = '%ss differ: %s != %s\n' % elements
 
-            for i in xrange(min(len1, len2)):
+            for i in range(min(len1, len2)):
                 try:
                     item1 = seq1[i]
                 except (TypeError, IndexError, NotImplementedError):

@@ -51,8 +51,17 @@ public:
                              const AArch64Subtarget &STI,
                              const AArch64RegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
+  bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
+
+  void setupMF(MachineFunction &MF, CodeGenCoverage &CoverageInfo) override {
+    InstructionSelector::setupMF(MF, CoverageInfo);
+
+    // hasFnAttribute() is expensive to call on every BRCOND selection, so
+    // cache it here for each run of the selector.
+    ProduceNonFlagSettingCondBr =
+        !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
+  }
 
 private:
   /// tblgen-erated 'select' implementation, used as the initial selector for
@@ -106,8 +115,6 @@ private:
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
-  void collectShuffleMaskIndices(MachineInstr &I, MachineRegisterInfo &MRI,
-                                 SmallVectorImpl<Optional<int>> &Idxs) const;
   bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectConcatVectors(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -221,6 +228,8 @@ private:
   const AArch64InstrInfo &TII;
   const AArch64RegisterInfo &TRI;
   const AArch64RegisterBankInfo &RBI;
+
+  bool ProduceNonFlagSettingCondBr = false;
 
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "AArch64GenGlobalISel.inc"
@@ -1315,8 +1324,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
   }
 }
 
-bool AArch64InstructionSelector::select(MachineInstr &I,
-                                        CodeGenCoverage &CoverageInfo) const {
+bool AArch64InstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -1385,7 +1393,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   if (earlySelect(I))
     return true;
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I, *CoverageInfo))
     return true;
 
   LLT Ty =
@@ -2374,13 +2382,14 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   MIB.buildInstr(AArch64::LOADgot, {AArch64::X0}, {})
       .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
 
-  Register DestReg = MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
-  MIB.buildInstr(AArch64::LDRXui, {DestReg}, {Register(AArch64::X0)}).addImm(0);
+  auto Load = MIB.buildInstr(AArch64::LDRXui, {&AArch64::GPR64commonRegClass},
+                             {Register(AArch64::X0)})
+                  .addImm(0);
 
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
   // silly).
-  MIB.buildInstr(AArch64::BLR, {}, {DestReg})
+  MIB.buildInstr(AArch64::BLR, {}, {Load})
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
 
@@ -3054,29 +3063,6 @@ bool AArch64InstructionSelector::selectConcatVectors(
   return true;
 }
 
-void AArch64InstructionSelector::collectShuffleMaskIndices(
-    MachineInstr &I, MachineRegisterInfo &MRI,
-    SmallVectorImpl<Optional<int>> &Idxs) const {
-  MachineInstr *MaskDef = MRI.getVRegDef(I.getOperand(3).getReg());
-  assert(
-      MaskDef->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
-      "G_SHUFFLE_VECTOR should have a constant mask operand as G_BUILD_VECTOR");
-  // Find the constant indices.
-  for (unsigned i = 1, e = MaskDef->getNumOperands(); i < e; ++i) {
-    // Look through copies.
-    MachineInstr *ScalarDef =
-        getDefIgnoringCopies(MaskDef->getOperand(i).getReg(), MRI);
-    assert(ScalarDef && "Could not find vreg def of shufflevec index op");
-    if (ScalarDef->getOpcode() != TargetOpcode::G_CONSTANT) {
-      // This be an undef if not a constant.
-      assert(ScalarDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
-      Idxs.push_back(None);
-    } else {
-      Idxs.push_back(ScalarDef->getOperand(1).getCImm()->getSExtValue());
-    }
-  }
-}
-
 unsigned
 AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
                                                   MachineFunction &MF) const {
@@ -3619,16 +3605,9 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
     return false;
 
   // The shuffle's second operand doesn't matter if the mask is all zero.
-  auto *ZeroVec = getOpcodeDef(G_BUILD_VECTOR, I.getOperand(3).getReg(), MRI);
-  if (!ZeroVec)
+  const Constant *Mask = I.getOperand(3).getShuffleMask();
+  if (!isa<ConstantAggregateZero>(Mask))
     return false;
-  int64_t Zero = 0;
-  if (!mi_match(ZeroVec->getOperand(1).getReg(), MRI, m_ICst(Zero)) || Zero)
-    return false;
-  for (unsigned i = 1, e = ZeroVec->getNumOperands(); i < e; ++i) {
-    if (ZeroVec->getOperand(i).getReg() != ZeroVec->getOperand(1).getReg())
-      return false; // This wasn't an all zeros vector.
-  }
 
   // We're done, now find out what kind of splat we need.
   LLT VecTy = MRI.getType(I.getOperand(0).getReg());
@@ -3676,19 +3655,14 @@ bool AArch64InstructionSelector::selectShuffleVector(
   const LLT Src1Ty = MRI.getType(Src1Reg);
   Register Src2Reg = I.getOperand(2).getReg();
   const LLT Src2Ty = MRI.getType(Src2Reg);
+  const Constant *ShuffleMask = I.getOperand(3).getShuffleMask();
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
 
-  // G_SHUFFLE_VECTOR doesn't really have a strictly enforced constant mask
-  // operand, it comes in as a normal vector value which we have to analyze to
-  // find the mask indices. If the mask element is undef, then
-  // collectShuffleMaskIndices() will add a None entry for that index into
-  // the list.
-  SmallVector<Optional<int>, 8> Mask;
-  collectShuffleMaskIndices(I, MRI, Mask);
-  assert(!Mask.empty() && "Expected to find mask indices");
+  SmallVector<int, 8> Mask;
+  ShuffleVectorInst::getShuffleMask(ShuffleMask, Mask);
 
   // G_SHUFFLE_VECTOR is weird in that the source operands can be scalars, if
   // it's originated from a <1 x T> type. Those should have been lowered into
@@ -3701,10 +3675,10 @@ bool AArch64InstructionSelector::selectShuffleVector(
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
 
   SmallVector<Constant *, 64> CstIdxs;
-  for (auto &MaybeVal : Mask) {
+  for (int Val : Mask) {
     // For now, any undef indexes we'll just assume to be 0. This should be
     // optimized in future, e.g. to select DUP etc.
-    int Val = MaybeVal.hasValue() ? *MaybeVal : 0;
+    Val = Val < 0 ? 0 : Val;
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
       unsigned Offset = Byte + Val * BytesPerElt;
       CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));

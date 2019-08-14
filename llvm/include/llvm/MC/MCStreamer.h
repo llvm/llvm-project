@@ -544,7 +544,7 @@ public:
   /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a power
   /// of 2.
   virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                             unsigned ByteAlignment);
+                                          unsigned ByteAlignment);
 
   /// Emit an ELF .size directive.
   ///

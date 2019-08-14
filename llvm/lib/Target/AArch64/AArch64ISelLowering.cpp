@@ -4300,8 +4300,7 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
       MVT::i64, DL, Chain, DescAddr,
       MachinePointerInfo::getGOT(DAG.getMachineFunction()),
       /* Alignment = */ 8,
-      MachineMemOperand::MONonTemporal | MachineMemOperand::MOInvariant |
-          MachineMemOperand::MODereferenceable);
+      MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   Chain = FuncTLVGet.getValue(1);
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();

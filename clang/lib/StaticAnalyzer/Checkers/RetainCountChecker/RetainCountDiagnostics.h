@@ -67,7 +67,7 @@ public:
               ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
-  llvm::iterator_range<ranges_iterator> getRanges() override {
+  llvm::iterator_range<ranges_iterator> getRanges() const override {
     if (!isLeak)
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());

@@ -11,12 +11,14 @@
 
 #include "clang/Driver/Phases.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Option/ArgList.h"
 
 namespace llvm {
 class StringRef;
 }
 namespace clang {
 namespace driver {
+class Driver;
 namespace types {
   enum ID {
     TY_INVALID,
@@ -100,6 +102,9 @@ namespace types {
   void getCompilationPhases(
     ID Id,
     llvm::SmallVectorImpl<phases::ID> &Phases);
+  void getCompilationPhases(const clang::driver::Driver &Driver,
+                            llvm::opt::DerivedArgList &DAL, ID Id,
+                            llvm::SmallVectorImpl<phases::ID> &Phases);
 
   /// lookupCXXTypeForCType - Lookup CXX input type that corresponds to given
   /// C type (used for clang++ emulation of g++ behaviour)

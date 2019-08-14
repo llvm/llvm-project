@@ -289,7 +289,9 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   resolveRelocation(Ctx, Section, SectionOffset + 8, XData, Offset);
 
   ArrayRef<uint8_t> Contents;
-  error(Ctx.COFF.getSectionContents(XData, Contents));
+  if (Error E = Ctx.COFF.getSectionContents(XData, Contents))
+    reportError(std::move(E), Ctx.COFF.getFileName());
+
   if (Contents.empty())
     return;
 
@@ -311,7 +313,9 @@ void Dumper::printData(const Context &Ctx) {
 
     const coff_section *PData = Ctx.COFF.getCOFFSection(Section);
     ArrayRef<uint8_t> Contents;
-    error(Ctx.COFF.getSectionContents(PData, Contents));
+
+    if (Error E = Ctx.COFF.getSectionContents(PData, Contents))
+      reportError(std::move(E), Ctx.COFF.getFileName());
     if (Contents.empty())
       continue;
 

@@ -1,5 +1,8 @@
+// KEEP-ALL-NOT:  warning:
 // KEEP-ALL:      "-mframe-pointer=all"
+// KEEP-NON-LEAF-NOT: warning:
 // KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
+// KEEP-NONE-NOT: warning:
 // KEEP-NONE:     "-mframe-pointer=none"
 
 // On Linux x86, omit frame pointer when optimization is enabled.
@@ -25,6 +28,13 @@
 // RUN: %clang -### -target i386-linux -S -O1 -momit-leaf-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
+// fno-omit-frame-pointer -momit-leaf-frame-pointer can be overwritten by
+// fomit-frame-pointer later on the command without warning
+// RUN: %clang -### -target i386-linux -S -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -fomit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+
+// RUN: %clang -### -target i386-linux -S -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // Explicit or default -fomit-frame-pointer wins over -mno-omit-leaf-frame-pointer.
 // RUN: %clang -### -target i386 -S %s -fomit-frame-pointer -mno-omit-leaf-frame-pointer 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
