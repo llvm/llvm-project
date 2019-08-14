@@ -91,7 +91,7 @@ TEST(SerializeTest, emitNamespaceInfo) {
   CheckNamespaceInfo(&ExpectedA, A);
 
   NamespaceInfo *B = InfoAsNamespace(Infos[2].get());
-  NamespaceInfo ExpectedB(EmptySID, "B");
+  NamespaceInfo ExpectedB(EmptySID, /*Name=*/"B", /*Path=*/"A");
   ExpectedB.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
   CheckNamespaceInfo(&ExpectedB, B);
 
@@ -276,7 +276,7 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *G = InfoAsRecord(Infos[2].get());
-  RecordInfo ExpectedG(EmptySID, "G");
+  RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"E");
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
