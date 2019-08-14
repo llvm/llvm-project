@@ -94,10 +94,11 @@ private:
     mutex_type& __m_;
 public:
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY
     explicit lock_guard(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
         : __m_(__m) {__m_.lock();}
-    _LIBCPP_INLINE_VISIBILITY
+
+    _LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY
     lock_guard(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
     _LIBCPP_INLINE_VISIBILITY

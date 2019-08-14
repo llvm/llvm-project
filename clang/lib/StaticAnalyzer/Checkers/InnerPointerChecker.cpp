@@ -54,9 +54,9 @@ public:
       ID.AddPointer(getTag());
     }
 
-    virtual std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    virtual PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                             BugReporterContext &BRC,
+                                             BugReport &BR) override;
 
     // FIXME: Scan the map once in the visitor's constructor and do a direct
     // lookup by region.
@@ -278,10 +278,8 @@ const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym) {
 } // end namespace ento
 } // end namespace clang
 
-std::shared_ptr<PathDiagnosticPiece>
-InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
-                                                      BugReporterContext &BRC,
-                                                      BugReport &) {
+PathDiagnosticPieceRef InnerPointerChecker::InnerPointerBRVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &) {
   if (!isSymbolTracked(N->getState(), PtrToBuf) ||
       isSymbolTracked(N->getFirstPred()->getState(), PtrToBuf))
     return nullptr;

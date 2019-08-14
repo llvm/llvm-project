@@ -243,14 +243,15 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
 
 TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
 
-  class BadGenerator {
+  class BadGenerator : public JITDylib::DefinitionGenerator {
   public:
-    Expected<SymbolNameSet> operator()(JITDylib &, const SymbolNameSet &) {
+    Expected<SymbolNameSet> tryToGenerate(JITDylib &,
+                                          const SymbolNameSet &) override {
       return make_error<StringError>("BadGenerator", inconvertibleErrorCode());
     }
   };
 
-  JD.setGenerator(BadGenerator());
+  JD.addGenerator(llvm::make_unique<BadGenerator>());
 
   EXPECT_THAT_ERROR(JD.lookupFlags({Foo}).takeError(), Failed<StringError>())
       << "Generator failure did not propagate through lookupFlags";
@@ -343,7 +344,7 @@ TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
 
   auto Filter = [this](SymbolStringPtr Name) { return Name != Bar; };
 
-  JD.setGenerator(ReexportsGenerator(JD2, false, Filter));
+  JD.addGenerator(llvm::make_unique<ReexportsGenerator>(JD2, false, Filter));
 
   auto Flags = cantFail(JD.lookupFlags({Foo, Bar, Baz}));
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
@@ -667,10 +668,29 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  JD.setGenerator([&](JITDylib &JD2, const SymbolNameSet &Names) {
-    cantFail(JD2.define(absoluteSymbols({{Bar, BarSym}})));
-    return SymbolNameSet({Bar});
-  });
+  class TestGenerator : public JITDylib::DefinitionGenerator {
+  public:
+    TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
+    Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
+                                          const SymbolNameSet &Names) {
+      SymbolMap NewDefs;
+      SymbolNameSet NewNames;
+
+      for (auto &Name : Names) {
+        if (Symbols.count(Name)) {
+          NewDefs[Name] = Symbols[Name];
+          NewNames.insert(Name);
+        }
+      }
+      cantFail(JD.define(absoluteSymbols(std::move(NewDefs))));
+      return NewNames;
+    };
+
+  private:
+    SymbolMap Symbols;
+  };
+
+  JD.addGenerator(llvm::make_unique<TestGenerator>(SymbolMap({{Bar, BarSym}})));
 
   auto Result =
       cantFail(ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo, Bar}));

@@ -355,7 +355,7 @@ const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }
 
-const InstructionSelector *X86Subtarget::getInstructionSelector() const {
+InstructionSelector *X86Subtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
 

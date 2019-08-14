@@ -229,7 +229,8 @@ public:
           if (const RecordDeclType *record_decl =
                   llvm::dyn_cast<RecordDeclType>(named_decl))
             compiler_type.SetCompilerType(
-                ast, clang::QualType(record_decl->getTypeForDecl(), 0));
+                this, clang::QualType(record_decl->getTypeForDecl(), 0)
+                          .getAsOpaquePtr());
         }
       }
     }

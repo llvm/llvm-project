@@ -18,6 +18,7 @@
 // CHECK: Displaying notes found at file offset 0x{{0*}}[[NOTE_OFFSET]]
 // CHECK-NEXT: Owner
 // CHECK-NEXT: foo                   0x00000004	NT_VERSION (version)
+// CHECK-NEXT:  description data: 62 61 72 00
 // CHECK-NEXT: Displaying notes
 // CHECK-NEXT: Owner
 // CHECK-NEXT: GNU                   0x00000014	NT_GNU_BUILD_ID (unique build ID bitstring)

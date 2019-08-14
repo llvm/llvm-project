@@ -60,5 +60,5 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
 
 void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                             unsigned ByteAlign) {
-  llvm_unreachable("Not implemented yet.");
+  report_fatal_error("Emission of local commons not implemented yet.");
 }

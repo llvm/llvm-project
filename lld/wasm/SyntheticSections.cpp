@@ -103,6 +103,7 @@ uint32_t ImportSection::getNumImports() const {
 
 void ImportSection::addGOTEntry(Symbol *sym) {
   assert(!isSealed);
+  LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   if (sym->hasGOTIndex())
     return;
   sym->setGOTIndex(numImportedGlobals++);
@@ -235,11 +236,26 @@ void MemorySection::writeBody() {
     writeUleb128(os, maxMemoryPages, "max pages");
 }
 
+void GlobalSection::assignIndexes() {
+  uint32_t globalIndex = out.importSec->getNumImportedGlobals();
+  for (InputGlobal *g : inputGlobals)
+    g->setGlobalIndex(globalIndex++);
+  for (Symbol *sym : gotSymbols)
+    sym->setGOTIndex(globalIndex++);
+}
+
+void GlobalSection::addDummyGOTEntry(Symbol *sym) {
+  LLVM_DEBUG(dbgs() << "addDummyGOTEntry: " << toString(*sym) << "\n");
+  if (sym->hasGOTIndex())
+    return;
+  gotSymbols.push_back(sym);
+}
+
 void GlobalSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
   writeUleb128(os, numGlobals(), "global count");
-  for (const InputGlobal *g : inputGlobals)
+  for (InputGlobal *g : inputGlobals)
     writeGlobal(os, g->global);
   for (const DefinedData *sym : definedFakeGlobals) {
     WasmGlobal global;
@@ -248,16 +264,22 @@ void GlobalSection::writeBody() {
     global.InitExpr.Value.Int32 = sym->getVirtualAddress();
     writeGlobal(os, global);
   }
+  for (const Symbol *sym : gotSymbols) {
+    WasmGlobal global;
+    global.Type = {WASM_TYPE_I32, false};
+    global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    if (auto *d = dyn_cast<DefinedData>(sym))
+      global.InitExpr.Value.Int32 = d->getVirtualAddress();
+    else if (auto *f = cast<DefinedFunction>(sym))
+      global.InitExpr.Value.Int32 = f->getTableIndex();
+    writeGlobal(os, global);
+  }
 }
 
 void GlobalSection::addGlobal(InputGlobal *global) {
   if (!global->live)
     return;
-  uint32_t globalIndex =
-      out.importSec->getNumImportedGlobals() + inputGlobals.size();
-  LLVM_DEBUG(dbgs() << "addGlobal: " << globalIndex << "\n");
-  global->setGlobalIndex(globalIndex);
-  out.globalSec->inputGlobals.push_back(global);
+  inputGlobals.push_back(global);
 }
 
 void EventSection::writeBody() {

@@ -5065,44 +5065,87 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case PPCISD::TOC_ENTRY: {
-    assert ((PPCSubTarget->isPPC64() || PPCSubTarget->isSVR4ABI()) &&
-            "Only supported for 64-bit ABI and 32-bit SVR4");
-    if (PPCSubTarget->isSVR4ABI() && !PPCSubTarget->isPPC64()) {
-      SDValue GA = N->getOperand(0);
-      SDNode *MN = CurDAG->getMachineNode(PPC::LWZtoc, dl, MVT::i32, GA,
-                                          N->getOperand(1));
-      transferMemOperands(N, MN);
-      ReplaceNode(N, MN);
-      return;
-    }
+    const bool isPPC64 = PPCSubTarget->isPPC64();
+    const bool isELFABI = PPCSubTarget->isSVR4ABI();
+    const bool isAIXABI = PPCSubTarget->isAIXABI();
 
-    // For medium and large code model, we generate two instructions as
-    // described below.  Otherwise we allow SelectCodeCommon to handle this,
+    assert(!PPCSubTarget->isDarwin() && "TOC is an ELF/XCOFF construct");
+
+    // PowerPC only support small, medium and large code model.
+    const CodeModel::Model CModel = TM.getCodeModel();
+    assert((CModel != CodeModel::Tiny || CModel != CodeModel::Kernel) &&
+           "PowerPC doesn't support tiny or kernel code models.");
+
+    if (isAIXABI && CModel == CodeModel::Medium)
+      report_fatal_error("Medium code model is not supported on AIX.");
+
+    // For 64-bit small code model, we allow SelectCodeCommon to handle this,
     // selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA.
-    CodeModel::Model CModel = TM.getCodeModel();
-    if (CModel != CodeModel::Medium && CModel != CodeModel::Large)
+    if (isPPC64 && CModel == CodeModel::Small)
       break;
 
-    // The first source operand is a TargetGlobalAddress or a TargetJumpTable.
-    // If it must be toc-referenced according to PPCSubTarget, we generate:
+    // Handle 32-bit small code model.
+    if (!isPPC64) {
+      // Transforms the ISD::TOC_ENTRY node to a PPCISD::LWZtoc.
+      auto replaceWithLWZtoc = [this, &dl](SDNode *TocEntry) {
+        SDValue GA = TocEntry->getOperand(0);
+        SDValue TocBase = TocEntry->getOperand(1);
+        SDNode *MN = CurDAG->getMachineNode(PPC::LWZtoc, dl, MVT::i32, GA,
+                                            TocBase);
+        transferMemOperands(TocEntry, MN);
+        ReplaceNode(TocEntry, MN);
+      };
+
+      if (isELFABI) {
+        assert(TM.isPositionIndependent() &&
+               "32-bit ELF can only have TOC entries in position independent"
+               " code.");
+        // 32-bit ELF always uses a small code model toc access.
+        replaceWithLWZtoc(N);
+        return;
+      }
+
+      if (isAIXABI && CModel == CodeModel::Small) {
+        replaceWithLWZtoc(N);
+        return;
+      }
+    }
+
+    assert(CModel != CodeModel::Small && "All small code models handled.");
+
+    assert((isPPC64 || (isAIXABI && !isPPC64)) && "We are dealing with 64-bit"
+           " ELF/AIX or 32-bit AIX in the following.");
+
+    // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode
+    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code. We
+    // generate two instructions as described below. The first source operand
+    // is a symbol reference. If it must be toc-referenced according to
+    // PPCSubTarget, we generate:
+    // [32-bit AIX]
+    //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
+    // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
     //   ADDItocL(ADDIStocHA8(%x2, @sym), @sym)
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
-    SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA8, dl, MVT::i64,
-                                         TOCbase, GA);
+
+    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+    SDNode *Tmp = CurDAG->getMachineNode(
+        isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
+
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
-      // If it is access as got-indirect, we need an extra LD to load
+      // If it is accessed as got-indirect, we need an extra LWZ/LD to load
       // the address.
-      SDNode *MN = CurDAG->getMachineNode(PPC::LDtocL, dl, MVT::i64, GA,
-                                          SDValue(Tmp, 0));
+      SDNode *MN = CurDAG->getMachineNode(
+          isPPC64 ? PPC::LDtocL : PPC::LWZtocL, dl, VT, GA, SDValue(Tmp, 0));
+
       transferMemOperands(N, MN);
       ReplaceNode(N, MN);
       return;
     }
 
-    // Build the address relative to the TOC-pointer..
+    // Build the address relative to the TOC-pointer.
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
     return;

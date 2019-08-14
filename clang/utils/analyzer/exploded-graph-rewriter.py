@@ -394,16 +394,25 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs, dark_mode, gray_mode, topo_mode):
+    def __init__(self, do_diffs, dark_mode, gray_mode,
+                 topo_mode, dump_dot_only):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
         self._topo_mode = topo_mode
+        self._dump_dot_only = dump_dot_only
+        self._output = []
 
-    @staticmethod
-    def _dump_raw(s):
-        print(s, end='')
+    def _dump_raw(self, s):
+        if self._dump_dot_only:
+            print(s, end='')
+        else:
+            self._output.append(s)
+
+    def output(self):
+        assert not self._dump_dot_only
+        return ''.join(self._output)
 
     def _dump(self, s):
         s = s.replace('&', '&amp;') \
@@ -635,6 +644,10 @@ class DotDumpVisitor(object):
         if st is None:
             self._dump('<i> Nothing!</i>')
         else:
+            if self._dark_mode:
+                self._dump(' <font color="gray30">(%s)</font>' % st.ptr)
+            else:
+                self._dump(' <font color="gray">(%s)</font>' % st.ptr)
             if prev_st is not None:
                 if s.store.is_different(prev_st):
                     self._dump('</td></tr><tr><td align="left">')
@@ -812,6 +825,44 @@ class DotDumpVisitor(object):
     def visit_end_of_graph(self):
         self._dump_raw('}\n')
 
+        if not self._dump_dot_only:
+            import sys
+            import tempfile
+
+            def write_temp_file(suffix, data):
+                fd, filename = tempfile.mkstemp(suffix=suffix)
+                print('Writing "%s"...' % filename)
+                with os.fdopen(fd, 'w') as fp:
+                    fp.write(data)
+                print('Done! Please remember to remove the file.')
+                return filename
+
+            try:
+                import graphviz
+            except ImportError:
+                # The fallback behavior if graphviz is not installed!
+                print('Python graphviz not found. Please invoke')
+                print('  $ pip install graphviz')
+                print('in order to enable automatic conversion to HTML.')
+                print()
+                print('You may also convert DOT to SVG manually via')
+                print('  $ dot -Tsvg input.dot -o output.svg')
+                print()
+                write_temp_file('.dot', self.output())
+                return
+
+            svg = graphviz.pipe('dot', 'svg', self.output())
+
+            filename = write_temp_file(
+                '.html', '<html><body bgcolor="%s">%s</body></html>' % (
+                             '#1a1a1a' if self._dark_mode else 'white', svg))
+            if sys.platform == 'win32':
+                os.startfile(filename)
+            elif sys.platform == 'darwin':
+                os.system('open "%s"' % filename)
+            else:
+                os.system('xdg-open "%s"' % filename)
+
 
 #===-----------------------------------------------------------------------===#
 # Explorers know how to traverse the ExplodedGraph in a certain order.
@@ -835,37 +886,82 @@ class BasicExplorer(object):
         visitor.visit_end_of_graph()
 
 
-# SinglePathExplorer traverses only a single path - the leftmost path
-# from the root. Useful when the trimmed graph is still too large
-# due to a large amount of equivalent reports.
-class SinglePathExplorer(object):
+#===-----------------------------------------------------------------------===#
+# Trimmers cut out parts of the ExplodedGraph so that to focus on other parts.
+# Trimmers can be combined together by applying them sequentially.
+#===-----------------------------------------------------------------------===#
+
+
+# SinglePathTrimmer keeps only a single path - the leftmost path from the root.
+# Useful when the trimmed graph is still too large.
+class SinglePathTrimmer(object):
     def __init__(self):
-        super(SinglePathExplorer, self).__init__()
+        super(SinglePathTrimmer, self).__init__()
 
-    def explore(self, graph, visitor):
-        visitor.visit_begin_graph(graph)
-
-        # Keep track of visited nodes in order to avoid loops.
-        visited = set()
+    def trim(self, graph):
+        visited_nodes = set()
         node_id = graph.root_id
         while True:
-            visited.add(node_id)
+            visited_nodes.add(node_id)
             node = graph.nodes[node_id]
-            logging.debug('Visiting ' + node_id)
-            visitor.visit_node(node)
-            if len(node.successors) == 0:
+            if len(node.successors) > 0:
+                succ_id = node.successors[0]
+                succ = graph.nodes[succ_id]
+                node.successors = [succ_id]
+                succ.predecessors = [node_id]
+                if succ_id in visited_nodes:
+                    break
+                node_id = succ_id
+            else:
                 break
+        graph.nodes = {node_id: graph.nodes[node_id]
+                       for node_id in visited_nodes}
 
-            succ_id = node.successors[0]
-            succ = graph.nodes[succ_id]
-            logging.debug('Visiting edge: %s -> %s ' % (node_id, succ_id))
-            visitor.visit_edge(node, succ)
-            if succ_id in visited:
-                break
 
-            node_id = succ_id
+# TargetedTrimmer keeps paths that lead to specific nodes and discards all
+# other paths. Useful when you cannot use -trim-egraph (e.g. when debugging
+# a crash).
+class TargetedTrimmer(object):
+    def __init__(self, target_nodes):
+        super(TargetedTrimmer, self).__init__()
+        self._target_nodes = target_nodes
 
-        visitor.visit_end_of_graph()
+    @staticmethod
+    def parse_target_node(node, graph):
+        if node.startswith('0x'):
+            ret = 'Node' + node
+            assert ret in graph.nodes
+            return ret
+        else:
+            for other_id in graph.nodes:
+                other = graph.nodes[other_id]
+                if other.node_id == int(node):
+                    return other_id
+
+    @staticmethod
+    def parse_target_nodes(target_nodes, graph):
+        return [TargetedTrimmer.parse_target_node(node, graph)
+                for node in target_nodes.split(',')]
+
+    def trim(self, graph):
+        queue = self._target_nodes
+        visited_nodes = set()
+
+        while len(queue) > 0:
+            node_id = queue.pop()
+            visited_nodes.add(node_id)
+            node = graph.nodes[node_id]
+            for pred_id in node.predecessors:
+                if pred_id not in visited_nodes:
+                    queue.append(pred_id)
+        graph.nodes = {node_id: graph.nodes[node_id]
+                       for node_id in visited_nodes}
+        for node_id in graph.nodes:
+            node = graph.nodes[node_id]
+            node.successors = [succ_id for succ_id in node.successors
+                               if succ_id in visited_nodes]
+            node.predecessors = [succ_id for succ_id in node.predecessors
+                                 if succ_id in visited_nodes]
 
 
 #===-----------------------------------------------------------------------===#
@@ -874,8 +970,10 @@ class SinglePathExplorer(object):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str)
+    parser = argparse.ArgumentParser(
+        description='Display and manipulate Exploded Graph dumps.')
+    parser.add_argument('filename', type=str,
+                        help='the .dot file produced by the Static Analyzer')
     parser.add_argument('-v', '--verbose', action='store_const',
                         dest='loglevel', const=logging.DEBUG,
                         default=logging.WARNING,
@@ -891,12 +989,22 @@ def main():
                         help='only display the leftmost path in the graph '
                              '(useful for trimmed graphs that still '
                              'branch too much)')
+    parser.add_argument('--to', type=str, default=None,
+                        help='only display execution paths from the root '
+                             'to the given comma-separated list of nodes '
+                             'identified by a pointer or a stable ID; '
+                             'compatible with --single-path')
     parser.add_argument('--dark', action='store_const', dest='dark',
                         const=True, default=False,
                         help='dark mode')
     parser.add_argument('--gray', action='store_const', dest='gray',
                         const=True, default=False,
                         help='black-and-white mode')
+    parser.add_argument('--dump-dot-only', action='store_const',
+                        dest='dump_dot_only', const=True, default=False,
+                        help='instead of writing an HTML file and immediately '
+                             'displaying it, dump the rewritten dot file '
+                             'to stdout')
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
@@ -906,8 +1014,20 @@ def main():
             raw_line = raw_line.strip()
             graph.add_raw_line(raw_line)
 
-    explorer = SinglePathExplorer() if args.single_path else BasicExplorer()
-    visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology)
+    trimmers = []
+    if args.to is not None:
+        trimmers.append(TargetedTrimmer(
+            TargetedTrimmer.parse_target_nodes(args.to, graph)))
+    if args.single_path:
+        trimmers.append(SinglePathTrimmer())
+
+    explorer = BasicExplorer()
+
+    visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology,
+                             args.dump_dot_only)
+
+    for trimmer in trimmers:
+        trimmer.trim(graph)
 
     explorer.explore(graph, visitor)
 

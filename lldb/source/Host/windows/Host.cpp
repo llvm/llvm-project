@@ -169,7 +169,23 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   GetProcessExecutableAndTriple(handle, process_info);
 
   // Need to read the PEB to get parent process and command line arguments.
-  return true;
+
+  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  if (!snapshot.IsValid())
+    return false;
+
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(PROCESSENTRY32W);
+  if (Process32FirstW(snapshot.get(), &pe)) {
+    do {
+      if (pe.th32ProcessID == pid) {
+        process_info.SetParentProcessID(pe.th32ParentProcessID);
+        return true;
+      }
+    } while (Process32NextW(snapshot.get(), &pe));
+  }
+
+  return false;
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(

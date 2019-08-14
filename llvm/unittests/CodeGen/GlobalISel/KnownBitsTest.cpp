@@ -40,6 +40,22 @@ TEST_F(GISelMITest, TestKnownBitsPtrToIntViceVersa) {
   EXPECT_EQ(256u, Res.One.getZExtValue());
   EXPECT_EQ(0xfffffeffu, Res.Zero.getZExtValue());
 }
+TEST_F(GISelMITest, TestKnownBitsXOR) {
+  StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 4\n"
+                        "  %4:_(s8) = G_CONSTANT i8 7\n"
+                        "  %5:_(s8) = G_XOR %3, %4\n"
+                        "  %6:_(s8) = COPY %5\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  unsigned CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  unsigned SrcReg = FinalCopy->getOperand(1).getReg();
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(3u, Res.One.getZExtValue());
+  EXPECT_EQ(252u, Res.Zero.getZExtValue());
+}
 
 TEST_F(GISelMITest, TestKnownBits) {
 

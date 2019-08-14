@@ -792,7 +792,7 @@ int runOrcLazyJIT(const char *ProgName) {
     });
     return TSM;
   });
-  J->getMainJITDylib().setGenerator(
+  J->getMainJITDylib().addGenerator(
       ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           J->getDataLayout().getGlobalPrefix())));
 
@@ -831,6 +831,16 @@ int runOrcLazyJIT(const char *ProgName) {
       auto &JD = *JDItr->second;
       ExitOnErr(
           J->addLazyIRModule(JD, orc::ThreadSafeModule(std::move(M), TSCtx)));
+    }
+
+    for (auto EAItr = ExtraArchives.begin(), EAEnd = ExtraArchives.end();
+         EAItr != EAEnd; ++EAItr) {
+      auto EAIdx = ExtraArchives.getPosition(EAItr - ExtraArchives.begin());
+      assert(EAIdx != 0 && "ExtraArchive should have index > 0");
+      auto JDItr = std::prev(IdxToDylib.lower_bound(EAIdx));
+      auto &JD = *JDItr->second;
+      JD.addGenerator(ExitOnErr(orc::StaticLibraryDefinitionGenerator::Load(
+          J->getObjLinkingLayer(), EAItr->c_str())));
     }
   }
 

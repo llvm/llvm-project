@@ -16,6 +16,8 @@
 // This header defines the minimum set of parallel routines required to support Parallel STL,
 // implemented on top of Intel(R) Threading Building Blocks (Intel(R) TBB) library
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __internal
@@ -79,5 +81,7 @@ __parallel_or(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick _
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_PARALLEL_IMPL_H */

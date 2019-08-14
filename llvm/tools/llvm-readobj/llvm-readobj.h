@@ -22,17 +22,16 @@ namespace llvm {
 
   // Various helper functions.
   LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
-  void reportError(StringRef Input, Error Err); 
+  void reportError(Error Err, StringRef Input); 
   void reportWarning(Twine Msg);
   void reportWarning(StringRef Input, Error Err);
   void warn(llvm::Error Err);
   void error(std::error_code EC);
-  void error(llvm::Error EC);
 
   template <class T> T unwrapOrError(StringRef Input, Expected<T> EO) {
     if (EO)
       return *EO;
-    reportError(Input, EO.takeError());
+    reportError(EO.takeError(), Input);
     llvm_unreachable("reportError shouldn't return in this case");
   }
 } // namespace llvm

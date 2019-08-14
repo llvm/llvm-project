@@ -3217,10 +3217,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
   ActionList LinkerInputs;
 
-  phases::ID FinalPhase;
   {
     Arg *FinalPhaseArg;
-    FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
+    phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
     if (FinalPhase == phases::Link) {
       if (Args.hasArg(options::OPT_emit_llvm))
@@ -3323,9 +3322,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     const Arg *InputArg = I.second;
 
     llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL;
-    types::getCompilationPhases(InputType, PL);
-    if (PL[0] > FinalPhase)
+    types::getCompilationPhases(*this, Args, InputType, PL);
+    if (PL.empty())
       continue;
+
+    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> FullPL;
+    types::getCompilationPhases(InputType, FullPL);
 
     // Build the pipeline for this file.
     Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
@@ -3337,13 +3339,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     for (phases::ID Phase : PL) {
 
-      // We are done if this step is past what the user requested.
-      if (Phase > FinalPhase)
-        break;
-
       // Add any offload action the host action depends on.
       Current = OffloadBuilder.addDeviceDependencesToHostAction(
-          Current, InputArg, Phase, FinalPhase, PL);
+          Current, InputArg, Phase, PL.back(), FullPL);
       if (!Current)
         break;
 

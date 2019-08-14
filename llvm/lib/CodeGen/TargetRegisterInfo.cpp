@@ -86,7 +86,7 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
 
 namespace llvm {
 
-Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI,
+Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
                    unsigned SubIdx, const MachineRegisterInfo *MRI) {
   return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)

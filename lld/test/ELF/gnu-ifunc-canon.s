@@ -4,7 +4,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/gnu-ifunc-canon-ro-abs.s -o %t-ro-abs.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/gnu-ifunc-canon-rw-addend.s -o %t-rw-addend.o
 // RUN: ld.lld %t.o -o %t1
-// RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=IREL2 %s
+// RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=IREL1 %s
 // RUN: ld.lld %t.o %t-ro-pcrel.o -o %t2
 // RUN: llvm-readobj -r %t2 | FileCheck --check-prefix=IREL1 %s
 // RUN: ld.lld %t.o %t-ro-abs.o -o %t3
@@ -22,7 +22,7 @@
 // RUN: ld.lld %t-rw-addend.o %t.o -o %t7
 // RUN: llvm-readobj -r %t7 | FileCheck --check-prefix=IREL1 %s
 // RUN: ld.lld %t.o -o %t8 -pie
-// RUN: llvm-readobj -r %t8 | FileCheck --check-prefix=IREL2 %s
+// RUN: llvm-readobj -r %t8 | FileCheck --check-prefix=IREL1-REL2 %s
 // RUN: ld.lld %t.o %t-ro-pcrel.o -o %t9 -pie
 // RUN: llvm-readobj -r %t9 | FileCheck --check-prefix=IREL1-REL2 %s
 // RUN: ld.lld %t.o %t-rw-addend.o -o %t10 -pie
@@ -31,13 +31,6 @@
 // RUN: llvm-readobj -r %t11 | FileCheck --check-prefix=IREL1-REL2 %s
 // RUN: ld.lld %t-rw-addend.o %t.o -o %t12 -pie
 // RUN: llvm-readobj -r %t12 | FileCheck --check-prefix=IREL1-REL3 %s
-
-// Two relocs, one for the GOT and the other for .data.
-// IREL2-NOT: R_X86_64_
-// IREL2: .rela.dyn
-// IREL2-NEXT: R_X86_64_IRELATIVE
-// IREL2-NEXT: R_X86_64_IRELATIVE
-// IREL2-NOT: R_X86_64_
 
 // One reloc for the canonical PLT.
 // IREL1-NOT: R_X86_64_

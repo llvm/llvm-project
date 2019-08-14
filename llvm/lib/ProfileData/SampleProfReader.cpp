@@ -468,14 +468,26 @@ std::error_code SampleProfileReaderBinary::read() {
 }
 
 std::error_code SampleProfileReaderCompactBinary::read() {
-  for (auto Name : FuncsToUse) {
-    auto GUID = std::to_string(MD5Hash(Name));
-    auto iter = FuncOffsetTable.find(StringRef(GUID));
-    if (iter == FuncOffsetTable.end())
-      continue;
+  std::vector<uint64_t> OffsetsToUse;
+  if (UseAllFuncs) {
+    for (auto FuncEntry : FuncOffsetTable) {
+      OffsetsToUse.push_back(FuncEntry.second);
+    }
+  }
+  else {
+    for (auto Name : FuncsToUse) {
+      auto GUID = std::to_string(MD5Hash(Name));
+      auto iter = FuncOffsetTable.find(StringRef(GUID));
+      if (iter == FuncOffsetTable.end())
+        continue;
+      OffsetsToUse.push_back(iter->second);
+    }
+  }
+
+  for (auto Offset : OffsetsToUse) {
     const uint8_t *SavedData = Data;
     Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart()) +
-           iter->second;
+           Offset;
     if (std::error_code EC = readFuncProfile())
       return EC;
     Data = SavedData;
@@ -591,6 +603,7 @@ std::error_code SampleProfileReaderCompactBinary::readFuncOffsetTable() {
 }
 
 void SampleProfileReaderCompactBinary::collectFuncsToUse(const Module &M) {
+  UseAllFuncs = false;
   FuncsToUse.clear();
   for (auto &F : M) {
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);

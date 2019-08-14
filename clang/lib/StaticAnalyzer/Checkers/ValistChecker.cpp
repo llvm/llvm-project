@@ -77,20 +77,21 @@ private:
       ID.AddPointer(&X);
       ID.AddPointer(Reg);
     }
-    std::shared_ptr<PathDiagnosticPiece>
-    getEndPath(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-               BugReport &BR) override {
+    PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                      const ExplodedNode *EndPathNode,
+                                      BugReport &BR) override {
       if (!IsLeak)
         return nullptr;
 
       PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(
           EndPathNode, BRC.getSourceManager());
       // Do not add the statement itself as a range in case of leak.
-      return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(), false);
+      return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
+                                                        false);
     }
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     BugReport &BR) override;
 
   private:
     const MemRegion *Reg;
@@ -373,9 +374,8 @@ void ValistChecker::checkVAListEndCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-std::shared_ptr<PathDiagnosticPiece> ValistChecker::ValistBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC,
-    BugReport &) {
+PathDiagnosticPieceRef ValistChecker::ValistBugVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &) {
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
 

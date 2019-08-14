@@ -340,7 +340,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
               WebAssembly::ClangCallTerminateFn);
       assert(ClangCallTerminateFn &&
              "There is no __clang_call_terminate() function");
-      unsigned Reg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+      Register Reg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::CONST_I32), Reg).addImm(0);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL_VOID))
           .addGlobalAddress(ClangCallTerminateFn)

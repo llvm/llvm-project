@@ -3161,7 +3161,16 @@ def ADDISdtprelHA32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s1
 def LWZtoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
                    "#LWZtoc",
                    [(set i32:$rD,
+                     (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
+def LWZtocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc_nor0:$reg),
+                    "#LWZtocL",
+                    [(set i32:$rD,
                       (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
+def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
+                       "#ADDIStocHA",
+                       [(set i32:$rD,
+                         (PPCtoc_entry i32:$reg, tglobaladdr:$disp))]>;
+
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
 def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []>;

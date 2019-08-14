@@ -16,6 +16,8 @@
 
 #include "pstl_config.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __internal
@@ -1254,4 +1256,7 @@ __pattern_lexicographical_compare(_ExecutionPolicy&&, _ForwardIterator1, _Forwar
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
+
 #endif /* _PSTL_ALGORITHM_FWD_H */

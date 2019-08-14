@@ -1118,6 +1118,149 @@ static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
   return nullptr;
 }
 
+// See if this is a pattern like:
+//   %old_cmp1 = icmp slt i32 %x, C2
+//   %old_replacement = select i1 %old_cmp1, i32 %target_low, i32 %target_high
+//   %old_x_offseted = add i32 %x, C1
+//   %old_cmp0 = icmp ult i32 %old_x_offseted, C0
+//   %r = select i1 %old_cmp0, i32 %x, i32 %old_replacement
+// This can be rewritten as more canonical pattern:
+//   %new_cmp1 = icmp slt i32 %x, -C1
+//   %new_cmp2 = icmp sge i32 %x, C0-C1
+//   %new_clamped_low = select i1 %new_cmp1, i32 %target_low, i32 %x
+//   %r = select i1 %new_cmp2, i32 %target_high, i32 %new_clamped_low
+// Iff -C1 s<= C2 s<= C0-C1
+// Also ULT predicate can also be UGT iff C0 != -1 (+invert result)
+//      SLT predicate can also be SGT iff C2 != INT_MAX (+invert res.)
+static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
+                                          InstCombiner::BuilderTy &Builder) {
+  Value *X = Sel0.getTrueValue();
+  Value *Sel1 = Sel0.getFalseValue();
+
+  // First match the condition of the outermost select.
+  // Said condition must be one-use.
+  if (!Cmp0.hasOneUse())
+    return nullptr;
+  Value *Cmp00 = Cmp0.getOperand(0);
+  Constant *C0;
+  if (!match(Cmp0.getOperand(1),
+             m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
+    return nullptr;
+  // Canonicalize Cmp0 into the form we expect.
+  // FIXME: we shouldn't care about lanes that are 'undef' in the end?
+  switch (Cmp0.getPredicate()) {
+  case ICmpInst::Predicate::ICMP_ULT:
+    break; // Great!
+  case ICmpInst::Predicate::ICMP_ULE:
+    // We'd have to increment C0 by one, and for that it must not have all-ones
+    // element, but then it would have been canonicalized to 'ult' before
+    // we get here. So we can't do anything useful with 'ule'.
+    return nullptr;
+  case ICmpInst::Predicate::ICMP_UGT:
+    // We want to canonicalize it to 'ult', so we'll need to increment C0,
+    // which again means it must not have any all-ones elements.
+    if (!match(C0,
+               m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
+                                  APInt::getAllOnesValue(
+                                      C0->getType()->getScalarSizeInBits()))))
+      return nullptr; // Can't do, have all-ones element[s].
+    C0 = AddOne(C0);
+    std::swap(X, Sel1);
+    break;
+  case ICmpInst::Predicate::ICMP_UGE:
+    // The only way we'd get this predicate if this `icmp` has extra uses,
+    // but then we won't be able to do this fold.
+    return nullptr;
+  default:
+    return nullptr; // Unknown predicate.
+  }
+
+  // Now that we've canonicalized the ICmp, we know the X we expect;
+  // the select in other hand should be one-use.
+  if (!Sel1->hasOneUse())
+    return nullptr;
+
+  // We now can finish matching the condition of the outermost select:
+  // it should either be the X itself, or an addition of some constant to X.
+  Constant *C1;
+  if (Cmp00 == X)
+    C1 = ConstantInt::getNullValue(Sel0.getType());
+  else if (!match(Cmp00,
+                  m_Add(m_Specific(X),
+                        m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C1)))))
+    return nullptr;
+
+  Value *Cmp1;
+  ICmpInst::Predicate Pred1;
+  Constant *C2;
+  Value *ReplacementLow, *ReplacementHigh;
+  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
+                            m_Value(ReplacementHigh))) ||
+      !match(Cmp1,
+             m_ICmp(Pred1, m_Specific(X),
+                    m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
+    return nullptr;
+
+  if (!Cmp1->hasOneUse() && (Cmp00 == X || !Cmp00->hasOneUse()))
+    return nullptr; // Not enough one-use instructions for the fold.
+  // FIXME: this restriction could be relaxed if Cmp1 can be reused as one of
+  //        two comparisons we'll need to build.
+
+  // Canonicalize Cmp1 into the form we expect.
+  // FIXME: we shouldn't care about lanes that are 'undef' in the end?
+  switch (Pred1) {
+  case ICmpInst::Predicate::ICMP_SLT:
+    break;
+  case ICmpInst::Predicate::ICMP_SLE:
+    // We'd have to increment C2 by one, and for that it must not have signed
+    // max element, but then it would have been canonicalized to 'slt' before
+    // we get here. So we can't do anything useful with 'sle'.
+    return nullptr;
+  case ICmpInst::Predicate::ICMP_SGT:
+    // We want to canonicalize it to 'slt', so we'll need to increment C2,
+    // which again means it must not have any signed max elements.
+    if (!match(C2,
+               m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
+                                  APInt::getSignedMaxValue(
+                                      C2->getType()->getScalarSizeInBits()))))
+      return nullptr; // Can't do, have signed max element[s].
+    C2 = AddOne(C2);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::Predicate::ICMP_SGE:
+    // Also non-canonical, but here we don't need to change C2,
+    // so we don't have any restrictions on C2, so we can just handle it.
+    std::swap(ReplacementLow, ReplacementHigh);
+    break;
+  default:
+    return nullptr; // Unknown predicate.
+  }
+
+  // The thresholds of this clamp-like pattern.
+  auto *ThresholdLowIncl = ConstantExpr::getNeg(C1);
+  auto *ThresholdHighExcl = ConstantExpr::getSub(C0, C1);
+
+  // The fold has a precondition 1: C2 s>= ThresholdLow
+  auto *Precond1 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SGE, C2,
+                                         ThresholdLowIncl);
+  if (!match(Precond1, m_One()))
+    return nullptr;
+  // The fold has a precondition 2: C2 s<= ThresholdHigh
+  auto *Precond2 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SLE, C2,
+                                         ThresholdHighExcl);
+  if (!match(Precond2, m_One()))
+    return nullptr;
+
+  // All good, finally emit the new pattern.
+  Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
+  Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
+  Value *MaybeReplacedLow =
+      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Instruction *MaybeReplacedHigh =
+      SelectInst::Create(ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+
+  return MaybeReplacedHigh;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
@@ -1128,6 +1271,9 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     return NewSel;
 
   if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, Builder))
+    return NewAbs;
+
+  if (Instruction *NewAbs = canonicalizeClampLike(SI, *ICI, Builder))
     return NewAbs;
 
   bool Changed = adjustMinMax(SI, *ICI);
@@ -1338,7 +1484,7 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
       return true;
     }
 
-    if (IsFreeToInvert(V, !V->hasNUsesOrMore(3))) {
+    if (isFreeToInvert(V, !V->hasNUsesOrMore(3))) {
       NotV = nullptr;
       return true;
     }
@@ -2098,9 +2244,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
         Value *A;
         if (match(X, m_Not(m_Value(A))) && !X->hasNUsesOrMore(3) &&
-            !IsFreeToInvert(A, A->hasOneUse()) &&
+            !isFreeToInvert(A, A->hasOneUse()) &&
             // Passing false to only consider m_Not and constants.
-            IsFreeToInvert(Y, false)) {
+            isFreeToInvert(Y, false)) {
           Value *B = Builder.CreateNot(Y);
           Value *NewMinMax = createMinMax(Builder, getInverseMinMaxFlavor(SPF),
                                           A, B);

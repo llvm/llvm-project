@@ -50,7 +50,7 @@ define void @test3() {
 
 define void @test4(i32 %chr) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
 ; CHECK-NEXT:    store i8* [[DST]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -148,7 +148,7 @@ define i1 @test11(i32 %C) {
 ; No 64 bits here
 define i1 @test12(i32 %C) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @spaces, i32 0, i32 0), i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @spaces, i32 0, i32 0), i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -185,7 +185,7 @@ define i1 @test14(i32 %C) {
 
 define i1 @test15(i32 %C) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @negative, i32 0, i32 0), i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @negative, i32 0, i32 0), i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

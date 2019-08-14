@@ -422,7 +422,7 @@ public:
     return CallLoweringInfo.get();
   }
 
-  const InstructionSelector *getInstructionSelector() const override {
+  InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
 

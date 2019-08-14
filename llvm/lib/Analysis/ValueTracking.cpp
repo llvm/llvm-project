@@ -558,12 +558,18 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
         return true;
   }
 
+  // Don't let an assume affect itself - this would cause the problems
+  // `isEphemeralValueOf` is trying to prevent, and it would also make
+  // the loop below go out of bounds.
+  if (Inv == CxtI)
+    return false;
+
   // The context comes first, but they're both in the same block. Make sure
   // there is nothing in between that might interrupt the control flow.
   for (BasicBlock::const_iterator I =
          std::next(BasicBlock::const_iterator(CxtI)), IE(Inv);
        I != IE; ++I)
-    if (!isSafeToSpeculativelyExecute(&*I) && !isAssumeLikeIntrinsic(&*I))
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
       return false;
 
   return !isEphemeralValueOf(Inv, CxtI);

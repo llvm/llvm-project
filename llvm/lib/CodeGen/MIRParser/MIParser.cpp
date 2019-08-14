@@ -451,6 +451,7 @@ public:
   bool parseBlockAddressOperand(MachineOperand &Dest);
   bool parseIntrinsicOperand(MachineOperand &Dest);
   bool parsePredicateOperand(MachineOperand &Dest);
+  bool parseShuffleMaskOperand(MachineOperand &Dest);
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
@@ -2285,6 +2286,49 @@ bool MIParser::parsePredicateOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_shufflemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return error("expected syntax shufflemask(<integer or undef>, ...)");
+
+  SmallVector<Constant *, 32> ShufMask;
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+
+  bool AllZero = true;
+  bool AllUndef = true;
+
+  do {
+    if (Token.is(MIToken::kw_undef)) {
+      ShufMask.push_back(UndefValue::get(I32Ty));
+      AllZero = false;
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      AllUndef = false;
+      const APSInt &Int = Token.integerValue();
+      if (!Int.isNullValue())
+        AllZero = false;
+      ShufMask.push_back(ConstantInt::get(I32Ty, Int.getExtValue()));
+    } else
+      return error("expected integer constant");
+
+    lex();
+  } while (consumeIfPresent(MIToken::comma));
+
+  if (expectAndConsume(MIToken::rparen))
+    return error("shufflemask should be terminated by ')'.");
+
+  if (AllZero || AllUndef) {
+    VectorType *VT = VectorType::get(I32Ty, ShufMask.size());
+    Constant *C = AllZero ? Constant::getNullValue(VT) : UndefValue::get(VT);
+    Dest = MachineOperand::CreateShuffleMask(C);
+  } else
+    Dest = MachineOperand::CreateShuffleMask(ConstantVector::get(ShufMask));
+
+  return false;
+}
+
 bool MIParser::parseTargetIndexOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_target_index));
   lex();
@@ -2432,6 +2476,8 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
   case MIToken::kw_floatpred:
   case MIToken::kw_intpred:
     return parsePredicateOperand(Dest);
+  case MIToken::kw_shufflemask:
+    return parseShuffleMaskOperand(Dest);
   case MIToken::Error:
     return true;
   case MIToken::Identifier:

@@ -38,6 +38,7 @@ class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.inferior_seg_fault_received(self.GDB_REMOTE_STOP_CODE_BAD_ACCESS)
 
+    @skipIfWindows # No signal is sent on Windows.
     @llgs_test
     def test_inferior_seg_fault_received_llgs(self):
         self.init_llgs_test()

@@ -580,16 +580,27 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
 
 static CodeGenOptions::FramePointerKind
 getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
+  // We have 4 states:
+  //
+  //  00) leaf retained, non-leaf retained
+  //  01) leaf retained, non-leaf omitted (this is invalid)
+  //  10) leaf omitted, non-leaf retained
+  //      (what -momit-leaf-frame-pointer was designed for)
+  //  11) leaf omitted, non-leaf omitted
+  //
+  //  "omit" options taking precedence over "no-omit" options is the only way
+  //  to make 3 valid states representable
   Arg *A = Args.getLastArg(options::OPT_fomit_frame_pointer,
                            options::OPT_fno_omit_frame_pointer);
   bool OmitFP = A && A->getOption().matches(options::OPT_fomit_frame_pointer);
   bool NoOmitFP =
       A && A->getOption().matches(options::OPT_fno_omit_frame_pointer);
+  bool KeepLeaf =
+      Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
+                   options::OPT_mno_omit_leaf_frame_pointer, Triple.isPS4CPU());
   if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
       (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
-    if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
-                     options::OPT_mno_omit_leaf_frame_pointer,
-                     Triple.isPS4CPU()))
+    if (KeepLeaf)
       return CodeGenOptions::FramePointerKind::NonLeaf;
     return CodeGenOptions::FramePointerKind::All;
   }

@@ -131,6 +131,19 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setLowBits(KnownZeroLow);
     break;
   }
+  case TargetOpcode::G_XOR: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+
+    // Output known-0 bits are known if clear or set in both the LHS & RHS.
+    APInt KnownZeroOut = (Known.Zero & Known2.Zero) | (Known.One & Known2.One);
+    // Output known-1 are known to be set if set in only one of the LHS, RHS.
+    Known.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
+    Known.Zero = KnownZeroOut;
+    break;
+  }
   // G_GEP is like G_ADD. FIXME: Is this true for all targets?
   case TargetOpcode::G_GEP:
   case TargetOpcode::G_ADD: {

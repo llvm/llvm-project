@@ -537,8 +537,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
         } else {
           WhatToStore.push_back(Arg);
         }
-        for (auto W : WhatToStore) {
-          Value *TheBtCast = W;
+        for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
+          Value *TheBtCast = WhatToStore[I];
           unsigned ArgSize =
               TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
           SmallVector<Value *, 1> BuffOffset;
@@ -551,9 +551,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
           LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                             << *StBuff << '\n');
           (void)StBuff;
-          ++W;
-          if (W == *WhatToStore.end() &&
-              ArgCount + 1 == CI->getNumArgOperands())
+          if (I + 1 == E && ArgCount + 1 == CI->getNumArgOperands())
             break;
           BufferIdx = dyn_cast<GetElementPtrInst>(GetElementPtrInst::Create(
               nullptr, BufferIdx, BuffOffset, "PrintBuffNextPtr", Brnch));
