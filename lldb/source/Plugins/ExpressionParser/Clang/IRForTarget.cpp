@@ -156,12 +156,9 @@ clang::NamedDecl *IRForTarget::DeclForGlobal(GlobalValue *global_val) {
 }
 
 /// Returns true iff the mangled symbol is for a static guard variable.
-static bool isGuardVariableSymbol(llvm::StringRef mangled_symbol,
-                                  bool check_ms_abi = true) {
-  bool result = mangled_symbol.startswith("_ZGV"); // Itanium ABI guard variable
-  if (check_ms_abi)
-    result |= mangled_symbol.endswith("@4IA"); // Microsoft ABI
-  return result;
+static bool isGuardVariableSymbol(llvm::StringRef mangled_symbol) {
+  return mangled_symbol.startswith("_ZGV") || // Itanium ABI
+         mangled_symbol.endswith("@4IA");     // Microsoft ABI
 }
 
 bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
@@ -181,9 +178,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
     result_name = value_symbol.first();
 
-    // Check if this is a guard variable. It seems this causes some hiccups
-    // on Windows, so let's only check for Itanium guard variables.
-    bool is_guard_var = isGuardVariableSymbol(result_name, /*MS ABI*/ false);
+    // Check if this is a guard variable.
+    const bool is_guard_var = isGuardVariableSymbol(result_name);
 
     if (result_name.contains("$__lldb_expr_result_ptr") && !is_guard_var) {
       found_result = true;
