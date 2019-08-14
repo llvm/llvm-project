@@ -258,8 +258,6 @@ public:
 
   void LoadExtraDylibs(Process &process, Status &error);
 
-  swift::Identifier GetIdentifier(const char *name);
-
   swift::Identifier GetIdentifier(const llvm::StringRef &name);
 
   CompilerType FindType(const char *name, swift::ModuleDecl *swift_module);
