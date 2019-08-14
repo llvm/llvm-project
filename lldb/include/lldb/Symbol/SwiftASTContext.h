@@ -751,9 +751,6 @@ public:
                                 lldb::StackFrameWP &stack_frame_wp,
                                 swift::SourceFile *source_file, Status &error);
 
-  /// Import a Clang declaration into Swift.
-  swift::ValueDecl *importDecl(clang::Decl *clangDecl);
-  
 protected:
   /// This map uses the string value of ConstStrings as the key, and the TypeBase
   /// * as the value. Since the ConstString strings are uniqued, we can use
@@ -812,7 +809,6 @@ protected:
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
   swift::ClangImporter *m_clang_importer = nullptr;
-  swift::DWARFImporter *m_dwarf_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;

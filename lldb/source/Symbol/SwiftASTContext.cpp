@@ -41,7 +41,6 @@
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
-#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
@@ -3200,8 +3199,8 @@ public:
     std::vector<CompilerContext> decl_context;
     ConstString name_cs(name);
     decl_context.push_back({CompilerContextKind::Structure, name_cs});
-    auto *dwarf_importer = m_swift_ast_ctx.GetDWARFImporter();
-    if (!dwarf_importer)
+    auto clang_importer = m_swift_ast_ctx.GetClangImporter();
+    if (!clang_importer)
       return;
     Module *module = m_swift_ast_ctx.GetModule();
     if (!module)
@@ -3238,7 +3237,7 @@ public:
       // Realize the full type.
       CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
       // Import the type into the DWARFImporter's context.
-      clang::ASTContext &to_ctx = dwarf_importer->getClangASTContext();
+      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
       auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
           compiler_type.GetTypeSystem());
       if (!type_system)
@@ -3295,8 +3294,19 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
-      clang_importer_ap = swift::ClangImporter::create(*m_ast_context_ap,
-                                                       clang_importer_options);
+      std::unique_ptr<SwiftDWARFImporterDelegate> dwarf_importer_up;
+      if (!m_is_scratch_context) {
+        // Create the DWARFImporterDelegate.
+        auto props = ModuleList::GetGlobalModuleListProperties();
+        if (props.GetUseDWARFImporter())
+          dwarf_importer_up =
+              llvm::make_unique<SwiftDWARFImporterDelegate>(*this);
+      }
+      clang_importer_ap = swift::ClangImporter::create(
+          *m_ast_context_ap, clang_importer_options, "", nullptr,
+          std::move(dwarf_importer_up));
+
+      // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
         std::string message;
         if (!HasErrors())
@@ -3405,22 +3415,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
                                       /*isClang=*/true);
   }
 
-  // 5. Create and install the DWARF importer, but only for the module AST
-  //    context.
-  if (!m_is_scratch_context) {
-    auto props = ModuleList::GetGlobalModuleListProperties();
-    if (props.GetUseDWARFImporter()) {
-      auto dwarf_importer_ap = swift::DWARFImporter::create(
-          *m_ast_context_ap, clang_importer_options,
-          llvm::make_unique<SwiftDWARFImporterDelegate>(*this));
-      if (dwarf_importer_ap) {
-        m_dwarf_importer = dwarf_importer_ap.get();
-        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
-                                          /*isClang=*/true, /*isDWARF=*/true);
-      }
-    }
-  }
-
   // Set up the required state for the evaluator in the TypeChecker.
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
 
@@ -3429,13 +3423,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   VALID_OR_RETURN(nullptr);
   return m_ast_context_ap.get();
 }
-
-swift::ValueDecl *SwiftASTContext::importDecl(clang::Decl *clangDecl) {
-  if (m_dwarf_importer)
-    return m_dwarf_importer->importDecl(clangDecl);
-  return nullptr;
-}
-
 
 swift::MemoryBufferSerializedModuleLoader *
 SwiftASTContext::GetMemoryBufferModuleLoader() {
@@ -3450,13 +3437,6 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clang_importer;
-}
-
-swift::DWARFImporter *SwiftASTContext::GetDWARFImporter() {
-  VALID_OR_RETURN(nullptr);
-
-  GetASTContext();
-  return m_dwarf_importer;
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
