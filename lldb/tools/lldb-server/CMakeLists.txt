@@ -73,6 +73,7 @@ target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
 if(HAVE_LIBDPU)
 # Specialized lldb-server for DPU targets
 
+link_directories(${UPMEM_API_LIB})
 set(LLDB_PLUGINS)
 
 list(APPEND LLDB_PLUGINS lldbPluginProcessDpu)
@@ -99,6 +100,6 @@ add_lldb_tool(lldb-server-dpu
       Support
 )
 
-target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "${UPMEM_API_LIB}libdpu-2019.3.0.so")
+target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "dpu-2019.3.0")
 target_compile_options(lldb-server-dpu PRIVATE -DUSE_DPU)
 endif()
