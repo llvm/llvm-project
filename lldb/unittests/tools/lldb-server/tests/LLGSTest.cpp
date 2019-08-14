@@ -14,8 +14,11 @@ using namespace llgs_tests;
 using namespace lldb_private;
 using namespace llvm;
 
+#ifdef SendMessage
+#undef SendMessage
+#endif
+
 #if !defined(__APPLE__)
-// FIXME: This test is hanging on Darwin. <rdar://problem/38313510>
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 

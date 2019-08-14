@@ -217,8 +217,13 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
+    // Temporarily relax the following for Windows until we can take advantage
+    // of the recently added pty support. This doesn't really affect the use of 
+    // lldb-server on Windows.
+#if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status(std::move(Err));
+#endif
   }
 
   {

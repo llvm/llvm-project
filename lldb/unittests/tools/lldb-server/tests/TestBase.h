@@ -12,6 +12,7 @@
 #include "TestClient.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Socket.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -23,9 +24,11 @@ public:
   static void SetUpTestCase() {
     lldb_private::FileSystem::Initialize();
     lldb_private::HostInfo::Initialize();
+    ASSERT_THAT_ERROR(lldb_private::Socket::Initialize(), llvm::Succeeded());
   }
 
   static void TearDownTestCase() {
+    lldb_private::Socket::Terminate();
     lldb_private::HostInfo::Terminate();
     lldb_private::FileSystem::Terminate();
   }
