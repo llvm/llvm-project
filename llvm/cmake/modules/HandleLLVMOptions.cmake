@@ -20,7 +20,7 @@ endif()
 
 set(LLVM_CXX_STD_default "c++14")
 # Preserve behaviour of legacy cache variables
-elseif (LLVM_ENABLE_CXX1Z)
+if (LLVM_ENABLE_CXX1Z)
   set(LLVM_CXX_STD_default "c++1z")
 endif()
 set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
