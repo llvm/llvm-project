@@ -98,8 +98,7 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
 
   Builder.SetInsertPoint(II);
   auto *BCI = Builder.CreateBitCast(Operand, FramePtrTy);
-  auto *Gep = Builder.CreateConstInBoundsGEP1_32(FrameTy, BCI, 0);
-  auto *Load = Builder.CreateLoad(FrameTy, Gep);
+  auto *Load = Builder.CreateLoad(BCI);
   auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
 
   II->replaceAllUsesWith(Cond);
@@ -237,12 +236,17 @@ struct CoroEarly : public FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(
-            M, {"llvm.coro.id",
-                "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-                "llvm.coro.destroy", "llvm.coro.done",
-                "llvm.coro.end", "llvm.coro.noop", "llvm.coro.free",
-                "llvm.coro.promise", "llvm.coro.resume", "llvm.coro.suspend"}))
+    if (coro::declaresIntrinsics(M, {"llvm.coro.id",
+                                     "llvm.coro.id.retcon",
+                                     "llvm.coro.id.retcon.once",
+                                     "llvm.coro.destroy",
+                                     "llvm.coro.done",
+                                     "llvm.coro.end",
+                                     "llvm.coro.noop", 
+                                     "llvm.coro.free",
+                                     "llvm.coro.promise",
+                                     "llvm.coro.resume",
+                                     "llvm.coro.suspend"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

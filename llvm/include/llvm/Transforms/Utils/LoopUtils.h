@@ -37,7 +37,6 @@ namespace llvm {
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
-class BlockFrequencyInfo;
 class DataLayout;
 class Loop;
 class LoopInfo;
@@ -115,26 +114,26 @@ struct SinkAndHoistLICMFlags {
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
-/// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
+/// DataLayout, TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
-                BlockFrequencyInfo *, TargetLibraryInfo *, TargetTransformInfo *,
-                Loop *, AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                TargetLibraryInfo *, TargetTransformInfo *, Loop *,
+                AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
-/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, BlockFrequencyInfo,
+/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, DataLayout,
 /// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
 /// loop and loop safety information as arguments. Diagnostics is emitted via \p
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
-                 BlockFrequencyInfo *, TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &, 
-                 OptimizationRemarkEmitter *);
+                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
+                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.

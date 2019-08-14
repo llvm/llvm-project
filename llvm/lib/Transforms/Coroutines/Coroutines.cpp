@@ -123,15 +123,26 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
-      "llvm.coro.alloc",   "llvm.coro.begin",   "llvm.coro.destroy",
-      "llvm.coro.done",    "llvm.coro.end",     "llvm.coro.frame",
-      "llvm.coro.free",    "llvm.coro.id",
-      "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
+      "llvm.coro.alloc",
+      "llvm.coro.begin",
+      "llvm.coro.destroy",
+      "llvm.coro.done",
+      "llvm.coro.end",
+      "llvm.coro.frame",
+      "llvm.coro.free",
+      "llvm.coro.id",
+      "llvm.coro.id.retcon",
+      "llvm.coro.id.retcon.once",
       "llvm.coro.noop",
-      "llvm.coro.param",   "llvm.coro.prepare.retcon",
-      "llvm.coro.promise", "llvm.coro.resume",
-      "llvm.coro.save",    "llvm.coro.size",    "llvm.coro.subfn.addr",
-      "llvm.coro.suspend", "llvm.coro.suspend.retcon",
+      "llvm.coro.param",
+      "llvm.coro.prepare.retcon",
+      "llvm.coro.promise",
+      "llvm.coro.resume",
+      "llvm.coro.save",
+      "llvm.coro.size",
+      "llvm.coro.subfn.addr",
+      "llvm.coro.suspend",
+      "llvm.coro.suspend.retcon",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }
@@ -502,6 +513,7 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
     return Call;
   }
   }
+  llvm_unreachable("Unknown coro::ABI enum");
 }
 
 void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
@@ -521,6 +533,7 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
     return;
   }
   }
+  llvm_unreachable("Unknown coro::ABI enum");
 }
 
 LLVM_ATTRIBUTE_NORETURN

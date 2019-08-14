@@ -133,8 +133,8 @@ void WasmDumper::printRelocations() {
   int SectionNumber = 0;
   for (const SectionRef &Section : Obj->sections()) {
     bool PrintedGroup = false;
-    StringRef Name;
-    error(Section.getName(Name));
+    StringRef Name = unwrapOrError(Obj->getFileName(), Section.getName());
+
     ++SectionNumber;
 
     for (const RelocationRef &Reloc : Section.relocations()) {

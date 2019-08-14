@@ -282,13 +282,13 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
 // We build up the list of spills for every case where a use is separated
 // from the definition by a suspend point.
 
-static const unsigned InvalidField = ~0U;
+static const unsigned InvalidFieldIndex = ~0U;
 
 namespace {
 class Spill {
   Value *Def = nullptr;
   Instruction *User = nullptr;
-  unsigned FieldNo = InvalidField;
+  unsigned FieldNo = InvalidFieldIndex;
 
 public:
   Spill(Value *Def, llvm::User *U) : Def(Def), User(cast<Instruction>(U)) {}
@@ -303,11 +303,11 @@ public:
   // the definition the first time they encounter it. Consider refactoring
   // SpillInfo into two arrays to normalize the spill representation.
   unsigned fieldIndex() const {
-    assert(FieldNo != InvalidField && "Accessing unassigned field");
+    assert(FieldNo != InvalidFieldIndex && "Accessing unassigned field");
     return FieldNo;
   }
   void setFieldIndex(unsigned FieldNumber) {
-    assert(FieldNo == InvalidField && "Reassigning field number");
+    assert(FieldNo == InvalidFieldIndex && "Reassigning field number");
     FieldNo = FieldNumber;
   }
 };
@@ -406,7 +406,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   if (Shape.ABI == coro::ABI::Switch) {
     auto *FramePtrTy = FrameTy->getPointerTo();
     auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                   /*IsVarArgs=*/false);
+                                   /*IsVarArg=*/false);
     auto *FnPtrTy = FnTy->getPointerTo();
 
     // Figure out how wide should be an integer type storing the suspend index.
@@ -527,7 +527,7 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
 //    whatever
 //
 //
-static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
+static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   auto *CB = Shape.CoroBegin;
   LLVMContext &C = CB->getContext();
   IRBuilder<> Builder(CB->getNextNode());
@@ -539,7 +539,9 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
   Value *CurrentReload = nullptr;
-  unsigned Index = 0; // Proper field number will be read from field definition.
+
+  // Proper field number will be read from field definition.
+  unsigned Index = InvalidFieldIndex;
 
   // We need to keep track of any allocas that need "spilling"
   // since they will live in the coroutine frame now, all access to them
@@ -579,7 +581,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   // Create a load instruction to reload the spilled value from the coroutine
   // frame.
   auto CreateReload = [&](Instruction *InsertBefore) {
-    assert(Index != InvalidField && "accessing unassigned field number");
+    assert(Index != InvalidFieldIndex && "accessing unassigned field number");
     Builder.SetInsertPoint(InsertBefore);
 
     auto *G = GetFramePointer(Index, CurrentValue);

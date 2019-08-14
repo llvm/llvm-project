@@ -4824,41 +4824,33 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   return nullptr;
 }
 
-/// If we have an icmp le or icmp ge instruction with a constant operand, turn
-/// it into the appropriate icmp lt or icmp gt instruction. This transform
-/// allows them to be folded in visitICmpInst.
-static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
-  ICmpInst::Predicate Pred = I.getPredicate();
-  if (Pred != ICmpInst::ICMP_SLE && Pred != ICmpInst::ICMP_SGE &&
-      Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_UGE)
-    return nullptr;
-
-  Value *Op0 = I.getOperand(0);
-  Value *Op1 = I.getOperand(1);
-  auto *Op1C = dyn_cast<Constant>(Op1);
-  if (!Op1C)
-    return nullptr;
+llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
+llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
+                                               Constant *C) {
+  assert(ICmpInst::isRelational(Pred) && ICmpInst::isIntPredicate(Pred) &&
+         !isCanonicalPredicate(Pred) &&
+         "Only for non-canonical relational integer predicates.");
 
   // Check if the constant operand can be safely incremented/decremented without
-  // overflowing/underflowing. For scalars, SimplifyICmpInst has already handled
-  // the edge cases for us, so we just assert on them. For vectors, we must
-  // handle the edge cases.
-  Type *Op1Type = Op1->getType();
-  bool IsSigned = I.isSigned();
+  // overflowing/underflowing. For scalars, SimplifyICmpInst should have already
+  // handled the edge cases for us, so we just assert on them.
+  // For vectors, we must handle the edge cases.
+  Type *Type = C->getType();
+  bool IsSigned = ICmpInst::isSigned(Pred);
   bool IsLE = (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE);
-  auto *CI = dyn_cast<ConstantInt>(Op1C);
+  auto *CI = dyn_cast<ConstantInt>(C);
   if (CI) {
     // A <= MAX -> TRUE ; A >= MIN -> TRUE
     assert(IsLE ? !CI->isMaxValue(IsSigned) : !CI->isMinValue(IsSigned));
-  } else if (Op1Type->isVectorTy()) {
+  } else if (Type->isVectorTy()) {
     // TODO? If the edge cases for vectors were guaranteed to be handled as they
     // are for scalar, we could remove the min/max checks. However, to do that,
     // we would have to use insertelement/shufflevector to replace edge values.
-    unsigned NumElts = Op1Type->getVectorNumElements();
+    unsigned NumElts = Type->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = Op1C->getAggregateElement(i);
+      Constant *Elt = C->getAggregateElement(i);
       if (!Elt)
-        return nullptr;
+        return llvm::None;
 
       if (isa<UndefValue>(Elt))
         continue;
@@ -4867,19 +4859,42 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
       // know that this constant is min/max.
       auto *CI = dyn_cast<ConstantInt>(Elt);
       if (!CI || (IsLE ? CI->isMaxValue(IsSigned) : CI->isMinValue(IsSigned)))
-        return nullptr;
+        return llvm::None;
     }
   } else {
     // ConstantExpr?
-    return nullptr;
+    return llvm::None;
   }
 
-  // Increment or decrement the constant and set the new comparison predicate:
-  // ULE -> ULT ; UGE -> UGT ; SLE -> SLT ; SGE -> SGT
-  Constant *OneOrNegOne = ConstantInt::get(Op1Type, IsLE ? 1 : -1, true);
-  CmpInst::Predicate NewPred = IsLE ? ICmpInst::ICMP_ULT: ICmpInst::ICMP_UGT;
-  NewPred = IsSigned ? ICmpInst::getSignedPredicate(NewPred) : NewPred;
-  return new ICmpInst(NewPred, Op0, ConstantExpr::getAdd(Op1C, OneOrNegOne));
+  CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);
+
+  // Increment or decrement the constant.
+  Constant *OneOrNegOne = ConstantInt::get(Type, IsLE ? 1 : -1, true);
+  Constant *NewC = ConstantExpr::getAdd(C, OneOrNegOne);
+
+  return std::make_pair(NewPred, NewC);
+}
+
+/// If we have an icmp le or icmp ge instruction with a constant operand, turn
+/// it into the appropriate icmp lt or icmp gt instruction. This transform
+/// allows them to be folded in visitICmpInst.
+static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
+  ICmpInst::Predicate Pred = I.getPredicate();
+  if (ICmpInst::isEquality(Pred) || !ICmpInst::isIntPredicate(Pred) ||
+      isCanonicalPredicate(Pred))
+    return nullptr;
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  if (!Op1C)
+    return nullptr;
+
+  auto FlippedStrictness = getFlippedStrictnessPredicateAndConstant(Pred, Op1C);
+  if (!FlippedStrictness)
+    return nullptr;
+
+  return new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
 }
 
 /// Integer compare with boolean values can always be turned into bitwise ops.

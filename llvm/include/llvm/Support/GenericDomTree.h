@@ -242,7 +242,7 @@ protected:
   using DomTreeNodeMapType =
      DenseMap<NodeT *, std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeMapType DomTreeNodes;
-  DomTreeNodeBase<NodeT> *RootNode;
+  DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
   mutable bool DFSInfoValid = false;

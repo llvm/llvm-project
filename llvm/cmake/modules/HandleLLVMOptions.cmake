@@ -18,7 +18,7 @@ else()
   set(LINKER_IS_LLD_LINK FALSE)
 endif()
 
-set(LLVM_CXX_STD_default "c++11")
+set(LLVM_CXX_STD_default "c++14")
 # Preserve behaviour of legacy cache variables
 if (LLVM_ENABLE_CXX1Y)
   set(LLVM_CXX_STD_default "c++1y")

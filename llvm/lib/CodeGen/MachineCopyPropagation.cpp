@@ -205,8 +205,11 @@ public:
   }
 
 private:
+  typedef enum { DebugUse = false, RegularUse = true } DebugType;
+
   void ClobberRegister(unsigned Reg);
-  void ReadRegister(unsigned Reg);
+  void ReadRegister(unsigned Reg, MachineInstr &Reader,
+                    DebugType DT);
   void CopyPropagateBlock(MachineBasicBlock &MBB);
   bool eraseIfRedundant(MachineInstr &Copy, unsigned Src, unsigned Def);
   void forwardUses(MachineInstr &MI);
@@ -216,6 +219,9 @@ private:
 
   /// Candidates for deletion.
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
+
+  /// Multimap tracking debug users in current BB
+  DenseMap<MachineInstr*, SmallVector<MachineInstr*, 2>> CopyDbgUsers;
 
   CopyTracker Tracker;
 
@@ -231,13 +237,19 @@ char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)
 
-void MachineCopyPropagation::ReadRegister(unsigned Reg) {
+void MachineCopyPropagation::ReadRegister(unsigned Reg, MachineInstr &Reader,
+                                          DebugType DT) {
   // If 'Reg' is defined by a copy, the copy is no longer a candidate
-  // for elimination.
+  // for elimination. If a copy is "read" by a debug user, record the user
+  // for propagation.
   for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
     if (MachineInstr *Copy = Tracker.findCopyForUnit(*RUI, *TRI)) {
-      LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: "; Copy->dump());
-      MaybeDeadCopies.remove(Copy);
+      if (DT == RegularUse) {
+        LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: "; Copy->dump());
+        MaybeDeadCopies.remove(Copy);
+      } else {
+        CopyDbgUsers[Copy].push_back(&Reader);
+      }
     }
   }
 }
@@ -488,14 +500,14 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // If Src is defined by a previous copy, the previous copy cannot be
       // eliminated.
-      ReadRegister(Src);
+      ReadRegister(Src, *MI, RegularUse);
       for (const MachineOperand &MO : MI->implicit_operands()) {
         if (!MO.isReg() || !MO.readsReg())
           continue;
         unsigned Reg = MO.getReg();
         if (!Reg)
           continue;
-        ReadRegister(Reg);
+        ReadRegister(Reg, *MI, RegularUse);
       }
 
       LLVM_DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI->dump());
@@ -534,7 +546,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
         // instruction, so we need to make sure we don't remove it as dead
         // later.
         if (MO.isTied())
-          ReadRegister(Reg);
+          ReadRegister(Reg, *MI, RegularUse);
         Tracker.clobberRegister(Reg, *TRI);
       }
 
@@ -558,8 +570,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (MO.isDef() && !MO.isEarlyClobber()) {
         Defs.push_back(Reg);
         continue;
-      } else if (!MO.isDebug() && MO.readsReg())
-        ReadRegister(Reg);
+      } else if (MO.readsReg())
+        ReadRegister(Reg, *MI, MO.isDebug() ? DebugUse : RegularUse);
     }
 
     // The instruction has a register mask operand which means that it clobbers
@@ -609,9 +621,10 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
                  MaybeDead->dump());
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
 
-      // Update matching debug values.
+      // Update matching debug values, if any.
       assert(MaybeDead->isCopy());
-      MaybeDead->changeDebugValuesDefReg(MaybeDead->getOperand(1).getReg());
+      unsigned SrcReg = MaybeDead->getOperand(1).getReg();
+      MRI->updateDbgUsersToReg(SrcReg, CopyDbgUsers[MaybeDead]);
 
       MaybeDead->eraseFromParent();
       Changed = true;
@@ -620,6 +633,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
   }
 
   MaybeDeadCopies.clear();
+  CopyDbgUsers.clear();
   Tracker.clear();
 }
 

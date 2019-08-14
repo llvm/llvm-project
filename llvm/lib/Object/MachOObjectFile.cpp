@@ -1986,13 +1986,12 @@ Expected<SectionRef> MachOObjectFile::getSection(unsigned SectionIndex) const {
 }
 
 Expected<SectionRef> MachOObjectFile::getSection(StringRef SectionName) const {
-  StringRef SecName;
   for (const SectionRef &Section : sections()) {
-    if (std::error_code E = Section.getName(SecName))
-      return errorCodeToError(E);
-    if (SecName == SectionName) {
+    auto NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    if (*NameOrErr == SectionName)
       return Section;
-    }
   }
   return errorCodeToError(object_error::parse_failed);
 }
@@ -3995,7 +3994,11 @@ BindRebaseSegInfo::BindRebaseSegInfo(const object::MachOObjectFile *Obj) {
   uint64_t CurSegAddress;
   for (const SectionRef &Section : Obj->sections()) {
     SectionInfo Info;
-    Section.getName(Info.SectionName);
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      consumeError(NameOrErr.takeError());
+    else
+      Info.SectionName = *NameOrErr;
     Info.Address = Section.getAddress();
     Info.Size = Section.getSize();
     Info.SegmentName =

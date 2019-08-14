@@ -441,8 +441,6 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
             continue;
           }
           object::section_iterator Sec = *SecOrErr;
-          StringRef SecName;
-          Sec->getName(SecName);
           Address.SectionIndex = Sec->getIndex();
           uint64_t SectionLoadAddress =
             LoadedObjInfo->getSectionLoadAddress(*Sec);

@@ -913,10 +913,12 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
     if (Flags & ELF::SHF_ALLOC)
       return Flags & ELF::SHF_WRITE ? 'd' : 'r';
 
-    StringRef SecName;
-    if (SecI->getName(SecName))
+    auto NameOrErr = SecI->getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
       return '?';
-    if (SecName.startswith(".debug"))
+    }
+    if ((*NameOrErr).startswith(".debug"))
       return 'N';
     if (!(Flags & ELF::SHF_WRITE))
       return 'n';
@@ -1090,8 +1092,13 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
         consumeError(SecIOrErr.takeError());
         return '?';
       }
-      elf_section_iterator secT = *SecIOrErr;
-      secT->getName(SecName);
+
+      Expected<StringRef> NameOrErr = (*SecIOrErr)->getName();
+      if (!NameOrErr) {
+        consumeError(SecIOrErr.takeError());
+        return '?';
+      }
+      SecName = *NameOrErr;
     }
   }
 
@@ -1347,7 +1354,12 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
             StringRef SectionName = StringRef();
             for (const SectionRef &Section : MachO->sections()) {
               S.NSect++;
-              Section.getName(SectionName);
+ 
+              if (Expected<StringRef> NameOrErr = Section.getName())
+                SectionName = *NameOrErr;
+              else
+                consumeError(NameOrErr.takeError());
+
               SegmentName = MachO->getSectionFinalSegmentName(
                                                   Section.getRawDataRefImpl());
               if (S.Address >= Section.getAddress() &&
@@ -1667,7 +1679,11 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           StringRef SegmentName = StringRef();
           StringRef SectionName = StringRef();
           for (const SectionRef &Section : MachO->sections()) {
-            Section.getName(SectionName);
+            if (Expected<StringRef> NameOrErr = Section.getName())
+              SectionName = *NameOrErr;
+            else
+              consumeError(NameOrErr.takeError());
+
             SegmentName = MachO->getSectionFinalSegmentName(
                                                 Section.getRawDataRefImpl());
             F.NSect++;

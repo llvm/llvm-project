@@ -4,11 +4,11 @@
 
 include(CheckCXXSourceCompiles)
 
-set(GCC_MIN 4.8)
+set(GCC_MIN 5.1)
 set(GCC_SOFT_ERROR 5.1)
-set(CLANG_MIN 3.1)
+set(CLANG_MIN 3.5)
 set(CLANG_SOFT_ERROR 3.5)
-set(APPLECLANG_MIN 3.1)
+set(APPLECLANG_MIN 6.0)
 set(APPLECLANG_SOFT_ERROR 6.0)
 
 # https://en.wikipedia.org/wiki/Microsoft_Visual_C#Internal_version_numbering
@@ -17,7 +17,7 @@ set(MSVC_MIN 19.1)
 set(MSVC_SOFT_ERROR 19.1)
 
 # Map the above GCC versions to dates: https://gcc.gnu.org/develop.html#timeline
-set(GCC_MIN_DATE 20130322)
+set(GCC_MIN_DATE 20150422)
 set(GCC_SOFT_ERROR_DATE 20150422)
 
 

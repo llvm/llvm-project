@@ -97,7 +97,9 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
       Resume,
       Destroy,
       Promise,
-      Index
+      Index,
+      /// The index of the first spill field.
+      FirstSpill
     };
   };
 
@@ -147,17 +149,23 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     return ConstantInt::get(getIndexType(), Value);
   }
 
+  PointerType *getSwitchResumePointerType() const {
+    assert(ABI == coro::ABI::Switch);
+  assert(FrameTy && "frame type not assigned");
+  return cast<PointerType>(FrameTy->getElementType(SwitchFieldIndex::Resume));
+  }
+
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
     case coro::ABI::Switch: {
-      assert(FrameTy && "frame type not assigned");
-      auto *FnPtrTy = FrameTy->getElementType(SwitchFieldIndex::Resume);
+      auto *FnPtrTy = getSwitchResumePointerType();
       return cast<FunctionType>(FnPtrTy->getPointerElementType());
     }
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
     }
+    llvm_unreachable("Unknown coro::ABI enum");
   }
 
   ArrayRef<Type*> getRetconResultTypes() const {
@@ -191,6 +199,19 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getCallingConv();
     }
+    llvm_unreachable("Unknown coro::ABI enum");
+  }
+
+  unsigned getFirstSpillFieldIndex() const {
+    switch (ABI) {
+    case coro::ABI::Switch:
+      return SwitchFieldIndex::FirstSpill;
+
+    case coro::ABI::Retcon:
+    case coro::ABI::RetconOnce:
+      return 0;
+    }
+    llvm_unreachable("Unknown coro::ABI enum");
   }
 
   AllocaInst *getPromiseAlloca() const {

@@ -160,9 +160,13 @@ createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
   // Iterate over all sections in the object.
   auto SI = SourceObject.section_begin();
   for (const auto &Sec : Obj->sections()) {
-    StringRef SectionName;
-    Sec.getName(SectionName);
-    if (SectionName != "") {
+    Expected<StringRef> NameOrErr = Sec.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      continue;
+    }
+
+    if (*NameOrErr != "") {
       DataRefImpl ShdrRef = Sec.getRawDataRefImpl();
       Elf_Shdr *shdr = const_cast<Elf_Shdr *>(
           reinterpret_cast<const Elf_Shdr *>(ShdrRef.p));
@@ -567,10 +571,11 @@ Error RuntimeDyldELF::findPPC64TOCSection(const ELFObjectFileBase &Obj,
 
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that
   // order. The TOC starts where the first of these sections starts.
-  for (auto &Section: Obj.sections()) {
-    StringRef SectionName;
-    if (auto EC = Section.getName(SectionName))
-      return errorCodeToError(EC);
+  for (auto &Section : Obj.sections()) {
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    StringRef SectionName = *NameOrErr;
 
     if (SectionName == ".got"
         || SectionName == ".toc"
@@ -605,9 +610,10 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
     if (RelSecI == Obj.section_end())
       continue;
 
-    StringRef RelSectionName;
-    if (auto EC = RelSecI->getName(RelSectionName))
-      return errorCodeToError(EC);
+    Expected<StringRef> NameOrErr = RelSecI->getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    StringRef RelSectionName = *NameOrErr;
 
     if (RelSectionName != ".opd")
       continue;
@@ -1879,8 +1885,14 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
   ObjSectionToIDMap::iterator i, e;
   for (i = SectionMap.begin(), e = SectionMap.end(); i != e; ++i) {
     const SectionRef &Section = i->first;
+
     StringRef Name;
-    Section.getName(Name);
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (NameOrErr)
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
     if (Name == ".eh_frame") {
       UnregisteredEHFrameSections.push_back(i->second);
       break;

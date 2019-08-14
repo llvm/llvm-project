@@ -2,9 +2,9 @@
 ## .shstrtab has an invalid type.
 
 # RUN: yaml2obj %s --docnum=1 -o %t1
-# RUN: not llvm-objdump -s %t1 2>&1 | FileCheck %s --check-prefix=INVALIDERR
+# RUN: not llvm-objdump -s %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=INVALID-SHTYPE
 
-# INVALIDERR: error: reading file: Invalid data was encountered while parsing the file
+# INVALID-SHTYPE: error: '[[FILE]]': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
 
 --- !ELF
 FileHeader:
@@ -20,7 +20,9 @@ Sections:
 ## .shstrtab has an invalid zero-size.
 
 # RUN: yaml2obj %s --docnum=2 -o %t2
-# RUN: not llvm-objdump -s %t2 2>&1 | FileCheck %s --check-prefix=INVALIDERR
+# RUN: not llvm-objdump -s %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=STRTAB-EMPTY
+
+# STRTAB-EMPTY: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is empty
 
 --- !ELF
 FileHeader:
@@ -37,7 +39,9 @@ Sections:
 ## size that goes past the end of the file.
 
 # RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=INVALIDERR
+# RUN:   | FileCheck %s -DFILE=%p/Inputs/invalid-strtab-size.elf --check-prefix=INVALID-STRTAB-SIZE
+
+# INVALID-STRTAB-SIZE: error: '[[FILE]]': section [index 1] has a sh_offset (0x70) + sh_size (0x16777215) that cannot be represented
 
 ## Check that llvm-dwarfdump reports an error during relocation resolution
 ## when instead of expected SHT_RELA section it locates a section of a different type.
@@ -72,7 +76,9 @@ Sections:
 ## and .shstrtab is not null-terminated.
 
 # RUN: yaml2obj %s --docnum=4 -o %t4
-# RUN: not llvm-objdump -s %t4 2>&1 | FileCheck --check-prefix=INVALIDERR %s
+# RUN: not llvm-objdump -s %t4 2>&1 | FileCheck -DFILE=%t4 --check-prefix=SHSTRTAB-NON-TERM %s
+
+# SHSTRTAB-NON-TERM: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is non-null terminated
 
 --- !ELF
 FileHeader:

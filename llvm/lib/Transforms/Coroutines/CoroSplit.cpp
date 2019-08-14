@@ -141,6 +141,7 @@ private:
     case Kind::SwitchCleanup:
       return true;
     }
+    llvm_unreachable("Unknown CoroCloner::Kind enum");
   }
 
   void createDeclaration();
@@ -279,8 +280,8 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
   IRBuilder<> Builder(NewEntry);
   auto *FramePtr = Shape.FramePtr;
   auto *FrameTy = Shape.FrameTy;
-  auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
-      FrameTy, FramePtr, 0, coro::Shape::SwitchFieldIndex::Index, "index.addr");
+  auto *GepIndex = Builder.CreateStructGEP(
+      FrameTy, FramePtr, coro::Shape::SwitchFieldIndex::Index, "index.addr");
   auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
   auto *Switch =
       Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
@@ -378,15 +379,12 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
-        Shape.FrameTy, NewFramePtr, 0, coro::Shape::SwitchFieldIndex::Resume,
-        "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(
-        Shape.FrameTy->getElementType(coro::Shape::SwitchFieldIndex::Resume),
-        GepIndex);
-    auto *NullPtr =
-        ConstantPointerNull::get(cast<PointerType>(Load->getType()));
-    auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
+    auto *GepIndex = Builder.CreateStructGEP(Shape.FrameTy, NewFramePtr,
+                                       coro::Shape::SwitchFieldIndex::Resume,
+                                             "ResumeFn.addr");
+    auto *Load = Builder.CreateLoad(Shape.getSwitchResumePointerType(),
+                                    GepIndex);
+    auto *Cond = Builder.CreateIsNull(Load);
     Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -398,12 +396,15 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
   Module *M = OrigF.getParent();
   auto *FnTy = Shape.getResumeFunctionType();
 
-  auto *F = Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                             OrigF.getName() + Suffix);
+  Function *NewF =
+      Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
+                       OrigF.getName() + Suffix);
+  NewF->addParamAttr(0, Attribute::NonNull);
+  NewF->addParamAttr(0, Attribute::NoAlias);
 
-  M->getFunctionList().insert(InsertBefore, F);
+  M->getFunctionList().insert(InsertBefore, NewF);
 
-  return F;
+  return NewF;
 }
 
 /// Replace uses of the active llvm.coro.suspend.retcon call with the
@@ -1403,18 +1404,6 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   }
 }
 
-static void splitCoroutine(Function &F, coro::Shape &Shape,
-                           SmallVectorImpl<Function *> &Clones) {
-  switch (Shape.ABI) {
-  case coro::ABI::Switch:
-    return splitSwitchCoroutine(F, Shape, Clones);
-  case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce:
-    return splitRetconCoroutine(F, Shape, Clones);
-  }
-  llvm_unreachable("bad ABI kind");
-}
-
 namespace {
   class PrettyStackTraceFunction : public PrettyStackTraceEntry {
     Function &F;
@@ -1428,10 +1417,24 @@ namespace {
   };
 }
 
+static void splitCoroutine(Function &F, coro::Shape &Shape,
+                           SmallVectorImpl<Function *> &Clones) {
+  switch (Shape.ABI) {
+  case coro::ABI::Switch:
+    return splitSwitchCoroutine(F, Shape, Clones);
+  case coro::ABI::Retcon:
+  case coro::ABI::RetconOnce:
+    return splitRetconCoroutine(F, Shape, Clones);
+  }
+  llvm_unreachable("bad ABI kind");
+}
+
 static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
-  EliminateUnreachableBlocks(F);
+  // The suspend-crossing algorithm in buildCoroutineFrame get tripped
+  // up by uses in unreachable blocks, so remove them as a first pass.
+  removeUnreachableBlocks(F);
 
   coro::Shape Shape(F);
   if (!Shape.CoroBegin)

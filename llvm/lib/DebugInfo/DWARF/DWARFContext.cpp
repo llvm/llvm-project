@@ -1506,7 +1506,11 @@ public:
     StringMap<unsigned> SectionAmountMap;
     for (const SectionRef &Section : Obj.sections()) {
       StringRef Name;
-      Section.getName(Name);
+      if (auto NameOrErr = Section.getName())
+        Name = *NameOrErr;
+      else
+        consumeError(NameOrErr.takeError());
+
       ++SectionAmountMap[Name];
       SectionNames.push_back({ Name, true });
 
@@ -1571,12 +1575,15 @@ public:
         continue;
 
       StringRef RelSecName;
-      StringRef RelSecData;
-      RelocatedSection->getName(RelSecName);
+      if (auto NameOrErr = RelocatedSection->getName())
+        RelSecName = *NameOrErr;
+      else
+        consumeError(NameOrErr.takeError());
 
       // If the section we're relocating was relocated already by the JIT,
       // then we used the relocated version above, so we do not need to process
       // relocations for it now.
+      StringRef RelSecData;
       if (L && L->getLoadedSectionContents(*RelocatedSection, RelSecData))
         continue;
 
