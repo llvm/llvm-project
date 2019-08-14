@@ -458,3 +458,242 @@ void f(int flag) {
 }
 
 } // end of namespace unimportant_write_before_collapse_point
+
+namespace dont_track_assertlike_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr) \
+  ((expr) ? (void)(0) : __assert_fail(#expr, __FILE__, __LINE__, __func__))
+
+int getInt();
+
+int cond1;
+
+void bar() {
+  cond1 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1); // expected-note{{Assuming 'cond1' is not equal to 0}}
+                 // expected-note@-1{{'?' condition is true}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assertlike_conditions
+
+namespace dont_track_assertlike_and_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr) \
+  ((expr) ? (void)(0) : __assert_fail(#expr, __FILE__, __LINE__, __func__))
+
+int getInt();
+
+int cond1;
+int cond2;
+
+void bar() {
+  cond1 = getInt();
+  cond2 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1 && cond2);
+  // expected-note@-1{{Assuming 'cond1' is not equal to 0}}
+  // expected-note@-2{{Assuming 'cond2' is not equal to 0}}
+  // expected-note@-3{{'?' condition is true}}
+  // expected-note@-4{{Left side of '&&' is true}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assertlike_and_conditions
+
+namespace dont_track_assertlike_or_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr) \
+  ((expr) ? (void)(0) : __assert_fail(#expr, __FILE__, __LINE__, __func__))
+
+int getInt();
+
+int cond1;
+int cond2;
+
+void bar() {
+  cond1 = getInt();
+  cond2 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1 || cond2);
+  // expected-note@-1{{Assuming 'cond1' is not equal to 0}}
+  // expected-note@-2{{Left side of '||' is true}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assertlike_or_conditions
+
+namespace dont_track_assert2like_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr)                                      \
+  do {                                                    \
+    if (!(expr))                                          \
+      __assert_fail(#expr, __FILE__, __LINE__, __func__); \
+  } while (0)
+
+int getInt();
+
+int cond1;
+
+void bar() {
+  cond1 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1); // expected-note{{Assuming 'cond1' is not equal to 0}}
+                 // expected-note@-1{{Taking false branch}}
+                 // expected-note@-2{{Loop condition is false.  Exiting loop}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assert2like_conditions
+
+namespace dont_track_assert2like_and_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr)                                      \
+  do {                                                    \
+    if (!(expr))                                          \
+      __assert_fail(#expr, __FILE__, __LINE__, __func__); \
+  } while (0)
+
+int getInt();
+
+int cond1;
+int cond2;
+
+void bar() {
+  cond1 = getInt();
+  cond2 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1 && cond2);
+  // expected-note@-1{{Assuming 'cond1' is not equal to 0}}
+  // expected-note@-2{{Left side of '&&' is true}}
+  // expected-note@-3{{Assuming the condition is false}}
+  // expected-note@-4{{Taking false branch}}
+  // expected-note@-5{{Loop condition is false.  Exiting loop}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assert2like_and_conditions
+
+namespace dont_track_assert2like_or_conditions {
+
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+#define assert(expr)                                      \
+  do {                                                    \
+    if (!(expr))                                          \
+      __assert_fail(#expr, __FILE__, __LINE__, __func__); \
+  } while (0)
+
+int getInt();
+
+int cond1;
+int cond2;
+
+void bar() {
+  cond1 = getInt();
+  cond2 = getInt();
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
+
+  flag = getInt();
+
+  bar();
+  assert(cond1 || cond2);
+  // expected-note@-1{{Assuming 'cond1' is not equal to 0}}
+  // expected-note@-2{{Left side of '||' is true}}
+  // expected-note@-3{{Taking false branch}}
+  // expected-note@-4{{Loop condition is false.  Exiting loop}}
+
+  if (flag) // expected-note{{'flag' is not equal to 0}}
+            // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+
+#undef assert
+} // end of namespace dont_track_assert2like_or_conditions

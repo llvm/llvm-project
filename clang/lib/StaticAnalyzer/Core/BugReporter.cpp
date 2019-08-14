@@ -2716,90 +2716,6 @@ struct FRIEC_WLItem {
 
 } // namespace
 
-static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
-  ProgramPoint P = N->getLocation();
-  if (auto BEP = P.getAs<BlockEntrance>())
-    return BEP->getBlock();
-
-  // Find the node's current statement in the CFG.
-  if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
-    return N->getLocationContext()->getAnalysisDeclContext()
-                                  ->getCFGStmtMap()->getBlock(S);
-
-  return nullptr;
-}
-
-// Returns true if by simply looking at the block, we can be sure that it
-// results in a sink during analysis. This is useful to know when the analysis
-// was interrupted, and we try to figure out if it would sink eventually.
-// There may be many more reasons why a sink would appear during analysis
-// (eg. checkers may generate sinks arbitrarily), but here we only consider
-// sinks that would be obvious by looking at the CFG.
-static bool isImmediateSinkBlock(const CFGBlock *Blk) {
-  if (Blk->hasNoReturnElement())
-    return true;
-
-  // FIXME: Throw-expressions are currently generating sinks during analysis:
-  // they're not supported yet, and also often used for actually terminating
-  // the program. So we should treat them as sinks in this analysis as well,
-  // at least for now, but once we have better support for exceptions,
-  // we'd need to carefully handle the case when the throw is being
-  // immediately caught.
-  if (std::any_of(Blk->begin(), Blk->end(), [](const CFGElement &Elm) {
-        if (Optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
-          if (isa<CXXThrowExpr>(StmtElm->getStmt()))
-            return true;
-        return false;
-      }))
-    return true;
-
-  return false;
-}
-
-// Returns true if by looking at the CFG surrounding the node's program
-// point, we can be sure that any analysis starting from this point would
-// eventually end with a sink. We scan the child CFG blocks in a depth-first
-// manner and see if all paths eventually end up in an immediate sink block.
-static bool isInevitablySinking(const ExplodedNode *N) {
-  const CFG &Cfg = N->getCFG();
-
-  const CFGBlock *StartBlk = findBlockForNode(N);
-  if (!StartBlk)
-    return false;
-  if (isImmediateSinkBlock(StartBlk))
-    return true;
-
-  llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
-  llvm::SmallPtrSet<const CFGBlock *, 32> Visited;
-
-  DFSWorkList.push_back(StartBlk);
-  while (!DFSWorkList.empty()) {
-    const CFGBlock *Blk = DFSWorkList.back();
-    DFSWorkList.pop_back();
-    Visited.insert(Blk);
-
-    // If at least one path reaches the CFG exit, it means that control is
-    // returned to the caller. For now, say that we are not sure what
-    // happens next. If necessary, this can be improved to analyze
-    // the parent StackFrameContext's call site in a similar manner.
-    if (Blk == &Cfg.getExit())
-      return false;
-
-    for (const auto &Succ : Blk->succs()) {
-      if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
-          // If the block has reachable child blocks that aren't no-return,
-          // add them to the worklist.
-          DFSWorkList.push_back(SuccBlk);
-        }
-      }
-    }
-  }
-
-  // Nothing reached the exit. It can only mean one thing: there's no return.
-  return true;
-}
-
 static BugReport *
 FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
@@ -2851,8 +2767,9 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
     // to being post-dominated by a sink. This works better when the analysis
     // is incomplete and we have never reached the no-return function call(s)
     // that we'd inevitably bump into on this path.
-    if (isInevitablySinking(errorNode))
-      continue;
+    if (const CFGBlock *ErrorB = errorNode->getCFGBlock())
+      if (ErrorB->isInevitablySinking())
+        continue;
 
     // At this point we know that 'N' is not a sink and it has at least one
     // successor.  Use a DFS worklist to find a non-sink end-of-path node.

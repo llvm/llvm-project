@@ -1710,18 +1710,6 @@ public:
 };
 } // end of anonymous namespace
 
-static CFGBlock *GetRelevantBlock(const ExplodedNode *Node) {
-  if (auto SP = Node->getLocationAs<StmtPoint>()) {
-    const Stmt *S = SP->getStmt();
-    assert(S);
-
-    return const_cast<CFGBlock *>(Node->getLocationContext()
-        ->getAnalysisDeclContext()->getCFGStmtMap()->getBlock(S));
-  }
-
-  return nullptr;
-}
-
 static std::shared_ptr<PathDiagnosticEventPiece>
 constructDebugPieceForTrackedCondition(const Expr *Cond,
                                        const ExplodedNode *N,
@@ -1742,22 +1730,58 @@ constructDebugPieceForTrackedCondition(const Expr *Cond,
           (Twine() + "Tracking condition '" + ConditionText + "'").str());
 }
 
+static bool isAssertlikeBlock(const CFGBlock *B, ASTContext &Context) {
+  if (B->succ_size() != 2)
+    return false;
+
+  const CFGBlock *Then = B->succ_begin()->getReachableBlock();
+  const CFGBlock *Else = (B->succ_begin() + 1)->getReachableBlock();
+
+  if (!Then || !Else)
+    return false;
+
+  if (Then->isInevitablySinking() != Else->isInevitablySinking())
+    return true;
+
+  // For the following condition the following CFG would be built:
+  //
+  //                          ------------->
+  //                         /              \
+  //                       [B1] -> [B2] -> [B3] -> [sink]
+  // assert(A && B || C);            \       \
+  //                                  -----------> [go on with the execution]
+  //
+  // It so happens that CFGBlock::getTerminatorCondition returns 'A' for block
+  // B1, 'A && B' for B2, and 'A && B || C' for B3. Let's check whether we
+  // reached the end of the condition!
+  if (const Stmt *ElseCond = Else->getTerminatorCondition())
+    if (isa<BinaryOperator>(ElseCond)) {
+      assert(cast<BinaryOperator>(ElseCond)->isLogicalOp());
+      return isAssertlikeBlock(Else, Context);
+    }
+
+  return false;
+}
+
 PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
   // We can only reason about control dependencies within the same stack frame.
   if (Origin->getStackFrame() != N->getStackFrame())
     return nullptr;
 
-  CFGBlock *NB = GetRelevantBlock(N);
+  CFGBlock *NB = const_cast<CFGBlock *>(N->getCFGBlock());
 
   // Skip if we already inspected this block.
   if (!VisitedBlocks.insert(NB).second)
     return nullptr;
 
-  CFGBlock *OriginB = GetRelevantBlock(Origin);
+  CFGBlock *OriginB = const_cast<CFGBlock *>(Origin->getCFGBlock());
 
   // TODO: Cache CFGBlocks for each ExplodedNode.
   if (!OriginB || !NB)
+    return nullptr;
+
+  if (isAssertlikeBlock(NB, BRC.getASTContext()))
     return nullptr;
 
   if (ControlDeps.isControlDependent(OriginB, NB)) {
