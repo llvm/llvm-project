@@ -479,16 +479,16 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
                          const cross_tu::CrossTranslationUnitContext &CTU,
                          const PathPieces &Path) {
   PlistPrinter Printer(FM, AnOpts, PP, CTU);
-  assert(std::is_partitioned(
-           Path.begin(), Path.end(),
-           [](const std::shared_ptr<PathDiagnosticPiece> &E)
-             { return E->getKind() == PathDiagnosticPiece::Note; }) &&
+  assert(std::is_partitioned(Path.begin(), Path.end(),
+                             [](const PathDiagnosticPieceRef &E) {
+                               return E->getKind() == PathDiagnosticPiece::Note;
+                             }) &&
          "PathDiagnostic is not partitioned so that notes precede the rest");
 
   PathPieces::const_iterator FirstNonNote = std::partition_point(
-      Path.begin(), Path.end(),
-      [](const std::shared_ptr<PathDiagnosticPiece> &E)
-        { return E->getKind() == PathDiagnosticPiece::Note; });
+      Path.begin(), Path.end(), [](const PathDiagnosticPieceRef &E) {
+        return E->getKind() == PathDiagnosticPiece::Note;
+      });
 
   PathPieces::const_iterator I = Path.begin();
 

@@ -21,17 +21,16 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; CHECK-LABEL: test_optsize:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #26215
-; CHECK-NEXT:    movk w8, #26214, lsl #16
-; CHECK-NEXT:    smull x8, w0, w8
-; CHECK-NEXT:    lsr x10, x8, #63
-; CHECK-NEXT:    asr x8, x8, #33
-; CHECK-NEXT:    add w8, w8, w10
-; CHECK-NEXT:    add w8, w8, w8, lsl #2
-; CHECK-NEXT:    mov w9, #-10
-; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    mov w8, #52429
+; CHECK-NEXT:    mov w9, #39321
+; CHECK-NEXT:    movk w8, #52428, lsl #16
+; CHECK-NEXT:    movk w9, #6553, lsl #16
+; CHECK-NEXT:    mov w10, #858993459
+; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    mov w11, #-10
+; CHECK-NEXT:    cmp w8, w10
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    csel w0, w8, w11, lo
 ; CHECK-NEXT:    ret
   %rem = srem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0

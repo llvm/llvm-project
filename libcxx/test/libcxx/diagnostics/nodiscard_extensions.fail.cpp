@@ -16,7 +16,7 @@
 // guides from existing ctors, needed by default_searcher() below.
 // UNSUPPORTED: apple-clang-9
 
-// Test that entities declared [[nodiscard]] as at extension by libc++, are
+// Test that entities declared [[nodiscard]] as an extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
 
 // All entities to which libc++ applies [[nodiscard]] as an extension should

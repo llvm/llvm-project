@@ -333,6 +333,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     return getIntrinsicID() == Other.getIntrinsicID();
   case MachineOperand::MO_Predicate:
     return getPredicate() == Other.getPredicate();
+  case MachineOperand::MO_ShuffleMask:
+    return getShuffleMask() == Other.getShuffleMask();
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -381,6 +383,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIntrinsicID());
   case MachineOperand::MO_Predicate:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
+  case MachineOperand::MO_ShuffleMask:
+    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getShuffleMask());
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -936,6 +940,20 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
        << CmpInst::getPredicateName(Pred) << ')';
     break;
   }
+  case MachineOperand::MO_ShuffleMask:
+    OS << "shufflemask(";
+    const Constant* C = getShuffleMask();
+    const int NumElts = C->getType()->getVectorNumElements();
+
+    StringRef Separator;
+    for (int I = 0; I != NumElts; ++I) {
+      OS << Separator;
+      C->getAggregateElement(I)->printAsOperand(OS, false, MST);
+      Separator = ", ";
+    }
+
+    OS << ')';
+    break;
   }
 }
 

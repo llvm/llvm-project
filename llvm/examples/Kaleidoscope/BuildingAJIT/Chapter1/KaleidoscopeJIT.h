@@ -46,7 +46,7 @@ public:
         CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
         DL(std::move(DL)), Mangle(ES, this->DL),
         Ctx(llvm::make_unique<LLVMContext>()) {
-    ES.getMainJITDylib().setGenerator(
+    ES.getMainJITDylib().addGenerator(
         cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
             DL.getGlobalPrefix())));
   }

@@ -556,9 +556,9 @@ def cmd_revert(args):
     if len(open_files) > 0:
         die("Found open files. Please stash and then revert.\n" + open_files)
 
-    # If the revision looks like rNNNNNN, use that. Otherwise, look for it in
-    # the git commit.
-    svn_match = re.match('^r(\d{5,7})$', args.revision)
+    # If the revision looks like rNNNNNN (or with a callsign, e.g. rLLDNNNNNN),
+    # use that. Otherwise, look for it in the git commit.
+    svn_match = re.match('^r[A-Z]*(\d{5,7})$', args.revision)
     if svn_match:
         # If the revision looks like rNNNNNN, use that as the svn revision, and
         # grep through git commits to find which one corresponds to that svn

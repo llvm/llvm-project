@@ -3830,7 +3830,9 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
-bool llvm::UpgradeRetainReleaseMarker(Module &M) {
+/// This checks for objc retain release marker which should be upgraded. It
+/// returns true if module is modified.
+static bool UpgradeRetainReleaseMarker(Module &M) {
   bool Changed = false;
   const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
   NamedMDNode *ModRetainReleaseMarker = M.getNamedMetadata(MarkerKey);
@@ -3854,7 +3856,7 @@ bool llvm::UpgradeRetainReleaseMarker(Module &M) {
   return Changed;
 }
 
-void llvm::UpgradeARCRuntimeCalls(Module &M) {
+void llvm::UpgradeARCRuntime(Module &M) {
   // This lambda converts normal function calls to ARC runtime functions to
   // intrinsic calls.
   auto UpgradeToIntrinsic = [&](const char *OldFunc,
@@ -3905,9 +3907,10 @@ void llvm::UpgradeARCRuntimeCalls(Module &M) {
   // "llvm.objc.clang.arc.use".
   UpgradeToIntrinsic("clang.arc.use", llvm::Intrinsic::objc_clang_arc_use);
 
-  // Return if the bitcode doesn't have the arm64 retainAutoreleasedReturnValue
-  // marker. We don't know for sure that it was compiled with ARC in that case.
-  if (!M.getModuleFlag("clang.arc.retainAutoreleasedReturnValueMarker"))
+  // Upgrade the retain release marker. If there is no need to upgrade
+  // the marker, that means either the module is already new enough to contain
+  // new intrinsics or it is not ARC. There is no need to upgrade runtime call.
+  if (!UpgradeRetainReleaseMarker(M))
     return;
 
   std::pair<const char *, llvm::Intrinsic::ID> RuntimeFuncs[] = {

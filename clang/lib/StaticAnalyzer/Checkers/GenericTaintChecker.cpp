@@ -71,9 +71,9 @@ public:
     std::vector<NameArgsPair> Sinks;
 
     TaintConfiguration() = default;
-    TaintConfiguration(const TaintConfiguration &) = delete;
+    TaintConfiguration(const TaintConfiguration &) = default;
     TaintConfiguration(TaintConfiguration &&) = default;
-    TaintConfiguration &operator=(const TaintConfiguration &) = delete;
+    TaintConfiguration &operator=(const TaintConfiguration &) = default;
     TaintConfiguration &operator=(TaintConfiguration &&) = default;
   };
 

@@ -16,7 +16,6 @@
 
 /// Removes all the Defined Functions (as well as their calls)
 /// that aren't inside any of the desired Chunks.
-/// @returns the Module stripped of out-of-chunk functions
 static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
                                        Module *Program) {
   // Get functions inside desired chunks

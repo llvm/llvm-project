@@ -43,7 +43,7 @@ public:
 
   Symbol *insert(StringRef name);
 
-  Symbol *addSymbol(const Symbol &New);
+  Symbol *addSymbol(const Symbol &newSym);
 
   void scanVersionScript();
 

@@ -34,7 +34,7 @@ public:
   MipsInstructionSelector(const MipsTargetMachine &TM, const MipsSubtarget &STI,
                           const MipsRegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
+  bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -204,8 +204,7 @@ static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes,
   return Opc;
 }
 
-bool MipsInstructionSelector::select(MachineInstr &I,
-                                     CodeGenCoverage &CoverageInfo) const {
+bool MipsInstructionSelector::select(MachineInstr &I) {
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -232,7 +231,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     return true;
   }
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I, *CoverageInfo))
     return true;
 
   MachineInstr *MI = nullptr;

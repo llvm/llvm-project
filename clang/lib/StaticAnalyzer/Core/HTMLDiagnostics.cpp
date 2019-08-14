@@ -657,16 +657,14 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
   // Process the path.
   // Maintain the counts of extra note pieces separately.
   unsigned TotalPieces = path.size();
-  unsigned TotalNotePieces =
-      std::count_if(path.begin(), path.end(),
-                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticNotePiece>(*p);
-                    });
-  unsigned PopUpPieceCount =
-      std::count_if(path.begin(), path.end(),
-                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticPopUpPiece>(*p);
-                    });
+  unsigned TotalNotePieces = std::count_if(
+      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+        return isa<PathDiagnosticNotePiece>(*p);
+      });
+  unsigned PopUpPieceCount = std::count_if(
+      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+        return isa<PathDiagnosticPopUpPiece>(*p);
+      });
 
   unsigned TotalRegularPieces = TotalPieces - TotalNotePieces - PopUpPieceCount;
   unsigned NumRegularPieces = TotalRegularPieces;

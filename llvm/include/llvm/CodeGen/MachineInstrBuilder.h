@@ -250,6 +250,11 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &addShuffleMask(const Constant *Val) const {
+    MI->addOperand(*MF, MachineOperand::CreateShuffleMask(Val));
+    return *this;
+  }
+
   const MachineInstrBuilder &addSym(MCSymbol *Sym,
                                     unsigned char TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateMCSymbol(Sym, TargetFlags));

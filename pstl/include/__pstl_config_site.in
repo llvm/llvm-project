@@ -11,5 +11,6 @@
 
 #cmakedefine _PSTL_PAR_BACKEND_SERIAL
 #cmakedefine _PSTL_PAR_BACKEND_TBB
+#cmakedefine _PSTL_HIDE_FROM_ABI_PER_TU
 
 #endif // __PSTL_CONFIG_SITE

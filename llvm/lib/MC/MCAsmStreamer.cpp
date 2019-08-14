@@ -759,14 +759,14 @@ void MCAsmStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
   EmitEOL();
 }
 
-// We need an XCOFF specific version of this directive as the AIX syntax
+// We need an XCOFF-specific version of this directive as the AIX syntax
 // requires a QualName argument identifying the csect name and storage mapping
 // class to appear before the alignment if we are specifying it.
 void MCAsmStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                                unsigned ByteAlignment) {
   assert(MAI->getLCOMMDirectiveAlignmentType() == LCOMM::Log2Alignment &&
-         "We only support writing log base-2 alignment format with XCOFF");
-  assert(isPowerOf2_32(ByteAlignment) && "alignment must be a power of 2");
+         "We only support writing log base-2 alignment format with XCOFF.");
+  assert(isPowerOf2_32(ByteAlignment) && "Alignment must be a power of 2.");
 
   OS << "\t.lcomm\t";
   Symbol->print(OS, MAI);

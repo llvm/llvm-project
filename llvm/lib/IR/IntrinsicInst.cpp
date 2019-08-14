@@ -143,7 +143,7 @@ ConstrainedFPIntrinsic::RoundingModeToStr(RoundingMode UseRounding) {
     RoundingStr = "round.upward";
     break;
   case ConstrainedFPIntrinsic::rmTowardZero:
-    RoundingStr = "round.tozero";
+    RoundingStr = "round.towardzero";
     break;
   }
   return RoundingStr;

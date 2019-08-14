@@ -19,10 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include <deque>
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 using namespace clang;
 using namespace tooling;
@@ -80,52 +80,23 @@ void tooling::addInclude(RewriteRule &Rule, StringRef Header,
     Case.AddedIncludes.emplace_back(Header.str(), Format);
 }
 
-// Determines whether A is a base type of B in the class hierarchy, including
-// the implicit relationship of Type and QualType.
-static bool isBaseOf(ASTNodeKind A, ASTNodeKind B) {
-  static auto TypeKind = ASTNodeKind::getFromNodeKind<Type>();
-  static auto QualKind = ASTNodeKind::getFromNodeKind<QualType>();
-  /// Mimic the implicit conversions of Matcher<>.
-  /// - From Matcher<Type> to Matcher<QualType>
-  /// - From Matcher<Base> to Matcher<Derived>
-  return (A.isSame(TypeKind) && B.isSame(QualKind)) || A.isBaseOf(B);
-}
-
-// Try to find a common kind to which all of the rule's matchers can be
-// converted.
-static ASTNodeKind
-findCommonKind(const SmallVectorImpl<RewriteRule::Case> &Cases) {
-  assert(!Cases.empty() && "Rule must have at least one case.");
-  ASTNodeKind JoinKind = Cases[0].Matcher.getSupportedKind();
-  // Find a (least) Kind K, for which M.canConvertTo(K) holds, for all matchers
-  // M in Rules.
-  for (const auto &Case : Cases) {
-    auto K = Case.Matcher.getSupportedKind();
-    if (isBaseOf(JoinKind, K)) {
-      JoinKind = K;
-      continue;
-    }
-    if (K.isSame(JoinKind) || isBaseOf(K, JoinKind))
-      // JoinKind is already the lowest.
-      continue;
-    // K and JoinKind are unrelated -- there is no least common kind.
-    return ASTNodeKind();
-  }
-  return JoinKind;
+// Filters for supported matcher kinds. FIXME: Explicitly list the allowed kinds
+// (all node matcher types except for `QualType` and `Type`), rather than just
+// banning `QualType` and `Type`.
+static bool hasValidKind(const DynTypedMatcher &M) {
+  return !M.canConvertTo<QualType>();
 }
 
 // Binds each rule's matcher to a unique (and deterministic) tag based on
-// `TagBase`.
-static std::vector<DynTypedMatcher>
-taggedMatchers(StringRef TagBase,
-               const SmallVectorImpl<RewriteRule::Case> &Cases) {
+// `TagBase` and the id paired with the case.
+static std::vector<DynTypedMatcher> taggedMatchers(
+    StringRef TagBase,
+    const SmallVectorImpl<std::pair<size_t, RewriteRule::Case>> &Cases) {
   std::vector<DynTypedMatcher> Matchers;
   Matchers.reserve(Cases.size());
-  size_t count = 0;
   for (const auto &Case : Cases) {
-    std::string Tag = (TagBase + Twine(count)).str();
-    ++count;
-    auto M = Case.Matcher.tryBind(Tag);
+    std::string Tag = (TagBase + Twine(Case.first)).str();
+    auto M = Case.second.Matcher.tryBind(Tag);
     assert(M && "RewriteRule matchers should be bindable.");
     Matchers.push_back(*std::move(M));
   }
@@ -142,22 +113,37 @@ RewriteRule tooling::applyFirst(ArrayRef<RewriteRule> Rules) {
   return R;
 }
 
-static DynTypedMatcher joinCaseMatchers(const RewriteRule &Rule) {
-  assert(!Rule.Cases.empty() && "Rule must have at least one case.");
-  if (Rule.Cases.size() == 1)
-    return Rule.Cases[0].Matcher;
+std::vector<DynTypedMatcher>
+tooling::detail::buildMatchers(const RewriteRule &Rule) {
+  // Map the cases into buckets of matchers -- one for each "root" AST kind,
+  // which guarantees that they can be combined in a single anyOf matcher. Each
+  // case is paired with an identifying number that is converted to a string id
+  // in `taggedMatchers`.
+  std::map<ASTNodeKind, SmallVector<std::pair<size_t, RewriteRule::Case>, 1>>
+      Buckets;
+  const SmallVectorImpl<RewriteRule::Case> &Cases = Rule.Cases;
+  for (int I = 0, N = Cases.size(); I < N; ++I) {
+    assert(hasValidKind(Cases[I].Matcher) &&
+           "Matcher must be non-(Qual)Type node matcher");
+    Buckets[Cases[I].Matcher.getSupportedKind()].emplace_back(I, Cases[I]);
+  }
 
-  auto CommonKind = findCommonKind(Rule.Cases);
-  assert(!CommonKind.isNone() && "Cases must have compatible matchers.");
-  return DynTypedMatcher::constructVariadic(
-      DynTypedMatcher::VO_AnyOf, CommonKind, taggedMatchers("Tag", Rule.Cases));
+  std::vector<DynTypedMatcher> Matchers;
+  for (const auto &Bucket : Buckets) {
+    DynTypedMatcher M = DynTypedMatcher::constructVariadic(
+        DynTypedMatcher::VO_AnyOf, Bucket.first,
+        taggedMatchers("Tag", Bucket.second));
+    M.setAllowBind(true);
+    // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
+    Matchers.push_back(*M.tryBind(RewriteRule::RootID));
+  }
+  return Matchers;
 }
 
 DynTypedMatcher tooling::detail::buildMatcher(const RewriteRule &Rule) {
-  DynTypedMatcher M = joinCaseMatchers(Rule);
-  M.setAllowBind(true);
-  // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
-  return *M.tryBind(RewriteRule::RootID);
+  std::vector<DynTypedMatcher> Ms = buildMatchers(Rule);
+  assert(Ms.size() == 1 && "Cases must have compatible matchers.");
+  return Ms[0];
 }
 
 // Finds the case that was "selected" -- that is, whose matcher triggered the
@@ -180,7 +166,8 @@ tooling::detail::findSelectedCase(const MatchResult &Result,
 constexpr llvm::StringLiteral RewriteRule::RootID;
 
 void Transformer::registerMatchers(MatchFinder *MatchFinder) {
-  MatchFinder->addDynamicMatcher(tooling::detail::buildMatcher(Rule), this);
+  for (auto &Matcher : tooling::detail::buildMatchers(Rule))
+    MatchFinder->addDynamicMatcher(Matcher, this);
 }
 
 void Transformer::run(const MatchResult &Result) {
@@ -222,12 +209,12 @@ void Transformer::run(const MatchResult &Result) {
   for (const auto &I : Case.AddedIncludes) {
     auto &Header = I.first;
     switch (I.second) {
-      case IncludeFormat::Quoted:
-        AC.addHeader(Header);
-        break;
-      case IncludeFormat::Angled:
-        AC.addHeader((llvm::Twine("<") + Header + ">").str());
-        break;
+    case IncludeFormat::Quoted:
+      AC.addHeader(Header);
+      break;
+    case IncludeFormat::Angled:
+      AC.addHeader((llvm::Twine("<") + Header + ">").str());
+      break;
     }
   }
 

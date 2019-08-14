@@ -368,6 +368,9 @@ def err_drv_ropi_rwpi_incompatible_with_pic : Error<
 def err_drv_ropi_incompatible_with_cxx : Error<
   "ROPI is not compatible with c++">;
 
+def err_stack_tagging_requires_hardware_feature : Error<
+  "'-fsanitize=memtag' requires hardware support (+memtag)">;
+
 def warn_target_unsupported_nan2008 : Warning<
   "ignoring '-mnan=2008' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;

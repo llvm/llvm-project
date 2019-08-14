@@ -42,6 +42,15 @@
 #define _PSTL_STRING(x) _PSTL_STRING_AUX(x)
 #define _PSTL_STRING_CONCAT(x, y) x #y
 
+#ifdef _PSTL_HIDE_FROM_ABI_PER_TU
+#    define _PSTL_HIDE_FROM_ABI_PUSH                                                                                   \
+        _Pragma("clang attribute push(__attribute__((internal_linkage)), apply_to=any(function,record))")
+#    define _PSTL_HIDE_FROM_ABI_POP _Pragma("clang attribute pop")
+#else
+#    define _PSTL_HIDE_FROM_ABI_PUSH /* nothing */
+#    define _PSTL_HIDE_FROM_ABI_POP  /* nothing */
+#endif
+
 // note that when ICC or Clang is in use, _PSTL_GCC_VERSION might not fully match
 // the actual GCC version on the system.
 #define _PSTL_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)

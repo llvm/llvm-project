@@ -789,6 +789,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
   case MachineOperand::MO_Immediate:
   case MachineOperand::MO_CImmediate:
   case MachineOperand::MO_FPImmediate:
+  case MachineOperand::MO_ShuffleMask:
     return false;
   case MachineOperand::MO_MachineBasicBlock:
     return true;

@@ -226,7 +226,9 @@ void Writer::layoutMemory() {
   }
 
   if (WasmSym::globalBase)
-    WasmSym::globalBase->setVirtualAddress(config->globalBase);
+    WasmSym::globalBase->setVirtualAddress(memoryPtr);
+  if (WasmSym::definedMemoryBase)
+    WasmSym::definedMemoryBase->setVirtualAddress(memoryPtr);
 
   uint32_t dataStart = memoryPtr;
 
@@ -617,6 +619,8 @@ void Writer::assignIndexes() {
     for (InputEvent *event : file->events)
       out.eventSec->addEvent(event);
   }
+
+  out.globalSec->assignIndexes();
 }
 
 static StringRef getOutputDataSegmentName(StringRef name) {
@@ -862,8 +866,11 @@ void Writer::run() {
 
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!config->isPic)
+  if (!config->isPic) {
     tableBase = 1;
+    if (WasmSym::definedTableBase)
+      WasmSym::definedTableBase->setVirtualAddress(tableBase);
+  }
 
   log("-- createOutputSegments");
   createOutputSegments();

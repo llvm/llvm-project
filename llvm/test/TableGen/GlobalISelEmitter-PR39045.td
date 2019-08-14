@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include %s -o %t
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common  %s -o %t
 // RUN: FileCheck %s < %t
 
 // Both predicates should be tested
@@ -6,9 +6,7 @@
 // CHECK-DAG: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_pat_frag_a,
 
 include "llvm/Target/Target.td"
-
-def MyTargetISA : InstrInfo;
-def MyTarget : Target { let InstructionSet = MyTargetISA; }
+include "GlobalISelEmitterCommon.td"
 
 
 def pat_frag_a : PatFrag <(ops node:$ptr), (load node:$ptr), [{}]> {
@@ -20,9 +18,6 @@ def pat_frag_b : PatFrag <(ops node:$ptr), (load node:$ptr), [{}]> {
    let PredicateCode = [{ return isInstB(MI); }];
    let GISelPredicateCode = [{ return isInstB(MI); }];
 }
-
-def R0 : Register<"r0"> { let Namespace = "MyTarget"; }
-def GPR32 : RegisterClass<"MyTarget", [i32], 32, (add R0)>;
 
 def inst_a : Instruction {
   let OutOperandList = (outs GPR32:$dst);

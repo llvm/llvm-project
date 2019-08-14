@@ -3559,16 +3559,15 @@ public:
         Kind = k_SPRRegisterList;
     }
 
-    // Sort based on the register encoding values.
-    array_pod_sort(Regs.begin(), Regs.end());
-
     if (Kind == k_RegisterList && Regs.back().second == ARM::APSR)
       Kind = k_RegisterListWithAPSR;
 
+    assert(std::is_sorted(Regs.begin(), Regs.end()) &&
+           "Register list must be sorted by encoding");
+
     auto Op = make_unique<ARMOperand>(Kind);
-    for (SmallVectorImpl<std::pair<unsigned, unsigned>>::const_iterator
-           I = Regs.begin(), E = Regs.end(); I != E; ++I)
-      Op->Registers.push_back(I->second);
+    for (const auto &P : Regs)
+      Op->Registers.push_back(P.second);
 
     Op->StartLoc = StartLoc;
     Op->EndLoc = EndLoc;
@@ -4269,6 +4268,24 @@ static unsigned getNextRegister(unsigned Reg) {
   }
 }
 
+// Insert an <Encoding, Register> pair in an ordered vector. Return true on
+// success, or false, if duplicate encoding found.
+static bool
+insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
+                   unsigned Enc, unsigned Reg) {
+  Regs.emplace_back(Enc, Reg);
+  for (auto I = Regs.rbegin(), J = I + 1, E = Regs.rend(); J != E; ++I, ++J) {
+    if (J->first == Enc) {
+      Regs.erase(J.base());
+      return false;
+    }
+    if (J->first < Enc)
+      break;
+    std::swap(*I, *J);
+  }
+  return true;
+}
+
 /// Parse a register list.
 bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
                                      bool EnforceOrder) {
@@ -4294,7 +4311,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
   if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
     Reg = getDRegFromQReg(Reg);
     EReg = MRI->getEncodingValue(Reg);
-    Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+    Registers.emplace_back(EReg, Reg);
     ++Reg;
   }
   const MCRegisterClass *RC;
@@ -4311,7 +4328,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
 
   // Store the register.
   EReg = MRI->getEncodingValue(Reg);
-  Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+  Registers.emplace_back(EReg, Reg);
 
   // This starts immediately after the first register token in the list,
   // so we can see either a comma or a minus (range separator) as a legal
@@ -4342,7 +4359,11 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
       while (Reg != EndReg) {
         Reg = getNextRegister(Reg);
         EReg = MRI->getEncodingValue(Reg);
-        Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+        if (!insertNoDuplicates(Registers, EReg, Reg)) {
+          Warning(AfterMinusLoc, StringRef("duplicated register (") +
+                                     ARMInstPrinter::getRegisterName(Reg) +
+                                     ") in register list");
+        }
       }
       continue;
     }
@@ -4366,11 +4387,16 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
       // subset of GPRRegClassId except it contains APSR as well.
       RC = &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID];
     }
-    if (Reg == ARM::VPR && (RC == &ARMMCRegisterClasses[ARM::SPRRegClassID] ||
-                            RC == &ARMMCRegisterClasses[ARM::DPRRegClassID])) {
+    if (Reg == ARM::VPR &&
+        (RC == &ARMMCRegisterClasses[ARM::SPRRegClassID] ||
+         RC == &ARMMCRegisterClasses[ARM::DPRRegClassID] ||
+         RC == &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID])) {
       RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
       EReg = MRI->getEncodingValue(Reg);
-      Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+      if (!insertNoDuplicates(Registers, EReg, Reg)) {
+        Warning(RegLoc, "duplicated register (" + RegTok.getString() +
+                            ") in register list");
+      }
       continue;
     }
     // The register must be in the same register class as the first.
@@ -4387,21 +4413,19 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
       else if (!ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
         return Error(RegLoc, "register list not in ascending order");
     }
-    if (MRI->getEncodingValue(Reg) == MRI->getEncodingValue(OldReg)) {
-      Warning(RegLoc, "duplicated register (" + RegTok.getString() +
-              ") in register list");
-      continue;
-    }
     // VFP register lists must also be contiguous.
     if (RC != &ARMMCRegisterClasses[ARM::GPRRegClassID] &&
         RC != &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID] &&
         Reg != OldReg + 1)
       return Error(RegLoc, "non-contiguous register range");
     EReg = MRI->getEncodingValue(Reg);
-    Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+    if (!insertNoDuplicates(Registers, EReg, Reg)) {
+      Warning(RegLoc, "duplicated register (" + RegTok.getString() +
+                          ") in register list");
+    }
     if (isQReg) {
       EReg = MRI->getEncodingValue(++Reg);
-      Registers.push_back(std::pair<unsigned, unsigned>(EReg, Reg));
+      Registers.emplace_back(EReg, Reg);
     }
   }
 

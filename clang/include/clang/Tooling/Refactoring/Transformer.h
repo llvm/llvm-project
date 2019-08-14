@@ -160,11 +160,9 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
 void addInclude(RewriteRule &Rule, llvm::StringRef Header,
                 IncludeFormat Format = IncludeFormat::Quoted);
 
-/// Applies the first rule whose pattern matches; other rules are ignored.
-///
-/// N.B. All of the rules must use the same kind of matcher (that is, share a
-/// base class in the AST hierarchy).  However, this constraint is caused by an
-/// implementation detail and should be lifted in the future.
+/// Applies the first rule whose pattern matches; other rules are ignored.  If
+/// the matchers are independent then order doesn't matter. In that case,
+/// `applyFirst` is simply joining the set of rules into one.
 //
 // `applyFirst` is like an `anyOf` matcher with an edit action attached to each
 // of its cases. Anywhere you'd use `anyOf(m1.bind("id1"), m2.bind("id2"))` and
@@ -243,7 +241,18 @@ inline ASTEdit remove(RangeSelector S) {
 // public and well-supported and move them out of `detail`.
 namespace detail {
 /// Builds a single matcher for the rule, covering all of the rule's cases.
+/// Only supports Rules whose cases' matchers share the same base "kind"
+/// (`Stmt`, `Decl`, etc.)  Deprecated: use `buildMatchers` instead, which
+/// supports mixing matchers of different kinds.
 ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
+
+/// Builds a set of matchers that cover the rule (one for each distinct node
+/// matcher base kind: Stmt, Decl, etc.). Node-matchers for `QualType` and
+/// `Type` are not permitted, since such nodes carry no source location
+/// information and are therefore not relevant for rewriting. If any such
+/// matchers are included, will return an empty vector.
+std::vector<ast_matchers::internal::DynTypedMatcher>
+buildMatchers(const RewriteRule &Rule);
 
 /// Returns the \c Case of \c Rule that was selected in the match result.
 /// Assumes a matcher built with \c buildMatcher.

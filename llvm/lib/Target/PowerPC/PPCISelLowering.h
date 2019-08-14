@@ -1020,6 +1020,8 @@ namespace llvm {
                                          SDValue &FPOpOut,
                                          const SDLoc &dl) const;
 
+    SDValue getTOCEntry(SelectionDAG &DAG, const SDLoc &dl, SDValue GA) const;
+
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
