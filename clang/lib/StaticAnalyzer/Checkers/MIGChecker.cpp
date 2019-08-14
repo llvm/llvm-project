@@ -282,7 +282,8 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
       N);
 
   R->addRange(RS->getSourceRange());
-  bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
+  bugreporter::trackExpressionValue(N, RS->getRetValue(), *R,
+                                    bugreporter::TrackingKind::Thorough, false);
   C.emitReport(std::move(R));
 }
 
