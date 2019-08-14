@@ -47,6 +47,8 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
   // The TextMate scope lookup table. A token with scope index i has the scopes
   // on index i in the lookup table.
   scopeLookupTable: string[][];
+  // The rules for the current theme.
+  themeRuleMatcher: ThemeRuleMatcher;
   fillClientCapabilities(capabilities: vscodelc.ClientCapabilities) {
     // Extend the ClientCapabilities type and add semantic highlighting
     // capability to the object.
@@ -56,6 +58,12 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
     textDocumentCapabilities.semanticHighlightingCapabilities = {
       semanticHighlighting : true,
     };
+  }
+
+  async loadCurrentTheme() {
+    this.themeRuleMatcher = new ThemeRuleMatcher(
+        await loadTheme(vscode.workspace.getConfiguration('workbench')
+                            .get<string>('colorTheme')));
   }
 
   initialize(capabilities: vscodelc.ServerCapabilities,
@@ -68,6 +76,7 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
     if (!serverCapabilities.semanticHighlighting)
       return;
     this.scopeLookupTable = serverCapabilities.semanticHighlighting.scopes;
+    this.loadCurrentTheme();
   }
 
   handleNotification(params: SemanticHighlightingParams) {}
@@ -99,6 +108,39 @@ interface TokenColorRule {
   scope: string;
   // foreground is the color tokens of this scope should have.
   foreground: string;
+}
+
+export class ThemeRuleMatcher {
+  // The rules for the theme.
+  private themeRules: TokenColorRule[];
+  // A cache for the getBestThemeRule function.
+  private bestRuleCache: Map<string, TokenColorRule> = new Map();
+  constructor(rules: TokenColorRule[]) { this.themeRules = rules; }
+  // Returns the best rule for a scope.
+  getBestThemeRule(scope: string): TokenColorRule {
+    if (this.bestRuleCache.has(scope))
+      return this.bestRuleCache.get(scope);
+    let bestRule: TokenColorRule = {scope : '', foreground : ''};
+    this.themeRules.forEach((rule) => {
+      // The best rule for a scope is the rule that is the longest prefix of the
+      // scope (unless a perfect match exists in which case the perfect match is
+      // the best). If a rule is not a prefix and we tried to match with longest
+      // common prefix instead variables would be highlighted as `less`
+      // variables when using Light+ (as variable.other would be matched against
+      // variable.other.less in this case). Doing common prefix matching also
+      // means we could match variable.cpp to variable.css if variable.css
+      // occurs before variable in themeRules.
+      // FIXME: This is not defined in the TextMate standard (it is explicitly
+      // undefined, https://macromates.com/manual/en/scope_selectors). Might
+      // want to rank some other way.
+      if (scope.startsWith(rule.scope) &&
+          rule.scope.length > bestRule.scope.length)
+        // This rule matches and is more specific than the old rule.
+        bestRule = rule;
+    });
+    this.bestRuleCache.set(scope, bestRule);
+    return bestRule;
+  }
 }
 
 // Get all token color rules provided by the theme.

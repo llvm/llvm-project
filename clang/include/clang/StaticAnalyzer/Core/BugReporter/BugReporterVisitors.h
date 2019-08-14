@@ -132,6 +132,7 @@ class FindLastStoreBRVisitor final : public BugReporterVisitor {
 
   using TrackingKind = bugreporter::TrackingKind;
   TrackingKind TKind;
+  const StackFrameContext *OriginSFC;
 
 public:
   /// Creates a visitor for every VarDecl inside a Stmt and registers it with
@@ -145,11 +146,18 @@ public:
   /// \param EnableNullFPSuppression Whether we should employ false positive
   ///         suppression (inlined defensive checks, returned null).
   /// \param TKind May limit the amount of notes added to the bug report.
+  /// \param OriginSFC Only adds notes when the last store happened in a
+  ///        different stackframe to this one. Disregarded if the tracking kind
+  ///        is thorough.
+  ///        This is useful, because for non-tracked regions, notes about
+  ///        changes to its value in a nested stackframe could be pruned, and
+  ///        this visitor can prevent that without polluting the bugpath too
+  ///        much.
   FindLastStoreBRVisitor(KnownSVal V, const MemRegion *R,
-                         bool InEnableNullFPSuppression,
-                         TrackingKind TKind)
+                         bool InEnableNullFPSuppression, TrackingKind TKind,
+                         const StackFrameContext *OriginSFC = nullptr)
       : R(R), V(V), EnableNullFPSuppression(InEnableNullFPSuppression),
-        TKind(TKind) {
+        TKind(TKind), OriginSFC(OriginSFC) {
     assert(R);
   }
 

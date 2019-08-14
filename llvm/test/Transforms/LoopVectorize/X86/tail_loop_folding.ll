@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -S | FileCheck -check-prefix=PREDFLAG %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,7 +14,15 @@ define dso_local void @tail_folding_enabled(i32* noalias nocapture %A, i32* noal
 ; CHECK:  %index.next = add i64 %index, 8
 ; CHECK:  %12 = icmp eq i64 %index.next, 432
 ; CHECK:  br i1 %12, label %middle.block, label %vector.body, !llvm.loop !0
-
+; PREDFLAG-LABEL: tail_folding_enabled(
+; PREDFLAG:  vector.body:
+; PREDFLAG:  %wide.masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(
+; PREDFLAG:  %wide.masked.load1 = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(
+; PREDFLAG:  %8 = add nsw <8 x i32> %wide.masked.load1, %wide.masked.load
+; PREDFLAG:  call void @llvm.masked.store.v8i32.p0v8i32(
+; PREDFLAG:  %index.next = add i64 %index, 8
+; PREDFLAG:  %12 = icmp eq i64 %index.next, 432
+; PREDFLAG:  br i1 %12, label %middle.block, label %vector.body, !llvm.loop !0
 entry:
   br label %for.body
 
@@ -40,6 +49,15 @@ define dso_local void @tail_folding_disabled(i32* noalias nocapture %A, i32* noa
 ; CHECK-NOT:  @llvm.masked.load.v8i32.p0v8i32(
 ; CHECK-NOT:  @llvm.masked.store.v8i32.p0v8i32(
 ; CHECK:      br i1 %44, label {{.*}}, label %vector.body
+; PREDFLAG-LABEL: tail_folding_disabled(
+; PREDFLAG:  vector.body:
+; PREDFLAG:  %wide.masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(
+; PREDFLAG:  %wide.masked.load1 = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(
+; PREDFLAG:  %8 = add nsw <8 x i32> %wide.masked.load1, %wide.masked.load
+; PREDFLAG:  call void @llvm.masked.store.v8i32.p0v8i32(
+; PREDFLAG:  %index.next = add i64 %index, 8
+; PREDFLAG:  %12 = icmp eq i64 %index.next, 432
+; PREDFLAG:  br i1 %12, label %middle.block, label %vector.body, !llvm.loop !4
 entry:
   br label %for.body
 

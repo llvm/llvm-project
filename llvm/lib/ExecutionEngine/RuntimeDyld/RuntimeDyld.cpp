@@ -535,9 +535,10 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
       bool IsCode = Section.isText();
       bool IsReadOnly = isReadOnlyData(Section);
 
-      StringRef Name;
-      if (auto EC = Section.getName(Name))
-        return errorCodeToError(EC);
+      Expected<StringRef> NameOrErr = Section.getName();
+      if (!NameOrErr)
+        return NameOrErr.takeError();
+      StringRef Name = *NameOrErr;
 
       uint64_t StubBufSize = computeSectionStubBufSize(Obj, Section);
 
@@ -777,9 +778,10 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   // anyway, so we should guarantee that the alignment is always at least 1.
   Alignment = std::max(1u, Alignment);
 
-  StringRef Name;
-  if (auto EC = Section.getName(Name))
-    return errorCodeToError(EC);
+  Expected<StringRef> NameOrErr = Section.getName();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  StringRef Name = *NameOrErr;
 
   StubBufSize = computeSectionStubBufSize(Obj, Section);
 

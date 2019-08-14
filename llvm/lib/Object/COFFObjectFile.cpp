@@ -994,11 +994,12 @@ std::error_code COFFObjectFile::getSection(int32_t Index,
 std::error_code COFFObjectFile::getSection(StringRef SectionName,
                                            const coff_section *&Result) const {
   Result = nullptr;
-  StringRef SecName;
   for (const SectionRef &Section : sections()) {
-    if (std::error_code E = Section.getName(SecName))
-      return E;
-    if (SecName == SectionName) {
+    auto NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return errorToErrorCode(NameOrErr.takeError());
+
+    if (*NameOrErr == SectionName) {
       Result = getCOFFSection(Section);
       return std::error_code();
     }

@@ -9,6 +9,7 @@ declare void @has_noaliases(i32* noalias %p, i32* %q)
 declare void @one_arg(i32)
 
 @CG = constant i32 7
+@CG2 = constant i32 7
 @E = external global i8
 
 define i32 @foo() noreturn {
@@ -78,7 +79,9 @@ define i32 @foo() noreturn {
   call void (float) bitcast (void (i32)* @one_arg to void (float)*)(float 0.0)
 
 ; CHECK: Write to read-only memory
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG to i8*), i64 1, i1 0)
+call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG2 to i8*), i64 1, i1 0)
+; CHECK: Unusual: noalias argument aliases another argument
+call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG to i8*), i64 1, i1 0)
 
 ; CHECK: Undefined behavior: Buffer overflow
   %wider = bitcast i8* %buf to i16*

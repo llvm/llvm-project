@@ -177,6 +177,14 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
+// Indicates that an epilogue is undesired, predication is preferred.
+// This means that the vectorizer will try to fold the loop-tail (epilogue)
+// into the loop and predicate the loop body accordingly.
+static cl::opt<bool> PreferPredicateOverEpilog(
+    "prefer-predicate-over-epilog", cl::init(false), cl::Hidden,
+    cl::desc("Indicate that an epilogue is undesired, predication should be "
+             "used instead."));
+
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -906,7 +914,7 @@ enum ScalarEpilogueLowering {
   CM_ScalarEpilogueNotAllowedLowTripLoop,
 
   // Loop hint predicate indicating an epilogue is undesired.
-  CM_ScalarEpilogueNotNeededPredicatePragma
+  CM_ScalarEpilogueNotNeededUsePredicate
 };
 
 /// LoopVectorizationCostModel - estimates the expected speedups due to
@@ -4804,9 +4812,9 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF() {
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
     return computeFeasibleMaxVF(TC);
-  case CM_ScalarEpilogueNotNeededPredicatePragma:
+  case CM_ScalarEpilogueNotNeededUsePredicate:
     LLVM_DEBUG(
-        dbgs() << "LV: vector predicate hint found.\n"
+        dbgs() << "LV: vector predicate hint/switch found.\n"
                << "LV: Not allowing scalar epilogue, creating predicated "
                << "vector loop.\n");
     break;
@@ -7298,8 +7306,8 @@ getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
       (F->hasOptSize() ||
        llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI)))
     SEL = CM_ScalarEpilogueNotAllowedOptSize;
-  else if (Hints.getPredicate())
-    SEL = CM_ScalarEpilogueNotNeededPredicatePragma;
+  else if (PreferPredicateOverEpilog || Hints.getPredicate()) 
+    SEL = CM_ScalarEpilogueNotNeededUsePredicate;
 
   return SEL;
 }

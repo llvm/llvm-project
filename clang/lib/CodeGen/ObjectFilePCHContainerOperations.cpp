@@ -335,7 +335,11 @@ ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
     // Find the clang AST section in the container.
     for (auto &Section : OF->sections()) {
       StringRef Name;
-      Section.getName(Name);
+      if (Expected<StringRef> NameOrErr = Section.getName())
+        Name = *NameOrErr;
+      else
+        consumeError(NameOrErr.takeError());
+
       if ((!IsCOFF && Name == "__clangast") || (IsCOFF && Name == "clangast")) {
         if (Expected<StringRef> E = Section.getContents())
           return *E;

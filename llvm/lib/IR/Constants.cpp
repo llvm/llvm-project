@@ -575,13 +575,10 @@ void Constant::removeDeadConstantUsers() const {
     }
 
     // If the constant was dead, then the iterator is invalidated.
-    if (LastNonDeadUser == E) {
+    if (LastNonDeadUser == E)
       I = user_begin();
-      if (I == E) break;
-    } else {
-      I = LastNonDeadUser;
-      ++I;
-    }
+    else
+      I = std::next(LastNonDeadUser);
   }
 }
 

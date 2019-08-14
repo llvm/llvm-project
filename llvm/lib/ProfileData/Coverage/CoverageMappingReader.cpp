@@ -666,11 +666,11 @@ static Expected<SectionRef> lookupSection(ObjectFile &OF, StringRef Name) {
   };
   Name = stripSuffix(Name);
 
-  StringRef FoundName;
   for (const auto &Section : OF.sections()) {
-    if (auto EC = Section.getName(FoundName))
-      return errorCodeToError(EC);
-    if (stripSuffix(FoundName) == Name)
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    if (stripSuffix(*NameOrErr) == Name)
       return Section;
   }
   return make_error<CoverageMapError>(coveragemap_error::no_data_found);

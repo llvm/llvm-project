@@ -392,9 +392,13 @@ ELFObjectFileBase::getPltAddresses() const {
     return {};
   Optional<SectionRef> Plt = None, RelaPlt = None, GotPlt = None;
   for (const SectionRef &Section : sections()) {
-    StringRef Name;
-    if (Section.getName(Name))
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
       continue;
+    }
+    StringRef Name = *NameOrErr;
+
     if (Name == ".plt")
       Plt = Section;
     else if (Name == ".rela.plt" || Name == ".rel.plt")

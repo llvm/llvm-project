@@ -855,6 +855,10 @@ public:
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
   void setHasNoReturnElement() { HasNoReturnElement = true; }
 
+  /// Returns true if the block would eventually end with a sink (a noreturn
+  /// node).
+  bool isInevitablySinking() const;
+
   CFGTerminator getTerminator() const { return Terminator; }
 
   Stmt *getTerminatorStmt() { return Terminator.getStmt(); }

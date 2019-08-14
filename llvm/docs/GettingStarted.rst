@@ -235,15 +235,6 @@ popular host toolchains for specific minimum versions in our build systems:
 * GCC 5.1
 * Visual Studio 2017
 
-The below versions currently soft-error as we transition to the new compiler
-versions listed above. The LLVM codebase is currently known to compile correctly
-with the following compilers, though this will change in the near future:
-
-* Clang 3.1
-* Apple Clang 3.1
-* GCC 4.8
-* Visual Studio 2017
-
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.
 Also note that older versions of these compilers have often crashed or
