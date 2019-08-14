@@ -23,8 +23,11 @@ set(LLVM_CXX_STD_default "c++14")
 if (LLVM_ENABLE_CXX1Z)
   set(LLVM_CXX_STD_default "c++1z")
 endif()
+if (LLVM_CXX_STD STREQUAL "c++11")
+  set(LLVM_CXX_STD_force FORCE)
+endif()
 set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
-    CACHE STRING "C++ standard to use for compilation.")
+    CACHE STRING "C++ standard to use for compilation." ${LLVM_CXX_STD_force})
 
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
