@@ -532,6 +532,7 @@ void f(int flag) {
 }
 
 #undef assert
+
 } // end of namespace dont_track_assertlike_and_conditions
 
 namespace dont_track_assertlike_or_conditions {
@@ -697,3 +698,37 @@ void f(int flag) {
 
 #undef assert
 } // end of namespace dont_track_assert2like_or_conditions
+
+namespace only_track_the_evaluated_condition {
+
+bool coin();
+
+void bar(int &flag) {
+  flag = coin(); // tracking-note{{Value assigned to 'flag'}}
+}
+
+void bar2(int &flag2) {
+  flag2 = coin();
+}
+
+void f(int *x) {
+  if (x) // expected-note{{Assuming 'x' is null}}
+         // debug-note@-1{{Tracking condition 'x'}}
+         // expected-note@-2{{Taking false branch}}
+    return;
+
+  int flag, flag2;
+  bar(flag); // tracking-note{{Calling 'bar'}}
+             // tracking-note@-1{{Returning from 'bar'}}
+  bar2(flag2);
+
+  if (flag && flag2) // expected-note   {{Assuming 'flag' is 0}}
+                     // expected-note@-1{{Left side of '&&' is false}}
+                     // debug-note@-2{{Tracking condition 'flag'}}
+    return;
+
+  *x = 5; // expected-warning{{Dereference of null pointer}}
+          // expected-note@-1{{Dereference of null pointer}}
+}
+
+} // end of namespace only_track_the_evaluated_condition
