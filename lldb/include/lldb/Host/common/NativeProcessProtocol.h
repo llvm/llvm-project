@@ -430,6 +430,8 @@ protected:
   NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
                         NativeDelegate &delegate);
 
+  void SetID(lldb::pid_t pid) { m_pid = pid; }
+
   // interface for state handling
   void SetState(lldb::StateType state, bool notify_delegates = true);
 

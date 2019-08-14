@@ -2508,7 +2508,7 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 template <class ELFT>
 static std::vector<GdbIndexSection::NameAttrEntry>
 readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
-                     const std::vector<GdbIndexSection::CuEntry> &cUs) {
+                     const std::vector<GdbIndexSection::CuEntry> &cus) {
   const DWARFSection &pubNames = obj.getGnuPubnamesSection();
   const DWARFSection &pubTypes = obj.getGnuPubtypesSection();
 
@@ -2520,12 +2520,11 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
       // don't know how many compilation units precede this object to compute
       // cuIndex, we compute (kind << 24 | cuIndexInThisObject) instead, and add
       // the number of preceding compilation units later.
-      uint32_t i =
-          lower_bound(cUs, set.Offset,
-                      [](GdbIndexSection::CuEntry cu, uint32_t offset) {
-                        return cu.cuOffset < offset;
-                      }) -
-          cUs.begin();
+      uint32_t i = llvm::partition_point(cus,
+                                         [&](GdbIndexSection::CuEntry cu) {
+                                           return cu.cuOffset < set.Offset;
+                                         }) -
+                   cus.begin();
       for (const DWARFDebugPubTable::Entry &ent : set.Entries)
         ret.push_back({{ent.Name, computeGdbHash(ent.Name)},
                        (ent.Descriptor.toBits() << 24) | i});
