@@ -671,7 +671,12 @@ namespace llvm {
       return { getVectorNumElements(), isScalableVector() };
     }
 
-    unsigned getSizeInBits() const {
+    /// Returns the size of the specified MVT in bits.
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getSizeInBits() const {
       switch (SimpleTy) {
       default:
         llvm_unreachable("getSizeInBits called on extended MVT.");
@@ -691,25 +696,25 @@ namespace llvm {
       case Metadata:
         llvm_unreachable("Value type is metadata.");
       case i1:
-      case v1i1:
-      case nxv1i1: return 1;
-      case v2i1:
-      case nxv2i1: return 2;
-      case v4i1:
-      case nxv4i1: return 4;
+      case v1i1: return TypeSize::Fixed(1);
+      case nxv1i1: return TypeSize::Scalable(1);
+      case v2i1: return TypeSize::Fixed(2);
+      case nxv2i1: return TypeSize::Scalable(2);
+      case v4i1: return TypeSize::Fixed(4);
+      case nxv4i1: return TypeSize::Scalable(4);
       case i8  :
       case v1i8:
-      case v8i1:
+      case v8i1: return TypeSize::Fixed(8);
       case nxv1i8:
-      case nxv8i1: return 8;
+      case nxv8i1: return TypeSize::Scalable(8);
       case i16 :
       case f16:
       case v16i1:
       case v2i8:
-      case v1i16:
+      case v1i16: return TypeSize::Fixed(16);
       case nxv16i1:
       case nxv2i8:
-      case nxv1i16: return 16;
+      case nxv1i16: return TypeSize::Scalable(16);
       case f32 :
       case i32 :
       case v32i1:
@@ -717,15 +722,15 @@ namespace llvm {
       case v2i16:
       case v2f16:
       case v1f32:
-      case v1i32:
+      case v1i32: return TypeSize::Fixed(32);
       case nxv32i1:
       case nxv4i8:
       case nxv2i16:
       case nxv1i32:
       case nxv2f16:
-      case nxv1f32: return 32;
+      case nxv1f32: return TypeSize::Scalable(32);
       case v3i16:
-      case v3f16: return 48;
+      case v3f16: return TypeSize::Fixed(48);
       case x86mmx:
       case f64 :
       case i64 :
@@ -736,17 +741,17 @@ namespace llvm {
       case v1i64:
       case v4f16:
       case v2f32:
-      case v1f64:
+      case v1f64: return TypeSize::Fixed(64);
       case nxv8i8:
       case nxv4i16:
       case nxv2i32:
       case nxv1i64:
       case nxv4f16:
       case nxv2f32:
-      case nxv1f64: return 64;
-      case f80 :  return 80;
+      case nxv1f64: return TypeSize::Scalable(64);
+      case f80 :  return TypeSize::Fixed(80);
       case v3i32:
-      case v3f32: return 96;
+      case v3f32: return TypeSize::Fixed(96);
       case f128:
       case ppcf128:
       case i128:
@@ -758,16 +763,16 @@ namespace llvm {
       case v1i128:
       case v8f16:
       case v4f32:
-      case v2f64:
+      case v2f64: return TypeSize::Fixed(128);
       case nxv16i8:
       case nxv8i16:
       case nxv4i32:
       case nxv2i64:
       case nxv8f16:
       case nxv4f32:
-      case nxv2f64: return 128;
+      case nxv2f64: return TypeSize::Scalable(128);
       case v5i32:
-      case v5f32: return 160;
+      case v5f32: return TypeSize::Fixed(160);
       case v256i1:
       case v32i8:
       case v16i16:
@@ -775,13 +780,13 @@ namespace llvm {
       case v4i64:
       case v16f16:
       case v8f32:
-      case v4f64:
+      case v4f64: return TypeSize::Fixed(256);
       case nxv32i8:
       case nxv16i16:
       case nxv8i32:
       case nxv4i64:
       case nxv8f32:
-      case nxv4f64: return 256;
+      case nxv4f64: return TypeSize::Scalable(256);
       case v512i1:
       case v64i8:
       case v32i16:
@@ -789,54 +794,69 @@ namespace llvm {
       case v8i64:
       case v32f16:
       case v16f32:
-      case v8f64:
+      case v8f64: return TypeSize::Fixed(512);
       case nxv32i16:
       case nxv16i32:
       case nxv8i64:
       case nxv16f32:
-      case nxv8f64: return 512;
+      case nxv8f64: return TypeSize::Scalable(512);
       case v1024i1:
       case v128i8:
       case v64i16:
       case v32i32:
       case v16i64:
-      case v32f32:
+      case v32f32: return TypeSize::Fixed(1024);
       case nxv32i32:
-      case nxv16i64: return 1024;
+      case nxv16i64: return TypeSize::Scalable(1024);
       case v256i8:
       case v128i16:
       case v64i32:
       case v32i64:
-      case v64f32:
-      case nxv32i64: return 2048;
+      case v64f32: return TypeSize::Fixed(2048);
+      case nxv32i64: return TypeSize::Scalable(2048);
       case v128i32:
-      case v128f32:  return 4096;
+      case v128f32:  return TypeSize::Fixed(4096);
       case v256i32:
-      case v256f32:  return 8192;
+      case v256f32:  return TypeSize::Fixed(8192);
       case v512i32:
-      case v512f32:  return 16384;
+      case v512f32:  return TypeSize::Fixed(16384);
       case v1024i32:
-      case v1024f32:  return 32768;
+      case v1024f32:  return TypeSize::Fixed(32768);
       case v2048i32:
-      case v2048f32:  return 65536;
-      case exnref: return 0; // opaque type
+      case v2048f32:  return TypeSize::Fixed(65536);
+      case exnref: return TypeSize::Fixed(0); // opaque type
       }
     }
 
-    unsigned getScalarSizeInBits() const {
+    TypeSize getScalarSizeInBits() const {
       return getScalarType().getSizeInBits();
     }
 
     /// Return the number of bytes overwritten by a store of the specified value
     /// type.
-    unsigned getStoreSize() const {
-      return (getSizeInBits() + 7) / 8;
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getStoreSize() const {
+      TypeSize BaseSize = getSizeInBits();
+      return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
     }
 
     /// Return the number of bits overwritten by a store of the specified value
     /// type.
-    unsigned getStoreSizeInBits() const {
+    ///
+    /// If the value type is a scalable vector type, the scalable property will
+    /// be set and the runtime size will be a positive integer multiple of the
+    /// base size.
+    TypeSize getStoreSizeInBits() const {
       return getStoreSize() * 8;
+    }
+
+    /// Returns true if the number of bits for the type is a multiple of an
+    /// 8-bit byte.
+    bool isByteSized() const {
+      return getSizeInBits().isByteSized();
     }
 
     /// Return true if this has more bits than VT.

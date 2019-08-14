@@ -9937,7 +9937,7 @@ static SDValue performBitcastCombine(SDNode *N,
 
   // Only interested in 64-bit vectors as the ultimate result.
   EVT VT = N->getValueType(0);
-  if (!VT.isVector())
+  if (!VT.isVector() || VT.isScalableVector())
     return SDValue();
   if (VT.getSimpleVT().getSizeInBits() != 64)
     return SDValue();

@@ -4304,7 +4304,10 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   MachineMemOperand *MMO =
     DAG.getMachineFunction().
     getMachineMemOperand(MachinePointerInfo(PtrOperand),
-                          MachineMemOperand::MOStore,  VT.getStoreSize(),
+                          MachineMemOperand::MOStore,
+                          // TODO: Make MachineMemOperands aware of scalable
+                          // vectors.
+                          VT.getStoreSize().getKnownMinSize(),
                           Alignment, AAInfo);
   SDValue StoreNode = DAG.getMaskedStore(getRoot(), sdl, Src0, Ptr, Mask, VT,
                                          MMO, false /* Truncating */,
@@ -4408,7 +4411,10 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   const Value *MemOpBasePtr = UniformBase ? BasePtr : nullptr;
   MachineMemOperand *MMO = DAG.getMachineFunction().
     getMachineMemOperand(MachinePointerInfo(MemOpBasePtr),
-                         MachineMemOperand::MOStore,  VT.getStoreSize(),
+                         MachineMemOperand::MOStore,
+                         // TODO: Make MachineMemOperands aware of scalable
+                         // vectors.
+                         VT.getStoreSize().getKnownMinSize(),
                          Alignment, AAInfo);
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -4477,7 +4483,10 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   MachineMemOperand *MMO =
     DAG.getMachineFunction().
     getMachineMemOperand(MachinePointerInfo(PtrOperand),
-                          MachineMemOperand::MOLoad,  VT.getStoreSize(),
+                          MachineMemOperand::MOLoad,
+                          // TODO: Make MachineMemOperands aware of scalable
+                          // vectors.
+                          VT.getStoreSize().getKnownMinSize(),
                           Alignment, AAInfo, Ranges);
 
   SDValue Load = DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Mask, Src0, VT, MMO,
@@ -4528,7 +4537,10 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   MachineMemOperand *MMO =
     DAG.getMachineFunction().
     getMachineMemOperand(MachinePointerInfo(UniformBase ? BasePtr : nullptr),
-                         MachineMemOperand::MOLoad,  VT.getStoreSize(),
+                         MachineMemOperand::MOLoad,
+                         // TODO: Make MachineMemOperands aware of scalable
+                         // vectors.
+                         VT.getStoreSize().getKnownMinSize(),
                          Alignment, AAInfo, Ranges);
 
   if (!UniformBase) {
@@ -9248,9 +9260,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
       for (unsigned j = 0; j != NumParts; ++j) {
         // if it isn't first piece, alignment must be 1
+        // For scalable vectors the scalable part is currently handled
+        // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(Flags, Parts[j].getValueType(), VT,
-                               i < CLI.NumFixedArgs,
-                               i, j*Parts[j].getValueType().getStoreSize());
+                    i < CLI.NumFixedArgs, i,
+                    j*Parts[j].getValueType().getStoreSize().getKnownMinSize());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
         else if (j != 0) {
@@ -9719,8 +9733,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       unsigned NumRegs = TLI->getNumRegistersForCallingConv(
           *CurDAG->getContext(), F.getCallingConv(), VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
+        // For scalable vectors, use the minimum size; individual targets
+        // are responsible for handling scalable vector arguments and
+        // return values.
         ISD::InputArg MyFlags(Flags, RegisterVT, VT, isArgValueUsed,
-                              ArgNo, PartBase+i*RegisterVT.getStoreSize());
+                 ArgNo, PartBase+i*RegisterVT.getStoreSize().getKnownMinSize());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
@@ -9733,7 +9750,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
       if (NeedsRegBlock && Value == NumValues - 1)
         Ins[Ins.size() - 1].Flags.setInConsecutiveRegsLast();
-      PartBase += VT.getStoreSize();
+      PartBase += VT.getStoreSize().getKnownMinSize();
     }
   }
 

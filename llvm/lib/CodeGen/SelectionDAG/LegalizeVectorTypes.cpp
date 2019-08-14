@@ -23,6 +23,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TypeSize.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "legalize-types"
@@ -4680,7 +4681,8 @@ static EVT FindMemType(SelectionDAG& DAG, const TargetLowering &TLI,
                        unsigned Width, EVT WidenVT,
                        unsigned Align = 0, unsigned WidenEx = 0) {
   EVT WidenEltVT = WidenVT.getVectorElementType();
-  unsigned WidenWidth = WidenVT.getSizeInBits();
+  const bool Scalable = WidenVT.isScalableVector();
+  unsigned WidenWidth = WidenVT.getSizeInBits().getKnownMinSize();
   unsigned WidenEltWidth = WidenEltVT.getSizeInBits();
   unsigned AlignInBits = Align*8;
 
@@ -4691,23 +4693,27 @@ static EVT FindMemType(SelectionDAG& DAG, const TargetLowering &TLI,
 
   // See if there is larger legal integer than the element type to load/store.
   unsigned VT;
-  for (VT = (unsigned)MVT::LAST_INTEGER_VALUETYPE;
-       VT >= (unsigned)MVT::FIRST_INTEGER_VALUETYPE; --VT) {
-    EVT MemVT((MVT::SimpleValueType) VT);
-    unsigned MemVTWidth = MemVT.getSizeInBits();
-    if (MemVT.getSizeInBits() <= WidenEltWidth)
-      break;
-    auto Action = TLI.getTypeAction(*DAG.getContext(), MemVT);
-    if ((Action == TargetLowering::TypeLegal ||
-         Action == TargetLowering::TypePromoteInteger) &&
-        (WidenWidth % MemVTWidth) == 0 &&
-        isPowerOf2_32(WidenWidth / MemVTWidth) &&
-        (MemVTWidth <= Width ||
-         (Align!=0 && MemVTWidth<=AlignInBits && MemVTWidth<=Width+WidenEx))) {
-      if (MemVTWidth == WidenWidth)
-        return MemVT;
-      RetVT = MemVT;
-      break;
+  // Don't bother looking for an integer type if the vector is scalable, skip
+  // to vector types.
+  if (!Scalable) {
+    for (VT = (unsigned)MVT::LAST_INTEGER_VALUETYPE;
+         VT >= (unsigned)MVT::FIRST_INTEGER_VALUETYPE; --VT) {
+      EVT MemVT((MVT::SimpleValueType) VT);
+      unsigned MemVTWidth = MemVT.getSizeInBits();
+      if (MemVT.getSizeInBits() <= WidenEltWidth)
+        break;
+      auto Action = TLI.getTypeAction(*DAG.getContext(), MemVT);
+      if ((Action == TargetLowering::TypeLegal ||
+           Action == TargetLowering::TypePromoteInteger) &&
+          (WidenWidth % MemVTWidth) == 0 &&
+          isPowerOf2_32(WidenWidth / MemVTWidth) &&
+          (MemVTWidth <= Width ||
+           (Align!=0 && MemVTWidth<=AlignInBits && MemVTWidth<=Width+WidenEx))) {
+        if (MemVTWidth == WidenWidth)
+          return MemVT;
+        RetVT = MemVT;
+        break;
+      }
     }
   }
 
@@ -4716,7 +4722,10 @@ static EVT FindMemType(SelectionDAG& DAG, const TargetLowering &TLI,
   for (VT = (unsigned)MVT::LAST_VECTOR_VALUETYPE;
        VT >= (unsigned)MVT::FIRST_VECTOR_VALUETYPE; --VT) {
     EVT MemVT = (MVT::SimpleValueType) VT;
-    unsigned MemVTWidth = MemVT.getSizeInBits();
+    // Skip vector MVTs which don't match the scalable property of WidenVT.
+    if (Scalable != MemVT.isScalableVector())
+      continue;
+    unsigned MemVTWidth = MemVT.getSizeInBits().getKnownMinSize();
     auto Action = TLI.getTypeAction(*DAG.getContext(), MemVT);
     if ((Action == TargetLowering::TypeLegal ||
          Action == TargetLowering::TypePromoteInteger) &&

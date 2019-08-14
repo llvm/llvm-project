@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/TypeSize.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -170,11 +171,15 @@ public:
   }
 
   /// Returns the size of the value in bits.
-  unsigned getValueSizeInBits() const {
+  ///
+  /// If the value type is a scalable vector type, the scalable property will
+  /// be set and the runtime size will be a positive integer multiple of the
+  /// base size.
+  TypeSize getValueSizeInBits() const {
     return getValueType().getSizeInBits();
   }
 
-  unsigned getScalarValueSizeInBits() const {
+  TypeSize getScalarValueSizeInBits() const {
     return getValueType().getScalarType().getSizeInBits();
   }
 
@@ -1022,7 +1027,11 @@ public:
   }
 
   /// Returns MVT::getSizeInBits(getValueType(ResNo)).
-  unsigned getValueSizeInBits(unsigned ResNo) const {
+  ///
+  /// If the value type is a scalable vector type, the scalable property will
+  /// be set and the runtime size will be a positive integer multiple of the
+  /// base size.
+  TypeSize getValueSizeInBits(unsigned ResNo) const {
     return getValueType(ResNo).getSizeInBits();
   }
 

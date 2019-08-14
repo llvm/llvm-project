@@ -122,7 +122,8 @@ unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
   if (VT.isVector())
-    return std::max((VT.getSizeInBits() / (Subtarget.isABI_O32() ? 32 : 64)),
+    return std::max(((unsigned)VT.getSizeInBits() /
+                     (Subtarget.isABI_O32() ? 32 : 64)),
                     1U);
   return MipsTargetLowering::getNumRegisters(Context, VT);
 }
