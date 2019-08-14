@@ -925,6 +925,12 @@ def process_is_running(pid, unknown_value=True):
         # Convert text pids to ints
         process_ids = [int(text_pid)
                        for text_pid in text_process_ids if text_pid != '']
+    elif platform.system() == 'Windows':
+        output = subprocess.check_output(
+            "for /f \"tokens=2 delims=,\" %F in ('tasklist /nh /fi \"PID ne 0\" /fo csv') do @echo %~F", shell=True).decode("utf-8")
+        text_process_ids = output.split('\n')[1:]
+        process_ids = [int(text_pid)
+                       for text_pid in text_process_ids if text_pid != '']
     # elif {your_platform_here}:
     #   fill in process_ids as a list of int type process IDs running on
     #   the local system.
