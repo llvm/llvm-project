@@ -61,11 +61,12 @@ private:
     return llvm::make_unique<SectionMemoryManager>();
   }
 
-  SimpleJIT(std::unique_ptr<TargetMachine> TM, DataLayout DL,
-            DynamicLibrarySearchGenerator ProcessSymbolsGenerator)
+  SimpleJIT(
+      std::unique_ptr<TargetMachine> TM, DataLayout DL,
+      std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
       : TM(std::move(TM)), DL(std::move(DL)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-    ES.getMainJITDylib().setGenerator(std::move(ProcessSymbolsGenerator));
+    ES.getMainJITDylib().addGenerator(std::move(ProcessSymbolsGenerator));
   }
 
 public:

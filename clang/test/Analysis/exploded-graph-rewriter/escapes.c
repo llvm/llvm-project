@@ -9,7 +9,7 @@
 // UNSUPPORTED: system-windows
 
 void escapes() {
-  // CHECK: <td align="left"><b>Store: </b></td>
+  // CHECK: <td align="left"><b>Store: </b> <font color="gray">(0x{{[0-9a-f]*}})</font></td>
   // CHECK-SAME: <td align="left">foo</td><td align="left">0</td>
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
   // CHECK: <td align="left"><b>Environment: </b></td>

@@ -26,3 +26,4 @@ c:@extSubSCN ctu-other.cpp.ast
 c:@extSCC ctu-other.cpp.ast
 c:@extU ctu-other.cpp.ast
 c:@S@TestAnonUnionUSR@Test ctu-other.cpp.ast
+c:@F@testImportOfIncompleteDefaultParmDuringImport#I# ctu-other.cpp.ast

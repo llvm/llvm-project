@@ -70,9 +70,9 @@ private:
       ID.AddPointer(ObjectRegion);
     }
 
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     BugReport &BR) override;
   };
 };
 } // end namespace
@@ -80,10 +80,8 @@ private:
 // GDM (generic data map) to the memregion of this for the ctor and dtor.
 REGISTER_MAP_WITH_PROGRAMSTATE(CtorDtorMap, const MemRegion *, ObjectState)
 
-std::shared_ptr<PathDiagnosticPiece>
-VirtualCallChecker::VirtualBugVisitor::VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &) {
+PathDiagnosticPieceRef VirtualCallChecker::VirtualBugVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &) {
   // We need the last ctor/dtor which call the virtual function.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)

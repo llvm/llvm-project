@@ -38,7 +38,9 @@ version checks".
 -----------------
 
 This function-like macro takes a single identifier argument that is the name of
-a builtin function.  It evaluates to 1 if the builtin is supported or 0 if not.
+a builtin function, a builtin pseudo-function (taking one or more type
+arguments), or a builtin template.
+It evaluates to 1 if the builtin is supported or 0 if not.
 It can be used like this:
 
 .. code-block:: c++
@@ -54,6 +56,14 @@ It can be used like this:
     abort();
   #endif
   ...
+
+.. note::
+
+  Prior to Clang 10, ``__has_builtin`` could not be used to detect most builtin
+  pseudo-functions.
+
+  ``__has_builtin`` should not be used to detect support for a builtin macro;
+  use ``#ifdef`` instead.
 
 .. _langext-__has_feature-__has_extension:
 
@@ -1041,8 +1051,8 @@ For example, compiling code with ``-fmodules`` enables the use of Modules.
 
 More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
-Checks for Type Trait Primitives
-================================
+Type Trait Primitives
+=====================
 
 Type trait primitives are special builtin constant expressions that can be used
 by the standard C++ library to facilitate or simplify the implementation of
@@ -1058,20 +1068,173 @@ the supported set of system headers, currently:
 
 Clang supports the `GNU C++ type traits
 <https://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html>`_ and a subset of the
-`Microsoft Visual C++ Type traits
-<https://msdn.microsoft.com/en-us/library/ms177194(v=VS.100).aspx>`_.
+`Microsoft Visual C++ type traits
+<https://msdn.microsoft.com/en-us/library/ms177194(v=VS.100).aspx>`_,
+as well as nearly all of the
+`Embarcadero C++ type traits
+<http://docwiki.embarcadero.com/RADStudio/Rio/en/Type_Trait_Functions_(C%2B%2B11)_Index>`_.
 
-Feature detection is supported only for some of the primitives at present. User
-code should not use these checks because they bear no direct relation to the
-actual set of type traits supported by the C++ standard library.
+The following type trait primitives are supported by Clang. Those traits marked
+(C++) provide implementations for type traits specified by the C++ standard;
+``__X(...)`` has the same semantics and constraints as the corresponding
+``std::X_t<...>`` or ``std::X_v<...>`` type trait.
 
-For type trait ``__X``, ``__has_extension(X)`` indicates the presence of the
-type trait primitive in the compiler. A simplistic usage example as might be
-seen in standard C++ headers follows:
+* ``__array_rank(type)`` (Embarcadero):
+  Returns the number of levels of array in the type ``type``:
+  ``0`` if ``type`` is not an array type, and
+  ``__array_rank(element) + 1`` if ``type`` is an array of ``element``.
+* ``__array_extent(type, dim)`` (Embarcadero):
+  The ``dim``'th array bound in the type ``type``, or ``0`` if
+  ``dim >= __array_rank(type)``.
+* ``__has_nothrow_assign`` (GNU, Microsoft, Embarcadero):
+  Deprecated, use ``__is_nothrow_assignable`` instead.
+* ``__has_nothrow_move_assign`` (GNU, Microsoft):
+  Deprecated, use ``__is_nothrow_assignable`` instead.
+* ``__has_nothrow_copy`` (GNU, Microsoft):
+  Deprecated, use ``__is_nothrow_constructible`` instead.
+* ``__has_nothrow_constructor`` (GNU, Microsoft):
+  Deprecated, use ``__is_nothrow_constructible`` instead.
+* ``__has_trivial_assign`` (GNU, Microsoft, Embarcadero):
+  Deprecated, use ``__is_trivially_assignable`` instead.
+* ``__has_trivial_move_assign`` (GNU, Microsoft):
+  Deprecated, use ``__is_trivially_assignable`` instead.
+* ``__has_trivial_copy`` (GNU, Microsoft):
+  Deprecated, use ``__is_trivially_constructible`` instead.
+* ``__has_trivial_constructor`` (GNU, Microsoft):
+  Deprecated, use ``__is_trivially_constructible`` instead.
+* ``__has_trivial_move_constructor`` (GNU, Microsoft):
+  Deprecated, use ``__is_trivially_constructible`` instead.
+* ``__has_trivial_destructor`` (GNU, Microsoft, Embarcadero):
+  Deprecated, use ``__is_trivially_destructible`` instead.
+* ``__has_unique_object_representations`` (C++, GNU)
+* ``__has_virtual_destructor`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_abstract`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_aggregate`` (C++, GNU, Microsoft)
+* ``__is_arithmetic`` (C++, Embarcadero)
+* ``__is_array`` (C++, Embarcadero)
+* ``__is_assignable`` (C++, MSVC 2015)
+* ``__is_base_of`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_class`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_complete_type(type)`` (Embarcadero):
+  Return ``true`` if ``type`` is a complete type.
+  Warning: this trait is dangerous because it can return different values at
+  different points in the same program.
+* ``__is_compound`` (C++, Embarcadero)
+* ``__is_const`` (C++, Embarcadero)
+* ``__is_constructible`` (C++, MSVC 2013)
+* ``__is_convertible`` (C++, Embarcadero)
+* ``__is_convertible_to`` (Microsoft):
+  Synonym for ``__is_convertible``.
+* ``__is_destructible`` (C++, MSVC 2013):
+  Only available in ``-fms-extensions`` mode.
+* ``__is_empty`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_enum`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_final`` (C++, GNU, Microsoft)
+* ``__is_floating_point`` (C++, Embarcadero)
+* ``__is_function`` (C++, Embarcadero)
+* ``__is_fundamental`` (C++, Embarcadero)
+* ``__is_integral`` (C++, Embarcadero)
+* ``__is_interface_class`` (Microsoft):
+  Returns ``false``, even for types defined with ``__interface``.
+* ``__is_literal`` (Clang):
+  Synonym for ``__is_literal_type``.
+* ``__is_literal_type`` (C++, GNU, Microsoft):
+  Note, the corresponding standard trait was deprecated in C++17
+  and removed in C++20.
+* ``__is_lvalue_reference`` (C++, Embarcadero)
+* ``__is_member_object_pointer`` (C++, Embarcadero)
+* ``__is_member_function_pointer`` (C++, Embarcadero)
+* ``__is_member_pointer`` (C++, Embarcadero)
+* ``__is_nothrow_assignable`` (C++, MSVC 2013)
+* ``__is_nothrow_constructible`` (C++, MSVC 2013)
+* ``__is_nothrow_destructible`` (C++, MSVC 2013)
+  Only available in ``-fms-extensions`` mode.
+* ``__is_object`` (C++, Embarcadero)
+* ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
+  Note, the corresponding standard trait was deprecated in C++20.
+* ``__is_pointer`` (C++, Embarcadero)
+* ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_reference`` (C++, Embarcadero)
+* ``__is_rvalue_reference`` (C++, Embarcadero)
+* ``__is_same`` (C++, Embarcadero)
+* ``__is_scalar`` (C++, Embarcadero)
+* ``__is_sealed`` (Microsoft):
+  Synonym for ``__is_final``.
+* ``__is_signed`` (C++, Embarcadero):
+  Note that this currently returns true for enumeration types if the underlying
+  type is signed, and returns false for floating-point types, in violation of
+  the requirements for ``std::is_signed``. This behavior is likely to change in
+  a future version of Clang.
+* ``__is_standard_layout`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_trivial`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_trivially_assignable`` (C++, GNU, Microsoft)
+* ``__is_trivially_constructible`` (C++, GNU, Microsoft)
+* ``__is_trivially_copyable`` (C++, GNU, Microsoft)
+* ``__is_trivially_destructible`` (C++, MSVC 2013)
+* ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_unsigned`` (C++, Embarcadero)
+  Note that this currently returns true for enumeration types if the underlying
+  type is unsigned, in violation of the requirements for ``std::is_unsigned``.
+  This behavior is likely to change in a future version of Clang.
+* ``__is_void`` (C++, Embarcadero)
+* ``__is_volatile`` (C++, Embarcadero)
+* ``__reference_binds_to_temporary(T, U)`` (Clang):  Determines whether a
+  reference of type ``T`` bound to an expression of type ``U`` would bind to a
+  materialized temporary object. If ``T`` is not a reference type the result
+  is false. Note this trait will also return false when the initialization of
+  ``T`` from ``U`` is ill-formed.
+* ``__underlying_type`` (C++, GNU, Microsoft)
+
+In addition, the following expression traits are supported:
+
+* ``__is_lvalue_expr(e)`` (Embarcadero):
+  Returns true if ``e`` is an lvalue expression.
+  Deprecated, use ``__is_lvalue_reference(decltype((e)))`` instead.
+* ``__is_rvalue_expr(e)`` (Embarcadero):
+  Returns true if ``e`` is a prvalue expression.
+  Deprecated, use ``!__is_reference(decltype((e)))`` instead.
+
+There are multiple ways to detect support for a type trait ``__X`` in the
+compiler, depending on the oldest version of Clang you wish to support.
+
+* From Clang 10 onwards, ``__has_builtin(__X)`` can be used.
+* From Clang 6 onwards, ``!__is_identifier(__X)`` can be used.
+* From Clang 3 onwards, ``__has_feature(X)`` can be used, but only supports
+  the following traits:
+
+  * ``__has_nothrow_assign``
+  * ``__has_nothrow_copy``
+  * ``__has_nothrow_constructor``
+  * ``__has_trivial_assign``
+  * ``__has_trivial_copy``
+  * ``__has_trivial_constructor``
+  * ``__has_trivial_destructor``
+  * ``__has_virtual_destructor``
+  * ``__is_abstract``
+  * ``__is_base_of``
+  * ``__is_class``
+  * ``__is_constructible``
+  * ``__is_convertible_to``
+  * ``__is_empty``
+  * ``__is_enum``
+  * ``__is_final``
+  * ``__is_literal``
+  * ``__is_standard_layout``
+  * ``__is_pod``
+  * ``__is_polymorphic``
+  * ``__is_sealed``
+  * ``__is_trivial``
+  * ``__is_trivially_assignable``
+  * ``__is_trivially_constructible``
+  * ``__is_trivially_copyable``
+  * ``__is_union``
+  * ``__underlying_type``
+
+A simplistic usage example as might be seen in standard C++ headers follows:
 
 .. code-block:: c++
 
-  #if __has_extension(is_convertible_to)
+  #if __has_builtin(__is_convertible_to)
   template<typename From, typename To>
   struct is_convertible_to {
     static const bool value = __is_convertible_to(From, To);
@@ -1079,54 +1242,6 @@ seen in standard C++ headers follows:
   #else
   // Emulate type trait for compatibility with other compilers.
   #endif
-
-The following type trait primitives are supported by Clang:
-
-* ``__has_nothrow_assign`` (GNU, Microsoft)
-* ``__has_nothrow_copy`` (GNU, Microsoft)
-* ``__has_nothrow_constructor`` (GNU, Microsoft)
-* ``__has_trivial_assign`` (GNU, Microsoft)
-* ``__has_trivial_copy`` (GNU, Microsoft)
-* ``__has_trivial_constructor`` (GNU, Microsoft)
-* ``__has_trivial_destructor`` (GNU, Microsoft)
-* ``__has_virtual_destructor`` (GNU, Microsoft)
-* ``__is_abstract`` (GNU, Microsoft)
-* ``__is_aggregate`` (GNU, Microsoft)
-* ``__is_base_of`` (GNU, Microsoft)
-* ``__is_class`` (GNU, Microsoft)
-* ``__is_convertible_to`` (Microsoft)
-* ``__is_empty`` (GNU, Microsoft)
-* ``__is_enum`` (GNU, Microsoft)
-* ``__is_interface_class`` (Microsoft)
-* ``__is_pod`` (GNU, Microsoft)
-* ``__is_polymorphic`` (GNU, Microsoft)
-* ``__is_union`` (GNU, Microsoft)
-* ``__is_literal(type)``: Determines whether the given type is a literal type
-* ``__is_final``: Determines whether the given type is declared with a
-  ``final`` class-virt-specifier.
-* ``__underlying_type(type)``: Retrieves the underlying type for a given
-  ``enum`` type.  This trait is required to implement the C++11 standard
-  library.
-* ``__is_trivially_assignable(totype, fromtype)``: Determines whether a value
-  of type ``totype`` can be assigned to from a value of type ``fromtype`` such
-  that no non-trivial functions are called as part of that assignment.  This
-  trait is required to implement the C++11 standard library.
-* ``__is_trivially_constructible(type, argtypes...)``: Determines whether a
-  value of type ``type`` can be direct-initialized with arguments of types
-  ``argtypes...`` such that no non-trivial functions are called as part of
-  that initialization.  This trait is required to implement the C++11 standard
-  library.
-* ``__is_destructible`` (MSVC 2013)
-* ``__is_nothrow_destructible`` (MSVC 2013)
-* ``__is_nothrow_assignable`` (MSVC 2013, clang)
-* ``__is_constructible`` (MSVC 2013, clang)
-* ``__is_nothrow_constructible`` (MSVC 2013, clang)
-* ``__is_assignable`` (MSVC 2015, clang)
-* ``__reference_binds_to_temporary(T, U)`` (Clang):  Determines whether a
-  reference of type ``T`` bound to an expression of type ``U`` would bind to a
-  materialized temporary object. If ``T`` is not a reference type the result
-  is false. Note this trait will also return false when the initialization of
-  ``T`` from ``U`` is ill-formed.
 
 Blocks
 ======

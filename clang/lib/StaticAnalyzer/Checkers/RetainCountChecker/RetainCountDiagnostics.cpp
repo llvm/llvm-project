@@ -325,22 +325,22 @@ public:
     ID.AddPointer(Sym);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
-  std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
-                                                  const ExplodedNode *N,
-                                                  BugReport &BR) override;
+  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                    const ExplodedNode *N,
+                                    BugReport &BR) override;
 };
 
 class RefLeakReportVisitor : public RefCountReportVisitor {
 public:
   RefLeakReportVisitor(SymbolRef sym) : RefCountReportVisitor(sym) {}
 
-  std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
-                                                  const ExplodedNode *N,
-                                                  BugReport &BR) override;
+  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                    const ExplodedNode *N,
+                                    BugReport &BR) override;
 };
 
 } // end namespace retaincountchecker
@@ -448,9 +448,9 @@ annotateStartParameter(const ExplodedNode *N, SymbolRef Sym,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-RefCountReportVisitor::VisitNode(const ExplodedNode *N,
-                              BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef RefCountReportVisitor::VisitNode(const ExplodedNode *N,
+                                                        BugReporterContext &BRC,
+                                                        BugReport &BR) {
 
   const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
   const auto *Checker =
@@ -709,21 +709,20 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       LeakContext)
     FirstBinding = nullptr;
 
-  return AllocationInfo(AllocationNodeInCurrentOrParentContext,
-                        FirstBinding,
+  return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,
                         InterestingMethodContext);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 RefCountReportVisitor::getEndPath(BugReporterContext &BRC,
-                               const ExplodedNode *EndN, BugReport &BR) {
+                                  const ExplodedNode *EndN, BugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
-                                   const ExplodedNode *EndN, BugReport &BR) {
+                                 const ExplodedNode *EndN, BugReport &BR) {
 
   // Tell the BugReporterContext to report cases when the tracked symbol is
   // assigned to different variables, etc.
@@ -737,7 +736,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   const MemRegion* FirstBinding = AllocI.R;
   BR.markInteresting(AllocI.InterestingMethodContext);
 
-  SourceManager& SM = BRC.getSourceManager();
+  const SourceManager& SM = BRC.getSourceManager();
 
   // Compute an actual location for the leak.  Sometimes a leak doesn't
   // occur at an actual statement (e.g., transition between blocks; end

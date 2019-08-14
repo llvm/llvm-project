@@ -633,12 +633,6 @@ bool CXIndexDataConsumer::handleField(const FieldDecl *D) {
   return handleDecl(D, D->getLocation(), getCursor(D), DInfo);
 }
 
-bool CXIndexDataConsumer::handleMSProperty(const MSPropertyDecl *D) {
-  DeclInfo DInfo(/*isRedeclaration=*/false, /*isDefinition=*/true,
-                 /*isContainer=*/false);
-  return handleDecl(D, D->getLocation(), getCursor(D), DInfo);
-}
-
 bool CXIndexDataConsumer::handleEnumerator(const EnumConstantDecl *D) {
   DeclInfo DInfo(/*isRedeclaration=*/false, /*isDefinition=*/true,
                  /*isContainer=*/false);
@@ -886,20 +880,6 @@ bool CXIndexDataConsumer::handleTypeAliasTemplate(const TypeAliasTemplateDecl *D
   DeclInfo DInfo(/*isRedeclaration=*/!D->isCanonicalDecl(),
                  /*isDefinition=*/true, /*isContainer=*/false);
   return handleDecl(D, D->getLocation(), getCursor(D), DInfo);
-}
-
-bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc,
-                                      const NamedDecl *Parent,
-                                      const DeclContext *DC,
-                                      const Expr *E,
-                                      CXIdxEntityRefKind Kind,
-                                      CXSymbolRole Role) {
-  if (!D || !DC)
-    return false;
-
-  CXCursor Cursor = E ? MakeCXCursor(E, cast<Decl>(DC), CXTU)
-                      : getRefCursor(D, Loc);
-  return handleReference(D, Loc, Cursor, Parent, DC, E, Kind, Role);
 }
 
 bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc,

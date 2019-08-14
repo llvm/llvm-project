@@ -378,6 +378,20 @@ class TypeSourceInfo;
     /// imported. If it does not exist nullptr is returned.
     TranslationUnitDecl *GetFromTU(Decl *ToD);
 
+    /// Return the declaration in the "from" context from which the declaration
+    /// in the "to" context was imported. If it was not imported or of the wrong
+    /// type a null value is returned.
+    template <typename DeclT>
+    llvm::Optional<DeclT *> getImportedFromDecl(const DeclT *ToD) const {
+      auto FromI = ImportedFromDecls.find(ToD);
+      if (FromI == ImportedFromDecls.end())
+        return {};
+      auto *FromD = dyn_cast<DeclT>(FromI->second);
+      if (!FromD)
+        return {};
+      return FromD;
+    }
+
     /// Import the given declaration context from the "from"
     /// AST context into the "to" AST context.
     ///
