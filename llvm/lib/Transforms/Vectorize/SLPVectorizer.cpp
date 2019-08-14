@@ -1310,7 +1310,7 @@ private:
     if (Vectorized) {
       for (int i = 0, e = VL.size(); i != e; ++i) {
         assert(!getTreeEntry(VL[i]) && "Scalar already in tree!");
-        ScalarToTreeEntry[VL[i]] = Last->Idx;
+        ScalarToTreeEntry[VL[i]] = Last;
       }
     } else {
       MustGather.insert(VL.begin(), VL.end());
@@ -1340,19 +1340,19 @@ private:
   TreeEntry *getTreeEntry(Value *V) {
     auto I = ScalarToTreeEntry.find(V);
     if (I != ScalarToTreeEntry.end())
-      return VectorizableTree[I->second].get();
+      return I->second;
     return nullptr;
   }
 
   const TreeEntry *getTreeEntry(Value *V) const {
     auto I = ScalarToTreeEntry.find(V);
     if (I != ScalarToTreeEntry.end())
-      return VectorizableTree[I->second].get();
+      return I->second;
     return nullptr;
   }
 
   /// Maps a specific scalar to its tree entry.
-  SmallDenseMap<Value*, int> ScalarToTreeEntry;
+  SmallDenseMap<Value*, TreeEntry *> ScalarToTreeEntry;
 
   /// A list of scalars that we found that we need to keep as scalars.
   ValueSet MustGather;

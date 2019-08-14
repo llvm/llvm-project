@@ -215,6 +215,16 @@ public:
     return -1;
   }
 
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const {
+    return false;
+  }
+
+  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                        Value *OldV, Value *NewV) const {
+    return false;
+  }
+
   bool isLegalAddImmediate(int64_t imm) {
     return getTLI()->isLegalAddImmediate(imm);
   }

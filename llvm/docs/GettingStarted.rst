@@ -95,7 +95,7 @@ Here's the short story for getting up and running quickly with LLVM:
        ``make -j NNN`` (with an appropriate value of NNN, e.g. number of CPUs
        you have.)
 
-   * For more information see `CMake <CMake.html>`_
+   * For more information see `CMake <CMake.html>`__
 
    * If you get an "internal compiler error (ICE)" or test failures, see
      `below`_.
@@ -169,7 +169,7 @@ uses the package and provides other details.
 =========================================================== ============ ==========================================
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
-`CMake <http://cmake.org/>`_                                >=3.4.3      Makefile/workspace generator
+`CMake <http://cmake.org/>`__                               >=3.4.3      Makefile/workspace generator
 `GCC <http://gcc.gnu.org/>`_                                >=5.1.0      C/C++ compiler\ :sup:`1`
 `python <http://www.python.org/>`_                          >=2.7        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`

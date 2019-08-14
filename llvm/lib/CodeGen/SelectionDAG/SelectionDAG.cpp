@@ -9003,7 +9003,6 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
     return SDValue();
 
   SDValue Op = Extract->getOperand(0);
-  unsigned Stages = Log2_32(Op.getValueType().getVectorNumElements());
 
   // Match against one of the candidate binary ops.
   if (llvm::none_of(CandidateBinOps, [Op](ISD::NodeType BinOp) {
@@ -9041,6 +9040,7 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
   // While a partial reduction match would be:
   // <2,3,u,u,u,u,u,u>
   // <1,u,u,u,u,u,u,u>
+  unsigned Stages = Log2_32(Op.getValueType().getVectorNumElements());
   SDValue PrevOp;
   for (unsigned i = 0; i < Stages; ++i) {
     unsigned MaskEnd = (1 << i);

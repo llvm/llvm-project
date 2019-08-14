@@ -476,24 +476,21 @@ or creating any Modules attached to it. E.g.
 
   .. code-block:: c++
 
+    ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
 
-  ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
+    ThreadPool TP(NumThreads);
+    JITStack J;
 
-  ThreadPool TP(NumThreads);
-  JITStack J;
+    for (auto &ModulePath : ModulePaths) {
+      TP.async(
+        [&]() {
+          auto Lock = TSCtx.getLock();
+          auto M = loadModuleOnContext(ModulePath, TSCtx.getContext());
+          J.addModule(ThreadSafeModule(std::move(M), TSCtx));
+        });
+    }
 
-  for (auto &ModulePath : ModulePaths) {
-    TP.async(
-      [&]() {
-        auto Lock = TSCtx.getLock();
-
-        auto M = loadModuleOnContext(ModulePath, TSCtx.getContext());
-
-        J.addModule(ThreadSafeModule(std::move(M), TSCtx));
-      });
-  }
-
-  TP.wait();
+    TP.wait();
 
 To make exclusive access to Modules easier to manage the ThreadSafeModule class
 provides a convenince function, ``withModuleDo``, that implicitly (1) locks the
