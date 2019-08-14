@@ -98,8 +98,8 @@ public:
 std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions() {
   std::vector<std::unique_ptr<RefactoringAction>> Actions;
 
-  Actions.push_back(llvm::make_unique<LocalRename>());
-  Actions.push_back(llvm::make_unique<ExtractRefactoring>());
+  Actions.push_back(std::make_unique<LocalRename>());
+  Actions.push_back(std::make_unique<ExtractRefactoring>());
 
   return Actions;
 }

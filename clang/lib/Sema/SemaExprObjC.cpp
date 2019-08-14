@@ -2111,7 +2111,7 @@ class ObjCInterfaceOrSuperCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<ObjCInterfaceOrSuperCCC>(*this);
+    return std::make_unique<ObjCInterfaceOrSuperCCC>(*this);
   }
 };
 

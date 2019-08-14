@@ -190,7 +190,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
   std::unique_ptr<BugReport> BR(
       new BugReport(*DoubleSuperDeallocBugType, Desc, ErrNode));
   BR->addRange(S->getSourceRange());
-  BR->addVisitor(llvm::make_unique<SuperDeallocBRVisitor>(Sym));
+  BR->addVisitor(std::make_unique<SuperDeallocBRVisitor>(Sym));
   C.emitReport(std::move(BR));
 }
 

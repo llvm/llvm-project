@@ -55,7 +55,7 @@ public:
   SuperRegionLivenessAction() {}
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
-    return llvm::make_unique<SuperRegionLivenessConsumer>(Compiler);
+    return std::make_unique<SuperRegionLivenessConsumer>(Compiler);
   }
 };
 

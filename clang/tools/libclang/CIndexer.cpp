@@ -52,7 +52,7 @@ void getClangResourcesPathImplAIX(LibClangPathType &LibClangPath) {
   size_t BufSize = 2048u;
   std::unique_ptr<char[]> Buf;
   while (true) {
-    Buf = llvm::make_unique<char []>(BufSize);
+    Buf = std::make_unique<char []>(BufSize);
     errno = 0;
     int Ret = loadquery(L_GETXINFO, Buf.get(), (unsigned int)BufSize);
     if (Ret != -1)

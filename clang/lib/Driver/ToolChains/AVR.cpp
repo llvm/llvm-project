@@ -144,7 +144,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   }
 
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
+  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
                                           CmdArgs, Inputs));
 }
 

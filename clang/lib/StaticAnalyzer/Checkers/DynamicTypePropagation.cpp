@@ -922,7 +922,7 @@ void DynamicTypePropagation::reportGenericsBug(
   std::unique_ptr<BugReport> R(
       new BugReport(*ObjCGenericsBugType, OS.str(), N));
   R->markInteresting(Sym);
-  R->addVisitor(llvm::make_unique<GenericsBugVisitor>(Sym));
+  R->addVisitor(std::make_unique<GenericsBugVisitor>(Sym));
   if (ReportedNode)
     R->addRange(ReportedNode->getSourceRange());
   C.emitReport(std::move(R));

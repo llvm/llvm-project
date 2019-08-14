@@ -2049,7 +2049,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<VarDeclFilterCCC>(*this);
+    return std::make_unique<VarDeclFilterCCC>(*this);
   }
 
 };
@@ -2071,7 +2071,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<VarOrFuncDeclFilterCCC>(*this);
+    return std::make_unique<VarOrFuncDeclFilterCCC>(*this);
   }
 };
 

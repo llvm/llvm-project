@@ -134,7 +134,7 @@ int main(int argc, const char **argv) {
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
-      llvm::make_unique<tooling::ArgumentsAdjustingCompilations>(
+      std::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   AdjustingCompilations->appendArgumentsAdjuster(
       [](const tooling::CommandLineArguments &Args, StringRef /*unused*/) {
@@ -162,7 +162,7 @@ int main(int argc, const char **argv) {
 #endif
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
-    WorkerTools.push_back(llvm::make_unique<DependencyScanningTool>(
+    WorkerTools.push_back(std::make_unique<DependencyScanningTool>(
         Service, *AdjustingCompilations, DependencyOS, Errs));
 
   std::vector<std::thread> WorkerThreads;

@@ -218,7 +218,7 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
-    return llvm::make_unique<ItaniumNumberingContext>();
+    return std::make_unique<ItaniumNumberingContext>();
   }
 };
 }

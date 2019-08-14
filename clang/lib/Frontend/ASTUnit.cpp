@@ -819,7 +819,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       /*isysroot=*/"",
       /*DisableValidation=*/disableValid, AllowPCHWithCompilerErrors);
 
-  AST->Reader->setListener(llvm::make_unique<ASTInfoCollector>(
+  AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
       AST->TargetOpts, AST->Target, Counter));
 
@@ -999,9 +999,9 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
     CI.getPreprocessor().addPPCallbacks(
-        llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
+        std::make_unique<MacroDefinitionTrackerPPCallbacks>(
                                            Unit.getCurrentTopLevelHashValue()));
-    return llvm::make_unique<TopLevelDeclTrackerConsumer>(
+    return std::make_unique<TopLevelDeclTrackerConsumer>(
         Unit, Unit.getCurrentTopLevelHashValue());
   }
 
@@ -1049,7 +1049,7 @@ public:
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
-    return llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(Hash);
+    return std::make_unique<MacroDefinitionTrackerPPCallbacks>(Hash);
   }
 
 private:
@@ -1624,15 +1624,15 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   if (Persistent && !TrackerAct) {
     Clang->getPreprocessor().addPPCallbacks(
-        llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
+        std::make_unique<MacroDefinitionTrackerPPCallbacks>(
                                            AST->getCurrentTopLevelHashValue()));
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     if (Clang->hasASTConsumer())
       Consumers.push_back(Clang->takeASTConsumer());
-    Consumers.push_back(llvm::make_unique<TopLevelDeclTrackerConsumer>(
+    Consumers.push_back(std::make_unique<TopLevelDeclTrackerConsumer>(
         *AST, AST->getCurrentTopLevelHashValue()));
     Clang->setASTConsumer(
-        llvm::make_unique<MultiplexConsumer>(std::move(Consumers)));
+        std::make_unique<MultiplexConsumer>(std::move(Consumers)));
   }
   if (llvm::Error Err = Act->Execute()) {
     consumeError(std::move(Err)); // FIXME this drops errors on the floor.

@@ -40,7 +40,7 @@ protected:
       }
 
       void HandleTranslationUnit(ASTContext &Ctx) override {
-        Arena = llvm::make_unique<syntax::Arena>(Ctx.getSourceManager(),
+        Arena = std::make_unique<syntax::Arena>(Ctx.getSourceManager(),
                                                  Ctx.getLangOpts(),
                                                  std::move(*Tokens).consume());
         Tokens = nullptr; // make sure we fail if this gets called twice.
@@ -63,8 +63,8 @@ protected:
       CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
         // We start recording the tokens, ast consumer will take on the result.
         auto Tokens =
-            llvm::make_unique<syntax::TokenCollector>(CI.getPreprocessor());
-        return llvm::make_unique<BuildSyntaxTree>(Root, Arena,
+            std::make_unique<syntax::TokenCollector>(CI.getPreprocessor());
+        return std::make_unique<BuildSyntaxTree>(Root, Arena,
                                                   std::move(Tokens));
       }
 

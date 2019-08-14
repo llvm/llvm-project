@@ -140,7 +140,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<StatementFilterCCC>(*this);
+    return std::make_unique<StatementFilterCCC>(*this);
   }
 
 private:

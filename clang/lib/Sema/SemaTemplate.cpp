@@ -644,7 +644,7 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
     }
 
     std::unique_ptr<CorrectionCandidateCallback> clone() override {
-      return llvm::make_unique<TemplateCandidateFilter>(*this);
+      return std::make_unique<TemplateCandidateFilter>(*this);
     }
   };
 
@@ -3456,7 +3456,7 @@ bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
              getAsTypeTemplateDecl(TC.getCorrectionDecl());
     }
     std::unique_ptr<CorrectionCandidateCallback> clone() override {
-      return llvm::make_unique<CandidateCallback>(*this);
+      return std::make_unique<CandidateCallback>(*this);
     }
   } FilterCCC;
 
@@ -10304,7 +10304,7 @@ void Sema::MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
   if (!FD)
     return;
 
-  auto LPT = llvm::make_unique<LateParsedTemplate>();
+  auto LPT = std::make_unique<LateParsedTemplate>();
 
   // Take tokens to avoid allocations
   LPT->Toks.swap(Toks);

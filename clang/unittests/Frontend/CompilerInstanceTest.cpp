@@ -81,7 +81,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  auto DiagPrinter = llvm::make_unique<TextDiagnosticPrinter>(
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
       DiagnosticsOS, new DiagnosticOptions());
   CompilerInstance Instance;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags = Instance.createDiagnostics(

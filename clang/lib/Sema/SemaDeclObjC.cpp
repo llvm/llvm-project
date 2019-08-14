@@ -513,7 +513,7 @@ class ObjCInterfaceValidatorCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<ObjCInterfaceValidatorCCC>(*this);
+    return std::make_unique<ObjCInterfaceValidatorCCC>(*this);
   }
 
  private:
@@ -1392,7 +1392,7 @@ class ObjCTypeArgOrProtocolValidatorCCC final
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(*this);
+    return std::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(*this);
   }
 };
 } // end anonymous namespace

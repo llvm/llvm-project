@@ -671,7 +671,7 @@ void VerifyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
 #ifndef NDEBUG
       // Debug build tracks parsed files.
       const_cast<Preprocessor *>(PP)->addPPCallbacks(
-                      llvm::make_unique<VerifyFileTracker>(*this, *SrcManager));
+                      std::make_unique<VerifyFileTracker>(*this, *SrcManager));
 #endif
     }
   }
@@ -1116,7 +1116,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
                                              bool MatchAnyLine, StringRef Text,
                                              unsigned Min, unsigned Max) {
   if (!RegexKind)
-    return llvm::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
+    return std::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
                                                 MatchAnyLine, Text, Min, Max);
 
   // Parse the directive into a regular expression.
@@ -1142,6 +1142,6 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
     }
   }
 
-  return llvm::make_unique<RegexDirective>(
+  return std::make_unique<RegexDirective>(
       DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max, RegexStr);
 }

@@ -83,10 +83,10 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
         os << "Variable '" << VD->getName()
            << "' is uninitialized when captured by block";
 
-        auto R = llvm::make_unique<BugReport>(*BT, os.str(), N);
+        auto R = std::make_unique<BugReport>(*BT, os.str(), N);
         if (const Expr *Ex = FindBlockDeclRefExpr(BE->getBody(), VD))
           R->addRange(Ex->getSourceRange());
-        R->addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+        R->addVisitor(std::make_unique<FindLastStoreBRVisitor>(
             *V, VR, /*EnableNullFPSuppression*/ false,
             bugreporter::TrackingKind::Thorough));
         R->disablePathPruning();

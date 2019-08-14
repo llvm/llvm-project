@@ -1021,7 +1021,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   // various pseudo-ops.  Just return the # token and push back the following
   // token to be lexed next time.
   if (getLangOpts().AsmPreprocessor) {
-    auto Toks = llvm::make_unique<Token[]>(2);
+    auto Toks = std::make_unique<Token[]>(2);
     // Return the # and the token after it.
     Toks[0] = SavedHash;
     Toks[1] = Result;
@@ -1511,7 +1511,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
                                         void *AnnotationVal) {
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
-  auto Tok = llvm::make_unique<Token[]>(1);
+  auto Tok = std::make_unique<Token[]>(1);
   Tok[0].startToken();
   Tok[0].setKind(Kind);
   Tok[0].setLocation(Range.getBegin());

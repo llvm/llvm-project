@@ -994,7 +994,7 @@ public:
   PPCallbacks *getPPCallbacks() const { return Callbacks.get(); }
   void addPPCallbacks(std::unique_ptr<PPCallbacks> C) {
     if (Callbacks)
-      C = llvm::make_unique<PPChainedCallbacks>(std::move(C),
+      C = std::make_unique<PPChainedCallbacks>(std::move(C),
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
@@ -1471,7 +1471,7 @@ public:
     if (LexLevel) {
       // It's not correct in general to enter caching lex mode while in the
       // middle of a nested lexing action.
-      auto TokCopy = llvm::make_unique<Token[]>(1);
+      auto TokCopy = std::make_unique<Token[]>(1);
       TokCopy[0] = Tok;
       EnterTokenStream(std::move(TokCopy), 1, true, IsReinject);
     } else {

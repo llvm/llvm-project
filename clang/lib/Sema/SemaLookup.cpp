@@ -4745,7 +4745,7 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   // occurs). Note that CorrectionCandidateCallback is polymorphic and
   // initially stack-allocated.
   std::unique_ptr<CorrectionCandidateCallback> ClonedCCC = CCC.clone();
-  auto Consumer = llvm::make_unique<TypoCorrectionConsumer>(
+  auto Consumer = std::make_unique<TypoCorrectionConsumer>(
       *this, TypoName, LookupKind, S, SS, std::move(ClonedCCC), MemberContext,
       EnteringContext);
 

@@ -92,11 +92,11 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
                          "Logic error"));
 
   ExplodedNode *N = C.generateNonFatalErrorNode();
-  auto R = llvm::make_unique<BugReport>(*BT, BT->getName(), N);
+  auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
-  R->addVisitor(llvm::make_unique<DeleteBugVisitor>());
+  R->addVisitor(std::make_unique<DeleteBugVisitor>());
   C.emitReport(std::move(R));
 }
 

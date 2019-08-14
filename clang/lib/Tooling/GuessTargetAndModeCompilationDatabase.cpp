@@ -50,7 +50,7 @@ private:
 
 std::unique_ptr<CompilationDatabase>
 inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base) {
-  return llvm::make_unique<TargetAndModeAdderDatabase>(std::move(Base));
+  return std::make_unique<TargetAndModeAdderDatabase>(std::move(Base));
 }
 
 } // namespace tooling

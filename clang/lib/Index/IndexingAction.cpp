@@ -124,12 +124,12 @@ protected:
   std::unique_ptr<IndexASTConsumer>
   createIndexASTConsumer(CompilerInstance &CI) {
     IndexCtx->setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
-    return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
-                                               IndexCtx);
+    return std::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
+                                              IndexCtx);
   }
 
   std::unique_ptr<PPCallbacks> createIndexPPCallbacks() {
-    return llvm::make_unique<IndexPPCallbacks>(IndexCtx);
+    return std::make_unique<IndexPPCallbacks>(IndexCtx);
   }
 
   void finish() {
@@ -181,7 +181,7 @@ protected:
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.push_back(std::move(OtherConsumer));
     Consumers.push_back(createIndexASTConsumer(CI));
-    return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
+    return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
 
   bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
@@ -205,9 +205,16 @@ index::createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                             IndexingOptions Opts,
                             std::unique_ptr<FrontendAction> WrappedAction) {
   if (WrappedAction)
+<<<<<<< HEAD
     return llvm::make_unique<WrappingIndexAction>(
         std::move(WrappedAction), std::move(DataConsumer), Opts);
   return llvm::make_unique<IndexAction>(std::move(DataConsumer), Opts);
+=======
+    return std::make_unique<WrappingIndexAction>(std::move(WrappedAction),
+                                                  std::move(DataConsumer),
+                                                  Opts);
+  return std::make_unique<IndexAction>(std::move(DataConsumer), Opts);
+>>>>>>> mirror/master
 }
 
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
@@ -261,7 +268,7 @@ void index::indexTopLevelDecls(ASTContext &Ctx, Preprocessor &PP,
 
 std::unique_ptr<PPCallbacks>
 index::indexMacrosCallback(IndexDataConsumer &Consumer, IndexingOptions Opts) {
-  return llvm::make_unique<IndexPPCallbacks>(
+  return std::make_unique<IndexPPCallbacks>(
       std::make_shared<IndexingContext>(Opts, Consumer));
 }
 

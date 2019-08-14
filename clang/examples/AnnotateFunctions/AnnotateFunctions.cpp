@@ -41,7 +41,7 @@ class AnnotateFunctionsAction : public PluginASTAction {
 public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
-    return llvm::make_unique<AnnotateFunctionsConsumer>();
+    return std::make_unique<AnnotateFunctionsConsumer>();
   }
 
   bool ParseArgs(const CompilerInstance &CI,

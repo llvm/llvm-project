@@ -101,7 +101,7 @@ public:
     if (Level != DiagnosticsEngine::Note)
       CurrentSet = MainSet;
 
-    auto Owner = llvm::make_unique<CXStoredDiagnostic>(*SD, LangOpts);
+    auto Owner = std::make_unique<CXStoredDiagnostic>(*SD, LangOpts);
     CXStoredDiagnostic &CD = *Owner;
     CurrentSet->appendDiagnostic(std::move(Owner));
 
@@ -122,7 +122,7 @@ public:
     else
       L = clang_getNullLocation();
     CurrentSet->appendDiagnostic(
-        llvm::make_unique<CXDiagnosticCustomNoteImpl>(Message, L));
+        std::make_unique<CXDiagnosticCustomNoteImpl>(Message, L));
   }
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -140,7 +140,7 @@ public:
     else
       L = clang_getNullLocation();
     CurrentSet->appendDiagnostic(
-        llvm::make_unique<CXDiagnosticCustomNoteImpl>(Message, L));
+        std::make_unique<CXDiagnosticCustomNoteImpl>(Message, L));
   }
 
   CXDiagnosticSetImpl *CurrentSet;

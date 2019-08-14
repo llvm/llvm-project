@@ -646,7 +646,7 @@ public:
 
   public:
     const NoteTag *makeNoteTag(Callback &&Cb, bool IsPrunable = false) {
-      // We cannot use make_unique because we cannot access the private
+      // We cannot use std::make_unique because we cannot access the private
       // constructor from inside it.
       std::unique_ptr<NoteTag> T(new NoteTag(std::move(Cb), IsPrunable));
       Tags.push_back(std::move(T));
