@@ -16,6 +16,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
@@ -6564,11 +6565,29 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return false;
 }
 
+// Decl::isInStdNamespace will return false for iterators in some STL
+// implementations due to them being defined in a namespace outside of the std
+// namespace.
+static bool isInStlNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  if (!DC)
+    return false;
+  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+    if (const IdentifierInfo *II = ND->getIdentifier()) {
+      StringRef Name = II->getName();
+      if (Name.size() >= 2 && Name.front() == '_' &&
+          (Name[1] == '_' || isUppercase(Name[1])))
+        return true;
+    }
+
+  return DC->isStdNamespace();
+}
+
 static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
     if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()))
       return true;
-  if (!Callee->getParent()->isInStdNamespace())
+  if (!isInStlNamespace(Callee->getParent()))
     return false;
   if (!isRecordWithAttr<PointerAttr>(Callee->getThisObjectType()) &&
       !isRecordWithAttr<OwnerAttr>(Callee->getThisObjectType()))
@@ -7107,25 +7126,29 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
     SourceLocation DiagLoc = DiagRange.getBegin();
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
-    bool IsTempGslOwner = MTE && !MTE->getExtendingDecl() &&
-                          isRecordWithAttr<OwnerAttr>(MTE->getType());
-    bool IsLocalGslOwner =
-        isa<DeclRefExpr>(L) && isRecordWithAttr<OwnerAttr>(L->getType());
 
-    // Skipping a chain of initializing gsl::Pointer annotated objects.
-    // We are looking only for the final source to find out if it was
-    // a local or temporary owner or the address of a local variable/param. We
-    // do not want to follow the references when returning a pointer originating
-    // from a local owner to avoid the following false positive:
-    //   int &p = *localUniquePtr;
-    //   someContainer.add(std::move(localUniquePtr));
-    //   return p;
-    if (!IsTempGslOwner && pathOnlyInitializesGslPointer(Path) &&
-        !(IsLocalGslOwner && !pathContainsInit(Path)))
-      return true;
-
-    bool IsGslPtrInitWithGslTempOwner =
-        IsTempGslOwner && pathOnlyInitializesGslPointer(Path);
+    bool IsGslPtrInitWithGslTempOwner = false;
+    bool IsLocalGslOwner = false;
+    if (pathOnlyInitializesGslPointer(Path)) {
+      if (isa<DeclRefExpr>(L)) {
+        // We do not want to follow the references when returning a pointer originating
+        // from a local owner to avoid the following false positive:
+        //   int &p = *localUniquePtr;
+        //   someContainer.add(std::move(localUniquePtr));
+        //   return p;
+        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
+        if (pathContainsInit(Path) || !IsLocalGslOwner)
+          return false;
+      } else {
+        IsGslPtrInitWithGslTempOwner = MTE && !MTE->getExtendingDecl() &&
+                            isRecordWithAttr<OwnerAttr>(MTE->getType());
+        // Skipping a chain of initializing gsl::Pointer annotated objects.
+        // We are looking only for the final source to find out if it was
+        // a local or temporary owner or the address of a local variable/param.
+        if (!IsGslPtrInitWithGslTempOwner)
+          return true;
+      }
+    }
 
     switch (LK) {
     case LK_FullExpression:

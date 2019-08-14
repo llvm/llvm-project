@@ -16,6 +16,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/LLVM.h"
@@ -290,6 +291,21 @@ bool ExplodedNode::isTrivial() const {
   return pred_size() == 1 && succ_size() == 1 &&
          getFirstPred()->getState()->getID() == getState()->getID() &&
          getFirstPred()->succ_size() == 1;
+}
+
+const CFGBlock *ExplodedNode::getCFGBlock() const {
+  ProgramPoint P = getLocation();
+  if (auto BEP = P.getAs<BlockEntrance>())
+    return BEP->getBlock();
+
+  // Find the node's current statement in the CFG.
+  if (const Stmt *S = PathDiagnosticLocation::getStmt(this))
+    return getLocationContext()
+        ->getAnalysisDeclContext()
+        ->getCFGStmtMap()
+        ->getBlock(S);
+
+  return nullptr;
 }
 
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,

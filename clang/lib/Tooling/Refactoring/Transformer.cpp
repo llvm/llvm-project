@@ -80,12 +80,14 @@ void tooling::addInclude(RewriteRule &Rule, StringRef Header,
     Case.AddedIncludes.emplace_back(Header.str(), Format);
 }
 
+#ifndef NDEBUG
 // Filters for supported matcher kinds. FIXME: Explicitly list the allowed kinds
 // (all node matcher types except for `QualType` and `Type`), rather than just
 // banning `QualType` and `Type`.
 static bool hasValidKind(const DynTypedMatcher &M) {
   return !M.canConvertTo<QualType>();
 }
+#endif
 
 // Binds each rule's matcher to a unique (and deterministic) tag based on
 // `TagBase` and the id paired with the case.
