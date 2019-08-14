@@ -83,6 +83,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     // performance. It definitely decreases performance on Android though.
     // if (!SCUDO_ANDROID) PREFETCH(P);
     Stats.add(StatAllocated, ClassSize);
+    Stats.sub(StatFree, ClassSize);
     return P;
   }
 
@@ -98,6 +99,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     const uptr ClassSize = C->ClassSize;
     C->Chunks[C->Count++] = P;
     Stats.sub(StatAllocated, ClassSize);
+    Stats.add(StatFree, ClassSize);
   }
 
   void drain() {

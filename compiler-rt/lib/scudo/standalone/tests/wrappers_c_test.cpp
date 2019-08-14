@@ -191,7 +191,7 @@ TEST(ScudoWrappersCTest, Realloc) {
 #define M_PURGE -101
 #endif
 
-TEST(ScudoWrappersCTest, Mallopt) {
+TEST(ScudoWrappersCTest, MallOpt) {
   errno = 0;
   EXPECT_EQ(mallopt(-1000, 1), 0);
   // mallopt doesn't set errno.
@@ -222,4 +222,20 @@ TEST(ScudoWrappersCTest, OtherAlloc) {
   free(P);
 
   EXPECT_EQ(valloc(SIZE_MAX), nullptr);
+}
+
+TEST(ScudoWrappersCTest, MallInfo) {
+  const size_t BypassQuarantineSize = 1024U;
+
+  struct mallinfo MI = mallinfo();
+  size_t Allocated = MI.uordblks;
+  void *P = malloc(BypassQuarantineSize);
+  EXPECT_NE(P, nullptr);
+  MI = mallinfo();
+  EXPECT_GE(static_cast<size_t>(MI.uordblks), Allocated + BypassQuarantineSize);
+  EXPECT_GT(static_cast<size_t>(MI.hblkhd), 0U);
+  size_t Free = MI.fordblks;
+  free(P);
+  MI = mallinfo();
+  EXPECT_GE(static_cast<size_t>(MI.fordblks), Free + BypassQuarantineSize);
 }
