@@ -2595,16 +2595,8 @@ bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
     // Swift class instances are actually pointers, but base class instances
     // are inlined at offset 0 in the class data. If we just let base classes
     // be dynamic, it would cause an infinite recursion. So we would usually
-    // disable it
-    // But if the base class is a generic type we still need to bind it, and
-    // that is
-    // a good job for dynamic types to perform
-    if (in_value.IsBaseClass()) {
-      CompilerType base_type(in_value.GetCompilerType());
-      if (SwiftASTContext::IsFullyRealized(base_type))
-        return false;
-    }
-    return true;
+    // disable it.
+    return !in_value.IsBaseClass();
   }
   return var_type.IsPossibleDynamicType(nullptr, false, false, true);
 }
