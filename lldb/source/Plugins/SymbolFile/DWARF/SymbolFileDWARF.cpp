@@ -178,11 +178,6 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
-static FileSpec::Style GuessPathStyleOrNative(llvm::StringRef p) {
-  llvm::Optional<FileSpec::Style> style = FileSpec::GuessPathStyle(p);
-  return style ? *style : FileSpec::Style::native;
-}
-
 static FileSpecList
 ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
                               const llvm::DWARFDebugLine::Prologue &prologue,
