@@ -717,7 +717,7 @@ llvm::Error parseStabs(MachOFile &file,
   // FIXME: Kill this off when we can move to sane yaml parsing.
   std::unique_ptr<BumpPtrAllocator> allocator;
   if (copyRefs)
-    allocator = llvm::make_unique<BumpPtrAllocator>();
+    allocator = std::make_unique<BumpPtrAllocator>();
 
   enum { start, inBeginEnd } state = start;
 
@@ -812,7 +812,7 @@ llvm::Error parseStabs(MachOFile &file,
     stabsList.push_back(stab);
   }
 
-  file.setDebugInfo(llvm::make_unique<StabsDebugInfo>(std::move(stabsList)));
+  file.setDebugInfo(std::make_unique<StabsDebugInfo>(std::move(stabsList)));
 
   // FIXME: Kill this off when we fix YAML memory ownership.
   file.debugInfo()->setAllocator(std::move(allocator));
@@ -974,11 +974,11 @@ llvm::Error parseDebugInfo(MachOFile &file,
     //        memory ownership.
     std::unique_ptr<BumpPtrAllocator> allocator;
     if (copyRefs) {
-      allocator = llvm::make_unique<BumpPtrAllocator>();
+      allocator = std::make_unique<BumpPtrAllocator>();
       tuOrErr->name = copyDebugString(tuOrErr->name, *allocator);
       tuOrErr->path = copyDebugString(tuOrErr->path, *allocator);
     }
-    file.setDebugInfo(llvm::make_unique<DwarfDebugInfo>(std::move(*tuOrErr)));
+    file.setDebugInfo(std::make_unique<DwarfDebugInfo>(std::move(*tuOrErr)));
     if (copyRefs)
       file.debugInfo()->setAllocator(std::move(allocator));
   } else

@@ -16,7 +16,7 @@ namespace lldb_private {
 
 template <typename T> std::unique_ptr<T> clone(const std::unique_ptr<T> &src) {
   if (src)
-    return llvm::make_unique<T>(*src);
+    return std::make_unique<T>(*src);
   return nullptr;
 }
 

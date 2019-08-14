@@ -6610,7 +6610,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
              OO == OverloadedOperatorKind::OO_Star;
     }
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("front", "back", "at", true)
+        .Cases("front", "back", "at", "top", "value", true)
         .Default(false);
   }
   return false;

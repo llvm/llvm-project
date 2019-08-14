@@ -1150,7 +1150,7 @@ void DebugSHandler::finish() {
   // string table. Generally the string table subsection appears after the
   // checksum table, so we have to do this after looping over all the
   // subsections.
-  auto newChecksums = make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
+  auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
   for (FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
         exitOnErr(cVStrTab.getString(fc.FileNameOffset));

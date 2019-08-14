@@ -27,7 +27,7 @@ SBSymbolContext::SBSymbolContext(const SymbolContext *sc_ptr) : m_opaque_up() {
                           (const lldb_private::SymbolContext *), sc_ptr);
 
   if (sc_ptr)
-    m_opaque_up = llvm::make_unique<SymbolContext>(*sc_ptr);
+    m_opaque_up = std::make_unique<SymbolContext>(*sc_ptr);
 }
 
 SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) : m_opaque_up() {
@@ -51,7 +51,7 @@ const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
 
 void SBSymbolContext::SetSymbolContext(const SymbolContext *sc_ptr) {
   if (sc_ptr)
-    m_opaque_up = llvm::make_unique<SymbolContext>(*sc_ptr);
+    m_opaque_up = std::make_unique<SymbolContext>(*sc_ptr);
   else
     m_opaque_up->Clear(true);
 }

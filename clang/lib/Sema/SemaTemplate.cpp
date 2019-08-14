@@ -362,13 +362,27 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     // x->B::f, and we are looking into the type of the object.
     assert(!SS.isSet() && "ObjectType and scope specifier cannot coexist");
     LookupCtx = computeDeclContext(ObjectType);
-    IsDependent = !LookupCtx;
+    IsDependent = !LookupCtx && ObjectType->isDependentType();
     assert((IsDependent || !ObjectType->isIncompleteType() ||
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
 
-    // Template names cannot appear inside an Objective-C class or object type.
-    if (ObjectType->isObjCObjectOrInterfaceType()) {
+    // Template names cannot appear inside an Objective-C class or object type
+    // or a vector type.
+    //
+    // FIXME: This is wrong. For example:
+    //
+    //   template<typename T> using Vec = T __attribute__((ext_vector_type(4)));
+    //   Vec<int> vi;
+    //   vi.Vec<int>::~Vec<int>();
+    //
+    // ... should be accepted but we will not treat 'Vec' as a template name
+    // here. The right thing to do would be to check if the name is a valid
+    // vector component name, and look up a template name if not. And similarly
+    // for lookups into Objective-C class and object types, where the same
+    // problem can arise.
+    if (ObjectType->isObjCObjectOrInterfaceType() ||
+        ObjectType->isVectorType()) {
       Found.clear();
       return false;
     }

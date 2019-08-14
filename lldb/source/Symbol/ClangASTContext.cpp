@@ -1519,14 +1519,44 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
   // something is struct or a class, so we default to always use the more
   // complete definition just in case.
 
-  bool is_anonymous = (!name) || (!name[0]);
+  bool has_name = name && name[0];
 
   CXXRecordDecl *decl = CXXRecordDecl::Create(
       *ast, (TagDecl::TagKind)kind, decl_ctx, SourceLocation(),
-      SourceLocation(), is_anonymous ? nullptr : &ast->Idents.get(name));
+      SourceLocation(), has_name ?  &ast->Idents.get(name) : nullptr);
 
-  if (is_anonymous)
-    decl->setAnonymousStructOrUnion(true);
+  if (!has_name) {
+    // In C++ a lambda is also represented as an unnamed class. This is
+    // different from an *anonymous class* that the user wrote:
+    //
+    // struct A {
+    //  // anonymous class (GNU/MSVC extension)
+    //  struct {
+    //    int x;
+    //  };
+    //  // unnamed class within a class
+    //  struct {
+    //    int y;
+    //  } B;
+    // };
+    //
+    // void f() {
+    //    // unammed class outside of a class
+    //    struct {
+    //      int z;
+    //    } C;
+    // }
+    //
+    // Anonymous classes is a GNU/MSVC extension that clang supports. It
+    // requires the anonymous class be embedded within a class. So the new
+    // heuristic verifies this condition.
+    //
+    // FIXME: An unnamed class within a class is also wrongly recognized as an
+    // anonymous struct.
+    if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl_ctx)) {
+      decl->setAnonymousStructOrUnion(true);
+    }
+  }
 
   if (decl) {
     if (metadata)
@@ -8444,7 +8474,7 @@ ClangASTContext::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
   if (!type)
     return nullptr;
 
-  return llvm::make_unique<clang::CXXBaseSpecifier>(
+  return std::make_unique<clang::CXXBaseSpecifier>(
       clang::SourceRange(), is_virtual, base_of_class,
       ClangASTContext::ConvertAccessTypeToAccessSpecifier(access),
       getASTContext()->getTrivialTypeSourceInfo(GetQualType(type)),

@@ -167,7 +167,7 @@ public:
   const ProgramStateRef &getState() const { return State; }
 
   template <typename T>
-  Optional<T> getLocationAs() const LLVM_LVALUE_FUNCTION {
+  Optional<T> getLocationAs() const & {
     return Location.getAs<T>();
   }
 

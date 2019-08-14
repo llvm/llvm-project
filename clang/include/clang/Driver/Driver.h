@@ -18,6 +18,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -250,8 +251,16 @@ private:
 
   // getFinalPhase - Determine which compilation mode we are in and record
   // which option we used to determine the final phase.
+  // TODO: Much of what getFinalPhase returns are not actually true compiler
+  //       modes. Fold this functionality into Types::getCompilationPhases and
+  //       handleArguments.
   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
+
+  // handleArguments - All code related to claiming and printing diagnostics
+  // related to arguments to the driver are done here.
+  void handleArguments(Compilation &C, llvm::opt::DerivedArgList &Args,
+                       const InputList &Inputs, ActionList &Actions) const;
 
   // Before executing jobs, sets up response files for commands that need them.
   void setUpResponseFiles(Compilation &C, Command &Cmd);

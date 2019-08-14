@@ -175,7 +175,7 @@ void Generator::AddProvidersToIndex() {
   index.AppendPathComponent("index.yaml");
 
   std::error_code EC;
-  auto strm = llvm::make_unique<raw_fd_ostream>(index.GetPath(), EC,
+  auto strm = std::make_unique<raw_fd_ostream>(index.GetPath(), EC,
                                                 sys::fs::OpenFlags::OF_None);
   yaml::Output yout(*strm);
 
@@ -223,7 +223,7 @@ bool Loader::HasFile(StringRef file) {
 llvm::Expected<std::unique_ptr<DataRecorder>>
 DataRecorder::Create(const FileSpec &filename) {
   std::error_code ec;
-  auto recorder = llvm::make_unique<DataRecorder>(std::move(filename), ec);
+  auto recorder = std::make_unique<DataRecorder>(std::move(filename), ec);
   if (ec)
     return llvm::errorCodeToError(ec);
   return std::move(recorder);
