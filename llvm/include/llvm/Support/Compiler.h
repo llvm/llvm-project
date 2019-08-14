@@ -43,6 +43,12 @@
 # define __has_builtin(x) 0
 #endif
 
+#ifdef __cplusplus
+# if __cplusplus < 201402L
+#  error Expected C++14 or later.
+# endif
+#endif
+
 /// \macro LLVM_GNUC_PREREQ
 /// Extend the default __GNUC_PREREQ even if glibc's features.h isn't
 /// available.
