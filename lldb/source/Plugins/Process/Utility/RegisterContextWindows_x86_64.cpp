@@ -75,11 +75,13 @@ typedef struct _FPReg {
   (sizeof(GPR) + LLVM_EXTENSION offsetof(FPReg, regname))
 
 #define DEFINE_XMM(reg)                                                        \
-#reg, NULL, sizeof(((FPReg *)nullptr)->reg), FPR_OFFSET(reg), eEncodingUint, \
-      eFormatVectorOfUInt64,                                                   \
-      {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,        \
-       LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                             \
-       nullptr, nullptr, nullptr, 0
+  {                                                                            \
+#reg, NULL, sizeof(((FPReg *)nullptr)->reg), FPR_OFFSET(reg),              \
+        eEncodingUint, eFormatVectorOfUInt64,                                  \
+        {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,      \
+         LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                           \
+         nullptr, nullptr, nullptr, 0                                          \
+  }
 
 // clang-format off
 static RegisterInfo g_register_infos_x86_64[] = {
