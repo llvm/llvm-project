@@ -4178,12 +4178,6 @@ void SwiftASTContext::ValidateSectionModules(
   }
 }
 
-swift::Identifier SwiftASTContext::GetIdentifier(const char *name) {
-  VALID_OR_RETURN(swift::Identifier());
-
-  return GetASTContext()->getIdentifier(llvm::StringRef(name));
-}
-
 swift::Identifier SwiftASTContext::GetIdentifier(const llvm::StringRef &name) {
   VALID_OR_RETURN(swift::Identifier());
 
@@ -4548,7 +4542,7 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
   if (name && name[0] && swift_module) {
     swift::ModuleDecl::AccessPathTy access_path;
     llvm::SmallVector<swift::ValueDecl *, 4> value_decls;
-    swift::Identifier identifier(GetIdentifier(name));
+    swift::Identifier identifier(GetIdentifier(llvm::StringRef(name)));
     if (strchr(name, '.'))
       swift_module->lookupValue(access_path, identifier,
                                 swift::NLKind::QualifiedLookup, value_decls);
