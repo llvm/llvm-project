@@ -50,8 +50,13 @@ int convertForTestingMain(int argc, const char *argv[]) {
   auto ObjFormat = OF->getTripleObjectFormat();
   for (const auto &Section : OF->sections()) {
     StringRef Name;
-    if (Section.getName(Name))
+    if (Expected<StringRef> NameOrErr = Section.getName()) {
+      Name = *NameOrErr;
+    } else {
+      consumeError(NameOrErr.takeError());
       return 1;
+    }
+
     if (Name == llvm::getInstrProfSectionName(IPSK_name, ObjFormat,
                                               /*AddSegmentInfo=*/false)) {
       ProfileNames = Section;

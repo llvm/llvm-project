@@ -289,7 +289,10 @@ public:
   Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
                        const SectionRef &Section) {
     StringRef Name;
-    Section.getName(Name);
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
 
     if (Name == "__nl_symbol_ptr")
       return populateIndirectSymbolPointersSection(cast<MachOObjectFile>(Obj),

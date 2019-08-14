@@ -309,6 +309,7 @@ private:
     DCHECK(B);
     DCHECK_GT(B->getCount(), 0);
 
+    C->getStats().add(StatFree, AllocatedUser);
     Region->AllocatedUser += AllocatedUser;
     Region->Exhausted = false;
     if (Region->CanRelease)

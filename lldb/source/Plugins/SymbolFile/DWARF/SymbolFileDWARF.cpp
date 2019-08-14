@@ -178,6 +178,11 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
+static FileSpec::Style GuessPathStyleOrNative(llvm::StringRef p) {
+  llvm::Optional<FileSpec::Style> style = FileSpec::GuessPathStyle(p);
+  return style ? *style : FileSpec::Style::native;
+}
+
 static FileSpecList
 ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
                               const llvm::DWARFDebugLine::Prologue &prologue,
@@ -186,8 +191,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   FileSpecList support_files;
   support_files.Append(first_file);
 
-  llvm::Optional<FileSpec::Style> compile_dir_style =
-      FileSpec::GuessPathStyle(compile_dir);
   const size_t number_of_files = prologue.FileNames.size();
   for (size_t idx = 1; idx <= number_of_files; ++idx) {
     std::string original_file;
@@ -200,26 +203,22 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
       continue;
     }
 
-    FileSpec::Style style = FileSpec::Style::native;
-    if (compile_dir_style) {
-      style = *compile_dir_style;
-    } else if (llvm::Optional<FileSpec::Style> file_style =
-                   FileSpec::GuessPathStyle(original_file)) {
-      style = *file_style;
-    }
-
     std::string remapped_file;
     if (!prologue.getFileNameByIndex(
             idx, compile_dir,
             llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             remapped_file)) {
       // Always add an entry so the indexes remain correct.
-      support_files.EmplaceBack(original_file, style);
+      support_files.EmplaceBack(original_file,
+                                FileSpec::GuessPathStyle(original_file)
+                                    .getValueOr(FileSpec::Style::native));
       continue;
     }
 
     module->RemapSourceFile(llvm::StringRef(original_file), remapped_file);
-    support_files.EmplaceBack(remapped_file, style);
+    support_files.EmplaceBack(remapped_file,
+                              FileSpec::GuessPathStyle(remapped_file)
+                                  .getValueOr(FileSpec::Style::native));
   }
 
   return support_files;

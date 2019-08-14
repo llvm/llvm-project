@@ -141,6 +141,7 @@ private:
     case Kind::SwitchCleanup:
       return true;
     }
+    llvm_unreachable("Unknown CoroCloner::Kind enum");
   }
 
   void createDeclaration();
@@ -865,9 +866,14 @@ static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
 
 static void postSplitCleanup(Function &F) {
   removeUnreachableBlocks(F);
+
+  // For now, we do a mandatory verification step because we don't
+  // entirely trust this pass.  Note that we don't want to add a verifier
+  // pass to FPM below because it will also verify all the global data.
+  verifyFunction(F);
+
   legacy::FunctionPassManager FPM(F.getParent());
 
-  FPM.add(createVerifierPass());
   FPM.add(createSCCPPass());
   FPM.add(createCFGSimplificationPass());
   FPM.add(createEarlyCSEPass());
@@ -1544,10 +1550,12 @@ static void replacePrepare(CallInst *Prepare, CallGraph &CG) {
     // If so, we'll need to update the call graph.
     if (PrepareUserNode) {
       for (auto &Use : Cast->uses()) {
-        auto CS = CallSite(Use.getUser());
-        if (!CS || !CS.isCallee(&Use)) continue;
-        PrepareUserNode->removeCallEdgeFor(CS);
-        PrepareUserNode->addCalledFunction(CS, FnNode);
+        if (auto *CB = dyn_cast<CallBase>(Use.getUser())) {
+          if (!CB->isCallee(&Use))
+            continue;
+          PrepareUserNode->removeCallEdgeFor(*CB);
+          PrepareUserNode->addCalledFunction(CB, FnNode);
+        }
       }
     }
 

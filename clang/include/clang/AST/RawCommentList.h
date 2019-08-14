@@ -199,7 +199,8 @@ public:
   void addComment(const RawComment &RC, const CommentOptions &CommentOpts,
                   llvm::BumpPtrAllocator &Allocator);
 
-  /// \returns nullptr in case there are no comments in in \p File.
+  /// \returns A mapping from an offset of the start of the comment to the
+  /// comment itself, or nullptr in case there are no comments in \p File.
   const std::map<unsigned, RawComment *> *getCommentsInFile(FileID File) const;
 
   bool empty() const;

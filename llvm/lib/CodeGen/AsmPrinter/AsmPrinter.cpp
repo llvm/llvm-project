@@ -1313,11 +1313,10 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
 
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
-  if (IsFunction) {
-    OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
-    if (isa<GlobalIFunc>(GIS))
-      OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
-  }
+  if (IsFunction)
+    OutStreamer->EmitSymbolAttribute(Name, isa<GlobalIFunc>(GIS)
+                                               ? MCSA_ELF_TypeIndFunction
+                                               : MCSA_ELF_TypeFunction);
 
   EmitVisibility(Name, GIS.getVisibility());
 

@@ -163,7 +163,7 @@ define i8* @test5(i32 %n) nounwind ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias i8* @malloc(i32 20) #0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @s, align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias align 1 dereferenceable(10) [[TMP0]], i8* noalias align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(10) [[TMP0]], i8* align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false)
 ; CHECK-NEXT:    ret i8* [[TMP0]]
 ;
 entry:

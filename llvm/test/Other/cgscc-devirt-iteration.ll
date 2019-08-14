@@ -96,7 +96,7 @@ entry:
 }
 
 declare i8* @memcpy(i8*, i8*, i64)
-; CHECK-LABEL: declare i8* @memcpy(
+; CHECK-LABEL: i8* @memcpy(
 
 ; The @test3 function checks that when we refine an indirect call to an
 ; intrinsic we still revisit the SCC pass. This also covers cases where the

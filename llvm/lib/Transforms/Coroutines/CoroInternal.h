@@ -165,6 +165,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
     }
+    llvm_unreachable("Unknown coro::ABI enum");
   }
 
   ArrayRef<Type*> getRetconResultTypes() const {
@@ -198,6 +199,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getCallingConv();
     }
+    llvm_unreachable("Unknown coro::ABI enum");
   }
 
   unsigned getFirstSpillFieldIndex() const {
@@ -208,7 +210,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return 0;
-    }    
+    }
+    llvm_unreachable("Unknown coro::ABI enum");
   }
 
   AllocaInst *getPromiseAlloca() const {

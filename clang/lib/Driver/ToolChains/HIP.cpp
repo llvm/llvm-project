@@ -23,7 +23,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-#if _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #define NULL_FILE "nul"
 #else
 #define NULL_FILE "/dev/null"

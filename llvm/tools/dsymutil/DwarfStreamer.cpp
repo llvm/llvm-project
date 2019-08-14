@@ -31,7 +31,11 @@ static Optional<object::SectionRef>
 getSectionByName(const object::ObjectFile &Obj, StringRef SecName) {
   for (const object::SectionRef &Section : Obj.sections()) {
     StringRef SectionName;
-    Section.getName(SectionName);
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      SectionName = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
     SectionName = SectionName.substr(SectionName.find_first_not_of("._"));
     if (SectionName != SecName)
       continue;

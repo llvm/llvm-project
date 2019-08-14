@@ -183,10 +183,6 @@
 #  define _LIBCPP_COMPILER_IBM
 #endif
 
-#ifndef _LIBCPP_CLANG_VER
-#define _LIBCPP_CLANG_VER 0
-#endif
-
 #if defined(_LIBCPP_COMPILER_GCC) && __cplusplus < 201103L
 #error "libc++ does not support using GCC with C++03. Please enable C++11"
 #endif
@@ -483,9 +479,10 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
 
-// No apple compilers support ""d and ""y at this time.
-#if _LIBCPP_CLANG_VER < 800 || defined(__apple_build_version__)
-#define	_LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
+// Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
+#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) || \
+    (defined(__apple_build_version__) && __apple_build_version__ < 10010000)
+#define _LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
 #endif
 
 #elif defined(_LIBCPP_COMPILER_GCC)
@@ -1242,7 +1239,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #ifndef _LIBCPP_NODEBUG_TYPE
 #if __has_attribute(__nodebug__) && \
-    (defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER >= 900)
+    (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
 #define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
 #else
 #define _LIBCPP_NODEBUG_TYPE

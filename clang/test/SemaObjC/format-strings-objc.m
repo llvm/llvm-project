@@ -25,7 +25,11 @@ typedef struct _NSZone NSZone;
 @protocol NSCoding  - (void)encodeWithCoder:(NSCoder *)aCoder; @end
 @interface NSObject <NSObject> {} @end
 typedef float CGFloat;
-@interface NSString : NSObject <NSCopying, NSMutableCopying, NSCoding>    - (NSUInteger)length; @end
+@interface NSString : NSObject <NSCopying, NSMutableCopying, NSCoding>
+- (NSUInteger)length;
++(instancetype)stringWithFormat:(NSString *)fmt, ...
+    __attribute__((format(__NSString__, 1, 2)));
+@end
 @interface NSSimpleCString : NSString {} @end
 @interface NSConstantString : NSSimpleCString @end
 extern void *_NSConstantStringClassReference;
@@ -302,3 +306,39 @@ const char *rd23622446(const char *format) {
 }
 
 @end
+
+@interface NSBundle : NSObject
+- (NSString *)localizedStringForKey:(NSString *)key
+                              value:(nullable NSString *)value
+                              table:(nullable NSString *)tableName
+     __attribute__((format_arg(1)));
+
+- (NSString *)someRandomMethod:(NSString *)key
+                         value:(nullable NSString *)value
+                         table:(nullable NSString *)tableName
+    __attribute__((format_arg(1)));
+@end
+
+void useLocalizedStringForKey(NSBundle *bndl) {
+  [NSString stringWithFormat:
+              [bndl localizedStringForKey:@"%d" // expected-warning{{more '%' conversions than data arguments}}
+                                      value:0
+                                      table:0]];
+  // No warning, @"flerp" doesn't have a format specifier.
+  [NSString stringWithFormat: [bndl localizedStringForKey:@"flerp" value:0 table:0], 43, @"flarp"];
+
+  [NSString stringWithFormat:
+              [bndl localizedStringForKey:@"%f"
+                                    value:0
+                                    table:0], 42]; // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
+
+  [NSString stringWithFormat:
+              [bndl someRandomMethod:@"%f"
+                               value:0
+                               table:0], 42]; // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
+
+  [NSString stringWithFormat:
+              [bndl someRandomMethod:@"flerp"
+                               value:0
+                               table:0], 42]; // expected-warning{{data argument not used by format string}}
+}
