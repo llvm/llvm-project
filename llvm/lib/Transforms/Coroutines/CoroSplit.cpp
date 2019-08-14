@@ -141,6 +141,7 @@ private:
     case Kind::SwitchCleanup:
       return true;
     }
+    llvm_unreachable("Unknown CoroCloner::Kind enum");
   }
 
   void createDeclaration();

@@ -47,6 +47,23 @@ class FileStatus {
   dispose() { this.statusBarItem.dispose(); }
 }
 
+class ClangdLanguageClient extends vscodelc.LanguageClient {
+  // Override the default implementation for failed requests. The default
+  // behavior is just to log failures in the output panel, however output panel
+  // is designed for extension debugging purpose, normal users will not open it,
+  // thus when the failure occurs, normal users doesn't know that.
+  //
+  // For user-interactive operations (e.g. applyFixIt, applyTweaks), we will
+  // prompt up the failure to users.
+  logFailedRequest(rpcReply: vscodelc.RPCMessageType, error: any) {
+    if (error instanceof vscodelc.ResponseError &&
+        rpcReply.method === "workspace/executeCommand")
+      vscode.window.showErrorMessage(error.message);
+    // Call default implementation.
+    super.logFailedRequest(rpcReply, error);
+  }
+}
+
 /**
  *  this method is called when your extension is activate
  *  your extension is activated the very first time the command is executed
@@ -89,8 +106,8 @@ export function activate(context: vscode.ExtensionContext) {
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
-  const clangdClient = new vscodelc.LanguageClient(
-      'Clang Language Server', serverOptions, clientOptions);
+  const clangdClient = new ClangdLanguageClient('Clang Language Server',
+                                                serverOptions, clientOptions);
   console.log('Clang Language Server is now active!');
   context.subscriptions.push(clangdClient.start());
   context.subscriptions.push(vscode.commands.registerCommand(

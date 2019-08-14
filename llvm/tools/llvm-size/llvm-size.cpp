@@ -106,17 +106,6 @@ static bool HadError = false;
 
 static std::string ToolName;
 
-/// If ec is not success, print the error and return true.
-static bool error(std::error_code ec) {
-  if (!ec)
-    return false;
-
-  HadError = true;
-  errs() << ToolName << ": error reading file: " << ec.message() << ".\n";
-  errs().flush();
-  return true;
-}
-
 static bool error(Twine Message) {
   HadError = true;
   errs() << ToolName << ": " << Message << ".\n";
@@ -397,11 +386,14 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
       uint64_t size = Section.getSize();
       total += size;
 
-      StringRef name;
-      if (error(Section.getName(name)))
+      Expected<StringRef> name_or_err = Section.getName();
+      if (!name_or_err) {
+        error(name_or_err.takeError(), Obj->getFileName());
         return;
+      }
+
       uint64_t addr = Section.getAddress();
-      max_name_len = std::max(max_name_len, name.size());
+      max_name_len = std::max(max_name_len, name_or_err->size());
       max_size_len = std::max(max_size_len, getNumLengthAsString(size));
       max_addr_len = std::max(max_addr_len, getNumLengthAsString(addr));
     }
@@ -431,14 +423,16 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
     for (const SectionRef &Section : Obj->sections()) {
       if (!considerForSize(Obj, Section))
         continue;
-      StringRef name;
-      if (error(Section.getName(name)))
+
+      Expected<StringRef> name_or_err = Section.getName();
+      if (!name_or_err) {
+        error(name_or_err.takeError(), Obj->getFileName());
         return;
+      }
+
       uint64_t size = Section.getSize();
       uint64_t addr = Section.getAddress();
-      std::string namestr = name;
-
-      outs() << format(fmt.str().c_str(), namestr.c_str(), size, addr);
+      outs() << format(fmt.str().c_str(), name_or_err->str().c_str(), size, addr);
     }
 
     if (ELFCommons) {

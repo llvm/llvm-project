@@ -748,6 +748,12 @@ bool ParseScanfString(FormatStringHandler &H,
                       const char *beg, const char *end, const LangOptions &LO,
                       const TargetInfo &Target);
 
+/// Return true if the given string has at least one formatting specifier.
+bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
+                                              const char *End,
+                                              const LangOptions &LO,
+                                              const TargetInfo &Target);
+
 } // end analyze_format_string namespace
 } // end clang namespace
 #endif

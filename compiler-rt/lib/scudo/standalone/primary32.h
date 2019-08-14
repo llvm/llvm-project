@@ -318,6 +318,8 @@ private:
     }
     DCHECK(B);
     DCHECK_GT(B->getCount(), 0);
+
+    C->getStats().add(StatFree, AllocatedUser);
     Sci->AllocatedUser += AllocatedUser;
     if (Sci->CanRelease)
       Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();

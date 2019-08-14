@@ -3241,8 +3241,8 @@ SDValue PPCTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV, nextOffset));
 }
 
-/// FPR - The set of FP registers that should be allocated for arguments,
-/// on Darwin.
+/// FPR - The set of FP registers that should be allocated for arguments
+/// on Darwin and AIX.
 static const MCPhysReg FPR[] = {PPC::F1,  PPC::F2,  PPC::F3, PPC::F4, PPC::F5,
                                 PPC::F6,  PPC::F7,  PPC::F8, PPC::F9, PPC::F10,
                                 PPC::F11, PPC::F12, PPC::F13};
@@ -6736,8 +6736,12 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   const unsigned NumGPRs = isPPC64 ? array_lengthof(GPR_64)
                                    : array_lengthof(GPR_32);
+  const unsigned NumFPRs = array_lengthof(FPR);
+  assert(NumFPRs == 13 && "Only FPR 1-13 could be used for parameter passing "
+                          "on AIX");
+
   const MCPhysReg *GPR = isPPC64 ? GPR_64 : GPR_32;
-  unsigned GPR_idx = 0;
+  unsigned GPR_idx = 0, FPR_idx = 0;
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
@@ -6774,6 +6778,20 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       break;
     case MVT::f32:
     case MVT::f64:
+      if (FPR_idx != NumFPRs) {
+        RegsToPass.push_back(std::make_pair(FPR[FPR_idx++], Arg));
+
+        // If we have any FPRs remaining, we may also have GPRs remaining.
+        // Args passed in FPRs consume 1 or 2 (f64 in 32 bit mode) available
+        // GPRs.
+        if (GPR_idx != NumGPRs)
+          ++GPR_idx;
+        if (GPR_idx != NumGPRs && Arg.getValueType() == MVT::f64 && !isPPC64)
+          ++GPR_idx;
+      } else
+        report_fatal_error("Handling of placing parameters on the stack is "
+                           "unimplemented!");
+      break;
     case MVT::v4f32:
     case MVT::v4i32:
     case MVT::v8i16:

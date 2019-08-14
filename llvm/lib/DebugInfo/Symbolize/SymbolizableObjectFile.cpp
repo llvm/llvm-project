@@ -54,10 +54,11 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
   // PowerPC64 ELF.
   if (Obj->getArch() == Triple::ppc64) {
     for (section_iterator Section : Obj->sections()) {
-      StringRef Name;
-      if (auto EC = Section->getName(Name))
-        return EC;
-      if (Name == ".opd") {
+      Expected<StringRef> NameOrErr = Section->getName();
+      if (!NameOrErr)
+        return errorToErrorCode(NameOrErr.takeError());
+
+      if (*NameOrErr == ".opd") {
         Expected<StringRef> E = Section->getContents();
         if (!E)
           return errorToErrorCode(E.takeError());

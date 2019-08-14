@@ -113,6 +113,9 @@ static inline bool isCanonicalPredicate(CmpInst::Predicate Pred) {
   }
 }
 
+llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
+getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred, Constant *C);
+
 /// Return the source operand of a potentially bitcasted value while optionally
 /// checking if it has one use. If there is no bitcast or the one use check is
 /// not met, return the input value itself.

@@ -610,6 +610,144 @@ class CFGBlock {
     bool empty() const { return Impl.empty(); }
   };
 
+  /// A convenience class for comparing CFGElements, since methods of CFGBlock
+  /// like operator[] return CFGElements by value. This is practically a wrapper
+  /// around a (CFGBlock, Index) pair.
+  template <bool IsConst> class ElementRefImpl {
+
+    template <bool IsOtherConst> friend class ElementRefImpl;
+
+    using CFGBlockPtr =
+        typename std::conditional<IsConst, const CFGBlock *, CFGBlock *>::type;
+
+    using CFGElementPtr = typename std::conditional<IsConst, const CFGElement *,
+                                                    CFGElement *>::type;
+
+  protected:
+    CFGBlockPtr Parent;
+    size_t Index;
+
+  public:
+    ElementRefImpl(CFGBlockPtr Parent, size_t Index)
+        : Parent(Parent), Index(Index) {}
+
+    template <bool IsOtherConst>
+    ElementRefImpl(ElementRefImpl<IsOtherConst> Other)
+        : ElementRefImpl(Other.Parent, Other.Index) {}
+
+    size_t getIndexInBlock() const { return Index; }
+
+    CFGBlockPtr getParent() { return Parent; }
+    CFGBlockPtr getParent() const { return Parent; }
+
+    bool operator<(ElementRefImpl Other) const {
+      return std::make_pair(Parent, Index) <
+             std::make_pair(Other.Parent, Other.Index);
+    }
+
+    bool operator==(ElementRefImpl Other) const {
+      return Parent == Other.Parent && Index == Other.Index;
+    }
+
+    bool operator!=(ElementRefImpl Other) const { return !(*this == Other); }
+    CFGElement operator*() { return (*Parent)[Index]; }
+    CFGElementPtr operator->() { return &*(Parent->begin() + Index); }
+  };
+
+  template <bool IsReverse, bool IsConst> class ElementRefIterator {
+
+    template <bool IsOtherReverse, bool IsOtherConst>
+    friend class ElementRefIterator;
+
+    using CFGBlockRef =
+        typename std::conditional<IsConst, const CFGBlock *, CFGBlock *>::type;
+
+    using UnderlayingIteratorTy = typename std::conditional<
+        IsConst,
+        typename std::conditional<IsReverse,
+                                  ElementList::const_reverse_iterator,
+                                  ElementList::const_iterator>::type,
+        typename std::conditional<IsReverse, ElementList::reverse_iterator,
+                                  ElementList::iterator>::type>::type;
+
+    using IteratorTraits = typename std::iterator_traits<UnderlayingIteratorTy>;
+    using ElementRef = typename CFGBlock::ElementRefImpl<IsConst>;
+
+  public:
+    using difference_type = typename IteratorTraits::difference_type;
+    using value_type = ElementRef;
+    using pointer = ElementRef *;
+    using iterator_category = typename IteratorTraits::iterator_category;
+
+  private:
+    CFGBlockRef Parent;
+    UnderlayingIteratorTy Pos;
+
+  public:
+    ElementRefIterator(CFGBlockRef Parent, UnderlayingIteratorTy Pos)
+        : Parent(Parent), Pos(Pos) {}
+
+    template <bool IsOtherConst>
+    ElementRefIterator(ElementRefIterator<false, IsOtherConst> E)
+        : ElementRefIterator(E.Parent, E.Pos.base()) {}
+
+    template <bool IsOtherConst>
+    ElementRefIterator(ElementRefIterator<true, IsOtherConst> E)
+        : ElementRefIterator(E.Parent, llvm::make_reverse_iterator(E.Pos)) {}
+
+    bool operator<(ElementRefIterator Other) const {
+      assert(Parent == Other.Parent);
+      return Pos < Other.Pos;
+    }
+
+    bool operator==(ElementRefIterator Other) const {
+      return Parent == Other.Parent && Pos == Other.Pos;
+    }
+
+    bool operator!=(ElementRefIterator Other) const {
+      return !(*this == Other);
+    }
+
+  private:
+    template <bool IsOtherConst>
+    static size_t
+    getIndexInBlock(CFGBlock::ElementRefIterator<true, IsOtherConst> E) {
+      return E.Parent->size() - (E.Pos - E.Parent->rbegin()) - 1;
+    }
+
+    template <bool IsOtherConst>
+    static size_t
+    getIndexInBlock(CFGBlock::ElementRefIterator<false, IsOtherConst> E) {
+      return E.Pos - E.Parent->begin();
+    }
+
+  public:
+    value_type operator*() { return {Parent, getIndexInBlock(*this)}; }
+
+    difference_type operator-(ElementRefIterator Other) const {
+      return Pos - Other.Pos;
+    }
+
+    ElementRefIterator operator++() {
+      ++this->Pos;
+      return *this;
+    }
+    ElementRefIterator operator++(int) {
+      ElementRefIterator Ret = *this;
+      ++*this;
+      return Ret;
+    }
+    ElementRefIterator operator+(size_t count) {
+      this->Pos += count;
+      return *this;
+    }
+    ElementRefIterator operator-(size_t count) {
+      this->Pos -= count;
+      return *this;
+    }
+  };
+
+public:
   /// The set of statements in the basic block.
   ElementList Elements;
 
@@ -715,6 +853,8 @@ public:
   using reverse_iterator = ElementList::reverse_iterator;
   using const_reverse_iterator = ElementList::const_reverse_iterator;
 
+  size_t getIndexInCFG() const;
+
   CFGElement                 front()       const { return Elements.front();   }
   CFGElement                 back()        const { return Elements.back();    }
 
@@ -727,6 +867,38 @@ public:
   reverse_iterator           rend()              { return Elements.rend();    }
   const_reverse_iterator     rbegin()      const { return Elements.rbegin();  }
   const_reverse_iterator     rend()        const { return Elements.rend();    }
+
+  using CFGElementRef = ElementRefImpl<false>;
+  using ConstCFGElementRef = ElementRefImpl<true>;
+
+  using ref_iterator = ElementRefIterator<false, false>;
+  using ref_iterator_range = llvm::iterator_range<ref_iterator>;
+  using const_ref_iterator = ElementRefIterator<false, true>;
+  using const_ref_iterator_range = llvm::iterator_range<const_ref_iterator>;
+
+  using reverse_ref_iterator = ElementRefIterator<true, false>;
+  using reverse_ref_iterator_range = llvm::iterator_range<reverse_ref_iterator>;
+
+  using const_reverse_ref_iterator = ElementRefIterator<true, true>;
+  using const_reverse_ref_iterator_range =
+      llvm::iterator_range<const_reverse_ref_iterator>;
+
+  ref_iterator ref_begin() { return {this, begin()}; }
+  ref_iterator ref_end() { return {this, end()}; }
+  const_ref_iterator ref_begin() const { return {this, begin()}; }
+  const_ref_iterator ref_end() const { return {this, end()}; }
+
+  reverse_ref_iterator rref_begin() { return {this, rbegin()}; }
+  reverse_ref_iterator rref_end() { return {this, rend()}; }
+  const_reverse_ref_iterator rref_begin() const { return {this, rbegin()}; }
+  const_reverse_ref_iterator rref_end() const { return {this, rend()}; }
+
+  ref_iterator_range refs() { return {ref_begin(), ref_end()}; }
+  const_ref_iterator_range refs() const { return {ref_begin(), ref_end()}; }
+  reverse_ref_iterator_range rrefs() { return {rref_begin(), rref_end()}; }
+  const_reverse_ref_iterator_range rrefs() const {
+    return {rref_begin(), rref_end()};
+  }
 
   unsigned                   size()        const { return Elements.size();    }
   bool                       empty()       const { return Elements.empty();   }
@@ -855,6 +1027,10 @@ public:
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
   void setHasNoReturnElement() { HasNoReturnElement = true; }
 
+  /// Returns true if the block would eventually end with a sink (a noreturn
+  /// node).
+  bool isInevitablySinking() const;
+
   CFGTerminator getTerminator() const { return Terminator; }
 
   Stmt *getTerminatorStmt() { return Terminator.getStmt(); }
@@ -894,7 +1070,7 @@ public:
   void printTerminator(raw_ostream &OS, const LangOptions &LO) const;
   void printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
                            bool AddQuotes) const;
-  
+
   void printAsOperand(raw_ostream &OS, bool /*PrintType*/) {
     OS << "BB#" << getBlockID();
   }
@@ -1010,7 +1186,6 @@ public:
     *I = CFGScopeEnd(VD, S);
     return ++I;
   }
-
 };
 
 /// CFGCallback defines methods that should be called when a logical

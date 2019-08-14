@@ -55,9 +55,18 @@ define i32 @memcmp_const_size_update_deref4(i8* nocapture readonly %d, i8* nocap
   ret i32 %call
 }
 
-define i32 @memcmp_const_size_update_deref5(i8* nocapture readonly %d, i8* nocapture readonly %s) {
+define i32 @memcmp_const_size_update_deref5(i8* nocapture readonly %d, i8* nocapture readonly %s) "null-pointer-is-valid"="false" {
 ; CHECK-LABEL: @memcmp_const_size_update_deref5(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* dereferenceable(40) [[D:%.*]], i8* dereferenceable(16) [[S:%.*]], i64 16)
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = tail call i32 @memcmp(i8* dereferenceable_or_null(40) %d, i8* %s, i64 16)
+  ret i32 %call
+}
+
+define i32 @memcmp_const_size_update_deref6(i8* nocapture readonly %d, i8* nocapture readonly %s) "null-pointer-is-valid"="true" {
+; CHECK-LABEL: @memcmp_const_size_update_deref6(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* dereferenceable(16) dereferenceable_or_null(40) [[D:%.*]], i8* dereferenceable(16) [[S:%.*]], i64 16)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = tail call i32 @memcmp(i8* dereferenceable_or_null(40) %d, i8* %s, i64 16)
@@ -84,7 +93,7 @@ define i32 @memcmp_nonconst_size(i8* nocapture readonly %d, i8* nocapture readon
 
 define i8* @memcpy_const_size_set_deref(i8* nocapture readonly %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias align 1 dereferenceable(64) [[D:%.*]], i8* noalias align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(64) [[D:%.*]], i8* align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i8* [[D]]
 ;
   %call = tail call i8* @memcpy(i8* %d, i8* %s, i64 64)
@@ -120,7 +129,7 @@ define i8* @memchr_const_size_set_deref(i8* nocapture readonly %s, i32 %c) {
 
 define i8* @llvm_memcpy_const_size_set_deref(i8* nocapture readonly %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @llvm_memcpy_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias align 1 dereferenceable(16) [[D:%.*]], i8* noalias align 1 dereferenceable(16) [[S:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(16) [[D:%.*]], i8* align 1 dereferenceable(16) [[S:%.*]], i64 16, i1 false)
 ; CHECK-NEXT:    ret i8* [[D]]
 ;
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %d, i8* align 1 %s, i64 16, i1 false)

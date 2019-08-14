@@ -67,10 +67,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   StringRef Contents = "";
   const auto &Sections = ObjFile.getBinary()->sections();
   auto I = llvm::find_if(Sections, [&](object::SectionRef Section) {
-    StringRef Name = "";
-    if (Section.getName(Name))
-      return false;
-    return Name == "xray_instr_map";
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (NameOrErr)
+      return *NameOrErr == "xray_instr_map";
+    consumeError(NameOrErr.takeError());
+    return false;
   });
 
   if (I == Sections.end())

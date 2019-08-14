@@ -88,6 +88,14 @@ static bool setDoesNotCapture(Function &F, unsigned ArgNo) {
   return true;
 }
 
+static bool setDoesNotAlias(Function &F, unsigned ArgNo) {
+  if (F.hasParamAttribute(ArgNo, Attribute::NoAlias))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::NoAlias);
+  ++NumNoAlias;
+  return true;
+}
+
 static bool setOnlyReadsMemory(Function &F, unsigned ArgNo) {
   if (F.hasParamAttribute(ArgNo, Attribute::ReadOnly))
     return false;
@@ -175,6 +183,9 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_strcpy:
   case LibFunc_strncpy:
+    Changed |= setDoesNotAlias(F, 0);
+    Changed |= setDoesNotAlias(F, 1);
+    LLVM_FALLTHROUGH;
   case LibFunc_strcat:
   case LibFunc_strncat:
     Changed |= setReturnedArg(F, 0);
@@ -249,12 +260,14 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_sprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_snprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
@@ -291,6 +304,9 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_memcpy:
+    Changed |= setDoesNotAlias(F, 0);
+    Changed |= setDoesNotAlias(F, 1);
+    LLVM_FALLTHROUGH;
   case LibFunc_memmove:
     Changed |= setReturnedArg(F, 0);
     LLVM_FALLTHROUGH;

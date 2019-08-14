@@ -125,6 +125,8 @@ public:
   static const int Test;
 };
 
+extern int testImportOfIncompleteDefaultParmDuringImport(int);
+
 int main() {
   clang_analyzer_eval(f(3) == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(f(4) == 3); // expected-warning{{TRUE}}
@@ -157,5 +159,8 @@ int main() {
   clang_analyzer_eval(extSubSCN.a == 1); // expected-warning{{TRUE}}
   // clang_analyzer_eval(extSCC.a == 7); // TODO
   clang_analyzer_eval(extU.a == 4); // expected-warning{{TRUE}}
+
   clang_analyzer_eval(TestAnonUnionUSR::Test == 5); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(testImportOfIncompleteDefaultParmDuringImport(9) == 9); // expected-warning{{TRUE}}
 }

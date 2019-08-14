@@ -1209,18 +1209,11 @@ class XX3Form<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = XT{5};
 }
 
-class XX3Form_Zero<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
+class XX3Form_SameOp<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
   : XX3Form<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
   let XA = XT;
   let XB = XT;
-}
-
-class XX3Form_SetZero<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
-               InstrItinClass itin, list<dag> pattern>
-    : XX3Form<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
-  let XB = XT;
-  let XA = XT;
 }
 
 class XX3Form_1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr, 

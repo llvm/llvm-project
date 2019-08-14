@@ -17,7 +17,7 @@
 namespace scudo {
 
 // Memory allocator statistics
-enum StatType { StatAllocated, StatMapped, StatCount };
+enum StatType { StatAllocated, StatFree, StatMapped, StatCount };
 
 typedef uptr StatCounters[StatCount];
 

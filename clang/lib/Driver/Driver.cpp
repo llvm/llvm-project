@@ -3148,6 +3148,123 @@ public:
 };
 } // anonymous namespace.
 
+void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
+                             const InputList &Inputs,
+                             ActionList &Actions) const {
+
+  // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
+  Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
+  Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
+  if (YcArg && YuArg && strcmp(YcArg->getValue(), YuArg->getValue()) != 0) {
+    Diag(clang::diag::warn_drv_ycyu_different_arg_clang_cl);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YcArg = YuArg = nullptr;
+  }
+  if (YcArg && Inputs.size() > 1) {
+    Diag(clang::diag::warn_drv_yc_multiple_inputs_clang_cl);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    YcArg = nullptr;
+  }
+
+  Arg *FinalPhaseArg;
+  phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
+
+  if (FinalPhase == phases::Link) {
+    if (Args.hasArg(options::OPT_emit_llvm))
+      Diag(clang::diag::err_drv_emit_llvm_link);
+    if (IsCLMode() && LTOMode != LTOK_None &&
+        !Args.getLastArgValue(options::OPT_fuse_ld_EQ).equals_lower("lld"))
+      Diag(clang::diag::err_drv_lto_without_lld);
+  }
+
+  if (FinalPhase == phases::Preprocess || Args.hasArg(options::OPT__SLASH_Y_)) {
+    // If only preprocessing or /Y- is used, all pch handling is disabled.
+    // Rather than check for it everywhere, just remove clang-cl pch-related
+    // flags here.
+    Args.eraseArg(options::OPT__SLASH_Fp);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YcArg = YuArg = nullptr;
+  }
+
+  unsigned LastPLSize = 0;
+  for (auto &I : Inputs) {
+    types::ID InputType = I.first;
+    const Arg *InputArg = I.second;
+
+    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL;
+    types::getCompilationPhases(InputType, PL);
+    LastPLSize = PL.size();
+
+    // If the first step comes after the final phase we are doing as part of
+    // this compilation, warn the user about it.
+    phases::ID InitialPhase = PL[0];
+    if (InitialPhase > FinalPhase) {
+      if (InputArg->isClaimed())
+        continue;
+
+      // Claim here to avoid the more general unused warning.
+      InputArg->claim();
+
+      // Suppress all unused style warnings with -Qunused-arguments
+      if (Args.hasArg(options::OPT_Qunused_arguments))
+        continue;
+
+      // Special case when final phase determined by binary name, rather than
+      // by a command-line argument with a corresponding Arg.
+      if (CCCIsCPP())
+        Diag(clang::diag::warn_drv_input_file_unused_by_cpp)
+            << InputArg->getAsString(Args) << getPhaseName(InitialPhase);
+      // Special case '-E' warning on a previously preprocessed file to make
+      // more sense.
+      else if (InitialPhase == phases::Compile &&
+               (Args.getLastArg(options::OPT__SLASH_EP,
+                                options::OPT__SLASH_P) ||
+                Args.getLastArg(options::OPT_E) ||
+                Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
+               getPreprocessedType(InputType) == types::TY_INVALID)
+        Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
+            << InputArg->getAsString(Args) << !!FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+      else
+        Diag(clang::diag::warn_drv_input_file_unused)
+            << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
+            << !!FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+      continue;
+    }
+
+    if (YcArg) {
+      // Add a separate precompile phase for the compile phase.
+      if (FinalPhase >= phases::Compile) {
+        const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
+        llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
+        types::getCompilationPhases(HeaderType, PCHPL);
+        // Build the pipeline for the pch file.
+        Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
+        for (phases::ID Phase : PCHPL)
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
+        assert(ClangClPch);
+        Actions.push_back(ClangClPch);
+        // The driver currently exits after the first failed command.  This
+        // relies on that behavior, to make sure if the pch generation fails,
+        // the main compilation won't run.
+        // FIXME: If the main compilation fails, the PCH generation should
+        // probably not be considered successful either.
+      }
+    }
+  }
+
+  // If we are linking, claim any options which are obviously only used for
+  // compilation.
+  // FIXME: Understand why the last Phase List length is used here.
+  if (FinalPhase == phases::Link && LastPLSize == 1) {
+    Args.ClaimAllArgs(options::OPT_CompileOnly_Group);
+    Args.ClaimAllArgs(options::OPT_cl_compile_Group);
+  }
+}
+
 void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                           const InputList &Inputs, ActionList &Actions) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation actions");
@@ -3195,20 +3312,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
-  Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
-  Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
-  if (YcArg && YuArg && strcmp(YcArg->getValue(), YuArg->getValue()) != 0) {
-    Diag(clang::diag::warn_drv_ycyu_different_arg_clang_cl);
-    Args.eraseArg(options::OPT__SLASH_Yc);
-    Args.eraseArg(options::OPT__SLASH_Yu);
-    YcArg = YuArg = nullptr;
-  }
-  if (YcArg && Inputs.size() > 1) {
-    Diag(clang::diag::warn_drv_yc_multiple_inputs_clang_cl);
-    Args.eraseArg(options::OPT__SLASH_Yc);
-    YcArg = nullptr;
-  }
+  handleArguments(C, Args, Inputs, Actions);
 
   // Builder to be used to build offloading actions.
   OffloadingActionBuilder OffloadBuilder(C, Args, Inputs);
@@ -3216,106 +3320,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   // Construct the actions to perform.
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
   ActionList LinkerInputs;
-
-  {
-    Arg *FinalPhaseArg;
-    phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
-
-    if (FinalPhase == phases::Link) {
-      if (Args.hasArg(options::OPT_emit_llvm))
-        Diag(clang::diag::err_drv_emit_llvm_link);
-      if (IsCLMode() && LTOMode != LTOK_None &&
-          !Args.getLastArgValue(options::OPT_fuse_ld_EQ).equals_lower("lld"))
-        Diag(clang::diag::err_drv_lto_without_lld);
-    }
-
-    if (FinalPhase == phases::Preprocess ||
-        Args.hasArg(options::OPT__SLASH_Y_)) {
-      // If only preprocessing or /Y- is used, all pch handling is disabled.
-      // Rather than check for it everywhere, just remove clang-cl pch-related
-      // flags here.
-      Args.eraseArg(options::OPT__SLASH_Fp);
-      Args.eraseArg(options::OPT__SLASH_Yc);
-      Args.eraseArg(options::OPT__SLASH_Yu);
-      YcArg = YuArg = nullptr;
-    }
-
-    unsigned LastPLSize = 0;
-    for (auto &I : Inputs) {
-      types::ID InputType = I.first;
-      const Arg *InputArg = I.second;
-
-      llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL;
-      types::getCompilationPhases(InputType, PL);
-      LastPLSize = PL.size();
-
-      // If the first step comes after the final phase we are doing as part of
-      // this compilation, warn the user about it.
-      phases::ID InitialPhase = PL[0];
-      if (InitialPhase > FinalPhase) {
-        if (InputArg->isClaimed())
-          continue;
-
-        // Claim here to avoid the more general unused warning.
-        InputArg->claim();
-
-        // Suppress all unused style warnings with -Qunused-arguments
-        if (Args.hasArg(options::OPT_Qunused_arguments))
-          continue;
-
-        // Special case when final phase determined by binary name, rather than
-        // by a command-line argument with a corresponding Arg.
-        if (CCCIsCPP())
-          Diag(clang::diag::warn_drv_input_file_unused_by_cpp)
-              << InputArg->getAsString(Args) << getPhaseName(InitialPhase);
-        // Special case '-E' warning on a previously preprocessed file to make
-        // more sense.
-        else if (InitialPhase == phases::Compile &&
-                 (Args.getLastArg(options::OPT__SLASH_EP,
-                                  options::OPT__SLASH_P) ||
-                  Args.getLastArg(options::OPT_E) ||
-                  Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
-                 getPreprocessedType(InputType) == types::TY_INVALID)
-          Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-              << InputArg->getAsString(Args) << !!FinalPhaseArg
-              << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
-        else
-          Diag(clang::diag::warn_drv_input_file_unused)
-              << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-              << !!FinalPhaseArg
-              << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
-        continue;
-      }
-
-      if (YcArg) {
-        // Add a separate precompile phase for the compile phase.
-        if (FinalPhase >= phases::Compile) {
-          const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
-          llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
-          types::getCompilationPhases(HeaderType, PCHPL);
-          // Build the pipeline for the pch file.
-          Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
-          for (phases::ID Phase : PCHPL)
-            ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
-          assert(ClangClPch);
-          Actions.push_back(ClangClPch);
-          // The driver currently exits after the first failed command.  This
-          // relies on that behavior, to make sure if the pch generation fails,
-          // the main compilation won't run.
-          // FIXME: If the main compilation fails, the PCH generation should
-          // probably not be considered successful either.
-        }
-      }
-    }
-
-    // If we are linking, claim any options which are obviously only used for
-    // compilation.
-    // FIXME: Understand why the last Phase List length is used here.
-    if (FinalPhase == phases::Link && LastPLSize == 1) {
-      Args.ClaimAllArgs(options::OPT_CompileOnly_Group);
-      Args.ClaimAllArgs(options::OPT_cl_compile_Group);
-    }
-  }
 
   for (auto &I : Inputs) {
     types::ID InputType = I.first;

@@ -35440,12 +35440,22 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
   if (VecVT.getScalarType() != VT)
     return SDValue();
 
+  SDLoc DL(ExtElt);
+
+  if (VecVT == MVT::v8i8) {
+    // Pad with undef.
+    Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
+                      DAG.getUNDEF(VecVT));
+    Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
+                      DAG.getConstant(0, DL, MVT::v16i8));
+    Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+  }
+
   // Must be a >=128-bit vector with pow2 elements.
   if ((VecVT.getSizeInBits() % 128) != 0 ||
       !isPowerOf2_32(VecVT.getVectorNumElements()))
     return SDValue();
-
-  SDLoc DL(ExtElt);
 
   // vXi8 reduction - sum lo/hi halves then use PSADBW.
   if (VT == MVT::i8) {

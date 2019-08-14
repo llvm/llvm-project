@@ -157,7 +157,15 @@ release of Clang. Users of the build system should adjust accordingly.
   install-clang-headers target now installs clang's API headers (corresponding
   to its libraries), which is consistent with the install-llvm-headers target.
 
--  ...
+- In 9.0.0 and later Clang added a new target, clang-cpp, which generates a
+  shared library comprised of all the clang component libraries and exporting
+  the clang C++ APIs. Additionally the build system gained the new
+  "CLANG_LINK_CLANG_DYLIB" option, which defaults Off, and when set to On, will
+  force clang (and clang-based tools) to link the clang-cpp library instead of
+  statically linking clang's components. This option will reduce the size of
+  binary distributions at the expense of compiler performance.
+
+- ...
 
 AST Matchers
 ------------
