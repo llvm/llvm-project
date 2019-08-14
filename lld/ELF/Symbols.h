@@ -537,6 +537,8 @@ void Symbol::replace(const Symbol &newSym) {
   Symbol old = *this;
   memcpy(this, &newSym, newSym.getSymbolSize());
 
+  // old may be a placeholder. The referenced fields must be initialized in
+  // SymbolTable::insert.
   versionId = old.versionId;
   visibility = old.visibility;
   isUsedInRegularObj = old.isUsedInRegularObj;
