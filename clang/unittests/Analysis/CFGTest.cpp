@@ -67,6 +67,139 @@ TEST(CFG, IsLinear) {
   expectLinear(true,  "void foo() { foo(); }"); // Recursion is not our problem.
 }
 
+TEST(CFG, ElementRefIterator) {
+  const char *Code = R"(void f() {
+                          int i;
+                          int j;
+                          i = 5;
+                          i = 6;
+                          j = 7;
+                        })";
+
+  BuildResult B = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, B.getStatus());
+  CFG *Cfg = B.getCFG();
+
+  // [B2 (ENTRY)]
+  //   Succs (1): B1
+
+  // [B1]
+  //   1: int i;
+  //   2: int j;
+  //   3: i = 5
+  //   4: i = 6
+  //   5: j = 7
+  //   Preds (1): B2
+  //   Succs (1): B0
+
+  // [B0 (EXIT)]
+  //   Preds (1): B1
+  CFGBlock *MainBlock = *(Cfg->begin() + 1);
+
+  constexpr CFGBlock::ref_iterator::difference_type MainBlockSize = 4;
+
+  // The rest of this test looks totally insane, but there iterators are
+  // templates under the hood, to it's important to instantiate everything for
+  // proper converage.
+
+  // Non-reverse, non-const version
+  size_t Index = 0;
+  for (CFGBlock::CFGElementRef ElementRef : MainBlock->refs()) {
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    EXPECT_EQ(ElementRef.getIndexInBlock(), Index);
+    EXPECT_TRUE(ElementRef->getAs<CFGStmt>());
+    EXPECT_TRUE((*ElementRef).getAs<CFGStmt>());
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    ++Index;
+  }
+  EXPECT_TRUE(*MainBlock->ref_begin() < *(MainBlock->ref_begin() + 1));
+  EXPECT_TRUE(*MainBlock->ref_begin() == *MainBlock->ref_begin());
+  EXPECT_FALSE(*MainBlock->ref_begin() != *MainBlock->ref_begin());
+
+  EXPECT_TRUE(MainBlock->ref_begin() < MainBlock->ref_begin() + 1);
+  EXPECT_TRUE(MainBlock->ref_begin() == MainBlock->ref_begin());
+  EXPECT_FALSE(MainBlock->ref_begin() != MainBlock->ref_begin());
+  EXPECT_EQ(MainBlock->ref_end() - MainBlock->ref_begin(), MainBlockSize + 1);
+  EXPECT_EQ(MainBlock->ref_end() - MainBlockSize - 1, MainBlock->ref_begin());
+  EXPECT_EQ(MainBlock->ref_begin() + MainBlockSize + 1, MainBlock->ref_end());
+  EXPECT_EQ(MainBlock->ref_begin()++, MainBlock->ref_begin());
+  EXPECT_EQ(++(MainBlock->ref_begin()), MainBlock->ref_begin() + 1);
+
+  // Non-reverse, non-const version
+  const CFGBlock *CMainBlock = MainBlock;
+  Index = 0;
+  for (CFGBlock::ConstCFGElementRef ElementRef : CMainBlock->refs()) {
+    EXPECT_EQ(ElementRef.getParent(), CMainBlock);
+    EXPECT_EQ(ElementRef.getIndexInBlock(), Index);
+    EXPECT_TRUE(ElementRef->getAs<CFGStmt>());
+    EXPECT_TRUE((*ElementRef).getAs<CFGStmt>());
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    ++Index;
+  }
+  EXPECT_TRUE(*CMainBlock->ref_begin() < *(CMainBlock->ref_begin() + 1));
+  EXPECT_TRUE(*CMainBlock->ref_begin() == *CMainBlock->ref_begin());
+  EXPECT_FALSE(*CMainBlock->ref_begin() != *CMainBlock->ref_begin());
+
+  EXPECT_TRUE(CMainBlock->ref_begin() < CMainBlock->ref_begin() + 1);
+  EXPECT_TRUE(CMainBlock->ref_begin() == CMainBlock->ref_begin());
+  EXPECT_FALSE(CMainBlock->ref_begin() != CMainBlock->ref_begin());
+  EXPECT_EQ(CMainBlock->ref_end() - CMainBlock->ref_begin(), MainBlockSize + 1);
+  EXPECT_EQ(CMainBlock->ref_end() - MainBlockSize - 1, CMainBlock->ref_begin());
+  EXPECT_EQ(CMainBlock->ref_begin() + MainBlockSize + 1, CMainBlock->ref_end());
+  EXPECT_EQ(CMainBlock->ref_begin()++, CMainBlock->ref_begin());
+  EXPECT_EQ(++(CMainBlock->ref_begin()), CMainBlock->ref_begin() + 1);
+
+  // Reverse, non-const version
+  Index = MainBlockSize;
+  for (CFGBlock::CFGElementRef ElementRef : MainBlock->rrefs()) {
+    llvm::errs() << Index << '\n';
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    EXPECT_EQ(ElementRef.getIndexInBlock(), Index);
+    EXPECT_TRUE(ElementRef->getAs<CFGStmt>());
+    EXPECT_TRUE((*ElementRef).getAs<CFGStmt>());
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    --Index;
+  }
+  EXPECT_FALSE(*MainBlock->rref_begin() < *(MainBlock->rref_begin() + 1));
+  EXPECT_TRUE(*MainBlock->rref_begin() == *MainBlock->rref_begin());
+  EXPECT_FALSE(*MainBlock->rref_begin() != *MainBlock->rref_begin());
+
+  EXPECT_TRUE(MainBlock->rref_begin() < MainBlock->rref_begin() + 1);
+  EXPECT_TRUE(MainBlock->rref_begin() == MainBlock->rref_begin());
+  EXPECT_FALSE(MainBlock->rref_begin() != MainBlock->rref_begin());
+  EXPECT_EQ(MainBlock->rref_end() - MainBlock->rref_begin(), MainBlockSize + 1);
+  EXPECT_EQ(MainBlock->rref_end() - MainBlockSize - 1, MainBlock->rref_begin());
+  EXPECT_EQ(MainBlock->rref_begin() + MainBlockSize + 1, MainBlock->rref_end());
+  EXPECT_EQ(MainBlock->rref_begin()++, MainBlock->rref_begin());
+  EXPECT_EQ(++(MainBlock->rref_begin()), MainBlock->rref_begin() + 1);
+
+  // Reverse, const version
+  Index = MainBlockSize;
+  for (CFGBlock::ConstCFGElementRef ElementRef : CMainBlock->rrefs()) {
+    EXPECT_EQ(ElementRef.getParent(), CMainBlock);
+    EXPECT_EQ(ElementRef.getIndexInBlock(), Index);
+    EXPECT_TRUE(ElementRef->getAs<CFGStmt>());
+    EXPECT_TRUE((*ElementRef).getAs<CFGStmt>());
+    EXPECT_EQ(ElementRef.getParent(), MainBlock);
+    --Index;
+  }
+  EXPECT_FALSE(*CMainBlock->rref_begin() < *(CMainBlock->rref_begin() + 1));
+  EXPECT_TRUE(*CMainBlock->rref_begin() == *CMainBlock->rref_begin());
+  EXPECT_FALSE(*CMainBlock->rref_begin() != *CMainBlock->rref_begin());
+
+  EXPECT_TRUE(CMainBlock->rref_begin() < CMainBlock->rref_begin() + 1);
+  EXPECT_TRUE(CMainBlock->rref_begin() == CMainBlock->rref_begin());
+  EXPECT_FALSE(CMainBlock->rref_begin() != CMainBlock->rref_begin());
+  EXPECT_EQ(CMainBlock->rref_end() - CMainBlock->rref_begin(),
+            MainBlockSize + 1);
+  EXPECT_EQ(CMainBlock->rref_end() - MainBlockSize - 1,
+            CMainBlock->rref_begin());
+  EXPECT_EQ(CMainBlock->rref_begin() + MainBlockSize + 1,
+            CMainBlock->rref_end());
+  EXPECT_EQ(CMainBlock->rref_begin()++, CMainBlock->rref_begin());
+  EXPECT_EQ(++(CMainBlock->rref_begin()), CMainBlock->rref_begin() + 1);
+}
+
 } // namespace
 } // namespace analysis
 } // namespace clang
