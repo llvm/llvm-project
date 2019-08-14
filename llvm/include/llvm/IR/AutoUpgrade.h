@@ -54,13 +54,9 @@ namespace llvm {
   /// module is modified.
   bool UpgradeModuleFlags(Module &M);
 
-  /// This checks for objc retain release marker which should be upgraded. It
-  /// returns true if module is modified.
-  bool UpgradeRetainReleaseMarker(Module &M);
-
-  /// Convert calls to ARC runtime functions to intrinsic calls if the bitcode
-  /// has the arm64 retainAutoreleasedReturnValue marker.
-  void UpgradeARCRuntimeCalls(Module &M);
+  /// Convert calls to ARC runtime functions to intrinsic calls and upgrade the
+  /// old retain release marker to new module flag format.
+  void UpgradeARCRuntime(Module &M);
 
   void UpgradeSectionAttributes(Module &M);
 

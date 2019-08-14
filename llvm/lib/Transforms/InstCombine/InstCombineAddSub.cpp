@@ -1809,7 +1809,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
         std::swap(LHS, RHS);
       // LHS is now O above and expected to have at least 2 uses (the min/max)
       // NotA is epected to have 2 uses from the min/max and 1 from the sub.
-      if (IsFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
+      if (isFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
           !NotA->hasNUsesOrMore(4)) {
         // Note: We don't generate the inverse max/min, just create the not of
         // it and let other folds do the rest.

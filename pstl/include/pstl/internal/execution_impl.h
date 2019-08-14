@@ -16,6 +16,8 @@
 #include "pstl_config.h"
 #include "execution_defs.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __internal
@@ -158,5 +160,7 @@ struct __prefer_parallel_tag
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_IMPL_H */

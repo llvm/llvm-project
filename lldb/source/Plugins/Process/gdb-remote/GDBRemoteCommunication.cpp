@@ -39,6 +39,8 @@
 
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
+#elif defined(_WIN32)
+#define DEBUGSERVER_BASENAME "lldb-server.exe"
 #else
 #define DEBUGSERVER_BASENAME "lldb-server"
 #endif

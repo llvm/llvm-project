@@ -187,7 +187,7 @@ FEATURE(cxx_variable_templates, LangOpts.CPlusPlus14)
 // FEATURE(raw_invocation_type, LangOpts.CPlusPlus)
 // Type traits
 // N.B. Additional type traits should not be added to the following list.
-// Instead, they should be detected by has_extension.
+// Instead, they should be detected by has_builtin.
 FEATURE(has_nothrow_assign, LangOpts.CPlusPlus)
 FEATURE(has_nothrow_copy, LangOpts.CPlusPlus)
 FEATURE(has_nothrow_constructor, LangOpts.CPlusPlus)

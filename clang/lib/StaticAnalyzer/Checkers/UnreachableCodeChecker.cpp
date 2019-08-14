@@ -55,7 +55,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
 
   const Decl *D = nullptr;
   CFG *C = nullptr;
-  ParentMap *PM = nullptr;
+  const ParentMap *PM = nullptr;
   const LocationContext *LC = nullptr;
   // Iterate over ExplodedGraph
   for (ExplodedGraph::node_iterator I = G.nodes_begin(), E = G.nodes_end();

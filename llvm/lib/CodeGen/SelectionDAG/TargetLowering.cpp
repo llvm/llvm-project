@@ -1784,17 +1784,6 @@ bool TargetLowering::SimplifyDemandedBits(
                              Depth + 1))
       return true;
 
-    // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedSrcBits.isAllOnesValue() ||
-        !DemandedSrcElts.isAllOnesValue()) {
-      if (SDValue DemandedSrc = SimplifyMultipleUseDemandedBits(
-              Src, DemandedSrcBits, DemandedSrcElts, TLO.DAG, Depth + 1)) {
-        SDValue NewOp =
-            TLO.DAG.getNode(Op.getOpcode(), dl, VT, DemandedSrc, Idx);
-        return TLO.CombineTo(Op, NewOp);
-      }
-    }
-
     Known = Known2;
     if (BitWidth > EltBitWidth)
       Known = Known.zext(BitWidth, false /* => any extend */);
@@ -3813,15 +3802,21 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
 
   // Fold remainder of division by a constant.
-  if (N0.getOpcode() == ISD::UREM && N0.hasOneUse() &&
-      (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
+  if ((N0.getOpcode() == ISD::UREM || N0.getOpcode() == ISD::SREM) &&
+      N0.hasOneUse() && (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
     AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
 
     // When division is cheap or optimizing for minimum size,
     // fall through to DIVREM creation by skipping this fold.
-    if (!isIntDivCheap(VT, Attr) && !Attr.hasFnAttribute(Attribute::MinSize))
-      if (SDValue Folded = buildUREMEqFold(VT, N0, N1, Cond, DCI, dl))
-        return Folded;
+    if (!isIntDivCheap(VT, Attr) && !Attr.hasFnAttribute(Attribute::MinSize)) {
+      if (N0.getOpcode() == ISD::UREM) {
+        if (SDValue Folded = buildUREMEqFold(VT, N0, N1, Cond, DCI, dl))
+          return Folded;
+      } else if (N0.getOpcode() == ISD::SREM) {
+        if (SDValue Folded = buildSREMEqFold(VT, N0, N1, Cond, DCI, dl))
+          return Folded;
+      }
+    }
   }
 
   // Fold away ALL boolean setcc's.
@@ -4877,7 +4872,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
   // fold (seteq/ne (urem N, D), 0) -> (setule/ugt (rotr (mul N, P), K), Q)
   // - D must be constant, with D = D0 * 2^K where D0 is odd
   // - P is the multiplicative inverse of D0 modulo 2^W
-  // - Q = floor((2^W - 1) / D0)
+  // - Q = floor(((2^W) - 1) / D)
   // where W is the width of the common type of N and D.
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
          "Only applicable for (in)equality comparisons.");
@@ -5011,6 +5006,216 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
   }
 
   // UREM: (setule/setugt (rotr (mul N, P), K), Q)
+  return DAG.getSetCC(DL, SETCCVT, Op0, QVal,
+                      ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+}
+
+/// Given an ISD::SREM used only by an ISD::SETEQ or ISD::SETNE
+/// where the divisor is constant and the comparison target is zero,
+/// return a DAG expression that will generate the same comparison result
+/// using only multiplications, additions and shifts/rotations.
+/// Ref: "Hacker's Delight" 10-17.
+SDValue TargetLowering::buildSREMEqFold(EVT SETCCVT, SDValue REMNode,
+                                        SDValue CompTargetNode,
+                                        ISD::CondCode Cond,
+                                        DAGCombinerInfo &DCI,
+                                        const SDLoc &DL) const {
+  SmallVector<SDNode *, 3> Built;
+  if (SDValue Folded = prepareSREMEqFold(SETCCVT, REMNode, CompTargetNode, Cond,
+                                         DCI, DL, Built)) {
+    for (SDNode *N : Built)
+      DCI.AddToWorklist(N);
+    return Folded;
+  }
+
+  return SDValue();
+}
+
+SDValue
+TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
+                                  SDValue CompTargetNode, ISD::CondCode Cond,
+                                  DAGCombinerInfo &DCI, const SDLoc &DL,
+                                  SmallVectorImpl<SDNode *> &Created) const {
+  // Fold:
+  //   (seteq/ne (srem N, D), 0)
+  // To:
+  //   (setule/ugt (rotr (add (mul N, P), A), K), Q)
+  //
+  // - D must be constant, with D = D0 * 2^K where D0 is odd
+  // - P is the multiplicative inverse of D0 modulo 2^W
+  // - A = bitwiseand(floor((2^(W - 1) - 1) / D0), (-(2^k)))
+  // - Q = floor((2 * A) / (2^K))
+  // where W is the width of the common type of N and D.
+  assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+         "Only applicable for (in)equality comparisons.");
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  EVT VT = REMNode.getValueType();
+  EVT SVT = VT.getScalarType();
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShSVT = ShVT.getScalarType();
+
+  // If MUL is unavailable, we cannot proceed in any case.
+  if (!isOperationLegalOrCustom(ISD::MUL, VT))
+    return SDValue();
+
+  // TODO: Could support comparing with non-zero too.
+  ConstantSDNode *CompTarget = isConstOrConstSplat(CompTargetNode);
+  if (!CompTarget || !CompTarget->isNullValue())
+    return SDValue();
+
+  bool HadOneDivisor = false;
+  bool AllDivisorsAreOnes = true;
+  bool HadEvenDivisor = false;
+  bool NeedToApplyOffset = false;
+  bool AllDivisorsArePowerOfTwo = true;
+  SmallVector<SDValue, 16> PAmts, AAmts, KAmts, QAmts;
+
+  auto BuildSREMPattern = [&](ConstantSDNode *C) {
+    // Division by 0 is UB. Leave it to be constant-folded elsewhere.
+    if (C->isNullValue())
+      return false;
+
+    // FIXME: we don't fold `rem %X, -C` to `rem %X, C` in DAGCombine.
+
+    // WARNING: this fold is only valid for positive divisors!
+    APInt D = C->getAPIntValue();
+    if (D.isMinSignedValue())
+      return false; // We can't negate INT_MIN.
+    if (D.isNegative())
+      D.negate(); //  `rem %X, -C` is equivalent to `rem %X, C`
+
+    assert(!D.isNegative() && "The fold is only valid for positive divisors!");
+
+    // If all divisors are ones, we will prefer to avoid the fold.
+    HadOneDivisor |= D.isOneValue();
+    AllDivisorsAreOnes &= D.isOneValue();
+
+    // Decompose D into D0 * 2^K
+    unsigned K = D.countTrailingZeros();
+    assert((!D.isOneValue() || (K == 0)) && "For divisor '1' we won't rotate.");
+    APInt D0 = D.lshr(K);
+
+    // D is even if it has trailing zeros.
+    HadEvenDivisor |= (K != 0);
+    // D is a power-of-two if D0 is one.
+    // If all divisors are power-of-two, we will prefer to avoid the fold.
+    AllDivisorsArePowerOfTwo &= D0.isOneValue();
+
+    // P = inv(D0, 2^W)
+    // 2^W requires W + 1 bits, so we have to extend and then truncate.
+    unsigned W = D.getBitWidth();
+    APInt P = D0.zext(W + 1)
+                  .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
+                  .trunc(W);
+    assert(!P.isNullValue() && "No multiplicative inverse!"); // unreachable
+    assert((D0 * P).isOneValue() && "Multiplicative inverse sanity check.");
+
+    // A = floor((2^(W - 1) - 1) / D0) & -2^K
+    APInt A = APInt::getSignedMaxValue(W).udiv(D0);
+    A.clearLowBits(K);
+
+    NeedToApplyOffset |= A != 0;
+
+    // Q = floor((2 * A) / (2^K))
+    APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
+
+    assert(APInt::getAllOnesValue(SVT.getSizeInBits()).ugt(A) &&
+           "We are expecting that A is always less than all-ones for SVT");
+    assert(APInt::getAllOnesValue(ShSVT.getSizeInBits()).ugt(K) &&
+           "We are expecting that K is always less than all-ones for ShSVT");
+
+    // If the divisor is 1 the result can be constant-folded.
+    if (D.isOneValue()) {
+      // Set P, A and K to a bogus values so we can try to splat them.
+      P = 0;
+      A = -1;
+      K = -1;
+
+      // x ?% 1 == 0  <-->  true  <-->  x u<= -1
+      Q = -1;
+    }
+
+    PAmts.push_back(DAG.getConstant(P, DL, SVT));
+    AAmts.push_back(DAG.getConstant(A, DL, SVT));
+    KAmts.push_back(
+        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K), DL, ShSVT));
+    QAmts.push_back(DAG.getConstant(Q, DL, SVT));
+    return true;
+  };
+
+  SDValue N = REMNode.getOperand(0);
+  SDValue D = REMNode.getOperand(1);
+
+  // Collect the values from each element.
+  if (!ISD::matchUnaryPredicate(D, BuildSREMPattern))
+    return SDValue();
+
+  // If this is a srem by a one, avoid the fold since it can be constant-folded.
+  if (AllDivisorsAreOnes)
+    return SDValue();
+
+  // If this is a srem by a powers-of-two, avoid the fold since it can be
+  // best implemented as a bit test.
+  if (AllDivisorsArePowerOfTwo)
+    return SDValue();
+
+  SDValue PVal, AVal, KVal, QVal;
+  if (VT.isVector()) {
+    if (HadOneDivisor) {
+      // Try to turn PAmts into a splat, since we don't care about the values
+      // that are currently '0'. If we can't, just keep '0'`s.
+      turnVectorIntoSplatVector(PAmts, isNullConstant);
+      // Try to turn AAmts into a splat, since we don't care about the
+      // values that are currently '-1'. If we can't, change them to '0'`s.
+      turnVectorIntoSplatVector(AAmts, isAllOnesConstant,
+                                DAG.getConstant(0, DL, SVT));
+      // Try to turn KAmts into a splat, since we don't care about the values
+      // that are currently '-1'. If we can't, change them to '0'`s.
+      turnVectorIntoSplatVector(KAmts, isAllOnesConstant,
+                                DAG.getConstant(0, DL, ShSVT));
+    }
+
+    PVal = DAG.getBuildVector(VT, DL, PAmts);
+    AVal = DAG.getBuildVector(VT, DL, AAmts);
+    KVal = DAG.getBuildVector(ShVT, DL, KAmts);
+    QVal = DAG.getBuildVector(VT, DL, QAmts);
+  } else {
+    PVal = PAmts[0];
+    AVal = AAmts[0];
+    KVal = KAmts[0];
+    QVal = QAmts[0];
+  }
+
+  // (mul N, P)
+  SDValue Op0 = DAG.getNode(ISD::MUL, DL, VT, N, PVal);
+  Created.push_back(Op0.getNode());
+
+  if (NeedToApplyOffset) {
+    // We need ADD to do this.
+    if (!isOperationLegalOrCustom(ISD::ADD, VT))
+      return SDValue();
+
+    // (add (mul N, P), A)
+    Op0 = DAG.getNode(ISD::ADD, DL, VT, Op0, AVal);
+    Created.push_back(Op0.getNode());
+  }
+
+  // Rotate right only if any divisor was even. We avoid rotates for all-odd
+  // divisors as a performance improvement, since rotating by 0 is a no-op.
+  if (HadEvenDivisor) {
+    // We need ROTR to do this.
+    if (!isOperationLegalOrCustom(ISD::ROTR, VT))
+      return SDValue();
+    SDNodeFlags Flags;
+    Flags.setExact(true);
+    // SREM: (rotr (add (mul N, P), A), K)
+    Op0 = DAG.getNode(ISD::ROTR, DL, VT, Op0, KVal, Flags);
+    Created.push_back(Op0.getNode());
+  }
+
+  // SREM: (setule/setugt (rotr (add (mul N, P), A), K), Q)
   return DAG.getSetCC(DL, SETCCVT, Op0, QVal,
                       ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
 }

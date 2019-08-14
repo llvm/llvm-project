@@ -233,6 +233,10 @@ class GdbRemoteTestCaseBase(TestBase):
             # Remote platforms don't support named pipe based port negotiation
             use_named_pipe = False
 
+            triple = self.dbg.GetSelectedPlatform().GetTriple()
+            if re.match(".*-.*-windows", triple):
+                self.skipTest("Remotely testing is not supported on Windows yet.")
+
             # Grab the ppid from /proc/[shell pid]/stat
             err, retcode, shell_stat = self.run_platform_command(
                 "cat /proc/$$/stat")
@@ -258,6 +262,10 @@ class GdbRemoteTestCaseBase(TestBase):
             # Remove if it's there.
             self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
         else:
+            # Need to figure out how to create a named pipe on Windows.
+            if platform.system() == 'Windows':
+                use_named_pipe = False
+
             self.debug_monitor_exe = get_lldb_server_exe()
             if not self.debug_monitor_exe:
                 self.skipTest("lldb-server exe not found")

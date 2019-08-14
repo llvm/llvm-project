@@ -1797,7 +1797,7 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    movw %cx, 6(%rdi)
 ; SSE2-NEXT:    movd %xmm2, %edx
@@ -1852,7 +1852,7 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    movw %ax, (%rdi)
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSSE3-NEXT:    movd %xmm0, %ecx
 ; SSSE3-NEXT:    movw %cx, 6(%rdi)
 ; SSSE3-NEXT:    movd %xmm2, %edx

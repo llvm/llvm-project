@@ -23,6 +23,7 @@
 namespace llvm {
 
 class BlockAddress;
+class Constant;
 class ConstantFP;
 class ConstantInt;
 class GlobalValue;
@@ -68,7 +69,8 @@ public:
     MO_CFIIndex,          ///< MCCFIInstruction index.
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
-    MO_Last = MO_Predicate,
+    MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
+    MO_Last = MO_ShuffleMask
   };
 
 private:
@@ -172,6 +174,7 @@ private:
     unsigned CFIIndex;       // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
     unsigned Pred;           // For MO_Predicate
+    const Constant *ShuffleMask; // For MO_ShuffleMask
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -341,6 +344,7 @@ public:
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
+  bool isShuffleMask() const { return OpKind == MO_ShuffleMask; }
   //===--------------------------------------------------------------------===//
   // Accessors for Register Operands
   //===--------------------------------------------------------------------===//
@@ -577,6 +581,11 @@ public:
   unsigned getPredicate() const {
     assert(isPredicate() && "Wrong MachineOperand accessor");
     return Contents.Pred;
+  }
+
+  const Constant *getShuffleMask() const {
+    assert(isShuffleMask() && "Wrong MachineOperand accessor");
+    return Contents.ShuffleMask;
   }
 
   /// Return the offset from the symbol in this operand. This always returns 0
@@ -899,6 +908,12 @@ public:
   static MachineOperand CreatePredicate(unsigned Pred) {
     MachineOperand Op(MachineOperand::MO_Predicate);
     Op.Contents.Pred = Pred;
+    return Op;
+  }
+
+  static MachineOperand CreateShuffleMask(const Constant *C) {
+    MachineOperand Op(MachineOperand::MO_ShuffleMask);
+    Op.Contents.ShuffleMask = C;
     return Op;
   }
 

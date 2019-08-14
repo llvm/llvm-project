@@ -102,11 +102,7 @@
 ; CHECK-NEXT:         Scalar Evolution Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Rotate Loops
-; CHECK-NEXT:         Branch Probability Analysis
-; CHECK-NEXT:         Block Frequency Analysis
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Unswitch loops
 ; CHECK-NEXT:         Simplify the CFG
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -158,15 +154,12 @@
 ; CHECK-NEXT:         Memory Dependence Analysis
 ; CHECK-NEXT:         Dead Store Elimination
 ; CHECK-NEXT:         Natural Loop Information
-; CHECK-NEXT:         Branch Probability Analysis
-; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:         Canonicalize natural loops
 ; CHECK-NEXT:         LCSSA Verifier
 ; CHECK-NEXT:         Loop-Closed SSA Form Pass
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Scalar Evolution Analysis
-; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
 ; CHECK-NEXT:         Post-Dominator Tree Construction
@@ -253,13 +246,10 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Combine redundant instructions
-; CHECK-NEXT:       Branch Probability Analysis
-; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Canonicalize natural loops
 ; CHECK-NEXT:       LCSSA Verifier
 ; CHECK-NEXT:       Loop-Closed SSA Form Pass
 ; CHECK-NEXT:       Scalar Evolution Analysis
-; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Loop Invariant Code Motion
 ; CHECK-NEXT:       Lazy Branch Probability Analysis

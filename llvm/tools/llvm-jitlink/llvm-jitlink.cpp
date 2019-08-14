@@ -380,7 +380,7 @@ Error loadProcessSymbols(Session &S) {
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
   };
-  S.ES.getMainJITDylib().setGenerator(
+  S.ES.getMainJITDylib().addGenerator(
       ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           GlobalPrefix, FilterMainEntryPoint)));
 

@@ -1,0 +1,8 @@
+# Make sure "llvm-profdata show" works for sample profile in binary compact format
+
+# RUN: llvm-profdata show -sample %S/Inputs/compat-sample.profdata  | FileCheck %s 
+
+# CHECK: Function: 15822663052811949562: 17, 0, 6 sampled lines 
+# CHECK-NEXT: Samples collected in the function's body {
+# CHECK: Samples collected in inlined callsites {
+# CHECK-NEXT: 1: inlined callee: 6309742469962978389: 17, 0, 1

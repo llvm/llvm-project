@@ -482,65 +482,85 @@ TEST_F(TransformerTest, OrderedRuleUnrelated) {
   testRule(applyFirst({ruleStrlenSize(), FlagRule}), Input, Expected);
 }
 
-// Version of ruleStrlenSizeAny that inserts a method with a different name than
-// ruleStrlenSize, so we can tell their effect apart.
-RewriteRule ruleStrlenSizeDistinct() {
-  StringRef S;
-  return makeRule(
-      callExpr(callee(functionDecl(hasName("strlen"))),
-               hasArgument(0, cxxMemberCallExpr(
-                                  on(expr().bind(S)),
-                                  callee(cxxMethodDecl(hasName("c_str")))))),
-      change(text("DISTINCT")));
-}
-
 TEST_F(TransformerTest, OrderedRuleRelated) {
   std::string Input = R"cc(
-    namespace foo {
-    struct mystring {
-      char* c_str();
-    };
-    int f(mystring s) { return strlen(s.c_str()); }
-    }  // namespace foo
-    int g(string s) { return strlen(s.c_str()); }
+    void f1();
+    void f2();
+    void call_f1() { f1(); }
+    void call_f2() { f2(); }
   )cc";
   std::string Expected = R"cc(
-    namespace foo {
-    struct mystring {
-      char* c_str();
-    };
-    int f(mystring s) { return DISTINCT; }
-    }  // namespace foo
-    int g(string s) { return REPLACED; }
+    void f1();
+    void f2();
+    void call_f1() { REPLACE_F1; }
+    void call_f2() { REPLACE_F1_OR_F2; }
   )cc";
 
-  testRule(applyFirst({ruleStrlenSize(), ruleStrlenSizeDistinct()}), Input,
-           Expected);
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               change(text("REPLACE_F1")));
+  RewriteRule ReplaceF1OrF2 =
+      makeRule(callExpr(callee(functionDecl(hasAnyName("f1", "f2")))),
+               change(text("REPLACE_F1_OR_F2")));
+  testRule(applyFirst({ReplaceF1, ReplaceF1OrF2}), Input, Expected);
 }
 
-// Change the order of the rules to get a different result.
+// Change the order of the rules to get a different result. When `ReplaceF1OrF2`
+// comes first, it applies for both uses, so `ReplaceF1` never applies.
 TEST_F(TransformerTest, OrderedRuleRelatedSwapped) {
   std::string Input = R"cc(
-    namespace foo {
-    struct mystring {
-      char* c_str();
-    };
-    int f(mystring s) { return strlen(s.c_str()); }
-    }  // namespace foo
-    int g(string s) { return strlen(s.c_str()); }
+    void f1();
+    void f2();
+    void call_f1() { f1(); }
+    void call_f2() { f2(); }
   )cc";
   std::string Expected = R"cc(
-    namespace foo {
-    struct mystring {
-      char* c_str();
-    };
-    int f(mystring s) { return DISTINCT; }
-    }  // namespace foo
-    int g(string s) { return DISTINCT; }
+    void f1();
+    void f2();
+    void call_f1() { REPLACE_F1_OR_F2; }
+    void call_f2() { REPLACE_F1_OR_F2; }
   )cc";
 
-  testRule(applyFirst({ruleStrlenSizeDistinct(), ruleStrlenSize()}), Input,
-           Expected);
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               change(text("REPLACE_F1")));
+  RewriteRule ReplaceF1OrF2 =
+      makeRule(callExpr(callee(functionDecl(hasAnyName("f1", "f2")))),
+               change(text("REPLACE_F1_OR_F2")));
+  testRule(applyFirst({ReplaceF1OrF2, ReplaceF1}), Input, Expected);
+}
+
+// Verify that a set of rules whose matchers have different base kinds works
+// properly, including that `applyFirst` produces multiple matchers.  We test
+// two different kinds of rules: Expr and Decl. We place the Decl rule in the
+// middle to test that `buildMatchers` works even when the kinds aren't grouped
+// together.
+TEST_F(TransformerTest, OrderedRuleMultipleKinds) {
+  std::string Input = R"cc(
+    void f1();
+    void f2();
+    void call_f1() { f1(); }
+    void call_f2() { f2(); }
+  )cc";
+  std::string Expected = R"cc(
+    void f1();
+    void DECL_RULE();
+    void call_f1() { REPLACE_F1; }
+    void call_f2() { REPLACE_F1_OR_F2; }
+  )cc";
+
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               change(text("REPLACE_F1")));
+  RewriteRule ReplaceF1OrF2 =
+      makeRule(callExpr(callee(functionDecl(hasAnyName("f1", "f2")))),
+               change(text("REPLACE_F1_OR_F2")));
+  RewriteRule DeclRule = makeRule(functionDecl(hasName("f2")).bind("fun"),
+                                  change(name("fun"), text("DECL_RULE")));
+
+  RewriteRule Rule = applyFirst({ReplaceF1, DeclRule, ReplaceF1OrF2});
+  EXPECT_EQ(tooling::detail::buildMatchers(Rule).size(), 2UL);
+  testRule(Rule, Input, Expected);
 }
 
 //
@@ -718,4 +738,18 @@ TEST_F(TransformerTest, NoPartialRewriteOfMacroExpansionForMacroArgs) {
 
   testRule(ruleStrlenSize(), Input, Input);
 }
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Verifies that `Type` and `QualType` are not allowed as top-level matchers in
+// rules.
+TEST(TransformerDeathTest, OrderedRuleTypes) {
+  RewriteRule QualTypeRule = makeRule(qualType(), change(text("Q")));
+  EXPECT_DEATH(tooling::detail::buildMatchers(QualTypeRule),
+               "Matcher must be.*node matcher");
+
+  RewriteRule TypeRule = makeRule(arrayType(), change(text("T")));
+  EXPECT_DEATH(tooling::detail::buildMatchers(TypeRule),
+               "Matcher must be.*node matcher");
+}
+#endif
 } // namespace

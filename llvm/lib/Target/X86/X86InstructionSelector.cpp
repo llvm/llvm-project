@@ -60,7 +60,7 @@ public:
   X86InstructionSelector(const X86TargetMachine &TM, const X86Subtarget &STI,
                          const X86RegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
+  bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -94,11 +94,9 @@ private:
                    MachineFunction &MF) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
-                           MachineFunction &MF,
-                           CodeGenCoverage &CoverageInfo) const;
+                           MachineFunction &MF);
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
-                         MachineFunction &MF,
-                         CodeGenCoverage &CoverageInfo) const;
+                         MachineFunction &MF);
   bool selectInsert(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
   bool selectExtract(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -308,8 +306,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::select(MachineInstr &I,
-                                    CodeGenCoverage &CoverageInfo) const {
+bool X86InstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -333,7 +330,7 @@ bool X86InstructionSelector::select(MachineInstr &I,
   assert(I.getNumOperands() == I.getNumExplicitOperands() &&
          "Generic instruction has unexpected implicit operands\n");
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I, *CoverageInfo))
     return true;
 
   LLVM_DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
@@ -370,10 +367,10 @@ bool X86InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_UADDE:
     return selectUadde(I, MRI, MF);
   case TargetOpcode::G_UNMERGE_VALUES:
-    return selectUnmergeValues(I, MRI, MF, CoverageInfo);
+    return selectUnmergeValues(I, MRI, MF);
   case TargetOpcode::G_MERGE_VALUES:
   case TargetOpcode::G_CONCAT_VECTORS:
-    return selectMergeValues(I, MRI, MF, CoverageInfo);
+    return selectMergeValues(I, MRI, MF);
   case TargetOpcode::G_EXTRACT:
     return selectExtract(I, MRI, MF);
   case TargetOpcode::G_INSERT:
@@ -1335,8 +1332,7 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 }
 
 bool X86InstructionSelector::selectUnmergeValues(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF,
-    CodeGenCoverage &CoverageInfo) const {
+    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) {
   assert((I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES) &&
          "unexpected instruction");
 
@@ -1352,7 +1348,7 @@ bool X86InstructionSelector::selectUnmergeValues(
              .addReg(SrcReg)
              .addImm(Idx * DefSize);
 
-    if (!select(ExtrInst, CoverageInfo))
+    if (!select(ExtrInst))
       return false;
   }
 
@@ -1361,8 +1357,7 @@ bool X86InstructionSelector::selectUnmergeValues(
 }
 
 bool X86InstructionSelector::selectMergeValues(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF,
-    CodeGenCoverage &CoverageInfo) const {
+    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) {
   assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES ||
           I.getOpcode() == TargetOpcode::G_CONCAT_VECTORS) &&
          "unexpected instruction");
@@ -1395,7 +1390,7 @@ bool X86InstructionSelector::selectMergeValues(
 
     DefReg = Tmp;
 
-    if (!select(InsertInst, CoverageInfo))
+    if (!select(InsertInst))
       return false;
   }
 
@@ -1403,7 +1398,7 @@ bool X86InstructionSelector::selectMergeValues(
                                     TII.get(TargetOpcode::COPY), DstReg)
                                 .addReg(DefReg);
 
-  if (!select(CopyInst, CoverageInfo))
+  if (!select(CopyInst))
     return false;
 
   I.eraseFromParent();

@@ -89,9 +89,9 @@ public:
   TaintBugVisitor(const SVal V) : V(V) {}
   void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 };
 
 } // namespace taint

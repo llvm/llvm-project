@@ -2066,7 +2066,8 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
     // seems to be generating bad types on occasion.
     return CompilerType();
 
-  return CompilerType(m_ast_context, copied_qual_type);
+  return CompilerType(ClangASTContext::GetASTContext(m_ast_context),
+                      copied_qual_type.getAsOpaquePtr());
 }
 
 clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
@@ -2194,7 +2195,9 @@ clang::NamedDecl *NameSearchContext::AddGenericFunDecl() {
       proto_info));
 
   return AddFunDecl(
-      CompilerType(m_ast_source.m_ast_context, generic_function_type), true);
+      CompilerType(ClangASTContext::GetASTContext(m_ast_source.m_ast_context),
+                   generic_function_type.getAsOpaquePtr()),
+      true);
 }
 
 clang::NamedDecl *

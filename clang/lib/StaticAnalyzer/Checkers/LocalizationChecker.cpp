@@ -120,12 +120,12 @@ class NonLocalizedStringBRVisitor final : public BugReporterVisitor {
 public:
   NonLocalizedStringBRVisitor(const MemRegion *NonLocalizedString)
       : NonLocalizedString(NonLocalizedString), Satisfied(false) {
-        assert(NonLocalizedString);
+    assert(NonLocalizedString);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
+                                   BugReporterContext &BRC,
+                                   BugReport &BR) override;
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.Add(NonLocalizedString);
@@ -998,7 +998,7 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
   setNonLocalizedState(sv, C);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
                                        BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)

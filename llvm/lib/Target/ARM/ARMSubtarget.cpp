@@ -125,7 +125,7 @@ const CallLowering *ARMSubtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }
 
-const InstructionSelector *ARMSubtarget::getInstructionSelector() const {
+InstructionSelector *ARMSubtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
 
@@ -252,6 +252,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   if (isRWPI())
     ReserveR9 = true;
+
+  // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
+  if (MVEVectorCostFactor == 0)
+    MVEVectorCostFactor = 2;
 
   // FIXME: Teach TableGen to deal with these instead of doing it manually here.
   switch (ARMProcFamily) {

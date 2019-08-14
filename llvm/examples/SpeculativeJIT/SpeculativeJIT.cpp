@@ -95,11 +95,12 @@ private:
     exit(1);
   }
 
-  SpeculativeJIT(std::unique_ptr<ExecutionSession> ES, DataLayout DL,
-                 orc::JITTargetMachineBuilder JTMB,
-                 std::unique_ptr<LazyCallThroughManager> LCTMgr,
-                 IndirectStubsManagerBuilderFunction ISMBuilder,
-                 DynamicLibrarySearchGenerator ProcessSymbolsGenerator)
+  SpeculativeJIT(
+      std::unique_ptr<ExecutionSession> ES, DataLayout DL,
+      orc::JITTargetMachineBuilder JTMB,
+      std::unique_ptr<LazyCallThroughManager> LCTMgr,
+      IndirectStubsManagerBuilderFunction ISMBuilder,
+      std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
       : ES(std::move(ES)), DL(std::move(DL)), LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
                      ConcurrentIRCompiler(std::move(JTMB))),
@@ -107,7 +108,7 @@ private:
         SpeculateLayer(*this->ES, CompileLayer, S, BlockFreqQuery()),
         CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
                  std::move(ISMBuilder)) {
-    this->ES->getMainJITDylib().setGenerator(
+    this->ES->getMainJITDylib().addGenerator(
         std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
     this->ES->setDispatchMaterialization(

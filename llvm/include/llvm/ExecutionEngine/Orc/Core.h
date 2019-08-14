@@ -411,26 +411,6 @@ reexports(JITDylib &SourceJD, SymbolAliasMap Aliases,
 Expected<SymbolAliasMap>
 buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols);
 
-/// ReexportsGenerator can be used with JITDylib::setGenerator to automatically
-/// re-export a subset of the source JITDylib's symbols in the target.
-class ReexportsGenerator {
-public:
-  using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
-
-  /// Create a reexports generator. If an Allow predicate is passed, only
-  /// symbols for which the predicate returns true will be reexported. If no
-  /// Allow predicate is passed, all symbols will be exported.
-  ReexportsGenerator(JITDylib &SourceJD, bool MatchNonExported = false,
-                     SymbolPredicate Allow = SymbolPredicate());
-
-  Expected<SymbolNameSet> operator()(JITDylib &JD, const SymbolNameSet &Names);
-
-private:
-  JITDylib &SourceJD;
-  bool MatchNonExported = false;
-  SymbolPredicate Allow;
-};
-
 /// Represents the state that a symbol has reached during materialization.
 enum class SymbolState : uint8_t {
   Invalid,       /// No symbol should be in this state.
@@ -502,8 +482,12 @@ class JITDylib {
   friend class ExecutionSession;
   friend class MaterializationResponsibility;
 public:
-  using GeneratorFunction = std::function<Expected<SymbolNameSet>(
-      JITDylib &Parent, const SymbolNameSet &Names)>;
+  class DefinitionGenerator {
+  public:
+    virtual ~DefinitionGenerator();
+    virtual Expected<SymbolNameSet>
+    tryToGenerate(JITDylib &Parent, const SymbolNameSet &Names) = 0;
+  };
 
   using AsynchronousSymbolQuerySet =
     std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -519,13 +503,20 @@ public:
   /// Get a reference to the ExecutionSession for this JITDylib.
   ExecutionSession &getExecutionSession() const { return ES; }
 
-  /// Set a definition generator. If set, whenever a symbol fails to resolve
-  /// within this JITDylib, lookup and lookupFlags will pass the unresolved
-  /// symbols set to the definition generator. The generator can optionally
-  /// add a definition for the unresolved symbols to the dylib.
-  void setGenerator(GeneratorFunction DefGenerator) {
-    this->DefGenerator = std::move(DefGenerator);
-  }
+  /// Adds a definition generator to this JITDylib and returns a referenece to
+  /// it.
+  ///
+  /// When JITDylibs are searched during lookup, if no existing definition of
+  /// a symbol is found, then any generators that have been added are run (in
+  /// the order that they were added) to potentially generate a definition.
+  template <typename GeneratorT>
+  GeneratorT &addGenerator(std::unique_ptr<GeneratorT> DefGenerator);
+
+  /// Remove a definition generator from this JITDylib.
+  ///
+  /// The given generator must exist in this JITDylib's generators list (i.e.
+  /// have been added and not yet removed).
+  void removeGenerator(DefinitionGenerator &G);
 
   /// Set the search order to be used when fixing up definitions in JITDylib.
   /// This will replace the previous search order, and apply to any symbol
@@ -744,7 +735,7 @@ private:
   SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
-  GeneratorFunction DefGenerator;
+  std::vector<std::unique_ptr<DefinitionGenerator>> DefGenerators;
   JITDylibSearchList SearchOrder;
 };
 
@@ -932,6 +923,14 @@ private:
       OutstandingMUs;
 };
 
+template <typename GeneratorT>
+GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
+  auto &G = *DefGenerator;
+  ES.runSessionLocked(
+      [&]() { DefGenerators.push_back(std::move(DefGenerator)); });
+  return G;
+}
+
 template <typename Func>
 auto JITDylib::withSearchOrderDo(Func &&F)
     -> decltype(F(std::declval<const JITDylibSearchList &>())) {
@@ -970,6 +969,27 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU) {
     return Error::success();
   });
 }
+
+/// ReexportsGenerator can be used with JITDylib::setGenerator to automatically
+/// re-export a subset of the source JITDylib's symbols in the target.
+class ReexportsGenerator : public JITDylib::DefinitionGenerator {
+public:
+  using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
+
+  /// Create a reexports generator. If an Allow predicate is passed, only
+  /// symbols for which the predicate returns true will be reexported. If no
+  /// Allow predicate is passed, all symbols will be exported.
+  ReexportsGenerator(JITDylib &SourceJD, bool MatchNonExported = false,
+                     SymbolPredicate Allow = SymbolPredicate());
+
+  Expected<SymbolNameSet> tryToGenerate(JITDylib &JD,
+                                        const SymbolNameSet &Names) override;
+
+private:
+  JITDylib &SourceJD;
+  bool MatchNonExported = false;
+  SymbolPredicate Allow;
+};
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.

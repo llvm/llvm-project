@@ -106,7 +106,7 @@ public:
   // us do things like a dedicated avx512 selector).  However, we might want
   // to also specialize selectors by MachineFunction, which would let us be
   // aware of optsize/optnone and such.
-  virtual const InstructionSelector *getInstructionSelector() const {
+  virtual InstructionSelector *getInstructionSelector() const {
     return nullptr;
   }
 

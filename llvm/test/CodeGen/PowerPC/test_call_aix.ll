@@ -1,5 +1,3 @@
-; XFAIL: asserts
-
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp < %s | \
 ; RUN: FileCheck --check-prefix=32BIT %s
 

@@ -873,6 +873,18 @@ static void addIncludeLinkerOption(const ToolChain &TC,
   CmdArgs.push_back(Args.MakeArgString(LinkerOptionFlag));
 }
 
+static bool hasTargetFeatureMTE(const llvm::opt::ArgStringList &CmdArgs) {
+  for (auto Start = CmdArgs.begin(), End = CmdArgs.end(); Start != End; ++Start) {
+    auto It = std::find(Start, End, StringRef("+mte"));
+    if (It == End)
+      break;
+    if (It > Start && *std::prev(It) == StringRef("-target-feature"))
+      return true;
+    Start = It;
+  }
+  return false;
+}
+
 void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             types::ID InputType) const {
@@ -1043,6 +1055,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                                Sanitizers.Mask & CFIClasses)
         << "-fvisibility=";
   }
+
+  if (Sanitizers.has(SanitizerKind::MemTag) && !hasTargetFeatureMTE(CmdArgs))
+    TC.getDriver().Diag(diag::err_stack_tagging_requires_hardware_feature);
 }
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,

@@ -9,13 +9,16 @@ clrm {r0, r1, r2, r3}
 // ERROR-NOT: register list not in ascending order
 clrm {r3, r4, r1, r2}
 
-// CHECK: clrm            {r0, apsr, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, lr} @ encoding: [0x9f,0xe8,0xff,0xdf]
+// CHECK: clrm            {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, lr, apsr} @ encoding: [0x9f,0xe8,0xff,0xdf]
 clrm {r0-r12, lr, apsr}
 
-// CHECK: clrm            {apsr, lr} @ encoding: [0x9f,0xe8,0x00,0xc0]
+// CHECK: clrm            {lr, apsr} @ encoding: [0x9f,0xe8,0x00,0xc0]
 clrm {apsr, lr}
 
-// CHECK: clrm            {r0, apsr, r1, r2, r3, r4, lr} @ encoding: [0x9f,0xe8,0x1f,0xc0]
+// CHECK: clrm            {r0, r1, apsr}  @ encoding: [0x9f,0xe8,0x03,0x80]
+clrm {apsr, r1, r0}
+
+// CHECK: clrm            {r0, r1, r2, r3, r4, lr, apsr} @ encoding: [0x9f,0xe8,0x1f,0xc0]
 clrm {r0-r4, apsr, lr}
 
 // ERROR: invalid register in register list. Valid registers are r0-r12, lr/r14 and APSR.
