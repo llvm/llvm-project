@@ -628,7 +628,7 @@ declare i8* @memchr(i8*, i32, i64)
 ; CHECK: declare i32 @memcmp(i8* nocapture, i8* nocapture, i64) [[G2]]
 declare i32 @memcmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @memcpy(i8* returned, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @memcpy(i8* noalias returned, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @memcpy(i8*, i8*, i64)
 
 ; CHECK: declare i8* @mempcpy(i8*, i8* nocapture readonly, i64) [[G1]]
@@ -793,10 +793,10 @@ declare x86_fp80 @sinhl(x86_fp80)
 ; CHECK: declare x86_fp80 @sinl(x86_fp80) [[G0]]
 declare x86_fp80 @sinl(x86_fp80)
 
-; CHECK: declare i32 @snprintf(i8* nocapture, i64, i8* nocapture readonly, ...) [[G1]]
+; CHECK: declare i32 @snprintf(i8* noalias nocapture, i64, i8* nocapture readonly, ...) [[G1]]
 declare i32 @snprintf(i8*, i64, i8*, ...)
 
-; CHECK: declare i32 @sprintf(i8* nocapture, i8* nocapture readonly, ...) [[G1]]
+; CHECK: declare i32 @sprintf(i8* noalias nocapture, i8* nocapture readonly, ...) [[G1]]
 declare i32 @sprintf(i8*, i8*, ...)
 
 ; CHECK: declare double @sqrt(double) [[G0]]
@@ -844,7 +844,7 @@ declare i32 @strcmp(i8*, i8*)
 ; CHECK: declare i32 @strcoll(i8* nocapture, i8* nocapture) [[G2]]
 declare i32 @strcoll(i8*, i8*)
 
-; CHECK: declare i8* @strcpy(i8* returned, i8* nocapture readonly) [[G1]]
+; CHECK: declare i8* @strcpy(i8* noalias returned, i8* noalias nocapture readonly) [[G1]]
 declare i8* @strcpy(i8*, i8*)
 
 ; CHECK: declare i64 @strcspn(i8* nocapture, i8* nocapture) [[G2]]
@@ -865,7 +865,7 @@ declare i8* @strncat(i8*, i8*, i64)
 ; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[G2]]
 declare i32 @strncmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncpy(i8* returned, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @strncpy(i8* noalias returned, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @strncpy(i8*, i8*, i64)
 
 ; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64) [[G1]]

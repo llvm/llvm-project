@@ -864,14 +864,14 @@ let Uses = [RM] in {
 
   let isCodeGenOnly = 1, isMoveImm = 1, isAsCheapAsAMove = 1,
       isReMaterializable = 1 in {
-    def XXLXORz : XX3Form_Zero<60, 154, (outs vsrc:$XT), (ins),
+    def XXLXORz : XX3Form_SameOp<60, 154, (outs vsrc:$XT), (ins),
                        "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
                        [(set v4i32:$XT, (v4i32 immAllZerosV))]>;
-    def XXLXORdpz : XX3Form_SetZero<60, 154,
+    def XXLXORdpz : XX3Form_SameOp<60, 154,
                          (outs vsfrc:$XT), (ins),
                          "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
                          [(set f64:$XT, (fpimm0))]>;
-    def XXLXORspz : XX3Form_SetZero<60, 154,
+    def XXLXORspz : XX3Form_SameOp<60, 154,
                          (outs vssrc:$XT), (ins),
                          "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
                          [(set f32:$XT, (fpimm0))]>;

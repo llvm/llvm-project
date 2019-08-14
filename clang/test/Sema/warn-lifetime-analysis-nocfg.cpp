@@ -119,6 +119,17 @@ void initLocalGslPtrWithTempOwner() {
   global2 = MyLongOwnerWithConversion{}; // TODO ?
 }
 
+namespace __gnu_cxx {
+template <typename T>
+struct basic_iterator {
+  basic_iterator operator++();
+  T& operator*() const;
+};
+
+template<typename T>
+bool operator!=(basic_iterator<T>, basic_iterator<T>);
+}
+
 namespace std {
 template<class T> struct remove_reference       { typedef T type; };
 template<class T> struct remove_reference<T &>  { typedef T type; };
@@ -128,17 +139,8 @@ template<class T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
 template <typename T>
-struct basic_iterator {
-  basic_iterator operator++();
-  T& operator*() const;
-};
-
-template<typename T>
-bool operator!=(basic_iterator<T>, basic_iterator<T>);
-
-template <typename T>
 struct vector {
-  typedef basic_iterator<T> iterator;
+  typedef __gnu_cxx::basic_iterator<T> iterator;
   iterator begin();
   iterator end();
   const T *data() const;

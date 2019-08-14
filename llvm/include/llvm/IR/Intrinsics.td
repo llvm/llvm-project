@@ -63,6 +63,12 @@ class NoCapture<int argNo> : IntrinsicProperty {
   int ArgNo = argNo;
 }
 
+// NoAlias - The specified argument pointer is not aliasing other "noalias" pointer
+// arguments of the intrinsic wrt. the intrinsic scope.
+class NoAlias<int argNo> : IntrinsicProperty {
+  int ArgNo = argNo;
+}
+
 // Returned - The specified argument is always the return value of the
 // intrinsic.
 class Returned<int argNo> : IntrinsicProperty {
@@ -494,7 +500,7 @@ def int_memcpy  : Intrinsic<[],
                              [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                               llvm_i1_ty],
                             [IntrArgMemOnly, IntrWillReturn, NoCapture<0>, NoCapture<1>,
-                             WriteOnly<0>, ReadOnly<1>, ImmArg<3>]>;
+                             NoAlias<0>, NoAlias<1>, WriteOnly<0>, ReadOnly<1>, ImmArg<3>]>;
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],

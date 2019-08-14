@@ -37,6 +37,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1063,7 +1064,10 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PTO.LoopVectorization = CodeGenOpts.VectorizeLoop;
   PTO.SLPVectorization = CodeGenOpts.VectorizeSLP;
 
-  PassBuilder PB(TM.get(), PTO, PGOOpt);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI;
+  SI.registerCallbacks(PIC);
+  PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &PluginFN : CodeGenOpts.PassPlugins) {

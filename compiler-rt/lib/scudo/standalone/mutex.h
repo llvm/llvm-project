@@ -27,10 +27,10 @@ public:
   NOINLINE void lock() {
     if (LIKELY(tryLock()))
       return;
-    // The compiler may try to fully unroll the loop, ending up in a
-    // NumberOfTries*NumberOfYields block of pauses mixed with tryLocks. This
-    // is large, ugly and unneeded, a compact loop is better for our purpose
-    // here. Use a pragma to tell the compiler not to unroll the loop.
+      // The compiler may try to fully unroll the loop, ending up in a
+      // NumberOfTries*NumberOfYields block of pauses mixed with tryLocks. This
+      // is large, ugly and unneeded, a compact loop is better for our purpose
+      // here. Use a pragma to tell the compiler not to unroll the loop.
 #ifdef __clang__
 #pragma nounroll
 #endif

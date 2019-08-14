@@ -818,6 +818,17 @@ public:
   /// deleted during LiveDebugVariables analysis.
   void markUsesInDebugValueAsUndef(unsigned Reg) const;
 
+  /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
+  /// to refer to the designated register.
+  void updateDbgUsersToReg(unsigned Reg,
+                           ArrayRef<MachineInstr*> Users) const {
+    for (MachineInstr *MI : Users) {
+      assert(MI->isDebugInstr());
+      assert(MI->getOperand(0).isReg());
+      MI->getOperand(0).setReg(Reg);
+    }
+  }
+
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or
   /// any of its aliases. Definitions found on functions marked noreturn are

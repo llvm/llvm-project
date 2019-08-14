@@ -21,11 +21,11 @@ declare i32 @sprintf(i8*, i8*, ...)
 
 define void @test_simplify1(i8* %dst) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias align 1 dereferenceable(13) [[DST:%.*]], i8* noalias align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(13) [[DST:%.*]], i8* align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify1(
-; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias align 1 dereferenceable(13) [[DST:%.*]], i8* noalias align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
+; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(13) [[DST:%.*]], i8* align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
@@ -87,13 +87,13 @@ define void @test_simplify5(i8* %dst, i8* %str) {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* [[STR:%.*]])
 ; CHECK-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias align 1 [[DST:%.*]], i8* noalias align 1 [[STR]], i32 [[LENINC]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify5(
 ; CHECK-IPRINTF-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* [[STR:%.*]])
 ; CHECK-IPRINTF-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias align 1 [[DST:%.*]], i8* noalias align 1 [[STR]], i32 [[LENINC]], i1 false)
+; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0

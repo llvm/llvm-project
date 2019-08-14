@@ -390,7 +390,10 @@ class ObjectFileHandler final : public FileHandler {
   static bool IsOffloadSection(SectionRef CurSection,
                                StringRef &OffloadTriple) {
     StringRef SectionName;
-    CurSection.getName(SectionName);
+    if (Expected<StringRef> NameOrErr = CurSection.getName())
+      SectionName = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
 
     if (SectionName.empty())
       return false;

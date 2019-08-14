@@ -145,3 +145,22 @@ public:
   static const int Test;
 };
 const int TestAnonUnionUSR::Test = 5;
+
+struct DefaultParmContext {
+  static const int I;
+  int f();
+};
+
+int fDefaultParm(int I = DefaultParmContext::I) {
+  return I;
+}
+
+int testImportOfIncompleteDefaultParmDuringImport(int I) {
+  return fDefaultParm(I);
+}
+
+const int DefaultParmContext::I = 0;
+
+int DefaultParmContext::f() {
+  return fDefaultParm();
+}

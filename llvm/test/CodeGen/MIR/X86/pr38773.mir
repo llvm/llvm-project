@@ -99,6 +99,13 @@ body:             |
     ; CHECK:        IDIV32r killed renamable $ecx
     ; CHECK-NEXT:   DBG_VALUE $eax, $noreg, !12, !DIExpression(), debug-location !13
     DBG_VALUE $ecx, $noreg, !12, !DIExpression(), debug-location !13
+    ; The following mov and DBG_VALUE have been inserted after the PR was
+    ; resolved to check that MCP will update debug users that are not
+    ; immediately after the dead copy.
+    ; CHECK-NEXT:   $edx = MOV32r0
+    $edx = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT:   DBG_VALUE $eax, $noreg, !12, !DIExpression(), debug-location !13
+    DBG_VALUE $ecx, $noreg, !12, !DIExpression(), debug-location !13
     $eax = COPY killed renamable $ecx
     RET 0, $eax
 

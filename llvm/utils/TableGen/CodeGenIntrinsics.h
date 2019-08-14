@@ -141,6 +141,7 @@ struct CodeGenIntrinsic {
 
   enum ArgAttribute {
     NoCapture,
+    NoAlias,
     Returned,
     ReadOnly,
     WriteOnly,

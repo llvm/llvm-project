@@ -371,11 +371,8 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
       Symbols.push_back(Symbol);
   }
 
-  for (const SectionRef &Section : MachOObj->sections()) {
-    StringRef SectName;
-    Section.getName(SectName);
+  for (const SectionRef &Section : MachOObj->sections())
     Sections.push_back(Section);
-  }
 
   bool BaseSegmentAddressSet = false;
   for (const auto &Command : MachOObj->load_commands()) {
@@ -449,13 +446,11 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     // If we couldn't find a symbol that this relocation refers to, try
     // to find a section beginning instead.
     for (const SectionRef &Section : ToolSectionFilter(*O)) {
-      StringRef Name;
       uint64_t Addr = Section.getAddress();
       if (Addr != Val)
         continue;
-      if (std::error_code EC = Section.getName(Name))
-        report_error(errorCodeToError(EC), O->getFileName());
-      Fmt << Name;
+      StringRef NameOrErr = unwrapOrError(Section.getName(), O->getFileName());
+      Fmt << NameOrErr;
       return;
     }
 
@@ -488,10 +483,14 @@ static void printRelocationTargetName(const MachOObjectFile *O,
       --I;
       advance(SI, 1);
     }
-    if (SI == O->section_end())
+    if (SI == O->section_end()) {
       Fmt << Val << " (?,?)";
-    else
-      SI->getName(S);
+    } else {
+      if (Expected<StringRef> NameOrErr = SI->getName())
+        S = *NameOrErr;
+      else
+        consumeError(NameOrErr.takeError());
+    }
   }
 
   Fmt << S;
@@ -1531,7 +1530,12 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
     uint64_t SectSize = Sect->getSize();
 
     StringRef SectName;
-    Sect->getName(SectName);
+    Expected<StringRef> SectNameOrErr = Sect->getName();
+    if (SectNameOrErr)
+      SectName = *SectNameOrErr;
+    else
+      consumeError(SectNameOrErr.takeError());
+
     DataRefImpl Ref = Sect->getRawDataRefImpl();
     StringRef SegmentName = O->getSectionFinalSegmentName(Ref);
     outs() << SegmentName << ":" << SectName << ":";
@@ -1743,7 +1747,12 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
     }
     for (const SectionRef &Section : O->sections()) {
       StringRef SectName;
-      Section.getName(SectName);
+      Expected<StringRef> SecNameOrErr = Section.getName();
+      if (SecNameOrErr)
+        SectName = *SecNameOrErr;
+      else
+        consumeError(SecNameOrErr.takeError());
+
       DataRefImpl Ref = Section.getRawDataRefImpl();
       StringRef SegName = O->getSectionFinalSegmentName(Ref);
       if ((DumpSegName.empty() || SegName == DumpSegName) &&
@@ -1839,7 +1848,12 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
                                          MachOObjectFile *O) {
   for (const SectionRef &Section : O->sections()) {
     StringRef SectName;
-    Section.getName(SectName);
+    Expected<StringRef> SecNameOrErr = Section.getName();
+    if (SecNameOrErr)
+      SectName = *SecNameOrErr;
+    else
+      consumeError(SecNameOrErr.takeError());
+
     DataRefImpl Ref = Section.getRawDataRefImpl();
     StringRef SegName = O->getSectionFinalSegmentName(Ref);
     if (SegName == "__TEXT" && SectName == "__info_plist") {
@@ -1936,7 +1950,11 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (DisassembleAll) {
     for (const SectionRef &Section : MachOOF->sections()) {
       StringRef SectName;
-      Section.getName(SectName);
+      if (Expected<StringRef> NameOrErr = Section.getName())
+        SectName = *NameOrErr;
+      else
+        consumeError(NameOrErr.takeError());
+
       if (SectName.equals("__text")) {
         DataRefImpl Ref = Section.getRawDataRefImpl();
         StringRef SegName = MachOOF->getSectionFinalSegmentName(Ref);
@@ -3247,7 +3265,13 @@ static const char *get_pointer_64(uint64_t Address, uint32_t &offset,
       continue;
     if (objc_only) {
       StringRef SectName;
-      ((*(info->Sections))[SectIdx]).getName(SectName);
+      Expected<StringRef> SecNameOrErr =
+          ((*(info->Sections))[SectIdx]).getName();
+      if (SecNameOrErr)
+        SectName = *SecNameOrErr;
+      else
+        consumeError(SecNameOrErr.takeError());
+
       DataRefImpl Ref = ((*(info->Sections))[SectIdx]).getRawDataRefImpl();
       StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
       if (SegName != "__OBJC" && SectName != "__cstring")
@@ -4039,7 +4063,12 @@ static const SectionRef get_section(MachOObjectFile *O, const char *segname,
                                     const char *sectname) {
   for (const SectionRef &Section : O->sections()) {
     StringRef SectName;
-    Section.getName(SectName);
+    Expected<StringRef> SecNameOrErr = Section.getName();
+    if (SecNameOrErr)
+      SectName = *SecNameOrErr;
+    else
+      consumeError(SecNameOrErr.takeError());
+
     DataRefImpl Ref = Section.getRawDataRefImpl();
     StringRef SegName = O->getSectionFinalSegmentName(Ref);
     if (SegName == segname && SectName == sectname)
@@ -4056,7 +4085,12 @@ walk_pointer_list_64(const char *listname, const SectionRef S,
     return;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -4105,8 +4139,7 @@ walk_pointer_list_32(const char *listname, const SectionRef S,
   if (S == SectionRef())
     return;
 
-  StringRef SectName;
-  S.getName(SectName);
+  StringRef SectName = unwrapOrError(S.getName(), O->getFileName());
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -5780,7 +5813,12 @@ static void print_message_refs64(SectionRef S, struct DisassembleInfo *info) {
     return;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -5843,7 +5881,12 @@ static void print_message_refs32(SectionRef S, struct DisassembleInfo *info) {
     return;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -5889,7 +5932,12 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
     return;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -5946,7 +5994,12 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
     return;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -5996,7 +6049,12 @@ static void print_image_info(SectionRef S, struct DisassembleInfo *info) {
   const char *r;
 
   StringRef SectName;
-  S.getName(SectName);
+  Expected<StringRef> SecNameOrErr = S.getName();
+  if (SecNameOrErr)
+    SectName = *SecNameOrErr;
+  else
+    consumeError(SecNameOrErr.takeError());
+
   DataRefImpl Ref = S.getRawDataRefImpl();
   StringRef SegName = info->O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
@@ -6031,11 +6089,8 @@ static void printObjc2_64bit_MetaData(MachOObjectFile *O, bool verbose) {
     CreateSymbolAddressMap(O, &AddrMap);
 
   std::vector<SectionRef> Sections;
-  for (const SectionRef &Section : O->sections()) {
-    StringRef SectName;
-    Section.getName(SectName);
+  for (const SectionRef &Section : O->sections())
     Sections.push_back(Section);
-  }
 
   struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
@@ -6116,11 +6171,8 @@ static void printObjc2_32bit_MetaData(MachOObjectFile *O, bool verbose) {
     CreateSymbolAddressMap(O, &AddrMap);
 
   std::vector<SectionRef> Sections;
-  for (const SectionRef &Section : O->sections()) {
-    StringRef SectName;
-    Section.getName(SectName);
+  for (const SectionRef &Section : O->sections())
     Sections.push_back(Section);
-  }
 
   struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
@@ -6214,11 +6266,8 @@ static bool printObjc1_32bit_MetaData(MachOObjectFile *O, bool verbose) {
     CreateSymbolAddressMap(O, &AddrMap);
 
   std::vector<SectionRef> Sections;
-  for (const SectionRef &Section : O->sections()) {
-    StringRef SectName;
-    Section.getName(SectName);
+  for (const SectionRef &Section : O->sections())
     Sections.push_back(Section);
-  }
 
   struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
@@ -6375,11 +6424,8 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
   CreateSymbolAddressMap(O, &AddrMap);
 
   std::vector<SectionRef> Sections;
-  for (const SectionRef &Section : O->sections()) {
-    StringRef SectName;
-    Section.getName(SectName);
+  for (const SectionRef &Section : O->sections())
     Sections.push_back(Section);
-  }
 
   struct DisassembleInfo info(O, &AddrMap, &Sections, true);
 
@@ -7344,8 +7390,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     outs() << "(" << DisSegName << "," << DisSectName << ") section\n";
 
   for (unsigned SectIdx = 0; SectIdx != Sections.size(); SectIdx++) {
-    StringRef SectName;
-    if (Sections[SectIdx].getName(SectName) || SectName != DisSectName)
+    Expected<StringRef> SecNameOrErr = Sections[SectIdx].getName();
+    if (!SecNameOrErr) {
+      consumeError(SecNameOrErr.takeError());
+      continue;
+    }
+    if (*SecNameOrErr != DisSectName)
       continue;
 
     DataRefImpl DR = Sections[SectIdx].getRawDataRefImpl();
@@ -7742,8 +7792,12 @@ static void findUnwindRelocNameAddend(const MachOObjectFile *Obj,
   auto Sym = Symbols.upper_bound(Addr);
   if (Sym == Symbols.begin()) {
     // The first symbol in the object is after this reference, the best we can
-    // do is section-relative notation.
-    RelocSection.getName(Name);
+    // do is section-relative notation.  
+    if (Expected<StringRef> NameOrErr = RelocSection.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
     Addend = Addr - SectionAddr;
     return;
   }
@@ -7762,7 +7816,11 @@ static void findUnwindRelocNameAddend(const MachOObjectFile *Obj,
 
   // There is a symbol before this reference, but it's in a different
   // section. Probably not helpful to mention it, so use the section name.
-  RelocSection.getName(Name);
+  if (Expected<StringRef> NameOrErr = RelocSection.getName())
+    Name = *NameOrErr;
+  else
+    consumeError(NameOrErr.takeError());
+
   Addend = Addr - SectionAddr;
 }
 
@@ -8127,7 +8185,11 @@ void printMachOUnwindInfo(const MachOObjectFile *Obj) {
 
   for (const SectionRef &Section : Obj->sections()) {
     StringRef SectName;
-    Section.getName(SectName);
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      SectName = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
     if (SectName == "__compact_unwind")
       printMachOCompactUnwindSection(Obj, Symbols, Section);
     else if (SectName == "__unwind_info")

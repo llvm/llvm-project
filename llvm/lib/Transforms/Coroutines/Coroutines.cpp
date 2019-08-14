@@ -513,6 +513,7 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
     return Call;
   }
   }
+  llvm_unreachable("Unknown coro::ABI enum");
 }
 
 void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
@@ -532,6 +533,7 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
     return;
   }
   }
+  llvm_unreachable("Unknown coro::ABI enum");
 }
 
 LLVM_ATTRIBUTE_NORETURN

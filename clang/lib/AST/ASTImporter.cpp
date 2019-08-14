@@ -426,6 +426,9 @@ namespace clang {
 
     Error ImportFunctionDeclBody(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
+    Error ImportDefaultArgOfParmVarDecl(const ParmVarDecl *FromParam,
+                                        ParmVarDecl *ToParam);
+
     template <typename T>
     bool hasSameVisibilityContext(T *Found, T *From);
 
@@ -3841,6 +3844,28 @@ ExpectedDecl ASTNodeImporter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
   return ToParm;
 }
 
+Error ASTNodeImporter::ImportDefaultArgOfParmVarDecl(
+    const ParmVarDecl *FromParam, ParmVarDecl *ToParam) {
+  ToParam->setHasInheritedDefaultArg(FromParam->hasInheritedDefaultArg());
+  ToParam->setKNRPromoted(FromParam->isKNRPromoted());
+
+  if (FromParam->hasUninstantiatedDefaultArg()) {
+    if (auto ToDefArgOrErr = import(FromParam->getUninstantiatedDefaultArg()))
+      ToParam->setUninstantiatedDefaultArg(*ToDefArgOrErr);
+    else
+      return ToDefArgOrErr.takeError();
+  } else if (FromParam->hasUnparsedDefaultArg()) {
+    ToParam->setUnparsedDefaultArg();
+  } else if (FromParam->hasDefaultArg()) {
+    if (auto ToDefArgOrErr = import(FromParam->getDefaultArg()))
+      ToParam->setDefaultArg(*ToDefArgOrErr);
+    else
+      return ToDefArgOrErr.takeError();
+  }
+
+  return Error::success();
+}
+
 ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
   // Parameters are created in the translation unit's context, then moved
   // into the function declaration's context afterward.
@@ -3867,23 +3892,11 @@ ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
                               /*DefaultArg*/ nullptr))
     return ToParm;
 
-  // Set the default argument.
-  ToParm->setHasInheritedDefaultArg(D->hasInheritedDefaultArg());
-  ToParm->setKNRPromoted(D->isKNRPromoted());
-
-  if (D->hasUninstantiatedDefaultArg()) {
-    if (auto ToDefArgOrErr = import(D->getUninstantiatedDefaultArg()))
-      ToParm->setUninstantiatedDefaultArg(*ToDefArgOrErr);
-    else
-      return ToDefArgOrErr.takeError();
-  } else if (D->hasUnparsedDefaultArg()) {
-    ToParm->setUnparsedDefaultArg();
-  } else if (D->hasDefaultArg()) {
-    if (auto ToDefArgOrErr = import(D->getDefaultArg()))
-      ToParm->setDefaultArg(*ToDefArgOrErr);
-    else
-      return ToDefArgOrErr.takeError();
-  }
+  // Set the default argument. It should be no problem if it was already done.
+  // Do not import the default expression before GetImportedOrCreateDecl call
+  // to avoid possible infinite import loop because circular dependency.
+  if (Error Err = ImportDefaultArgOfParmVarDecl(D, ToParm))
+    return std::move(Err);
 
   if (D->isObjCMethodParameter()) {
     ToParm->setObjCMethodScopeInfo(D->getFunctionScopeIndex());
@@ -6939,8 +6952,23 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   if (!UsedContextOrErr)
     return UsedContextOrErr.takeError();
 
-  return CXXDefaultArgExpr::Create(
-      Importer.getToContext(), *ToUsedLocOrErr, *ToParamOrErr, *UsedContextOrErr);
+  // Import the default arg if it was not imported yet.
+  // This is needed because it can happen that during the import of the
+  // default expression (from VisitParmVarDecl) the same ParmVarDecl is
+  // encountered here. The default argument for a ParmVarDecl is set in the
+  // ParmVarDecl only after it is imported (set in VisitParmVarDecl if not here,
+  // see VisitParmVarDecl).
+  ParmVarDecl *ToParam = *ToParamOrErr;
+  if (!ToParam->getDefaultArg()) {
+    Optional<ParmVarDecl *> FromParam = Importer.getImportedFromDecl(ToParam);
+    assert(FromParam && "ParmVarDecl was not imported?");
+
+    if (Error Err = ImportDefaultArgOfParmVarDecl(*FromParam, ToParam))
+      return std::move(Err);
+  }
+
+  return CXXDefaultArgExpr::Create(Importer.getToContext(), *ToUsedLocOrErr,
+                                   *ToParamOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt

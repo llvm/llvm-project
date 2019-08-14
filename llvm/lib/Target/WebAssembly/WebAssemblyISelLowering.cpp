@@ -1449,11 +1449,6 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
-  // Expand all vector shifts until V8 fixes its implementation
-  // TODO: remove this once V8 is fixed
-  if (!Subtarget->hasUnimplementedSIMD128())
-    return unrollVectorShift(Op, DAG);
-
   // Unroll non-splat vector shifts
   BuildVectorSDNode *ShiftVec;
   SDValue SplatVal;

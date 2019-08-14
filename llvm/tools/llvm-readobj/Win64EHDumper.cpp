@@ -306,7 +306,10 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
 void Dumper::printData(const Context &Ctx) {
   for (const auto &Section : Ctx.COFF.sections()) {
     StringRef Name;
-    Section.getName(Name);
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
 
     if (Name != ".pdata" && !Name.startswith(".pdata$"))
       continue;
