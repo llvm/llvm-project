@@ -19,7 +19,6 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
-using ::testing::AnyOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::Field;
@@ -414,21 +413,22 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
            AllOf(WithName("KInt"), WithKind(SymbolKind::Variable), Children()),
            AllOf(WithName("kStr"), WithKind(SymbolKind::Variable), Children()),
            AllOf(WithName("f1"), WithKind(SymbolKind::Function), Children()),
-           AllOf(WithName("foo"), WithKind(SymbolKind::Namespace),
-                 Children(
-                     AllOf(WithName("int32"), WithKind(SymbolKind::Class),
-                           Children()),
-                     AllOf(WithName("int32_t"), WithKind(SymbolKind::Class),
-                           Children()),
-                     AllOf(WithName("v1"), WithKind(SymbolKind::Variable),
-                           Children()),
-                     AllOf(WithName("bar"), WithKind(SymbolKind::Namespace),
-                           Children(AllOf(WithName("v2"),
-                                          WithKind(SymbolKind::Variable),
-                                          Children()))),
-                     AllOf(WithName("baz"), WithKind(SymbolKind::Namespace),
-                           Children()),
-                     AllOf(WithName("v2"), WithKind(SymbolKind::Namespace))))}));
+           AllOf(
+               WithName("foo"), WithKind(SymbolKind::Namespace),
+               Children(
+                   AllOf(WithName("int32"), WithKind(SymbolKind::Class),
+                         Children()),
+                   AllOf(WithName("int32_t"), WithKind(SymbolKind::Class),
+                         Children()),
+                   AllOf(WithName("v1"), WithKind(SymbolKind::Variable),
+                         Children()),
+                   AllOf(WithName("bar"), WithKind(SymbolKind::Namespace),
+                         Children(AllOf(WithName("v2"),
+                                        WithKind(SymbolKind::Variable),
+                                        Children()))),
+                   AllOf(WithName("baz"), WithKind(SymbolKind::Namespace),
+                         Children()),
+                   AllOf(WithName("v2"), WithKind(SymbolKind::Namespace))))}));
 }
 
 TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
@@ -442,13 +442,14 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
     )");
 
   addFile(FilePath, Main.code());
-  EXPECT_THAT(getSymbols(FilePath),
-              ElementsAre(AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                                Children(AllOf(
-                                    WithName("f"), WithKind(SymbolKind::Method),
-                                    SymNameRange(Main.range("decl"))))),
-                          AllOf(WithName("f"), WithKind(SymbolKind::Method),
-                                SymNameRange(Main.range("def")))));
+  EXPECT_THAT(
+      getSymbols(FilePath),
+      ElementsAre(
+          AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
+                Children(AllOf(WithName("f"), WithKind(SymbolKind::Method),
+                               SymNameRange(Main.range("decl"))))),
+          AllOf(WithName("Foo::f"), WithKind(SymbolKind::Method),
+                SymNameRange(Main.range("def")))));
 }
 
 TEST_F(DocumentSymbolsTest, ExternSymbol) {
@@ -682,6 +683,70 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
           AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class)),
           AllOf(WithName("Foo<bool, int>"), WithKind(SymbolKind::Class)),
           AllOf(WithName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
+}
+
+TEST_F(DocumentSymbolsTest, Qualifiers) {
+  addFile("foo.cpp", R"cpp(
+    namespace foo { namespace bar {
+      struct Cls;
+
+      int func1();
+      int func2();
+      int func3();
+      int func4();
+    }}
+
+    struct foo::bar::Cls { };
+
+    int foo::bar::func1() { return 10; }
+    int ::foo::bar::func2() { return 20; }
+
+    using namespace foo;
+    int bar::func3() { return 30; }
+
+    namespace alias = foo::bar;
+    int ::alias::func4() { return 40; }
+  )cpp");
+
+  // All the qualifiers should be preserved exactly as written.
+  EXPECT_THAT(getSymbols("foo.cpp"),
+              UnorderedElementsAre(
+                  WithName("foo"), WithName("foo::bar::Cls"),
+                  WithName("foo::bar::func1"), WithName("::foo::bar::func2"),
+                  WithName("using namespace foo"), WithName("bar::func3"),
+                  WithName("alias"), WithName("::alias::func4")));
+}
+
+TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
+  addFile("foo.cpp", R"cpp(
+      template <typename T, typename U = double> class Foo;
+
+      template <>
+      class Foo<int, double> {
+        int method1();
+        int method2();
+        int method3();
+      };
+
+      using int_type = int;
+
+      // Typedefs should be preserved!
+      int Foo<int_type, double>::method1() { return 10; }
+
+      // Default arguments should not be shown!
+      int Foo<int>::method2() { return 20; }
+
+      using Foo_type = Foo<int>;
+      // If the whole type is aliased, this should be preserved too!
+      int Foo_type::method3() { return 30; }
+      )cpp");
+  EXPECT_THAT(
+      getSymbols("foo.cpp"),
+      UnorderedElementsAre(WithName("Foo"), WithName("Foo<int, double>"),
+                           WithName("int_type"),
+                           WithName("Foo<int_type, double>::method1"),
+                           WithName("Foo<int>::method2"), WithName("Foo_type"),
+                           WithName("Foo_type::method3")));
 }
 
 } // namespace clangd

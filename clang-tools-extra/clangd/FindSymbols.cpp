@@ -176,14 +176,14 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   return SI;
 }
 
-/// A helper class to build an outline for the parse AST. It traverse the AST
+/// A helper class to build an outline for the parse AST. It traverses the AST
 /// directly instead of using RecursiveASTVisitor (RAV) for three main reasons:
-///    - there is no way to keep RAV from traversing subtrees we're not
+///    - there is no way to keep RAV from traversing subtrees we are not
 ///      interested in. E.g. not traversing function locals or implicit template
 ///      instantiations.
-///    - it's easier to combine results of recursive passes, e.g.
+///    - it's easier to combine results of recursive passes,
 ///    - visiting decls is actually simple, so we don't hit the complicated
-///      cases that RAV mostly helps with (types and expressions, etc.)
+///      cases that RAV mostly helps with (types, expressions, etc.)
 class DocumentOutline {
 public:
   DocumentOutline(ParsedAST &AST) : AST(AST) {}

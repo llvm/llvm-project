@@ -25,7 +25,7 @@ namespace clangd {
 //   Header = R"cpp(
 //     namespace foo { template<typename> class X{}; }
 //     using namespace foo;
-//   cpp)";
+//   )cpp";
 //   Context = Function;
 //   EXPECT_THAT(apply("[[auto]] X = foo<int>();"),
 //               "foo<int> X = foo<int();");
