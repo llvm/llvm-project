@@ -20,8 +20,6 @@ endif()
 
 set(LLVM_CXX_STD_default "c++14")
 # Preserve behaviour of legacy cache variables
-if (LLVM_ENABLE_CXX1Y)
-  set(LLVM_CXX_STD_default "c++1y")
 elseif (LLVM_ENABLE_CXX1Z)
   set(LLVM_CXX_STD_default "c++1z")
 endif()
