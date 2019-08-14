@@ -79,7 +79,7 @@ private:
 void AvoidUnderscoreInGoogletestNameCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
-      llvm::make_unique<AvoidUnderscoreInGoogletestNameCallback>(PP, this));
+      std::make_unique<AvoidUnderscoreInGoogletestNameCallback>(PP, this));
 }
 
 } // namespace readability

@@ -85,8 +85,8 @@ protected:
                                                  StringRef InFile) override {
     Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(
-        llvm::make_unique<PPCallbacksTracker>(Filters, CallbackCalls, PP));
-    return llvm::make_unique<ASTConsumer>();
+        std::make_unique<PPCallbacksTracker>(Filters, CallbackCalls, PP));
+    return std::make_unique<ASTConsumer>();
   }
 
   void EndSourceFileAction() override {

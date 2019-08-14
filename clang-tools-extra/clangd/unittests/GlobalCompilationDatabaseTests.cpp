@@ -82,7 +82,7 @@ class OverlayCDBTest : public ::testing::Test {
   };
 
 protected:
-  OverlayCDBTest() : Base(llvm::make_unique<BaseCDB>()) {}
+  OverlayCDBTest() : Base(std::make_unique<BaseCDB>()) {}
   std::unique_ptr<GlobalCompilationDatabase> Base;
 };
 

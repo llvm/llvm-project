@@ -92,9 +92,9 @@ static std::string runIncludeFixer(
       {SymbolInfo("foo2", SymbolInfo::SymbolKind::Class, "\"foo2.h\"", {}),
        SymbolInfo::Signals{}},
   };
-  auto SymbolIndexMgr = llvm::make_unique<SymbolIndexManager>();
+  auto SymbolIndexMgr = std::make_unique<SymbolIndexManager>();
   SymbolIndexMgr->addSymbolIndex(
-      [=]() { return llvm::make_unique<InMemorySymbolIndex>(Symbols); });
+      [=]() { return std::make_unique<InMemorySymbolIndex>(Symbols); });
 
   std::vector<IncludeFixerContext> FixerContexts;
   IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContexts, "llvm");

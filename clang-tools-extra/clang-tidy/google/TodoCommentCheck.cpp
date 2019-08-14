@@ -52,7 +52,7 @@ private:
 
 TodoCommentCheck::TodoCommentCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Handler(llvm::make_unique<TodoCommentHandler>(
+      Handler(std::make_unique<TodoCommentHandler>(
           *this, Context->getOptions().User)) {}
 
 void TodoCommentCheck::registerPPCallbacks(const SourceManager &SM,

@@ -29,7 +29,7 @@ std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
   // There is no need to include "Rels" in Data because the relations are self-
   // contained, without references into a backing store.
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  return llvm::make_unique<Dex>(Data.first, Data.second, Rels, std::move(Data),
+  return std::make_unique<Dex>(Data.first, Data.second, Rels, std::move(Data),
                                 Size);
 }
 

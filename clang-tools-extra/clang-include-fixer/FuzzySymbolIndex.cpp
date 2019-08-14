@@ -134,7 +134,7 @@ FuzzySymbolIndex::createFromYAML(StringRef FilePath) {
   auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
   if (!Buffer)
     return llvm::errorCodeToError(Buffer.getError());
-  return llvm::make_unique<MemSymbolIndex>(
+  return std::make_unique<MemSymbolIndex>(
       find_all_symbols::ReadSymbolInfosFromYAML(Buffer.get()->getBuffer()));
 }
 

@@ -40,7 +40,7 @@ template <typename Check> struct CheckFactory<Check> {
   static void
   createChecks(ClangTidyContext *Context,
                SmallVectorImpl<std::unique_ptr<ClangTidyCheck>> &Result) {
-    Result.emplace_back(llvm::make_unique<Check>(
+    Result.emplace_back(std::make_unique<Check>(
         "test-check-" + std::to_string(Result.size()), Context));
   }
 };
@@ -88,7 +88,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
                    std::map<StringRef, StringRef>()) {
   ClangTidyOptions Options = ExtraOptions;
   Options.Checks = "*";
-  ClangTidyContext Context(llvm::make_unique<DefaultOptionsProvider>(
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,

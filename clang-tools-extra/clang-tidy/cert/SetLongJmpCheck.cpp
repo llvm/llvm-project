@@ -51,7 +51,7 @@ void SetLongJmpCheck::registerPPCallbacks(const SourceManager &SM,
 
   // Per [headers]p5, setjmp must be exposed as a macro instead of a function,
   // despite the allowance in C for setjmp to also be an extern function.
-  PP->addPPCallbacks(llvm::make_unique<SetJmpMacroCallbacks>(*this));
+  PP->addPPCallbacks(std::make_unique<SetJmpMacroCallbacks>(*this));
 }
 
 void SetLongJmpCheck::registerMatchers(MatchFinder *Finder) {

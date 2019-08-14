@@ -257,11 +257,11 @@ struct {
   const char *Description;
   std::function<std::unique_ptr<Command>()> Implementation;
 } CommandInfo[] = {
-    {"find", "Search for symbols with fuzzyFind", llvm::make_unique<FuzzyFind>},
+    {"find", "Search for symbols with fuzzyFind", std::make_unique<FuzzyFind>},
     {"lookup", "Dump symbol details by ID or qualified name",
-     llvm::make_unique<Lookup>},
+     std::make_unique<Lookup>},
     {"refs", "Find references by ID or qualified name",
-     llvm::make_unique<Refs>},
+     std::make_unique<Refs>},
 };
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {

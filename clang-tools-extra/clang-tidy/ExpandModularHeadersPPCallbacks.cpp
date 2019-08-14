@@ -54,7 +54,7 @@ private:
 ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
     CompilerInstance *CI,
     IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
-    : Recorder(llvm::make_unique<FileRecorder>()), Compiler(*CI),
+    : Recorder(std::make_unique<FileRecorder>()), Compiler(*CI),
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
@@ -72,13 +72,13 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   auto HSO = std::make_shared<HeaderSearchOptions>();
   *HSO = Compiler.getHeaderSearchOpts();
 
-  HeaderInfo = llvm::make_unique<HeaderSearch>(HSO, Sources, Diags, LangOpts,
+  HeaderInfo = std::make_unique<HeaderSearch>(HSO, Sources, Diags, LangOpts,
                                                &Compiler.getTarget());
 
   auto PO = std::make_shared<PreprocessorOptions>();
   *PO = Compiler.getPreprocessorOpts();
 
-  PP = llvm::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
+  PP = std::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
                                               *HeaderInfo, ModuleLoader,
                                               /*IILookup=*/nullptr,
                                               /*OwnsHeaderSearch=*/false);

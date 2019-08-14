@@ -42,7 +42,7 @@ IncludeInserter::IncludeInserter(const SourceManager &SourceMgr,
 IncludeInserter::~IncludeInserter() {}
 
 std::unique_ptr<PPCallbacks> IncludeInserter::CreatePPCallbacks() {
-  return llvm::make_unique<IncludeInserterCallback>(this);
+  return std::make_unique<IncludeInserterCallback>(this);
 }
 
 llvm::Optional<FixItHint>
@@ -58,7 +58,7 @@ IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
     // file.
     IncludeSorterByFile.insert(std::make_pair(
         FileID,
-        llvm::make_unique<IncludeSorter>(
+        std::make_unique<IncludeSorter>(
             &SourceMgr, &LangOpts, FileID,
             SourceMgr.getFilename(SourceMgr.getLocForStartOfFile(FileID)),
             Style)));
@@ -72,7 +72,7 @@ void IncludeInserter::AddInclude(StringRef FileName, bool IsAngled,
   FileID FileID = SourceMgr.getFileID(HashLocation);
   if (IncludeSorterByFile.find(FileID) == IncludeSorterByFile.end()) {
     IncludeSorterByFile.insert(std::make_pair(
-        FileID, llvm::make_unique<IncludeSorter>(
+        FileID, std::make_unique<IncludeSorter>(
                     &SourceMgr, &LangOpts, FileID,
                     SourceMgr.getFilename(HashLocation), Style)));
   }
