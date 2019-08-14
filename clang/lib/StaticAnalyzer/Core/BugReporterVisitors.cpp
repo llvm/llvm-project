@@ -1987,7 +1987,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
       if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
         CanDereference = false;
-    } else if (const auto *AR = L->getRegionAs<AllocaRegion>())
+    } else if (L->getRegionAs<AllocaRegion>())
       CanDereference = false;
 
     // At this point we are dealing with the region's LValue.

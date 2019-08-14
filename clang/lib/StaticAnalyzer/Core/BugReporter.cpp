@@ -2180,7 +2180,7 @@ llvm::iterator_range<BugReport::ranges_iterator> BugReport::getRanges() const {
   // If no custom ranges, add the range of the statement corresponding to
   // the error node.
   if (Ranges.empty()) {
-    if (const auto *E = dyn_cast_or_null<Expr>(getStmt()))
+    if (dyn_cast_or_null<Expr>(getStmt()))
       return llvm::make_range(&ErrorNodeRange, &ErrorNodeRange + 1);
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
