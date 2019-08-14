@@ -181,7 +181,7 @@ recursive_timed_mutex::unlock() _NOEXCEPT
     unique_lock<mutex> lk(__m_);
     if (--__count_ == 0)
     {
-        __id_.reset();
+        __id_.__reset();
         lk.unlock();
         __cv_.notify_one();
     }
