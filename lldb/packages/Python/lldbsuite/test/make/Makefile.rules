@@ -651,10 +651,10 @@ endif
 ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(DYLIB_NAME)" ""
-MODULENAME=$(shell basename $(EXE) .out)
+MODULENAME?=$(shell basename $(EXE) .out)
 else
 EXE = $(DYLIB_FILENAME)
-MODULENAME=$(DYLIB_NAME)
+MODULENAME?=$(DYLIB_NAME)
 SWIFT_FEFLAGS += -parse-as-library
 endif
 
