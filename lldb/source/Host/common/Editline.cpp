@@ -14,6 +14,7 @@
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SelectHelper.h"
@@ -894,9 +895,17 @@ unsigned char Editline::TabCommand(int ch) {
   StringList completions, descriptions;
   int page_size = 40;
 
-  const int num_completions = m_completion_callback(
-      line_info->buffer, line_info->cursor, line_info->lastchar,
-      completions, descriptions, m_completion_callback_baton);
+  llvm::StringRef line(line_info->buffer,
+                       line_info->lastchar - line_info->buffer);
+  unsigned cursor_index = line_info->cursor - line_info->buffer;
+  CompletionResult result;
+  CompletionRequest request(line, cursor_index, result);
+
+  const int num_completions =
+      m_completion_callback(request, m_completion_callback_baton);
+
+  result.GetMatches(completions);
+  result.GetDescriptions(descriptions);
 
   if (num_completions == 0)
     return CC_ERROR;
