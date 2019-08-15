@@ -24,3 +24,6 @@ void foo2(void) [[clang::unavailable("not available - replaced")]]; // expected-
 void bar(void) {
   foo2(); // expected-error {{'foo2' is unavailable: not available - replaced}}
 }
+
+[[nodiscard]] int without_underscores(void);
+[[__nodiscard__]] int underscores(void);

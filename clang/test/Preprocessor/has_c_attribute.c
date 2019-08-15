@@ -10,3 +10,7 @@
   int does_not_have_selectany();
 #endif
 
+// CHECK: has_nodiscard_underscore
+#if __has_c_attribute(__nodiscard__)
+  int has_nodiscard_underscore();
+#endif
