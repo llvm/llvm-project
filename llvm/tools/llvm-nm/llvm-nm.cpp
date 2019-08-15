@@ -711,17 +711,21 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    const std::string &ArchiveName,
                                    const std::string &ArchitectureName) {
   if (!NoSort) {
-    std::function<bool(const NMSymbol &, const NMSymbol &)> Cmp;
+    using Comparator = bool (*)(const NMSymbol &, const NMSymbol &);
+    Comparator Cmp;
     if (NumericSort)
-      Cmp = compareSymbolAddress;
+      Cmp = &compareSymbolAddress;
     else if (SizeSort)
-      Cmp = compareSymbolSize;
+      Cmp = &compareSymbolSize;
     else
-      Cmp = compareSymbolName;
+      Cmp = &compareSymbolName;
 
     if (ReverseSort)
-      Cmp = [=](const NMSymbol &A, const NMSymbol &B) { return Cmp(B, A); };
-    llvm::sort(SymbolList, Cmp);
+      llvm::sort(SymbolList, [=](const NMSymbol &A, const NMSymbol &B) -> bool {
+        return Cmp(B, A);
+      });
+    else
+      llvm::sort(SymbolList, Cmp);
   }
 
   if (!PrintFileName) {
