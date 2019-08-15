@@ -253,8 +253,6 @@ public:
 
   void LoadExtraDylibs(Process &process, Status &error);
 
-  swift::Identifier GetIdentifier(const char *name);
-
   swift::Identifier GetIdentifier(const llvm::StringRef &name);
 
   CompilerType FindType(const char *name, swift::ModuleDecl *swift_module);
@@ -650,7 +648,8 @@ public:
 
   bool IsCStringType(void *type, uint32_t &length) override;
 
-  size_t GetTypeBitAlign(void *type) override;
+  llvm::Optional<size_t> GetTypeBitAlign(void *type,
+                                         ExecutionContextScope *exe_scope) override;
 
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
@@ -727,9 +726,6 @@ public:
                                 lldb::StackFrameWP &stack_frame_wp,
                                 swift::SourceFile *source_file, Status &error);
 
-  /// Import a Clang declaration into Swift.
-  swift::ValueDecl *importDecl(clang::Decl *clangDecl);
-  
 protected:
   /// This map uses the string value of ConstStrings as the key, and the TypeBase
   /// * as the value. Since the ConstString strings are uniqued, we can use
@@ -789,7 +785,6 @@ protected:
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
   swift::ClangImporter *m_clang_importer = nullptr;
-  swift::DWARFImporter *m_dwarf_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;

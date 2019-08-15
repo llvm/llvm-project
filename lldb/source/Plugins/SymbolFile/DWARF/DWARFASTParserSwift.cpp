@@ -172,7 +172,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       // Fall back to (id), which is not necessarily correct.
       if (!compiler_type) {
         is_clang_type = true;
-        compiler_type = clang_ctx->GetBasicType(eBasicTypeObjCClass);
+        compiler_type = clang_ctx->GetBasicType(eBasicTypeObjCID);
       }
     }
   }

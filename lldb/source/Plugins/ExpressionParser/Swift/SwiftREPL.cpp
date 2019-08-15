@@ -555,12 +555,13 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
     auto *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
     if (target_swift_ast)
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
+    swift::registerIDERequestFunctions(
+        m_swift_ast_sp.get()->GetASTContext()->evaluator);
   }
   SwiftASTContext *swift_ast = m_swift_ast_sp.get();
 
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();
-    swift::registerIDERequestFunctions(ast->evaluator);
     swift::REPLCompletions completions;
     SourceModule completion_module_info;
     completion_module_info.path.push_back(ConstString("repl"));

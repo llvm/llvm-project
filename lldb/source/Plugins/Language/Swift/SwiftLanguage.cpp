@@ -56,10 +56,9 @@ using lldb_private::formatters::swift::DictionaryConfig;
 using lldb_private::formatters::swift::SetConfig;
 
 void SwiftLanguage::Initialize() {
-  static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21__SharedStringStorage"));
-  static ConstString g_SwiftStringStorageClass(
-      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs15__StringStorage"));
-  static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
+  static ConstString g_SwiftSharedStringClass("_TtCs21__SharedStringStorage");
+  static ConstString g_SwiftStringStorageClass("_TtCs15__StringStorage");
+  static ConstString g_NSArrayClass1("_TtCs22__SwiftDeferredNSArray");
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Swift Language",
                                 CreateInstance);
 
@@ -81,10 +80,9 @@ void SwiftLanguage::Initialize() {
 
 void SwiftLanguage::Terminate() {
   // FIXME: Duplicating this list from Initialize seems error-prone.
-  static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21__SharedStringStorage"));
-  static ConstString g_SwiftStringStorageClass(
-      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs15__StringStorage"));
-  static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
+  static ConstString g_SwiftSharedStringClass("_TtCs21__SharedStringStorage");
+  static ConstString g_SwiftStringStorageClass("_TtCs15__StringStorage");
+  static ConstString g_NSArrayClass1("_TtCs22__SwiftDeferredNSArray");
 
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
       .erase(g_SwiftSharedStringClass);
@@ -317,7 +315,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "Swift.Array summary provider",
-      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray")), summary_flags, false);
+      ConstString("_TtCs22__SwiftDeferredNSArray"), summary_flags, false);
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider,
       "Swift.Array summary provider",
@@ -369,8 +367,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSynthetic(swift_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
                   "Swift.Array synthetic children",
-                  ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray")),
-                  synth_flags,
+                  ConstString("_TtCs22__SwiftDeferredNSArray"), synth_flags,
                   false);
   AddCXXSynthetic(swift_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
@@ -435,7 +432,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::SwiftSharedString_SummaryProvider,
       "SharedStringStorage summary provider",
-      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21__SharedStringStorage")), summary_flags);
+      ConstString("_TtCs21__SharedStringStorage"), summary_flags);
   summary_flags.SetSkipPointers(true);
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::BuiltinObjC_SummaryProvider,

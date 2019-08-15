@@ -794,26 +794,6 @@ bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
   return swift::Demangle::isClass(name);
 }
 
-const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangled_name)
-{
-#ifndef USE_NEW_MANGLING
-  return std::string(mangled_name);
-#else
-  //FIXME: Check if we need to cache these lookups...
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_ptr = demangle_ctx.demangleSymbolAsNode(mangled_name);
-  if (!node_ptr)
-  {
-    // Sometimes this gets passed the prefix of a name, in which case we
-    // won't be able to demangle it.  In that case return what was passed in.
-    printf ("Couldn't get mangled name for %s.\n", mangled_name);
-    return mangled_name;
-  }
-  else
-    return swift::Demangle::mangleNode(node_ptr);
-#endif
-}
-
 void SwiftLanguageRuntime::MethodName::Clear() {
   m_full.Clear();
   m_basename = llvm::StringRef();
@@ -2594,13 +2574,17 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetByteStride(CompilerType type) 
   return {};
 }
 
+llvm::Optional<size_t> SwiftLanguageRuntime::GetBitAlignment(CompilerType type) {
+  if (auto *type_info = GetTypeInfo(type))
+    return type_info->getAlignment();
+  return {};
+}
+
 bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
   return name == g_self;
 }
 
 bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
-  // if (in_value.IsDynamic())
-  //    return false;
   if (IsIndirectEnumCase(in_value))
     return true;
   CompilerType var_type(in_value.GetCompilerType());
@@ -2609,16 +2593,8 @@ bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
     // Swift class instances are actually pointers, but base class instances
     // are inlined at offset 0 in the class data. If we just let base classes
     // be dynamic, it would cause an infinite recursion. So we would usually
-    // disable it
-    // But if the base class is a generic type we still need to bind it, and
-    // that is
-    // a good job for dynamic types to perform
-    if (in_value.IsBaseClass()) {
-      CompilerType base_type(in_value.GetCompilerType());
-      if (SwiftASTContext::IsFullyRealized(base_type))
-        return false;
-    }
-    return true;
+    // disable it.
+    return !in_value.IsBaseClass();
   }
   return var_type.IsPossibleDynamicType(nullptr, false, false, true);
 }
