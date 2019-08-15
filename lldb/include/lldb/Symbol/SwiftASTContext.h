@@ -34,7 +34,7 @@
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
-class DWARFImporter;
+class DWARFImporterDelegate;
 class IRGenOptions;
 class NominalTypeDecl;
 class SearchPathOptions;
@@ -307,7 +307,6 @@ public:
   CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
-  swift::DWARFImporter *GetDWARFImporter();
 
   struct TupleElement {
     ConstString element_name;
@@ -788,9 +787,10 @@ protected:
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_up;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
-  // CompilerInvocation, SourceMgr, and DiagEngine must come
-  // before the ASTContext, so they get deallocated *after* the
-  // ASTContext.
+  std::unique_ptr<swift::DWARFImporterDelegate> m_dwarf_importer_delegate_up;
+  // CompilerInvocation, SourceMgr, DiagEngine and
+  // DWARFImporterDelegate must come before the ASTContext, so they
+  // get deallocated *after* the ASTContext.
   std::unique_ptr<swift::ASTContext> m_ast_context_ap;
   std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
