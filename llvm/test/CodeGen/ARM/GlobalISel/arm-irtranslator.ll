@@ -560,8 +560,8 @@ define void @test_load_store_struct({i32, i32} *%addr) {
 ; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_GEP [[ADDR1]], [[OFFSET]](s32)
 ; CHECK-DAG: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[ADDR2]](p0) :: (load 4 from %ir.addr + 4)
 ; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store 4 into %ir.addr)
-; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_GEP [[ADDR1]], [[OFFSET]](s32)
-; CHECK-DAG: G_STORE [[VAL2]](s32), [[ADDR2]](p0) :: (store 4 into %ir.addr + 4)
+; CHECK-DAG: [[ADDR3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
+; CHECK-DAG: G_STORE [[VAL2]](s32), [[ADDR3]](p0) :: (store 4 into %ir.addr + 4)
   %val = load {i32, i32}, {i32, i32} *%addr, align 4
   store {i32, i32} %val, {i32, i32} *%addr, align 4
   ret void
