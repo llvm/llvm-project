@@ -543,10 +543,10 @@ protected:
         // additionally to the breakpoint
         m_should_stop = true;
         
-        // Here we clean the preset stop info so the next GetStopInfo call will
-        // find the appropriate stop info, which should be the stop info
-        // related to the completed plan
-        thread_sp->ResetStopInfo();
+        // We know we're stopping for a completed plan and we don't want to
+        // show the breakpoint stop, so compute the public stop info immediately
+        // here.
+        thread_sp->CalculatePublicStopInfo();
       }
 
       LLDB_LOGF(log,

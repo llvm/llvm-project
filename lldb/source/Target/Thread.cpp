@@ -402,6 +402,11 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   }
 }
 
+void Thread::CalculatePublicStopInfo() {
+  ResetStopInfo();
+  SetStopInfo(GetStopInfo());
+}
+
 lldb::StopInfoSP Thread::GetPrivateStopInfo() {
   if (m_destroy_called)
     return m_stop_info_sp;
