@@ -205,16 +205,10 @@ index::createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                             IndexingOptions Opts,
                             std::unique_ptr<FrontendAction> WrappedAction) {
   if (WrappedAction)
-<<<<<<< HEAD
-    return llvm::make_unique<WrappingIndexAction>(
-        std::move(WrappedAction), std::move(DataConsumer), Opts);
-  return llvm::make_unique<IndexAction>(std::move(DataConsumer), Opts);
-=======
     return std::make_unique<WrappingIndexAction>(std::move(WrappedAction),
                                                   std::move(DataConsumer),
                                                   Opts);
   return std::make_unique<IndexAction>(std::move(DataConsumer), Opts);
->>>>>>> mirror/master
 }
 
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
