@@ -15,7 +15,7 @@ int main (int argc, char* argv[]) {
 
   Kokkos::initialize (argc, argv);
   {
-    Kokkos::parallel_for(15, KOKKOS_LAMBDA(const int i) {
+    Kokkos::parallel_for("debug", 15, KOKKOS_LAMBDA(const int i) {
 	printf("hello from %i\n", i);
       });
   }

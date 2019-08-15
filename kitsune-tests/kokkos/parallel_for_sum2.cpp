@@ -35,7 +35,7 @@ int main (int argc, char* argv[]) {
     initialize(a);
     initialize(b);
 
-    Kokkos::parallel_for(SIZE, KOKKOS_LAMBDA (const int i) {
+    Kokkos::parallel_for(SIZE, KOKKOS_LAMBDA(const int i) {
       c(i) = a(i) + b(i);
     });
 

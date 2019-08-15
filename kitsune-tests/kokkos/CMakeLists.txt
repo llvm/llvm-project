@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 3.13.5)
 
 set(KOKKOS_LINK_LIBRARIES 
     "-lkokkos -ldl -lrt" 
@@ -24,6 +24,8 @@ foreach(cpp_file ${SOURCES})
   add_executable(${target}.kokkos ${cpp_file}) 
   target_include_directories(${target}.kokkos 
     PRIVATE ${KOKKOS_INSTALL_PREFIX}/include)
+  target_link_directories(${target}.kokkos
+    PRIVATE ${KOKKOS_INSTALL_PREFIX}/lib)
   target_link_libraries(${target}.kokkos 
     PRIVATE ${KOKKOS_LINK_LIBRARIES})
 
@@ -50,6 +52,8 @@ foreach(cpp_file ${SOURCES})
     PRIVATE ${KOKKOS_INSTALL_PREFIX}/include)
   target_compile_options(${target}.kitsune BEFORE
     PRIVATE "-fkokkos")
+  target_link_directories(${target}.kitsune
+    PRIVATE ${KOKKOS_INSTALL_PREFIX}/lib)
   target_link_libraries(${target}.kitsune
     PRIVATE ${KOKKOS_LINK_LIBRARIES})
 

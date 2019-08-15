@@ -47,12 +47,77 @@
  *  SUCH DAMAGE.
  *
  ***************************************************************************/
-
+#include <cstdio>
 #include "CodeGenFunction.h"
 using namespace clang;
 using namespace CodeGen;
 
 namespace {
+
+
+
+  static const Expr *SimplifyExpr(const Expr *E) {
+    return E->IgnoreImplicit()->IgnoreImpCasts();
+  }
+
+  // A helper function used to extract the bounds of a parallel-for 
+  // construct.  This handles the case of sorting out if we have a 
+  // constant or binary expression to deal with. 
+  static void ExtractParallelForComponents(const CallExpr* CE,
+					   std::string &CN, 
+					   const Expr *& BE, 
+					   const LambdaExpr *& LE)
+  {
+    // There are two forms of kokkos parallel_for that we support: 
+    // 
+    //   parallel_for(N, lambda...);
+    // 
+    // and 
+    //
+    //   parallel_for("name", N, lambda...);
+    // 
+    // 
+    // We currently don't support functors as they introduce some 
+    // messy challenges that will need to be visited at some point
+    // down the road... 
+
+
+    unsigned int curArgIndex = 0;
+
+    const Expr *SE = SimplifyExpr(CE->getArg(curArgIndex));
+    if (SE->getStmtClass() == Expr::CXXConstructExprClass) {
+      // matches: parall_for("id-string", N, lambda)
+      const CXXConstructExpr *CXXCE = dyn_cast<CXXConstructExpr>(SE);
+      SE = CXXCE->getArg(0)->IgnoreImplicit();
+      if (SE->getStmtClass() == Expr::StringLiteralClass) {
+	CN = dyn_cast<StringLiteral>(SE)->getString().str();
+	curArgIndex++;
+	SE = SimplifyExpr(CE->getArg(curArgIndex));
+      }
+    } 
+
+    if (SE->getStmtClass() == Expr::IntegerLiteralClass) {
+      BE = SE;
+      curArgIndex++;
+      SE = SimplifyExpr(CE->getArg(curArgIndex));
+    } else if (SE->getStmtClass() == Expr::BinaryOperatorClass) {
+      BE = SE;
+      curArgIndex++;
+      SE = SimplifyExpr(CE->getArg(curArgIndex));
+    } else if (SE->getStmtClass() == Expr::DeclRefExprClass) {
+      BE = SE;
+      curArgIndex++;
+      SE = SimplifyExpr(CE->getArg(curArgIndex));
+    } else {
+      CE->getArg(curArgIndex)->dump();
+      SE->dump();
+      llvm_unreachable("unknown size expr for parallel_for construct");
+    }
+
+    if (SE->getStmtClass() == Expr::LambdaExprClass) {
+      LE = dyn_cast<LambdaExpr>(SE);
+    }
+  }
 
   // A helper function used to extract the lamba expression 
   // used in Kokkos.  Note that the expression is sometimes 
@@ -136,23 +201,41 @@ void CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
     
   ArrayRef<const Attr *> ForallAttrs; // FIXME: This is unused... 
 
-  // A Kokkos parallel-for is a lambda expression construct -- our 
-  // first step is to extract the lambda, which we will then be 
-  // transformed into a parallel-for loop body when we have 
-  // completed lowering. 
+  // The Kokkos parallel_for has multiple forms and we have to sort out
+  // which one is being used to figure out the details of transformation 
+  // and lowering to IR.  At a high-level the pseudo code looks like:
   //
-  /*
-  const Expr *E = nullptr;
-  for(int i = 0; i < CE->getNumArgs(); i++) {
-    const Expr *E = CE->getArg(i);
-    if (E) {
-      E->dump();
-    }
-  }
-  */
-  const LambdaExpr *LE = ExtractLambdaExpr(CE->getArg(1));
-  assert(LE && "EmitKokkosParallelFor -- unable to extract lambda!");  
-  
+  //    parallel_for(N, lambda | functor) {
+  //      // parallel body... 
+  //    } 
+  //
+  // some older syntax appears to allow (not deprecated):
+  // 
+  //    parallel_for("name", N, lambda | functor) { 
+  //      // parallel body...
+  //    }  
+  // 
+  // Note each lamba/functor takes a single argument (the "active" index)
+  // that is an integer in simple cases and can be more complex when using 
+  // a range poicy...  Right now we are only supporting the simple cases 
+  // (i.e. no range policies). 
+  //  
+  // FIXME: The Kokkos wiki states: 
+  // 
+  //   "Kokkos lets users choose whether to use a functor or a
+  //   lambda. Lambdas are convenient for short loop bodies. For a
+  //   much more complicated loop body, you might find it easier for
+  //   testing to separate it out and name it as a functor."  
+  // 
+  // 
+  std::string      PFName; 
+  const Expr       *BE = nullptr; // "bounds" expression
+  const LambdaExpr *LE = nullptr; // the lambda  
+
+  ExtractParallelForComponents(CE, PFName, BE, LE);
+  assert(LE && "failed to extract lambda from kokkos statement!");  
+  assert(BE && "failed to extract loop bound from kokkos statement!");
+
   JumpDest LoopExit = getJumpDestInCurrentScope("kokkos.forall.end");
   PushSyncRegion();
   llvm::Instruction *SRStart = EmitSyncRegionStart();
@@ -181,7 +264,15 @@ void CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
   Builder.CreateStore(Zero, Addr);
 
   // Next, work towards determining the end of the loop range.
-  llvm::Value *LoopEnd   = EmitScalarExpr(CE->getArg(0));
+  llvm::Value *LoopEnd = nullptr;
+
+  if (BE->getStmtClass() == Expr::BinaryOperatorClass) {
+    RValue RV = EmitAnyExprToTemp(BE);
+    LoopEnd = RV.getScalarVal();
+  } else { 
+    LoopEnd = EmitScalarExpr(BE);
+  }
+
   llvm::Type  *LoopVarTy = ConvertType(LoopVar->getType());
   unsigned NBits  = LoopEnd->getType()->getPrimitiveSizeInBits();
   unsigned LVBits = LoopVarTy->getPrimitiveSizeInBits();
