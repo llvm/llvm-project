@@ -18,6 +18,7 @@ add_llvm_tool(llvm-reduce
   TestRunner.cpp
   deltas/Delta.cpp
   deltas/ReduceFunctions.cpp
+  deltas/ReduceGlobalVars.cpp
 
   DEPENDS
   intrinsics_gen
