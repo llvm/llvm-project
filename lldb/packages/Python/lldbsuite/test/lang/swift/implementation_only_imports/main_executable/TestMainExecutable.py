@@ -22,6 +22,7 @@ import os.path
 import time
 import unittest2
 
+@skipIfDarwin # rdar://problem/54322424 Sometimes failing, sometimes truncated output.
 class TestMainExecutable(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
