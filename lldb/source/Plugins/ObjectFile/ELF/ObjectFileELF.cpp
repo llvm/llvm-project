@@ -1762,7 +1762,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
 
-  m_sections_up = llvm::make_unique<SectionList>();
+  m_sections_up = std::make_unique<SectionList>();
   VMAddressProvider regular_provider(GetType(), "PT_LOAD");
   VMAddressProvider tls_provider(GetType(), "PT_TLS");
 

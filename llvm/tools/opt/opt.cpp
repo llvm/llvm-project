@@ -720,7 +720,7 @@ int main(int argc, char **argv) {
         OutputFilename = "-";
 
       std::error_code EC;
-      Out = llvm::make_unique<ToolOutputFile>(OutputFilename, EC,
+      Out = std::make_unique<ToolOutputFile>(OutputFilename, EC,
                                               sys::fs::OF_None);
       if (EC) {
         errs() << EC.message() << '\n';
@@ -867,7 +867,7 @@ int main(int argc, char **argv) {
     assert(Out);
     OS = &Out->os();
     if (RunTwice) {
-      BOS = make_unique<raw_svector_ostream>(Buffer);
+      BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
     if (OutputAssembly) {

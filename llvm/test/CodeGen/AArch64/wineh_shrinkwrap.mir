@@ -9,14 +9,14 @@
 # The same test gets shrink wrapped on Linux ARM64.
 
 # WIN64-LABEL: bb.0.entry:
-# WIN64: early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32
+# WIN64: early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4
 # WIN64-LABEL: bb.1:
 # WIN64-LABEL: bb.2.if.then:
 
 # LINUX-LABEL: bb.0.entry:
 # LINUX-LABEL: bb.1:
 # LINUX-LABEL: bb.2.if.then:
-# LINUX: early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32
+# LINUX: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -32
 --- |
   ; ModuleID = 'shrink.cpp'
   target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"

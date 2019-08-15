@@ -287,7 +287,7 @@ public:
   OptStatementsRCResource(OptionalStmtList &&Stmts,
                           uint16_t Flags = RCResource::getDefaultMemoryFlags())
       : RCResource(Flags),
-        OptStatements(llvm::make_unique<OptionalStmtList>(std::move(Stmts))) {}
+        OptStatements(std::make_unique<OptionalStmtList>(std::move(Stmts))) {}
 
   virtual Error applyStmts(Visitor *V) const { return OptStatements->visit(V); }
 };

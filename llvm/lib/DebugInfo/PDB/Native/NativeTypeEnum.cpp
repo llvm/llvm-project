@@ -163,14 +163,14 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent,
 std::unique_ptr<IPDBEnumSymbols>
 NativeTypeEnum::findChildren(PDB_SymType Type) const {
   if (Type != PDB_SymType::Data)
-    return llvm::make_unique<NullEnumerator<PDBSymbol>>();
+    return std::make_unique<NullEnumerator<PDBSymbol>>();
 
   const NativeTypeEnum *ClassParent = nullptr;
   if (!Modifiers)
     ClassParent = this;
   else
     ClassParent = UnmodifiedType;
-  return llvm::make_unique<NativeEnumEnumEnumerators>(Session, *ClassParent);
+  return std::make_unique<NativeEnumEnumEnumerators>(Session, *ClassParent);
 }
 
 PDB_SymType NativeTypeEnum::getSymTag() const { return PDB_SymType::Enum; }

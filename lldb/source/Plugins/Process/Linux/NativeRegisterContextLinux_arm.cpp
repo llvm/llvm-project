@@ -97,7 +97,7 @@ static const RegisterSet g_reg_sets_arm[k_num_register_sets] = {
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
-  return llvm::make_unique<NativeRegisterContextLinux_arm>(target_arch,
+  return std::make_unique<NativeRegisterContextLinux_arm>(target_arch,
                                                            native_thread);
 }
 

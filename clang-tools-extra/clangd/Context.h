@@ -122,7 +122,7 @@ public:
                  typename std::decay<Type>::type Value) const & {
     return Context(std::make_shared<Data>(Data{
         /*Parent=*/DataPtr, &Key,
-        llvm::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+        std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
             std::move(Value))}));
   }
 
@@ -132,7 +132,7 @@ public:
          typename std::decay<Type>::type Value) && /* takes ownership */ {
     return Context(std::make_shared<Data>(Data{
         /*Parent=*/std::move(DataPtr), &Key,
-        llvm::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+        std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
             std::move(Value))}));
   }
 

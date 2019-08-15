@@ -22,7 +22,7 @@ template <class RecordType> struct Helper {};
 
 template <> struct Helper<BufferExtents> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<BufferExtents>(1);
+    return std::make_unique<BufferExtents>(1);
   }
 
   static const char *expected() { return "<Buffer: size = 1 bytes>"; }
@@ -30,7 +30,7 @@ template <> struct Helper<BufferExtents> {
 
 template <> struct Helper<WallclockRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<WallclockRecord>(1, 2);
+    return std::make_unique<WallclockRecord>(1, 2);
   }
 
   static const char *expected() { return "<Wall Time: seconds = 1.000002>"; }
@@ -38,7 +38,7 @@ template <> struct Helper<WallclockRecord> {
 
 template <> struct Helper<NewCPUIDRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<NewCPUIDRecord>(1, 2);
+    return std::make_unique<NewCPUIDRecord>(1, 2);
   }
 
   static const char *expected() { return "<CPU: id = 1, tsc = 2>"; }
@@ -46,7 +46,7 @@ template <> struct Helper<NewCPUIDRecord> {
 
 template <> struct Helper<TSCWrapRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<TSCWrapRecord>(1);
+    return std::make_unique<TSCWrapRecord>(1);
   }
 
   static const char *expected() { return "<TSC Wrap: base = 1>"; }
@@ -54,7 +54,7 @@ template <> struct Helper<TSCWrapRecord> {
 
 template <> struct Helper<CustomEventRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<CustomEventRecord>(4, 1, 2, "data");
+    return std::make_unique<CustomEventRecord>(4, 1, 2, "data");
   }
 
   static const char *expected() {
@@ -64,7 +64,7 @@ template <> struct Helper<CustomEventRecord> {
 
 template <> struct Helper<CallArgRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<CallArgRecord>(1);
+    return std::make_unique<CallArgRecord>(1);
   }
 
   static const char *expected() {
@@ -74,7 +74,7 @@ template <> struct Helper<CallArgRecord> {
 
 template <> struct Helper<PIDRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<PIDRecord>(1);
+    return std::make_unique<PIDRecord>(1);
   }
 
   static const char *expected() { return "<PID: 1>"; }
@@ -82,7 +82,7 @@ template <> struct Helper<PIDRecord> {
 
 template <> struct Helper<NewBufferRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<NewBufferRecord>(1);
+    return std::make_unique<NewBufferRecord>(1);
   }
 
   static const char *expected() { return "<Thread ID: 1>"; }
@@ -90,7 +90,7 @@ template <> struct Helper<NewBufferRecord> {
 
 template <> struct Helper<EndBufferRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<EndBufferRecord>();
+    return std::make_unique<EndBufferRecord>();
   }
 
   static const char *expected() { return "<End of Buffer>"; }

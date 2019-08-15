@@ -1026,7 +1026,7 @@ void ConsumedBlockInfo::addInfo(
   } else if (OwnedStateMap)
     Entry = std::move(OwnedStateMap);
   else
-    Entry = llvm::make_unique<ConsumedStateMap>(*StateMap);
+    Entry = std::make_unique<ConsumedStateMap>(*StateMap);
 }
 
 void ConsumedBlockInfo::addInfo(const CFGBlock *Block,
@@ -1058,7 +1058,7 @@ ConsumedBlockInfo::getInfo(const CFGBlock *Block) {
   assert(Block && "Block pointer must not be NULL");
 
   auto &Entry = StateMapsArray[Block->getBlockID()];
-  return isBackEdgeTarget(Block) ? llvm::make_unique<ConsumedStateMap>(*Entry)
+  return isBackEdgeTarget(Block) ? std::make_unique<ConsumedStateMap>(*Entry)
                                  : std::move(Entry);
 }
 
@@ -1317,7 +1317,7 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
   BlockInfo = ConsumedBlockInfo(CFGraph->getNumBlockIDs(), SortedGraph);
 
-  CurrStates = llvm::make_unique<ConsumedStateMap>();
+  CurrStates = std::make_unique<ConsumedStateMap>();
   ConsumedStmtVisitor Visitor(*this, CurrStates.get());
 
   // Add all trackable parameters to the state map.

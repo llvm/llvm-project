@@ -325,7 +325,7 @@ define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 4
 ; CHECK-NEXT:    blr
@@ -338,7 +338,7 @@ define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
 ; CHECK-NEXT:    blr
@@ -391,7 +391,7 @@ define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
 ; CHECK-NEXT:    xxlnor 34, 34, 34
@@ -405,7 +405,7 @@ define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 4
 ; CHECK-NEXT:    blr

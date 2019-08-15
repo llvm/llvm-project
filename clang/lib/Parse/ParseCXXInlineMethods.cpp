@@ -986,7 +986,7 @@ public:
     // Put back the original tokens.
     Self.SkipUntil(EndKind, StopAtSemi | StopBeforeMatch);
     if (Toks.size()) {
-      auto Buffer = llvm::make_unique<Token[]>(Toks.size());
+      auto Buffer = std::make_unique<Token[]>(Toks.size());
       std::copy(Toks.begin() + 1, Toks.end(), Buffer.get());
       Buffer[Toks.size() - 1] = Self.Tok;
       Self.PP.EnterTokenStream(std::move(Buffer), Toks.size(), true,

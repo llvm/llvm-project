@@ -32,7 +32,7 @@ Ltmp4 = Leh_func_begin0-Ltmp3
 // CHECK-NEXT:     Alignment: 0
 // CHECK-NEXT:     RelocationOffset: 0x0
 // CHECK-NEXT:     RelocationCount: 0
-// CHECK-NEXT:     Type: 0x0
+// CHECK-NEXT:     Type: Regular (0x0)
 // CHECK-NEXT:     Attributes [ (0x800000)
 // CHECK-NEXT:       PureInstructions (0x800000)
 // CHECK-NEXT:     ]
@@ -51,7 +51,7 @@ Ltmp4 = Leh_func_begin0-Ltmp3
 // CHECK-NEXT:     Alignment: 0
 // CHECK-NEXT:     RelocationOffset: 0x0
 // CHECK-NEXT:     RelocationCount: 0
-// CHECK-NEXT:     Type: 0xB
+// CHECK-NEXT:     Type: Coalesced (0xB)
 // CHECK-NEXT:     Attributes [ (0x680000)
 // CHECK-NEXT:       LiveSupport (0x80000)
 // CHECK-NEXT:       NoTOC (0x400000)

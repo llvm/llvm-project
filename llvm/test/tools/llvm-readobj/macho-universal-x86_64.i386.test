@@ -66,7 +66,7 @@ MULTISECTIONS:     Offset: 3936
 MULTISECTIONS:     Alignment: 4
 MULTISECTIONS:     RelocationOffset: 0x0
 MULTISECTIONS:     RelocationCount: 0
-MULTISECTIONS:     Type: 0x0
+MULTISECTIONS:     Type: Regular (0x0)
 MULTISECTIONS:     Attributes [ (0x800004)
 MULTISECTIONS:       PureInstructions (0x800000)
 MULTISECTIONS:       SomeInstructions (0x4)
@@ -84,7 +84,7 @@ MULTISECTIONS:     Offset: 3954
 MULTISECTIONS:     Alignment: 0
 MULTISECTIONS:     RelocationOffset: 0x0
 MULTISECTIONS:     RelocationCount: 0
-MULTISECTIONS:     Type: 0x0
+MULTISECTIONS:     Type: Regular (0x0)
 MULTISECTIONS:     Attributes [ (0x0)
 MULTISECTIONS:     ]
 MULTISECTIONS:     Reserved1: 0x0
@@ -100,7 +100,7 @@ MULTISECTIONS:     Offset: 4032
 MULTISECTIONS:     Alignment: 3
 MULTISECTIONS:     RelocationOffset: 0x0
 MULTISECTIONS:     RelocationCount: 0
-MULTISECTIONS:     Type: 0x0
+MULTISECTIONS:     Type: Regular (0x0)
 MULTISECTIONS:     Attributes [ (0x0)
 MULTISECTIONS:     ]
 MULTISECTIONS:     Reserved1: 0x0
@@ -122,7 +122,7 @@ MULTISECTIONS:     Offset: 4000
 MULTISECTIONS:     Alignment: 4
 MULTISECTIONS:     RelocationOffset: 0x0
 MULTISECTIONS:     RelocationCount: 0
-MULTISECTIONS:     Type: 0x0
+MULTISECTIONS:     Type: Regular (0x0)
 MULTISECTIONS:     Attributes [ (0x800004)
 MULTISECTIONS:       PureInstructions (0x800000)
 MULTISECTIONS:       SomeInstructions (0x4)
@@ -140,7 +140,7 @@ MULTISECTIONS:     Offset: 4021
 MULTISECTIONS:     Alignment: 0
 MULTISECTIONS:     RelocationOffset: 0x0
 MULTISECTIONS:     RelocationCount: 0
-MULTISECTIONS:     Type: 0x0
+MULTISECTIONS:     Type: Regular (0x0)
 MULTISECTIONS:     Attributes [ (0x0)
 MULTISECTIONS:     ]
 MULTISECTIONS:     Reserved1: 0x0
@@ -198,7 +198,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 528
 MULTISECTIONS-ARCHIVE:     Alignment: 4
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x2B8
 MULTISECTIONS-ARCHIVE:     RelocationCount: 2
-MULTISECTIONS-ARCHIVE:     Type: 0x0
+MULTISECTIONS-ARCHIVE:     Type: Regular (0x0)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x800004)
 MULTISECTIONS-ARCHIVE:       PureInstructions (0x800000)
 MULTISECTIONS-ARCHIVE:       SomeInstructions (0x4)
@@ -216,7 +216,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 587
 MULTISECTIONS-ARCHIVE:     Alignment: 0
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x0
 MULTISECTIONS-ARCHIVE:     RelocationCount: 0
-MULTISECTIONS-ARCHIVE:     Type: ExtReloc (0x2)
+MULTISECTIONS-ARCHIVE:     Type: CStringLiterals (0x2)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x0)
 MULTISECTIONS-ARCHIVE:     ]
 MULTISECTIONS-ARCHIVE:     Reserved1: 0x0
@@ -232,7 +232,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 600
 MULTISECTIONS-ARCHIVE:     Alignment: 3
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x2C8
 MULTISECTIONS-ARCHIVE:     RelocationCount: 1
-MULTISECTIONS-ARCHIVE:     Type: 0x0
+MULTISECTIONS-ARCHIVE:     Type: Regular (0x0)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x20000)
 MULTISECTIONS-ARCHIVE:       Debug (0x20000)
 MULTISECTIONS-ARCHIVE:     ]
@@ -249,7 +249,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 632
 MULTISECTIONS-ARCHIVE:     Alignment: 3
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x0
 MULTISECTIONS-ARCHIVE:     RelocationCount: 0
-MULTISECTIONS-ARCHIVE:     Type: 0xB
+MULTISECTIONS-ARCHIVE:     Type: Coalesced (0xB)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x680000)
 MULTISECTIONS-ARCHIVE:       LiveSupport (0x80000)
 MULTISECTIONS-ARCHIVE:       NoTOC (0x400000)
@@ -275,7 +275,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 324
 MULTISECTIONS-ARCHIVE:     Alignment: 4
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x0
 MULTISECTIONS-ARCHIVE:     RelocationCount: 0
-MULTISECTIONS-ARCHIVE:     Type: 0x0
+MULTISECTIONS-ARCHIVE:     Type: Regular (0x0)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x800004)
 MULTISECTIONS-ARCHIVE:       PureInstructions (0x800000)
 MULTISECTIONS-ARCHIVE:       SomeInstructions (0x4)
@@ -293,7 +293,7 @@ MULTISECTIONS-ARCHIVE:     Offset: 332
 MULTISECTIONS-ARCHIVE:     Alignment: 2
 MULTISECTIONS-ARCHIVE:     RelocationOffset: 0x0
 MULTISECTIONS-ARCHIVE:     RelocationCount: 0
-MULTISECTIONS-ARCHIVE:     Type: 0x0
+MULTISECTIONS-ARCHIVE:     Type: Regular (0x0)
 MULTISECTIONS-ARCHIVE:     Attributes [ (0x0)
 MULTISECTIONS-ARCHIVE:     ]
 MULTISECTIONS-ARCHIVE:     Reserved1: 0x0

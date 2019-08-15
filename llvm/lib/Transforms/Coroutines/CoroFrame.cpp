@@ -18,6 +18,7 @@
 
 #include "CoroInternal.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
@@ -484,6 +485,61 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+// We use a pointer use visitor to discover if there are any writes into an
+// alloca that dominates CoroBegin. If that is the case, insertSpills will copy
+// the value from the alloca into the coroutine frame spill slot corresponding
+// to that alloca.
+namespace {
+struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
+  using Base = PtrUseVisitor<AllocaUseVisitor>;
+  AllocaUseVisitor(const DataLayout &DL, const DominatorTree &DT,
+                   const CoroBeginInst &CB)
+      : PtrUseVisitor(DL), DT(DT), CoroBegin(CB) {}
+
+  // We are only interested in uses that dominate coro.begin.
+  void visit(Instruction &I) {
+    if (DT.dominates(&I, &CoroBegin))
+      Base::visit(I);
+  }
+  // We need to provide this overload as PtrUseVisitor uses a pointer based
+  // visiting function.
+  void visit(Instruction *I) { return visit(*I); }
+
+  void visitLoadInst(LoadInst &) {} // Good. Nothing to do.
+
+  // If the use is an operand, the pointer escaped and anything can write into
+  // that memory. If the use is the pointer, we are definitely writing into the
+  // alloca and therefore we need to copy.
+  void visitStoreInst(StoreInst &SI) { PI.setAborted(&SI); }
+
+  // Any other instruction that is not filtered out by PtrUseVisitor, will
+  // result in the copy.
+  void visitInstruction(Instruction &I) { PI.setAborted(&I); }
+
+private:
+  const DominatorTree &DT;
+  const CoroBeginInst &CoroBegin;
+};
+} // namespace
+static bool mightWriteIntoAllocaPtr(AllocaInst &A, const DominatorTree &DT,
+                                    const CoroBeginInst &CB) {
+  const DataLayout &DL = A.getModule()->getDataLayout();
+  AllocaUseVisitor Visitor(DL, DT, CB);
+  auto PtrI = Visitor.visitPtr(A);
+  if (PtrI.isEscaped() || PtrI.isAborted()) {
+    auto *PointerEscapingInstr = PtrI.getEscapingInst()
+                                     ? PtrI.getEscapingInst()
+                                     : PtrI.getAbortingInst();
+    if (PointerEscapingInstr) {
+      LLVM_DEBUG(
+          dbgs() << "AllocaInst copy was triggered by instruction: "
+                 << *PointerEscapingInstr << "\n");
+    }
+    return true;
+  }
+  return false;
+}
+
 // We need to make room to insert a spill after initial PHIs, but before
 // catchswitch instruction. Placing it before violates the requirement that
 // catchswitch, like all other EHPads must be the first nonPHI in a block.
@@ -535,6 +591,7 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   PointerType *FramePtrTy = FrameTy->getPointerTo();
   auto *FramePtr =
       cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
+  DominatorTree DT(*CB->getFunction());
 
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
@@ -641,11 +698,17 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
           // that the suspend will be followed by a branch.
           InsertPt = CSI->getParent()->getSingleSuccessor()->getFirstNonPHI();
         } else {
+          auto *I = cast<Instruction>(E.def());
+          assert(!I->isTerminator() && "unexpected terminator");
           // For all other values, the spill is placed immediately after
           // the definition.
-          assert(!cast<Instruction>(E.def())->isTerminator() &&
-                 "unexpected terminator");
-          InsertPt = cast<Instruction>(E.def())->getNextNode();
+          if (DT.dominates(CB, I)) {
+            InsertPt = I->getNextNode();
+          } else {
+            // Unless, it is not dominated by CoroBegin, then it will be
+            // inserted immediately after CoroFrame is computed.
+            InsertPt = FramePtr->getNextNode();
+          }
         }
 
         Builder.SetInsertPoint(InsertPt);
@@ -683,17 +746,48 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
     FramePtrBB->splitBasicBlock(FramePtr->getNextNode(), "AllocaSpillBB");      
   SpillBlock->splitBasicBlock(&SpillBlock->front(), "PostSpill");
   Shape.AllocaSpillBlock = SpillBlock;
-
   // If we found any allocas, replace all of their remaining uses with Geps.
-  Builder.SetInsertPoint(&SpillBlock->front());
+  // Note: we cannot do it indiscriminately as some of the uses may not be
+  // dominated by CoroBegin.
+  bool MightNeedToCopy = false;
+  Builder.SetInsertPoint(&Shape.AllocaSpillBlock->front());
+  SmallVector<Instruction *, 4> UsersToUpdate;
   for (auto &P : Allocas) {
-    auto *G = GetFramePointer(P.second, P.first);
+    AllocaInst *const A = P.first;
+    UsersToUpdate.clear();
+    for (User *U : A->users()) {
+      auto *I = cast<Instruction>(U);
+      if (DT.dominates(CB, I))
+        UsersToUpdate.push_back(I);
+      else
+        MightNeedToCopy = true;
+    }
+    if (!UsersToUpdate.empty()) {
+      auto *G = GetFramePointer(P.second, A);
+      G->takeName(A);
+      for (Instruction *I : UsersToUpdate)
+        I->replaceUsesOfWith(A, G);
+    }
+  }
+  // If we discovered such uses not dominated by CoroBegin, see if any of them
+  // preceed coro begin and have instructions that can modify the
+  // value of the alloca and therefore would require a copying the value into
+  // the spill slot in the coroutine frame.
+  if (MightNeedToCopy) {
+    Builder.SetInsertPoint(FramePtr->getNextNode());
 
-    // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G)) here,
-    // as we are changing location of the instruction.
-    G->takeName(P.first);
-    P.first->replaceAllUsesWith(G);
-    P.first->eraseFromParent();
+    for (auto &P : Allocas) {
+      AllocaInst *const A = P.first;
+      if (mightWriteIntoAllocaPtr(*A, DT, *CB)) {
+        if (A->isArrayAllocation())
+          report_fatal_error(
+              "Coroutines cannot handle copying of array allocas yet");
+
+        auto *G = GetFramePointer(P.second, A);
+        auto *Value = Builder.CreateLoad(A);
+        Builder.CreateStore(Value, G);
+      }
+    }
   }
   return FramePtr;
 }
@@ -893,52 +987,6 @@ static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
     // CurrentMaterialization for the block.
     E.user()->replaceUsesOfWith(CurrentDef, CurrentMaterialization);
   }
-}
-
-// Move early uses of spilled variable after CoroBegin.
-// For example, if a parameter had address taken, we may end up with the code
-// like:
-//        define @f(i32 %n) {
-//          %n.addr = alloca i32
-//          store %n, %n.addr
-//          ...
-//          call @coro.begin
-//    we need to move the store after coro.begin
-static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
-                                        CoroBeginInst *CoroBegin) {
-  DominatorTree DT(F);
-  SmallVector<Instruction *, 8> NeedsMoving;
-
-  Value *CurrentValue = nullptr;
-
-  for (auto const &E : Spills) {
-    if (CurrentValue == E.def())
-      continue;
-
-    CurrentValue = E.def();
-
-    for (User *U : CurrentValue->users()) {
-      Instruction *I = cast<Instruction>(U);
-      if (!DT.dominates(CoroBegin, I)) {
-        LLVM_DEBUG(dbgs() << "will move: " << *I << "\n");
-
-        // TODO: Make this more robust. Currently if we run into a situation
-        // where simple instruction move won't work we panic and
-        // report_fatal_error.
-        for (User *UI : I->users()) {
-          if (!DT.dominates(CoroBegin, cast<Instruction>(UI)))
-            report_fatal_error("cannot move instruction since its users are not"
-                               " dominated by CoroBegin");
-        }
-
-        NeedsMoving.push_back(I);
-      }
-    }
-  }
-
-  Instruction *InsertPt = CoroBegin->getNextNode();
-  for (Instruction *I : NeedsMoving)
-    I->moveBefore(InsertPt);
 }
 
 // Splits the block at a particular instruction unless it is the first
@@ -1383,7 +1431,6 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       }
   }
   LLVM_DEBUG(dump("Spills", Spills));
-  moveSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, Spills);
   Shape.FramePtr = insertSpills(Spills, Shape);
   lowerLocalAllocas(LocalAllocas, DeadInstructions);

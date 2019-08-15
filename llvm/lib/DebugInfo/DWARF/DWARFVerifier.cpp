@@ -294,7 +294,7 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       switch (UnitType) {
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
-        Unit = TypeUnitVector.addUnit(llvm::make_unique<DWARFTypeUnit>(
+        Unit = TypeUnitVector.addUnit(std::make_unique<DWARFTypeUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
             &DObj.getLocSection(), DObj.getStrSection(),
             DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),
@@ -308,7 +308,7 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case dwarf::DW_UT_partial:
       // UnitType = 0 means that we are verifying a compile unit in DWARF v4.
       case 0: {
-        Unit = CompileUnitVector.addUnit(llvm::make_unique<DWARFCompileUnit>(
+        Unit = CompileUnitVector.addUnit(std::make_unique<DWARFCompileUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
             &DObj.getLocSection(), DObj.getStrSection(),
             DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),

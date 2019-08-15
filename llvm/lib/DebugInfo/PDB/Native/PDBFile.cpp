@@ -264,7 +264,7 @@ Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
         safelyCreateIndexedStream(DbiS->getGlobalSymbolStreamIndex());
     if (!GlobalS)
       return GlobalS.takeError();
-    auto TempGlobals = llvm::make_unique<GlobalsStream>(std::move(*GlobalS));
+    auto TempGlobals = std::make_unique<GlobalsStream>(std::move(*GlobalS));
     if (auto EC = TempGlobals->reload())
       return std::move(EC);
     Globals = std::move(TempGlobals);
@@ -277,7 +277,7 @@ Expected<InfoStream &> PDBFile::getPDBInfoStream() {
     auto InfoS = safelyCreateIndexedStream(StreamPDB);
     if (!InfoS)
       return InfoS.takeError();
-    auto TempInfo = llvm::make_unique<InfoStream>(std::move(*InfoS));
+    auto TempInfo = std::make_unique<InfoStream>(std::move(*InfoS));
     if (auto EC = TempInfo->reload())
       return std::move(EC);
     Info = std::move(TempInfo);
@@ -290,7 +290,7 @@ Expected<DbiStream &> PDBFile::getPDBDbiStream() {
     auto DbiS = safelyCreateIndexedStream(StreamDBI);
     if (!DbiS)
       return DbiS.takeError();
-    auto TempDbi = llvm::make_unique<DbiStream>(std::move(*DbiS));
+    auto TempDbi = std::make_unique<DbiStream>(std::move(*DbiS));
     if (auto EC = TempDbi->reload(this))
       return std::move(EC);
     Dbi = std::move(TempDbi);
@@ -303,7 +303,7 @@ Expected<TpiStream &> PDBFile::getPDBTpiStream() {
     auto TpiS = safelyCreateIndexedStream(StreamTPI);
     if (!TpiS)
       return TpiS.takeError();
-    auto TempTpi = llvm::make_unique<TpiStream>(*this, std::move(*TpiS));
+    auto TempTpi = std::make_unique<TpiStream>(*this, std::move(*TpiS));
     if (auto EC = TempTpi->reload())
       return std::move(EC);
     Tpi = std::move(TempTpi);
@@ -319,7 +319,7 @@ Expected<TpiStream &> PDBFile::getPDBIpiStream() {
     auto IpiS = safelyCreateIndexedStream(StreamIPI);
     if (!IpiS)
       return IpiS.takeError();
-    auto TempIpi = llvm::make_unique<TpiStream>(*this, std::move(*IpiS));
+    auto TempIpi = std::make_unique<TpiStream>(*this, std::move(*IpiS));
     if (auto EC = TempIpi->reload())
       return std::move(EC);
     Ipi = std::move(TempIpi);
@@ -337,7 +337,7 @@ Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
         safelyCreateIndexedStream(DbiS->getPublicSymbolStreamIndex());
     if (!PublicS)
       return PublicS.takeError();
-    auto TempPublics = llvm::make_unique<PublicsStream>(std::move(*PublicS));
+    auto TempPublics = std::make_unique<PublicsStream>(std::move(*PublicS));
     if (auto EC = TempPublics->reload())
       return std::move(EC);
     Publics = std::move(TempPublics);
@@ -356,7 +356,7 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
     if (!SymbolS)
       return SymbolS.takeError();
 
-    auto TempSymbols = llvm::make_unique<SymbolStream>(std::move(*SymbolS));
+    auto TempSymbols = std::make_unique<SymbolStream>(std::move(*SymbolS));
     if (auto EC = TempSymbols->reload())
       return std::move(EC);
     Symbols = std::move(TempSymbols);
@@ -370,7 +370,7 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
     if (!NS)
       return NS.takeError();
 
-    auto N = llvm::make_unique<PDBStringTable>();
+    auto N = std::make_unique<PDBStringTable>();
     BinaryStreamReader Reader(**NS);
     if (auto EC = N->reload(Reader))
       return std::move(EC);
@@ -391,7 +391,7 @@ Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
     if (!Strings)
       return Strings.takeError();
 
-    auto IJ = llvm::make_unique<InjectedSourceStream>(std::move(*IJS));
+    auto IJ = std::make_unique<InjectedSourceStream>(std::move(*IJS));
     if (auto EC = IJ->reload(*Strings))
       return std::move(EC);
     InjectedSources = std::move(IJ);

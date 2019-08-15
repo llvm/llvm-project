@@ -44,7 +44,7 @@ void CXXBasePaths::ComputeDeclsFound() {
     Decls.insert(Path->Decls.front());
 
   NumDeclsFound = Decls.size();
-  DeclsFound = llvm::make_unique<NamedDecl *[]>(NumDeclsFound);
+  DeclsFound = std::make_unique<NamedDecl *[]>(NumDeclsFound);
   std::copy(Decls.begin(), Decls.end(), DeclsFound.get());
 }
 

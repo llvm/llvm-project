@@ -120,7 +120,7 @@ int main(int argc, const char **argv) {
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
   auto Err = Executor->get()->execute(
-      llvm::make_unique<clang::clangd::IndexActionFactory>(Data),
+      std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::getStripPluginsAdjuster());
   if (Err) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";

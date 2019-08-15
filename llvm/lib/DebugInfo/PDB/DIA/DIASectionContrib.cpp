@@ -23,7 +23,7 @@ std::unique_ptr<PDBSymbolCompiland> DIASectionContrib::getCompiland() const {
   if (FAILED(Section->get_compiland(&Symbol)))
     return nullptr;
 
-  auto RawSymbol = llvm::make_unique<DIARawSymbol>(Session, Symbol);
+  auto RawSymbol = std::make_unique<DIARawSymbol>(Session, Symbol);
   return PDBSymbol::createAs<PDBSymbolCompiland>(Session, std::move(RawSymbol));
 }
 

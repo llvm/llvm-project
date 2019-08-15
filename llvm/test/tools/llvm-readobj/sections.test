@@ -137,7 +137,7 @@ MACHO-I386-NEXT:     Offset: 324
 MACHO-I386-NEXT:     Alignment: 4
 MACHO-I386-NEXT:     RelocationOffset: 0x174
 MACHO-I386-NEXT:     RelocationCount: 4
-MACHO-I386-NEXT:     Type: 0x0
+MACHO-I386-NEXT:     Type: Regular (0x0)
 MACHO-I386-NEXT:     Attributes [ (0x800004)
 MACHO-I386-NEXT:       PureInstructions (0x800000)
 MACHO-I386-NEXT:       SomeInstructions (0x4)
@@ -155,7 +155,7 @@ MACHO-I386-NEXT:     Offset: 358
 MACHO-I386-NEXT:     Alignment: 0
 MACHO-I386-NEXT:     RelocationOffset: 0x0
 MACHO-I386-NEXT:     RelocationCount: 0
-MACHO-I386-NEXT:     Type: ExtReloc (0x2)
+MACHO-I386-NEXT:     Type: CStringLiterals (0x2)
 MACHO-I386-NEXT:     Attributes [ (0x0)
 MACHO-I386-NEXT:     ]
 MACHO-I386-NEXT:     Reserved1: 0x0
@@ -174,7 +174,7 @@ MACHO-X86-64-NEXT:    Offset: 368
 MACHO-X86-64-NEXT:    Alignment: 4
 MACHO-X86-64-NEXT:    RelocationOffset: 0x194
 MACHO-X86-64-NEXT:    RelocationCount: 3
-MACHO-X86-64-NEXT:    Type: 0x0
+MACHO-X86-64-NEXT:    Type: Regular (0x0)
 MACHO-X86-64-NEXT:    Attributes [ (0x800004)
 MACHO-X86-64-NEXT:      PureInstructions (0x800000)
 MACHO-X86-64-NEXT:      SomeInstructions (0x4)
@@ -193,7 +193,7 @@ MACHO-X86-64-NEXT:    Offset: 390
 MACHO-X86-64-NEXT:    Alignment: 0
 MACHO-X86-64-NEXT:    RelocationOffset: 0x0
 MACHO-X86-64-NEXT:    RelocationCount: 0
-MACHO-X86-64-NEXT:    Type: ExtReloc (0x2)
+MACHO-X86-64-NEXT:    Type: CStringLiterals (0x2)
 MACHO-X86-64-NEXT:    Attributes [ (0x0)
 MACHO-X86-64-NEXT:    ]
 MACHO-X86-64-NEXT:    Reserved1: 0x0
@@ -213,7 +213,7 @@ MACHO-PPC-NEXT:     Offset: 528
 MACHO-PPC-NEXT:     Alignment: 2
 MACHO-PPC-NEXT:     RelocationOffset: 0x27C
 MACHO-PPC-NEXT:     RelocationCount: 5
-MACHO-PPC-NEXT:     Type: 0x0
+MACHO-PPC-NEXT:     Type: Regular (0x0)
 MACHO-PPC-NEXT:     Attributes [ (0x800004)
 MACHO-PPC-NEXT:       PureInstructions (0x800000)
 MACHO-PPC-NEXT:       SomeInstructions (0x4)
@@ -231,7 +231,7 @@ MACHO-PPC-NEXT:     Offset: 592
 MACHO-PPC-NEXT:     Alignment: 5
 MACHO-PPC-NEXT:     RelocationOffset: 0x2A4
 MACHO-PPC-NEXT:     RelocationCount: 4
-MACHO-PPC-NEXT:     Type: 0x8
+MACHO-PPC-NEXT:     Type: SymbolStubs (0x8)
 MACHO-PPC-NEXT:     Attributes [ (0x800004)
 MACHO-PPC-NEXT:       PureInstructions (0x800000)
 MACHO-PPC-NEXT:       SomeInstructions (0x4)
@@ -249,7 +249,7 @@ MACHO-PPC-NEXT:     Offset: 624
 MACHO-PPC-NEXT:     Alignment: 2
 MACHO-PPC-NEXT:     RelocationOffset: 0x0
 MACHO-PPC-NEXT:     RelocationCount: 0
-MACHO-PPC-NEXT:     Type: 0x0
+MACHO-PPC-NEXT:     Type: Regular (0x0)
 MACHO-PPC-NEXT:     Attributes [ (0x0)
 MACHO-PPC-NEXT:     ]
 MACHO-PPC-NEXT:     Reserved1: 0x0
@@ -265,7 +265,7 @@ MACHO-PPC-NEXT:     Offset: 628
 MACHO-PPC-NEXT:     Alignment: 2
 MACHO-PPC-NEXT:     RelocationOffset: 0x0
 MACHO-PPC-NEXT:     RelocationCount: 0
-MACHO-PPC-NEXT:     Type: 0x6
+MACHO-PPC-NEXT:     Type: NonLazySymbolPointers (0x6)
 MACHO-PPC-NEXT:     Attributes [ (0x0)
 MACHO-PPC-NEXT:     ]
 MACHO-PPC-NEXT:     Reserved1: 0x1
@@ -281,7 +281,7 @@ MACHO-PPC-NEXT:     Offset: 632
 MACHO-PPC-NEXT:     Alignment: 2
 MACHO-PPC-NEXT:     RelocationOffset: 0x2C4
 MACHO-PPC-NEXT:     RelocationCount: 1
-MACHO-PPC-NEXT:     Type: 0x7
+MACHO-PPC-NEXT:     Type: LazySymbolPointers (0x7)
 MACHO-PPC-NEXT:     Attributes [ (0x0)
 MACHO-PPC-NEXT:     ]
 MACHO-PPC-NEXT:     Reserved1: 0x2
@@ -300,7 +300,7 @@ MACHO-PPC64-NEXT:     Offset: 608
 MACHO-PPC64-NEXT:     Alignment: 2
 MACHO-PPC64-NEXT:     RelocationOffset: 0x2D4
 MACHO-PPC64-NEXT:     RelocationCount: 5
-MACHO-PPC64-NEXT:     Type: 0x0
+MACHO-PPC64-NEXT:     Type: Regular (0x0)
 MACHO-PPC64-NEXT:     Attributes [ (0x800004)
 MACHO-PPC64-NEXT:       PureInstructions (0x800000)
 MACHO-PPC64-NEXT:       SomeInstructions (0x4)
@@ -319,7 +319,7 @@ MACHO-PPC64-NEXT:     Offset: 672
 MACHO-PPC64-NEXT:     Alignment: 5
 MACHO-PPC64-NEXT:     RelocationOffset: 0x2FC
 MACHO-PPC64-NEXT:     RelocationCount: 4
-MACHO-PPC64-NEXT:     Type: 0x8
+MACHO-PPC64-NEXT:     Type: SymbolStubs (0x8)
 MACHO-PPC64-NEXT:     Attributes [ (0x800004)
 MACHO-PPC64-NEXT:       PureInstructions (0x800000)
 MACHO-PPC64-NEXT:       SomeInstructions (0x4)
@@ -338,7 +338,7 @@ MACHO-PPC64-NEXT:     Offset: 704
 MACHO-PPC64-NEXT:     Alignment: 2
 MACHO-PPC64-NEXT:     RelocationOffset: 0x0
 MACHO-PPC64-NEXT:     RelocationCount: 0
-MACHO-PPC64-NEXT:     Type: 0x0
+MACHO-PPC64-NEXT:     Type: Regular (0x0)
 MACHO-PPC64-NEXT:     Attributes [ (0x0)
 MACHO-PPC64-NEXT:     ]
 MACHO-PPC64-NEXT:     Reserved1: 0x0
@@ -355,7 +355,7 @@ MACHO-PPC64-NEXT:     Offset: 708
 MACHO-PPC64-NEXT:     Alignment: 2
 MACHO-PPC64-NEXT:     RelocationOffset: 0x0
 MACHO-PPC64-NEXT:     RelocationCount: 0
-MACHO-PPC64-NEXT:     Type: 0x6
+MACHO-PPC64-NEXT:     Type: NonLazySymbolPointers (0x6)
 MACHO-PPC64-NEXT:     Attributes [ (0x0)
 MACHO-PPC64-NEXT:     ]
 MACHO-PPC64-NEXT:     Reserved1: 0x1
@@ -372,7 +372,7 @@ MACHO-PPC64-NEXT:     Offset: 716
 MACHO-PPC64-NEXT:     Alignment: 2
 MACHO-PPC64-NEXT:     RelocationOffset: 0x31C
 MACHO-PPC64-NEXT:     RelocationCount: 1
-MACHO-PPC64-NEXT:     Type: 0x7
+MACHO-PPC64-NEXT:     Type: LazySymbolPointers (0x7)
 MACHO-PPC64-NEXT:     Attributes [ (0x0)
 MACHO-PPC64-NEXT:     ]
 MACHO-PPC64-NEXT:     Reserved1: 0x2
@@ -392,7 +392,7 @@ MACHO-ARM-NEXT:    Offset: 664
 MACHO-ARM-NEXT:    Alignment: 2
 MACHO-ARM-NEXT:    RelocationOffset: 0x2E0
 MACHO-ARM-NEXT:    RelocationCount: 9
-MACHO-ARM-NEXT:    Type: 0x0
+MACHO-ARM-NEXT:    Type: Regular (0x0)
 MACHO-ARM-NEXT:    Attributes [ (0x800004)
 MACHO-ARM-NEXT:      PureInstructions (0x800000)
 MACHO-ARM-NEXT:      SomeInstructions (0x4)
@@ -410,7 +410,7 @@ MACHO-ARM-NEXT:    Offset: 724
 MACHO-ARM-NEXT:    Alignment: 0
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0xB
+MACHO-ARM-NEXT:    Type: Coalesced (0xB)
 MACHO-ARM-NEXT:    Attributes [ (0x800000)
 MACHO-ARM-NEXT:      PureInstructions (0x800000)
 MACHO-ARM-NEXT:    ]
@@ -427,7 +427,7 @@ MACHO-ARM-NEXT:    Offset: 724
 MACHO-ARM-NEXT:    Alignment: 0
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0xB
+MACHO-ARM-NEXT:    Type: Coalesced (0xB)
 MACHO-ARM-NEXT:    Attributes [ (0x0)
 MACHO-ARM-NEXT:    ]
 MACHO-ARM-NEXT:    Reserved1: 0x0
@@ -443,7 +443,7 @@ MACHO-ARM-NEXT:    Offset: 724
 MACHO-ARM-NEXT:    Alignment: 0
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0x8
+MACHO-ARM-NEXT:    Type: SymbolStubs (0x8)
 MACHO-ARM-NEXT:    Attributes [ (0x0)
 MACHO-ARM-NEXT:    ]
 MACHO-ARM-NEXT:    Reserved1: 0x0
@@ -459,7 +459,7 @@ MACHO-ARM-NEXT:    Offset: 724
 MACHO-ARM-NEXT:    Alignment: 0
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0x0
+MACHO-ARM-NEXT:    Type: Regular (0x0)
 MACHO-ARM-NEXT:    Attributes [ (0x800000)
 MACHO-ARM-NEXT:      PureInstructions (0x800000)
 MACHO-ARM-NEXT:    ]
@@ -476,7 +476,7 @@ MACHO-ARM-NEXT:    Offset: 724
 MACHO-ARM-NEXT:    Alignment: 2
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0x0
+MACHO-ARM-NEXT:    Type: Regular (0x0)
 MACHO-ARM-NEXT:    Attributes [ (0x0)
 MACHO-ARM-NEXT:    ]
 MACHO-ARM-NEXT:    Reserved1: 0x0
@@ -492,7 +492,7 @@ MACHO-ARM-NEXT:    Offset: 728
 MACHO-ARM-NEXT:    Alignment: 2
 MACHO-ARM-NEXT:    RelocationOffset: 0x0
 MACHO-ARM-NEXT:    RelocationCount: 0
-MACHO-ARM-NEXT:    Type: 0x6
+MACHO-ARM-NEXT:    Type: NonLazySymbolPointers (0x6)
 MACHO-ARM-NEXT:    Attributes [ (0x0)
 MACHO-ARM-NEXT:    ]
 MACHO-ARM-NEXT:    Reserved1: 0x0

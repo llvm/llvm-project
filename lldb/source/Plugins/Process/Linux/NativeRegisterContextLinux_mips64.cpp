@@ -79,7 +79,7 @@ using namespace lldb_private::process_linux;
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
-  return llvm::make_unique<NativeRegisterContextLinux_mips64>(target_arch,
+  return std::make_unique<NativeRegisterContextLinux_mips64>(target_arch,
                                                               native_thread);
 }
 

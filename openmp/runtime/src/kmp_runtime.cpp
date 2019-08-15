@@ -5661,7 +5661,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
 void *__kmp_launch_thread(kmp_info_t *this_thr) {
   int gtid = this_thr->th.th_info.ds.ds_gtid;
   /*    void                 *stack_data;*/
-  kmp_team_t *(*volatile pteam);
+  kmp_team_t **volatile pteam;
 
   KMP_MB();
   KA_TRACE(10, ("__kmp_launch_thread: T#%d start\n", gtid));
@@ -5705,7 +5705,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
     }
 #endif
 
-    pteam = (kmp_team_t * (*))(&this_thr->th.th_team);
+    pteam = &this_thr->th.th_team;
 
     /* have we been allocated? */
     if (TCR_SYNC_PTR(*pteam) && !TCR_4(__kmp_global.g.g_done)) {

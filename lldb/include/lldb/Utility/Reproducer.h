@@ -203,7 +203,7 @@ public:
 
   /// Create and register a new provider.
   template <typename T> T *Create() {
-    std::unique_ptr<ProviderBase> provider = llvm::make_unique<T>(m_root);
+    std::unique_ptr<ProviderBase> provider = std::make_unique<T>(m_root);
     return static_cast<T *>(Register(std::move(provider)));
   }
 

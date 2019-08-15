@@ -61,7 +61,7 @@ public:
 llvm::Expected<std::unique_ptr<URIScheme>>
 findSchemeByName(llvm::StringRef Scheme) {
   if (Scheme == "file")
-    return llvm::make_unique<FileSystemScheme>();
+    return std::make_unique<FileSystemScheme>();
 
   for (auto I = URISchemeRegistry::begin(), E = URISchemeRegistry::end();
        I != E; ++I) {

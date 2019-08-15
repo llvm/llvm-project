@@ -2,6 +2,7 @@
 # RUN: llvm-objcopy --add-symbol='abs1=1' \ 
 # RUN:              --add-symbol='abs2=2,LoCaL,HiDdEn,FuNcTiOn' \
 # RUN:              --add-symbol='abs3=3,global,default,object' \
+# RUN:              --add-symbol='abs4=4,global,protected,object' \
 # RUN:              --add-symbol='foo.cpp=0,file' \
 # RUN:              --add-symbol='=.text:0,section' \
 # RUN:              --add-symbol='data=.data:0x100,weak' \
@@ -58,14 +59,15 @@ ProgramHeaders:
     Sections:
       - Section: .data
 
-# CHECK:      0: 00000000 0 NOTYPE LOCAL DEFAULT UND 
+# CHECK:      0: 00000000 0 NOTYPE LOCAL DEFAULT UND
 # CHECK-NEXT: 1: 00000001 0 NOTYPE GLOBAL DEFAULT ABS abs1
 # CHECK-NEXT: 2: 00000002 0 FUNC LOCAL HIDDEN ABS abs2
 # CHECK-NEXT: 3: 00000003 0 OBJECT GLOBAL DEFAULT ABS abs3
-# CHECK-NEXT: 4: 00000000 0 FILE GLOBAL DEFAULT ABS foo.cpp
-# CHECK-NEXT: 5: 00001000 0 SECTION GLOBAL DEFAULT 1 
-# CHECK-NEXT: 6: 00002100 0 NOTYPE WEAK DEFAULT 2 data
-# CHECK-NEXT: 7: 00001000 0 IFUNC GLOBAL DEFAULT 1 ifunc
+# CHECK-NEXT: 4: 00000004 0 OBJECT GLOBAL PROTECTED ABS abs4
+# CHECK-NEXT: 5: 00000000 0 FILE GLOBAL DEFAULT ABS foo.cpp
+# CHECK-NEXT: 6: 00001000 0 SECTION GLOBAL DEFAULT 1
+# CHECK-NEXT: 7: 00002100 0 NOTYPE WEAK DEFAULT 2 data
+# CHECK-NEXT: 8: 00001000 0 IFUNC GLOBAL DEFAULT 1 ifunc
 
 # IGNORED:       1: 00000000 0 NOTYPE GLOBAL DEFAULT ABS dummy1
 # IGNORED-NEXT:  2: 00000000 0 NOTYPE GLOBAL DEFAULT ABS dummy2

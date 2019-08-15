@@ -131,9 +131,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
 
   // XXX - What does the member GPU mean if device name string passed here?
   if (isAMDGCN(getTriple())) {
-    if (CPU.empty())
-      CPU = "gfx600";
-
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
     case GK_GFX1012:
     case GK_GFX1011:
@@ -189,7 +186,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX600:
       break;
     case GK_NONE:
-      return false;
+      break;
     default:
       llvm_unreachable("Unhandled GPU!");
     }

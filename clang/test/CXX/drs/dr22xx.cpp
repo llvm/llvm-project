@@ -26,3 +26,12 @@ void f() {
 }
 }
 #endif
+
+namespace dr2292 { // dr2292: 9
+#if __cplusplus >= 201103L
+  template<typename T> using id = T;
+  void test(int *p) {
+    p->template id<int>::~id<int>();
+  }
+#endif
+}

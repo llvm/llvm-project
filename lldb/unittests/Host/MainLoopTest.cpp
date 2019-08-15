@@ -110,7 +110,7 @@ TEST_F(MainLoopTest, DetectsEOF) {
   PseudoTerminal term;
   ASSERT_TRUE(term.OpenFirstAvailableMaster(O_RDWR, nullptr, 0));
   ASSERT_TRUE(term.OpenSlave(O_RDWR | O_NOCTTY, nullptr, 0));
-  auto conn = llvm::make_unique<ConnectionFileDescriptor>(
+  auto conn = std::make_unique<ConnectionFileDescriptor>(
       term.ReleaseMasterFileDescriptor(), true);
 
   Status error;

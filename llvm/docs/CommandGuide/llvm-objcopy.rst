@@ -160,6 +160,7 @@ them.
  - `weak` = the symbol will have weak binding.
  - `default` = the symbol will have default visibility.
  - `hidden` = the symbol will have hidden visibility.
+ - `protected` = the symbol will have protected visibility.
  - `file` = the symbol will be an `STT_FILE` symbol.
  - `section` = the symbol will be an `STT_SECTION` symbol.
  - `object` = the symbol will be an `STT_OBJECT` symbol.

@@ -644,7 +644,7 @@ struct WholeProgramDevirt : public ModulePass {
     // an optimization remark emitter on the fly, when we need it.
     std::unique_ptr<OptimizationRemarkEmitter> ORE;
     auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
-      ORE = make_unique<OptimizationRemarkEmitter>(F);
+      ORE = std::make_unique<OptimizationRemarkEmitter>(F);
       return *ORE;
     };
 

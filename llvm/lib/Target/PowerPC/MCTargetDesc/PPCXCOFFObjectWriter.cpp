@@ -25,5 +25,5 @@ PPCXCOFFObjectWriter::PPCXCOFFObjectWriter(bool Is64Bit)
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createPPCXCOFFObjectWriter(bool Is64Bit) {
-  return llvm::make_unique<PPCXCOFFObjectWriter>(Is64Bit);
+  return std::make_unique<PPCXCOFFObjectWriter>(Is64Bit);
 }

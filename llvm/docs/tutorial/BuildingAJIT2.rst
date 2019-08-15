@@ -71,11 +71,11 @@ apply to each Module that is added via addModule:
 
     KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
         : ObjectLayer(ES,
-                      []() { return llvm::make_unique<SectionMemoryManager>(); }),
+                      []() { return std::make_unique<SectionMemoryManager>(); }),
           CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
           TransformLayer(ES, CompileLayer, optimizeModule),
           DL(std::move(DL)), Mangle(ES, this->DL),
-          Ctx(llvm::make_unique<LLVMContext>()) {
+          Ctx(std::make_unique<LLVMContext>()) {
       ES.getMainJITDylib().setGenerator(
           cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
     }
@@ -102,7 +102,7 @@ Next we need to update our addModule method to replace the call to
   static Expected<ThreadSafeModule>
   optimizeModule(ThreadSafeModule M, const MaterializationResponsibility &R) {
     // Create a function pass manager.
-    auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
+    auto FPM = std::make_unique<legacy::FunctionPassManager>(M.get());
 
     // Add some optimizations.
     FPM->add(createInstructionCombiningPass());
@@ -213,7 +213,7 @@ class:
 .. code-block:: c++
 
   Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
-    return JD.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
+    return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
         *this, std::move(K), std::move(TSM)));
   }
 

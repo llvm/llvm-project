@@ -141,6 +141,8 @@ using ValueToAddrSpaceMapTy = DenseMap<const Value *, unsigned>;
 
 /// InferAddressSpaces
 class InferAddressSpaces : public FunctionPass {
+  const TargetTransformInfo *TTI;
+
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace;
@@ -264,17 +266,6 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
   Module *M = II->getParent()->getParent()->getParent();
 
   switch (II->getIntrinsicID()) {
-  case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
-    const ConstantInt *IsVolatile = dyn_cast<ConstantInt>(II->getArgOperand(4));
-    if (!IsVolatile || !IsVolatile->isZero())
-      return false;
-
-    LLVM_FALLTHROUGH;
-  }
   case Intrinsic::objectsize: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
@@ -285,25 +276,27 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
     return true;
   }
   default:
-    return false;
+    return TTI->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
   }
 }
 
-// TODO: Move logic to TTI?
 void InferAddressSpaces::collectRewritableIntrinsicOperands(
     IntrinsicInst *II, std::vector<std::pair<Value *, bool>> &PostorderStack,
     DenseSet<Value *> &Visited) const {
-  switch (II->getIntrinsicID()) {
+  auto IID = II->getIntrinsicID();
+  switch (IID) {
   case Intrinsic::objectsize:
-  case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
   default:
+    SmallVector<int, 2> OpIndexes;
+    if (TTI->collectFlatAddressOperands(OpIndexes, IID)) {
+      for (int Idx : OpIndexes) {
+        appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(Idx),
+                                                     PostorderStack, Visited);
+      }
+    }
     break;
   }
 }
@@ -631,11 +624,10 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  const TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   if (FlatAddrSpace == UninitializedAddressSpace) {
-    FlatAddrSpace = TTI.getFlatAddressSpace();
+    FlatAddrSpace = TTI->getFlatAddressSpace();
     if (FlatAddrSpace == UninitializedAddressSpace)
       return false;
   }
@@ -650,7 +642,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
 
   // Changes the address spaces of the flat address expressions who are inferred
   // to point to a specific address space.
-  return rewriteWithNewAddressSpaces(TTI, Postorder, InferredAddrSpace, &F);
+  return rewriteWithNewAddressSpaces(*TTI, Postorder, InferredAddrSpace, &F);
 }
 
 // Constants need to be tracked through RAUW to handle cases with nested

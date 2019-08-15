@@ -216,7 +216,7 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
     Consumers.push_back(std::move(C));
   }
 
-  return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
+  return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
 /// For preprocessed files, if the first line is the linemarker and specifies

@@ -2629,7 +2629,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
 
   parallelForEachN(0, sections.size(), [&](size_t i) {
     ObjFile<ELFT> *file = sections[i]->getFile<ELFT>();
-    DWARFContext dwarf(make_unique<LLDDwarfObj<ELFT>>(file));
+    DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
 
     chunks[i].sec = sections[i];
     chunks[i].compilationUnits = readCuList(dwarf);

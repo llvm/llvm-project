@@ -72,7 +72,7 @@ void VLASizeChecker::reportBug(
     break;
   }
 
-  auto report = llvm::make_unique<BugReport>(*BT, os.str(), N);
+  auto report = std::make_unique<BugReport>(*BT, os.str(), N);
   report->addVisitor(std::move(Visitor));
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
@@ -110,7 +110,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   // Check if the size is tainted.
   if (isTainted(state, sizeV)) {
     reportBug(VLA_Tainted, SE, nullptr, C,
-              llvm::make_unique<TaintBugVisitor>(sizeV));
+              std::make_unique<TaintBugVisitor>(sizeV));
     return;
   }
 

@@ -380,7 +380,7 @@ Corpus::intersect(std::vector<std::unique_ptr<Iterator>> Children) const {
   case 1:
     return std::move(RealChildren.front());
   default:
-    return llvm::make_unique<AndIterator>(std::move(RealChildren));
+    return std::make_unique<AndIterator>(std::move(RealChildren));
   }
 }
 
@@ -410,16 +410,16 @@ Corpus::unionOf(std::vector<std::unique_ptr<Iterator>> Children) const {
   case 1:
     return std::move(RealChildren.front());
   default:
-    return llvm::make_unique<OrIterator>(std::move(RealChildren));
+    return std::make_unique<OrIterator>(std::move(RealChildren));
   }
 }
 
 std::unique_ptr<Iterator> Corpus::all() const {
-  return llvm::make_unique<TrueIterator>(Size);
+  return std::make_unique<TrueIterator>(Size);
 }
 
 std::unique_ptr<Iterator> Corpus::none() const {
-  return llvm::make_unique<FalseIterator>();
+  return std::make_unique<FalseIterator>();
 }
 
 std::unique_ptr<Iterator> Corpus::boost(std::unique_ptr<Iterator> Child,
@@ -428,14 +428,14 @@ std::unique_ptr<Iterator> Corpus::boost(std::unique_ptr<Iterator> Child,
     return Child;
   if (Child->kind() == Iterator::Kind::False)
     return Child;
-  return llvm::make_unique<BoostIterator>(std::move(Child), Factor);
+  return std::make_unique<BoostIterator>(std::move(Child), Factor);
 }
 
 std::unique_ptr<Iterator> Corpus::limit(std::unique_ptr<Iterator> Child,
                                         size_t Limit) const {
   if (Child->kind() == Iterator::Kind::False)
     return Child;
-  return llvm::make_unique<LimitIterator>(std::move(Child), Limit);
+  return std::make_unique<LimitIterator>(std::move(Child), Limit);
 }
 
 } // namespace dex

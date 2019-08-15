@@ -374,15 +374,15 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
 
 void HexagonSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
-  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
-  Mutations.push_back(llvm::make_unique<BankConflictMutation>());
+  Mutations.push_back(std::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<BankConflictMutation>());
 }
 
 void HexagonSubtarget::getSMSMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
-  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
 }
 
 // Pin the vtable to this file.

@@ -54,5 +54,5 @@ protected:
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createMSP430ELFObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<MSP430ELFObjectWriter>(OSABI);
+  return std::make_unique<MSP430ELFObjectWriter>(OSABI);
 }

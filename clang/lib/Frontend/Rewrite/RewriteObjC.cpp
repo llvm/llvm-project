@@ -593,7 +593,7 @@ clang::CreateObjCRewriter(const std::string &InFile,
                           std::unique_ptr<raw_ostream> OS,
                           DiagnosticsEngine &Diags, const LangOptions &LOpts,
                           bool SilenceRewriteMacroWarning) {
-  return llvm::make_unique<RewriteObjCFragileABI>(
+  return std::make_unique<RewriteObjCFragileABI>(
       InFile, std::move(OS), Diags, LOpts, SilenceRewriteMacroWarning);
 }
 

@@ -306,7 +306,7 @@ public:
       const SmallVector<const FieldDecl *, 20> &OptimalFieldsOrder) const {
     if (!PaddingBug)
       PaddingBug =
-          llvm::make_unique<BugType>(this, "Excessive Padding", "Performance");
+          std::make_unique<BugType>(this, "Excessive Padding", "Performance");
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -335,7 +335,7 @@ public:
 
     PathDiagnosticLocation CELoc =
         PathDiagnosticLocation::create(RD, BR->getSourceManager());
-    auto Report = llvm::make_unique<BugReport>(*PaddingBug, Os.str(), CELoc);
+    auto Report = std::make_unique<BugReport>(*PaddingBug, Os.str(), CELoc);
     Report->setDeclWithIssue(RD);
     Report->addRange(RD->getSourceRange());
     BR->emitReport(std::move(Report));

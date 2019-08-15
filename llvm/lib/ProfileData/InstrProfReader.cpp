@@ -119,7 +119,7 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
     return make_error<InstrProfError>(instrprof_error::bad_magic);
-  auto Result = llvm::make_unique<IndexedInstrProfReader>(
+  auto Result = std::make_unique<IndexedInstrProfReader>(
       std::move(Buffer), std::move(RemappingBuffer));
 
   // Initialize the reader and return the result.
@@ -385,7 +385,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   NamesStart = Start + NamesOffset;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
+  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = createSymtab(*NewSymtab.get()))
     return E;
 
@@ -767,7 +767,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
         UseCS ? this->CS_Summary : this->Summary;
 
     // initialize InstrProfSummary using the SummaryData from disk.
-    Summary = llvm::make_unique<ProfileSummary>(
+    Summary = std::make_unique<ProfileSummary>(
         UseCS ? ProfileSummary::PSK_CSInstr : ProfileSummary::PSK_Instr,
         DetailedSummary, SummaryData->get(Summary::TotalBlockCount),
         SummaryData->get(Summary::MaxBlockCount),
@@ -827,18 +827,18 @@ Error IndexedInstrProfReader::readHeader() {
 
   // The rest of the file is an on disk hash table.
   auto IndexPtr =
-      llvm::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
+      std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
           Start + HashOffset, Cur, Start, HashType, FormatVersion);
 
   // Load the remapping table now if requested.
   if (RemappingBuffer) {
-    Remapper = llvm::make_unique<
+    Remapper = std::make_unique<
         InstrProfReaderItaniumRemapper<OnDiskHashTableImplV3>>(
         std::move(RemappingBuffer), *IndexPtr);
     if (Error E = Remapper->populateRemappings())
       return E;
   } else {
-    Remapper = llvm::make_unique<InstrProfReaderNullRemapper>(*IndexPtr);
+    Remapper = std::make_unique<InstrProfReaderNullRemapper>(*IndexPtr);
   }
   Index = std::move(IndexPtr);
 
@@ -849,7 +849,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   if (Symtab.get())
     return *Symtab.get();
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
+  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = Index->populateSymtab(*NewSymtab.get())) {
     consumeError(error(InstrProfError::take(std::move(E))));
   }

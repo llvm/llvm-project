@@ -34,7 +34,7 @@ public:
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
     SemaSource.setFilePath(InFile);
-    return llvm::make_unique<clang::ASTConsumer>();
+    return std::make_unique<clang::ASTConsumer>();
   }
 
   void ExecuteAction() override {
@@ -104,7 +104,7 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Run the parser, gather missing includes.
   auto ScopedToolAction =
-      llvm::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
+      std::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
   Contexts.push_back(ScopedToolAction->getIncludeFixerContext(

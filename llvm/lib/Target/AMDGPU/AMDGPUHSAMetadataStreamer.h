@@ -52,7 +52,7 @@ public:
 class MetadataStreamerV3 final : public MetadataStreamer {
 private:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
-      llvm::make_unique<msgpack::Document>();
+      std::make_unique<msgpack::Document>();
 
   void dump(StringRef HSAMetadataString) const;
 

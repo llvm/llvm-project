@@ -1483,12 +1483,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
       if (BI.Incoming) {
         if (!Brackets)
-          Brackets = llvm::make_unique<WaitcntBrackets>(*BI.Incoming);
+          Brackets = std::make_unique<WaitcntBrackets>(*BI.Incoming);
         else
           *Brackets = *BI.Incoming;
       } else {
         if (!Brackets)
-          Brackets = llvm::make_unique<WaitcntBrackets>(ST);
+          Brackets = std::make_unique<WaitcntBrackets>(ST);
         else
           Brackets->clear();
       }
@@ -1508,7 +1508,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
             if (!MoveBracketsToSucc) {
               MoveBracketsToSucc = &SuccBI;
             } else {
-              SuccBI.Incoming = llvm::make_unique<WaitcntBrackets>(*Brackets);
+              SuccBI.Incoming = std::make_unique<WaitcntBrackets>(*Brackets);
             }
           } else if (SuccBI.Incoming->merge(*Brackets)) {
             SuccBI.Dirty = true;

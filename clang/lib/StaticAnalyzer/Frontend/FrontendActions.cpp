@@ -23,5 +23,5 @@ ParseModelFileAction::ParseModelFileAction(llvm::StringMap<Stmt *> &Bodies)
 std::unique_ptr<ASTConsumer>
 ParseModelFileAction::CreateASTConsumer(CompilerInstance &CI,
                                         StringRef InFile) {
-  return llvm::make_unique<ModelConsumer>(Bodies);
+  return std::make_unique<ModelConsumer>(Bodies);
 }

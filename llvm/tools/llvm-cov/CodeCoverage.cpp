@@ -712,15 +712,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // Create the function filters
     if (!NameFilters.empty() || NameWhitelist || !NameRegexFilters.empty()) {
-      auto NameFilterer = llvm::make_unique<CoverageFilters>();
+      auto NameFilterer = std::make_unique<CoverageFilters>();
       for (const auto &Name : NameFilters)
-        NameFilterer->push_back(llvm::make_unique<NameCoverageFilter>(Name));
+        NameFilterer->push_back(std::make_unique<NameCoverageFilter>(Name));
       if (NameWhitelist)
         NameFilterer->push_back(
-            llvm::make_unique<NameWhitelistCoverageFilter>(*NameWhitelist));
+            std::make_unique<NameWhitelistCoverageFilter>(*NameWhitelist));
       for (const auto &Regex : NameRegexFilters)
         NameFilterer->push_back(
-            llvm::make_unique<NameRegexCoverageFilter>(Regex));
+            std::make_unique<NameRegexCoverageFilter>(Regex));
       Filters.push_back(std::move(NameFilterer));
     }
 
@@ -728,18 +728,18 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
         RegionCoverageGtFilter.getNumOccurrences() ||
         LineCoverageLtFilter.getNumOccurrences() ||
         LineCoverageGtFilter.getNumOccurrences()) {
-      auto StatFilterer = llvm::make_unique<CoverageFilters>();
+      auto StatFilterer = std::make_unique<CoverageFilters>();
       if (RegionCoverageLtFilter.getNumOccurrences())
-        StatFilterer->push_back(llvm::make_unique<RegionCoverageFilter>(
+        StatFilterer->push_back(std::make_unique<RegionCoverageFilter>(
             RegionCoverageFilter::LessThan, RegionCoverageLtFilter));
       if (RegionCoverageGtFilter.getNumOccurrences())
-        StatFilterer->push_back(llvm::make_unique<RegionCoverageFilter>(
+        StatFilterer->push_back(std::make_unique<RegionCoverageFilter>(
             RegionCoverageFilter::GreaterThan, RegionCoverageGtFilter));
       if (LineCoverageLtFilter.getNumOccurrences())
-        StatFilterer->push_back(llvm::make_unique<LineCoverageFilter>(
+        StatFilterer->push_back(std::make_unique<LineCoverageFilter>(
             LineCoverageFilter::LessThan, LineCoverageLtFilter));
       if (LineCoverageGtFilter.getNumOccurrences())
-        StatFilterer->push_back(llvm::make_unique<LineCoverageFilter>(
+        StatFilterer->push_back(std::make_unique<LineCoverageFilter>(
             RegionCoverageFilter::GreaterThan, LineCoverageGtFilter));
       Filters.push_back(std::move(StatFilterer));
     }
@@ -747,7 +747,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     // Create the ignore filename filters.
     for (const auto &RE : IgnoreFilenameRegexFilters)
       IgnoreFilenameFilters.push_back(
-          llvm::make_unique<NameRegexCoverageFilter>(RE));
+          std::make_unique<NameRegexCoverageFilter>(RE));
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -1040,7 +1040,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
 
   switch (ViewOpts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    Exporter = llvm::make_unique<CoverageExporterJson>(*Coverage.get(),
+    Exporter = std::make_unique<CoverageExporterJson>(*Coverage.get(),
                                                        ViewOpts, outs());
     break;
   case CoverageViewOptions::OutputFormat::HTML:
@@ -1048,7 +1048,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     // above.
     llvm_unreachable("Export in HTML is not supported!");
   case CoverageViewOptions::OutputFormat::Lcov:
-    Exporter = llvm::make_unique<CoverageExporterLcov>(*Coverage.get(),
+    Exporter = std::make_unique<CoverageExporterLcov>(*Coverage.get(),
                                                        ViewOpts, outs());
     break;
   }

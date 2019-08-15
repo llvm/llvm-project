@@ -55,7 +55,7 @@ public:
                    /*length*/ 0, /*data_sp*/ nullptr, /*data_offset*/ 0),
         m_arch(module_spec.GetArchitecture()), m_uuid(module_spec.GetUUID()),
         m_base(base), m_size(size) {
-    m_symtab_up = llvm::make_unique<Symtab>(this);
+    m_symtab_up = std::make_unique<Symtab>(this);
   }
 
   ConstString GetPluginName() override { return ConstString("placeholder"); }
@@ -80,7 +80,7 @@ public:
   }
 
   void CreateSections(SectionList &unified_section_list) override {
-    m_sections_up = llvm::make_unique<SectionList>();
+    m_sections_up = std::make_unique<SectionList>();
     auto section_sp = std::make_shared<Section>(
         GetModule(), this, /*sect_id*/ 0, ConstString(".module_image"),
         eSectionTypeOther, m_base, m_size, /*file_offset*/ 0, /*file_size*/ 0,
@@ -444,7 +444,7 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
 // debug information than needed.
 JITLoaderList &ProcessMinidump::GetJITLoaders() {
   if (!m_jit_loaders_up) {
-    m_jit_loaders_up = llvm::make_unique<JITLoaderList>();
+    m_jit_loaders_up = std::make_unique<JITLoaderList>();
   }
   return *m_jit_loaders_up;
 }

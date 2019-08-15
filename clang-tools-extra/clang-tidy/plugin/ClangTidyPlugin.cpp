@@ -42,7 +42,7 @@ public:
     auto ExternalDiagEngine = &Compiler.getDiagnostics();
     auto DiagConsumer =
         new ClangTidyDiagnosticConsumer(*Context, ExternalDiagEngine);
-    auto DiagEngine = llvm::make_unique<DiagnosticsEngine>(
+    auto DiagEngine = std::make_unique<DiagnosticsEngine>(
         new DiagnosticIDs, new DiagnosticOptions, DiagConsumer);
     Context->setDiagnosticsEngine(DiagEngine.get());
 
@@ -51,7 +51,7 @@ public:
     std::vector<std::unique_ptr<ASTConsumer>> Vec;
     Vec.push_back(Factory.CreateASTConsumer(Compiler, File));
 
-    return llvm::make_unique<WrapConsumer>(
+    return std::make_unique<WrapConsumer>(
         std::move(Context), std::move(DiagEngine), std::move(Vec));
   }
 
@@ -67,9 +67,9 @@ public:
       if (Arg.startswith("-checks="))
         OverrideOptions.Checks = Arg.substr(strlen("-checks="));
 
-    auto Options = llvm::make_unique<FileOptionsProvider>(
+    auto Options = std::make_unique<FileOptionsProvider>(
         GlobalOptions, DefaultOptions, OverrideOptions);
-    Context = llvm::make_unique<ClangTidyContext>(std::move(Options));
+    Context = std::make_unique<ClangTidyContext>(std::move(Options));
     return true;
   }
 

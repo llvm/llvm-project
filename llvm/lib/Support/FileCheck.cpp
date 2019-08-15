@@ -209,7 +209,7 @@ FileCheckPattern::parseNumericVariableUse(StringRef Name, bool IsPseudo,
         "numeric variable '" + Name +
             "' defined from input on the same line as used");
 
-  return llvm::make_unique<FileCheckNumericVariableUse>(Name, NumericVariable);
+  return std::make_unique<FileCheckNumericVariableUse>(Name, NumericVariable);
 }
 
 Expected<std::unique_ptr<FileCheckExpressionAST>>
@@ -234,7 +234,7 @@ FileCheckPattern::parseNumericOperand(StringRef &Expr, AllowedOperand AO,
   // Otherwise, parse it as a literal.
   uint64_t LiteralValue;
   if (!Expr.consumeInteger(/*Radix=*/10, LiteralValue))
-    return llvm::make_unique<FileCheckExpressionLiteral>(LiteralValue);
+    return std::make_unique<FileCheckExpressionLiteral>(LiteralValue);
 
   return FileCheckErrorDiagnostic::get(SM, Expr,
                                        "invalid operand format '" + Expr + "'");
@@ -287,7 +287,7 @@ Expected<std::unique_ptr<FileCheckExpressionAST>> FileCheckPattern::parseBinop(
     return RightOpResult;
 
   Expr = Expr.ltrim(SpaceChars);
-  return llvm::make_unique<FileCheckASTBinop>(EvalBinop, std::move(LeftOp),
+  return std::make_unique<FileCheckASTBinop>(EvalBinop, std::move(LeftOp),
                                               std::move(*RightOpResult));
 }
 
@@ -862,7 +862,7 @@ template <class... Types>
 FileCheckNumericVariable *
 FileCheckPatternContext::makeNumericVariable(Types... args) {
   NumericVariables.push_back(
-      llvm::make_unique<FileCheckNumericVariable>(args...));
+      std::make_unique<FileCheckNumericVariable>(args...));
   return NumericVariables.back().get();
 }
 
@@ -870,14 +870,14 @@ FileCheckSubstitution *
 FileCheckPatternContext::makeStringSubstitution(StringRef VarName,
                                                 size_t InsertIdx) {
   Substitutions.push_back(
-      llvm::make_unique<FileCheckStringSubstitution>(this, VarName, InsertIdx));
+      std::make_unique<FileCheckStringSubstitution>(this, VarName, InsertIdx));
   return Substitutions.back().get();
 }
 
 FileCheckSubstitution *FileCheckPatternContext::makeNumericSubstitution(
     StringRef ExpressionStr,
     std::unique_ptr<FileCheckExpressionAST> ExpressionAST, size_t InsertIdx) {
-  Substitutions.push_back(llvm::make_unique<FileCheckNumericSubstitution>(
+  Substitutions.push_back(std::make_unique<FileCheckNumericSubstitution>(
       this, ExpressionStr, std::move(ExpressionAST), InsertIdx));
   return Substitutions.back().get();
 }

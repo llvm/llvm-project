@@ -42,7 +42,7 @@ llvm::parseAssembly(MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
                     SlotMapping *Slots, bool UpgradeDebugInfo,
                     StringRef DataLayoutString) {
   std::unique_ptr<Module> M =
-      make_unique<Module>(F.getBufferIdentifier(), Context);
+      std::make_unique<Module>(F.getBufferIdentifier(), Context);
 
   if (parseAssemblyInto(F, M.get(), nullptr, Err, Slots, UpgradeDebugInfo,
                         DataLayoutString))
@@ -71,9 +71,9 @@ ParsedModuleAndIndex llvm::parseAssemblyWithIndex(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots, bool UpgradeDebugInfo, StringRef DataLayoutString) {
   std::unique_ptr<Module> M =
-      make_unique<Module>(F.getBufferIdentifier(), Context);
+      std::make_unique<Module>(F.getBufferIdentifier(), Context);
   std::unique_ptr<ModuleSummaryIndex> Index =
-      make_unique<ModuleSummaryIndex>(/*HaveGVs=*/true);
+      std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/true);
 
   if (parseAssemblyInto(F, M.get(), Index.get(), Err, Slots, UpgradeDebugInfo,
                         DataLayoutString))
@@ -123,7 +123,7 @@ static bool parseSummaryIndexAssemblyInto(MemoryBufferRef F,
 std::unique_ptr<ModuleSummaryIndex>
 llvm::parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err) {
   std::unique_ptr<ModuleSummaryIndex> Index =
-      make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
   if (parseSummaryIndexAssemblyInto(F, *Index, Err))
     return nullptr;

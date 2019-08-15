@@ -243,7 +243,7 @@ void IdentifierNamingCheck::registerMatchers(MatchFinder *Finder) {
 void IdentifierNamingCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   ModuleExpanderPP->addPPCallbacks(
-      llvm::make_unique<IdentifierNamingCheckPPCallbacks>(ModuleExpanderPP,
+      std::make_unique<IdentifierNamingCheckPPCallbacks>(ModuleExpanderPP,
                                                           this));
 }
 

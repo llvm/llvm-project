@@ -92,7 +92,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
     return false;
 
   Builder =
-      CSEInfo ? make_unique<CSEMIRBuilder>() : make_unique<MachineIRBuilder>();
+      CSEInfo ? std::make_unique<CSEMIRBuilder>() : std::make_unique<MachineIRBuilder>();
   MRI = &MF.getRegInfo();
   Builder->setMF(MF);
   if (CSEInfo)

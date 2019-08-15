@@ -24,7 +24,7 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
     return llvm::make_error<llvm::StringError>("debug info null",
                                                llvm::inconvertibleErrorCode());
   }
-  auto index_up = llvm::make_unique<DebugNames>(debug_names.GetAsLLVM(),
+  auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVM(),
                                                 debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);

@@ -297,7 +297,7 @@ public:
           Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
           Ctx.getTargetInfo().getDataLayout(), M.get(),
           BackendAction::Backend_EmitLL,
-          llvm::make_unique<llvm::raw_svector_ostream>(Buffer));
+          std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
@@ -321,7 +321,7 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
     const std::string &OutputFileName,
     std::unique_ptr<llvm::raw_pwrite_stream> OS,
     std::shared_ptr<PCHBuffer> Buffer) const {
-  return llvm::make_unique<PCHContainerGenerator>(
+  return std::make_unique<PCHContainerGenerator>(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
 }
 

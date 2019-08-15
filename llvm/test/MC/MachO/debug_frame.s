@@ -36,7 +36,7 @@ Ltext_end:
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x180
 // CHECK:     RelocationCount: 2
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x20000)
 // CHECK:       Debug (0x20000)
 // CHECK:     ]

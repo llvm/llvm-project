@@ -302,7 +302,7 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
   std::unique_ptr<AnalysisDeclContext> &AC = Contexts[D];
   if (!AC)
-    AC = llvm::make_unique<AnalysisDeclContext>(this, D, cfgBuildOptions);
+    AC = std::make_unique<AnalysisDeclContext>(this, D, cfgBuildOptions);
   return AC.get();
 }
 

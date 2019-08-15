@@ -83,6 +83,7 @@ void CheckMemberTypeInfo(MemberTypeInfo *Expected, MemberTypeInfo *Actual) {
 void CheckBaseInfo(Info *Expected, Info *Actual) {
   EXPECT_EQ(size_t(20), Actual->USR.size());
   EXPECT_EQ(Expected->Name, Actual->Name);
+  EXPECT_EQ(Expected->Path, Actual->Path);
   ASSERT_EQ(Expected->Namespace.size(), Actual->Namespace.size());
   for (size_t Idx = 0; Idx < Actual->Namespace.size(); ++Idx)
     CheckReference(Expected->Namespace[Idx], Actual->Namespace[Idx]);

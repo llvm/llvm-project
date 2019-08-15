@@ -1334,14 +1334,14 @@ public:
   template <typename T> operator Matcher<T>() const {
     return DynTypedMatcher::constructVariadic(
                Op, ast_type_traits::ASTNodeKind::getFromNodeKind<T>(),
-               getMatchers<T>(llvm::index_sequence_for<Ps...>()))
+               getMatchers<T>(std::index_sequence_for<Ps...>()))
         .template unconditionalConvertTo<T>();
   }
 
 private:
   // Helper method to unpack the tuple into a vector.
   template <typename T, std::size_t... Is>
-  std::vector<DynTypedMatcher> getMatchers(llvm::index_sequence<Is...>) const {
+  std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) const {
     return {Matcher<T>(std::get<Is>(Params))...};
   }
 

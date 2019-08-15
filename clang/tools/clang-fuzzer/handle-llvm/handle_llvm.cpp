@@ -159,7 +159,7 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
   builder.setMAttrs(getFeatureList());
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(EngineKind::JIT);
-  builder.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
+  builder.setMCJITMemoryManager(std::make_unique<SectionMemoryManager>());
   builder.setOptLevel(OLvl);
   builder.setTargetOptions(InitTargetOptionsFromCodeGenFlags());
 

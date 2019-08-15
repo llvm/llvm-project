@@ -682,9 +682,9 @@ bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
   }
 
   if (eatTerm(FuncName, "_Z"))
-    F.Impl = make_unique<AMDGPUMangledLibFunc>();
+    F.Impl = std::make_unique<AMDGPUMangledLibFunc>();
   else
-    F.Impl = make_unique<AMDGPUUnmangledLibFunc>();
+    F.Impl = std::make_unique<AMDGPUUnmangledLibFunc>();
   if (F.Impl->parseFuncName(FuncName))
     return true;
 

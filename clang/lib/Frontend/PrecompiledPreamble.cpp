@@ -202,7 +202,7 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
 
   std::unique_ptr<llvm::raw_ostream> OS;
   if (InMemStorage) {
-    OS = llvm::make_unique<llvm::raw_string_ostream>(*InMemStorage);
+    OS = std::make_unique<llvm::raw_string_ostream>(*InMemStorage);
   } else {
     std::string OutputFile;
     OS = GeneratePCHAction::CreateOutputFile(CI, InFile, OutputFile);
@@ -213,7 +213,7 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
   if (!CI.getFrontendOpts().RelocatablePCH)
     Sysroot.clear();
 
-  return llvm::make_unique<PrecompilePreambleConsumer>(
+  return std::make_unique<PrecompilePreambleConsumer>(
       *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, std::move(OS));
 }
 

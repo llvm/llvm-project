@@ -53,7 +53,7 @@ public:
     static constexpr const size_t kAlignment = 1024;
     static constexpr const size_t kSize = 1 << 20; // 1MB.
     ScratchSpace()
-        : UnalignedPtr(llvm::make_unique<char[]>(kSize + kAlignment)),
+        : UnalignedPtr(std::make_unique<char[]>(kSize + kAlignment)),
           AlignedPtr(
               UnalignedPtr.get() + kAlignment -
               (reinterpret_cast<intptr_t>(UnalignedPtr.get()) % kAlignment)) {}

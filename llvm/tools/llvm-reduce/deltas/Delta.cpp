@@ -115,15 +115,14 @@ void llvm::runDeltaPass(
     outs() << "\nNothing to reduce\n";
     return;
   }
+  if (!Test.run(Test.getReducedFilepath())) {
+    outs() << "\nInput isn't interesting! Verify interesting-ness test\n";
+    exit(1);
+  }
 
   std::vector<Chunk> Chunks = {{1, Targets}};
   std::set<Chunk> UninterestingChunks;
   std::unique_ptr<Module> ReducedProgram;
-
-  if (!Test.run(Test.getReducedFilepath())) {
-    outs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    return;
-  }
 
   if (!increaseGranularity(Chunks)) {
     outs() << "\nAlready at minimum size. Cannot reduce anymore.\n";

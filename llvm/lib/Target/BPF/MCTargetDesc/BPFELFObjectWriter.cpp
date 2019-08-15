@@ -85,5 +85,5 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createBPFELFObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<BPFELFObjectWriter>(OSABI);
+  return std::make_unique<BPFELFObjectWriter>(OSABI);
 }

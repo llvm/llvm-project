@@ -20,8 +20,8 @@ using namespace llvm::orc;
 ExitOnError ExitOnErr;
 
 ThreadSafeModule createDemoModule() {
-  auto Context = llvm::make_unique<LLVMContext>();
-  auto M = make_unique<Module>("test", *Context);
+  auto Context = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("test", *Context);
 
   // Create the add1 function entry and insert this entry into module M.  The
   // function will have a return type of "int" and take an argument of "int".

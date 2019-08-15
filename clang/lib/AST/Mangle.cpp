@@ -470,7 +470,7 @@ private:
 };
 
 ASTNameGenerator::ASTNameGenerator(ASTContext &Ctx)
-    : Impl(llvm::make_unique<Implementation>(Ctx)) {}
+    : Impl(std::make_unique<Implementation>(Ctx)) {}
 
 ASTNameGenerator::~ASTNameGenerator() {}
 

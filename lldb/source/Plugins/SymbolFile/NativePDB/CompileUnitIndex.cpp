@@ -130,7 +130,7 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
 
   if (!stream_data) {
     llvm::pdb::ModuleDebugStreamRef debug_stream(descriptor, nullptr);
-    cci = llvm::make_unique<CompilandIndexItem>(PdbCompilandId{ modi }, debug_stream, std::move(descriptor));
+    cci = std::make_unique<CompilandIndexItem>(PdbCompilandId{ modi }, debug_stream, std::move(descriptor));
     return *cci;
   }
 
@@ -139,7 +139,7 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
 
   cantFail(debug_stream.reload());
 
-  cci = llvm::make_unique<CompilandIndexItem>(
+  cci = std::make_unique<CompilandIndexItem>(
       PdbCompilandId{modi}, std::move(debug_stream), std::move(descriptor));
   ParseExtendedInfo(m_index, *cci);
 

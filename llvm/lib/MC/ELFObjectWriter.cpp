@@ -1551,7 +1551,7 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 std::unique_ptr<MCObjectWriter>
 llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return llvm::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
+  return std::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
                                                   IsLittleEndian);
 }
 
@@ -1559,6 +1559,6 @@ std::unique_ptr<MCObjectWriter>
 llvm::createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                                raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
                                bool IsLittleEndian) {
-  return llvm::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
+  return std::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
                                                IsLittleEndian);
 }

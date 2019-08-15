@@ -808,7 +808,7 @@ bool LoopSimplify::runOnFunction(Function &F) {
     auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     if (MSSAAnalysis) {
       MSSA = &MSSAAnalysis->getMSSA();
-      MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+      MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
     }
   }
 
@@ -839,7 +839,7 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAAnalysis) {
     auto *MSSA = &MSSAAnalysis->getMSSA();
-    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
 

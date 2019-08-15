@@ -863,8 +863,8 @@ static void pdb2Yaml(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   auto &File = loadPDB(Path, Session);
 
-  auto O = llvm::make_unique<YAMLOutputStyle>(File);
-  O = llvm::make_unique<YAMLOutputStyle>(File);
+  auto O = std::make_unique<YAMLOutputStyle>(File);
+  O = std::make_unique<YAMLOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -872,7 +872,7 @@ static void pdb2Yaml(StringRef Path) {
 static void dumpRaw(StringRef Path) {
   InputFile IF = ExitOnErr(InputFile::open(Path));
 
-  auto O = llvm::make_unique<DumpOutputStyle>(IF);
+  auto O = std::make_unique<DumpOutputStyle>(IF);
   ExitOnErr(O->dump());
 }
 
@@ -880,7 +880,7 @@ static void dumpBytes(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   auto &File = loadPDB(Path, Session);
 
-  auto O = llvm::make_unique<BytesOutputStyle>(File);
+  auto O = std::make_unique<BytesOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -1347,7 +1347,7 @@ static void explain() {
       ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 
   for (uint64_t Off : opts::explain::Offsets) {
-    auto O = llvm::make_unique<ExplainOutputStyle>(IF, Off);
+    auto O = std::make_unique<ExplainOutputStyle>(IF, Off);
 
     ExitOnErr(O->dump());
   }

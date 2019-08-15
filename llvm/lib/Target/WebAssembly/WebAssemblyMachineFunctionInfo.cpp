@@ -72,7 +72,7 @@ void llvm::valTypesFromMVTs(const ArrayRef<MVT> &In,
 std::unique_ptr<wasm::WasmSignature>
 llvm::signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
                         const SmallVectorImpl<MVT> &Params) {
-  auto Sig = make_unique<wasm::WasmSignature>();
+  auto Sig = std::make_unique<wasm::WasmSignature>();
   valTypesFromMVTs(Results, Sig->Returns);
   valTypesFromMVTs(Params, Sig->Params);
   return Sig;

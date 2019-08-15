@@ -2193,26 +2193,26 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
                        : TPC->isGISelCSEEnabled();
 
   if (EnableCSE) {
-    EntryBuilder = make_unique<CSEMIRBuilder>(CurMF);
+    EntryBuilder = std::make_unique<CSEMIRBuilder>(CurMF);
     CSEInfo = &Wrapper.get(TPC->getCSEConfig());
     EntryBuilder->setCSEInfo(CSEInfo);
-    CurBuilder = make_unique<CSEMIRBuilder>(CurMF);
+    CurBuilder = std::make_unique<CSEMIRBuilder>(CurMF);
     CurBuilder->setCSEInfo(CSEInfo);
   } else {
-    EntryBuilder = make_unique<MachineIRBuilder>();
-    CurBuilder = make_unique<MachineIRBuilder>();
+    EntryBuilder = std::make_unique<MachineIRBuilder>();
+    CurBuilder = std::make_unique<MachineIRBuilder>();
   }
   CLI = MF->getSubtarget().getCallLowering();
   CurBuilder->setMF(*MF);
   EntryBuilder->setMF(*MF);
   MRI = &MF->getRegInfo();
   DL = &F.getParent()->getDataLayout();
-  ORE = llvm::make_unique<OptimizationRemarkEmitter>(&F);
+  ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   FuncInfo.MF = MF;
   FuncInfo.BPI = nullptr;
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
   const TargetMachine &TM = MF->getTarget();
-  SL = make_unique<GISelSwitchLowering>(this, FuncInfo);
+  SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);
   SL->init(TLI, TM, *DL);
 
   EnableOpts = TM.getOptLevel() != CodeGenOpt::None && !skipFunction(F);

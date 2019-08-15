@@ -43,7 +43,7 @@ clang::FrontendAction *MapperActionFactory::create() {
     std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
                       llvm::StringRef InFile) override {
-      return llvm::make_unique<MapASTVisitor>(&Compiler.getASTContext(), CDCtx);
+      return std::make_unique<MapASTVisitor>(&Compiler.getASTContext(), CDCtx);
     }
 
   private:
@@ -54,7 +54,7 @@ clang::FrontendAction *MapperActionFactory::create() {
 
 std::unique_ptr<tooling::FrontendActionFactory>
 newMapperActionFactory(ClangDocContext CDCtx) {
-  return llvm::make_unique<MapperActionFactory>(CDCtx);
+  return std::make_unique<MapperActionFactory>(CDCtx);
 }
 
 } // namespace doc

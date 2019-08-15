@@ -193,17 +193,17 @@ std::unique_ptr<Stream> Stream::create(StreamType Type) {
   StreamKind Kind = getKind(Type);
   switch (Kind) {
   case StreamKind::MemoryList:
-    return llvm::make_unique<MemoryListStream>();
+    return std::make_unique<MemoryListStream>();
   case StreamKind::ModuleList:
-    return llvm::make_unique<ModuleListStream>();
+    return std::make_unique<ModuleListStream>();
   case StreamKind::RawContent:
-    return llvm::make_unique<RawContentStream>(Type);
+    return std::make_unique<RawContentStream>(Type);
   case StreamKind::SystemInfo:
-    return llvm::make_unique<SystemInfoStream>();
+    return std::make_unique<SystemInfoStream>();
   case StreamKind::TextContent:
-    return llvm::make_unique<TextContentStream>(Type);
+    return std::make_unique<TextContentStream>(Type);
   case StreamKind::ThreadList:
-    return llvm::make_unique<ThreadListStream>();
+    return std::make_unique<ThreadListStream>();
   }
   llvm_unreachable("Unhandled stream kind!");
 }
@@ -602,7 +602,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
         return ExpectedContent.takeError();
       Ranges.push_back({MD, *ExpectedContent});
     }
-    return llvm::make_unique<MemoryListStream>(std::move(Ranges));
+    return std::make_unique<MemoryListStream>(std::move(Ranges));
   }
   case StreamKind::ModuleList: {
     auto ExpectedList = File.getModuleList();
@@ -622,10 +622,10 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
       Modules.push_back(
           {M, std::move(*ExpectedName), *ExpectedCv, *ExpectedMisc});
     }
-    return llvm::make_unique<ModuleListStream>(std::move(Modules));
+    return std::make_unique<ModuleListStream>(std::move(Modules));
   }
   case StreamKind::RawContent:
-    return llvm::make_unique<RawContentStream>(StreamDesc.Type,
+    return std::make_unique<RawContentStream>(StreamDesc.Type,
                                                File.getRawStream(StreamDesc));
   case StreamKind::SystemInfo: {
     auto ExpectedInfo = File.getSystemInfo();
@@ -634,11 +634,11 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     auto ExpectedCSDVersion = File.getString(ExpectedInfo->CSDVersionRVA);
     if (!ExpectedCSDVersion)
       return ExpectedInfo.takeError();
-    return llvm::make_unique<SystemInfoStream>(*ExpectedInfo,
+    return std::make_unique<SystemInfoStream>(*ExpectedInfo,
                                                std::move(*ExpectedCSDVersion));
   }
   case StreamKind::TextContent:
-    return llvm::make_unique<TextContentStream>(
+    return std::make_unique<TextContentStream>(
         StreamDesc.Type, toStringRef(File.getRawStream(StreamDesc)));
   case StreamKind::ThreadList: {
     auto ExpectedList = File.getThreadList();
@@ -654,7 +654,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
         return ExpectedContext.takeError();
       Threads.push_back({T, *ExpectedStack, *ExpectedContext});
     }
-    return llvm::make_unique<ThreadListStream>(std::move(Threads));
+    return std::make_unique<ThreadListStream>(std::move(Threads));
   }
   }
   llvm_unreachable("Unhandled stream kind!");

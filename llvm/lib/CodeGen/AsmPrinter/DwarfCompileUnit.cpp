@@ -208,7 +208,7 @@ void DwarfCompileUnit::addLocationAttribute(
     if (!Loc) {
       addToAccelTable = true;
       Loc = new (DIEValueAllocator) DIELoc;
-      DwarfExpr = llvm::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
+      DwarfExpr = std::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
     if (Expr) {
@@ -1071,11 +1071,11 @@ void DwarfCompileUnit::createAbstractEntity(const DINode *Node,
   assert(Scope && Scope->isAbstractScope());
   auto &Entity = getAbstractEntities()[Node];
   if (isa<const DILocalVariable>(Node)) {
-    Entity = llvm::make_unique<DbgVariable>(
+    Entity = std::make_unique<DbgVariable>(
                         cast<const DILocalVariable>(Node), nullptr /* IA */);;
     DU->addScopeVariable(Scope, cast<DbgVariable>(Entity.get()));
   } else if (isa<const DILabel>(Node)) {
-    Entity = llvm::make_unique<DbgLabel>(
+    Entity = std::make_unique<DbgLabel>(
                         cast<const DILabel>(Node), nullptr /* IA */);
     DU->addScopeLabel(Scope, cast<DbgLabel>(Entity.get()));
   }

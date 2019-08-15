@@ -171,7 +171,7 @@ void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
   // currently does not provide any benefit to other languages, despite being
   // benign.
   if (getLangOpts().CPlusPlus) {
-    Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+    Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                          IncludeStyle);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }

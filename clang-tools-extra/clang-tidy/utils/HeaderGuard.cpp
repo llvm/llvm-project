@@ -269,7 +269,7 @@ private:
 void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(llvm::make_unique<HeaderGuardPPCallbacks>(PP, this));
+  PP->addPPCallbacks(std::make_unique<HeaderGuardPPCallbacks>(PP, this));
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {

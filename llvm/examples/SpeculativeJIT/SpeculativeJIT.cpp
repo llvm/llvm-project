@@ -48,7 +48,7 @@ public:
     if (!DL)
       return DL.takeError();
 
-    auto ES = llvm::make_unique<ExecutionSession>();
+    auto ES = std::make_unique<ExecutionSession>();
 
     auto LCTMgr = createLocalLazyCallThroughManager(
         JTMB->getTargetTriple(), *ES,
@@ -128,7 +128,7 @@ private:
   }
 
   static std::unique_ptr<SectionMemoryManager> createMemMgr() {
-    return llvm::make_unique<SectionMemoryManager>();
+    return std::make_unique<SectionMemoryManager>();
   }
 
   std::unique_ptr<ExecutionSession> ES;
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
   // Load the IR inputs.
   for (const auto &InputFile : InputFiles) {
     SMDiagnostic Err;
-    auto Ctx = llvm::make_unique<LLVMContext>();
+    auto Ctx = std::make_unique<LLVMContext>();
     auto M = parseIRFile(InputFile, Err, *Ctx);
     if (!M) {
       Err.print(argv[0], errs());

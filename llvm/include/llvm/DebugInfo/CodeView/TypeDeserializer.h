@@ -66,7 +66,7 @@ public:
 
   Error visitTypeBegin(CVType &Record) override {
     assert(!Mapping && "Already in a type mapping!");
-    Mapping = llvm::make_unique<MappingInfo>(Record.content());
+    Mapping = std::make_unique<MappingInfo>(Record.content());
     return Mapping->Mapping.visitTypeBegin(Record);
   }
 

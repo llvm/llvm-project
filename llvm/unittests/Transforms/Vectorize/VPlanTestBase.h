@@ -48,7 +48,7 @@ protected:
   VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
     doAnalysis(*LoopHeader->getParent());
 
-    auto Plan = llvm::make_unique<VPlan>();
+    auto Plan = std::make_unique<VPlan>();
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
     return Plan;
@@ -58,7 +58,7 @@ protected:
   VPlanPtr buildPlainCFG(BasicBlock *LoopHeader) {
     doAnalysis(*LoopHeader->getParent());
 
-    auto Plan = llvm::make_unique<VPlan>();
+    auto Plan = std::make_unique<VPlan>();
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
     VPRegionBlock *TopRegion = HCFGBuilder.buildPlainCFG();
     Plan->setEntry(TopRegion);

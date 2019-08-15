@@ -51,7 +51,7 @@ ThreadSafeModule cloneToNewContext(ThreadSafeModule &TSM,
     MemoryBufferRef ClonedModuleBufferRef(
         StringRef(ClonedModuleBuffer.data(), ClonedModuleBuffer.size()),
         "cloned module buffer");
-    ThreadSafeContext NewTSCtx(llvm::make_unique<LLVMContext>());
+    ThreadSafeContext NewTSCtx(std::make_unique<LLVMContext>());
 
     auto ClonedModule = cantFail(
         parseBitcodeFile(ClonedModuleBufferRef, *NewTSCtx.getContext()));

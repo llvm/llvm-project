@@ -321,7 +321,7 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
   });
   // And locations of macro calls, to properly recover boundaries of those in
   // case of empty expansions.
-  auto CB = llvm::make_unique<CollectPPExpansions>(*this);
+  auto CB = std::make_unique<CollectPPExpansions>(*this);
   this->Collector = CB.get();
   PP.addPPCallbacks(std::move(CB));
 }

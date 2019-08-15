@@ -73,13 +73,13 @@ template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || defined(_MSC_VER)
+#if defined(__GNUC__) || defined(_MSC_VER)
 template <typename T> struct TrailingZerosCounter<T, 4> {
   static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 32;
 
-#if __has_builtin(__builtin_ctz) || LLVM_GNUC_PREREQ(4, 0, 0)
+#if __has_builtin(__builtin_ctz) || defined(__GNUC__)
     return __builtin_ctz(Val);
 #elif defined(_MSC_VER)
     unsigned long Index;
@@ -95,7 +95,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
     if (ZB != ZB_Undefined && Val == 0)
       return 64;
 
-#if __has_builtin(__builtin_ctzll) || LLVM_GNUC_PREREQ(4, 0, 0)
+#if __has_builtin(__builtin_ctzll) || defined(__GNUC__)
     return __builtin_ctzll(Val);
 #elif defined(_MSC_VER)
     unsigned long Index;
@@ -142,13 +142,13 @@ template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
   }
 };
 
-#if __GNUC__ >= 4 || defined(_MSC_VER)
+#if defined(__GNUC__) || defined(_MSC_VER)
 template <typename T> struct LeadingZerosCounter<T, 4> {
   static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 32;
 
-#if __has_builtin(__builtin_clz) || LLVM_GNUC_PREREQ(4, 0, 0)
+#if __has_builtin(__builtin_clz) || defined(__GNUC__)
     return __builtin_clz(Val);
 #elif defined(_MSC_VER)
     unsigned long Index;
@@ -164,7 +164,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
     if (ZB != ZB_Undefined && Val == 0)
       return 64;
 
-#if __has_builtin(__builtin_clzll) || LLVM_GNUC_PREREQ(4, 0, 0)
+#if __has_builtin(__builtin_clzll) || defined(__GNUC__)
     return __builtin_clzll(Val);
 #elif defined(_MSC_VER)
     unsigned long Index;
@@ -486,7 +486,7 @@ template <typename T, std::size_t SizeOfT> struct PopulationCounter {
   static unsigned count(T Value) {
     // Generic version, forward to 32 bits.
     static_assert(SizeOfT <= 4, "Not implemented!");
-#if __GNUC__ >= 4
+#if defined(__GNUC__)
     return __builtin_popcount(Value);
 #else
     uint32_t v = Value;
@@ -499,7 +499,7 @@ template <typename T, std::size_t SizeOfT> struct PopulationCounter {
 
 template <typename T> struct PopulationCounter<T, 8> {
   static unsigned count(T Value) {
-#if __GNUC__ >= 4
+#if defined(__GNUC__)
     return __builtin_popcountll(Value);
 #else
     uint64_t v = Value;

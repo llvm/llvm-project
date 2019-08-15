@@ -32,10 +32,10 @@ std::unique_ptr<IRMutator> createInjectorMutator() {
 
   std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
   Strategies.push_back(
-      llvm::make_unique<InjectorIRStrategy>(
+      std::make_unique<InjectorIRStrategy>(
           InjectorIRStrategy::getDefaultOps()));
 
-  return llvm::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
+  return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
 
 std::unique_ptr<IRMutator> createDeleterMutator() {
@@ -44,9 +44,9 @@ std::unique_ptr<IRMutator> createDeleterMutator() {
       Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
 
   std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
-  Strategies.push_back(llvm::make_unique<InstDeleterIRStrategy>());
+  Strategies.push_back(std::make_unique<InstDeleterIRStrategy>());
 
-  return llvm::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
+  return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
 
 std::unique_ptr<Module> parseAssembly(
@@ -79,7 +79,7 @@ TEST(InjectorIRStrategyTest, EmptyModule) {
   // Test that we can inject into empty module
 
   LLVMContext Ctx;
-  auto M = llvm::make_unique<Module>("M", Ctx);
+  auto M = std::make_unique<Module>("M", Ctx);
   ASSERT_TRUE(M && !verifyModule(*M, &errs()));
 
   auto Mutator = createInjectorMutator();

@@ -33,10 +33,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if SANITIZER_MAC
-#include <util.h>  // for forkpty()
-#endif  // SANITIZER_MAC
-
 // C++ demangling function, as required by Itanium C++ ABI. This is weak,
 // because we do not require a C++ ABI library to be linked to a program
 // using sanitizers; if it's not present, we'll just use the mangled name.
@@ -151,80 +147,32 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     return false;
   }
 
-  int pid = -1;
+  const char *argv[kArgVMax];
+  GetArgV(path_, argv);
+  pid_t pid;
 
-  int infd[2];
-  internal_memset(&infd, 0, sizeof(infd));
-  int outfd[2];
-  internal_memset(&outfd, 0, sizeof(outfd));
-  if (!CreateTwoHighNumberedPipes(infd, outfd)) {
-    Report("WARNING: Can't create a socket pair to start "
-           "external symbolizer (errno: %d)\n", errno);
-    return false;
-  }
-
-  if (use_forkpty_) {
+  if (use_posix_spawn_) {
 #if SANITIZER_MAC
-    fd_t fd = kInvalidFd;
-
-    // forkpty redirects stdout and stderr into a single stream, so we would
-    // receive error messages as standard replies. To avoid that, let's dup
-    // stderr and restore it in the child.
-    int saved_stderr = dup(STDERR_FILENO);
-    CHECK_GE(saved_stderr, 0);
-
-    // We only need one pipe, for stdin of the child.
-    close(outfd[0]);
-    close(outfd[1]);
-
-    // Use forkpty to disable buffering in the new terminal.
-    pid = internal_forkpty(&fd);
-    if (pid == -1) {
-      // forkpty() failed.
-      Report("WARNING: failed to fork external symbolizer (errno: %d)\n",
+    fd_t fd = internal_spawn(argv, &pid);
+    if (fd == kInvalidFd) {
+      Report("WARNING: failed to spawn external symbolizer (errno: %d)\n",
              errno);
       return false;
-    } else if (pid == 0) {
-      // Child subprocess.
-
-      // infd[0] is the child's reading end.
-      close(infd[1]);
-
-      // Set up stdin to read from the pipe.
-      CHECK_GE(dup2(infd[0], STDIN_FILENO), 0);
-      close(infd[0]);
-
-      // Restore stderr.
-      CHECK_GE(dup2(saved_stderr, STDERR_FILENO), 0);
-      close(saved_stderr);
-
-      const char *argv[kArgVMax];
-      GetArgV(path_, argv);
-      execv(path_, const_cast<char **>(&argv[0]));
-      internal__exit(1);
     }
 
-    // Input for the child, infd[1] is our writing end.
-    output_fd_ = infd[1];
-    close(infd[0]);
-
-    // Continue execution in parent process.
     input_fd_ = fd;
-
-    close(saved_stderr);
-
-    // Disable echo in the new terminal, disable CR.
-    struct termios termflags;
-    tcgetattr(fd, &termflags);
-    termflags.c_oflag &= ~ONLCR;
-    termflags.c_lflag &= ~ECHO;
-    tcsetattr(fd, TCSANOW, &termflags);
+    output_fd_ = fd;
 #else  // SANITIZER_MAC
     UNIMPLEMENTED();
 #endif  // SANITIZER_MAC
   } else {
-    const char *argv[kArgVMax];
-    GetArgV(path_, argv);
+    fd_t infd[2] = {}, outfd[2] = {};
+    if (!CreateTwoHighNumberedPipes(infd, outfd)) {
+      Report("WARNING: Can't create a socket pair to start "
+             "external symbolizer (errno: %d)\n", errno);
+      return false;
+    }
+
     pid = StartSubprocess(path_, argv, /* stdin */ outfd[0],
                           /* stdout */ infd[1]);
     if (pid < 0) {

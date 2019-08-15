@@ -1153,7 +1153,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                                 StringRef SectionContents) {
   ArrayRef<uint8_t> BinaryData(Subsection.bytes_begin(),
                                Subsection.bytes_end());
-  auto CODD = llvm::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
+  auto CODD = std::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
                                                         SectionContents);
   CVSymbolDumper CVSD(W, Types, CodeViewContainer::ObjectFile, std::move(CODD),
                       CompilationCPUType, opts::CodeViewSubsectionBytes);

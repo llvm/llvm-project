@@ -206,7 +206,7 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
   ASTCtx = &Ctx;
   CompletionAllocator = std::make_shared<GlobalCodeCompletionAllocator>();
   CompletionTUInfo =
-      llvm::make_unique<CodeCompletionTUInfo>(CompletionAllocator);
+      std::make_unique<CodeCompletionTUInfo>(CompletionAllocator);
 }
 
 bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,

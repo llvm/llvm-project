@@ -537,7 +537,7 @@ private:
 
 std::unique_ptr<CompilationDatabase>
 inferMissingCompileCommands(std::unique_ptr<CompilationDatabase> Inner) {
-  return llvm::make_unique<InterpolatingCompilationDatabase>(std::move(Inner));
+  return std::make_unique<InterpolatingCompilationDatabase>(std::move(Inner));
 }
 
 } // namespace tooling

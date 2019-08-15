@@ -140,7 +140,7 @@ void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,
   // benign.
   if (!getLangOpts().CPlusPlus)
     return;
-  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+  Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }

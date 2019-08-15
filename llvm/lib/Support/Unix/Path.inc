@@ -443,7 +443,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   std::unique_ptr<char[]> Buf;
   int Tries = 3;
   while (Tries--) {
-    Buf = llvm::make_unique<char[]>(BufSize);
+    Buf = std::make_unique<char[]>(BufSize);
     Ret = mntctl(MCTL_QUERY, BufSize, Buf.get());
     if (Ret != 0)
       break;

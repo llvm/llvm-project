@@ -209,7 +209,7 @@ namespace clang {
 namespace clangd {
 
 std::unique_ptr<Transport> newXPCTransport() {
-  return llvm::make_unique<XPCTransport>();
+  return std::make_unique<XPCTransport>();
 }
 
 } // namespace clangd

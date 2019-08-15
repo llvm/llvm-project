@@ -53,7 +53,7 @@ private:
 void IncludeOrderCheck::registerPPCallbacks(const SourceManager &SM,
                                             Preprocessor *PP,
                                             Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(::llvm::make_unique<IncludeOrderPPCallbacks>(*this, SM));
+  PP->addPPCallbacks(::std::make_unique<IncludeOrderPPCallbacks>(*this, SM));
 }
 
 static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {

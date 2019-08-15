@@ -330,7 +330,7 @@ ObjectLinkingLayer::~ObjectLinkingLayer() {
 void ObjectLinkingLayer::emit(MaterializationResponsibility R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
-  jitLink(llvm::make_unique<ObjectLinkingLayerJITLinkContext>(
+  jitLink(std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), std::move(O)));
 }
 

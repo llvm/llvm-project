@@ -31,11 +31,11 @@ llvm::Error RetireStage::cycleStart() {
   while (!RCU.isEmpty()) {
     if (MaxRetirePerCycle != 0 && NumRetired == MaxRetirePerCycle)
       break;
-    const RetireControlUnit::RUToken &Current = RCU.peekCurrentToken();
+    const RetireControlUnit::RUToken &Current = RCU.getCurrentToken();
     if (!Current.Executed)
       break;
-    RCU.consumeCurrentToken();
     notifyInstructionRetired(Current.IR);
+    RCU.consumeCurrentToken();
     NumRetired++;
   }
 

@@ -131,7 +131,7 @@ public:
     auto BaseIter = RawSymbol->findChildren(T::Tag);
     if (!BaseIter)
       return nullptr;
-    return llvm::make_unique<ConcreteSymbolEnumerator<T>>(std::move(BaseIter));
+    return std::make_unique<ConcreteSymbolEnumerator<T>>(std::move(BaseIter));
   }
   std::unique_ptr<IPDBEnumSymbols> findAllChildren(PDB_SymType Type) const;
   std::unique_ptr<IPDBEnumSymbols> findAllChildren() const;

@@ -476,7 +476,7 @@ getUsedDecls(const HelperDeclRefGraph *RG,
 std::unique_ptr<ASTConsumer>
 ClangMoveAction::CreateASTConsumer(CompilerInstance &Compiler,
                                    StringRef /*InFile*/) {
-  Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllIncludes>(
+  Compiler.getPreprocessor().addPPCallbacks(std::make_unique<FindAllIncludes>(
       &Compiler.getSourceManager(), &MoveTool));
   return MatchFinder.newASTConsumer();
 }
@@ -610,7 +610,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Matchers for old files, including old.h/old.cc
   //============================================================================
   // Create a MatchCallback for class declarations.
-  MatchCallbacks.push_back(llvm::make_unique<ClassDeclarationMatch>(this));
+  MatchCallbacks.push_back(std::make_unique<ClassDeclarationMatch>(this));
   // Match moved class declarations.
   auto MovedClass = cxxRecordDecl(InOldFiles, *HasAnySymbolNames,
                                   isDefinition(), TopLevelDecl)
@@ -629,19 +629,19 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           .bind("class_static_var_decl"),
       MatchCallbacks.back().get());
 
-  MatchCallbacks.push_back(llvm::make_unique<FunctionDeclarationMatch>(this));
+  MatchCallbacks.push_back(std::make_unique<FunctionDeclarationMatch>(this));
   Finder->addMatcher(functionDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl)
                          .bind("function"),
                      MatchCallbacks.back().get());
 
-  MatchCallbacks.push_back(llvm::make_unique<VarDeclarationMatch>(this));
+  MatchCallbacks.push_back(std::make_unique<VarDeclarationMatch>(this));
   Finder->addMatcher(
       varDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl).bind("var"),
       MatchCallbacks.back().get());
 
   // Match enum definition in old.h. Enum helpers (which are defined in old.cc)
   // will not be moved for now no matter whether they are used or not.
-  MatchCallbacks.push_back(llvm::make_unique<EnumDeclarationMatch>(this));
+  MatchCallbacks.push_back(std::make_unique<EnumDeclarationMatch>(this));
   Finder->addMatcher(
       enumDecl(InOldHeader, *HasAnySymbolNames, isDefinition(), TopLevelDecl)
           .bind("enum"),
@@ -650,7 +650,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match type alias in old.h, this includes "typedef" and "using" type alias
   // declarations. Type alias helpers (which are defined in old.cc) will not be
   // moved for now no matter whether they are used or not.
-  MatchCallbacks.push_back(llvm::make_unique<TypeAliasMatch>(this));
+  MatchCallbacks.push_back(std::make_unique<TypeAliasMatch>(this));
   Finder->addMatcher(namedDecl(anyOf(typedefDecl().bind("typedef"),
                                      typeAliasDecl().bind("type_alias")),
                                InOldHeader, *HasAnySymbolNames, TopLevelDecl),

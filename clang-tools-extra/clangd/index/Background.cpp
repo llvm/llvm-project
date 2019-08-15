@@ -144,7 +144,7 @@ BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, const FileSystemProvider &FSProvider,
     const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
-    : SwapIndex(llvm::make_unique<MemIndex>()), FSProvider(FSProvider),
+    : SwapIndex(std::make_unique<MemIndex>()), FSProvider(FSProvider),
       CDB(CDB), BackgroundContext(std::move(BackgroundContext)),
       Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
@@ -300,10 +300,10 @@ void BackgroundIndex::update(
       Refs.insert(RefToIDs[R], *R);
     for (const auto *Rel : FileIt.second.Relations)
       Relations.insert(*Rel);
-    auto SS = llvm::make_unique<SymbolSlab>(std::move(Syms).build());
-    auto RS = llvm::make_unique<RefSlab>(std::move(Refs).build());
-    auto RelS = llvm::make_unique<RelationSlab>(std::move(Relations).build());
-    auto IG = llvm::make_unique<IncludeGraph>(
+    auto SS = std::make_unique<SymbolSlab>(std::move(Syms).build());
+    auto RS = std::make_unique<RefSlab>(std::move(Refs).build());
+    auto RelS = std::make_unique<RelationSlab>(std::move(Relations).build());
+    auto IG = std::make_unique<IncludeGraph>(
         getSubGraph(URI::create(Path), Index.Sources.getValue()));
 
     // We need to store shards before updating the index, since the latter
@@ -466,14 +466,14 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
         continue;
       auto SS =
           LS.Shard->Symbols
-              ? llvm::make_unique<SymbolSlab>(std::move(*LS.Shard->Symbols))
+              ? std::make_unique<SymbolSlab>(std::move(*LS.Shard->Symbols))
               : nullptr;
       auto RS = LS.Shard->Refs
-                    ? llvm::make_unique<RefSlab>(std::move(*LS.Shard->Refs))
+                    ? std::make_unique<RefSlab>(std::move(*LS.Shard->Refs))
                     : nullptr;
       auto RelS =
           LS.Shard->Relations
-              ? llvm::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
+              ? std::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
               : nullptr;
       ShardVersion &SV = ShardVersions[LS.AbsolutePath];
       SV.Digest = LS.Digest;

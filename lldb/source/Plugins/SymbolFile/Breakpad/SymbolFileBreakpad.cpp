@@ -590,7 +590,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
          "How did we create compile units without a base address?");
 
   SupportFileMap map;
-  data.line_table_up = llvm::make_unique<LineTable>(&cu);
+  data.line_table_up = std::make_unique<LineTable>(&cu);
   std::unique_ptr<LineSequence> line_seq_up(
       data.line_table_up->CreateLineSequenceContainer());
   llvm::Optional<addr_t> next_addr;

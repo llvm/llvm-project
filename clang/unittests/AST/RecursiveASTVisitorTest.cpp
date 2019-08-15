@@ -42,7 +42,7 @@ public:
       llvm::function_ref<void(ASTContext &CTx)> Process;
     };
 
-    return llvm::make_unique<Consumer>(Process);
+    return std::make_unique<Consumer>(Process);
   }
 
 private:

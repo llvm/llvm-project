@@ -308,7 +308,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   Triple TargetTriple(TargetTripleStr);
 
   // Create a new module.
-  std::unique_ptr<Module> M = make_unique<Module>("CygMingHelper", Context);
+  std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTripleStr);
 
   // Create an empty function named "__main".
@@ -744,7 +744,7 @@ int runOrcLazyJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
-  orc::ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
+  orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
   SMDiagnostic Err;
   auto MainModule = parseIRFile(InputFile, Err, *TSCtx.getContext());
   if (!MainModule)
@@ -962,6 +962,6 @@ std::unique_ptr<FDRawChannel> launchRemote() {
   close(PipeFD[1][1]);
 
   // Return an RPC channel connected to our end of the pipes.
-  return llvm::make_unique<FDRawChannel>(PipeFD[1][0], PipeFD[0][1]);
+  return std::make_unique<FDRawChannel>(PipeFD[1][0], PipeFD[0][1]);
 #endif
 }

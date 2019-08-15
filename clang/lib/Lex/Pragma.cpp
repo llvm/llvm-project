@@ -183,7 +183,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
       assert(!Tokens.empty() && "collected unexpected number of tokens");
 
       // Push the ( "string" ) tokens into the token stream.
-      auto Toks = llvm::make_unique<Token[]>(Tokens.size());
+      auto Toks = std::make_unique<Token[]>(Tokens.size());
       std::copy(Tokens.begin() + 1, Tokens.end(), Toks.get());
       Toks[Tokens.size() - 1] = Tok;
       Self.EnterTokenStream(std::move(Toks), Tokens.size(),

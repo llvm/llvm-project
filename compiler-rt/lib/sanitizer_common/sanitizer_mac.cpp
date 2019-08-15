@@ -64,7 +64,9 @@ extern "C" {
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
+#include <spawn.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
@@ -239,27 +241,84 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                       (size_t)newlen);
 }
 
-int internal_forkpty(int *aparent) {
-  int parent, worker;
-  if (openpty(&parent, &worker, nullptr, nullptr, nullptr) == -1) return -1;
-  int pid = internal_fork();
-  if (pid == -1) {
-    close(parent);
-    close(worker);
-    return -1;
+static fd_t internal_spawn_impl(const char *argv[], pid_t *pid) {
+  fd_t master_fd = kInvalidFd;
+  fd_t slave_fd = kInvalidFd;
+
+  auto fd_closer = at_scope_exit([&] {
+    internal_close(master_fd);
+    internal_close(slave_fd);
+  });
+
+  // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
+  // in particular detects when it's talking to a pipe and forgets to flush the
+  // output stream after sending a response.
+  master_fd = posix_openpt(O_RDWR);
+  if (master_fd == kInvalidFd) return kInvalidFd;
+
+  int res = grantpt(master_fd) || unlockpt(master_fd);
+  if (res != 0) return kInvalidFd;
+
+  // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
+  char slave_pty_name[128];
+  res = ioctl(master_fd, TIOCPTYGNAME, slave_pty_name);
+  if (res == -1) return kInvalidFd;
+
+  slave_fd = internal_open(slave_pty_name, O_RDWR);
+  if (slave_fd == kInvalidFd) return kInvalidFd;
+
+  posix_spawn_file_actions_t acts;
+  res = posix_spawn_file_actions_init(&acts);
+  if (res != 0) return kInvalidFd;
+
+  auto fa_cleanup = at_scope_exit([&] {
+    posix_spawn_file_actions_destroy(&acts);
+  });
+
+  char **env = GetEnviron();
+  res = posix_spawn_file_actions_adddup2(&acts, slave_fd, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, slave_fd, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, slave_fd) ||
+        posix_spawn_file_actions_addclose(&acts, master_fd) ||
+        posix_spawn(pid, argv[0], &acts, NULL, const_cast<char **>(argv), env);
+  if (res != 0) return kInvalidFd;
+
+  // Disable echo in the new terminal, disable CR.
+  struct termios termflags;
+  tcgetattr(master_fd, &termflags);
+  termflags.c_oflag &= ~ONLCR;
+  termflags.c_lflag &= ~ECHO;
+  tcsetattr(master_fd, TCSANOW, &termflags);
+
+  // On success, do not close master_fd on scope exit.
+  fd_t fd = master_fd;
+  master_fd = kInvalidFd;
+
+  return fd;
+}
+
+fd_t internal_spawn(const char *argv[], pid_t *pid) {
+  // The client program may close its stdin and/or stdout and/or stderr thus
+  // allowing open/posix_openpt to reuse file descriptors 0, 1 or 2. In this
+  // case the communication is broken if either the parent or the child tries to
+  // close or duplicate these descriptors. We temporarily reserve these
+  // descriptors here to prevent this.
+  fd_t low_fds[3];
+  size_t count = 0;
+
+  for (; count < 3; count++) {
+    low_fds[count] = posix_openpt(O_RDWR);
+    if (low_fds[count] >= STDERR_FILENO)
+      break;
   }
-  if (pid == 0) {
-    close(parent);
-    if (login_tty(worker) != 0) {
-      // We already forked, there's not much we can do.  Let's quit.
-      Report("login_tty failed (errno %d)\n", errno);
-      internal__exit(1);
-    }
-  } else {
-    *aparent = parent;
-    close(worker);
+
+  fd_t fd = internal_spawn_impl(argv, pid);
+
+  for (; count > 0; count--) {
+    internal_close(low_fds[count]);
   }
-  return pid;
+
+  return fd;
 }
 
 uptr internal_rename(const char *oldpath, const char *newpath) {

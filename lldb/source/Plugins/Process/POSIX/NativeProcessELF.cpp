@@ -21,7 +21,7 @@ NativeProcessELF::GetAuxValue(enum AuxVector::EntryType type) {
     DataExtractor auxv_data(buffer_or_error.get()->getBufferStart(),
                             buffer_or_error.get()->getBufferSize(),
                             GetByteOrder(), GetAddressByteSize());
-    m_aux_vector = llvm::make_unique<AuxVector>(auxv_data);
+    m_aux_vector = std::make_unique<AuxVector>(auxv_data);
   }
 
   return m_aux_vector->GetAuxValue(type);

@@ -1,0 +1,314 @@
+## Show that llvm-readobj prints MachO all section types properly.
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+# CHECK:  Type: Regular (0x0)
+# CHECK:  Type: ZeroFill (0x1)
+# CHECK:  Type: CStringLiterals (0x2)
+# CHECK:  Type: 4ByteLiterals (0x3)
+# CHECK:  Type: 8ByteLiterals (0x4)
+# CHECK:  Type: LiteralPointers (0x5)
+# CHECK:  Type: NonLazySymbolPointers (0x6)
+# CHECK:  Type: LazySymbolPointers (0x7)
+# CHECK:  Type: SymbolStubs (0x8)
+# CHECK:  Type: ModInitFuncPointers (0x9)
+# CHECK:  Type: ModTermFuncPointers (0xA)
+# CHECK:  Type: Coalesced (0xB)
+# CHECK:  Type: GBZeroFill (0xC)
+# CHECK:  Type: Interposing (0xD)
+# CHECK:  Type: 16ByteLiterals (0xE)
+# CHECK:  Type: DTraceDOF (0xF)
+# CHECK:  Type: LazyDylibSymbolPointers (0x10)
+# CHECK:  Type: ThreadLocalRegular (0x11)
+# CHECK:  Type: ThreadLocalZerofill (0x12)
+# CHECK:  Type: ThreadLocalVariables (0x13)
+# CHECK:  Type: ThreadLocalVariablePointers (0x14)
+# CHECK:  Type: ThreadLocalInitFunctionPointers (0x15)
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      1832
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         1832
+    segname:         ''
+    vmaddr:          0x0000000000001000
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        7
+    nsects:          22
+    flags:           0
+    Sections:
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000001
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000003
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000004
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000005
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000006
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000007
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000008
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000009
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000a
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000b
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000c
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000d
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000e
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000f
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000010
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000011
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000012
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000013
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000014
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000015
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
