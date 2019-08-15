@@ -1006,18 +1006,13 @@ struct PragmaLoopHintInfo {
 } // end anonymous namespace
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
-  std::string PragmaString;
-  if (PragmaName.getIdentifierInfo()->getName() == "loop") {
-    PragmaString = "clang loop ";
-    PragmaString += Option.getIdentifierInfo()->getName();
-  } else if (PragmaName.getIdentifierInfo()->getName() == "unroll_and_jam") {
-    PragmaString = "unroll_and_jam";
-  } else {
-    assert(PragmaName.getIdentifierInfo()->getName() == "unroll" &&
-           "Unexpected pragma name");
-    PragmaString = "unroll";
-  }
-  return PragmaString;
+  StringRef Str = PragmaName.getIdentifierInfo()->getName();
+  std::string ClangLoopStr = (llvm::Twine("clang loop ") + Str).str();
+  return llvm::StringSwitch<StringRef>(Str)
+      .Case("loop", ClangLoopStr)
+      .Case("unroll_and_jam", Str)
+      .Case("unroll", Str)
+      .Default("");
 }
 
 bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
@@ -1041,12 +1036,12 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // Return a valid hint if pragma unroll or nounroll were specified
   // without an argument.
-  bool PragmaUnroll = PragmaNameInfo->getName() == "unroll";
-  bool PragmaNoUnroll = PragmaNameInfo->getName() == "nounroll";
-  bool PragmaUnrollAndJam = PragmaNameInfo->getName() == "unroll_and_jam";
-  bool PragmaNoUnrollAndJam = PragmaNameInfo->getName() == "nounroll_and_jam";
-  if (Toks.empty() && (PragmaUnroll || PragmaNoUnroll || PragmaUnrollAndJam ||
-                       PragmaNoUnrollAndJam)) {
+  auto IsLoopHint = llvm::StringSwitch<bool>(PragmaNameInfo->getName())
+                        .Cases("unroll", "nounroll", "unroll_and_jam",
+                               "nounroll_and_jam", true)
+                        .Default(false);
+
+  if (Toks.empty() && IsLoopHint) {
     ConsumeAnnotationToken();
     Hint.Range = Info->PragmaName.getLocation();
     return true;

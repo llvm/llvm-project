@@ -180,10 +180,12 @@ public:
   /// to the user. This method allows to rest the location which should be used
   /// for uniquing reports. For example, memory leaks checker, could set this to
   /// the allocation site, rather then the location where the bug is reported.
-  BugReport(BugType& bt, StringRef desc, const ExplodedNode *errornode,
+  BugReport(BugType &bt, StringRef desc, const ExplodedNode *errornode,
             PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique)
       : BT(bt), Description(desc), UniqueingLocation(LocationToUnique),
-        UniqueingDecl(DeclToUnique), ErrorNode(errornode) {}
+        UniqueingDecl(DeclToUnique), ErrorNode(errornode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
   virtual ~BugReport() = default;
 
