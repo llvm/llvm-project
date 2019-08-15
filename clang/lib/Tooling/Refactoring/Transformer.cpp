@@ -98,8 +98,10 @@ static std::vector<DynTypedMatcher> taggedMatchers(
   Matchers.reserve(Cases.size());
   for (const auto &Case : Cases) {
     std::string Tag = (TagBase + Twine(Case.first)).str();
-    auto M = Case.second.Matcher.tryBind(Tag);
-    assert(M && "RewriteRule matchers should be bindable.");
+    // HACK: Many matchers are not bindable, so ensure that tryBind will work.
+    DynTypedMatcher BoundMatcher(Case.second.Matcher);
+    BoundMatcher.setAllowBind(true);
+    auto M = BoundMatcher.tryBind(Tag);
     Matchers.push_back(*std::move(M));
   }
   return Matchers;

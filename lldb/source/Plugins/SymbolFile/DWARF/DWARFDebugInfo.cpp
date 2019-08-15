@@ -38,7 +38,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   if (m_cu_aranges_up)
     return *m_cu_aranges_up;
 
-  m_cu_aranges_up = llvm::make_unique<DWARFDebugAranges>();
+  m_cu_aranges_up = std::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
       m_context.getOrLoadArangesData();
   if (llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data))

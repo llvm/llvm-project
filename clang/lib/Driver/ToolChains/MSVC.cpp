@@ -565,7 +565,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     linkPath = TC.GetProgramPath(Linker.str().c_str());
   }
 
-  auto LinkCmd = llvm::make_unique<Command>(
+  auto LinkCmd = std::make_unique<Command>(
       JA, *this, Args.MakeArgString(linkPath), CmdArgs, Inputs);
   if (!Environment.empty())
     LinkCmd->setEnvironment(Environment);
@@ -695,7 +695,7 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
   CmdArgs.push_back(Fo);
 
   std::string Exec = FindVisualStudioExecutable(getToolChain(), "cl.exe");
-  return llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
+  return std::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
                                     CmdArgs, Inputs);
 }
 

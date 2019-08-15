@@ -227,7 +227,7 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   ClangMoveContext MoveContext = {Spec, FileToReplacements, WorkingDir, "LLVM",
                                   Reporter != nullptr};
 
-  auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
+  auto Factory = std::make_unique<clang::move::ClangMoveActionFactory>(
       &MoveContext, Reporter);
 
  // std::string IncludeArg = Twine("-I" + WorkingDir;

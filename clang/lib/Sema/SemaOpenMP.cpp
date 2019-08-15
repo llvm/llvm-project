@@ -2049,7 +2049,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<VarDeclFilterCCC>(*this);
+    return std::make_unique<VarDeclFilterCCC>(*this);
   }
 
 };
@@ -2071,7 +2071,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<VarOrFuncDeclFilterCCC>(*this);
+    return std::make_unique<VarOrFuncDeclFilterCCC>(*this);
   }
 };
 
@@ -4709,6 +4709,54 @@ StmtResult Sema::ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
 }
 
 namespace {
+/// Iteration space of a single for loop.
+struct LoopIterationSpace final {
+  /// True if the condition operator is the strict compare operator (<, > or
+  /// !=).
+  bool IsStrictCompare = false;
+  /// Condition of the loop.
+  Expr *PreCond = nullptr;
+  /// This expression calculates the number of iterations in the loop.
+  /// It is always possible to calculate it before starting the loop.
+  Expr *NumIterations = nullptr;
+  /// The loop counter variable.
+  Expr *CounterVar = nullptr;
+  /// Private loop counter variable.
+  Expr *PrivateCounterVar = nullptr;
+  /// This is initializer for the initial value of #CounterVar.
+  Expr *CounterInit = nullptr;
+  /// This is step for the #CounterVar used to generate its update:
+  /// #CounterVar = #CounterInit + #CounterStep * CurrentIteration.
+  Expr *CounterStep = nullptr;
+  /// Should step be subtracted?
+  bool Subtract = false;
+  /// Source range of the loop init.
+  SourceRange InitSrcRange;
+  /// Source range of the loop condition.
+  SourceRange CondSrcRange;
+  /// Source range of the loop increment.
+  SourceRange IncSrcRange;
+  /// Minimum value that can have the loop control variable. Used to support
+  /// non-rectangular loops. Applied only for LCV with the non-iterator types,
+  /// since only such variables can be used in non-loop invariant expressions.
+  Expr *MinValue = nullptr;
+  /// Maximum value that can have the loop control variable. Used to support
+  /// non-rectangular loops. Applied only for LCV with the non-iterator type,
+  /// since only such variables can be used in non-loop invariant expressions.
+  Expr *MaxValue = nullptr;
+  /// true, if the lower bound depends on the outer loop control var.
+  bool IsNonRectangularLB = false;
+  /// true, if the upper bound depends on the outer loop control var.
+  bool IsNonRectangularUB = false;
+  /// Index of the loop this loop depends on and forms non-rectangular loop
+  /// nest.
+  unsigned LoopDependentIdx = 0;
+  /// Final condition for the non-rectangular loop nest support. It is used to
+  /// check that the number of iterations for this particular counter must be
+  /// finished.
+  Expr *FinalCondition = nullptr;
+};
+
 /// Helper class for checking canonical form of the OpenMP loops and
 /// extracting iteration space of each loop in the loop nest, that will be used
 /// for IR generation.
@@ -4758,6 +4806,9 @@ class OpenMPIterationSpaceChecker {
   Optional<unsigned> CondDependOnLC;
   /// Checks if the provide statement depends on the loop counter.
   Optional<unsigned> doesDependOnLoopCounter(const Stmt *S, bool IsInitializer);
+  /// Original condition required for checking of the exit condition for
+  /// non-rectangular loop.
+  Expr *Condition = nullptr;
 
 public:
   OpenMPIterationSpaceChecker(Sema &SemaRef, DSAStackTy &Stack,
@@ -4789,7 +4840,7 @@ public:
   bool isStrictTestOp() const { return TestIsStrictOp; }
   /// Build the expression to calculate the number of iterations.
   Expr *buildNumIterations(
-      Scope *S, const bool LimitedType,
+      Scope *S, ArrayRef<LoopIterationSpace> ResultIterSpaces, bool LimitedType,
       llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const;
   /// Build the precondition expression for the loops.
   Expr *
@@ -4813,8 +4864,21 @@ public:
                        llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
                        SourceLocation Loc, Expr *Inc = nullptr,
                        OverloadedOperatorKind OOK = OO_Amp);
+  /// Builds the minimum value for the loop counter.
+  std::pair<Expr *, Expr *> buildMinMaxValues(
+      Scope *S, llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const;
+  /// Builds final condition for the non-rectangular loops.
+  Expr *buildFinalCondition(Scope *S) const;
   /// Return true if any expression is dependent.
   bool dependent() const;
+  /// Returns true if the initializer forms non-rectangular loop.
+  bool doesInitDependOnLC() const { return InitDependOnLC.hasValue(); }
+  /// Returns true if the condition forms non-rectangular loop.
+  bool doesCondDependOnLC() const { return CondDependOnLC.hasValue(); }
+  /// Returns index of the loop we depend on (starting from 1), or 0 otherwise.
+  unsigned getLoopDependentIdx() const {
+    return InitDependOnLC.getValueOr(CondDependOnLC.getValueOr(0));
+  }
 
 private:
   /// Check the right-hand side of an assignment in the increment
@@ -5013,9 +5077,9 @@ public:
     return false;
   }
   bool VisitStmt(const Stmt *S) {
-    bool Res = true;
+    bool Res = false;
     for (const Stmt *Child : S->children())
-      Res = Child && Visit(Child) && Res;
+      Res = (Child && Visit(Child)) || Res;
     return Res;
   }
   explicit LoopCounterRefChecker(Sema &SemaRef, DSAStackTy &Stack,
@@ -5165,6 +5229,7 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
     SemaRef.Diag(DefaultLoc, diag::err_omp_loop_not_canonical_cond) << LCDecl;
     return true;
   }
+  Condition = S;
   S = getExprAsWritten(S);
   SourceLocation CondLoc = S->getBeginLoc();
   if (auto *BO = dyn_cast<BinaryOperator>(S)) {
@@ -5351,15 +5416,177 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
 
 /// Build the expression to calculate the number of iterations.
 Expr *OpenMPIterationSpaceChecker::buildNumIterations(
-    Scope *S, const bool LimitedType,
+    Scope *S, ArrayRef<LoopIterationSpace> ResultIterSpaces, bool LimitedType,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
   ExprResult Diff;
   QualType VarType = LCDecl->getType().getNonReferenceType();
   if (VarType->isIntegerType() || VarType->isPointerType() ||
       SemaRef.getLangOpts().CPlusPlus) {
+    Expr *LBVal = LB;
+    Expr *UBVal = UB;
+    // LB = TestIsLessOp.getValue() ? min(LB(MinVal), LB(MaxVal)) :
+    // max(LB(MinVal), LB(MaxVal))
+    if (InitDependOnLC) {
+      const LoopIterationSpace &IS =
+          ResultIterSpaces[ResultIterSpaces.size() - 1 -
+                           InitDependOnLC.getValueOr(
+                               CondDependOnLC.getValueOr(0))];
+      if (!IS.MinValue || !IS.MaxValue)
+        return nullptr;
+      // OuterVar = Min
+      ExprResult MinValue =
+          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
+      if (!MinValue.isUsable())
+        return nullptr;
+
+      ExprResult LBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                               IS.CounterVar, MinValue.get());
+      if (!LBMinVal.isUsable())
+        return nullptr;
+      // OuterVar = Min, LBVal
+      LBMinVal =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMinVal.get(), LBVal);
+      if (!LBMinVal.isUsable())
+        return nullptr;
+      // (OuterVar = Min, LBVal)
+      LBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMinVal.get());
+      if (!LBMinVal.isUsable())
+        return nullptr;
+
+      // OuterVar = Max
+      ExprResult MaxValue =
+          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
+      if (!MaxValue.isUsable())
+        return nullptr;
+
+      ExprResult LBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                               IS.CounterVar, MaxValue.get());
+      if (!LBMaxVal.isUsable())
+        return nullptr;
+      // OuterVar = Max, LBVal
+      LBMaxVal =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMaxVal.get(), LBVal);
+      if (!LBMaxVal.isUsable())
+        return nullptr;
+      // (OuterVar = Max, LBVal)
+      LBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMaxVal.get());
+      if (!LBMaxVal.isUsable())
+        return nullptr;
+
+      Expr *LBMin = tryBuildCapture(SemaRef, LBMinVal.get(), Captures).get();
+      Expr *LBMax = tryBuildCapture(SemaRef, LBMaxVal.get(), Captures).get();
+      if (!LBMin || !LBMax)
+        return nullptr;
+      // LB(MinVal) < LB(MaxVal)
+      ExprResult MinLessMaxRes =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_LT, LBMin, LBMax);
+      if (!MinLessMaxRes.isUsable())
+        return nullptr;
+      Expr *MinLessMax =
+          tryBuildCapture(SemaRef, MinLessMaxRes.get(), Captures).get();
+      if (!MinLessMax)
+        return nullptr;
+      if (TestIsLessOp.getValue()) {
+        // LB(MinVal) < LB(MaxVal) ? LB(MinVal) : LB(MaxVal) - min(LB(MinVal),
+        // LB(MaxVal))
+        ExprResult MinLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
+                                                      MinLessMax, LBMin, LBMax);
+        if (!MinLB.isUsable())
+          return nullptr;
+        LBVal = MinLB.get();
+      } else {
+        // LB(MinVal) < LB(MaxVal) ? LB(MaxVal) : LB(MinVal) - max(LB(MinVal),
+        // LB(MaxVal))
+        ExprResult MaxLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
+                                                      MinLessMax, LBMax, LBMin);
+        if (!MaxLB.isUsable())
+          return nullptr;
+        LBVal = MaxLB.get();
+      }
+    }
+    // UB = TestIsLessOp.getValue() ? max(UB(MinVal), UB(MaxVal)) :
+    // min(UB(MinVal), UB(MaxVal))
+    if (CondDependOnLC) {
+      const LoopIterationSpace &IS =
+          ResultIterSpaces[ResultIterSpaces.size() - 1 -
+                           InitDependOnLC.getValueOr(
+                               CondDependOnLC.getValueOr(0))];
+      if (!IS.MinValue || !IS.MaxValue)
+        return nullptr;
+      // OuterVar = Min
+      ExprResult MinValue =
+          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
+      if (!MinValue.isUsable())
+        return nullptr;
+
+      ExprResult UBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                               IS.CounterVar, MinValue.get());
+      if (!UBMinVal.isUsable())
+        return nullptr;
+      // OuterVar = Min, UBVal
+      UBMinVal =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMinVal.get(), UBVal);
+      if (!UBMinVal.isUsable())
+        return nullptr;
+      // (OuterVar = Min, UBVal)
+      UBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMinVal.get());
+      if (!UBMinVal.isUsable())
+        return nullptr;
+
+      // OuterVar = Max
+      ExprResult MaxValue =
+          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
+      if (!MaxValue.isUsable())
+        return nullptr;
+
+      ExprResult UBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                               IS.CounterVar, MaxValue.get());
+      if (!UBMaxVal.isUsable())
+        return nullptr;
+      // OuterVar = Max, UBVal
+      UBMaxVal =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMaxVal.get(), UBVal);
+      if (!UBMaxVal.isUsable())
+        return nullptr;
+      // (OuterVar = Max, UBVal)
+      UBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMaxVal.get());
+      if (!UBMaxVal.isUsable())
+        return nullptr;
+
+      Expr *UBMin = tryBuildCapture(SemaRef, UBMinVal.get(), Captures).get();
+      Expr *UBMax = tryBuildCapture(SemaRef, UBMaxVal.get(), Captures).get();
+      if (!UBMin || !UBMax)
+        return nullptr;
+      // UB(MinVal) > UB(MaxVal)
+      ExprResult MinGreaterMaxRes =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_GT, UBMin, UBMax);
+      if (!MinGreaterMaxRes.isUsable())
+        return nullptr;
+      Expr *MinGreaterMax =
+          tryBuildCapture(SemaRef, MinGreaterMaxRes.get(), Captures).get();
+      if (!MinGreaterMax)
+        return nullptr;
+      if (TestIsLessOp.getValue()) {
+        // UB(MinVal) > UB(MaxVal) ? UB(MinVal) : UB(MaxVal) - max(UB(MinVal),
+        // UB(MaxVal))
+        ExprResult MaxUB = SemaRef.ActOnConditionalOp(
+            DefaultLoc, DefaultLoc, MinGreaterMax, UBMin, UBMax);
+        if (!MaxUB.isUsable())
+          return nullptr;
+        UBVal = MaxUB.get();
+      } else {
+        // UB(MinVal) > UB(MaxVal) ? UB(MaxVal) : UB(MinVal) - min(UB(MinVal),
+        // UB(MaxVal))
+        ExprResult MinUB = SemaRef.ActOnConditionalOp(
+            DefaultLoc, DefaultLoc, MinGreaterMax, UBMax, UBMin);
+        if (!MinUB.isUsable())
+          return nullptr;
+        UBVal = MinUB.get();
+      }
+    }
     // Upper - Lower
-    Expr *UBExpr = TestIsLessOp.getValue() ? UB : LB;
-    Expr *LBExpr = TestIsLessOp.getValue() ? LB : UB;
+    Expr *UBExpr = TestIsLessOp.getValue() ? UBVal : LBVal;
+    Expr *LBExpr = TestIsLessOp.getValue() ? LBVal : UBVal;
     Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures).get();
     Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures).get();
     if (!Upper || !Lower)
@@ -5446,6 +5673,127 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
   return Diff.get();
 }
 
+std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
+    Scope *S, llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
+  // Do not build for iterators, they cannot be used in non-rectangular loop
+  // nests.
+  if (LCDecl->getType()->isRecordType())
+    return std::make_pair(nullptr, nullptr);
+  // If we subtract, the min is in the condition, otherwise the min is in the
+  // init value.
+  Expr *MinExpr = nullptr;
+  Expr *MaxExpr = nullptr;
+  Expr *LBExpr = TestIsLessOp.getValue() ? LB : UB;
+  Expr *UBExpr = TestIsLessOp.getValue() ? UB : LB;
+  bool LBNonRect = TestIsLessOp.getValue() ? InitDependOnLC.hasValue()
+                                           : CondDependOnLC.hasValue();
+  bool UBNonRect = TestIsLessOp.getValue() ? CondDependOnLC.hasValue()
+                                           : InitDependOnLC.hasValue();
+  Expr *Lower =
+      LBNonRect ? LBExpr : tryBuildCapture(SemaRef, LBExpr, Captures).get();
+  Expr *Upper =
+      UBNonRect ? UBExpr : tryBuildCapture(SemaRef, UBExpr, Captures).get();
+  if (!Upper || !Lower)
+    return std::make_pair(nullptr, nullptr);
+
+  if (TestIsLessOp.getValue())
+    MinExpr = Lower;
+  else
+    MaxExpr = Upper;
+
+  // Build minimum/maximum value based on number of iterations.
+  ExprResult Diff;
+  QualType VarType = LCDecl->getType().getNonReferenceType();
+
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // Upper - Lower [- 1]
+  if (TestIsStrictOp)
+    Diff = SemaRef.BuildBinOp(
+        S, DefaultLoc, BO_Sub, Diff.get(),
+        SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // Upper - Lower [- 1] + Step
+  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
+  if (!NewStep.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // Parentheses (for dumping/debugging purposes only).
+  Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // (Upper - Lower [- 1]) / Step
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // ((Upper - Lower [- 1]) / Step) * Step
+  // Parentheses (for dumping/debugging purposes only).
+  Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Mul, Diff.get(), NewStep.get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // Convert to the original type or ptrdiff_t, if original type is pointer.
+  if (!VarType->isAnyPointerType() &&
+      !SemaRef.Context.hasSameType(Diff.get()->getType(), VarType)) {
+    Diff = SemaRef.PerformImplicitConversion(
+        Diff.get(), VarType, Sema::AA_Converting, /*AllowExplicit=*/true);
+  } else if (VarType->isAnyPointerType() &&
+             !SemaRef.Context.hasSameType(
+                 Diff.get()->getType(),
+                 SemaRef.Context.getUnsignedPointerDiffType())) {
+    Diff = SemaRef.PerformImplicitConversion(
+        Diff.get(), SemaRef.Context.getUnsignedPointerDiffType(),
+        Sema::AA_Converting, /*AllowExplicit=*/true);
+  }
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  // Parentheses (for dumping/debugging purposes only).
+  Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  if (TestIsLessOp.getValue()) {
+    // MinExpr = Lower;
+    // MaxExpr = Lower + (((Upper - Lower [- 1]) / Step) * Step)
+    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Lower, Diff.get());
+    if (!Diff.isUsable())
+      return std::make_pair(nullptr, nullptr);
+    Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue*/ false);
+    if (!Diff.isUsable())
+      return std::make_pair(nullptr, nullptr);
+    MaxExpr = Diff.get();
+  } else {
+    // MaxExpr = Upper;
+    // MinExpr = Upper - (((Upper - Lower [- 1]) / Step) * Step)
+    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Diff.get());
+    if (!Diff.isUsable())
+      return std::make_pair(nullptr, nullptr);
+    Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue*/ false);
+    if (!Diff.isUsable())
+      return std::make_pair(nullptr, nullptr);
+    MinExpr = Diff.get();
+  }
+
+  return std::make_pair(MinExpr, MaxExpr);
+}
+
+Expr *OpenMPIterationSpaceChecker::buildFinalCondition(Scope *S) const {
+  if (InitDependOnLC || CondDependOnLC)
+    return Condition;
+  return nullptr;
+}
+
 Expr *OpenMPIterationSpaceChecker::buildPreCond(
     Scope *S, Expr *Cond,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
@@ -5453,8 +5801,10 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
   bool Suppress = SemaRef.getDiagnostics().getSuppressAllDiagnostics();
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
 
-  ExprResult NewLB = tryBuildCapture(SemaRef, LB, Captures);
-  ExprResult NewUB = tryBuildCapture(SemaRef, UB, Captures);
+  ExprResult NewLB =
+      InitDependOnLC ? LB : tryBuildCapture(SemaRef, LB, Captures);
+  ExprResult NewUB =
+      CondDependOnLC ? UB : tryBuildCapture(SemaRef, UB, Captures);
   if (!NewLB.isUsable() || !NewUB.isUsable())
     return nullptr;
 
@@ -5576,36 +5926,6 @@ Expr *OpenMPIterationSpaceChecker::buildOrderedLoopData(
 
   return Diff.get();
 }
-
-/// Iteration space of a single for loop.
-struct LoopIterationSpace final {
-  /// True if the condition operator is the strict compare operator (<, > or
-  /// !=).
-  bool IsStrictCompare = false;
-  /// Condition of the loop.
-  Expr *PreCond = nullptr;
-  /// This expression calculates the number of iterations in the loop.
-  /// It is always possible to calculate it before starting the loop.
-  Expr *NumIterations = nullptr;
-  /// The loop counter variable.
-  Expr *CounterVar = nullptr;
-  /// Private loop counter variable.
-  Expr *PrivateCounterVar = nullptr;
-  /// This is initializer for the initial value of #CounterVar.
-  Expr *CounterInit = nullptr;
-  /// This is step for the #CounterVar used to generate its update:
-  /// #CounterVar = #CounterInit + #CounterStep * CurrentIteration.
-  Expr *CounterStep = nullptr;
-  /// Should step be subtracted?
-  bool Subtract = false;
-  /// Source range of the loop init.
-  SourceRange InitSrcRange;
-  /// Source range of the loop condition.
-  SourceRange CondSrcRange;
-  /// Source range of the loop increment.
-  SourceRange IncSrcRange;
-};
-
 } // namespace
 
 void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
@@ -5696,7 +6016,7 @@ static bool checkOpenMPIterationSpace(
     unsigned TotalNestedLoopCount, Expr *CollapseLoopCountExpr,
     Expr *OrderedLoopCountExpr,
     Sema::VarsWithInheritedDSAType &VarsWithImplicitDSA,
-    LoopIterationSpace &ResultIterSpace,
+    llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
   // OpenMP [2.6, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
@@ -5774,37 +6094,57 @@ static bool checkOpenMPIterationSpace(
     return HasErrors;
 
   // Build the loop's iteration space representation.
-  ResultIterSpace.PreCond =
+  ResultIterSpaces[CurrentNestedLoopCount].PreCond =
       ISC.buildPreCond(DSA.getCurScope(), For->getCond(), Captures);
-  ResultIterSpace.NumIterations = ISC.buildNumIterations(
-      DSA.getCurScope(),
-      (isOpenMPWorksharingDirective(DKind) ||
-       isOpenMPTaskLoopDirective(DKind) || isOpenMPDistributeDirective(DKind)),
-      Captures);
-  ResultIterSpace.CounterVar = ISC.buildCounterVar(Captures, DSA);
-  ResultIterSpace.PrivateCounterVar = ISC.buildPrivateCounterVar();
-  ResultIterSpace.CounterInit = ISC.buildCounterInit();
-  ResultIterSpace.CounterStep = ISC.buildCounterStep();
-  ResultIterSpace.InitSrcRange = ISC.getInitSrcRange();
-  ResultIterSpace.CondSrcRange = ISC.getConditionSrcRange();
-  ResultIterSpace.IncSrcRange = ISC.getIncrementSrcRange();
-  ResultIterSpace.Subtract = ISC.shouldSubtractStep();
-  ResultIterSpace.IsStrictCompare = ISC.isStrictTestOp();
+  ResultIterSpaces[CurrentNestedLoopCount].NumIterations =
+      ISC.buildNumIterations(DSA.getCurScope(), ResultIterSpaces,
+                             (isOpenMPWorksharingDirective(DKind) ||
+                              isOpenMPTaskLoopDirective(DKind) ||
+                              isOpenMPDistributeDirective(DKind)),
+                             Captures);
+  ResultIterSpaces[CurrentNestedLoopCount].CounterVar =
+      ISC.buildCounterVar(Captures, DSA);
+  ResultIterSpaces[CurrentNestedLoopCount].PrivateCounterVar =
+      ISC.buildPrivateCounterVar();
+  ResultIterSpaces[CurrentNestedLoopCount].CounterInit = ISC.buildCounterInit();
+  ResultIterSpaces[CurrentNestedLoopCount].CounterStep = ISC.buildCounterStep();
+  ResultIterSpaces[CurrentNestedLoopCount].InitSrcRange = ISC.getInitSrcRange();
+  ResultIterSpaces[CurrentNestedLoopCount].CondSrcRange =
+      ISC.getConditionSrcRange();
+  ResultIterSpaces[CurrentNestedLoopCount].IncSrcRange =
+      ISC.getIncrementSrcRange();
+  ResultIterSpaces[CurrentNestedLoopCount].Subtract = ISC.shouldSubtractStep();
+  ResultIterSpaces[CurrentNestedLoopCount].IsStrictCompare =
+      ISC.isStrictTestOp();
+  std::tie(ResultIterSpaces[CurrentNestedLoopCount].MinValue,
+           ResultIterSpaces[CurrentNestedLoopCount].MaxValue) =
+      ISC.buildMinMaxValues(DSA.getCurScope(), Captures);
+  ResultIterSpaces[CurrentNestedLoopCount].FinalCondition =
+      ISC.buildFinalCondition(DSA.getCurScope());
+  ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularLB =
+      ISC.doesInitDependOnLC();
+  ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularUB =
+      ISC.doesCondDependOnLC();
+  ResultIterSpaces[CurrentNestedLoopCount].LoopDependentIdx =
+      ISC.getLoopDependentIdx();
 
-  HasErrors |= (ResultIterSpace.PreCond == nullptr ||
-                ResultIterSpace.NumIterations == nullptr ||
-                ResultIterSpace.CounterVar == nullptr ||
-                ResultIterSpace.PrivateCounterVar == nullptr ||
-                ResultIterSpace.CounterInit == nullptr ||
-                ResultIterSpace.CounterStep == nullptr);
+  HasErrors |=
+      (ResultIterSpaces[CurrentNestedLoopCount].PreCond == nullptr ||
+       ResultIterSpaces[CurrentNestedLoopCount].NumIterations == nullptr ||
+       ResultIterSpaces[CurrentNestedLoopCount].CounterVar == nullptr ||
+       ResultIterSpaces[CurrentNestedLoopCount].PrivateCounterVar == nullptr ||
+       ResultIterSpaces[CurrentNestedLoopCount].CounterInit == nullptr ||
+       ResultIterSpaces[CurrentNestedLoopCount].CounterStep == nullptr);
   if (!HasErrors && DSA.isOrderedRegion()) {
     if (DSA.getOrderedRegionParam().second->getNumForLoops()) {
       if (CurrentNestedLoopCount <
           DSA.getOrderedRegionParam().second->getLoopNumIterations().size()) {
         DSA.getOrderedRegionParam().second->setLoopNumIterations(
-            CurrentNestedLoopCount, ResultIterSpace.NumIterations);
+            CurrentNestedLoopCount,
+            ResultIterSpaces[CurrentNestedLoopCount].NumIterations);
         DSA.getOrderedRegionParam().second->setLoopCounter(
-            CurrentNestedLoopCount, ResultIterSpace.CounterVar);
+            CurrentNestedLoopCount,
+            ResultIterSpaces[CurrentNestedLoopCount].CounterVar);
       }
     }
     for (auto &Pair : DSA.getDoacrossDependClauses()) {
@@ -5821,11 +6161,13 @@ static bool checkOpenMPIterationSpace(
       Expr *CntValue;
       if (Pair.first->getDependencyKind() == OMPC_DEPEND_source)
         CntValue = ISC.buildOrderedLoopData(
-            DSA.getCurScope(), ResultIterSpace.CounterVar, Captures,
+            DSA.getCurScope(),
+            ResultIterSpaces[CurrentNestedLoopCount].CounterVar, Captures,
             Pair.first->getDependencyLoc());
       else
         CntValue = ISC.buildOrderedLoopData(
-            DSA.getCurScope(), ResultIterSpace.CounterVar, Captures,
+            DSA.getCurScope(),
+            ResultIterSpaces[CurrentNestedLoopCount].CounterVar, Captures,
             Pair.first->getDependencyLoc(),
             Pair.second[CurrentNestedLoopCount].first,
             Pair.second[CurrentNestedLoopCount].second);
@@ -5839,10 +6181,12 @@ static bool checkOpenMPIterationSpace(
 /// Build 'VarRef = Start.
 static ExprResult
 buildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc, ExprResult VarRef,
-                 ExprResult Start,
+                 ExprResult Start, bool IsNonRectangularLB,
                  llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
   // Build 'VarRef = Start.
-  ExprResult NewStart = tryBuildCapture(SemaRef, Start.get(), Captures);
+  ExprResult NewStart = IsNonRectangularLB
+                            ? Start.get()
+                            : tryBuildCapture(SemaRef, Start.get(), Captures);
   if (!NewStart.isUsable())
     return ExprError();
   if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
@@ -5863,6 +6207,7 @@ buildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc, ExprResult VarRef,
 static ExprResult buildCounterUpdate(
     Sema &SemaRef, Scope *S, SourceLocation Loc, ExprResult VarRef,
     ExprResult Start, ExprResult Iter, ExprResult Step, bool Subtract,
+    bool IsNonRectangularLB,
     llvm::MapVector<const Expr *, DeclRefExpr *> *Captures = nullptr) {
   // Add parentheses (for debugging purposes only).
   Iter = SemaRef.ActOnParenExpr(Loc, Loc, Iter.get());
@@ -5882,8 +6227,12 @@ static ExprResult buildCounterUpdate(
 
   // Try to build 'VarRef = Start, VarRef (+|-)= Iter * Step' or
   // 'VarRef = Start (+|-) Iter * Step'.
-  ExprResult NewStart = Start;
-  if (Captures)
+  if (!Start.isUsable())
+    return ExprError();
+  ExprResult NewStart = SemaRef.ActOnParenExpr(Loc, Loc, Start.get());
+  if (!NewStart.isUsable())
+    return ExprError();
+  if (Captures && !IsNonRectangularLB)
     NewStart = tryBuildCapture(SemaRef, Start.get(), *Captures);
   if (NewStart.isInvalid())
     return ExprError();
@@ -6054,8 +6403,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     if (checkOpenMPIterationSpace(
             DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
             std::max(OrderedLoopCount, NestedLoopCount), CollapseLoopCountExpr,
-            OrderedLoopCountExpr, VarsWithImplicitDSA, IterSpaces[Cnt],
-            Captures))
+            OrderedLoopCountExpr, VarsWithImplicitDSA, IterSpaces, Captures))
       return 0;
     // Move on to the next nested for loop, or to the loop body.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -6068,8 +6416,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     if (checkOpenMPIterationSpace(
             DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
             std::max(OrderedLoopCount, NestedLoopCount), CollapseLoopCountExpr,
-            OrderedLoopCountExpr, VarsWithImplicitDSA, IterSpaces[Cnt],
-            Captures))
+            OrderedLoopCountExpr, VarsWithImplicitDSA, IterSpaces, Captures))
       return 0;
     if (Cnt > 0 && IterSpaces[Cnt].CounterVar) {
       // Handle initialization of captured loop iterator variables.
@@ -6530,6 +6877,9 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.Inits.resize(NestedLoopCount);
   Built.Updates.resize(NestedLoopCount);
   Built.Finals.resize(NestedLoopCount);
+  Built.DependentCounters.resize(NestedLoopCount);
+  Built.DependentInits.resize(NestedLoopCount);
+  Built.FinalsConditions.resize(NestedLoopCount);
   {
     // We implement the following algorithm for obtaining the
     // original loop iteration variable values based on the
@@ -6589,24 +6939,26 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       DeclRefExpr *CounterVar = buildDeclRefExpr(
           SemaRef, VD, IS.CounterVar->getType(), IS.CounterVar->getExprLoc(),
           /*RefersToCapture=*/true);
-      ExprResult Init = buildCounterInit(SemaRef, CurScope, UpdLoc, CounterVar,
-                                         IS.CounterInit, Captures);
+      ExprResult Init =
+          buildCounterInit(SemaRef, CurScope, UpdLoc, CounterVar,
+                           IS.CounterInit, IS.IsNonRectangularLB, Captures);
       if (!Init.isUsable()) {
         HasErrors = true;
         break;
       }
       ExprResult Update = buildCounterUpdate(
           SemaRef, CurScope, UpdLoc, CounterVar, IS.CounterInit, Iter,
-          IS.CounterStep, IS.Subtract, &Captures);
+          IS.CounterStep, IS.Subtract, IS.IsNonRectangularLB, &Captures);
       if (!Update.isUsable()) {
         HasErrors = true;
         break;
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      ExprResult Final = buildCounterUpdate(
-          SemaRef, CurScope, UpdLoc, CounterVar, IS.CounterInit,
-          IS.NumIterations, IS.CounterStep, IS.Subtract, &Captures);
+      ExprResult Final =
+          buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
+                             IS.CounterInit, IS.NumIterations, IS.CounterStep,
+                             IS.Subtract, IS.IsNonRectangularLB, &Captures);
       if (!Final.isUsable()) {
         HasErrors = true;
         break;
@@ -6622,6 +6974,16 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       Built.Inits[Cnt] = Init.get();
       Built.Updates[Cnt] = Update.get();
       Built.Finals[Cnt] = Final.get();
+      Built.DependentCounters[Cnt] = nullptr;
+      Built.DependentInits[Cnt] = nullptr;
+      Built.FinalsConditions[Cnt] = nullptr;
+      if (IS.IsNonRectangularLB) {
+        Built.DependentCounters[Cnt] =
+            Built.Counters[NestedLoopCount - 1 - IS.LoopDependentIdx];
+        Built.DependentInits[Cnt] =
+            Built.Inits[NestedLoopCount - 1 - IS.LoopDependentIdx];
+        Built.FinalsConditions[Cnt] = IS.FinalCondition;
+      }
     }
   }
 
@@ -6634,7 +6996,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.NumIterations = NumIterations.get();
   Built.CalcLastIteration = SemaRef
                                 .ActOnFinishFullExpr(CalcLastIteration.get(),
-                                                     /*DiscardedValue*/ false)
+                                                     /*DiscardedValue=*/false)
                                 .get();
   Built.PreCond = PreCond.get();
   Built.PreInits = buildPreInits(C, Captures);
@@ -12778,9 +13140,9 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     // Build update: Var = InitExpr + IV * Step
     ExprResult Update;
     if (!Info.first)
-      Update =
-          buildCounterUpdate(SemaRef, S, RefExpr->getExprLoc(), *CurPrivate,
-                             InitExpr, IV, Step, /* Subtract */ false);
+      Update = buildCounterUpdate(
+          SemaRef, S, RefExpr->getExprLoc(), *CurPrivate, InitExpr, IV, Step,
+          /*Subtract=*/false, /*IsNonRectangularLB=*/false);
     else
       Update = *CurPrivate;
     Update = SemaRef.ActOnFinishFullExpr(Update.get(), DE->getBeginLoc(),
@@ -12791,7 +13153,8 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     if (!Info.first)
       Final =
           buildCounterUpdate(SemaRef, S, RefExpr->getExprLoc(), CapturedRef,
-                             InitExpr, NumIterations, Step, /*Subtract=*/false);
+                             InitExpr, NumIterations, Step, /*Subtract=*/false,
+                             /*IsNonRectangularLB=*/false);
     else
       Final = *CurPrivate;
     Final = SemaRef.ActOnFinishFullExpr(Final.get(), DE->getBeginLoc(),

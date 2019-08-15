@@ -910,7 +910,8 @@ static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << "DEBUG_LABEL: ";
 
   const DILabel *V = MI->getDebugLabel();
-  if (auto *SP = dyn_cast<DISubprogram>(V->getScope())) {
+  if (auto *SP = dyn_cast<DISubprogram>(
+          V->getScope()->getNonLexicalBlockFileScope())) {
     StringRef Name = SP->getName();
     if (!Name.empty())
       OS << Name << ":";

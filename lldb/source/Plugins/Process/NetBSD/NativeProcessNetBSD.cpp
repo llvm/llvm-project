@@ -659,7 +659,7 @@ NativeThreadNetBSD &NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
   if (m_threads.empty())
     SetCurrentThreadID(thread_id);
 
-  m_threads.push_back(llvm::make_unique<NativeThreadNetBSD>(*this, thread_id));
+  m_threads.push_back(std::make_unique<NativeThreadNetBSD>(*this, thread_id));
   return static_cast<NativeThreadNetBSD &>(*m_threads.back());
 }
 

@@ -469,7 +469,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     if (!AST) {
       llvm::Optional<ParsedAST> NewAST =
           buildAST(FileName, std::move(Invocation), Inputs, NewPreamble);
-      AST = NewAST ? llvm::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
+      AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
       if (!(*AST)) { // buildAST fails.
         TUStatus::BuildDetails Details;
         Details.BuildFailed = true;
@@ -519,10 +519,10 @@ void ASTWorker::runWithAST(
       llvm::Optional<ParsedAST> NewAST =
           Invocation
               ? buildAST(FileName,
-                         llvm::make_unique<CompilerInvocation>(*Invocation),
+                         std::make_unique<CompilerInvocation>(*Invocation),
                          *CurrentInputs, getPossiblyStalePreamble())
               : None;
-      AST = NewAST ? llvm::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
+      AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }
     // Make sure we put the AST back into the LRU cache.
     auto _ = llvm::make_scope_exit(
@@ -832,9 +832,9 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
                          ASTRetentionPolicy RetentionPolicy)
     : CDB(CDB), StorePreamblesInMemory(StorePreamblesInMemory),
       Callbacks(Callbacks ? move(Callbacks)
-                          : llvm::make_unique<ParsingCallbacks>()),
+                          : std::make_unique<ParsingCallbacks>()),
       Barrier(AsyncThreadsCount),
-      IdleASTs(llvm::make_unique<ASTCache>(RetentionPolicy.MaxRetainedASTs)),
+      IdleASTs(std::make_unique<ASTCache>(RetentionPolicy.MaxRetainedASTs)),
       UpdateDebounce(UpdateDebounce) {
   if (0 < AsyncThreadsCount) {
     PreambleTasks.emplace();

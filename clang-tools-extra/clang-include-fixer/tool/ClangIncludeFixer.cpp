@@ -161,7 +161,7 @@ std::unique_ptr<include_fixer::SymbolIndexManager>
 createSymbolIndexManager(StringRef FilePath) {
   using find_all_symbols::SymbolInfo;
 
-  auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
+  auto SymbolIndexMgr = std::make_unique<include_fixer::SymbolIndexManager>();
   switch (DatabaseFormat) {
   case fixed: {
     // Parse input and fill the database with it.
@@ -185,7 +185,7 @@ createSymbolIndexManager(StringRef FilePath) {
                                  /*Used=*/0)});
     }
     SymbolIndexMgr->addSymbolIndex([=]() {
-      return llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols);
+      return std::make_unique<include_fixer::InMemorySymbolIndex>(Symbols);
     });
     break;
   }

@@ -9520,23 +9520,9 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       // it to i32 first.
       if (EltVT == MVT::i16 || EltVT == MVT::i8) {
         Item = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Item);
-        if (VT.getSizeInBits() >= 256) {
-          MVT ShufVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
-          if (Subtarget.hasAVX()) {
-            Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, ShufVT, Item);
-            Item = getShuffleVectorZeroOrUndef(Item, 0, true, Subtarget, DAG);
-          } else {
-            // Without AVX, we need to extend to a 128-bit vector and then
-            // insert into the 256-bit vector.
-            Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Item);
-            SDValue ZeroVec = getZeroVector(ShufVT, Subtarget, DAG, dl);
-            Item = insert128BitVector(ZeroVec, Item, 0, DAG, dl);
-          }
-        } else {
-          assert(VT.is128BitVector() && "Expected an SSE value type!");
-          Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Item);
-          Item = getShuffleVectorZeroOrUndef(Item, 0, true, Subtarget, DAG);
-        }
+        MVT ShufVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
+        Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, ShufVT, Item);
+        Item = getShuffleVectorZeroOrUndef(Item, 0, true, Subtarget, DAG);
         return DAG.getBitcast(VT, Item);
       }
     }

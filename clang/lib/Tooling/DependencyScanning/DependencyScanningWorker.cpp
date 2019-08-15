@@ -116,7 +116,7 @@ public:
     // invocation to the collector. The options in the invocation are reset,
     // which ensures that the compiler won't create new dependency collectors,
     // and thus won't write out the extra '.d' files to disk.
-    auto Opts = llvm::make_unique<DependencyOutputOptions>(
+    auto Opts = std::make_unique<DependencyOutputOptions>(
         std::move(Compiler.getInvocation().getDependencyOutputOpts()));
     // We need at least one -MT equivalent for the generator to work.
     if (Opts->Targets.empty())
@@ -124,7 +124,7 @@ public:
     Compiler.addDependencyCollector(std::make_shared<DependencyPrinter>(
         std::move(Opts), DependencyFileContents));
 
-    auto Action = llvm::make_unique<PreprocessOnlyAction>();
+    auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();

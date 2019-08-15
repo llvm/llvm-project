@@ -2303,7 +2303,7 @@ reformat(const FormatStyle &Style, StringRef Code,
   });
 
   auto Env =
-      llvm::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
+      std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
                                      NextStartColumn, LastStartColumn);
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
@@ -2317,7 +2317,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       Penalty += PassFixes.second;
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
-        Env = llvm::make_unique<Environment>(
+        Env = std::make_unique<Environment>(
             *CurrentCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges),
             FirstStartColumn, NextStartColumn, LastStartColumn);

@@ -167,7 +167,7 @@ public:
   const ProgramStateRef &getState() const { return State; }
 
   template <typename T>
-  Optional<T> getLocationAs() const LLVM_LVALUE_FUNCTION {
+  Optional<T> getLocationAs() const & {
     return Location.getAs<T>();
   }
 
@@ -337,7 +337,7 @@ public:
     bool IsSink = false);
 
   std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
-    return llvm::make_unique<ExplodedGraph>();
+    return std::make_unique<ExplodedGraph>();
   }
 
   /// addRoot - Add an untyped node to the set of roots.

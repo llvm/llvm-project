@@ -144,7 +144,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   // Allocate a new module.
-  auto NewModule = llvm::make_unique<ModuleFile>(Type, Generation);
+  auto NewModule = std::make_unique<ModuleFile>(Type, Generation);
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName.str();
   NewModule->File = Entry;

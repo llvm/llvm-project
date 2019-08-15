@@ -173,7 +173,7 @@ bool MacroRepeatedPPCallbacks::hasSideEffects(
 
 void MacroRepeatedSideEffectsCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(::llvm::make_unique<MacroRepeatedPPCallbacks>(*this, *PP));
+  PP->addPPCallbacks(::std::make_unique<MacroRepeatedPPCallbacks>(*this, *PP));
 }
 
 } // namespace bugprone

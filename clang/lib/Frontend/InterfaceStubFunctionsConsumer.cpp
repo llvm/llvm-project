@@ -366,13 +366,13 @@ public:
 std::unique_ptr<ASTConsumer>
 GenerateInterfaceYAMLExpV1Action::CreateASTConsumer(CompilerInstance &CI,
                                                     StringRef InFile) {
-  return llvm::make_unique<InterfaceStubFunctionsConsumer>(
+  return std::make_unique<InterfaceStubFunctionsConsumer>(
       CI, InFile, "experimental-yaml-elf-v1");
 }
 
 std::unique_ptr<ASTConsumer>
 GenerateInterfaceTBEExpV1Action::CreateASTConsumer(CompilerInstance &CI,
                                                    StringRef InFile) {
-  return llvm::make_unique<InterfaceStubFunctionsConsumer>(
+  return std::make_unique<InterfaceStubFunctionsConsumer>(
       CI, InFile, "experimental-tapi-elf-v1");
 }

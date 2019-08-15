@@ -688,24 +688,24 @@ TEST(Matcher, BindMatchedNodes) {
   DeclarationMatcher ClassX = has(recordDecl(hasName("::X")).bind("x"));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class X {};",
-                                       ClassX, llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("x")));
+                                       ClassX, std::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("x")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class X {};",
-                                        ClassX, llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("other-id")));
+                                        ClassX, std::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("other-id")));
 
   TypeMatcher TypeAHasClassB = hasDeclaration(
     recordDecl(hasName("A"), has(recordDecl(hasName("B")).bind("b"))));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { public: A *a; class B {}; };",
                                        TypeAHasClassB,
-                                       llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+                                       std::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
 
   StatementMatcher MethodX =
     callExpr(callee(cxxMethodDecl(hasName("x")))).bind("x");
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { void x() { x(); } };",
                                        MethodX,
-                                       llvm::make_unique<VerifyIdIsBoundTo<CXXMemberCallExpr>>("x")));
+                                       std::make_unique<VerifyIdIsBoundTo<CXXMemberCallExpr>>("x")));
 }
 
 TEST(Matcher, BindTheSameNameInAlternatives) {
@@ -722,7 +722,7 @@ TEST(Matcher, BindTheSameNameInAlternatives) {
     // The second branch binds x to f() and succeeds.
     "int f() { return 0 + f(); }",
     matcher,
-    llvm::make_unique<VerifyIdIsBoundTo<CallExpr>>("x")));
+    std::make_unique<VerifyIdIsBoundTo<CallExpr>>("x")));
 }
 
 TEST(Matcher, BindsIDForMemoizedResults) {
@@ -734,7 +734,7 @@ TEST(Matcher, BindsIDForMemoizedResults) {
     DeclarationMatcher(anyOf(
       recordDecl(hasName("A"), hasDescendant(ClassX)),
       recordDecl(hasName("B"), hasDescendant(ClassX)))),
-    llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 2)));
+    std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 2)));
 }
 
 TEST(HasType, MatchesAsString) {
@@ -784,7 +784,7 @@ TEST(Matcher, NestedOverloadedOperatorCalls) {
       "Y& operator&&(Y& x, Y& y) { return x; }; "
       "Y a; Y b; Y c; Y d = a && b && c;",
     cxxOperatorCallExpr(hasOverloadedOperatorName("&&")).bind("x"),
-    llvm::make_unique<VerifyIdIsBoundTo<CXXOperatorCallExpr>>("x", 2)));
+    std::make_unique<VerifyIdIsBoundTo<CXXOperatorCallExpr>>("x", 2)));
   EXPECT_TRUE(matches("class Y { }; "
                         "Y& operator&&(Y& x, Y& y) { return x; }; "
                         "Y a; Y b; Y c; Y d = a && b && c;",
@@ -1817,7 +1817,7 @@ TEST(EachOf, TriggersForEachMatch) {
     "class A { int a; int b; };",
     recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                       has(fieldDecl(hasName("b")).bind("v")))),
-    llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
+    std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
 }
 
 TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
@@ -1825,12 +1825,12 @@ TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
     "class A { int a; int c; };",
     recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                       has(fieldDecl(hasName("b")).bind("v")))),
-    llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
+    std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "class A { int c; int b; };",
     recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                       has(fieldDecl(hasName("b")).bind("v")))),
-    llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
+    std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
   EXPECT_TRUE(notMatches(
     "class A { int c; int d; };",
     recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
@@ -2337,7 +2337,7 @@ TEST(EqualsBoundNodeMatcher, UsingForEachDescendant) {
                  forEachDescendant(varDecl(hasType(
                    qualType(equalsBoundNode("type")))).bind("decl"))),
     // Only i and j should match, not k.
-    llvm::make_unique<VerifyIdIsBoundTo<VarDecl>>("decl", 2)));
+    std::make_unique<VerifyIdIsBoundTo<VarDecl>>("decl", 2)));
 }
 
 TEST(EqualsBoundNodeMatcher, FiltersMatchedCombinations) {
@@ -2350,7 +2350,7 @@ TEST(EqualsBoundNodeMatcher, FiltersMatchedCombinations) {
     functionDecl(
       hasName("f"), forEachDescendant(varDecl().bind("d")),
       forEachDescendant(declRefExpr(to(decl(equalsBoundNode("d")))))),
-    llvm::make_unique<VerifyIdIsBoundTo<VarDecl>>("d", 5)));
+    std::make_unique<VerifyIdIsBoundTo<VarDecl>>("d", 5)));
 }
 
 TEST(EqualsBoundNodeMatcher, UnlessDescendantsOfAncestorsMatch) {
@@ -2367,7 +2367,7 @@ TEST(EqualsBoundNodeMatcher, UnlessDescendantsOfAncestorsMatch) {
         callee(cxxMethodDecl(anyOf(hasName("size"), hasName("length")))),
         on(declRefExpr(to(varDecl(equalsBoundNode("var")))))))))))
       .bind("data"),
-    llvm::make_unique<VerifyIdIsBoundTo<Expr>>("data", 1)));
+    std::make_unique<VerifyIdIsBoundTo<Expr>>("data", 1)));
 
   EXPECT_FALSE(matches(
     "struct StringRef { int size() const; const char* data() const; };"

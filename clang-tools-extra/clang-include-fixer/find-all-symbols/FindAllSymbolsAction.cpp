@@ -27,7 +27,7 @@ std::unique_ptr<ASTConsumer>
 FindAllSymbolsAction::CreateASTConsumer(CompilerInstance &Compiler,
                                         StringRef InFile) {
   Compiler.getPreprocessor().addCommentHandler(&Handler);
-  Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllMacros>(
+  Compiler.getPreprocessor().addPPCallbacks(std::make_unique<FindAllMacros>(
       Reporter, &Compiler.getSourceManager(), &Collector));
   return MatchFinder.newASTConsumer();
 }

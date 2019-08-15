@@ -103,7 +103,7 @@ void RestrictedIncludesPPCallbacks::EndOfMainFile() {
 void RestrictSystemIncludesCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
-      llvm::make_unique<RestrictedIncludesPPCallbacks>(*this, SM));
+      std::make_unique<RestrictedIncludesPPCallbacks>(*this, SM));
 }
 
 void RestrictSystemIncludesCheck::storeOptions(

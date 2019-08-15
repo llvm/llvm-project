@@ -356,7 +356,7 @@ public:
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<DefaultFilterCCC>(*this);
+    return std::make_unique<DefaultFilterCCC>(*this);
   }
 };
 
@@ -369,7 +369,7 @@ public:
     return candidate.getCorrectionDeclAs<C>();
   }
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<DeclFilterCCC>(*this);
+    return std::make_unique<DeclFilterCCC>(*this);
   }
 };
 
@@ -384,7 +384,7 @@ public:
 
   bool ValidateCandidate(const TypoCorrection &candidate) override;
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<FunctionCallFilterCCC>(*this);
+    return std::make_unique<FunctionCallFilterCCC>(*this);
   }
 
 private:
@@ -409,7 +409,7 @@ public:
     return false;
   }
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<NoTypoCorrectionCCC>(*this);
+    return std::make_unique<NoTypoCorrectionCCC>(*this);
   }
 };
 

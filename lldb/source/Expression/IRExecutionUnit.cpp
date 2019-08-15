@@ -316,7 +316,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   };
 
   if (process_sp->GetTarget().GetEnableSaveObjects()) {
-    m_object_cache_up = llvm::make_unique<ObjectDumper>();
+    m_object_cache_up = std::make_unique<ObjectDumper>();
     m_execution_engine_up->setObjectCache(m_object_cache_up.get());
   }
 

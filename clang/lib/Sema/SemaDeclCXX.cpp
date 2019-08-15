@@ -3944,7 +3944,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<MemInitializerValidatorCCC>(*this);
+    return std::make_unique<MemInitializerValidatorCCC>(*this);
   }
 
 private:
@@ -9504,7 +9504,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<NamespaceValidatorCCC>(*this);
+    return std::make_unique<NamespaceValidatorCCC>(*this);
   }
 };
 
@@ -10083,7 +10083,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<UsingValidatorCCC>(*this);
+    return std::make_unique<UsingValidatorCCC>(*this);
   }
 
 private:

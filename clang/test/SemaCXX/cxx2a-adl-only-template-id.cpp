@@ -65,3 +65,11 @@ void xf(g<int> x); // expected-error {{variable has incomplete type 'void'}} exp
 struct B : g<int> { // expected-error {{expected class name}}
   B() : g<int>() {} // expected-error {{expected class member or base class name}}
 };
+
+namespace vector_components {
+  typedef __attribute__((__ext_vector_type__(2))) float vector_float2;
+  bool foo123(vector_float2 &A, vector_float2 &B)
+  {
+    return A.x < B.x && B.y > A.y;
+  }
+}

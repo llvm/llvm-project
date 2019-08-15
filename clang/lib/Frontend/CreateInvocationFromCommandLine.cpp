@@ -94,7 +94,7 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   }
 
   const ArgStringList &CCArgs = Cmd.getArguments();
-  auto CI = llvm::make_unique<CompilerInvocation>();
+  auto CI = std::make_unique<CompilerInvocation>();
   if (!CompilerInvocation::CreateFromArgs(*CI,
                                      const_cast<const char **>(CCArgs.data()),
                                      const_cast<const char **>(CCArgs.data()) +

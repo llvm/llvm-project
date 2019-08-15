@@ -703,7 +703,7 @@ public:
 protected:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-    return llvm::make_unique<CollectEntitiesConsumer>(
+    return std::make_unique<CollectEntitiesConsumer>(
         Entities, PPTracker, CI.getPreprocessor(), InFile, HadErrors);
   }
 
@@ -793,7 +793,7 @@ public:
 protected:
   std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-    return llvm::make_unique<CompileCheckConsumer>();
+    return std::make_unique<CompileCheckConsumer>();
   }
 };
 

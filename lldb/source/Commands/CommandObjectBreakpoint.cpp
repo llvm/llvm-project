@@ -159,7 +159,7 @@ public:
     {
       if (!m_commands.empty())
       {
-          auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+          auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
         
           for (std::string &str : m_commands)
             cmd_data->user_source.AppendString(str); 

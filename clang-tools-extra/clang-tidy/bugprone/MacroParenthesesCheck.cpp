@@ -250,7 +250,7 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
 void MacroParenthesesCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(llvm::make_unique<MacroParenthesesPPCallbacks>(PP, this));
+  PP->addPPCallbacks(std::make_unique<MacroParenthesesPPCallbacks>(PP, this));
 }
 
 } // namespace bugprone

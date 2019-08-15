@@ -822,10 +822,10 @@ void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
   InputInfo II(types::TY_Object, Output.getFilename(), Output.getFilename());
 
   // First extract the dwo sections.
-  C.addCommand(llvm::make_unique<Command>(JA, T, Exec, ExtractArgs, II));
+  C.addCommand(std::make_unique<Command>(JA, T, Exec, ExtractArgs, II));
 
   // Then remove them from the original .o file.
-  C.addCommand(llvm::make_unique<Command>(JA, T, Exec, StripArgs, II));
+  C.addCommand(std::make_unique<Command>(JA, T, Exec, StripArgs, II));
 }
 
 // Claim options we don't want to warn if they are unused. We do this for

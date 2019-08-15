@@ -125,7 +125,7 @@ void UpgradeGoogletestCaseCheck::registerPPCallbacks(const SourceManager &,
     return;
 
   PP->addPPCallbacks(
-      llvm::make_unique<UpgradeGoogletestCasePPCallback>(this, PP));
+      std::make_unique<UpgradeGoogletestCasePPCallback>(this, PP));
 }
 
 void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {

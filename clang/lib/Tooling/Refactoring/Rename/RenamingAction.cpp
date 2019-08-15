@@ -266,12 +266,12 @@ private:
 };
 
 std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
-  return llvm::make_unique<RenamingASTConsumer>(NewNames, PrevNames, USRList,
+  return std::make_unique<RenamingASTConsumer>(NewNames, PrevNames, USRList,
                                                 FileToReplaces, PrintLocations);
 }
 
 std::unique_ptr<ASTConsumer> QualifiedRenamingAction::newASTConsumer() {
-  return llvm::make_unique<USRSymbolRenamer>(NewNames, USRList, FileToReplaces);
+  return std::make_unique<USRSymbolRenamer>(NewNames, USRList, FileToReplaces);
 }
 
 } // end namespace tooling

@@ -292,7 +292,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
       m_did_load_objfile = true;
-      auto data_up = llvm::make_unique<DataBufferHeap>(size_to_read, 0);
+      auto data_up = std::make_unique<DataBufferHeap>(size_to_read, 0);
       Status readmem_error;
       const size_t bytes_read =
           process_sp->ReadMemory(header_addr, data_up->GetBytes(),
@@ -1297,7 +1297,7 @@ UnwindTable &Module::GetUnwindTable() {
 
 SectionList *Module::GetUnifiedSectionList() {
   if (!m_sections_up)
-    m_sections_up = llvm::make_unique<SectionList>();
+    m_sections_up = std::make_unique<SectionList>();
   return m_sections_up.get();
 }
 

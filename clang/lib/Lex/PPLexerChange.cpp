@@ -128,7 +128,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
                               MacroInfo *Macro, MacroArgs *Args) {
   std::unique_ptr<TokenLexer> TokLexer;
   if (NumCachedTokenLexers == 0) {
-    TokLexer = llvm::make_unique<TokenLexer>(Tok, ILEnd, Macro, Args, *this);
+    TokLexer = std::make_unique<TokenLexer>(Tok, ILEnd, Macro, Args, *this);
   } else {
     TokLexer = std::move(TokenLexerCache[--NumCachedTokenLexers]);
     TokLexer->Init(Tok, ILEnd, Macro, Args);
@@ -180,7 +180,7 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   // Create a macro expander to expand from the specified token stream.
   std::unique_ptr<TokenLexer> TokLexer;
   if (NumCachedTokenLexers == 0) {
-    TokLexer = llvm::make_unique<TokenLexer>(
+    TokLexer = std::make_unique<TokenLexer>(
         Toks, NumToks, DisableMacroExpansion, OwnsTokens, IsReinject, *this);
   } else {
     TokLexer = std::move(TokenLexerCache[--NumCachedTokenLexers]);

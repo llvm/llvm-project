@@ -1603,11 +1603,14 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     LexicalScope *Scope = nullptr;
     const DILabel *Label = cast<DILabel>(IL.first);
+    // The scope could have an extra lexical block file.
+    const DILocalScope *LocalScope =
+        Label->getScope()->getNonLexicalBlockFileScope();
     // Get inlined DILocation if it is inlined label.
     if (const DILocation *IA = IL.second)
-      Scope = LScopes.findInlinedScope(Label->getScope(), IA);
+      Scope = LScopes.findInlinedScope(LocalScope, IA);
     else
-      Scope = LScopes.findLexicalScope(Label->getScope());
+      Scope = LScopes.findLexicalScope(LocalScope);
     // If label scope is not found then skip this label.
     if (!Scope)
       continue;

@@ -342,3 +342,19 @@ void test_vector_literal(inte4 res) {
   inte4 b = (inte4)(a, a); //expected-error{{C-style cast from vector 'inte2' (vector of 2 'int' values) to vector 'inte4' (vector of 4 'int' values) of different size}} //expected-warning{{expression result unused}}
 }
 
+typedef __attribute__((__ext_vector_type__(4))) float vector_float4;
+typedef __attribute__((__ext_vector_type__(4))) int vector_int4;
+
+namespace swizzle_template_confusion {
+  template<typename T> struct xyzw {};
+  vector_int4 foo123(vector_float4 &A, vector_float4 &B) {
+    return A.xyzw < B.x && B.y > A.y; // OK, not a template-id
+  }
+}
+
+namespace swizzle_typo_correction {
+  template<typename T> struct xyzv {};
+  vector_int4 foo123(vector_float4 &A, vector_float4 &B) {
+    return A.xyzw < B.x && B.y > A.y; // OK, not a typo for 'xyzv'
+  }
+}

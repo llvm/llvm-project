@@ -420,13 +420,21 @@ public:
 
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return __libcpp_thread_id_equal(__x.__id_, __y.__id_);}
+        { // don't pass id==0 to underlying routines
+        if (__x.__id_ == 0) return __y.__id_ == 0;
+        if (__y.__id_ == 0) return false;
+        return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
+        }
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT
         {return !(__x == __y);}
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator< (__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return  __libcpp_thread_id_less(__x.__id_, __y.__id_);}
+        { // id==0 is always less than any other thread_id
+        if (__x.__id_ == 0) return __y.__id_ != 0;
+        if (__y.__id_ == 0) return false;
+        return  __libcpp_thread_id_less(__x.__id_, __y.__id_);
+        }
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT
         {return !(__y < __x);}
@@ -438,7 +446,7 @@ public:
         {return !(__x < __y);}
 
     _LIBCPP_INLINE_VISIBILITY
-    void reset() { __id_ = 0; }
+    void __reset() { __id_ = 0; }
     
     template<class _CharT, class _Traits>
     friend

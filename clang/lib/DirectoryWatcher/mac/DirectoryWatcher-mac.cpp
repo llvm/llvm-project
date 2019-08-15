@@ -217,7 +217,7 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
   assert(EventStream && "EventStream expected to be non-null");
 
   std::unique_ptr<DirectoryWatcher> Result =
-      llvm::make_unique<DirectoryWatcherMac>(EventStream, Receiver, Path);
+      std::make_unique<DirectoryWatcherMac>(EventStream, Receiver, Path);
 
   // We need to copy the data so the lifetime is ok after a const copy is made
   // for the block.

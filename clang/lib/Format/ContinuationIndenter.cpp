@@ -1795,7 +1795,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
                                            ? 0
                                            : Current.UnbreakableTailLength;
-      return llvm::make_unique<BreakableStringLiteral>(
+      return std::make_unique<BreakableStringLiteral>(
           Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
           State.Line->InPPDirective, Encoding, Style);
     }
@@ -1807,7 +1807,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
         switchesFormatting(Current)) {
       return nullptr;
     }
-    return llvm::make_unique<BreakableBlockComment>(
+    return std::make_unique<BreakableBlockComment>(
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
         State.Line->InPPDirective, Encoding, Style, Whitespaces.useCRLF());
   } else if (Current.is(TT_LineComment) &&
@@ -1817,7 +1817,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current))
       return nullptr;
-    return llvm::make_unique<BreakableLineCommentSection>(
+    return std::make_unique<BreakableLineCommentSection>(
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
         /*InPPDirective=*/false, Encoding, Style);
   }

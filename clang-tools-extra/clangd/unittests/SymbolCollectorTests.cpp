@@ -258,7 +258,7 @@ public:
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
-    auto Factory = llvm::make_unique<SymbolIndexActionFactory>(
+    auto Factory = std::make_unique<SymbolIndexActionFactory>(
         CollectorOpts, PragmaHandler.get());
 
     std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",

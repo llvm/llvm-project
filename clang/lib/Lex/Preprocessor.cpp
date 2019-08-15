@@ -209,7 +209,7 @@ void Preprocessor::InitializeForModelFile() {
 
   // Reset pragmas
   PragmaHandlersBackup = std::move(PragmaHandlers);
-  PragmaHandlers = llvm::make_unique<PragmaNamespace>(StringRef());
+  PragmaHandlers = std::make_unique<PragmaNamespace>(StringRef());
   RegisterBuiltinPragmas();
 
   // Reset PredefinesFileID
@@ -1129,7 +1129,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   // Allocate a holding buffer for a sequence of tokens and introduce it into
   // the token stream.
   auto EnterTokens = [this](ArrayRef<Token> Toks) {
-    auto ToksCopy = llvm::make_unique<Token[]>(Toks.size());
+    auto ToksCopy = std::make_unique<Token[]>(Toks.size());
     std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
     EnterTokenStream(std::move(ToksCopy), Toks.size(),
                      /*DisableMacroExpansion*/ true, /*IsReinject*/ false);

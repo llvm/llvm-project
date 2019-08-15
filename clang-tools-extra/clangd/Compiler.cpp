@@ -88,7 +88,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());
   }
 
-  auto Clang = llvm::make_unique<CompilerInstance>(
+  auto Clang = std::make_unique<CompilerInstance>(
       std::make_shared<PCHContainerOperations>());
   Clang->setInvocation(std::move(CI));
   Clang->createDiagnostics(&DiagsClient, false);

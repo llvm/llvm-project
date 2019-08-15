@@ -58,7 +58,7 @@ private:
   IRCompileLayer CompileLayer{ES, ObjectLayer, SimpleCompiler(*TM)};
 
   static std::unique_ptr<SectionMemoryManager> createMemMgr() {
-    return llvm::make_unique<SectionMemoryManager>();
+    return std::make_unique<SectionMemoryManager>();
   }
 
   SimpleJIT(

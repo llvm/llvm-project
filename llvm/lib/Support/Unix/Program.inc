@@ -136,7 +136,7 @@ static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
   if (int Err = posix_spawn_file_actions_addopen(
           FileActions, FD, File,
           FD == 0 ? O_RDONLY : O_WRONLY | O_CREAT, 0666))
-    return MakeErrMsg(ErrMsg, "Cannot dup2", Err);
+    return MakeErrMsg(ErrMsg, "Cannot posix_spawn_file_actions_addopen", Err);
   return false;
 }
 #endif

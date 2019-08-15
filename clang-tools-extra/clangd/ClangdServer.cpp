@@ -127,13 +127,13 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // critical paths.
       WorkScheduler(
           CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-          llvm::make_unique<UpdateIndexCallbacks>(
+          std::make_unique<UpdateIndexCallbacks>(
               DynamicIdx.get(), DiagConsumer, Opts.SemanticHighlighting),
           Opts.UpdateDebounce, Opts.RetentionPolicy) {
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
-      MergedIdx.push_back(llvm::make_unique<MergedIndex>(Idx, this->Index));
+      MergedIdx.push_back(std::make_unique<MergedIndex>(Idx, this->Index));
       this->Index = MergedIdx.back().get();
     } else {
       this->Index = Idx;
@@ -142,7 +142,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.StaticIndex)
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
-    BackgroundIdx = llvm::make_unique<BackgroundIndex>(
+    BackgroundIdx = std::make_unique<BackgroundIndex>(
         Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
             [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),

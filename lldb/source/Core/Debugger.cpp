@@ -275,7 +275,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (str.length())
         new_prompt = str;
       GetCommandInterpreter().UpdatePrompt(new_prompt);
-      auto bytes = llvm::make_unique<EventDataBytes>(new_prompt);
+      auto bytes = std::make_unique<EventDataBytes>(new_prompt);
       auto prompt_change_event_sp = std::make_shared<Event>(
           CommandInterpreter::eBroadcastBitResetPrompt, bytes.release());
       GetCommandInterpreter().BroadcastEvent(prompt_change_event_sp);
@@ -704,7 +704,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
-          llvm::make_unique<CommandInterpreter>(*this, false)),
+          std::make_unique<CommandInterpreter>(*this, false)),
       m_script_interpreter_sp(), m_input_reader_stack(), m_instance_name(),
       m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
@@ -1239,7 +1239,7 @@ ScriptInterpreter *Debugger::GetScriptInterpreter(bool can_create) {
 
 SourceManager &Debugger::GetSourceManager() {
   if (!m_source_manager_up)
-    m_source_manager_up = llvm::make_unique<SourceManager>(shared_from_this());
+    m_source_manager_up = std::make_unique<SourceManager>(shared_from_this());
   return *m_source_manager_up;
 }
 

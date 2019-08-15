@@ -294,7 +294,7 @@ std::unique_ptr<Transport> newJSONTransport(std::FILE *In,
                                             llvm::raw_ostream *InMirror,
                                             bool Pretty,
                                             JSONStreamStyle Style) {
-  return llvm::make_unique<JSONTransport>(In, Out, InMirror, Pretty, Style);
+  return std::make_unique<JSONTransport>(In, Out, InMirror, Pretty, Style);
 }
 
 } // namespace clangd

@@ -76,7 +76,7 @@ public:
     if (OptionsParser.getSourcePathList().empty())
       return make_string_error(
           "[StandaloneToolExecutorPlugin] No positional argument found.");
-    return llvm::make_unique<StandaloneToolExecutor>(std::move(OptionsParser));
+    return std::make_unique<StandaloneToolExecutor>(std::move(OptionsParser));
   }
 };
 

@@ -49,7 +49,7 @@ protected:
 
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
-    std::unique_ptr<Preprocessor> PP = llvm::make_unique<Preprocessor>(
+    std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
         std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
         HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,

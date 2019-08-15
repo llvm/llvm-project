@@ -132,7 +132,7 @@ void VforkChecker::reportBug(const char *What, CheckerContext &C,
     if (Details)
       os << "; " << Details;
 
-    auto Report = llvm::make_unique<BugReport>(*BT, os.str(), N);
+    auto Report = std::make_unique<BugReport>(*BT, os.str(), N);
     // TODO: mark vfork call in BugReportVisitor
     C.emitReport(std::move(Report));
   }

@@ -453,7 +453,7 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   const SourceManager &SM = Inputs.AST.getSourceManager();
   if (const SelectionTree::Node *N =
           computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))
-    Target = llvm::make_unique<ExtractionContext>(N, SM, Ctx);
+    Target = std::make_unique<ExtractionContext>(N, SM, Ctx);
   return Target && Target->isExtractable();
 }
 

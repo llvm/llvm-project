@@ -1995,6 +1995,12 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
   for (auto I : D->finals()) {
     Record.AddStmt(I);
   }
+  for (Stmt *S : D->dependent_counters())
+    Record.AddStmt(S);
+  for (Stmt *S : D->dependent_inits())
+    Record.AddStmt(S);
+  for (Stmt *S : D->finals_conditions())
+    Record.AddStmt(S);
 }
 
 void ASTStmtWriter::VisitOMPParallelDirective(OMPParallelDirective *D) {

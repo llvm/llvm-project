@@ -247,7 +247,7 @@ public:
 } // end anonymous namespace
 
 CXDiagnosticSet DiagLoader::load(const char *file) {
-  TopDiags = llvm::make_unique<CXLoadedDiagnosticSetImpl>();
+  TopDiags = std::make_unique<CXLoadedDiagnosticSetImpl>();
 
   std::error_code EC = readDiagnostics(file);
   if (EC) {
@@ -306,7 +306,7 @@ DiagLoader::readRange(const serialized_diags::Location &SDStart,
 }
 
 std::error_code DiagLoader::visitStartOfDiagnostic() {
-  CurrentDiags.push_back(llvm::make_unique<CXLoadedDiagnostic>());
+  CurrentDiags.push_back(std::make_unique<CXLoadedDiagnostic>());
   return std::error_code();
 }
 

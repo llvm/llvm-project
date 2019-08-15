@@ -208,7 +208,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
       SVal ByteOffset = rawOffset.getByteOffset();
       if (isTainted(state, ByteOffset)) {
         reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted,
-                  llvm::make_unique<TaintBugVisitor>(ByteOffset));
+                  std::make_unique<TaintBugVisitor>(ByteOffset));
         return;
       }
     } else if (state_exceedsUpperBound) {
@@ -256,7 +256,7 @@ void ArrayBoundCheckerV2::reportOOB(
     break;
   }
 
-  auto BR = llvm::make_unique<BugReport>(*BT, os.str(), errorNode);
+  auto BR = std::make_unique<BugReport>(*BT, os.str(), errorNode);
   BR->addVisitor(std::move(Visitor));
   checkerContext.emitReport(std::move(BR));
 }

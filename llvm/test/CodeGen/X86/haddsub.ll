@@ -1985,3 +1985,135 @@ define float @hadd32_16_optsize(<16 x float> %x225) optsize {
   %x230 = extractelement <16 x float> %x229, i32 0
   ret float %x230
 }
+
+define float @partial_reduction_fadd_v8f32(<8 x float> %x) {
+; SSE3-SLOW-LABEL: partial_reduction_fadd_v8f32:
+; SSE3-SLOW:       # %bb.0:
+; SSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-SLOW-NEXT:    addps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE3-SLOW-NEXT:    addss %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    retq
+;
+; SSE3-FAST-LABEL: partial_reduction_fadd_v8f32:
+; SSE3-FAST:       # %bb.0:
+; SSE3-FAST-NEXT:    movaps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-FAST-NEXT:    addps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    haddps %xmm1, %xmm1
+; SSE3-FAST-NEXT:    movaps %xmm1, %xmm0
+; SSE3-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: partial_reduction_fadd_v8f32:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vzeroupper
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: partial_reduction_fadd_v8f32:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vzeroupper
+; AVX-FAST-NEXT:    retq
+  %x23 = shufflevector <8 x float> %x, <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0213 = fadd <8 x float> %x, %x23
+  %x13 = shufflevector <8 x float> %x0213, <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0123 = fadd nsz reassoc <8 x float> %x0213, %x13
+  %r = extractelement <8 x float> %x0123, i32 0
+  ret float %r
+}
+
+define float @partial_reduction_fadd_v8f32_wrong_flags(<8 x float> %x) {
+; SSE3-SLOW-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
+; SSE3-SLOW:       # %bb.0:
+; SSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-SLOW-NEXT:    addps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE3-SLOW-NEXT:    addss %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    retq
+;
+; SSE3-FAST-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
+; SSE3-FAST:       # %bb.0:
+; SSE3-FAST-NEXT:    movaps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-FAST-NEXT:    addps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    haddps %xmm1, %xmm1
+; SSE3-FAST-NEXT:    movaps %xmm1, %xmm0
+; SSE3-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vzeroupper
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vzeroupper
+; AVX-FAST-NEXT:    retq
+  %x23 = shufflevector <8 x float> %x, <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0213 = fadd fast <8 x float> %x, %x23
+  %x13 = shufflevector <8 x float> %x0213, <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0123 = fadd ninf nnan <8 x float> %x0213, %x13
+  %r = extractelement <8 x float> %x0123, i32 0
+  ret float %r
+}
+
+define float @partial_reduction_fadd_v16f32(<16 x float> %x) {
+; SSE3-SLOW-LABEL: partial_reduction_fadd_v16f32:
+; SSE3-SLOW:       # %bb.0:
+; SSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-SLOW-NEXT:    addps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE3-SLOW-NEXT:    addss %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    retq
+;
+; SSE3-FAST-LABEL: partial_reduction_fadd_v16f32:
+; SSE3-FAST:       # %bb.0:
+; SSE3-FAST-NEXT:    movaps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE3-FAST-NEXT:    addps %xmm0, %xmm1
+; SSE3-FAST-NEXT:    haddps %xmm1, %xmm1
+; SSE3-FAST-NEXT:    movaps %xmm1, %xmm0
+; SSE3-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: partial_reduction_fadd_v16f32:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vzeroupper
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: partial_reduction_fadd_v16f32:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vzeroupper
+; AVX-FAST-NEXT:    retq
+  %x23 = shufflevector <16 x float> %x, <16 x float> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0213 = fadd <16 x float> %x, %x23
+  %x13 = shufflevector <16 x float> %x0213, <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0123 = fadd reassoc nsz <16 x float> %x0213, %x13
+  %r = extractelement <16 x float> %x0123, i32 0
+  ret float %r
+}

@@ -73,7 +73,7 @@ protected:
         });
       }
     };
-    return llvm::make_unique<CaptureDiags>();
+    return std::make_unique<CaptureDiags>();
   }
 
   /// Schedule an update and call \p CB with the diagnostics it produces, if

@@ -2003,7 +2003,7 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
 
   if (!CompilationDatabase) {
     std::error_code EC;
-    auto File = llvm::make_unique<llvm::raw_fd_ostream>(Filename, EC,
+    auto File = std::make_unique<llvm::raw_fd_ostream>(Filename, EC,
                                                         llvm::sys::fs::OF_Text);
     if (EC) {
       D.Diag(clang::diag::err_drv_compilationdatabase) << Filename
@@ -3804,7 +3804,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         II.getInputArg().renderAsInput(Args, CmdArgs);
     }
 
-    C.addCommand(llvm::make_unique<Command>(JA, *this, D.getClangProgramPath(),
+    C.addCommand(std::make_unique<Command>(JA, *this, D.getClangProgramPath(),
                                             CmdArgs, Inputs));
     return;
   }
@@ -5524,16 +5524,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       (InputType == types::TY_C || InputType == types::TY_CXX)) {
     auto CLCommand =
         getCLFallback()->GetCommand(C, JA, Output, Inputs, Args, LinkingOutput);
-    C.addCommand(llvm::make_unique<FallbackCommand>(
+    C.addCommand(std::make_unique<FallbackCommand>(
         JA, *this, Exec, CmdArgs, Inputs, std::move(CLCommand)));
   } else if (Args.hasArg(options::OPT__SLASH_fallback) &&
              isa<PrecompileJobAction>(JA)) {
     // In /fallback builds, run the main compilation even if the pch generation
     // fails, so that the main compilation's fallback to cl.exe runs.
-    C.addCommand(llvm::make_unique<ForceSuccessCommand>(JA, *this, Exec,
+    C.addCommand(std::make_unique<ForceSuccessCommand>(JA, *this, Exec,
                                                         CmdArgs, Inputs));
   } else {
-    C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+    C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
 
   // Make the compile command echo its inputs for /showFilenames.
@@ -6260,7 +6260,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Input.getFilename());
 
   const char *Exec = getToolChain().getDriver().getClangProgramPath();
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
 // Begin OffloadBundler
@@ -6343,7 +6343,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(TCArgs.MakeArgString(UB));
 
   // All the inputs are encoded as commands.
-  C.addCommand(llvm::make_unique<Command>(
+  C.addCommand(std::make_unique<Command>(
       JA, *this,
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));
@@ -6409,7 +6409,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   CmdArgs.push_back("-unbundle");
 
   // All the inputs are encoded as commands.
-  C.addCommand(llvm::make_unique<Command>(
+  C.addCommand(std::make_unique<Command>(
       JA, *this,
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));

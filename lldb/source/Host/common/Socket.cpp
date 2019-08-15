@@ -114,16 +114,16 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   switch (protocol) {
   case ProtocolTcp:
     socket_up =
-        llvm::make_unique<TCPSocket>(true, child_processes_inherit);
+        std::make_unique<TCPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUdp:
     socket_up =
-        llvm::make_unique<UDPSocket>(true, child_processes_inherit);
+        std::make_unique<UDPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUnixDomain:
 #ifndef LLDB_DISABLE_POSIX
     socket_up =
-        llvm::make_unique<DomainSocket>(true, child_processes_inherit);
+        std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
     error.SetErrorString(
         "Unix domain sockets are not supported on this platform.");
@@ -132,7 +132,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   case ProtocolUnixAbstract:
 #ifdef __linux__
     socket_up =
-        llvm::make_unique<AbstractSocket>(child_processes_inherit);
+        std::make_unique<AbstractSocket>(child_processes_inherit);
 #else
     error.SetErrorString(
         "Abstract domain sockets are not supported on this platform.");
