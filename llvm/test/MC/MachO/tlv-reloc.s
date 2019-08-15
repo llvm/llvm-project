@@ -47,7 +47,7 @@ _foo:
 // CHECK:     Alignment: 4
 // CHECK:     RelocationOffset: 0x1E8
 // CHECK:     RelocationCount: 1
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x800004)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:       SomeInstructions (0x4)
@@ -69,7 +69,7 @@ _foo:
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x11
+// CHECK:     Type: ThreadLocalRegular (0x11)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -89,7 +89,7 @@ _foo:
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x1F0
 // CHECK:     RelocationCount: 2
-// CHECK:     Type: 0x13
+// CHECK:     Type: ThreadLocalVariables (0x13)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0

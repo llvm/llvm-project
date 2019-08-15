@@ -4853,7 +4853,7 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF() {
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  if (Legal->canFoldTailByMasking()) {
+  if (Legal->prepareToFoldTailByMasking()) {
     FoldTailByMasking = true;
     return MaxVF;
   }

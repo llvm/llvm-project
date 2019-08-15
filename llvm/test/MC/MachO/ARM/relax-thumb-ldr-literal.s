@@ -10,7 +10,7 @@ _foo:
         ldr r2, (_foo - 4)
 
 @ CHECK:  RelocationCount: 0
-@ CHECK:  Type: 0x0
+@ CHECK:  Type: Regular (0x0)
 @ CHECK:  Attributes [ (0x800004)
 @ CHECK:    PureInstructions (0x800000)
 @ CHECK:    SomeInstructions (0x4)

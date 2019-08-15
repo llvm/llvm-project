@@ -1153,95 +1153,6 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
   S.resize(N);
 }
 
-static SmallPtrSet<BasicBlock *, 4> getCoroBeginPredBlocks(CoroBeginInst *CB) {
-  // Collect all blocks that we need to look for instructions to relocate.
-  SmallPtrSet<BasicBlock *, 4> RelocBlocks;
-  SmallVector<BasicBlock *, 4> Work;
-  Work.push_back(CB->getParent());
-
-  do {
-    BasicBlock *Current = Work.pop_back_val();
-    for (BasicBlock *BB : predecessors(Current))
-      if (RelocBlocks.count(BB) == 0) {
-        RelocBlocks.insert(BB);
-        Work.push_back(BB);
-      }
-  } while (!Work.empty());
-  return RelocBlocks;
-}
-
-static SmallPtrSet<Instruction *, 8>
-getNotRelocatableInstructions(CoroBeginInst *CoroBegin,
-                              SmallPtrSetImpl<BasicBlock *> &RelocBlocks) {
-  SmallPtrSet<Instruction *, 8> DoNotRelocate;
-  // Collect all instructions that we should not relocate
-  SmallVector<Instruction *, 8> Work;
-
-  // Start with CoroBegin and terminators of all preceding blocks.
-  Work.push_back(CoroBegin);
-  BasicBlock *CoroBeginBB = CoroBegin->getParent();
-  for (BasicBlock *BB : RelocBlocks)
-    if (BB != CoroBeginBB)
-      Work.push_back(BB->getTerminator());
-
-  // For every instruction in the Work list, place its operands in DoNotRelocate
-  // set.
-  do {
-    Instruction *Current = Work.pop_back_val();
-    LLVM_DEBUG(dbgs() << "CoroSplit: Will not relocate: " << *Current << "\n");
-    DoNotRelocate.insert(Current);
-    for (Value *U : Current->operands()) {
-      auto *I = dyn_cast<Instruction>(U);
-      if (!I)
-        continue;
-
-      if (auto *A = dyn_cast<AllocaInst>(I)) {
-        // Stores to alloca instructions that occur before the coroutine frame
-        // is allocated should not be moved; the stored values may be used by
-        // the coroutine frame allocator. The operands to those stores must also
-        // remain in place.
-        for (const auto &User : A->users())
-          if (auto *SI = dyn_cast<llvm::StoreInst>(User))
-            if (RelocBlocks.count(SI->getParent()) != 0 &&
-                DoNotRelocate.count(SI) == 0) {
-              Work.push_back(SI);
-              DoNotRelocate.insert(SI);
-            }
-        continue;
-      }
-
-      if (DoNotRelocate.count(I) == 0) {
-        Work.push_back(I);
-        DoNotRelocate.insert(I);
-      }
-    }
-  } while (!Work.empty());
-  return DoNotRelocate;
-}
-
-static void relocateInstructionBefore(CoroBeginInst *CoroBegin, Function &F) {
-  // Analyze which non-alloca instructions are needed for allocation and
-  // relocate the rest to after coro.begin. We need to do it, since some of the
-  // targets of those instructions may be placed into coroutine frame memory
-  // for which becomes available after coro.begin intrinsic.
-
-  auto BlockSet = getCoroBeginPredBlocks(CoroBegin);
-  auto DoNotRelocateSet = getNotRelocatableInstructions(CoroBegin, BlockSet);
-
-  Instruction *InsertPt = CoroBegin->getNextNode();
-  BasicBlock &BB = F.getEntryBlock(); // TODO: Look at other blocks as well.
-  for (auto B = BB.begin(), E = BB.end(); B != E;) {
-    Instruction &I = *B++;
-    if (isa<AllocaInst>(&I))
-      continue;
-    if (&I == CoroBegin)
-      break;
-    if (DoNotRelocateSet.count(&I))
-      continue;
-    I.moveBefore(InsertPt);
-  }
-}
-
 static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
                                  SmallVectorImpl<Function *> &Clones) {
   assert(Shape.ABI == coro::ABI::Switch);
@@ -1441,7 +1352,6 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
     return;
 
   simplifySuspendPoints(Shape);
-  relocateInstructionBefore(Shape.CoroBegin, F);
   buildCoroutineFrame(F, Shape);
   replaceFrameSize(Shape);
 

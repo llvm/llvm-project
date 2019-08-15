@@ -70,7 +70,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x800000)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:     ]
@@ -89,7 +89,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -107,7 +107,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -125,7 +125,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: ExtReloc (0x2)
+// CHECK:     Type: CStringLiterals (0x2)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -143,7 +143,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x3
+// CHECK:     Type: 4ByteLiterals (0x3)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -161,7 +161,7 @@
 // CHECK:     Alignment: 3
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: SomeInstructions (0x4)
+// CHECK:     Type: 8ByteLiterals (0x4)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -179,7 +179,7 @@
 // CHECK:     Alignment: 4
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0xE
+// CHECK:     Type: 16ByteLiterals (0xE)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -197,7 +197,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -215,7 +215,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -233,7 +233,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x8
+// CHECK:     Type: SymbolStubs (0x8)
 // CHECK:     Attributes [ (0x800000)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:     ]
@@ -252,7 +252,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x8
+// CHECK:     Type: SymbolStubs (0x8)
 // CHECK:     Attributes [ (0x800000)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:     ]
@@ -271,7 +271,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -289,7 +289,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -307,7 +307,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x6
+// CHECK:     Type: NonLazySymbolPointers (0x6)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -325,7 +325,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x7
+// CHECK:     Type: LazySymbolPointers (0x7)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -343,7 +343,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -361,7 +361,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x9
+// CHECK:     Type: ModInitFuncPointers (0x9)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -379,7 +379,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0xA
+// CHECK:     Type: ModTermFuncPointers (0xA)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -397,7 +397,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -415,7 +415,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -434,7 +434,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -453,7 +453,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -472,7 +472,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -491,7 +491,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -510,7 +510,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -529,7 +529,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -548,7 +548,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -567,7 +567,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x5
+// CHECK:     Type: LiteralPointers (0x5)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -586,7 +586,7 @@
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x5
+// CHECK:     Type: LiteralPointers (0x5)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -605,7 +605,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -624,7 +624,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -643,7 +643,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -662,7 +662,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -681,7 +681,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x100000)
 // CHECK:       NoDeadStrip (0x100000)
 // CHECK:     ]
@@ -700,7 +700,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: ExtReloc (0x2)
+// CHECK:     Type: CStringLiterals (0x2)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -718,7 +718,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x8
+// CHECK:     Type: SymbolStubs (0x8)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0

@@ -12,5 +12,6 @@ executable("llvm-reduce") {
     "TestRunner.cpp",
     "deltas/Delta.cpp",
     "deltas/ReduceFunctions.cpp",
+    "deltas/ReduceGlobalVars.cpp",
   ]
 }
