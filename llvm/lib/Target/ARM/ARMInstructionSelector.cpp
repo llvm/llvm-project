@@ -1076,7 +1076,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   case G_STORE:
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();
-    if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+    if (MemOp.isAtomic()) {
       LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
       return false;
     }
