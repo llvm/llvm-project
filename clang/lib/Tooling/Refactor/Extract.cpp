@@ -282,7 +282,7 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
                                  Stmts.containsSelectionRangeEnd);
   }
 
-  auto Operation = llvm::make_unique<ExtractOperation>(
+  auto Operation = std::make_unique<ExtractOperation>(
       Selected, ParentStmt, ParentDecl, std::move(Candidates),
       ExtractedStmtRange, FirstCandidateInfo, Kind);
   auto &CandidateExtractionInfo = Operation->CandidateExtractionInfo;
@@ -1485,7 +1485,7 @@ ExtractOperation::performExpressionExtraction(ASTContext &Context,
   QualType VarType = findExpressionLexicalType(FunctionLikeParentDecl, E,
                                                E->getType(), PP, Context);
   StringRef VarName = "extractedExpr";
-  auto CreatedSymbol = llvm::make_unique<RefactoringResultAssociatedSymbol>(
+  auto CreatedSymbol = std::make_unique<RefactoringResultAssociatedSymbol>(
       OldSymbolName(VarName));
 
   SourceRange ExtractedTokenRange = CandidateExtractionInfo[0].Range;
@@ -1805,7 +1805,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       ExtractedNamePieces.push_back(Var.getName());
   }
   std::unique_ptr<RefactoringResultAssociatedSymbol> CreatedSymbol =
-      llvm::make_unique<RefactoringResultAssociatedSymbol>(
+      std::make_unique<RefactoringResultAssociatedSymbol>(
           OldSymbolName(ExtractedNamePieces));
 
   SourceLocation FunctionExtractionLoc = computeFunctionExtractionLocation(

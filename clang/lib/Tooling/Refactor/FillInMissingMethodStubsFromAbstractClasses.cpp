@@ -74,7 +74,7 @@ clang::tooling::initiateFillInMissingMethodStubsFromAbstractClassesOperation(
   if (!CreateOperation)
     return Result;
   auto Operation =
-      llvm::make_unique<FillInMissingMethodStubsFromAbstractClassesOperation>(
+      std::make_unique<FillInMissingMethodStubsFromAbstractClassesOperation>(
           Class);
   Result.RefactoringOp = std::move(Operation);
   return Result;

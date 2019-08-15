@@ -435,7 +435,7 @@ public:
 
   virtual void attachToPreprocessor(Preprocessor &PP) override {
     DependencyCollector::attachToPreprocessor(PP);
-    PP.addPPCallbacks(llvm::make_unique<IncludePPCallbacks>(
+    PP.addPPCallbacks(std::make_unique<IncludePPCallbacks>(
         IndexCtx, RecordOpts, Includes, PP.getSourceManager()));
   }
 
@@ -541,7 +541,7 @@ protected:
     DepCollector.setSysrootPath(IndexCtx->getSysrootPath());
     DepCollector.attachToPreprocessor(PP);
 
-    return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
+    return std::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
                                                IndexCtx);
   }
 
@@ -587,7 +587,7 @@ protected:
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.push_back(std::move(OtherConsumer));
     Consumers.push_back(createIndexASTConsumer(CI));
-    return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
+    return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
 
   void EndSourceFileAction() override {
@@ -887,9 +887,9 @@ createIndexDataRecordingAction(IndexingOptions IndexOpts,
                                RecordingOptions RecordOpts,
                                std::unique_ptr<FrontendAction> WrappedAction) {
   if (WrappedAction)
-    return llvm::make_unique<WrappingIndexRecordAction>(
+    return std::make_unique<WrappingIndexRecordAction>(
         std::move(WrappedAction), std::move(IndexOpts), std::move(RecordOpts));
-  return llvm::make_unique<IndexRecordAction>(std::move(IndexOpts),
+  return std::make_unique<IndexRecordAction>(std::move(IndexOpts),
                                               std::move(RecordOpts));
 }
 

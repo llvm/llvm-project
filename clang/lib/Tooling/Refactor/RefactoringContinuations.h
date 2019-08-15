@@ -387,7 +387,7 @@ continueInExternalASTUnit(
     typename detail::SpecificRefactoringContinuation<
         ASTQueryType, QueryOrState...>::ConsumerFn Consumer,
     QueryOrState... Inputs) {
-  return llvm::make_unique<
+  return std::make_unique<
       detail::SpecificRefactoringContinuation<ASTQueryType, QueryOrState...>>(
       Consumer, std::move(ASTQuery), std::move(Inputs)...);
 }

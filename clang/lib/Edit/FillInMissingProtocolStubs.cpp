@@ -363,7 +363,7 @@ operator=(FillInMissingProtocolStubs &&Other) {
 
 bool FillInMissingProtocolStubs::initiate(ASTContext &Context,
                                           const ObjCContainerDecl *Container) {
-  Impl = llvm::make_unique<FillInMissingProtocolStubsImpl>();
+  Impl = std::make_unique<FillInMissingProtocolStubsImpl>();
   if (!::initiate(*Impl, Context, Container))
     return true;
   return false;

@@ -156,7 +156,7 @@ public:
       : CXDiagnosticSetImpl(/*isManaged=*/true),
         Diags(Diags.begin(), Diags.end()) {
     for (const auto &Diag : this->Diags)
-      appendDiagnostic(llvm::make_unique<CXStoredDiagnostic>(Diag, LangOpts));
+      appendDiagnostic(std::make_unique<CXStoredDiagnostic>(Diag, LangOpts));
   }
 };
 }

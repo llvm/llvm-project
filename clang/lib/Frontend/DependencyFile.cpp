@@ -234,10 +234,10 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
 
   // FIXME: Restore the call to DependencyCollector::attachToPreprocessor(PP);
   // once the SkipUnusedModuleMaps is upstreamed.
-  PP.addPPCallbacks(llvm::make_unique<DepCollectorPPCallbacks>(
+  PP.addPPCallbacks(std::make_unique<DepCollectorPPCallbacks>(
       *this, PP.getSourceManager(), PP.getDiagnostics()));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
-      llvm::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
+      std::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,

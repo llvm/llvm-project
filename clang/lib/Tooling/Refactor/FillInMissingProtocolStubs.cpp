@@ -74,7 +74,7 @@ clang::tooling::initiateFillInMissingProtocolStubsOperation(
   Result.Initiated = true;
   if (!CreateOperation)
     return Result;
-  auto Operation = llvm::make_unique<FillInMissingProtocolStubsOperation>(
+  auto Operation = std::make_unique<FillInMissingProtocolStubsOperation>(
       Container, std::move(Impl));
   Result.RefactoringOp = std::move(Operation);
   return Result;

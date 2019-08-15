@@ -1417,7 +1417,7 @@ private:
                       llvm::StringRef) override {
       Test->PP = &Compiler.getPreprocessor();
       Test->Context = &Compiler.getASTContext();
-      return llvm::make_unique<TestConsumer>(Test);
+      return std::make_unique<TestConsumer>(Test);
     }
 
   private:

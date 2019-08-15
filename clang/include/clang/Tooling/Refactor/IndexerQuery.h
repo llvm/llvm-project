@@ -301,7 +301,7 @@ filter(ArrayRef<const T *> Declarations,
        BoolDeclPredicate (*Fn)(const DeclEntity &),
        typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
            nullptr) {
-  return llvm::make_unique<ManyToManyDeclarationsQuery<T>>(
+  return std::make_unique<ManyToManyDeclarationsQuery<T>>(
       Declarations, detail::DeclPredicateNode::create(Fn(DeclEntity())));
 }
 

@@ -50,7 +50,7 @@ public:
     Result.Initiated = true;
     if (!CreateOperation)
       return Result;
-    auto Operation = llvm::make_unique<Derived>(Container, Methods);
+    auto Operation = std::make_unique<Derived>(Container, Methods);
     Result.RefactoringOp = std::move(Operation);
     return Result;
   }

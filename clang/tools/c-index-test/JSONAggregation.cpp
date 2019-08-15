@@ -138,7 +138,7 @@ bool Aggregator::process() {
 
 void Aggregator::processUnit(StringRef name, IndexUnitReader &UnitReader) {
   auto workDir = UnitReader.getWorkingDirectory();
-  auto unit = llvm::make_unique<UnitInfo>();
+  auto unit = std::make_unique<UnitInfo>();
   unit->Name = name;
   unit->Triple = getTripleString(UnitReader.getTarget());
   unit->OutFile = getFilePathIndex(UnitReader.getOutputFile(), workDir);
@@ -218,7 +218,7 @@ std::unique_ptr<RecordInfo> Aggregator::processRecord(StringRef recordFile) {
     errs() << "failed reading record file: " << recordFile << '\n';
     ::exit(1);
   }
-  auto record = llvm::make_unique<RecordInfo>();
+  auto record = std::make_unique<RecordInfo>();
   recordReader.foreachOccurrence([&](IndexRecordOccurrence idxOccur) -> bool {
     SymbolIndex symIdx = getSymbolIndex(idxOccur.getSymbol());
     SymbolInfo &symInfo = Symbols[symIdx];

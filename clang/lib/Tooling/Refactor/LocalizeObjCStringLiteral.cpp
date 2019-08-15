@@ -58,7 +58,7 @@ clang::tooling::initiateLocalizeObjCStringLiteralOperation(
   Result.Initiated = true;
   if (!CreateOperation)
     return Result;
-  auto Operation = llvm::make_unique<LocalizeObjCStringLiteralOperation>(E);
+  auto Operation = std::make_unique<LocalizeObjCStringLiteralOperation>(E);
   Result.RefactoringOp = std::move(Operation);
   return Result;
 }

@@ -43,7 +43,7 @@ RefactoringOperationResult clang::tooling::initiateRefactoringOperationAt(
     RefactoringOperationResult Result;
     Result.Initiated = true;
     if (CreateOperation)
-      Result.SymbolOp = llvm::make_unique<SymbolOperation>(FoundDecl, Context);
+      Result.SymbolOp = std::make_unique<SymbolOperation>(FoundDecl, Context);
     return Result;
   }
   SourceManager &SM = Context.getSourceManager();
@@ -88,6 +88,6 @@ RefactoringOperationResult clang::tooling::initiateRefactoringOperationOnDecl(
     return None;
   RefactoringOperationResult Result;
   Result.Initiated = true;
-  Result.SymbolOp = llvm::make_unique<SymbolOperation>(FoundDecl, Context);
+  Result.SymbolOp = std::make_unique<SymbolOperation>(FoundDecl, Context);
   return Result;
 }

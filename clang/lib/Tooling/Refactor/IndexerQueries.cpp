@@ -29,20 +29,20 @@ const char *DeclPredicateNotPredicate::NameUIDString = "not.decl.predicate";
 
 std::unique_ptr<DeclPredicateNode>
 DeclPredicateNode::create(const DeclPredicate &Predicate) {
-  return llvm::make_unique<DeclPredicateNodePredicate>(Predicate);
+  return std::make_unique<DeclPredicateNodePredicate>(Predicate);
 }
 
 std::unique_ptr<DeclPredicateNode>
 DeclPredicateNode::create(const BoolDeclPredicate &Predicate) {
   if (Predicate.IsInverted)
-    return llvm::make_unique<DeclPredicateNotPredicate>(
+    return std::make_unique<DeclPredicateNotPredicate>(
         create(Predicate.Predicate));
   return create(Predicate.Predicate);
 }
 
 std::unique_ptr<ASTUnitForImplementationOfDeclarationQuery>
 clang::tooling::indexer::fileThatShouldContainImplementationOf(const Decl *D) {
-  return llvm::make_unique<ASTUnitForImplementationOfDeclarationQuery>(D);
+  return std::make_unique<ASTUnitForImplementationOfDeclarationQuery>(D);
 }
 
 bool ASTUnitForImplementationOfDeclarationQuery::verify(ASTContext &Context) {

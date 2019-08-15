@@ -91,7 +91,7 @@ clang::tooling::initiateFillInEnumSwitchCasesOperation(
   Result.Initiated = true;
   if (!CreateOperation)
     return Result;
-  auto Operation = llvm::make_unique<FillInEnumSwitchCasesOperation>(
+  auto Operation = std::make_unique<FillInEnumSwitchCasesOperation>(
       ED, Switch, dyn_cast<DeclContext>(ParentDecl));
   Result.RefactoringOp = std::move(Operation);
   return Result;

@@ -620,7 +620,7 @@ CXErrorCode performIndexedFileRename(
 
   rename::IndexedFileRenamerLock Lock(*ClangToolConstructionMutex);
   auto Runner =
-      llvm::make_unique<ToolRunner>(Symbols, IndexedSymbols, Lock, Options);
+      std::make_unique<ToolRunner>(Symbols, IndexedSymbols, Lock, Options);
 
   // Run a clang tool on the input file.
   std::string Name = Filename.str();
@@ -725,7 +725,7 @@ CXErrorCode performIndexedSymbolSearch(
   };
 
   rename::IndexedFileRenamerLock Lock(*ClangToolConstructionMutex);
-  auto Runner = llvm::make_unique<ToolRunner>(IndexedSymbols, Lock, Options);
+  auto Runner = std::make_unique<ToolRunner>(IndexedSymbols, Lock, Options);
 
   // Run a clang tool on the input file.
   std::string Name = Filename.str();
@@ -1422,7 +1422,7 @@ enum CXErrorCode clang_Refactoring_initiateAction(
                                        ActionType, TU);
   else
     *OutAction = new RefactoringAction(
-        llvm::make_unique<RenamingAction>(CXXUnit->getLangOpts(),
+        std::make_unique<RenamingAction>(CXXUnit->getLangOpts(),
                                           std::move(*Operation.SymbolOp)),
         TU);
   return CXError_Success;
@@ -1461,7 +1461,7 @@ enum CXErrorCode clang_Refactoring_initiateActionOnDecl(
                                        ActionType, TU);
   else
     *OutAction = new RefactoringAction(
-        llvm::make_unique<RenamingAction>(CXXUnit->getLangOpts(),
+        std::make_unique<RenamingAction>(CXXUnit->getLangOpts(),
                                           std::move(*Operation.SymbolOp)),
         TU);
   return CXError_Success;
