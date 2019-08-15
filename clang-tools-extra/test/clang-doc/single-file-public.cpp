@@ -46,4 +46,5 @@ void Record::function_public() {}
 // CHECK-NEXT:     ReturnType:
 // CHECK-NEXT:       Type:
 // CHECK-NEXT:         Name:            'void'
+// CHECK-NEXT:     Access:			Public
 // CHECK-NEXT: ...

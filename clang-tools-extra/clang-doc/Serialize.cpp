@@ -463,11 +463,10 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, LineNumber, File, IsFileInRootDir,
                        IsInAnonymousNamespace);
+  Func.Access = clang::AccessSpecifier::AS_none;
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
     return {};
-
-  Func.Access = clang::AccessSpecifier::AS_none;
 
   // Wrap in enclosing scope
   auto ParentI = std::make_unique<NamespaceInfo>();

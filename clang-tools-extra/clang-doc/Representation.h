@@ -198,10 +198,11 @@ struct MemberTypeInfo : public FieldTypeInfo {
            std::tie(Other.Type, Other.Name, Other.Access);
   }
 
-  AccessSpecifier Access = AccessSpecifier::AS_none; // Access level associated
-                                                     // with this info (public,
-                                                     // protected, private,
-                                                     // none).
+  // Access level associated with this info (public, protected, private, none).
+  // AS_public is set as default because the bitcode writer requires the enum
+  // with value 0 to be used as the default.
+  // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
+  AccessSpecifier Access = AccessSpecifier::AS_public;
 };
 
 struct Location {
@@ -291,7 +292,8 @@ struct SymbolInfo : public Info {
   SymbolInfo(InfoType IT) : Info(IT) {}
   SymbolInfo(InfoType IT, SymbolID USR) : Info(IT, USR) {}
   SymbolInfo(InfoType IT, SymbolID USR, StringRef Name) : Info(IT, USR, Name) {}
-  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path) : Info(IT, USR, Name, Path) {}
+  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path)
+      : Info(IT, USR, Name, Path) {}
 
   void merge(SymbolInfo &&I);
 
@@ -312,7 +314,10 @@ struct FunctionInfo : public SymbolInfo {
   TypeInfo ReturnType;   // Info about the return type of this function.
   llvm::SmallVector<FieldTypeInfo, 4> Params; // List of parameters.
   // Access level for this method (public, private, protected, none).
-  AccessSpecifier Access = AccessSpecifier::AS_none;
+  // AS_public is set as default because the bitcode writer requires the enum
+  // with value 0 to be used as the default.
+  // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
+  AccessSpecifier Access = AccessSpecifier::AS_public;
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,
@@ -364,13 +369,14 @@ struct EnumInfo : public SymbolInfo {
 
 struct Index : public Reference {
   Index() = default;
+  Index(StringRef Name) : Reference(Name) {}
   Index(StringRef Name, StringRef JumpToSection)
       : Reference(Name), JumpToSection(JumpToSection) {}
   Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
       : Reference(USR, Name, IT, Path) {}
   // This is used to look for a USR in a vector of Indexes using std::find
   bool operator==(const SymbolID &Other) const { return USR == Other; }
-  bool operator<(const Index &Other) const { return Name < Other.Name; }
+  bool operator<(const Index &Other) const;
 
   llvm::Optional<SmallString<16>> JumpToSection;
   std::vector<Index> Children;

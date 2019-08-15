@@ -174,6 +174,9 @@ template <> struct MappingTraits<FieldTypeInfo> {
 template <> struct MappingTraits<MemberTypeInfo> {
   static void mapping(IO &IO, MemberTypeInfo &I) {
     FieldTypeInfoMapping(IO, I);
+    // clang::AccessSpecifier::AS_none is used as the default here because it's
+    // the AS that shouldn't be part of the output. Even though AS_public is the
+    // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
   }
 };
@@ -218,6 +221,9 @@ template <> struct MappingTraits<FunctionInfo> {
     IO.mapOptional("Parent", I.Parent, Reference());
     IO.mapOptional("Params", I.Params);
     IO.mapOptional("ReturnType", I.ReturnType);
+    // clang::AccessSpecifier::AS_none is used as the default here because it's
+    // the AS that shouldn't be part of the output. Even though AS_public is the
+    // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
   }
 };

@@ -103,6 +103,7 @@ TEST(SerializeTest, emitNamespaceInfo) {
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Namespace.emplace_back(EmptySID, "B", InfoType::IT_namespace);
   F.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
@@ -299,6 +300,7 @@ TEST(SerializeTest, emitPublicFunctionInternalInfo) {
   F.Name = "F";
   F.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
@@ -314,6 +316,7 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Params.emplace_back("int", "I");
+  F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
@@ -379,6 +382,7 @@ export double exportedModuleFunction(double y);)raw",
   F.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
   F.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   F.Params.emplace_back("int", "x");
+  F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 
@@ -389,6 +393,7 @@ export double exportedModuleFunction(double y);)raw",
   ExportedF.ReturnType = TypeInfo(EmptySID, "double", InfoType::IT_default);
   ExportedF.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   ExportedF.Params.emplace_back("double", "y");
+  ExportedF.Access = AccessSpecifier::AS_none;
   ExpectedBWithExportedFunction.ChildFunctions.emplace_back(
       std::move(ExportedF));
   CheckNamespaceInfo(&ExpectedBWithExportedFunction, BWithExportedFunction);

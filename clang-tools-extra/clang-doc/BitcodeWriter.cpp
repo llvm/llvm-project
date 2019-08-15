@@ -510,6 +510,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
     emitBlock(CI);
+  emitRecord(I.Access, FUNCTION_ACCESS);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
   if (I.DefLoc)
     emitRecord(I.DefLoc.getValue(), FUNCTION_DEFLOCATION);

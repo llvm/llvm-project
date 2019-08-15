@@ -43,6 +43,7 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
                               "Namespace");
   I.ChildFunctions.emplace_back();
+  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
   I.ChildFunctions.back().Name = "OneFunction";
   I.ChildEnums.emplace_back();
   I.ChildEnums.back().Name = "OneEnum";
@@ -228,7 +229,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   <h2 id="Functions">Functions</h2>
   <div>
     <h3 id="0000000000000000000000000000000000000000">OneFunction</h3>
-    <p>OneFunction()</p>
+    <p>public OneFunction()</p>
   </div>
   <h2 id="Enums">Enums</h2>
   <div>
@@ -247,6 +248,8 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"dir/test.cpp"}, false);
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.Access = AccessSpecifier::AS_none;
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
@@ -331,6 +334,7 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "I");
   I.Params.emplace_back("int", "J");
+  I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
   Top.Kind = "FullComment";

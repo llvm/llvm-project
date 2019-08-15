@@ -89,12 +89,12 @@ public:
 
   template <typename T> operator Matcher<const std::vector<T> &>() const {
     return ::testing::MakeMatcher(new SubsequenceMatcher<T>(
-        TypedMatchers<T>(llvm::index_sequence_for<M...>{})));
+        TypedMatchers<T>(std::index_sequence_for<M...>{})));
   }
 
 private:
   template <typename T, size_t... I>
-  std::vector<Matcher<T>> TypedMatchers(llvm::index_sequence<I...>) const {
+  std::vector<Matcher<T>> TypedMatchers(std::index_sequence<I...>) const {
     return {std::get<I>(Matchers)...};
   }
 };

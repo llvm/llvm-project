@@ -106,6 +106,8 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "P");
 
+  I.Access = AccessSpecifier::AS_none;
+
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);
   std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
@@ -126,8 +128,7 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
-  // TODO: fix access
-  // I.Access = AccessSpecifier::AS_private;
+  I.Access = AccessSpecifier::AS_public;
 
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);

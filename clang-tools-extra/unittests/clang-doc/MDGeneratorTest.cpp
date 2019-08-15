@@ -31,6 +31,7 @@ TEST(MDGeneratorTest, emitNamespaceMD) {
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
+  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
   I.ChildEnums.emplace_back();
   I.ChildEnums.back().Name = "OneEnum";
 
@@ -127,7 +128,7 @@ ChildStruct
 
 ### OneFunction
 
-* OneFunction()*
+*public  OneFunction()*
 
 
 
@@ -152,6 +153,8 @@ TEST(MDGeneratorTest, emitFunctionMD) {
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.Access = AccessSpecifier::AS_none;
 
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "P");
@@ -213,6 +216,7 @@ TEST(MDGeneratorTest, emitCommentMD) {
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "I");
   I.Params.emplace_back("int", "J");
+  I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
   Top.Kind = "FullComment";

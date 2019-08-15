@@ -34,6 +34,7 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
                               "path/to/A/Namespace");
   I.ChildFunctions.emplace_back();
   I.ChildFunctions.back().Name = "OneFunction";
+  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
   I.ChildEnums.emplace_back();
   I.ChildEnums.back().Name = "OneEnum";
 
@@ -138,6 +139,7 @@ ChildFunctions:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
     ReturnType:      {}
+    Access:          Public
 ChildEnums:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneEnum'
@@ -153,6 +155,8 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.Access = AccessSpecifier::AS_none;
 
   I.ReturnType =
       TypeInfo(EmptySID, "void", InfoType::IT_default, "path/to/void");
@@ -242,6 +246,7 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "I");
   I.Params.emplace_back("int", "J");
+  I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
   Top.Kind = "FullComment";
