@@ -2585,8 +2585,6 @@ bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
 }
 
 bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
-  // if (in_value.IsDynamic())
-  //    return false;
   if (IsIndirectEnumCase(in_value))
     return true;
   CompilerType var_type(in_value.GetCompilerType());
