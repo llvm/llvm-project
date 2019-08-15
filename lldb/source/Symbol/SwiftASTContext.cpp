@@ -3294,17 +3294,16 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
-      std::unique_ptr<SwiftDWARFImporterDelegate> dwarf_importer_up;
       if (!m_is_scratch_context) {
         // Create the DWARFImporterDelegate.
         auto props = ModuleList::GetGlobalModuleListProperties();
         if (props.GetUseDWARFImporter())
-          dwarf_importer_up =
+          m_dwarf_importer_delegate_up =
               llvm::make_unique<SwiftDWARFImporterDelegate>(*this);
       }
       clang_importer_ap = swift::ClangImporter::create(
           *m_ast_context_ap, clang_importer_options, "", nullptr,
-          std::move(dwarf_importer_up));
+          m_dwarf_importer_delegate_up.get());
 
       // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
