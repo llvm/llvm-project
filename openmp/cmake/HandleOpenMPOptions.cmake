@@ -21,6 +21,7 @@ endif()
 # Additional warnings that are not enabled by -Wall.
 append_if(OPENMP_HAVE_WCAST_QUAL_FLAG "-Wcast-qual" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WFORMAT_PEDANTIC_FLAG "-Wformat-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+append_if(OPENMP_HAVE_WIMPLICIT_FALLTHROUGH_FLAG "-Wimplicit-fallthrough" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WSIGN_COMPARE_FLAG "-Wsign-compare" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
 # Warnings that we want to disable because they are too verbose or fragile.

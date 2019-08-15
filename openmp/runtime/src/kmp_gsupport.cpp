@@ -22,7 +22,7 @@ extern "C" {
 #endif // __cplusplus
 
 #define MKLOC(loc, routine)                                                    \
-  static ident_t(loc) = {0, KMP_IDENT_KMPC, 0, 0, ";unknown;unknown;0;0;;"};
+  static ident_t loc = {0, KMP_IDENT_KMPC, 0, 0, ";unknown;unknown;0;0;;"};
 
 #include "kmp_ftn_os.h"
 
