@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1041,28 +1040,9 @@ static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
          sys::path::is_absolute(Path, sys::path::Style::windows);
 }
 
-/// If given an absolute path, guess the path style.
-static sys::path::Style GuessPathStyle(StringRef Path) {
-  bool Posix = sys::path::is_absolute(Path, sys::path::Style::posix);
-  bool Windows = sys::path::is_absolute(Path, sys::path::Style::windows);
-  // This is a relative path.
-  if (!Posix && !Windows)
-    return sys::path::Style::native;
-  // This is a valid absolute path for both Windows and Posix.
-  if (Posix && Windows)
-    return sys::path::Style::native;
-  if (Posix)
-    return sys::path::Style::posix;
-  if (Windows)
-    return sys::path::Style::windows;
-
-  llvm_unreachable("All combinations should have been handled.");
-}
-
-bool DWARFDebugLine::Prologue::getFileNameByIndex(uint64_t FileIndex,
-                                                  StringRef CompDir,
-                                                  FileLineInfoKind Kind,
-                                                  std::string &Result) const {
+bool DWARFDebugLine::Prologue::getFileNameByIndex(
+    uint64_t FileIndex, StringRef CompDir, FileLineInfoKind Kind,
+    std::string &Result, sys::path::Style Style) const {
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = getFileNameEntry(FileIndex);
@@ -1088,11 +1068,11 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(uint64_t FileIndex,
     // We know that FileName is not absolute, the only way to have an
     // absolute path at this point would be if IncludeDir is absolute.
     if (!CompDir.empty() && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
-      sys::path::append(FilePath, GuessPathStyle(CompDir), CompDir);
+      sys::path::append(FilePath, Style, CompDir);
   }
 
   // sys::path::append skips empty strings.
-  sys::path::append(FilePath, GuessPathStyle(IncludeDir), IncludeDir, FileName);
+  sys::path::append(FilePath, Style, IncludeDir, FileName);
   Result = FilePath.str();
   return true;
 }
