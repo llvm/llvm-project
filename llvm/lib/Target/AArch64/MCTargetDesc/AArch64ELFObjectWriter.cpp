@@ -448,5 +448,5 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createAArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32) {
-  return llvm::make_unique<AArch64ELFObjectWriter>(OSABI, IsILP32);
+  return std::make_unique<AArch64ELFObjectWriter>(OSABI, IsILP32);
 }

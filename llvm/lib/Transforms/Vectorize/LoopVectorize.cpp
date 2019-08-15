@@ -2746,7 +2746,7 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
 
   // We currently don't use LoopVersioning for the actual loop cloning but we
   // still use it to add the noalias metadata.
-  LVer = llvm::make_unique<LoopVersioning>(*Legal->getLAI(), OrigLoop, LI, DT,
+  LVer = std::make_unique<LoopVersioning>(*Legal->getLAI(), OrigLoop, LI, DT,
                                            PSE.getSE());
   LVer->prepareNoAliasMetadata();
 }
@@ -4853,7 +4853,7 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF() {
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  if (Legal->canFoldTailByMasking()) {
+  if (Legal->prepareToFoldTailByMasking()) {
     FoldTailByMasking = true;
     return MaxVF;
   }
@@ -6972,7 +6972,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
-  auto Plan = llvm::make_unique<VPlan>(VPBB);
+  auto Plan = std::make_unique<VPlan>(VPBB);
 
   VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, Builder);
   // Represent values that will have defs inside VPlan.
@@ -7092,7 +7092,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   // Create new empty VPlan
-  auto Plan = llvm::make_unique<VPlan>();
+  auto Plan = std::make_unique<VPlan>();
 
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);

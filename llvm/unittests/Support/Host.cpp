@@ -273,7 +273,7 @@ static bool runAndGetCommandOutput(
     Size = ::lseek(FD, 0, SEEK_END);
     ASSERT_NE(-1, Size);
     ::lseek(FD, 0, SEEK_SET);
-    Buffer = llvm::make_unique<char[]>(Size);
+    Buffer = std::make_unique<char[]>(Size);
     ASSERT_EQ(::read(FD, Buffer.get(), Size), Size);
     ::close(FD);
 

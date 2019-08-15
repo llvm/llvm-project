@@ -170,17 +170,15 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
 
 IOHandlerConfirm::~IOHandlerConfirm() = default;
 
-int IOHandlerConfirm::IOHandlerComplete(
-    IOHandler &io_handler, const char *current_line, const char *cursor,
-    const char *last_char, StringList &matches, StringList &descriptions) {
-  if (current_line == cursor) {
-    if (m_default_response) {
-      matches.AppendString("y");
-    } else {
-      matches.AppendString("n");
-    }
+int IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
+                                        CompletionRequest &request) {
+  if (request.GetRawCursorPos() == 0) {
+    if (m_default_response)
+      request.AddCompletion("y");
+    else
+      request.AddCompletion("n");
   }
-  return matches.GetSize();
+  return request.GetNumberOfMatches();
 }
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
@@ -218,39 +216,43 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
-int IOHandlerDelegate::IOHandlerComplete(
-    IOHandler &io_handler, const char *current_line, const char *cursor,
-    const char *last_char, StringList &matches, StringList &descriptions) {
+int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
+                                         CompletionRequest &request) {
   switch (m_completion) {
   case Completion::None:
     break;
 
   case Completion::LLDBCommand:
     return io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(
-        current_line, cursor, last_char, matches, descriptions);
+        request);
   case Completion::Expression: {
     CompletionResult result;
-    CompletionRequest request(current_line, cursor - current_line, result);
+    CompletionRequest subrequest(request.GetRawLine(),
+                                 request.GetRawCursorPos(), result);
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, request, nullptr);
+        CommandCompletions::eVariablePathCompletion, subrequest, nullptr);
+    StringList matches;
+    StringList descriptions;
     result.GetMatches(matches);
     result.GetDescriptions(descriptions);
 
-    size_t num_matches = request.GetNumberOfMatches();
+    size_t num_matches = subrequest.GetNumberOfMatches();
     if (num_matches > 0) {
       std::string common_prefix = matches.LongestCommonPrefix();
-      const size_t partial_name_len = request.GetCursorArgumentPrefix().size();
+      const size_t partial_name_len =
+          subrequest.GetCursorArgumentPrefix().size();
 
       // If we matched a unique single command, add a space... Only do this if
       // the completer told us this was a complete word, however...
-      if (num_matches == 1 && request.GetWordComplete()) {
+      if (num_matches == 1 && subrequest.GetWordComplete()) {
         common_prefix.push_back(' ');
       }
       common_prefix.erase(0, partial_name_len);
-      matches.InsertStringAtIndex(0, std::move(common_prefix));
+      request.AddCompletion(common_prefix);
     }
-    return num_matches;
+    request.AddCompletions(matches, descriptions);
+    return request.GetNumberOfMatches();
   } break;
   }
 
@@ -443,14 +445,12 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
       *editline_reader, lines, cursor_position);
 }
 
-int IOHandlerEditline::AutoCompleteCallback(
-    const char *current_line, const char *cursor, const char *last_char,
-    StringList &matches, StringList &descriptions, void *baton) {
+int IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
+                                            void *baton) {
   IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
   if (editline_reader)
-    return editline_reader->m_delegate.IOHandlerComplete(
-        *editline_reader, current_line, cursor, last_char, matches,
-        descriptions);
+    return editline_reader->m_delegate.IOHandlerComplete(*editline_reader,
+                                                         request);
   return 0;
 }
 #endif

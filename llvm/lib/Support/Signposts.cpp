@@ -78,6 +78,8 @@ public:
 
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
 #define HAVE_ANY_SIGNPOST_IMPL 1
+#else
+#define HAVE_ANY_SIGNPOST_IMPL 0
 #endif
 
 SignpostEmitter::SignpostEmitter() {

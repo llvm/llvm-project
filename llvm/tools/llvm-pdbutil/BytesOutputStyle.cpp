@@ -457,7 +457,7 @@ BytesOutputStyle::initializeTypes(uint32_t StreamIdx) {
   uint32_t Count = Tpi->getNumTypeRecords();
   auto Offsets = Tpi->getTypeIndexOffsets();
   TypeCollection =
-      llvm::make_unique<LazyRandomTypeCollection>(Types, Count, Offsets);
+      std::make_unique<LazyRandomTypeCollection>(Types, Count, Offsets);
 
   return *TypeCollection;
 }

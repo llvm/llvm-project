@@ -62,7 +62,7 @@ public:
 
   Error visitSymbolBegin(CVSymbol &Record) override {
     assert(!Mapping && "Already in a symbol mapping!");
-    Mapping = llvm::make_unique<MappingInfo>(Record.content(), Container);
+    Mapping = std::make_unique<MappingInfo>(Record.content(), Container);
     return Mapping->Mapping.visitSymbolBegin(Record);
   }
   Error visitSymbolEnd(CVSymbol &Record) override {

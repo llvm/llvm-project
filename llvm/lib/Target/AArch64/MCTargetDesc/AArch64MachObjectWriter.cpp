@@ -406,6 +406,6 @@ void AArch64MachObjectWriter::recordRelocation(
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
                                     bool IsILP32) {
-  return llvm::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype,
+  return std::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype,
                                                     IsILP32);
 }

@@ -54,21 +54,14 @@ struct PointerUnionTypeSelectorReturn<
 };
 
 namespace pointer_union_detail {
-  constexpr int constexprMin(int a, int b) { return a < b ? a : b; }
   /// Determine the number of bits required to store integers with values < n.
   /// This is ceil(log2(n)).
   constexpr int bitsRequired(unsigned n) {
     return n > 1 ? 1 + bitsRequired((n + 1) / 2) : 0;
   }
 
-  // FIXME: In C++14, replace this with
-  //   std::min({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...})
-  template <typename T> constexpr int lowBitsAvailable() {
-    return PointerLikeTypeTraits<T>::NumLowBitsAvailable;
-  }
-  template <typename T1, typename T2, typename... Ts>
-  constexpr int lowBitsAvailable() {
-    return constexprMin(lowBitsAvailable<T1>(), lowBitsAvailable<T2, Ts...>());
+  template <typename... Ts> constexpr int lowBitsAvailable() {
+    return std::min<int>({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...});
   }
 
   /// Find the index of a type in a list of types. TypeIndex<T, Us...>::Index

@@ -18,7 +18,7 @@ namespace mca {
 
 CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {
   // Create a default region for the input code sequence.
-  Regions.emplace_back(make_unique<CodeRegion>("", SMLoc()));
+  Regions.emplace_back(std::make_unique<CodeRegion>("", SMLoc()));
 }
 
 bool CodeRegion::isLocInRange(SMLoc Loc) const {
@@ -36,7 +36,7 @@ void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
     if (Regions.size() == 1 && !Regions[0]->startLoc().isValid() &&
         !Regions[0]->endLoc().isValid()) {
       ActiveRegions[Description] = 0;
-      Regions[0] = make_unique<CodeRegion>(Description, Loc);
+      Regions[0] = std::make_unique<CodeRegion>(Description, Loc);
       return;
     }
   } else {
@@ -62,7 +62,7 @@ void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
   }
 
   ActiveRegions[Description] = Regions.size();
-  Regions.emplace_back(make_unique<CodeRegion>(Description, Loc));
+  Regions.emplace_back(std::make_unique<CodeRegion>(Description, Loc));
   return;
 }
 

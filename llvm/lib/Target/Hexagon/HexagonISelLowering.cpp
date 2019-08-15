@@ -2877,6 +2877,17 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
+SDValue
+HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
+      const {
+  SDValue Op(N, 0);
+  if (isHvxOperation(Op)) {
+    if (SDValue V = PerformHvxDAGCombine(N, DCI))
+      return V;
+  }
+  return SDValue();
+}
+
 /// Returns relocation base for the given PIC jumptable.
 SDValue
 HexagonTargetLowering::getPICJumpTableRelocBase(SDValue Table,

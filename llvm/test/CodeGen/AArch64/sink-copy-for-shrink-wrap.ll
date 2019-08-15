@@ -4,7 +4,7 @@
 ; CHECK-NOT: stp
 ; CHECK-NOT: mov w{{[0-9]+}}, w0
 ; CHECK-LABEL: %bb.1:
-; CHECK: stp x19
+; CHECK: stp {{.*}}x19
 ; CHECK: mov w{{[0-9]+}}, w0
 
 define i32 @shrinkwrapme(i32 %paramAcrossCall, i32 %paramNotAcrossCall) {

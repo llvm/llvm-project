@@ -472,7 +472,7 @@ private:
   }
 
   Expected<ObjHandleT> addObject(std::string ObjBuffer) {
-    auto Buffer = llvm::make_unique<StringMemoryBuffer>(std::move(ObjBuffer));
+    auto Buffer = std::make_unique<StringMemoryBuffer>(std::move(ObjBuffer));
     auto Id = HandleIdMgr.getNext();
     assert(!BaseLayerHandles.count(Id) && "Id already in use?");
 

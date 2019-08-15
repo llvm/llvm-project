@@ -77,8 +77,8 @@ statement be our "main":
 
 .. code-block:: udiff
 
-  -    auto Proto = llvm::make_unique<PrototypeAST>("", std::vector<std::string>());
-  +    auto Proto = llvm::make_unique<PrototypeAST>("main", std::vector<std::string>());
+  -    auto Proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+  +    auto Proto = std::make_unique<PrototypeAST>("main", std::vector<std::string>());
 
 just with the simple change of giving it a name.
 
@@ -325,7 +325,7 @@ that we pass down through when we create a new expression:
 
 .. code-block:: c++
 
-   LHS = llvm::make_unique<BinaryExprAST>(BinLoc, BinOp, std::move(LHS),
+   LHS = std::make_unique<BinaryExprAST>(BinLoc, BinOp, std::move(LHS),
                                           std::move(RHS));
 
 giving us locations for each of our expressions and variables.

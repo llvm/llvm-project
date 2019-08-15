@@ -78,7 +78,7 @@ _foo:
 // CHECK:   Alignment: 3
 // CHECK:   RelocationOffset: 0x0
 // CHECK:   RelocationCount: 0
-// CHECK:   Type: 0xB
+// CHECK:   Type: Coalesced (0xB)
 // CHECK:   Attributes [ (0x680000)
 // CHECK:     LiveSupport (0x80000)
 // CHECK:     NoTOC (0x400000)

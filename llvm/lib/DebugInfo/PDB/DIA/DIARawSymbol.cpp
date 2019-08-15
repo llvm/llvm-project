@@ -405,7 +405,7 @@ DIARawSymbol::findChildren(PDB_SymType Type) const {
       return nullptr;
   }
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -423,7 +423,7 @@ DIARawSymbol::findChildren(PDB_SymType Type, StringRef Name,
       Symbol->findChildrenEx(EnumVal, Name16Str, CompareFlags, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -443,7 +443,7 @@ DIARawSymbol::findChildrenByAddr(PDB_SymType Type, StringRef Name,
                                            Section, Offset, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -462,7 +462,7 @@ DIARawSymbol::findChildrenByVA(PDB_SymType Type, StringRef Name,
                                          &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -480,7 +480,7 @@ DIARawSymbol::findChildrenByRVA(PDB_SymType Type, StringRef Name,
                                           &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -489,7 +489,7 @@ DIARawSymbol::findInlineFramesByAddr(uint32_t Section, uint32_t Offset) const {
   if (S_OK != Symbol->findInlineFramesByAddr(Section, Offset, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -498,7 +498,7 @@ DIARawSymbol::findInlineFramesByRVA(uint32_t RVA) const {
   if (S_OK != Symbol->findInlineFramesByRVA(RVA, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -507,7 +507,7 @@ DIARawSymbol::findInlineFramesByVA(uint64_t VA) const {
   if (S_OK != Symbol->findInlineFramesByVA(VA, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
+  return std::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers> DIARawSymbol::findInlineeLines() const {
@@ -515,7 +515,7 @@ std::unique_ptr<IPDBEnumLineNumbers> DIARawSymbol::findInlineeLines() const {
   if (S_OK != Symbol->findInlineeLines(&DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
+  return std::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
@@ -526,7 +526,7 @@ DIARawSymbol::findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
       Symbol->findInlineeLinesByAddr(Section, Offset, Length, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
+  return std::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
@@ -535,7 +535,7 @@ DIARawSymbol::findInlineeLinesByRVA(uint32_t RVA, uint32_t Length) const {
   if (S_OK != Symbol->findInlineeLinesByRVA(RVA, Length, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
+  return std::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
@@ -544,7 +544,7 @@ DIARawSymbol::findInlineeLinesByVA(uint64_t VA, uint32_t Length) const {
   if (S_OK != Symbol->findInlineeLinesByVA(VA, Length, &DiaEnumerator))
     return nullptr;
 
-  return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
+  return std::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
 }
 
 void DIARawSymbol::getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes) const {
@@ -776,7 +776,7 @@ std::unique_ptr<IPDBLineNumber> DIARawSymbol::getSrcLineOnTypeDefn() const {
   if (FAILED(Symbol->getSrcLineOnTypeDefn(&LineNumber)) || !LineNumber)
     return nullptr;
 
-  return llvm::make_unique<DIALineNumber>(LineNumber);
+  return std::make_unique<DIALineNumber>(LineNumber);
 }
 
 uint32_t DIARawSymbol::getStride() const {
@@ -871,7 +871,7 @@ DIARawSymbol::getVirtualBaseTableType() const {
   if (FAILED(Symbol->get_virtualBaseTableType(&TableType)) || !TableType)
     return nullptr;
 
-  auto RawVT = llvm::make_unique<DIARawSymbol>(Session, TableType);
+  auto RawVT = std::make_unique<DIARawSymbol>(Session, TableType);
   auto Pointer =
       PDBSymbol::createAs<PDBSymbolTypePointer>(Session, std::move(RawVT));
   return unique_dyn_cast<PDBSymbolTypeBuiltin>(Pointer->getPointeeType());

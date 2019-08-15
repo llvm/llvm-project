@@ -242,19 +242,19 @@ llvm::RuntimeDyldELF::create(Triple::ArchType Arch,
                              JITSymbolResolver &Resolver) {
   switch (Arch) {
   default:
-    return make_unique<RuntimeDyldELF>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldELF>(MemMgr, Resolver);
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
-    return make_unique<RuntimeDyldELFMips>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldELFMips>(MemMgr, Resolver);
   }
 }
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyldELF::loadObject(const object::ObjectFile &O) {
   if (auto ObjSectionToIDOrErr = loadObjectImpl(O))
-    return llvm::make_unique<LoadedELFObjectInfo>(*this, *ObjSectionToIDOrErr);
+    return std::make_unique<LoadedELFObjectInfo>(*this, *ObjSectionToIDOrErr);
   else {
     HasError = true;
     raw_string_ostream ErrStream(ErrorStr);

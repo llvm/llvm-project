@@ -186,12 +186,12 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSDarwin())
-    return llvm::make_unique<TargetLoweringObjectFileMachO>();
+    return std::make_unique<TargetLoweringObjectFileMachO>();
 
   if (TT.isOSAIX())
-    return llvm::make_unique<TargetLoweringObjectFileXCOFF>();
+    return std::make_unique<TargetLoweringObjectFileXCOFF>();
 
-  return llvm::make_unique<PPC64LinuxTargetObjectFile>();
+  return std::make_unique<PPC64LinuxTargetObjectFile>();
 }
 
 static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
@@ -269,8 +269,8 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
   ScheduleDAGMILive *DAG =
     new ScheduleDAGMILive(C, ST.usePPCPreRASchedStrategy() ?
-                          llvm::make_unique<PPCPreRASchedStrategy>(C) :
-                          llvm::make_unique<GenericScheduler>(C));
+                          std::make_unique<PPCPreRASchedStrategy>(C) :
+                          std::make_unique<GenericScheduler>(C));
   // add DAG Mutations here.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
@@ -281,8 +281,8 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
   ScheduleDAGMI *DAG =
     new ScheduleDAGMI(C, ST.usePPCPostRASchedStrategy() ?
-                      llvm::make_unique<PPCPostRASchedStrategy>(C) :
-                      llvm::make_unique<PostGenericScheduler>(C), true);
+                      std::make_unique<PPCPostRASchedStrategy>(C) :
+                      std::make_unique<PostGenericScheduler>(C), true);
   // add DAG Mutations here.
   return DAG;
 }
@@ -338,7 +338,7 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<PPCSubtarget>(
+    I = std::make_unique<PPCSubtarget>(
         TargetTriple, CPU,
         // FIXME: It would be good to have the subtarget additions here
         // not necessary. Anything that turns them on/off (overrides) ends

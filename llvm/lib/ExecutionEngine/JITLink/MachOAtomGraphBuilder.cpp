@@ -34,7 +34,7 @@ Expected<std::unique_ptr<AtomGraph>> MachOAtomGraphBuilder::buildGraph() {
 
 MachOAtomGraphBuilder::MachOAtomGraphBuilder(const object::MachOObjectFile &Obj)
     : Obj(Obj),
-      G(llvm::make_unique<AtomGraph>(Obj.getFileName(), getPointerSize(Obj),
+      G(std::make_unique<AtomGraph>(Obj.getFileName(), getPointerSize(Obj),
                                      getEndianness(Obj))) {}
 
 void MachOAtomGraphBuilder::addCustomAtomizer(StringRef SectionName,

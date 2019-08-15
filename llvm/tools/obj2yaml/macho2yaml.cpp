@@ -180,7 +180,7 @@ const char *MachODumper::processLoadCommandData<MachO::build_version_command>(
 }
 
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
-  auto Y = make_unique<MachOYAML::Object>();
+  auto Y = std::make_unique<MachOYAML::Object>();
   Y->IsLittleEndian = Obj.isLittleEndian();
   dumpHeader(Y);
   dumpLoadCommands(Y);

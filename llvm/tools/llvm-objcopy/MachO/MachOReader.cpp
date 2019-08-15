@@ -188,7 +188,7 @@ void MachOReader::readSymbolTable(Object &O) const {
                    StrTable,
                    MachOObj.getSymbolTableEntry(Symbol.getRawDataRefImpl())));
 
-    O.SymTable.Symbols.push_back(llvm::make_unique<SymbolEntry>(SE));
+    O.SymTable.Symbols.push_back(std::make_unique<SymbolEntry>(SE));
   }
 }
 
@@ -223,7 +223,7 @@ void MachOReader::readExportInfo(Object &O) const {
 }
 
 std::unique_ptr<Object> MachOReader::create() const {
-  auto Obj = llvm::make_unique<Object>();
+  auto Obj = std::make_unique<Object>();
   readHeader(*Obj);
   readLoadCommands(*Obj);
   readSymbolTable(*Obj);

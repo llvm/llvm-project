@@ -244,11 +244,11 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
-  return llvm::make_unique<AMDGPUTargetObjectFile>();
+  return std::make_unique<AMDGPUTargetObjectFile>();
 }
 
 static ScheduleDAGInstrs *createR600MachineScheduler(MachineSchedContext *C) {
-  return new ScheduleDAGMILive(C, llvm::make_unique<R600SchedStrategy>());
+  return new ScheduleDAGMILive(C, std::make_unique<R600SchedStrategy>());
 }
 
 static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
@@ -258,7 +258,7 @@ static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
 static ScheduleDAGInstrs *
 createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
-    new GCNScheduleDAGMILive(C, make_unique<GCNMaxOccupancySchedStrategy>(C));
+    new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
@@ -484,7 +484,7 @@ const R600Subtarget *R600TargetMachine::getSubtargetImpl(
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
+    I = std::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
   }
 
   return I.get();
@@ -520,7 +520,7 @@ const GCNSubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const 
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
+    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);

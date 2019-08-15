@@ -466,7 +466,7 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
       // splitAndWriteThinLTOBitcode). Just always build it once via the
       // buildModuleSummaryIndex when Module(s) are ready.
       ProfileSummaryInfo PSI(M);
-      NewIndex = llvm::make_unique<ModuleSummaryIndex>(
+      NewIndex = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(M, nullptr, &PSI));
       Index = NewIndex.get();
     }

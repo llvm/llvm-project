@@ -255,16 +255,16 @@ void SetTheory::Operator::anchor() {}
 void SetTheory::Expander::anchor() {}
 
 SetTheory::SetTheory() {
-  addOperator("add", llvm::make_unique<AddOp>());
-  addOperator("sub", llvm::make_unique<SubOp>());
-  addOperator("and", llvm::make_unique<AndOp>());
-  addOperator("shl", llvm::make_unique<ShlOp>());
-  addOperator("trunc", llvm::make_unique<TruncOp>());
-  addOperator("rotl", llvm::make_unique<RotOp>(false));
-  addOperator("rotr", llvm::make_unique<RotOp>(true));
-  addOperator("decimate", llvm::make_unique<DecimateOp>());
-  addOperator("interleave", llvm::make_unique<InterleaveOp>());
-  addOperator("sequence", llvm::make_unique<SequenceOp>());
+  addOperator("add", std::make_unique<AddOp>());
+  addOperator("sub", std::make_unique<SubOp>());
+  addOperator("and", std::make_unique<AndOp>());
+  addOperator("shl", std::make_unique<ShlOp>());
+  addOperator("trunc", std::make_unique<TruncOp>());
+  addOperator("rotl", std::make_unique<RotOp>(false));
+  addOperator("rotr", std::make_unique<RotOp>(true));
+  addOperator("decimate", std::make_unique<DecimateOp>());
+  addOperator("interleave", std::make_unique<InterleaveOp>());
+  addOperator("sequence", std::make_unique<SequenceOp>());
 }
 
 void SetTheory::addOperator(StringRef Name, std::unique_ptr<Operator> Op) {
@@ -276,7 +276,7 @@ void SetTheory::addExpander(StringRef ClassName, std::unique_ptr<Expander> E) {
 }
 
 void SetTheory::addFieldExpander(StringRef ClassName, StringRef FieldName) {
-  addExpander(ClassName, llvm::make_unique<FieldExpander>(FieldName));
+  addExpander(ClassName, std::make_unique<FieldExpander>(FieldName));
 }
 
 void SetTheory::evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {

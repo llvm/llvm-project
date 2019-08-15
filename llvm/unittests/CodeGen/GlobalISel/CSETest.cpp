@@ -22,7 +22,7 @@ TEST_F(GISelMITest, TestCSE) {
   auto MIBInput1 = B.buildInstr(TargetOpcode::G_TRUNC, {s16}, {Copies[1]});
   auto MIBAdd = B.buildInstr(TargetOpcode::G_ADD, {s16}, {MIBInput, MIBInput});
   GISelCSEInfo CSEInfo;
-  CSEInfo.setCSEConfig(make_unique<CSEConfigFull>());
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigFull>());
   CSEInfo.analyze(*MF);
   B.setCSEInfo(&CSEInfo);
   CSEMIRBuilder CSEB(B.getState());
@@ -84,7 +84,7 @@ TEST_F(GISelMITest, TestCSEConstantConfig) {
   auto MIBAdd = B.buildInstr(TargetOpcode::G_ADD, {s16}, {MIBInput, MIBInput});
   auto MIBZero = B.buildConstant(s16, 0);
   GISelCSEInfo CSEInfo;
-  CSEInfo.setCSEConfig(make_unique<CSEConfigConstantOnly>());
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
   CSEInfo.analyze(*MF);
   B.setCSEInfo(&CSEInfo);
   CSEMIRBuilder CSEB(B.getState());

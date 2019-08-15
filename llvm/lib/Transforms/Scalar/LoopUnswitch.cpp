@@ -525,7 +525,7 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   if (EnableMSSALoopDependency) {
     MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
     assert(DT && "Cannot update MemorySSA without a valid DomTree.");
   }
   currentLoop = L;

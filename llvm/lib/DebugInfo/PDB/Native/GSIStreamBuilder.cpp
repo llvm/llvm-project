@@ -183,8 +183,8 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
 }
 
 GSIStreamBuilder::GSIStreamBuilder(msf::MSFBuilder &Msf)
-    : Msf(Msf), PSH(llvm::make_unique<GSIHashStreamBuilder>()),
-      GSH(llvm::make_unique<GSIHashStreamBuilder>()) {}
+    : Msf(Msf), PSH(std::make_unique<GSIHashStreamBuilder>()),
+      GSH(std::make_unique<GSIHashStreamBuilder>()) {}
 
 GSIStreamBuilder::~GSIStreamBuilder() {}
 

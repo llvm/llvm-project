@@ -42,7 +42,7 @@ Lsym_asm_temp:
 // CHECK-X86_32:     Alignment: 0
 // CHECK-X86_32:     RelocationOffset: 0x0
 // CHECK-X86_32:     RelocationCount: 0
-// CHECK-X86_32:     Type: 0x0
+// CHECK-X86_32:     Type: Regular (0x0)
 // CHECK-X86_32:     Attributes [ (0x800000)
 // CHECK-X86_32:       PureInstructions (0x800000)
 // CHECK-X86_32:     ]
@@ -206,7 +206,7 @@ Lsym_asm_temp:
 // CHECK-X86_64:     Alignment: 0
 // CHECK-X86_64:     RelocationOffset: 0x0
 // CHECK-X86_64:     RelocationCount: 0
-// CHECK-X86_64:     Type: 0x0
+// CHECK-X86_64:     Type: Regular (0x0)
 // CHECK-X86_64:     Attributes [ (0x800000)
 // CHECK-X86_64:       PureInstructions (0x800000)
 // CHECK-X86_64:     ]

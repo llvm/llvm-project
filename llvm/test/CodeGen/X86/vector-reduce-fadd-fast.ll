@@ -90,8 +90,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ;
 ; AVX1-FAST-LABEL: test_v4f32:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    retq
@@ -156,9 +155,8 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; AVX1-FAST-LABEL: test_v8f32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm2, %xmm1
+; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
@@ -350,8 +348,7 @@ define float @test_v4f32_zero(<4 x float> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v4f32_zero:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    retq
 ;
@@ -411,9 +408,8 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; AVX1-FAST-LABEL: test_v8f32_zero:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -597,8 +593,7 @@ define float @test_v4f32_undef(<4 x float> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v4f32_undef:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    retq
 ;
@@ -658,9 +653,8 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; AVX1-FAST-LABEL: test_v8f32_undef:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -834,7 +828,7 @@ define double @test_v4f64(double %a0, <4 x double> %a1) {
 ; AVX1-FAST-LABEL: test_v4f64:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-FAST-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; AVX1-FAST-NEXT:    vhaddpd %xmm1, %xmm2, %xmm1
 ; AVX1-FAST-NEXT:    vhaddpd %xmm1, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
@@ -1053,7 +1047,7 @@ define double @test_v4f64_zero(<4 x double> %a0) {
 ; AVX1-FAST-LABEL: test_v4f64_zero:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm1, %xmm0
 ; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -1260,7 +1254,7 @@ define double @test_v4f64_undef(<4 x double> %a0) {
 ; AVX1-FAST-LABEL: test_v4f64_undef:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm1, %xmm0
 ; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq

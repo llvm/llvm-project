@@ -97,14 +97,14 @@ public:
       // If the smallest region containing MBB is a loop
       if (LoopMap.count(ML))
         return LoopMap[ML].get();
-      LoopMap[ML] = llvm::make_unique<ConcreteRegion<MachineLoop>>(ML);
+      LoopMap[ML] = std::make_unique<ConcreteRegion<MachineLoop>>(ML);
       return LoopMap[ML].get();
     } else {
       // If the smallest region containing MBB is an exception
       if (ExceptionMap.count(WE))
         return ExceptionMap[WE].get();
       ExceptionMap[WE] =
-          llvm::make_unique<ConcreteRegion<WebAssemblyException>>(WE);
+          std::make_unique<ConcreteRegion<WebAssemblyException>>(WE);
       return ExceptionMap[WE].get();
     }
   }

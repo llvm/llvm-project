@@ -200,7 +200,7 @@ public:
         RegClassInfo(rci), II_setByPragma(II), Topo(SUnits, &ExitSU) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
-      Mutations.push_back(llvm::make_unique<CopyToPhiMutation>());
+      Mutations.push_back(std::make_unique<CopyToPhiMutation>());
   }
 
   void schedule() override;

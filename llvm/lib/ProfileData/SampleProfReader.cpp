@@ -660,7 +660,7 @@ std::error_code SampleProfileReaderBinary::readSummary() {
     if (EC != sampleprof_error::success)
       return EC;
   }
-  Summary = llvm::make_unique<ProfileSummary>(
+  Summary = std::make_unique<ProfileSummary>(
       ProfileSummary::PSK_Sample, Entries, *TotalCount, *MaxBlockCount, 0,
       *MaxFunctionCount, *NumBlocks, *NumFunctions);
 
@@ -1007,7 +1007,7 @@ SampleProfileReaderItaniumRemapper::create(
   auto BufferOrError = setupMemoryBuffer(Filename);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
-  return llvm::make_unique<SampleProfileReaderItaniumRemapper>(
+  return std::make_unique<SampleProfileReaderItaniumRemapper>(
       std::move(BufferOrError.get()), C, std::move(Underlying));
 }
 

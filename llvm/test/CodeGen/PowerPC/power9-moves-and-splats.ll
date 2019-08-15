@@ -217,12 +217,12 @@ entry:
 define <16 x i8> @test12() {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxspltib v2, 255
+; CHECK-NEXT:    xxleqv v2, v2, v2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test12:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxspltib v2, 255
+; CHECK-BE-NEXT:    xxleqv v2, v2, v2
 ; CHECK-BE-NEXT:    blr
 
 entry:

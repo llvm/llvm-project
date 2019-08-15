@@ -242,9 +242,34 @@ C++ Checkers.
 
 .. _cplusplus-InnerPointer:
 
-cplusplus.InnerPointer
-""""""""""""""""""""""
+cplusplus.InnerPointer (C++)
+""""""""""""""""""""""""""""
 Check for inner pointers of C++ containers used after re/deallocation.
+
+Many container methods in the C++ standard library are known to invalidate
+"references" (including actual references, iterators and raw pointers) to
+elements of the container. Using such references after they are invalidated
+causes undefined behavior, which is a common source of memory errors in C++ that
+this checker is capable of finding.
+
+The checker is currently limited to ``std::string`` objects and doesn't
+recognize some of the more sophisticated approaches to passing unowned pointers
+around, such as ``std::string_view``.
+
+.. code-block:: cpp
+
+ void deref_after_assignment() {
+   std::string s = "llvm";
+   const char *c = s.data(); // note: pointer to inner buffer of 'std::string' obtained here
+   s = "clang"; // note: inner buffer of 'std::string' reallocated by call to 'operator='
+   consume(c); // warn: inner pointer of container used after re/deallocation
+ }
+
+ const char *return_temp(int x) {
+   return std::to_string(x).c_str(); // warn: inner pointer of container used after re/deallocation
+   // note: pointer to inner buffer of 'std::string' obtained here
+   // note: inner buffer of 'std::string' deallocated by call to destructor
+ }
 
 .. _cplusplus-NewDelete:
 

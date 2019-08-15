@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=arm64-eabi -mcpu=cyclone < %s | FileCheck %s
 
 ; CHECK: foo
-; CHECK-DAG: stur w[[REG0:[0-9]+]], [x29, #-24]
-; CHECK-DAG: stur w[[REG0]], [x29, #-20]
+; CHECK-DAG: str w[[REG0:[0-9]+]], [x29, #24]
+; CHECK-DAG: str w[[REG0]], [x29, #28]
 define i32 @foo(i32 %a) nounwind {
   %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4

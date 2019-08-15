@@ -63,7 +63,7 @@ createPtr(MemoryBufferRef Object) {
   auto Ret = ELFObjectFile<ELFT>::create(Object);
   if (Error E = Ret.takeError())
     return std::move(E);
-  return make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
+  return std::make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
 }
 
 Expected<std::unique_ptr<ObjectFile>>

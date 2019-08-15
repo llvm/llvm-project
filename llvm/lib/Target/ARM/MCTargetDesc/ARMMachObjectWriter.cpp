@@ -506,5 +506,5 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
-  return llvm::make_unique<ARMMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+  return std::make_unique<ARMMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
 }

@@ -155,7 +155,7 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
   // Create a partitioning materialization unit and lodge it with the
   // implementation dylib.
   if (auto Err = PDR.getImplDylib().define(
-          llvm::make_unique<PartitioningIRMaterializationUnit>(
+          std::make_unique<PartitioningIRMaterializationUnit>(
               ES, std::move(TSM), R.getVModuleKey(), *this))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
@@ -267,7 +267,7 @@ void CompileOnDemandLayer::emitPartition(
 
   // If the partition is empty, return the whole module to the symbol table.
   if (GVsToExtract->empty()) {
-    R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
+    R.replace(std::make_unique<PartitioningIRMaterializationUnit>(
         std::move(TSM), R.getSymbols(), std::move(Defs), *this));
     return;
   }
@@ -310,7 +310,7 @@ void CompileOnDemandLayer::emitPartition(
     return;
   }
 
-  R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
+  R.replace(std::make_unique<PartitioningIRMaterializationUnit>(
       ES, std::move(TSM), R.getVModuleKey(), *this));
   BaseLayer.emit(std::move(R), std::move(*ExtractedTSM));
 }

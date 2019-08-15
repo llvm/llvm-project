@@ -117,9 +117,9 @@ define void @test_alloca_large_frame(i64 %n) {
 ; CHECK-MACHO-LABEL: test_alloca_large_frame:
 
 
-; CHECK: stp     x28, x19, [sp, #-32]!
-; CHECK: stp     x29, x30, [sp, #16]
-; CHECK: add     x29, sp, #16
+; CHECK: stp     x29, x30, [sp, #-32]!
+; CHECK: stp     x28, x19, [sp, #16]
+; CHECK: mov     x29, sp
 ; CHECK: sub     sp, sp, #1953, lsl #12
 ; CHECK: sub     sp, sp, #512
 
@@ -136,9 +136,9 @@ define void @test_alloca_large_frame(i64 %n) {
 
   ret void
 
-; CHECK: sub     sp, x29, #16
-; CHECK: ldp     x29, x30, [sp, #16]
-; CHECK: ldp     x28, x19, [sp], #32
+; CHECK: mov     sp, x29
+; CHECK: ldp     x28, x19, [sp, #16]
+; CHECK: ldp     x29, x30, [sp], #32
 
 ; CHECK-MACHO: sub     sp, x29, #16
 ; CHECK-MACHO: ldp     x29, x30, [sp, #16]
@@ -152,6 +152,7 @@ define void @test_scoped_alloca(i64 %n) {
 ; CHECK-LABEL: test_scoped_alloca:
 
   %sp = call i8* @llvm.stacksave()
+; CHECK: mov x29, sp
 ; CHECK: mov [[SAVED_SP:x[0-9]+]], sp
 ; CHECK: mov [[OLDSP:x[0-9]+]], sp
 

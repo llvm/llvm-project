@@ -27,7 +27,7 @@ private:
 
 protected:
   ExecutionEngineTest() {
-    auto Owner = make_unique<Module>("<main>", Context);
+    auto Owner = std::make_unique<Module>("<main>", Context);
     M = Owner.get();
     Engine.reset(EngineBuilder(std::move(Owner)).setErrorStr(&Error).create());
   }

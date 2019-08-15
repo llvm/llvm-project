@@ -39,7 +39,7 @@ CHECK:       Offset: 0
 CHECK:       Alignment: 4
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: 0x0
+CHECK:       Type: Regular (0x0)
 CHECK:       Attributes [ (0x800004)
 CHECK:         PureInstructions (0x800000)
 CHECK:         SomeInstructions (0x4)
@@ -57,7 +57,7 @@ CHECK:       Offset: 0
 CHECK:       Alignment: 2
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: 0x0
+CHECK:       Type: Regular (0x0)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0
@@ -72,7 +72,7 @@ CHECK32:    Offset: 0
 CHECK32:    Alignment: 2
 CHECK32:    RelocationOffset: 0x0
 CHECK32:    RelocationCount: 0
-CHECK32:    Type: 0x6
+CHECK32:    Type: NonLazySymbolPointers (0x6)
 CHECK32:    Attributes [ (0x0)
 CHECK32:    ]
 CHECK32:    Reserved1: 0x0
@@ -88,7 +88,7 @@ CHECK:       Offset: 0
 CHECK:       Alignment: 2
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: 0x0
+CHECK:       Type: Regular (0x0)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0
@@ -104,7 +104,7 @@ CHECK:       Offset: 0
 CHECK:       Alignment: 2
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: LocReloc (0x1)
+CHECK:       Type: ZeroFill (0x1)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0
@@ -120,7 +120,7 @@ CHECK:       Offset: 0
 CHECK:       Alignment: 2
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: LocReloc (0x1)
+CHECK:       Type: ZeroFill (0x1)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0
@@ -135,7 +135,7 @@ CHECK64:     Offset: 8192
 CHECK64:     Alignment: 0
 CHECK64:     RelocationOffset: 0x0
 CHECK64:     RelocationCount: 0
-CHECK64:     Type: 0x0
+CHECK64:     Type: Regular (0x0)
 CHECK64:     Attributes [ (0x0)
 CHECK64:     ]
 CHECK64:     Reserved1: 0x0
@@ -150,7 +150,7 @@ CHECK64:     Offset: 8426
 CHECK64:     Alignment: 0
 CHECK64:     RelocationOffset: 0x0
 CHECK64:     RelocationCount: 0
-CHECK64:     Type: 0x0
+CHECK64:     Type: Regular (0x0)
 CHECK64:     Attributes [ (0x0)
 CHECK64:     ]
 CHECK64:     Reserved1: 0x0
@@ -165,7 +165,7 @@ CHECK64:     Offset: 8553
 CHECK64:     Alignment: 0
 CHECK64:     RelocationOffset: 0x0
 CHECK64:     RelocationCount: 0
-CHECK64:     Type: 0x0
+CHECK64:     Type: Regular (0x0)
 CHECK64:     Attributes [ (0x0)
 CHECK64:     ]
 CHECK64:     Reserved1: 0x0
@@ -180,7 +180,7 @@ CHECK64:     Offset: 8640
 CHECK64:     Alignment: 0
 CHECK64:     RelocationOffset: 0x0
 CHECK64:     RelocationCount: 0
-CHECK64:     Type: 0x0
+CHECK64:     Type: Regular (0x0)
 CHECK64:     Attributes [ (0x0)
 CHECK64:     ]
 CHECK64:     Reserved1: 0x0
@@ -195,7 +195,7 @@ CHECK64:     Offset: 8816
 CHECK64:     Alignment: 0
 CHECK64:     RelocationOffset: 0x0
 CHECK64:     RelocationCount: 0
-CHECK64:     Type: 0x0
+CHECK64:     Type: Regular (0x0)
 CHECK64:     Attributes [ (0x0)
 CHECK64:     ]
 CHECK64:     Reserved1: 0x0
@@ -213,7 +213,7 @@ CHECK64:     Offset: 9260
 CHECK:       Alignment: 0
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: 0x0
+CHECK:       Type: Regular (0x0)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0
@@ -231,7 +231,7 @@ CHECK64:     Offset: 9403
 CHECK:       Alignment: 0
 CHECK:       RelocationOffset: 0x0
 CHECK:       RelocationCount: 0
-CHECK:       Type: 0x0
+CHECK:       Type: Regular (0x0)
 CHECK:       Attributes [ (0x0)
 CHECK:       ]
 CHECK:       Reserved1: 0x0

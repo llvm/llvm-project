@@ -103,9 +103,8 @@ public:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &line) override;
 
-  int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
-                        const char *cursor, const char *last_char,
-                        StringList &matches, StringList &descriptions) override;
+  int IOHandlerComplete(IOHandler &io_handler,
+                        CompletionRequest &request) override;
 
 protected:
   static int CalculateActualIndentation(const StringList &lines);

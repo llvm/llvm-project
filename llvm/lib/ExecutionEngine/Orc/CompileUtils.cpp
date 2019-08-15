@@ -42,7 +42,7 @@ SimpleCompiler::CompileResult SimpleCompiler::operator()(Module &M) {
     PM.run(M);
   }
 
-  auto ObjBuffer = llvm::make_unique<SmallVectorMemoryBuffer>(
+  auto ObjBuffer = std::make_unique<SmallVectorMemoryBuffer>(
       std::move(ObjBufferSV),
       "<in memory object compiled from " + M.getModuleIdentifier() + ">");
 

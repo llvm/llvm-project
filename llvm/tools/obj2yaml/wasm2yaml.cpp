@@ -53,7 +53,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
   if (WasmSec.Name == "dylink") {
     std::unique_ptr<WasmYAML::DylinkSection> DylinkSec =
-        make_unique<WasmYAML::DylinkSection>();
+        std::make_unique<WasmYAML::DylinkSection>();
     const wasm::WasmDylinkInfo& Info = Obj.dylinkInfo();
     DylinkSec->MemorySize = Info.MemorySize;
     DylinkSec->MemoryAlignment = Info.MemoryAlignment;
@@ -63,7 +63,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     CustomSec = std::move(DylinkSec);
   } else if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec =
-        make_unique<WasmYAML::NameSection>();
+        std::make_unique<WasmYAML::NameSection>();
     for (const llvm::wasm::WasmFunctionName &Func : Obj.debugNames()) {
       WasmYAML::NameEntry NameEntry;
       NameEntry.Name = Func.Name;
@@ -73,7 +73,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
     std::unique_ptr<WasmYAML::LinkingSection> LinkingSec =
-        make_unique<WasmYAML::LinkingSection>();
+        std::make_unique<WasmYAML::LinkingSection>();
     LinkingSec->Version = Obj.linkingData().Version;
 
     ArrayRef<StringRef> Comdats = Obj.linkingData().Comdats;
@@ -134,7 +134,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     CustomSec = std::move(LinkingSec);
   } else if (WasmSec.Name == "producers") {
     std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =
-        make_unique<WasmYAML::ProducersSection>();
+        std::make_unique<WasmYAML::ProducersSection>();
     const llvm::wasm::WasmProducerInfo &Info = Obj.getProducerInfo();
     for (auto &E : Info.Languages) {
       WasmYAML::ProducerEntry Producer;
@@ -157,7 +157,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     CustomSec = std::move(ProducersSec);
   } else if (WasmSec.Name == "target_features") {
     std::unique_ptr<WasmYAML::TargetFeaturesSection> TargetFeaturesSec =
-        make_unique<WasmYAML::TargetFeaturesSection>();
+        std::make_unique<WasmYAML::TargetFeaturesSection>();
     for (auto &E : Obj.getTargetFeatures()) {
       WasmYAML::FeatureEntry Feature;
       Feature.Prefix = E.Prefix;
@@ -166,14 +166,14 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
     CustomSec = std::move(TargetFeaturesSec);
   } else {
-    CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
+    CustomSec = std::make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }
   CustomSec->Payload = yaml::BinaryRef(WasmSec.Content);
   return CustomSec;
 }
 
 ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
-  auto Y = make_unique<WasmYAML::Object>();
+  auto Y = std::make_unique<WasmYAML::Object>();
 
   // Dump header
   Y->Header.Version = Obj.getHeader().Version;
@@ -193,7 +193,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_TYPE: {
-      auto TypeSec = make_unique<WasmYAML::TypeSection>();
+      auto TypeSec = std::make_unique<WasmYAML::TypeSection>();
       uint32_t Index = 0;
       for (const auto &FunctionSig : Obj.types()) {
         WasmYAML::Signature Sig;
@@ -211,7 +211,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_IMPORT: {
-      auto ImportSec = make_unique<WasmYAML::ImportSection>();
+      auto ImportSec = std::make_unique<WasmYAML::ImportSection>();
       for (auto &Import : Obj.imports()) {
         WasmYAML::Import Im;
         Im.Module = Import.Module;
@@ -242,7 +242,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_FUNCTION: {
-      auto FuncSec = make_unique<WasmYAML::FunctionSection>();
+      auto FuncSec = std::make_unique<WasmYAML::FunctionSection>();
       for (const auto &Func : Obj.functionTypes()) {
         FuncSec->FunctionTypes.push_back(Func);
       }
@@ -250,7 +250,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_TABLE: {
-      auto TableSec = make_unique<WasmYAML::TableSection>();
+      auto TableSec = std::make_unique<WasmYAML::TableSection>();
       for (const wasm::WasmTable &Table : Obj.tables()) {
         TableSec->Tables.push_back(makeTable(Table));
       }
@@ -258,7 +258,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_MEMORY: {
-      auto MemorySec = make_unique<WasmYAML::MemorySection>();
+      auto MemorySec = std::make_unique<WasmYAML::MemorySection>();
       for (const wasm::WasmLimits &Memory : Obj.memories()) {
         MemorySec->Memories.push_back(makeLimits(Memory));
       }
@@ -266,7 +266,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_GLOBAL: {
-      auto GlobalSec = make_unique<WasmYAML::GlobalSection>();
+      auto GlobalSec = std::make_unique<WasmYAML::GlobalSection>();
       for (auto &Global : Obj.globals()) {
         WasmYAML::Global G;
         G.Index = Global.Index;
@@ -279,7 +279,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_EVENT: {
-      auto EventSec = make_unique<WasmYAML::EventSection>();
+      auto EventSec = std::make_unique<WasmYAML::EventSection>();
       for (auto &Event : Obj.events()) {
         WasmYAML::Event E;
         E.Index = Event.Index;
@@ -291,13 +291,13 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_START: {
-      auto StartSec = make_unique<WasmYAML::StartSection>();
+      auto StartSec = std::make_unique<WasmYAML::StartSection>();
       StartSec->StartFunction = Obj.startFunction();
       S = std::move(StartSec);
       break;
     }
     case wasm::WASM_SEC_EXPORT: {
-      auto ExportSec = make_unique<WasmYAML::ExportSection>();
+      auto ExportSec = std::make_unique<WasmYAML::ExportSection>();
       for (auto &Export : Obj.exports()) {
         WasmYAML::Export Ex;
         Ex.Name = Export.Name;
@@ -309,7 +309,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_ELEM: {
-      auto ElemSec = make_unique<WasmYAML::ElemSection>();
+      auto ElemSec = std::make_unique<WasmYAML::ElemSection>();
       for (auto &Segment : Obj.elements()) {
         WasmYAML::ElemSegment Seg;
         Seg.TableIndex = Segment.TableIndex;
@@ -323,7 +323,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_CODE: {
-      auto CodeSec = make_unique<WasmYAML::CodeSection>();
+      auto CodeSec = std::make_unique<WasmYAML::CodeSection>();
       for (auto &Func : Obj.functions()) {
         WasmYAML::Function Function;
         Function.Index = Func.Index;
@@ -340,7 +340,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_DATA: {
-      auto DataSec = make_unique<WasmYAML::DataSection>();
+      auto DataSec = std::make_unique<WasmYAML::DataSection>();
       for (const object::WasmSegment &Segment : Obj.dataSegments()) {
         WasmYAML::DataSegment Seg;
         Seg.SectionOffset = Segment.SectionOffset;
@@ -354,7 +354,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       break;
     }
     case wasm::WASM_SEC_DATACOUNT: {
-      auto DataCountSec = make_unique<WasmYAML::DataCountSection>();
+      auto DataCountSec = std::make_unique<WasmYAML::DataCountSection>();
       DataCountSec->Count = Obj.dataSegments().size();
       S = std::move(DataCountSec);
       break;

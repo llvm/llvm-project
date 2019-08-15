@@ -780,7 +780,7 @@ AST node:
       if (!Body)
         return nullptr;
 
-      return llvm::make_unique<VarExprAST>(std::move(VarNames),
+      return std::make_unique<VarExprAST>(std::move(VarNames),
                                            std::move(Body));
     }
 

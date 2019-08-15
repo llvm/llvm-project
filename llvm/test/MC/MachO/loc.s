@@ -14,7 +14,7 @@
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x12C
 // CHECK:     RelocationCount: 1
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x20000)
 // CHECK:       Debug (0x20000)
 // CHECK:     ]

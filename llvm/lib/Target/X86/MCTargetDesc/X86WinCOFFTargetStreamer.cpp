@@ -170,7 +170,7 @@ bool X86WinCOFFTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
         L, "opening new .cv_fpo_proc before closing previous frame");
     return true;
   }
-  CurFPOData = llvm::make_unique<FPOData>();
+  CurFPOData = std::make_unique<FPOData>();
   CurFPOData->Function = ProcSym;
   CurFPOData->Begin = emitFPOLabel();
   CurFPOData->ParamsSize = ParamsSize;

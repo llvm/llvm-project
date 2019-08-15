@@ -507,7 +507,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
 void ASTWorker::runWithAST(
     llvm::StringRef Name,
     llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action) {
-  auto Task = [=](decltype(Action) Action) {
+  auto Task = [=, Action = std::move(Action)]() mutable {
     if (isCancelled())
       return Action(llvm::make_error<CancelledError>());
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
@@ -533,8 +533,7 @@ void ASTWorker::runWithAST(
           "invalid AST", llvm::errc::invalid_argument));
     Action(InputsAndAST{*CurrentInputs, **AST});
   };
-  startTask(Name, Bind(Task, std::move(Action)),
-            /*UpdateType=*/None);
+  startTask(Name, std::move(Task), /*UpdateType=*/None);
 }
 
 std::shared_ptr<const PreambleData>
@@ -559,11 +558,9 @@ void ASTWorker::getCurrentPreamble(
   }
   assert(!RunSync && "Running synchronously, but queue is non-empty!");
   Requests.insert(LastUpdate.base(),
-                  Request{Bind(
-                              [this](decltype(Callback) Callback) {
-                                Callback(getPossiblyStalePreamble());
-                              },
-                              std::move(Callback)),
+                  Request{[Callback = std::move(Callback), this]() mutable {
+                            Callback(getPossiblyStalePreamble());
+                          },
                           "GetPreamble", steady_clock::now(),
                           Context::current().clone(),
                           /*UpdateType=*/None});
@@ -945,20 +942,20 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
   if (Consistency == Consistent) {
     std::promise<std::shared_ptr<const PreambleData>> Promise;
     ConsistentPreamble = Promise.get_future();
-    It->second->Worker->getCurrentPreamble(Bind(
-        [](decltype(Promise) Promise,
-           std::shared_ptr<const PreambleData> Preamble) {
+    It->second->Worker->getCurrentPreamble(
+        [Promise = std::move(Promise)](
+            std::shared_ptr<const PreambleData> Preamble) mutable {
           Promise.set_value(std::move(Preamble));
-        },
-        std::move(Promise)));
+        });
   }
 
   std::shared_ptr<const ASTWorker> Worker = It->second->Worker.lock();
-  auto Task = [Worker, Consistency,
-               this](std::string Name, std::string File, std::string Contents,
-                     tooling::CompileCommand Command, Context Ctx,
-                     decltype(ConsistentPreamble) ConsistentPreamble,
-                     decltype(Action) Action) mutable {
+  auto Task = [Worker, Consistency, Name = Name.str(), File = File.str(),
+               Contents = It->second->Contents,
+               Command = Worker->getCurrentCompileCommand(),
+               Ctx = Context::current().derive(kFileBeingProcessed, File),
+               ConsistentPreamble = std::move(ConsistentPreamble),
+               Action = std::move(Action), this]() mutable {
     std::shared_ptr<const PreambleData> Preamble;
     if (ConsistentPreamble.valid()) {
       Preamble = ConsistentPreamble.get();
@@ -979,12 +976,8 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
     Action(InputsAndPreamble{Contents, Command, Preamble.get()});
   };
 
-  PreambleTasks->runAsync(
-      "task:" + llvm::sys::path::filename(File),
-      Bind(Task, std::string(Name), std::string(File), It->second->Contents,
-           Worker->getCurrentCompileCommand(),
-           Context::current().derive(kFileBeingProcessed, File),
-           std::move(ConsistentPreamble), std::move(Action)));
+  PreambleTasks->runAsync("task:" + llvm::sys::path::filename(File),
+                          std::move(Task));
 }
 
 std::vector<std::pair<Path, std::size_t>>

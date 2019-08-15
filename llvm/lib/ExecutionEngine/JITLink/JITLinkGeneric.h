@@ -121,7 +121,7 @@ public:
   /// Link should be called with the constructor arguments for LinkerImpl, which
   /// will be forwarded to the constructor.
   template <typename... ArgTs> static void link(ArgTs &&... Args) {
-    auto L = llvm::make_unique<LinkerImpl>(std::forward<ArgTs>(Args)...);
+    auto L = std::make_unique<LinkerImpl>(std::forward<ArgTs>(Args)...);
 
     // Ownership of the linker is passed into the linker's doLink function to
     // allow it to be passed on to async continuations.

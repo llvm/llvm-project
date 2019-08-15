@@ -464,7 +464,7 @@ private:
   std::unique_ptr<IPDBSession> Session;
 
   void InsertItemWithTag(PDB_SymType Tag) {
-    auto RawSymbol = llvm::make_unique<MockRawSymbol>(Tag);
+    auto RawSymbol = std::make_unique<MockRawSymbol>(Tag);
     auto Symbol = PDBSymbol::create(*Session, std::move(RawSymbol));
     SymbolMap.insert(std::make_pair(Tag, std::move(Symbol)));
   }

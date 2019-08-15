@@ -35,7 +35,7 @@ parseExampleModule(llvm::StringRef Source, llvm::StringRef Name) {
   using namespace llvm;
   using namespace llvm::orc;
 
-  auto Ctx = llvm::make_unique<LLVMContext>();
+  auto Ctx = std::make_unique<LLVMContext>();
   SMDiagnostic Err;
   auto M = parseIR(MemoryBufferRef(Source, Name), Err, *Ctx);
 

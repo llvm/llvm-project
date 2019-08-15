@@ -136,9 +136,9 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
-  addMutation(llvm::make_unique<HexagonSubtarget::UsrOverflowMutation>());
-  addMutation(llvm::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
-  addMutation(llvm::make_unique<HexagonSubtarget::BankConflictMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.

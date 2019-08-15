@@ -4666,6 +4666,13 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL (MVE_VMOVimmi16 1), (MVE_VMOVimmi16 0), 0, VCCR:$pred))>;
   def : Pat<(v4i32 (anyext  (v4i1  VCCR:$pred))),
             (v4i32 (MVE_VPSEL (MVE_VMOVimmi32 1), (MVE_VMOVimmi32 0), 0, VCCR:$pred))>;
+
+  def : Pat<(v16i1 (trunc (v16i8 MQPR:$v1))),
+            (v16i1 (MVE_VCMPi32r (v16i8 MQPR:$v1), ZR, 1))>;
+  def : Pat<(v8i1 (trunc (v8i16  MQPR:$v1))),
+            (v8i1 (MVE_VCMPi32r (v8i16 MQPR:$v1), ZR, 1))>;
+  def : Pat<(v4i1 (trunc (v4i32  MQPR:$v1))),
+            (v4i1 (MVE_VCMPi32r (v4i32 MQPR:$v1), ZR, 1))>;
 }
 
 let Predicates = [HasMVEFloat] in {
@@ -4839,11 +4846,11 @@ def aligned32_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
 }]>;
 def aligned16_pre_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                   (pre_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() == 2;
+  return cast<StoreSDNode>(N)->getAlignment() >= 2;
 }]>;
 def aligned16_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                   (post_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() == 2;
+  return cast<StoreSDNode>(N)->getAlignment() >= 2;
 }]>;
 
 let Predicates = [HasMVEInt, IsLE] in {
@@ -4921,6 +4928,13 @@ let Predicates = [HasMVEInt] in {
              (v8i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
   def  : Pat<(v4i1 (load t2addrmode_imm7<2>:$addr)),
              (v4i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
+
+  def  : Pat<(store (v4i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
+             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
+  def  : Pat<(store (v8i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
+             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
+  def  : Pat<(store (v16i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
+             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
 }
 
 

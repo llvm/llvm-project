@@ -59,18 +59,18 @@ NativeSession::~NativeSession() = default;
 Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
                                    std::unique_ptr<IPDBSession> &Session) {
   StringRef Path = Buffer->getBufferIdentifier();
-  auto Stream = llvm::make_unique<MemoryBufferByteStream>(
+  auto Stream = std::make_unique<MemoryBufferByteStream>(
       std::move(Buffer), llvm::support::little);
 
-  auto Allocator = llvm::make_unique<BumpPtrAllocator>();
-  auto File = llvm::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);
+  auto Allocator = std::make_unique<BumpPtrAllocator>();
+  auto File = std::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);
   if (auto EC = File->parseFileHeaders())
     return EC;
   if (auto EC = File->parseStreamData())
     return EC;
 
   Session =
-      llvm::make_unique<NativeSession>(std::move(File), std::move(Allocator));
+      std::make_unique<NativeSession>(std::move(File), std::move(Allocator));
 
   return Error::success();
 }
@@ -202,7 +202,7 @@ NativeSession::getInjectedSources() const {
     consumeError(Strings.takeError());
     return nullptr;
   }
-  return make_unique<NativeEnumInjectedSources>(*Pdb, *ISS, *Strings);
+  return std::make_unique<NativeEnumInjectedSources>(*Pdb, *ISS, *Strings);
 }
 
 std::unique_ptr<IPDBEnumSectionContribs>

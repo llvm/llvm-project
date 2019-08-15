@@ -196,7 +196,7 @@ Error COFFReader::setSymbolTargets(Object &Obj) const {
 }
 
 Expected<std::unique_ptr<Object>> COFFReader::create() const {
-  auto Obj = llvm::make_unique<Object>();
+  auto Obj = std::make_unique<Object>();
 
   const coff_file_header *CFH = nullptr;
   const coff_bigobj_file_header *CBFH = nullptr;

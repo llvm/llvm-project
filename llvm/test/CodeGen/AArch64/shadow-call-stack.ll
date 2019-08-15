@@ -41,7 +41,7 @@ define i32 @f4() shadowcallstack {
   %res12 = add i32 %res1, %res2
   %res34 = add i32 %res3, %res4
   %res1234 = add i32 %res12, %res34
-  ; CHECK: ldp {{.*}}x30, [sp
+  ; CHECK: ldp x30,{{.*}}, [sp
   ; CHECK: ldr x30, [x18, #-8]!
   ; CHECK: ret
   ret i32 %res1234

@@ -73,18 +73,18 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
 
     if (!MDT) {
       LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
-      OwnedMDT = make_unique<MachineDominatorTree>();
+      OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->getBase().recalculate(*MF);
       MDT = OwnedMDT.get();
     }
 
     // Generate LoopInfo from it.
-    OwnedMLI = make_unique<MachineLoopInfo>();
+    OwnedMLI = std::make_unique<MachineLoopInfo>();
     OwnedMLI->getBase().analyze(MDT->getBase());
     MLI = OwnedMLI.get();
   }
 
-  OwnedMBFI = make_unique<MachineBlockFrequencyInfo>();
+  OwnedMBFI = std::make_unique<MachineBlockFrequencyInfo>();
   OwnedMBFI->calculate(*MF, MBPI, *MLI);
   return *OwnedMBFI.get();
 }

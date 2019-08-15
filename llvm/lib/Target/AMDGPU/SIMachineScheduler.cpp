@@ -1228,7 +1228,7 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
     unsigned Color = CurrentColoring[SU->NodeNum];
     if (RealID.find(Color) == RealID.end()) {
       int ID = CurrentBlocks.size();
-      BlockPtrs.push_back(llvm::make_unique<SIScheduleBlock>(DAG, this, ID));
+      BlockPtrs.push_back(std::make_unique<SIScheduleBlock>(DAG, this, ID));
       CurrentBlocks.push_back(BlockPtrs.rbegin()->get());
       RealID[Color] = ID;
     }
@@ -1801,7 +1801,7 @@ SIScheduler::scheduleVariant(SISchedulerBlockCreatorVariant BlockVariant,
 // SIScheduleDAGMI //
 
 SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
-  ScheduleDAGMILive(C, llvm::make_unique<GenericScheduler>(C)) {
+  ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C)) {
   SITII = static_cast<const SIInstrInfo*>(TII);
   SITRI = static_cast<const SIRegisterInfo*>(TRI);
 

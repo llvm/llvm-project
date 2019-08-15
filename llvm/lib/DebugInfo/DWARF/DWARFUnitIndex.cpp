@@ -54,10 +54,10 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
                       (2 * Header.NumUnits + 1) * 4 * Header.NumColumns))
     return false;
 
-  Rows = llvm::make_unique<Entry[]>(Header.NumBuckets);
+  Rows = std::make_unique<Entry[]>(Header.NumBuckets);
   auto Contribs =
-      llvm::make_unique<Entry::SectionContribution *[]>(Header.NumUnits);
-  ColumnKinds = llvm::make_unique<DWARFSectionKind[]>(Header.NumColumns);
+      std::make_unique<Entry::SectionContribution *[]>(Header.NumUnits);
+  ColumnKinds = std::make_unique<DWARFSectionKind[]>(Header.NumColumns);
 
   // Read Hash Table of Signatures
   for (unsigned i = 0; i != Header.NumBuckets; ++i)
@@ -70,7 +70,7 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
       continue;
     Rows[i].Index = this;
     Rows[i].Contributions =
-        llvm::make_unique<Entry::SectionContribution[]>(Header.NumColumns);
+        std::make_unique<Entry::SectionContribution[]>(Header.NumColumns);
     Contribs[Index - 1] = Rows[i].Contributions.get();
   }
 

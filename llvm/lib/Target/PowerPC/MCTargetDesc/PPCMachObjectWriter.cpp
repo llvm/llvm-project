@@ -376,5 +376,5 @@ void PPCMachObjectWriter::RecordPPCRelocation(
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createPPCMachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
-  return llvm::make_unique<PPCMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+  return std::make_unique<PPCMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
 }

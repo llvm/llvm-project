@@ -233,10 +233,10 @@ Session::Session(Triple TT) : ObjLayer(ES, MemMgr), TT(std::move(TT)) {
   };
 
   if (!NoExec && !TT.isOSWindows())
-    ObjLayer.addPlugin(llvm::make_unique<EHFrameRegistrationPlugin>(
+    ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
         InProcessEHFrameRegistrar::getInstance()));
 
-  ObjLayer.addPlugin(llvm::make_unique<JITLinkSessionPlugin>(*this));
+  ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 }
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
@@ -589,7 +589,7 @@ Expected<int> runEntryPoint(Session &S, JITEvaluatedSymbol EntryPoint) {
   assert(EntryPoint.getAddress() && "Entry point address should not be null");
 
   constexpr const char *JITProgramName = "<llvm-jitlink jit'd code>";
-  auto PNStorage = llvm::make_unique<char[]>(strlen(JITProgramName) + 1);
+  auto PNStorage = std::make_unique<char[]>(strlen(JITProgramName) + 1);
   strcpy(PNStorage.get(), JITProgramName);
 
   std::vector<const char *> EntryPointArgs;

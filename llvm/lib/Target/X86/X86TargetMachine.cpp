@@ -86,22 +86,22 @@ extern "C" void LLVMInitializeX86Target() {
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO()) {
     if (TT.getArch() == Triple::x86_64)
-      return llvm::make_unique<X86_64MachoTargetObjectFile>();
-    return llvm::make_unique<TargetLoweringObjectFileMachO>();
+      return std::make_unique<X86_64MachoTargetObjectFile>();
+    return std::make_unique<TargetLoweringObjectFileMachO>();
   }
 
   if (TT.isOSFreeBSD())
-    return llvm::make_unique<X86FreeBSDTargetObjectFile>();
+    return std::make_unique<X86FreeBSDTargetObjectFile>();
   if (TT.isOSLinux() || TT.isOSNaCl() || TT.isOSIAMCU())
-    return llvm::make_unique<X86LinuxNaClTargetObjectFile>();
+    return std::make_unique<X86LinuxNaClTargetObjectFile>();
   if (TT.isOSSolaris())
-    return llvm::make_unique<X86SolarisTargetObjectFile>();
+    return std::make_unique<X86SolarisTargetObjectFile>();
   if (TT.isOSFuchsia())
-    return llvm::make_unique<X86FuchsiaTargetObjectFile>();
+    return std::make_unique<X86FuchsiaTargetObjectFile>();
   if (TT.isOSBinFormatELF())
-    return llvm::make_unique<X86ELFTargetObjectFile>();
+    return std::make_unique<X86ELFTargetObjectFile>();
   if (TT.isOSBinFormatCOFF())
-    return llvm::make_unique<TargetLoweringObjectFileCOFF>();
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
   llvm_unreachable("unknown subtarget type");
 }
 
@@ -311,7 +311,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
+    I = std::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
                                         Options.StackAlignmentOverride,
                                         PreferVectorWidthOverride,
                                         RequiredVectorWidth);

@@ -50,7 +50,7 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, getCPU(CPU), FS, *this) {
-  this->TLOF = make_unique<AVRTargetObjectFile>();
+  this->TLOF = std::make_unique<AVRTargetObjectFile>();
   initAsmInfo();
 }
 

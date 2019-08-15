@@ -33,7 +33,7 @@ _a:
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x800000)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:     ]
@@ -53,7 +53,7 @@ _a:
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x13
+// CHECK:     Type: ThreadLocalVariables (0x13)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0

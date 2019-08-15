@@ -461,7 +461,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
         }
       }
 
-      auto Cie = llvm::make_unique<CIE>(
+      auto Cie = std::make_unique<CIE>(
           StartOffset, Length, Version, AugmentationString, AddressSize,
           SegmentDescriptorSize, CodeAlignmentFactor, DataAlignmentFactor,
           ReturnAddressRegister, AugmentationData, FDEPointerEncoding,

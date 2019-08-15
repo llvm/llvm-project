@@ -37,7 +37,7 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
 
   bool DummyTargetMaterialized = false;
 
-  cantFail(JD.define(llvm::make_unique<SimpleMaterializationUnit>(
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{DummyTarget, JITSymbolFlags::Exported}}),
       [&](MaterializationResponsibility R) {
         DummyTargetMaterialized = true;

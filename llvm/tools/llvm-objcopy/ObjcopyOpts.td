@@ -214,7 +214,7 @@ def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
 
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
-         "global, local, weak, default, hidden, file, section, object, "
+         "global, local, weak, default, hidden, protected, file, section, object, "
          "function, indirect-function. Accepted but ignored for "
          "compatibility: debug, constructor, warning, indirect, synthetic, "
          "unique-object, before.">,

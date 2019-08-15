@@ -26196,53 +26196,37 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getZExtOrTrunc(V, DL, DstVT);
   }
 
-  if (SrcVT == MVT::v2i32 || SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8 ||
-      SrcVT == MVT::i64) {
-    assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
-    if (DstVT != MVT::f64 && DstVT != MVT::i64 &&
-        !(DstVT == MVT::x86mmx && SrcVT.isVector()))
-      // This conversion needs to be expanded.
-      return SDValue();
+  assert((SrcVT == MVT::v2i32 || SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8 ||
+          SrcVT == MVT::i64) && "Unexpected VT!");
 
-    SDLoc dl(Op);
-    if (SrcVT.isVector()) {
-      // Widen the vector in input in the case of MVT::v2i32.
-      // Example: from MVT::v2i32 to MVT::v4i32.
-      MVT NewVT = MVT::getVectorVT(SrcVT.getVectorElementType(),
-                                   SrcVT.getVectorNumElements() * 2);
-      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewVT, Src,
-                        DAG.getUNDEF(SrcVT));
-    } else {
-      assert(SrcVT == MVT::i64 && !Subtarget.is64Bit() &&
-             "Unexpected source type in LowerBITCAST");
-      Src = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Src);
-    }
+  assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
+  if (!(DstVT == MVT::f64 && SrcVT == MVT::i64) &&
+      !(DstVT == MVT::x86mmx && SrcVT.isVector()))
+    // This conversion needs to be expanded.
+    return SDValue();
 
-    MVT V2X64VT = DstVT == MVT::f64 ? MVT::v2f64 : MVT::v2i64;
-    Src = DAG.getNode(ISD::BITCAST, dl, V2X64VT, Src);
-
-    if (DstVT == MVT::x86mmx)
-      return DAG.getNode(X86ISD::MOVDQ2Q, dl, DstVT, Src);
-
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, DstVT, Src,
-                       DAG.getIntPtrConstant(0, dl));
+  SDLoc dl(Op);
+  if (SrcVT.isVector()) {
+    // Widen the vector in input in the case of MVT::v2i32.
+    // Example: from MVT::v2i32 to MVT::v4i32.
+    MVT NewVT = MVT::getVectorVT(SrcVT.getVectorElementType(),
+                                 SrcVT.getVectorNumElements() * 2);
+    Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewVT, Src,
+                      DAG.getUNDEF(SrcVT));
+  } else {
+    assert(SrcVT == MVT::i64 && !Subtarget.is64Bit() &&
+           "Unexpected source type in LowerBITCAST");
+    Src = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Src);
   }
 
-  assert(Subtarget.is64Bit() && !Subtarget.hasSSE2() &&
-         Subtarget.hasMMX() && "Unexpected custom BITCAST");
-  assert((DstVT == MVT::i64 ||
-          (DstVT.isVector() && DstVT.getSizeInBits()==64)) &&
-         "Unexpected custom BITCAST");
-  // i64 <=> MMX conversions are Legal.
-  if (SrcVT==MVT::i64 && DstVT.isVector())
-    return Op;
-  if (DstVT==MVT::i64 && SrcVT.isVector())
-    return Op;
-  // MMX <=> MMX conversions are Legal.
-  if (SrcVT.isVector() && DstVT.isVector())
-    return Op;
-  // All other conversions need to be expanded.
-  return SDValue();
+  MVT V2X64VT = DstVT == MVT::f64 ? MVT::v2f64 : MVT::v2i64;
+  Src = DAG.getNode(ISD::BITCAST, dl, V2X64VT, Src);
+
+  if (DstVT == MVT::x86mmx)
+    return DAG.getNode(X86ISD::MOVDQ2Q, dl, DstVT, Src);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, DstVT, Src,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 /// Compute the horizontal sum of bytes in V for the elements of VT.
@@ -35411,9 +35395,9 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unexpected caller");
 
-  // TODO: Allow FADD with reduction and/or reassociation and no-signed-zeros.
   ISD::NodeType Opc;
-  SDValue Rdx = DAG.matchBinOpReduction(ExtElt, Opc, {ISD::ADD}, true);
+  SDValue Rdx =
+      DAG.matchBinOpReduction(ExtElt, Opc, {ISD::ADD, ISD::FADD}, true);
   if (!Rdx)
     return SDValue();
 

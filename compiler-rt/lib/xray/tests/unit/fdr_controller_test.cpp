@@ -51,11 +51,11 @@ protected:
 public:
   void SetUp() override {
     bool Success;
-    BQ = llvm::make_unique<BufferQueue>(4096, 1, Success);
+    BQ = std::make_unique<BufferQueue>(4096, 1, Success);
     ASSERT_TRUE(Success);
     ASSERT_EQ(BQ->getBuffer(B), BufferQueue::ErrorCode::Ok);
-    W = llvm::make_unique<FDRLogWriter>(B);
-    C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 0);
+    W = std::make_unique<FDRLogWriter>(B);
+    C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 0);
   }
 };
 
@@ -103,7 +103,7 @@ TEST_F(FunctionSequenceTest, BoundaryFuncIdEncoding) {
 }
 
 TEST_F(FunctionSequenceTest, ThresholdsAreEnforced) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
   ASSERT_TRUE(C->functionEnter(1, 2, 3));
   ASSERT_TRUE(C->functionExit(1, 2, 3));
   ASSERT_TRUE(C->flush());
@@ -118,7 +118,7 @@ TEST_F(FunctionSequenceTest, ThresholdsAreEnforced) {
 }
 
 TEST_F(FunctionSequenceTest, ArgsAreHandledAndKept) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
   ASSERT_TRUE(C->functionEnterArg(1, 2, 3, 4));
   ASSERT_TRUE(C->functionExit(1, 2, 3));
   ASSERT_TRUE(C->flush());
@@ -138,7 +138,7 @@ TEST_F(FunctionSequenceTest, ArgsAreHandledAndKept) {
 }
 
 TEST_F(FunctionSequenceTest, PreservedCallsHaveCorrectTSC) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
   uint64_t TSC = 1;
   uint16_t CPU = 0;
   ASSERT_TRUE(C->functionEnter(1, TSC++, CPU));
@@ -163,7 +163,7 @@ TEST_F(FunctionSequenceTest, PreservedCallsHaveCorrectTSC) {
 }
 
 TEST_F(FunctionSequenceTest, PreservedCallsSupportLargeDeltas) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
   uint64_t TSC = 1;
   uint16_t CPU = 0;
   const auto LargeDelta = uint64_t{std::numeric_limits<int32_t>::max()};
@@ -187,7 +187,7 @@ TEST_F(FunctionSequenceTest, PreservedCallsSupportLargeDeltas) {
 }
 
 TEST_F(FunctionSequenceTest, RewindingMultipleCalls) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
 
   // First we construct an arbitrarily deep function enter/call stack.
   // We also ensure that we are in the same CPU.
@@ -214,7 +214,7 @@ TEST_F(FunctionSequenceTest, RewindingMultipleCalls) {
 }
 
 TEST_F(FunctionSequenceTest, RewindingIntermediaryTailExits) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
 
   // First we construct an arbitrarily deep function enter/call stack.
   // We also ensure that we are in the same CPU.
@@ -248,7 +248,7 @@ TEST_F(FunctionSequenceTest, RewindingIntermediaryTailExits) {
 }
 
 TEST_F(FunctionSequenceTest, RewindingAfterMigration) {
-  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
 
   // First we construct an arbitrarily deep function enter/call stack.
   // We also ensure that we are in the same CPU.
@@ -303,13 +303,13 @@ protected:
 public:
   void SetUp() override {
     bool Success;
-    BQ = llvm::make_unique<BufferQueue>(sizeof(MetadataRecord) * 5 +
+    BQ = std::make_unique<BufferQueue>(sizeof(MetadataRecord) * 5 +
                                             sizeof(FunctionRecord) * 2,
                                         kBuffers, Success);
     ASSERT_TRUE(Success);
     ASSERT_EQ(BQ->getBuffer(B), BufferQueue::ErrorCode::Ok);
-    W = llvm::make_unique<FDRLogWriter>(B);
-    C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 0);
+    W = std::make_unique<FDRLogWriter>(B);
+    C = std::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 0);
   }
 };
 

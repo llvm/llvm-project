@@ -889,7 +889,7 @@ public:
                                       int64_t Val, SMLoc Loc,
                                       ImmTy Type = ImmTyNone,
                                       bool IsFPImm = false) {
-    auto Op = llvm::make_unique<AMDGPUOperand>(Immediate, AsmParser);
+    auto Op = std::make_unique<AMDGPUOperand>(Immediate, AsmParser);
     Op->Imm.Val = Val;
     Op->Imm.IsFPImm = IsFPImm;
     Op->Imm.Type = Type;
@@ -902,7 +902,7 @@ public:
   static AMDGPUOperand::Ptr CreateToken(const AMDGPUAsmParser *AsmParser,
                                         StringRef Str, SMLoc Loc,
                                         bool HasExplicitEncodingSize = true) {
-    auto Res = llvm::make_unique<AMDGPUOperand>(Token, AsmParser);
+    auto Res = std::make_unique<AMDGPUOperand>(Token, AsmParser);
     Res->Tok.Data = Str.data();
     Res->Tok.Length = Str.size();
     Res->StartLoc = Loc;
@@ -913,7 +913,7 @@ public:
   static AMDGPUOperand::Ptr CreateReg(const AMDGPUAsmParser *AsmParser,
                                       unsigned RegNo, SMLoc S,
                                       SMLoc E) {
-    auto Op = llvm::make_unique<AMDGPUOperand>(Register, AsmParser);
+    auto Op = std::make_unique<AMDGPUOperand>(Register, AsmParser);
     Op->Reg.RegNo = RegNo;
     Op->Reg.Mods = Modifiers();
     Op->StartLoc = S;
@@ -923,7 +923,7 @@ public:
 
   static AMDGPUOperand::Ptr CreateExpr(const AMDGPUAsmParser *AsmParser,
                                        const class MCExpr *Expr, SMLoc S) {
-    auto Op = llvm::make_unique<AMDGPUOperand>(Expression, AsmParser);
+    auto Op = std::make_unique<AMDGPUOperand>(Expression, AsmParser);
     Op->Expr = Expr;
     Op->StartLoc = S;
     Op->EndLoc = S;

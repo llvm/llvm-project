@@ -237,7 +237,7 @@ public:
 
 GCNIterativeScheduler::GCNIterativeScheduler(MachineSchedContext *C,
                                              StrategyKind S)
-  : BaseClass(C, llvm::make_unique<SchedStrategyStub>())
+  : BaseClass(C, std::make_unique<SchedStrategyStub>())
   , Context(C)
   , Strategy(S)
   , UPTracker(*LIS) {

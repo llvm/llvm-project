@@ -200,7 +200,7 @@ void MachineFunction::init() {
          "Target-incompatible DataLayout attached\n");
 
   PSVManager =
-    llvm::make_unique<PseudoSourceValueManager>(*(getSubtarget().
+    std::make_unique<PseudoSourceValueManager>(*(getSubtarget().
                                                   getInstrInfo()));
 }
 

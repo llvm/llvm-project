@@ -354,20 +354,20 @@ RuntimeDyldMachO::create(Triple::ArchType Arch,
     llvm_unreachable("Unsupported target for RuntimeDyldMachO.");
     break;
   case Triple::arm:
-    return make_unique<RuntimeDyldMachOARM>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldMachOARM>(MemMgr, Resolver);
   case Triple::aarch64:
-    return make_unique<RuntimeDyldMachOAArch64>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldMachOAArch64>(MemMgr, Resolver);
   case Triple::x86:
-    return make_unique<RuntimeDyldMachOI386>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldMachOI386>(MemMgr, Resolver);
   case Triple::x86_64:
-    return make_unique<RuntimeDyldMachOX86_64>(MemMgr, Resolver);
+    return std::make_unique<RuntimeDyldMachOX86_64>(MemMgr, Resolver);
   }
 }
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyldMachO::loadObject(const object::ObjectFile &O) {
   if (auto ObjSectionToIDOrErr = loadObjectImpl(O))
-    return llvm::make_unique<LoadedMachOObjectInfo>(*this,
+    return std::make_unique<LoadedMachOObjectInfo>(*this,
                                                     *ObjSectionToIDOrErr);
   else {
     HasError = true;

@@ -333,9 +333,9 @@ static int run(int argc, char **argv) {
     std::string Path = OutputFilename + "." + utostr(Task);
 
     std::error_code EC;
-    auto S = llvm::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
     check(EC, Path);
-    return llvm::make_unique<lto::NativeObjectStream>(std::move(S));
+    return std::make_unique<lto::NativeObjectStream>(std::move(S));
   };
 
   auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {

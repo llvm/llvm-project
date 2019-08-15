@@ -155,8 +155,8 @@ be generated with calls like this:
 
 .. code-block:: c++
 
-      auto LHS = llvm::make_unique<VariableExprAST>("x");
-      auto RHS = llvm::make_unique<VariableExprAST>("y");
+      auto LHS = std::make_unique<VariableExprAST>("x");
+      auto RHS = std::make_unique<VariableExprAST>("y");
       auto Result = std::make_unique<BinaryExprAST>('+', std::move(LHS),
                                                     std::move(RHS));
 
@@ -210,7 +210,7 @@ which parses that production. For numeric literals, we have:
 
     /// numberexpr ::= number
     static std::unique_ptr<ExprAST> ParseNumberExpr() {
-      auto Result = llvm::make_unique<NumberExprAST>(NumVal);
+      auto Result = std::make_unique<NumberExprAST>(NumVal);
       getNextToken(); // consume the number
       return std::move(Result);
     }
@@ -276,7 +276,7 @@ function calls:
       getNextToken();  // eat identifier.
 
       if (CurTok != '(') // Simple variable ref.
-        return llvm::make_unique<VariableExprAST>(IdName);
+        return std::make_unique<VariableExprAST>(IdName);
 
       // Call.
       getNextToken();  // eat (
@@ -300,7 +300,7 @@ function calls:
       // Eat the ')'.
       getNextToken();
 
-      return llvm::make_unique<CallExprAST>(IdName, std::move(Args));
+      return std::make_unique<CallExprAST>(IdName, std::move(Args));
     }
 
 This routine follows the same style as the other routines. (It expects
@@ -503,7 +503,7 @@ then continue parsing:
         }
 
         // Merge LHS/RHS.
-        LHS = llvm::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
+        LHS = std::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
                                                std::move(RHS));
       }  // loop around to the top of the while loop.
     }
@@ -533,7 +533,7 @@ above two blocks duplicated for context):
             return nullptr;
         }
         // Merge LHS/RHS.
-        LHS = llvm::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
+        LHS = std::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
                                                std::move(RHS));
       }  // loop around to the top of the while loop.
     }
@@ -593,7 +593,7 @@ expressions):
       // success.
       getNextToken();  // eat ')'.
 
-      return llvm::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
+      return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
     }
 
 Given this, a function definition is very simple, just a prototype plus
@@ -608,7 +608,7 @@ an expression to implement the body:
       if (!Proto) return nullptr;
 
       if (auto E = ParseExpression())
-        return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+        return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
       return nullptr;
     }
 
@@ -634,8 +634,8 @@ nullary (zero argument) functions for them:
     static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
       if (auto E = ParseExpression()) {
         // Make an anonymous proto.
-        auto Proto = llvm::make_unique<PrototypeAST>("", std::vector<std::string>());
-        return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+        auto Proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+        return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
       }
       return nullptr;
     }

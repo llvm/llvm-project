@@ -239,7 +239,7 @@ WinCOFFObjectWriter::WinCOFFObjectWriter(
 }
 
 COFFSymbol *WinCOFFObjectWriter::createSymbol(StringRef Name) {
-  Symbols.push_back(make_unique<COFFSymbol>(Name));
+  Symbols.push_back(std::make_unique<COFFSymbol>(Name));
   return Symbols.back().get();
 }
 
@@ -251,7 +251,7 @@ COFFSymbol *WinCOFFObjectWriter::GetOrCreateCOFFSymbol(const MCSymbol *Symbol) {
 }
 
 COFFSection *WinCOFFObjectWriter::createSection(StringRef Name) {
-  Sections.emplace_back(make_unique<COFFSection>(Name));
+  Sections.emplace_back(std::make_unique<COFFSection>(Name));
   return Sections.back().get();
 }
 
@@ -1098,5 +1098,5 @@ void MCWinCOFFObjectTargetWriter::anchor() {}
 
 std::unique_ptr<MCObjectWriter> llvm::createWinCOFFObjectWriter(
     std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS) {
-  return llvm::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS);
+  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS);
 }

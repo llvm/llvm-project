@@ -66,7 +66,7 @@ public:
                 std::unique_ptr<MCAsmBackend> asmbackend, bool showInst)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(printer),
-        Assembler(llvm::make_unique<MCAssembler>(
+        Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
                          : nullptr)),

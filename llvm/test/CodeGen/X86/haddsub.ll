@@ -1645,10 +1645,8 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ;
 ; SSE3-FAST-LABEL: fadd_reduce_v8f32:
 ; SSE3-FAST:       # %bb.0:
-; SSE3-FAST-NEXT:    addps %xmm2, %xmm1
-; SSE3-FAST-NEXT:    movaps %xmm1, %xmm2
-; SSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE3-FAST-NEXT:    addps %xmm1, %xmm2
+; SSE3-FAST-NEXT:    haddps %xmm1, %xmm2
+; SSE3-FAST-NEXT:    haddps %xmm2, %xmm2
 ; SSE3-FAST-NEXT:    haddps %xmm2, %xmm2
 ; SSE3-FAST-NEXT:    addss %xmm2, %xmm0
 ; SSE3-FAST-NEXT:    retq
@@ -1668,9 +1666,8 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-FAST-LABEL: fadd_reduce_v8f32:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm2, %xmm1
+; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
@@ -1691,9 +1688,9 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ;
 ; SSE3-FAST-LABEL: fadd_reduce_v4f64:
 ; SSE3-FAST:       # %bb.0:
-; SSE3-FAST-NEXT:    addpd %xmm2, %xmm1
-; SSE3-FAST-NEXT:    haddpd %xmm1, %xmm1
-; SSE3-FAST-NEXT:    addsd %xmm1, %xmm0
+; SSE3-FAST-NEXT:    haddpd %xmm1, %xmm2
+; SSE3-FAST-NEXT:    haddpd %xmm2, %xmm2
+; SSE3-FAST-NEXT:    addsd %xmm2, %xmm0
 ; SSE3-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: fadd_reduce_v4f64:
@@ -1709,7 +1706,7 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; AVX-FAST-LABEL: fadd_reduce_v4f64:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-FAST-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
+; AVX-FAST-NEXT:    vhaddpd %xmm1, %xmm2, %xmm1
 ; AVX-FAST-NEXT:    vhaddpd %xmm1, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
@@ -2017,8 +2014,7 @@ define float @partial_reduction_fadd_v8f32(<8 x float> %x) {
 ;
 ; AVX-FAST-LABEL: partial_reduction_fadd_v8f32:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
@@ -2029,6 +2025,9 @@ define float @partial_reduction_fadd_v8f32(<8 x float> %x) {
   %r = extractelement <8 x float> %x0123, i32 0
   ret float %r
 }
+
+; Negative test - only the flags on the final math op in the
+; sequence determine whether we can transform to horizontal ops.
 
 define float @partial_reduction_fadd_v8f32_wrong_flags(<8 x float> %x) {
 ; SSE3-SLOW-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
@@ -2105,8 +2104,7 @@ define float @partial_reduction_fadd_v16f32(<16 x float> %x) {
 ;
 ; AVX-FAST-LABEL: partial_reduction_fadd_v16f32:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq

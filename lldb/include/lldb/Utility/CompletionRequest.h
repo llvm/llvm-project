@@ -75,6 +75,9 @@ public:
                     CompletionResult &result);
 
   llvm::StringRef GetRawLine() const { return m_command; }
+  llvm::StringRef GetRawLineUntilCursor() const {
+    return m_command.substr(0, m_cursor_index);
+  }
 
   unsigned GetRawCursorPos() const { return m_raw_cursor_pos; }
 
