@@ -3700,7 +3700,9 @@ llvm::getArgumentAliasingToReturnedPointer(const CallBase *Call,
 bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness) {
   return Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-         Call->getIntrinsicID() == Intrinsic::strip_invariant_group;
+         Call->getIntrinsicID() == Intrinsic::strip_invariant_group ||
+         (!MustPreserveNullness &&
+          Call->getIntrinsicID() == Intrinsic::ptrmask);
 }
 
 /// \p PN defines a loop-variant pointer to an object.  Check if the
@@ -3758,7 +3760,7 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true)) {
+        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
           V = RP;
           continue;
         }
