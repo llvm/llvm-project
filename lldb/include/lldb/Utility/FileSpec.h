@@ -73,7 +73,7 @@ public:
   /// \see FileSpec::SetFile (const char *path)
   explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
-  explicit FileSpec(llvm::StringRef path, const llvm::Triple &Triple);
+  explicit FileSpec(llvm::StringRef path, const llvm::Triple &triple);
 
   /// Copy constructor
   ///
@@ -200,10 +200,8 @@ public:
   ///     only the filename will be compared, else a full comparison
   ///     is done.
   ///
-  /// \return
-  ///     \li -1 if \a lhs is less than \a rhs
-  ///     \li 0 if \a lhs is equal to \a rhs
-  ///     \li 1 if \a lhs is greater than \a rhs
+  /// \return -1 if \a lhs is less than \a rhs, 0 if \a lhs is equal to \a rhs,
+  ///     1 if \a lhs is greater than \a rhs
   static int Compare(const FileSpec &lhs, const FileSpec &rhs, bool full);
 
   static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
@@ -322,10 +320,6 @@ public:
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into an llvm::SmallVectorImpl<>
-  ///
-  /// \return
-  ///     Returns a std::string with the directory and filename
-  ///     concatenated.
   void GetPath(llvm::SmallVectorImpl<char> &path,
                bool denormalize = true) const;
 
@@ -336,8 +330,7 @@ public:
   /// filename has no extension, ConstString(nullptr) is returned. The dot
   /// ('.') character is not returned as part of the extension
   ///
-  /// \return
-  ///     Returns the extension of the file as a ConstString object.
+  /// \return Returns the extension of the file as a ConstString object.
   ConstString GetFileNameExtension() const;
 
   /// Return the filename without the extension part
@@ -346,9 +339,7 @@ public:
   /// without the extension part (e.g. for a file named "foo.bar", "foo" is
   /// returned)
   ///
-  /// \return
-  ///     Returns the filename without extension
-  ///     as a ConstString object.
+  /// \return Returns the filename without extension as a ConstString object.
   ConstString GetFileNameStrippingExtension() const;
 
   /// Get the memory cost of this object.
@@ -372,12 +363,22 @@ public:
   /// \param[in] path
   ///     A full, partial, or relative path to a file.
   ///
-  /// \param[in] resolve_path
-  ///     If \b true, then we will try to resolve links the path using
-  ///     the static FileSpec::Resolve.
+  /// \param[in] style
+  ///     The style for the given path.
   void SetFile(llvm::StringRef path, Style style);
 
-  void SetFile(llvm::StringRef path, const llvm::Triple &Triple);
+  /// Change the file specified with a new path.
+  ///
+  /// Update the contents of this object with a new path. The path will be
+  /// split up into a directory and filename and stored as uniqued string
+  /// values for quick comparison and efficient memory usage.
+  ///
+  /// \param[in] path
+  ///     A full, partial, or relative path to a file.
+  ///
+  /// \param[in] triple
+  ///     The triple which is used to set the Path style.
+  void SetFile(llvm::StringRef path, const llvm::Triple &triple);
 
   bool IsResolved() const { return m_is_resolved; }
 
