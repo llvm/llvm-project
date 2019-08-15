@@ -307,15 +307,18 @@ private:
   FilterPredicate Predicate;
   llvm::object::ObjectFile const &Object;
 };
+
 SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O) {
   return SectionFilter(
       [](llvm::object::SectionRef const &S) {
         if (FilterSections.empty())
           return true;
-        llvm::StringRef String;
-        std::error_code error = S.getName(String);
-        if (error)
+        Expected<StringRef> SecNameOrErr = S.getName();
+        if (!SecNameOrErr) {
+          consumeError(SecNameOrErr.takeError());
           return false;
+        }
+        StringRef String = *SecNameOrErr;
         return is_contained(FilterSections, String);
       },
       O);
@@ -392,6 +395,18 @@ report_error(StringRef ArchiveName, const object::Archive::Child &C,
     report_error(ArchiveName, "???", std::move(E), ArchitectureName);
   } else
     report_error(ArchiveName, NameOrErr.get(), std::move(E), ArchitectureName);
+}
+
+static LLVM_ATTRIBUTE_NORETURN void report_error(llvm::Error E,
+                                                 StringRef File) {
+  report_error(File, std::move(E));
+}
+
+template <typename T, typename... Ts>
+T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+  if (EO)
+    return std::move(*EO);
+  report_error(EO.takeError(), std::forward<Ts>(Args)...);
 }
 
 static const Target *getTarget(const ObjectFile *Obj = nullptr) {
@@ -822,13 +837,13 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     for (const SectionRef &Section : ToolSectionFilter(*O)) {
       std::error_code ec;
 
-      StringRef Name;
       uint64_t Addr = Section.getAddress();
       if (Addr != Val)
         continue;
-      if ((ec = Section.getName(Name)))
-        report_error(O->getFileName(), ec);
-      fmt << Name;
+      Expected<StringRef> NameOrErr = Section.getName();
+      if (!NameOrErr)
+        report_error(O->getFileName(), NameOrErr.takeError());
+      fmt << *NameOrErr;
       return;
     }
 
@@ -854,7 +869,11 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     section_iterator SI = O->section_begin();
     // Adjust for the fact that sections are 1-indexed.
     advance(SI, Val - 1);
-    SI->getName(S);
+    Expected<StringRef> SOrErr = SI->getName();
+    if (!SOrErr)
+      consumeError(SOrErr.takeError());
+    else
+      S = *SOrErr;
   }
 
   fmt << S;
@@ -1362,8 +1381,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
       DataRefImpl DR = Section.getRawDataRefImpl();
       SegmentName = MachO->getSectionFinalSegmentName(DR);
     }
-    StringRef name;
-    error(Section.getName(name));
+    StringRef name = unwrapOrError(Section.getName(), Obj->getFileName());
 
     if ((SectionAddr <= StopAddress) &&
         (SectionAddr + SectSize) >= StartAddress) {
@@ -1675,8 +1693,7 @@ void llvm::DisassemHelper::PrintRelocations(const ObjectFile *Obj) {
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     if (Section.relocation_begin() == Section.relocation_end())
       continue;
-    StringRef secname;
-    error(Section.getName(secname));
+    StringRef secname = unwrapOrError(Section.getName(), Obj->getFileName());
     OutS << "RELOCATION RECORDS FOR [" << secname << "]:\n";
     for (const RelocationRef &Reloc : Section.relocations()) {
       bool hidden = getHidden(Reloc);
@@ -1699,8 +1716,7 @@ void llvm::DisassemHelper::PrintSectionHeaders(const ObjectFile *Obj) {
           "Idx Name          Size      Address          Type\n";
   unsigned i = 0;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
-    StringRef Name;
-    error(Section.getName(Name));
+    StringRef Name = unwrapOrError(Section.getName(), Obj->getFileName());
     uint64_t Address = Section.getAddress();
     uint64_t Size = Section.getSize();
     bool Text = Section.isText();
@@ -1717,9 +1733,8 @@ void llvm::DisassemHelper::PrintSectionHeaders(const ObjectFile *Obj) {
 void llvm::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
   std::error_code EC;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
-    StringRef Name;
     StringRef Contents;
-    error(Section.getName(Name));
+    StringRef Name = unwrapOrError(Section.getName(), Obj->getFileName());
     uint64_t BaseAddr = Section.getAddress();
     uint64_t Size = Section.getSize();
     if (!Size)
@@ -1797,7 +1812,11 @@ void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *o,
     section_iterator Section = *SectionOrErr;
     StringRef Name;
     if (Type == SymbolRef::ST_Debug && Section != o->section_end()) {
-      Section->getName(Name);
+      Expected<StringRef> NameOrErr = Section->getName();
+      if (!NameOrErr)
+        consumeError(NameOrErr.takeError());
+      else
+        Name = *NameOrErr;
     } else {
       Expected<StringRef> NameOrErr = Symbol.getName();
       if (!NameOrErr)
@@ -1846,8 +1865,7 @@ void llvm::DisassemHelper::PrintSymbolTable(const ObjectFile *o,
         StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
         OutS << SegmentName << ",";
       }
-      StringRef SectionName;
-      error(Section->getName(SectionName));
+      StringRef SectionName = unwrapOrError(Section->getName(), o->getFileName());
       OutS << SectionName;
     }
 
@@ -1978,7 +1996,11 @@ void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
   Optional<object::SectionRef> ClangASTSection;
   for (auto Sec : ToolSectionFilter(*Obj)) {
     StringRef Name;
-    Sec.getName(Name);
+    auto NameOrErr = Sec.getName();
+    if (!NameOrErr) // FIXME: Need better error handling.
+      consumeError(NameOrErr.takeError());
+    else
+      Name = *NameOrErr;
     if (Name == ClangASTSectionName) {
       ClangASTSection = Sec;
       break;
@@ -2015,7 +2037,11 @@ void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
 
   for (auto Sec : ToolSectionFilter(*Obj)) {
     StringRef Name;
-    Sec.getName(Name);
+    auto NameOrErr = Sec.getName();
+    if (!NameOrErr) // FIXME: Need better error handling.
+      consumeError(NameOrErr.takeError());
+    else
+      Name = *NameOrErr;
     if (Name == FaultMapSectionName) {
       FaultMapSection = Sec;
       break;
