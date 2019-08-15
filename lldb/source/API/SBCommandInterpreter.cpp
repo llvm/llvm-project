@@ -371,8 +371,11 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
 
   if (IsValid()) {
     lldb_private::StringList lldb_matches, lldb_descriptions;
-    num_completions = m_opaque_ptr->HandleCompletion(
-        current_line, cursor, last_char, lldb_matches, lldb_descriptions);
+    CompletionResult result;
+    CompletionRequest request(current_line, cursor - current_line, result);
+    num_completions = m_opaque_ptr->HandleCompletion(request);
+    result.GetMatches(lldb_matches);
+    result.GetDescriptions(lldb_descriptions);
 
     SBStringList temp_matches_list(&lldb_matches);
     matches.AppendList(temp_matches_list);

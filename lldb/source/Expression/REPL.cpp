@@ -433,28 +433,28 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
   }
 }
 
-int REPL::IOHandlerComplete(IOHandler &io_handler, const char *current_line,
-                            const char *cursor, const char *last_char,
-                            StringList &matches, StringList &descriptions) {
-  matches.Clear();
-
-  llvm::StringRef line(current_line, cursor - current_line);
-
+int REPL::IOHandlerComplete(IOHandler &io_handler, CompletionRequest &request) {
   // Complete an LLDB command if the first character is a colon...
-  if (!line.empty() && line[0] == ':') {
+  if (request.GetRawLine().startswith(":")) {
     Debugger &debugger = m_target.GetDebugger();
 
     // auto complete LLDB commands
-    const char *lldb_current_line = line.substr(1).data();
-    return debugger.GetCommandInterpreter().HandleCompletion(
-        lldb_current_line, cursor, last_char, matches, descriptions);
+    llvm::StringRef new_line = request.GetRawLine().drop_front();
+    CompletionResult sub_result;
+    CompletionRequest sub_request(new_line, request.GetRawCursorPos() - 1,
+                                  sub_result);
+    int result = debugger.GetCommandInterpreter().HandleCompletion(sub_request);
+    StringList matches, descriptions;
+    sub_result.GetMatches(matches);
+    sub_result.GetDescriptions(descriptions);
+    request.AddCompletions(matches, descriptions);
+    return result;
   }
 
   // Strip spaces from the line and see if we had only spaces
-  line = line.ltrim();
-  if (line.empty()) {
+  if (request.GetRawLineUntilCursor().trim().empty()) {
     // Only spaces on this line, so just indent
-    matches.AppendString(m_indent_str);
+    request.AddCompletion(m_indent_str);
     return 1;
   }
 
@@ -477,12 +477,13 @@ int REPL::IOHandlerComplete(IOHandler &io_handler, const char *current_line,
     }
   }
 
-  if (cursor > current_line) {
-    current_code.append("\n");
-    current_code.append(current_line, cursor - current_line);
-  }
+  current_code.append("\n");
+  current_code += request.GetRawLineUntilCursor();
 
-  return CompleteCode(current_code, matches);
+  StringList matches;
+  int result = CompleteCode(current_code, matches);
+  request.AddCompletions(matches);
+  return result;
 }
 
 bool QuitCommandOverrideCallback(void *baton, const char **argv) {

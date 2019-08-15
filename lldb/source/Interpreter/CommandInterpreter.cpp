@@ -1814,18 +1814,16 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   return num_command_matches;
 }
 
-int CommandInterpreter::HandleCompletion(const char *current_line,
-                                         const char *cursor,
-                                         const char *last_char,
-                                         StringList &matches,
-                                         StringList &descriptions) {
-
-  llvm::StringRef command_line(current_line, last_char - current_line);
+int CommandInterpreter::HandleCompletion(CompletionRequest &orig_request) {
+  // Start a new subrequest we can modify.
   CompletionResult result;
-  CompletionRequest request(command_line, cursor - current_line, result);
+  CompletionRequest request(orig_request.GetRawLine(),
+                            orig_request.GetRawCursorPos(), result);
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
+  StringList matches, descriptions;
+
   if (first_arg) {
     if (first_arg[0] == m_comment_char)
       return 0;
@@ -1872,6 +1870,8 @@ int CommandInterpreter::HandleCompletion(const char *current_line,
     matches.InsertStringAtIndex(0, common_prefix.c_str());
     descriptions.InsertStringAtIndex(0, "");
   }
+  // Add completion to original request.
+  orig_request.AddCompletions(matches, descriptions);
   return num_command_matches;
 }
 

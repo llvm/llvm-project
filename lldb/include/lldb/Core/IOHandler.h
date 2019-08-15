@@ -10,6 +10,7 @@
 #define liblldb_IOHandler_h_
 
 #include "lldb/Core/ValueObjectList.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
@@ -198,9 +199,8 @@ public:
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
-  virtual int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
-                                const char *cursor, const char *last_char,
-                                StringList &matches, StringList &descriptions);
+  virtual int IOHandlerComplete(IOHandler &io_handler,
+                                CompletionRequest &request);
 
   virtual const char *IOHandlerGetFixIndentationCharacters() { return nullptr; }
 
@@ -414,10 +414,7 @@ private:
   static int FixIndentationCallback(Editline *editline, const StringList &lines,
                                     int cursor_position, void *baton);
 
-  static int AutoCompleteCallback(const char *current_line, const char *cursor,
-                                  const char *last_char,
-                                  StringList &matches, StringList &descriptions,
-                                  void *baton);
+  static int AutoCompleteCallback(CompletionRequest &request, void *baton);
 #endif
 
 protected:
@@ -448,9 +445,8 @@ public:
 
   bool GetResponse() const { return m_user_response; }
 
-  int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
-                        const char *cursor, const char *last_char,
-                        StringList &matches, StringList &descriptions) override;
+  int IOHandlerComplete(IOHandler &io_handler,
+                        CompletionRequest &request) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;
