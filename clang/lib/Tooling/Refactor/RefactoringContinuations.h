@@ -223,7 +223,7 @@ struct ContinuationFunction {
       ASTContext &Context, const ASTQueryType &Query,
       const std::tuple<typename StateTraits<QueryOrState>::StoredResultType...>
           &Arguments,
-      llvm::index_sequence<Is...>) {
+      std::index_sequence<Is...>) {
     auto ASTQueryResult = Converter.convert(Query.getResult());
     return Fn(Context, ASTQueryResult, std::get<Is>(Arguments)...);
   }
@@ -242,7 +242,7 @@ struct ContinuationFunction<void, ASTQueryType, QueryOrState...> {
       ASTContext &Context, const ASTQueryType &,
       const std::tuple<typename StateTraits<QueryOrState>::StoredResultType...>
           &Arguments,
-      llvm::index_sequence<Is...>) {
+      std::index_sequence<Is...>) {
     return Fn(Context, std::get<Is>(Arguments)...);
   }
 };
@@ -277,7 +277,7 @@ private:
   /// TU independent state.
   template <size_t... Is>
   std::tuple<typename StateTraits<QueryOrState>::PersistentType...>
-  convertToPersistentImpl(llvm::index_sequence<Is...>) {
+  convertToPersistentImpl(std::index_sequence<Is...>) {
     assert(Inputs && "TU-dependent state is already converted");
     return std::make_tuple(
         detail::convertToPersistentRepresentation(std::get<Is>(*Inputs))...);
@@ -301,7 +301,7 @@ private:
 
   template <size_t... Is>
   std::vector<indexer::IndexerQuery *>
-  gatherQueries(llvm::index_sequence<Is...>) {
+  gatherQueries(std::index_sequence<Is...>) {
     assert(Inputs && "TU-dependent state is already converted");
     std::vector<indexer::IndexerQuery *> Queries;
     std::make_tuple(gatherQueries(Queries, std::get<Is>(*Inputs))...);
@@ -312,7 +312,7 @@ private:
   /// whose values are converted from the TU-independent to TU-specific values.
   template <size_t... Is>
   llvm::Expected<RefactoringResult> dispatch(ASTContext &Context,
-                                             llvm::index_sequence<Is...> Seq) {
+                                             std::index_sequence<Is...> Seq) {
     assert(State && "TU-independent state is not yet produced");
     detail::PersistentToASTSpecificStateConverter Converter(Context);
     (void)std::make_tuple(Converter.addConvertible(std::get<Is>(*State))...);
@@ -341,7 +341,7 @@ public:
   }
 
   std::vector<indexer::IndexerQuery *> getAdditionalIndexerQueries() override {
-    return gatherQueries(llvm::index_sequence_for<QueryOrState...>());
+    return gatherQueries(std::index_sequence_for<QueryOrState...>());
   }
 
   /// Query results are fetched. State is converted to a persistent
@@ -349,7 +349,7 @@ public:
   void persistTUSpecificState() override {
     ASTQuery->invalidateTUSpecificState();
     State =
-        convertToPersistentImpl(llvm::index_sequence_for<QueryOrState...>());
+        convertToPersistentImpl(std::index_sequence_for<QueryOrState...>());
     Inputs = None;
   }
 
@@ -357,7 +357,7 @@ public:
   /// and the continuation is dispatched.
   llvm::Expected<RefactoringResult>
   runInExternalASTUnit(ASTContext &Context) override {
-    return dispatch(Context, llvm::index_sequence_for<QueryOrState...>());
+    return dispatch(Context, std::index_sequence_for<QueryOrState...>());
   }
 };
 
