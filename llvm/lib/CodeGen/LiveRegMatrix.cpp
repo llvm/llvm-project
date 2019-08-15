@@ -118,7 +118,7 @@ void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
 }
 
 void LiveRegMatrix::unassign(LiveInterval &VirtReg) {
-  unsigned PhysReg = VRM->getPhys(VirtReg.reg);
+  Register PhysReg = VRM->getPhys(VirtReg.reg);
   LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI) << " from "
                     << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg);

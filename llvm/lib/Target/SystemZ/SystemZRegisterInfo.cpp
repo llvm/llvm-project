@@ -41,7 +41,7 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
     return &SystemZ::GRH32BitRegClass;
 
   if (VRM && VRM->hasPhys(MO.getReg())) {
-    unsigned PhysReg = VRM->getPhys(MO.getReg());
+    Register PhysReg = VRM->getPhys(MO.getReg());
     if (SystemZ::GR32BitRegClass.contains(PhysReg))
       return &SystemZ::GR32BitRegClass;
     assert (SystemZ::GRH32BitRegClass.contains(PhysReg) &&
@@ -120,8 +120,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
           }
 
           // Add the other operand of the LOCRMux to the worklist.
-          unsigned OtherReg =
-            (TrueMO.getReg() == Reg ? FalseMO.getReg() : TrueMO.getReg());
+          Register OtherReg =
+              (TrueMO.getReg() == Reg ? FalseMO.getReg() : TrueMO.getReg());
           if (MRI->getRegClass(OtherReg) == &SystemZ::GRX32BitRegClass)
             Worklist.push_back(OtherReg);
         } // end LOCRMux
@@ -298,8 +298,8 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(Mask && "One offset must be OK");
     } while (!OpcodeForOffset);
 
-    unsigned ScratchReg =
-      MF.getRegInfo().createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+    Register ScratchReg =
+        MF.getRegInfo().createVirtualRegister(&SystemZ::ADDR64BitRegClass);
     int64_t HighOffset = OldOffset - Offset;
 
     if (MI->getDesc().TSFlags & SystemZII::HasIndex
@@ -352,8 +352,8 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   // regalloc may run out of registers.
 
   unsigned WideOpNo = (getRegSizeInBits(*SrcRC) == 128 ? 1 : 0);
-  unsigned GR128Reg = MI->getOperand(WideOpNo).getReg();
-  unsigned GRNarReg = MI->getOperand((WideOpNo == 1) ? 0 : 1).getReg();
+  Register GR128Reg = MI->getOperand(WideOpNo).getReg();
+  Register GRNarReg = MI->getOperand((WideOpNo == 1) ? 0 : 1).getReg();
   LiveInterval &IntGR128 = LIS.getInterval(GR128Reg);
   LiveInterval &IntGRNar = LIS.getInterval(GRNarReg);
 

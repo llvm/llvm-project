@@ -144,6 +144,10 @@ namespace llvm {
       /// relative displacements.
       WrapperRIP,
 
+      /// Copies a 64-bit value from an MMX vector to the low word
+      /// of an XMM vector, with the high word zero filled.
+      MOVQ2DQ,
+
       /// Copies a 64-bit value from the low word of an XMM vector
       /// to an MMX vector.
       MOVDQ2Q,

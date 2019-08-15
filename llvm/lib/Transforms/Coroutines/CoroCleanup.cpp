@@ -115,7 +115,7 @@ struct CoroCleanup : FunctionPass {
                                      "llvm.coro.subfn.addr", "llvm.coro.free",
                                      "llvm.coro.id", "llvm.coro.id.retcon",
                                      "llvm.coro.id.retcon.once"}))
-      L = llvm::make_unique<Lowerer>(M);
+      L = std::make_unique<Lowerer>(M);
     return false;
   }
 

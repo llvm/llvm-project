@@ -157,6 +157,7 @@ std::string EVT::getEVTString() const {
   case MVT::v256i8:  return "v256i8";
   case MVT::v1i16:   return "v1i16";
   case MVT::v2i16:   return "v2i16";
+  case MVT::v3i16:   return "v3i16";
   case MVT::v4i16:   return "v4i16";
   case MVT::v8i16:   return "v8i16";
   case MVT::v16i16:  return "v16i16";
@@ -187,6 +188,7 @@ std::string EVT::getEVTString() const {
   case MVT::v1f32:   return "v1f32";
   case MVT::v2f32:   return "v2f32";
   case MVT::v2f16:   return "v2f16";
+  case MVT::v3f16:   return "v3f16";
   case MVT::v4f16:   return "v4f16";
   case MVT::v8f16:   return "v8f16";
   case MVT::v3f32:   return "v3f32";
@@ -296,6 +298,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v256i8:  return VectorType::get(Type::getInt8Ty(Context), 256);
   case MVT::v1i16:   return VectorType::get(Type::getInt16Ty(Context), 1);
   case MVT::v2i16:   return VectorType::get(Type::getInt16Ty(Context), 2);
+  case MVT::v3i16:   return VectorType::get(Type::getInt16Ty(Context), 3);
   case MVT::v4i16:   return VectorType::get(Type::getInt16Ty(Context), 4);
   case MVT::v8i16:   return VectorType::get(Type::getInt16Ty(Context), 8);
   case MVT::v16i16:  return VectorType::get(Type::getInt16Ty(Context), 16);
@@ -324,6 +327,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v32i64:  return VectorType::get(Type::getInt64Ty(Context), 32);
   case MVT::v1i128:  return VectorType::get(Type::getInt128Ty(Context), 1);
   case MVT::v2f16:   return VectorType::get(Type::getHalfTy(Context), 2);
+  case MVT::v3f16:   return VectorType::get(Type::getHalfTy(Context), 3);
   case MVT::v4f16:   return VectorType::get(Type::getHalfTy(Context), 4);
   case MVT::v8f16:   return VectorType::get(Type::getHalfTy(Context), 8);
   case MVT::v1f32:   return VectorType::get(Type::getFloatTy(Context), 1);

@@ -42,7 +42,7 @@ Error PDBFileBuilder::initialize(uint32_t BlockSize) {
   auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
   if (!ExpectedMsf)
     return ExpectedMsf.takeError();
-  Msf = llvm::make_unique<MSFBuilder>(std::move(*ExpectedMsf));
+  Msf = std::make_unique<MSFBuilder>(std::move(*ExpectedMsf));
   return Error::success();
 }
 
@@ -50,25 +50,25 @@ MSFBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
 
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
-    Info = llvm::make_unique<InfoStreamBuilder>(*Msf, NamedStreams);
+    Info = std::make_unique<InfoStreamBuilder>(*Msf, NamedStreams);
   return *Info;
 }
 
 DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   if (!Dbi)
-    Dbi = llvm::make_unique<DbiStreamBuilder>(*Msf);
+    Dbi = std::make_unique<DbiStreamBuilder>(*Msf);
   return *Dbi;
 }
 
 TpiStreamBuilder &PDBFileBuilder::getTpiBuilder() {
   if (!Tpi)
-    Tpi = llvm::make_unique<TpiStreamBuilder>(*Msf, StreamTPI);
+    Tpi = std::make_unique<TpiStreamBuilder>(*Msf, StreamTPI);
   return *Tpi;
 }
 
 TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
   if (!Ipi)
-    Ipi = llvm::make_unique<TpiStreamBuilder>(*Msf, StreamIPI);
+    Ipi = std::make_unique<TpiStreamBuilder>(*Msf, StreamIPI);
   return *Ipi;
 }
 
@@ -78,7 +78,7 @@ PDBStringTableBuilder &PDBFileBuilder::getStringTableBuilder() {
 
 GSIStreamBuilder &PDBFileBuilder::getGsiBuilder() {
   if (!Gsi)
-    Gsi = llvm::make_unique<GSIStreamBuilder>(*Msf);
+    Gsi = std::make_unique<GSIStreamBuilder>(*Msf);
   return *Gsi;
 }
 

@@ -286,7 +286,7 @@ SDValue HexagonTargetLowering::LowerCallResult(
       SDValue FR0 = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
                                        MVT::i32, Glue);
       // FR0 = (Value, Chain, Glue)
-      unsigned PredR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
+      Register PredR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
       SDValue TPR = DAG.getCopyToReg(FR0.getValue(1), dl, PredR,
                                      FR0.getValue(0), FR0.getValue(2));
       // TPR = (Chain, Glue)
@@ -736,7 +736,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         RegVT = VA.getValVT();
 
       const TargetRegisterClass *RC = getRegClassFor(RegVT);
-      unsigned VReg = MRI.createVirtualRegister(RC);
+      Register VReg = MRI.createVirtualRegister(RC);
       SDValue Copy = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
 
       // Treat values of type MVT::i1 specially: they are passed in
@@ -870,15 +870,20 @@ SDValue
 HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue PredOp = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1), Op2 = Op.getOperand(2);
-  EVT OpVT = Op1.getValueType();
-  SDLoc DL(Op);
+  MVT OpTy = ty(Op1);
+  const SDLoc &dl(Op);
 
-  if (OpVT == MVT::v2i16) {
-    SDValue X1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v2i32, Op1);
-    SDValue X2 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v2i32, Op2);
-    SDValue SL = DAG.getNode(ISD::VSELECT, DL, MVT::v2i32, PredOp, X1, X2);
-    SDValue TR = DAG.getNode(ISD::TRUNCATE, DL, MVT::v2i16, SL);
-    return TR;
+  if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
+    MVT ElemTy = OpTy.getVectorElementType();
+    assert(ElemTy.isScalarInteger());
+    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
+                                  OpTy.getVectorNumElements());
+    // Generate (trunc (select (_, sext, sext))).
+    return DAG.getSExtOrTrunc(
+              DAG.getSelect(dl, WideTy, PredOp,
+                            DAG.getSExtOrTrunc(Op1, dl, WideTy),
+                            DAG.getSExtOrTrunc(Op2, dl, WideTy)),
+              dl, OpTy);
   }
 
   return SDValue();
@@ -1506,6 +1511,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // Custom-lower bitcasts from i8 to v8i1.
   setOperationAction(ISD::BITCAST,        MVT::i8,    Custom);
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
+  setOperationAction(ISD::VSELECT,        MVT::v4i8,  Custom);
   setOperationAction(ISD::VSELECT,        MVT::v2i16, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8,  Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
@@ -2875,6 +2881,17 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       break;
   }
+}
+
+SDValue
+HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
+      const {
+  SDValue Op(N, 0);
+  if (isHvxOperation(Op)) {
+    if (SDValue V = PerformHvxDAGCombine(N, DCI))
+      return V;
+  }
+  return SDValue();
 }
 
 /// Returns relocation base for the given PIC jumptable.

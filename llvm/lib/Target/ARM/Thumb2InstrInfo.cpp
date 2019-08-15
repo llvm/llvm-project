@@ -554,7 +554,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // register then we change to an immediate version.
     unsigned NewOpc = Opcode;
     if (AddrMode == ARMII::AddrModeT2_so) {
-      unsigned OffsetReg = MI.getOperand(FrameRegIdx+1).getReg();
+      Register OffsetReg = MI.getOperand(FrameRegIdx + 1).getReg();
       if (OffsetReg != 0) {
         MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
         return Offset == 0;

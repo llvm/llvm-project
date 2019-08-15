@@ -151,23 +151,19 @@ define void @add3i16(%i16vec3* nocapture sret %ret, %i16vec3* %ap, %i16vec3* %bp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrw $2, 4(%edx), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrw $2, 4(%ecx), %xmm1
-; X86-NEXT:    paddw %xmm0, %xmm1
-; X86-NEXT:    pextrw $2, %xmm1, 4(%eax)
-; X86-NEXT:    movd %xmm1, (%eax)
+; X86-NEXT:    movdqa (%edx), %xmm0
+; X86-NEXT:    paddw (%ecx), %xmm0
+; X86-NEXT:    pextrw $2, %xmm0, 4(%eax)
+; X86-NEXT:    movd %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: add3i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    paddw %xmm0, %xmm1
-; X64-NEXT:    pextrw $2, %xmm1, 4(%rdi)
-; X64-NEXT:    movd %xmm1, (%rdi)
+; X64-NEXT:    movdqa (%rsi), %xmm0
+; X64-NEXT:    paddw (%rdx), %xmm0
+; X64-NEXT:    pextrw $2, %xmm0, 4(%rdi)
+; X64-NEXT:    movd %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%a = load %i16vec3, %i16vec3* %ap, align 16
 	%b = load %i16vec3, %i16vec3* %bp, align 16

@@ -339,16 +339,16 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
           // 1. CR register
           // 2. Target MBB
           PPC::Predicate Pred = (PPC::Predicate)I->getOperand(0).getImm();
-          unsigned CRReg = I->getOperand(1).getReg();
+          Register CRReg = I->getOperand(1).getReg();
 
           // Jump over the uncond branch inst (i.e. $PC+8) on opposite condition.
           BuildMI(MBB, I, dl, TII->get(PPC::BCC))
             .addImm(PPC::InvertPredicate(Pred)).addReg(CRReg).addImm(2);
         } else if (I->getOpcode() == PPC::BC) {
-          unsigned CRBit = I->getOperand(0).getReg();
+          Register CRBit = I->getOperand(0).getReg();
           BuildMI(MBB, I, dl, TII->get(PPC::BCn)).addReg(CRBit).addImm(2);
         } else if (I->getOpcode() == PPC::BCn) {
-          unsigned CRBit = I->getOperand(0).getReg();
+          Register CRBit = I->getOperand(0).getReg();
           BuildMI(MBB, I, dl, TII->get(PPC::BC)).addReg(CRBit).addImm(2);
         } else if (I->getOpcode() == PPC::BDNZ) {
           BuildMI(MBB, I, dl, TII->get(PPC::BDZ)).addImm(2);

@@ -57,34 +57,43 @@ struct RetireControlUnit : public HardwareUnit {
 private:
   unsigned NextAvailableSlotIdx;
   unsigned CurrentInstructionSlotIdx;
-  unsigned AvailableSlots;
+  unsigned NumROBEntries;
+  unsigned AvailableEntries;
   unsigned MaxRetirePerCycle; // 0 means no limit.
   std::vector<RUToken> Queue;
 
-public:
-  RetireControlUnit(const MCSchedModel &SM);
-
-  bool isEmpty() const { return AvailableSlots == Queue.size(); }
-  bool isAvailable(unsigned Quantity = 1) const {
+  unsigned normalizeQuantity(unsigned Quantity) const {
     // Some instructions may declare a number of uOps which exceeds the size
     // of the reorder buffer. To avoid problems, cap the amount of slots to
     // the size of the reorder buffer.
-    Quantity = std::min(Quantity, static_cast<unsigned>(Queue.size()));
+    Quantity = std::min(Quantity, NumROBEntries);
 
     // Further normalize the number of micro opcodes for instructions that
     // declare zero opcodes. This should match the behavior of method
     // reserveSlot().
-    Quantity = std::max(Quantity, 1U);
-    return AvailableSlots >= Quantity;
+    return std::max(Quantity, 1U);
+  }
+
+  unsigned computeNextSlotIdx() const;
+
+public:
+  RetireControlUnit(const MCSchedModel &SM);
+
+  bool isEmpty() const { return AvailableEntries == NumROBEntries; }
+
+  bool isAvailable(unsigned Quantity = 1) const {
+    return AvailableEntries >= normalizeQuantity(Quantity);
   }
 
   unsigned getMaxRetirePerCycle() const { return MaxRetirePerCycle; }
 
-  // Reserves a number of slots, and returns a new token.
-  unsigned reserveSlot(const InstRef &IS, unsigned NumMicroOps);
+  // Reserves a number of slots, and returns a new token reference.
+  unsigned dispatch(const InstRef &IS);
 
   // Return the current token from the RCU's circular token queue.
-  const RUToken &peekCurrentToken() const;
+  const RUToken &getCurrentToken() const;
+
+  const RUToken &peekNextToken() const;
 
   // Advance the pointer to the next token in the circular token queue.
   void consumeCurrentToken();

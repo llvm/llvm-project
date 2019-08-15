@@ -1745,7 +1745,7 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
             .getManager();
     ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   } else {
-    OwnedORE = make_unique<OptimizationRemarkEmitter>(&F);
+    OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
     ORE = OwnedORE.get();
   }
   Samples = Reader->getSamplesFor(F);

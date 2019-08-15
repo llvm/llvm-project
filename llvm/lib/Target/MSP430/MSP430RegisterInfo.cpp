@@ -139,7 +139,7 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       return;
 
     // We need to materialize the offset via add instruction.
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     if (Offset < 0)
       BuildMI(MBB, std::next(II), dl, TII.get(MSP430::SUB16ri), DstReg)
         .addReg(DstReg).addImm(-Offset);

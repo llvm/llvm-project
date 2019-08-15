@@ -382,6 +382,8 @@ TEST_F(OptionalTest, ImmovableEmplace) {
   EXPECT_EQ(0u, Immovable::Destructions);
 }
 
+#if LLVM_HAS_RVALUE_REFERENCE_THIS
+
 TEST_F(OptionalTest, MoveGetValueOr) {
   Optional<MoveOnly> A;
 
@@ -398,6 +400,8 @@ TEST_F(OptionalTest, MoveGetValueOr) {
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(2u, MoveOnly::Destructions);
 }
+
+#endif // LLVM_HAS_RVALUE_REFERENCE_THIS
 
 struct EqualTo {
   template <typename T, typename U> static bool apply(const T &X, const U &Y) {

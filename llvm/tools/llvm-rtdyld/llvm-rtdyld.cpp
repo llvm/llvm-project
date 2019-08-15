@@ -889,7 +889,7 @@ static int linkAndVerify() {
     ObjectFile &Obj = **MaybeObj;
 
     if (!Checker)
-      Checker = llvm::make_unique<RuntimeDyldChecker>(
+      Checker = std::make_unique<RuntimeDyldChecker>(
           IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo,
           GetStubInfo, Obj.isLittleEndian() ? support::little : support::big,
           Disassembler.get(), InstPrinter.get(), dbgs());

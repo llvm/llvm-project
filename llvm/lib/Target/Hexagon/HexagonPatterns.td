@@ -816,14 +816,6 @@ def: Pat<(select (not I1:$Pu), f32ImmPred:$I, F32:$Rs),
 def: Pat<(select (not I1:$Pu), F32:$Rt, f32ImmPred:$I),
          (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
 
-def: Pat<(select I1:$Pu, V4I8:$Rs, V4I8:$Rt),
-         (LoReg (C2_vmux I1:$Pu, (ToAext64 $Rs), (ToAext64 $Rt)))>;
-def: Pat<(select I1:$Pu, V2I16:$Rs, V2I16:$Rt),
-         (LoReg (C2_vmux I1:$Pu, (ToAext64 $Rs), (ToAext64 $Rt)))>;
-def: Pat<(select I1:$Pu, V2I32:$Rs, V2I32:$Rt),
-         (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
-                   (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
-
 def: Pat<(vselect V8I1:$Pu, V8I8:$Rs, V8I8:$Rt),
          (C2_vmux V8I1:$Pu, V8I8:$Rs, V8I8:$Rt)>;
 def: Pat<(vselect V4I1:$Pu, V4I16:$Rs, V4I16:$Rt),

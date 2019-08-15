@@ -144,6 +144,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i16, Expand);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i16, Expand);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::v2i16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::v3i16, Expand);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v3i16, Expand);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::v3i16, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4i16, Expand);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i16, Expand);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::v4i16, Expand);
@@ -151,6 +154,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
 
@@ -212,6 +216,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
+  setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
 

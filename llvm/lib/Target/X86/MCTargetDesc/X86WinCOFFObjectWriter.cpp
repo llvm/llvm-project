@@ -109,5 +109,5 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createX86WinCOFFObjectWriter(bool Is64Bit) {
-  return llvm::make_unique<X86WinCOFFObjectWriter>(Is64Bit);
+  return std::make_unique<X86WinCOFFObjectWriter>(Is64Bit);
 }

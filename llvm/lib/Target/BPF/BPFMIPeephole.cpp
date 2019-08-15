@@ -104,7 +104,7 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
     if (!opnd.isReg())
       return false;
 
-    unsigned Reg = opnd.getReg();
+    Register Reg = opnd.getReg();
     if ((Register::isVirtualRegister(Reg) &&
          MRI->getRegClass(Reg) == &BPF::GPRRegClass))
       return false;
@@ -134,8 +134,8 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
       //   SRL_ri    rB, rB, 32
       if (MI.getOpcode() == BPF::SRL_ri &&
           MI.getOperand(2).getImm() == 32) {
-        unsigned DstReg = MI.getOperand(0).getReg();
-        unsigned ShfReg = MI.getOperand(1).getReg();
+        Register DstReg = MI.getOperand(0).getReg();
+        Register ShfReg = MI.getOperand(1).getReg();
         MachineInstr *SllMI = MRI->getVRegDef(ShfReg);
 
         LLVM_DEBUG(dbgs() << "Starting SRL found:");
@@ -159,7 +159,7 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
         LLVM_DEBUG(dbgs() << "  Type cast Mov found:");
         LLVM_DEBUG(MovMI->dump());
 
-        unsigned SubReg = MovMI->getOperand(1).getReg();
+        Register SubReg = MovMI->getOperand(1).getReg();
         if (!isMovFrom32Def(MovMI)) {
           LLVM_DEBUG(dbgs()
                      << "  One ZExt elim sequence failed qualifying elim.\n");
@@ -254,9 +254,9 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
       // register class on src (i32) and dst (i64), RA could generate useless
       // instruction due to this.
       if (MI.getOpcode() == BPF::MOV_32_64) {
-        unsigned dst = MI.getOperand(0).getReg();
-        unsigned dst_sub = TRI->getSubReg(dst, BPF::sub_32);
-        unsigned src = MI.getOperand(1).getReg();
+        Register dst = MI.getOperand(0).getReg();
+        Register dst_sub = TRI->getSubReg(dst, BPF::sub_32);
+        Register src = MI.getOperand(1).getReg();
 
         if (dst_sub != src)
           continue;

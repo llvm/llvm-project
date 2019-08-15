@@ -242,7 +242,7 @@ void X86AsmPrinter::PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
     return PrintOperand(MI, OpNo, O);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
     O << '%';
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
     unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
         (strcmp(Modifier+6,"32") == 0) ? 32 :
@@ -388,7 +388,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
 static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   bool EmitPercent = true;
 
   if (!X86::GR8RegClass.contains(Reg) &&

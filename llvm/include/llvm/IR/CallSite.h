@@ -663,6 +663,30 @@ public:
     return false;
   }
 
+  /// Return the set of functions this call site is known to call. For direct
+  /// calls, the returned set contains the called function. For indirect calls,
+  /// this function collects known callees from !callees metadata, if present.
+  SmallVector<FunTy *, 1> getKnownCallees() {
+    SmallVector<FunTy *, 1> Callees;
+
+    if (getCalledFunction()) {
+      // If the call site is direct, just add the called function to the set.
+      Callees.push_back(getCalledFunction());
+      return Callees;
+    }
+
+    InstrTy *Inst = getInstruction();
+    if (auto *Node = Inst->getMetadata(LLVMContext::MD_callees)) {
+      // Otherwise, if the call site is indirect, collect the known callees from
+      // !callees metadata if present.
+      for (const MDOperand &Op : Node->operands())
+        if (auto *MDConstant = mdconst::extract_or_null<Constant>(Op))
+          Callees.push_back(cast<FunTy>(MDConstant));
+    }
+
+    return Callees;
+  }
+
 private:
   IterTy getCallee() const {
     return cast<CallBase>(getInstruction())->op_end() - 1;

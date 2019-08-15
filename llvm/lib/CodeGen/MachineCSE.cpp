@@ -167,14 +167,14 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
   for (MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isUse())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
     bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
     if (!DefMI->isCopy())
       continue;
-    unsigned SrcReg = DefMI->getOperand(1).getReg();
+    Register SrcReg = DefMI->getOperand(1).getReg();
     if (!Register::isVirtualRegister(SrcReg))
       continue;
     if (DefMI->getOperand(0).getSubReg())
@@ -280,7 +280,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || MO.isDef())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (Register::isVirtualRegister(Reg))
@@ -299,7 +299,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     const MachineOperand &MO = MOP.value();
     if (!MO.isReg() || !MO.isDef())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (Register::isVirtualRegister(Reg))
@@ -376,7 +376,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
         return false;
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned MOReg = MO.getReg();
+      Register MOReg = MO.getReg();
       if (Register::isVirtualRegister(MOReg))
         continue;
       if (PhysRefs.count(MOReg))
@@ -593,8 +593,8 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
       MachineOperand &MO = MI->getOperand(i);
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned OldReg = MO.getReg();
-      unsigned NewReg = CSMI->getOperand(i).getReg();
+      Register OldReg = MO.getReg();
+      Register NewReg = CSMI->getOperand(i).getReg();
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,
       // we should make sure it is not dead at CSMI.
@@ -822,8 +822,8 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
 
         assert(MI->getOperand(0).isDef() &&
                "First operand of instr with one explicit def must be this def");
-        unsigned VReg = MI->getOperand(0).getReg();
-        unsigned NewReg = MRI->cloneVirtualRegister(VReg);
+        Register VReg = MI->getOperand(0).getReg();
+        Register NewReg = MRI->cloneVirtualRegister(VReg);
         if (!isProfitableToCSE(NewReg, VReg, CMBB, MI))
           continue;
         MachineInstr &NewMI =

@@ -278,7 +278,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
       // Ignore instructions like DBG_VALUE which don't read/def the register.
       if (!MO.isDef() && !MO.readsReg())
         continue;
-      unsigned PhysReg = MO.getReg();
+      Register PhysReg = MO.getReg();
       if (!PhysReg)
         continue;
       assert(Register::isPhysicalRegister(PhysReg) && "Unallocated register?!");

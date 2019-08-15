@@ -51,7 +51,7 @@ protected:
         : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
           BAA(Test.DL, *Test.F, Test.TLI, AC, &DT) {
       AA.addAAResult(BAA);
-      MSSA = make_unique<MemorySSA>(*Test.F, &AA, &DT);
+      MSSA = std::make_unique<MemorySSA>(*Test.F, &AA, &DT);
       Walker = MSSA->getWalker();
     }
   };
@@ -1431,7 +1431,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiNotOpt) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
   std::unique_ptr<MemorySSAUpdater> MSSAU =
-      make_unique<MemorySSAUpdater>(&MSSA);
+      std::make_unique<MemorySSAUpdater>(&MSSA);
 
   MemoryPhi *Phi = MSSA.getMemoryAccess(Exit);
   EXPECT_EQ(Phi, Walker->getClobberingMemoryAccess(S1));
@@ -1493,7 +1493,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
   std::unique_ptr<MemorySSAUpdater> MSSAU =
-      make_unique<MemorySSAUpdater>(&MSSA);
+      std::make_unique<MemorySSAUpdater>(&MSSA);
 
   MemoryDef *DefS1 = cast<MemoryDef>(MSSA.getMemoryAccess(S1));
   EXPECT_EQ(DefS1, Walker->getClobberingMemoryAccess(S2));
@@ -1565,7 +1565,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithNoPhiAddNewPhis) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAU =
-      make_unique<MemorySSAUpdater>(&MSSA);
+      std::make_unique<MemorySSAUpdater>(&MSSA);
 
   // Alter CFG, add edge: f -> c
   FBlock->getTerminator()->eraseFromParent();

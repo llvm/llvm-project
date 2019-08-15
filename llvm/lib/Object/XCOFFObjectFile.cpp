@@ -502,7 +502,7 @@ XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
 
 Expected<std::unique_ptr<XCOFFObjectFile>>
 XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
-  // Can't use make_unique because of the private constructor.
+  // Can't use std::make_unique because of the private constructor.
   std::unique_ptr<XCOFFObjectFile> Obj;
   Obj.reset(new XCOFFObjectFile(Type, MBR));
 

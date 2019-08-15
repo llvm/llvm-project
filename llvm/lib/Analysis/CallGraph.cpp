@@ -29,7 +29,7 @@ using namespace llvm;
 
 CallGraph::CallGraph(Module &M)
     : M(M), ExternalCallingNode(getOrInsertFunction(nullptr)),
-      CallsExternalNode(llvm::make_unique<CallGraphNode>(nullptr)) {
+      CallsExternalNode(std::make_unique<CallGraphNode>(nullptr)) {
   // Add every function to the call graph.
   for (Function &F : M)
     addToCallGraph(&F);
@@ -37,6 +37,7 @@ CallGraph::CallGraph(Module &M)
 
 CallGraph::CallGraph(CallGraph &&Arg)
     : M(Arg.M), FunctionMap(std::move(Arg.FunctionMap)),
+      DummyNodeMap(std::move(Arg.DummyNodeMap)),
       ExternalCallingNode(Arg.ExternalCallingNode),
       CallsExternalNode(std::move(Arg.CallsExternalNode)) {
   Arg.FunctionMap.clear();
@@ -53,6 +54,8 @@ CallGraph::~CallGraph() {
 #ifndef NDEBUG
   for (auto &I : FunctionMap)
     I.second->allReferencesDropped();
+  for (auto &N : DummyNodeMap)
+    N.second->allReferencesDropped();
 #endif
 }
 
@@ -74,7 +77,14 @@ void CallGraph::addToCallGraph(Function *F) {
     for (Instruction &I : BB) {
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         const Function *Callee = Call->getCalledFunction();
-        if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
+        MDNode *CalleesMD = I.getMetadata(LLVMContext::MD_callees);
+        if (!Callee && CalleesMD)
+          // If an indirect call site has !callees metadata indicating its
+          // possible callees, we add an edge from the call site to a dummy
+          // node. When we construct the dummy node, we add edges from it to
+          // the functions indicated in the !callees metadata.
+          Node->addCalledFunction(Call, getOrInsertNodeForCalleesMD(CalleesMD));
+        else if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
           // Indirect calls of intrinsics are not allowed so no need to check.
           // We can be more precise here by using TargetArg returned by
           // Intrinsic::isLeaf.
@@ -105,6 +115,11 @@ void CallGraph::print(raw_ostream &OS) const {
 
   for (CallGraphNode *CN : Nodes)
     CN->print(OS);
+
+  // The iteration order of the DummyNodeMap is deterministic, so we don't need
+  // to sort the nodes. Just print them.
+  for (auto &Entry : DummyNodeMap)
+    Entry.second->print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -120,6 +135,12 @@ LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
 Function *CallGraph::removeFunctionFromModule(CallGraphNode *CGN) {
   assert(CGN->empty() && "Cannot remove function from call "
          "graph if it references other functions!");
+
+  // If any dummy node references the node for the given function, we first
+  // need to remove those edges.
+  for (auto &Entry : DummyNodeMap)
+    Entry.second->removeAnyCallEdgeTo(CGN);
+
   Function *F = CGN->getFunction(); // Get the function for the call graph node
   FunctionMap.erase(F);             // Remove the call graph node from the map
 
@@ -150,7 +171,22 @@ CallGraphNode *CallGraph::getOrInsertFunction(const Function *F) {
     return CGN.get();
 
   assert((!F || F->getParent() == &M) && "Function not in current module!");
-  CGN = llvm::make_unique<CallGraphNode>(const_cast<Function *>(F));
+  CGN = std::make_unique<CallGraphNode>(const_cast<Function *>(F));
+  return CGN.get();
+}
+
+CallGraphNode *CallGraph::getOrInsertNodeForCalleesMD(MDNode *Callees) {
+  auto &CGN = DummyNodeMap[Callees];
+  if (CGN)
+    return CGN.get();
+  CGN = llvm::make_unique<CallGraphNode>(nullptr);
+  for (const MDOperand &Op : Callees->operands())
+    if (auto *MDConstant = mdconst::extract_or_null<Constant>(Op)) {
+      auto *F = cast<Function>(MDConstant);
+
+      assert(!F->isIntrinsic());
+      CGN->addCalledFunction(nullptr, getOrInsertFunction(F));
+    }
   return CGN.get();
 }
 
@@ -171,7 +207,7 @@ void CallGraphNode::print(raw_ostream &OS) const {
     if (Function *FI = I.second->getFunction())
       OS << "function '" << FI->getName() <<"'\n";
     else
-      OS << "external node\n";
+      OS << "<<null function>><<" << I.second << ">>\n";
   }
   OS << '\n';
 }

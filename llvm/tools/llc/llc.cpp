@@ -242,7 +242,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   sys::fs::OpenFlags OpenFlags = sys::fs::OF_None;
   if (!Binary)
     OpenFlags |= sys::fs::OF_Text;
-  auto FDOut = llvm::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
+  auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -329,7 +329,7 @@ int main(int argc, char **argv) {
   // Set a diagnostic handler that doesn't exit on the first error
   bool HasError = false;
   Context.setDiagnosticHandler(
-      llvm::make_unique<LLCDiagnosticHandler>(&HasError));
+      std::make_unique<LLCDiagnosticHandler>(&HasError));
   Context.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, &HasError);
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
@@ -479,7 +479,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;
-    DwoOut = llvm::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
+    DwoOut = std::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
                                                sys::fs::OF_None);
     if (EC) {
       WithColor::error(errs(), argv[0]) << EC.message() << '\n';
@@ -533,7 +533,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     if ((FileType != TargetMachine::CGFT_AssemblyFile &&
          !Out->os().supportsSeeking()) ||
         CompileTwice) {
-      BOS = make_unique<raw_svector_ostream>(Buffer);
+      BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
 

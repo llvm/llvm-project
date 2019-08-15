@@ -248,7 +248,7 @@ static bool updateOperand(FoldCandidate &Fold,
     bool HaveNonDbgCarryUse = !MRI.use_nodbg_empty(Dst1.getReg());
 
     const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
-    unsigned NewReg0 = MRI.createVirtualRegister(Dst0RC);
+    Register NewReg0 = MRI.createVirtualRegister(Dst0RC);
 
     MachineInstr *Inst32 = TII.buildShrunkInst(*MI, Op32);
 
@@ -443,7 +443,7 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
   if (!OpToFold.isReg())
     return false;
 
-  unsigned UseReg = OpToFold.getReg();
+  Register UseReg = OpToFold.getReg();
   if (!Register::isVirtualRegister(UseReg))
     return false;
 
@@ -518,7 +518,7 @@ void SIFoldOperands::foldOperand(
   // REG_SEQUENCE instructions, so we have to fold them into the
   // uses of REG_SEQUENCE.
   if (UseMI->isRegSequence()) {
-    unsigned RegSeqDstReg = UseMI->getOperand(0).getReg();
+    Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
     MachineRegisterInfo::use_iterator Next;
@@ -569,12 +569,12 @@ void SIFoldOperands::foldOperand(
       OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
 
   if (FoldingImmLike && UseMI->isCopy()) {
-    unsigned DestReg = UseMI->getOperand(0).getReg();
+    Register DestReg = UseMI->getOperand(0).getReg();
     const TargetRegisterClass *DestRC = Register::isVirtualRegister(DestReg)
                                             ? MRI->getRegClass(DestReg)
                                             : TRI->getPhysRegClass(DestReg);
 
-    unsigned SrcReg  = UseMI->getOperand(1).getReg();
+    Register SrcReg = UseMI->getOperand(1).getReg();
     if (Register::isVirtualRegister(DestReg) &&
         Register::isVirtualRegister(SrcReg)) {
       const TargetRegisterClass * SrcRC = MRI->getRegClass(SrcReg);
@@ -710,7 +710,7 @@ void SIFoldOperands::foldOperand(
 
   // Split 64-bit constants into 32-bits for folding.
   if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(FoldRC->getID()) == 64) {
-    unsigned UseReg = UseOp.getReg();
+    Register UseReg = UseOp.getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
 
     if (AMDGPU::getRegBitWidth(UseRC->getID()) != 64)

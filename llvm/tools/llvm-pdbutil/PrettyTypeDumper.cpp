@@ -117,7 +117,7 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
       continue;
     }
 
-    auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
+    auto Layout = std::make_unique<ClassLayout>(std::move(Class));
     if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold) {
       ++Discarded;
       continue;
@@ -259,7 +259,7 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
             continue;
           }
 
-          auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
+          auto Layout = std::make_unique<ClassLayout>(std::move(Class));
           if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
             continue;
 

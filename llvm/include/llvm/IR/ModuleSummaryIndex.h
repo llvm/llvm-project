@@ -603,7 +603,7 @@ public:
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
-      TIdInfo = llvm::make_unique<TypeIdInfo>(TypeIdInfo{
+      TIdInfo = std::make_unique<TypeIdInfo>(TypeIdInfo{
           std::move(TypeTests), std::move(TypeTestAssumeVCalls),
           std::move(TypeCheckedLoadVCalls),
           std::move(TypeTestAssumeConstVCalls),
@@ -682,7 +682,7 @@ public:
   /// were unable to devirtualize a checked call.
   void addTypeTest(GlobalValue::GUID Guid) {
     if (!TIdInfo)
-      TIdInfo = llvm::make_unique<TypeIdInfo>();
+      TIdInfo = std::make_unique<TypeIdInfo>();
     TIdInfo->TypeTests.push_back(Guid);
   }
 
@@ -782,7 +782,7 @@ public:
 
   void setVTableFuncs(VTableFuncList Funcs) {
     assert(!VTableFuncs);
-    VTableFuncs = llvm::make_unique<VTableFuncList>(std::move(Funcs));
+    VTableFuncs = std::make_unique<VTableFuncList>(std::move(Funcs));
   }
 
   ArrayRef<VirtFuncOffset> vTableFuncs() const {
@@ -1419,7 +1419,7 @@ template <>
 struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
   static NodeRef getEntryNode(ModuleSummaryIndex *I) {
     std::unique_ptr<GlobalValueSummary> Root =
-        make_unique<FunctionSummary>(I->calculateCallGraphRoot());
+        std::make_unique<FunctionSummary>(I->calculateCallGraphRoot());
     GlobalValueSummaryInfo G(I->haveGVs());
     G.SummaryList.push_back(std::move(Root));
     static auto P =

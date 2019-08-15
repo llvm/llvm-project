@@ -3,7 +3,7 @@
 ;
 ; RUN: llvm-reduce --test %p/Inputs/remove-funcs.py %s
 ; RUN: cat reduced.ll | FileCheck %s
-; REQUIRES: plugins
+; REQUIRES: plugins, shell
 
 ; CHECK-NOT: uninteresting1()
 define i32 @uninteresting1() {

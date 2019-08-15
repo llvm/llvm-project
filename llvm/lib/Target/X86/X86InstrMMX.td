@@ -567,6 +567,13 @@ def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
                                 (int_x86_mmx_pmovmskb VR64:$src))]>,
                           Sched<[WriteMMXMOVMSK]>;
 
+// MMX to XMM for vector types
+def MMX_X86movq2dq : SDNode<"X86ISD::MOVQ2DQ", SDTypeProfile<1, 1,
+                            [SDTCisVT<0, v2i64>, SDTCisVT<1, x86mmx>]>>;
+
+def : Pat<(v2i64 (MMX_X86movq2dq VR64:$src)),
+          (v2i64 (MMX_MOVQ2DQrr VR64:$src))>;
+
 // Low word of XMM to MMX.
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,
                             [SDTCisVT<0, x86mmx>, SDTCisVT<1, v2i64>]>>;

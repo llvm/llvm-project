@@ -551,26 +551,26 @@ public:
 
   /// RPC channel serialization for std::tuple.
   static Error serialize(ChannelT &C, const std::tuple<ArgTs...> &V) {
-    return serializeTupleHelper(C, V, llvm::index_sequence_for<ArgTs...>());
+    return serializeTupleHelper(C, V, std::index_sequence_for<ArgTs...>());
   }
 
   /// RPC channel deserialization for std::tuple.
   static Error deserialize(ChannelT &C, std::tuple<ArgTs...> &V) {
-    return deserializeTupleHelper(C, V, llvm::index_sequence_for<ArgTs...>());
+    return deserializeTupleHelper(C, V, std::index_sequence_for<ArgTs...>());
   }
 
 private:
   // Serialization helper for std::tuple.
   template <size_t... Is>
   static Error serializeTupleHelper(ChannelT &C, const std::tuple<ArgTs...> &V,
-                                    llvm::index_sequence<Is...> _) {
+                                    std::index_sequence<Is...> _) {
     return serializeSeq(C, std::get<Is>(V)...);
   }
 
   // Serialization helper for std::tuple.
   template <size_t... Is>
   static Error deserializeTupleHelper(ChannelT &C, std::tuple<ArgTs...> &V,
-                                      llvm::index_sequence<Is...> _) {
+                                      std::index_sequence<Is...> _) {
     return deserializeSeq(C, std::get<Is>(V)...);
   }
 };

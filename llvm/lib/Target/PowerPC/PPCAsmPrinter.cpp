@@ -269,7 +269,7 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return true;
       // This operand uses VSX numbering.
       // If the operand is a VMX register, convert it to a VSX register.
-      unsigned Reg = MI->getOperand(OpNo).getReg();
+      Register Reg = MI->getOperand(OpNo).getReg();
       if (PPCInstrInfo::isVRRegister(Reg))
         Reg = PPC::VSX32 + (Reg - PPC::V0);
       else if (PPCInstrInfo::isVFRegister(Reg))
@@ -382,7 +382,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
     if (CallTarget) {
       assert((CallTarget & 0xFFFFFFFFFFFF) == CallTarget &&
              "High 16 bits of call target should be zero.");
-      unsigned ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
+      Register ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
       EncodedBytes = 0;
       // Materialize the jump address:
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI8)
@@ -521,7 +521,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   if (!MI->isInlineAsm()) {
     for (const MachineOperand &MO: MI->operands()) {
       if (MO.isReg()) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (Subtarget->hasSPE()) {
           if (PPC::F4RCRegClass.contains(Reg) ||
               PPC::F8RCRegClass.contains(Reg) ||

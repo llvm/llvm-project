@@ -98,6 +98,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v256i8:   return "MVT::v256i8";
   case MVT::v1i16:    return "MVT::v1i16";
   case MVT::v2i16:    return "MVT::v2i16";
+  case MVT::v3i16:    return "MVT::v3i16";
   case MVT::v4i16:    return "MVT::v4i16";
   case MVT::v8i16:    return "MVT::v8i16";
   case MVT::v16i16:   return "MVT::v16i16";
@@ -126,6 +127,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v32i64:   return "MVT::v32i64";
   case MVT::v1i128:   return "MVT::v1i128";
   case MVT::v2f16:    return "MVT::v2f16";
+  case MVT::v3f16:    return "MVT::v3f16";
   case MVT::v4f16:    return "MVT::v4f16";
   case MVT::v8f16:    return "MVT::v8f16";
   case MVT::v1f32:    return "MVT::v1f32";
@@ -289,7 +291,7 @@ Record *CodeGenTarget::getAsmWriter() const {
 
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
-    RegBank = llvm::make_unique<CodeGenRegBank>(Records, getHwModes());
+    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
   return *RegBank;
 }
 
@@ -339,7 +341,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
   if (!SchedModels)
-    SchedModels = llvm::make_unique<CodeGenSchedModels>(Records, *this);
+    SchedModels = std::make_unique<CodeGenSchedModels>(Records, *this);
   return *SchedModels;
 }
 
@@ -352,7 +354,7 @@ void CodeGenTarget::ReadInstructions() const {
 
   // Parse the instructions defined in the .td file.
   for (unsigned i = 0, e = Insts.size(); i != e; ++i)
-    Instructions[Insts[i]] = llvm::make_unique<CodeGenInstruction>(Insts[i]);
+    Instructions[Insts[i]] = std::make_unique<CodeGenInstruction>(Insts[i]);
 }
 
 static const CodeGenInstruction *

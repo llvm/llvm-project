@@ -56,12 +56,13 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
   SmallVector<InstRef, 4> Ready;
 
   HWS.issueInstruction(IR, Used, Pending, Ready);
-  NumIssuedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
+  Instruction &IS = *IR.getInstruction();
+  NumIssuedOpcodes += IS.getNumMicroOps();
 
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
 
   notifyInstructionIssued(IR, Used);
-  if (IR.getInstruction()->isExecuted()) {
+  if (IS.isExecuted()) {
     notifyInstructionExecuted(IR);
     // FIXME: add a buffer of executed instructions.
     if (Error S = moveToTheNextStage(IR))
@@ -199,7 +200,8 @@ Error ExecuteStage::execute(InstRef &IR) {
   // units have been consumed.
   bool IsReadyInstruction = HWS.dispatch(IR);
   const Instruction &Inst = *IR.getInstruction();
-  NumDispatchedOpcodes += Inst.getDesc().NumMicroOps;
+  unsigned NumMicroOps = Inst.getNumMicroOps();
+  NumDispatchedOpcodes += NumMicroOps;
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
  
   if (!IsReadyInstruction) {
@@ -269,13 +271,17 @@ void ExecuteStage::notifyInstructionIssued(
 
 void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
                                                    bool Reserved) const {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  if (Desc.Buffers.empty())
+  uint64_t UsedBuffers = IR.getInstruction()->getDesc().UsedBuffers;
+  if (!UsedBuffers)
     return;
 
-  SmallVector<unsigned, 4> BufferIDs(Desc.Buffers.begin(), Desc.Buffers.end());
-  std::transform(Desc.Buffers.begin(), Desc.Buffers.end(), BufferIDs.begin(),
-                 [&](uint64_t Op) { return HWS.getResourceID(Op); });
+  SmallVector<unsigned, 4> BufferIDs(countPopulation(UsedBuffers), 0);
+  for (unsigned I = 0, E = BufferIDs.size(); I < E; ++I) {
+    uint64_t CurrentBufferMask = UsedBuffers & (-UsedBuffers);
+    BufferIDs[I] = HWS.getResourceID(CurrentBufferMask);
+    UsedBuffers ^= CurrentBufferMask;
+  }
+
   if (Reserved) {
     for (HWEventListener *Listener : getListeners())
       Listener->onReservedBuffers(IR, BufferIDs);

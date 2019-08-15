@@ -677,13 +677,13 @@ static bool tryOptimizeLEAtoMOV(MachineBasicBlock::iterator II) {
       MI.getOperand(4).getImm() != 0 ||
       MI.getOperand(5).getReg() != X86::NoRegister)
     return false;
-  unsigned BasePtr = MI.getOperand(1).getReg();
+  Register BasePtr = MI.getOperand(1).getReg();
   // In X32 mode, ensure the base-pointer is a 32-bit operand, so the LEA will
   // be replaced with a 32-bit operand MOV which will zero extend the upper
   // 32-bits of the super register.
   if (Opc == X86::LEA64_32r)
     BasePtr = getX86SubSuperRegister(BasePtr, 32);
-  unsigned NewDestReg = MI.getOperand(0).getReg();
+  Register NewDestReg = MI.getOperand(0).getReg();
   const X86InstrInfo *TII =
       MI.getParent()->getParent()->getSubtarget<X86Subtarget>().getInstrInfo();
   TII->copyPhysReg(*MI.getParent(), II, MI.getDebugLoc(), NewDestReg, BasePtr,
@@ -773,7 +773,7 @@ Register X86RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 unsigned
 X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  unsigned FrameReg = getFrameRegister(MF);
+  Register FrameReg = getFrameRegister(MF);
   if (Subtarget.isTarget64BitILP32())
     FrameReg = getX86SubSuperRegister(FrameReg, 32);
   return FrameReg;
@@ -782,7 +782,7 @@ X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
 unsigned
 X86RegisterInfo::getPtrSizedStackRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  unsigned StackReg = getStackRegister();
+  Register StackReg = getStackRegister();
   if (Subtarget.isTarget64BitILP32())
     StackReg = getX86SubSuperRegister(StackReg, 32);
   return StackReg;

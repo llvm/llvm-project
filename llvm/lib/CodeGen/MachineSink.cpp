@@ -195,8 +195,8 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   if (!MI.isCopy())
     return false;
 
-  unsigned SrcReg = MI.getOperand(1).getReg();
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   if (!Register::isVirtualRegister(SrcReg) ||
       !Register::isVirtualRegister(DstReg) || !MRI->hasOneNonDBGUse(SrcReg))
     return false;
@@ -414,7 +414,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
     const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isUse())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0)
       continue;
 
@@ -613,7 +613,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
     const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg()) continue;  // Ignore non-register operands.
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
     if (Register::isPhysicalRegister(Reg)) {
@@ -815,7 +815,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
     if (!MO.isReg()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0 || !Register::isPhysicalRegister(Reg))
       continue;
     if (SuccToSinkTo->isLiveIn(Reg))
@@ -1029,7 +1029,7 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
                            const TargetRegisterInfo *TRI) {
   for (auto U : UsedOpsInCopy) {
     MachineOperand &MO = MI->getOperand(U);
-    unsigned SrcReg = MO.getReg();
+    Register SrcReg = MO.getReg();
     if (!UsedRegUnits.available(SrcReg)) {
       MachineBasicBlock::iterator NI = std::next(MI->getIterator());
       for (MachineInstr &UI : make_range(NI, CurBB.end())) {
@@ -1052,7 +1052,7 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
     for (MCSubRegIterator S(DefReg, TRI, true); S.isValid(); ++S)
       SuccBB->removeLiveIn(*S);
   for (auto U : UsedOpsInCopy) {
-    unsigned Reg = MI->getOperand(U).getReg();
+    Register Reg = MI->getOperand(U).getReg();
     if (!SuccBB->isLiveIn(Reg))
       SuccBB->addLiveIn(Reg);
   }
@@ -1068,7 +1068,7 @@ static bool hasRegisterDependency(MachineInstr *MI,
     MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (MO.isDef()) {
@@ -1181,7 +1181,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     for (auto &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned reg = MO.getReg();
+      Register reg = MO.getReg();
       for (auto *MI : SeenDbgInstrs.lookup(reg))
         DbgValsToSink.push_back(MI);
     }

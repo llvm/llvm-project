@@ -311,7 +311,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isOSWindows()) {
-      Handlers.emplace_back(llvm::make_unique<CodeViewDebug>(this),
+      Handlers.emplace_back(std::make_unique<CodeViewDebug>(this),
                             DbgTimerName, DbgTimerDescription,
                             CodeViewLineTablesGroupName,
                             CodeViewLineTablesGroupDescription);
@@ -380,7 +380,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (mdconst::extract_or_null<ConstantInt>(
           MMI->getModule()->getModuleFlag("cfguardtable")))
-    Handlers.emplace_back(llvm::make_unique<WinCFGuard>(this), CFGuardName,
+    Handlers.emplace_back(std::make_unique<WinCFGuard>(this), CFGuardName,
                           CFGuardDescription, DWARFGroupName,
                           DWARFGroupDescription);
 
@@ -783,7 +783,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
 /// emitImplicitDef - This method emits the specified machine instruction
 /// that is an implicit def.
 void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
-  unsigned RegNo = MI->getOperand(0).getReg();
+  Register RegNo = MI->getOperand(0).getReg();
 
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
@@ -1025,7 +1025,7 @@ void AsmPrinter::EmitFunctionBody() {
     // Get MachineDominatorTree or compute it on the fly if it's unavailable
     MDT = getAnalysisIfAvailable<MachineDominatorTree>();
     if (!MDT) {
-      OwnedMDT = make_unique<MachineDominatorTree>();
+      OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->getBase().recalculate(*MF);
       MDT = OwnedMDT.get();
     }
@@ -1033,7 +1033,7 @@ void AsmPrinter::EmitFunctionBody() {
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
     MLI = getAnalysisIfAvailable<MachineLoopInfo>();
     if (!MLI) {
-      OwnedMLI = make_unique<MachineLoopInfo>();
+      OwnedMLI = std::make_unique<MachineLoopInfo>();
       OwnedMLI->getBase().analyze(MDT->getBase());
       MLI = OwnedMLI.get();
     }

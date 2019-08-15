@@ -30,7 +30,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
   AArch64Subtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
                       TM->getTargetFeatureString(), *TM, /* isLittle */ false);
-  return llvm::make_unique<AArch64InstrInfo>(ST);
+  return std::make_unique<AArch64InstrInfo>(ST);
 }
 
 /// The \p InputIRSnippet is only needed for things that can't be expressed in

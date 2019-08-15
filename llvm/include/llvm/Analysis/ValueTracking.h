@@ -307,20 +307,26 @@ class Value;
   uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
   /// This function returns call pointer argument that is considered the same by
-  /// aliasing rules. You CAN'T use it to replace one value with another.
-  const Value *getArgumentAliasingToReturnedPointer(const CallBase *Call);
-  inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call) {
+  /// aliasing rules. You CAN'T use it to replace one value with another. If
+  /// \p MustPreserveNullness is true, the call must preserve the nullness of
+  /// the pointer.
+  const Value *getArgumentAliasingToReturnedPointer(const CallBase *Call,
+                                                    bool MustPreserveNullness);
+  inline Value *
+  getArgumentAliasingToReturnedPointer(CallBase *Call,
+                                       bool MustPreserveNullness) {
     return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-        const_cast<const CallBase *>(Call)));
+        const_cast<const CallBase *>(Call), MustPreserveNullness));
   }
 
-  // {launder,strip}.invariant.group returns pointer that aliases its argument,
-  // and it only captures pointer by returning it.
-  // These intrinsics are not marked as nocapture, because returning is
-  // considered as capture. The arguments are not marked as returned neither,
-  // because it would make it useless.
+  /// {launder,strip}.invariant.group returns pointer that aliases its argument,
+  /// and it only captures pointer by returning it.
+  /// These intrinsics are not marked as nocapture, because returning is
+  /// considered as capture. The arguments are not marked as returned neither,
+  /// because it would make it useless. If \p MustPreserveNullness is true,
+  /// the intrinsic must preserve the nullness of the pointer.
   bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-      const CallBase *Call);
+      const CallBase *Call, bool MustPreserveNullness);
 
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note

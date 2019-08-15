@@ -507,7 +507,7 @@ const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
 }
 
 void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
-  unsigned RegNo = MI->getOperand(0).getReg();
+  Register RegNo = MI->getOperand(0).getReg();
   if (Register::isVirtualRegister(RegNo)) {
     OutStreamer->AddComment(Twine("implicit-def: ") +
                             getVirtualRegisterName(RegNo));

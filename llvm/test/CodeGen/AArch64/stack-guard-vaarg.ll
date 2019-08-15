@@ -9,7 +9,7 @@
 ; CHECK: ldr [[GUARD:x[0-9]+]]{{.*}}:lo12:__stack_chk_guard]
 ; Make sure the canary is placed relative to the frame pointer, not
 ; the stack pointer.
-; CHECK: stur [[GUARD]], [x29, #-24]
+; CHECK: stur [[GUARD]], [x29, #-8]
 define void @test(i8* %i, ...) #0 {
 entry:
   %buf = alloca [10 x i8], align 1

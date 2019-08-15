@@ -660,7 +660,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
     const MachineOperand &MO = *I;
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (Register::isPhysicalRegister(Reg)) {
@@ -687,7 +687,7 @@ static void getPHIDeps(const MachineInstr &UseMI,
   assert(UseMI.isPHI() && UseMI.getNumOperands() % 2 && "Bad PHI");
   for (unsigned i = 1; i != UseMI.getNumOperands(); i += 2) {
     if (UseMI.getOperand(i + 1).getMBB() == Pred) {
-      unsigned Reg = UseMI.getOperand(i).getReg();
+      Register Reg = UseMI.getOperand(i).getReg();
       Deps.push_back(DataDep(MRI, Reg, i));
       return;
     }
@@ -708,7 +708,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     const MachineOperand &MO = *MI;
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isPhysicalRegister(Reg))
       continue;
     // Track live defs and kills for updating RegUnits.
@@ -902,7 +902,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     const MachineOperand &MO = *MOI;
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isPhysicalRegister(Reg))
       continue;
     if (MO.readsReg())
@@ -930,7 +930,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
 
   // Now we know the height of MI. Update any regunits read.
   for (unsigned i = 0, e = ReadOps.size(); i != e; ++i) {
-    unsigned Reg = MI.getOperand(ReadOps[i]).getReg();
+    Register Reg = MI.getOperand(ReadOps[i]).getReg();
     for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
       LiveRegUnit &LRU = RegUnits[*Units];
       // Set the height to the highest reader of the unit.

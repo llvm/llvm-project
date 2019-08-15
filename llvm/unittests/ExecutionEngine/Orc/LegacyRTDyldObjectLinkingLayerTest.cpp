@@ -75,7 +75,7 @@ TEST(LegacyRTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
       });
 
   LLVMContext Context;
-  auto M = llvm::make_unique<Module>("", Context);
+  auto M = std::make_unique<Module>("", Context);
   M->setTargetTriple("x86_64-unknown-linux-gnu");
   Type *Int32Ty = IntegerType::get(Context, 32);
   GlobalVariable *GV =

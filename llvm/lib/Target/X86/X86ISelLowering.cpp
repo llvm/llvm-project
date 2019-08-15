@@ -4361,7 +4361,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
         CCValAssign &VA = ArgLocs[i];
         if (!VA.isRegLoc())
           continue;
-        unsigned Reg = VA.getLocReg();
+        Register Reg = VA.getLocReg();
         switch (Reg) {
         default: break;
         case X86::EAX: case X86::EDX: case X86::ECX:
@@ -21724,7 +21724,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     }
 
     const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
-    unsigned Vreg = MRI.createVirtualRegister(AddrRegClass);
+    Register Vreg = MRI.createVirtualRegister(AddrRegClass);
     Chain = DAG.getCopyToReg(Chain, dl, Vreg, Size);
     Result = DAG.getNode(X86ISD::SEG_ALLOCA, dl, SPTy, Chain,
                                 DAG.getRegister(Vreg, SPTy));
@@ -21734,7 +21734,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     MF.getInfo<X86MachineFunctionInfo>()->setHasWinAlloca(true);
 
     const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-    unsigned SPReg = RegInfo->getStackRegister();
+    Register SPReg = RegInfo->getStackRegister();
     SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, SPTy);
     Chain = SP.getValue(1);
 
@@ -23730,7 +23730,7 @@ SDValue X86TargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  unsigned FrameReg = RegInfo->getFrameRegister(DAG.getMachineFunction());
+  Register FrameReg = RegInfo->getFrameRegister(DAG.getMachineFunction());
   assert(((FrameReg == X86::RBP && PtrVT == MVT::i64) ||
           (FrameReg == X86::EBP && PtrVT == MVT::i32)) &&
          "Invalid Frame Register!");
@@ -27668,7 +27668,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     SDValue Result;
     SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-    unsigned BasePtr = TRI->getBaseRegister();
+    Register BasePtr = TRI->getBaseRegister();
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
     if (TRI->hasBasePointer(DAG.getMachineFunction()) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
@@ -27823,6 +27823,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
+    if (DstVT.isVector() && SrcVT == MVT::x86mmx) {
+      assert(getTypeAction(*DAG.getContext(), DstVT) == TypeWidenVector &&
+             "Unexpected type action!");
+      EVT WideVT = getTypeToTransformTo(*DAG.getContext(), DstVT);
+      SDValue Res = DAG.getNode(X86ISD::MOVQ2DQ, dl, WideVT, N->getOperand(0));
+      Results.push_back(Res);
+      return;
+    }
+
     return;
   }
   case ISD::MGATHER: {
@@ -27934,6 +27943,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::GlobalBaseReg:      return "X86ISD::GlobalBaseReg";
   case X86ISD::Wrapper:            return "X86ISD::Wrapper";
   case X86ISD::WrapperRIP:         return "X86ISD::WrapperRIP";
+  case X86ISD::MOVQ2DQ:            return "X86ISD::MOVQ2DQ";
   case X86ISD::MOVDQ2Q:            return "X86ISD::MOVDQ2Q";
   case X86ISD::MMX_MOVD2W:         return "X86ISD::MMX_MOVD2W";
   case X86ISD::MMX_MOVW2D:         return "X86ISD::MMX_MOVW2D";
@@ -28554,10 +28564,10 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
   sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  unsigned mainDstReg = MRI.createVirtualRegister(RC);
-  unsigned fallDstReg = MRI.createVirtualRegister(RC);
+  Register mainDstReg = MRI.createVirtualRegister(RC);
+  Register fallDstReg = MRI.createVirtualRegister(RC);
 
   // thisMBB:
   //  xbegin fallMBB
@@ -28611,7 +28621,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
   static_assert(X86::AddrNumOperands == 5,
                 "VAARG_64 assumes 5 address operands");
 
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   MachineOperand &Base = MI.getOperand(1);
   MachineOperand &Scale = MI.getOperand(2);
   MachineOperand &Index = MI.getOperand(3);
@@ -28747,7 +28757,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
     assert(OffsetReg != 0);
 
     // Read the reg_save_area address.
-    unsigned RegSaveReg = MRI.createVirtualRegister(AddrRegClass);
+    Register RegSaveReg = MRI.createVirtualRegister(AddrRegClass);
     BuildMI(offsetMBB, DL, TII->get(X86::MOV64rm), RegSaveReg)
         .add(Base)
         .add(Scale)
@@ -28757,8 +28767,8 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
         .setMemRefs(LoadOnlyMMO);
 
     // Zero-extend the offset
-    unsigned OffsetReg64 = MRI.createVirtualRegister(AddrRegClass);
-      BuildMI(offsetMBB, DL, TII->get(X86::SUBREG_TO_REG), OffsetReg64)
+    Register OffsetReg64 = MRI.createVirtualRegister(AddrRegClass);
+    BuildMI(offsetMBB, DL, TII->get(X86::SUBREG_TO_REG), OffsetReg64)
         .addImm(0)
         .addReg(OffsetReg)
         .addImm(X86::sub_32bit);
@@ -28769,7 +28779,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
       .addReg(RegSaveReg);
 
     // Compute the offset for the next argument
-    unsigned NextOffsetReg = MRI.createVirtualRegister(OffsetRegClass);
+    Register NextOffsetReg = MRI.createVirtualRegister(OffsetRegClass);
     BuildMI(offsetMBB, DL, TII->get(X86::ADD32ri), NextOffsetReg)
       .addReg(OffsetReg)
       .addImm(UseFPOffset ? 16 : 8);
@@ -28794,7 +28804,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
   //
 
   // Load the overflow_area address into a register.
-  unsigned OverflowAddrReg = MRI.createVirtualRegister(AddrRegClass);
+  Register OverflowAddrReg = MRI.createVirtualRegister(AddrRegClass);
   BuildMI(overflowMBB, DL, TII->get(X86::MOV64rm), OverflowAddrReg)
       .add(Base)
       .add(Scale)
@@ -28808,7 +28818,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
   if (NeedsAlign) {
     // Align the overflow address
     assert(isPowerOf2_32(Align) && "Alignment must be a power of 2");
-    unsigned TmpReg = MRI.createVirtualRegister(AddrRegClass);
+    Register TmpReg = MRI.createVirtualRegister(AddrRegClass);
 
     // aligned_addr = (addr + (align-1)) & ~(align-1)
     BuildMI(overflowMBB, DL, TII->get(X86::ADD64ri32), TmpReg)
@@ -28825,7 +28835,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
 
   // Compute the next overflow address after this argument.
   // (the overflow address should be kept 8-byte aligned)
-  unsigned NextAddrReg = MRI.createVirtualRegister(AddrRegClass);
+  Register NextAddrReg = MRI.createVirtualRegister(AddrRegClass);
   BuildMI(overflowMBB, DL, TII->get(X86::ADD64ri32), NextAddrReg)
     .addReg(OverflowDestReg)
     .addImm(ArgSizeA8);
@@ -28889,7 +28899,7 @@ MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned CountReg = MI.getOperand(0).getReg();
+  Register CountReg = MI.getOperand(0).getReg();
   int64_t RegSaveFrameIndex = MI.getOperand(1).getImm();
   int64_t VarArgsFPOffset = MI.getOperand(2).getImm();
 
@@ -29026,9 +29036,9 @@ static MachineInstrBuilder createPHIsForCMOVsInSinkBB(
   MachineInstrBuilder MIB;
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
-    unsigned DestReg = MIIt->getOperand(0).getReg();
-    unsigned Op1Reg = MIIt->getOperand(1).getReg();
-    unsigned Op2Reg = MIIt->getOperand(2).getReg();
+    Register DestReg = MIIt->getOperand(0).getReg();
+    Register Op1Reg = MIIt->getOperand(1).getReg();
+    Register Op2Reg = MIIt->getOperand(2).getReg();
 
     // If this CMOV we are generating is the opposite condition from
     // the jump we generated, then we have to swap the operands for the
@@ -29186,9 +29196,9 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
 
   //  SinkMBB:
   //   %Result = phi [ %FalseValue, SecondInsertedMBB ], [ %TrueValue, ThisMBB ]
-  unsigned DestReg = FirstCMOV.getOperand(0).getReg();
-  unsigned Op1Reg = FirstCMOV.getOperand(1).getReg();
-  unsigned Op2Reg = FirstCMOV.getOperand(2).getReg();
+  Register DestReg = FirstCMOV.getOperand(0).getReg();
+  Register Op1Reg = FirstCMOV.getOperand(1).getReg();
+  Register Op2Reg = FirstCMOV.getOperand(2).getReg();
   MachineInstrBuilder MIB =
       BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII->get(X86::PHI), DestReg)
           .addReg(Op1Reg)
@@ -29706,7 +29716,7 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
   // call the retpoline thunk.
   DebugLoc DL = MI.getDebugLoc();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned CalleeVReg = MI.getOperand(0).getReg();
+  Register CalleeVReg = MI.getOperand(0).getReg();
   unsigned Opc = getOpcodeForRetpoline(MI.getOpcode());
 
   // Find an available scratch register to hold the callee. On 64-bit, we can
@@ -29779,7 +29789,7 @@ void X86TargetLowering::emitSetJmpShadowStackFix(MachineInstr &MI,
   // Initialize a register with zero.
   MVT PVT = getPointerTy(MF->getDataLayout());
   const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
-  unsigned ZReg = MRI.createVirtualRegister(PtrRC);
+  Register ZReg = MRI.createVirtualRegister(PtrRC);
   unsigned XorRROpc = (PVT == MVT::i64) ? X86::XOR64rr : X86::XOR32rr;
   BuildMI(*MBB, MI, DL, TII->get(XorRROpc))
       .addDef(ZReg)
@@ -29787,7 +29797,7 @@ void X86TargetLowering::emitSetJmpShadowStackFix(MachineInstr &MI,
       .addReg(ZReg, RegState::Undef);
 
   // Read the current SSP Register value to the zeroed register.
-  unsigned SSPCopyReg = MRI.createVirtualRegister(PtrRC);
+  Register SSPCopyReg = MRI.createVirtualRegister(PtrRC);
   unsigned RdsspOpc = (PVT == MVT::i64) ? X86::RDSSPQ : X86::RDSSPD;
   BuildMI(*MBB, MI, DL, TII->get(RdsspOpc), SSPCopyReg).addReg(ZReg);
 
@@ -29831,8 +29841,8 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
   assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
   (void)TRI;
-  unsigned mainDstReg = MRI.createVirtualRegister(RC);
-  unsigned restoreDstReg = MRI.createVirtualRegister(RC);
+  Register mainDstReg = MRI.createVirtualRegister(RC);
+  Register restoreDstReg = MRI.createVirtualRegister(RC);
 
   MemOpndSlot = CurOp;
 
@@ -29946,8 +29956,8 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
         Subtarget.isTarget64BitLP64() || Subtarget.isTargetNaCl64();
     X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
     X86FI->setRestoreBasePointer(MF);
-    unsigned FramePtr = RegInfo->getFrameRegister(*MF);
-    unsigned BasePtr = RegInfo->getBaseRegister();
+    Register FramePtr = RegInfo->getFrameRegister(*MF);
+    Register BasePtr = RegInfo->getBaseRegister();
     unsigned Opm = Uses64BitFramePtr ? X86::MOV64rm : X86::MOV32rm;
     addRegOffset(BuildMI(restoreMBB, DL, TII->get(Opm), BasePtr),
                  FramePtr, true, X86FI->getRestoreBasePointerOffset())
@@ -30029,7 +30039,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   MBB->addSuccessor(checkSspMBB);
 
   // Initialize a register with zero.
-  unsigned ZReg = MRI.createVirtualRegister(PtrRC);
+  Register ZReg = MRI.createVirtualRegister(PtrRC);
   unsigned XorRROpc = (PVT == MVT::i64) ? X86::XOR64rr : X86::XOR32rr;
   BuildMI(checkSspMBB, DL, TII->get(XorRROpc))
       .addDef(ZReg)
@@ -30037,7 +30047,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
       .addReg(ZReg, RegState::Undef);
 
   // Read the current SSP Register value to the zeroed register.
-  unsigned SSPCopyReg = MRI.createVirtualRegister(PtrRC);
+  Register SSPCopyReg = MRI.createVirtualRegister(PtrRC);
   unsigned RdsspOpc = (PVT == MVT::i64) ? X86::RDSSPQ : X86::RDSSPD;
   BuildMI(checkSspMBB, DL, TII->get(RdsspOpc), SSPCopyReg).addReg(ZReg);
 
@@ -30052,7 +30062,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   checkSspMBB->addSuccessor(fallMBB);
 
   // Reload the previously saved SSP register value.
-  unsigned PrevSSPReg = MRI.createVirtualRegister(PtrRC);
+  Register PrevSSPReg = MRI.createVirtualRegister(PtrRC);
   unsigned PtrLoadOpc = (PVT == MVT::i64) ? X86::MOV64rm : X86::MOV32rm;
   const int64_t SPPOffset = 3 * PVT.getStoreSize();
   MachineInstrBuilder MIB =
@@ -30070,7 +30080,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   MIB.setMemRefs(MMOs);
 
   // Subtract the current SSP from the previous SSP.
-  unsigned SspSubReg = MRI.createVirtualRegister(PtrRC);
+  Register SspSubReg = MRI.createVirtualRegister(PtrRC);
   unsigned SubRROpc = (PVT == MVT::i64) ? X86::SUB64rr : X86::SUB32rr;
   BuildMI(fallMBB, DL, TII->get(SubRROpc), SspSubReg)
       .addReg(PrevSSPReg)
@@ -30084,7 +30094,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   // Shift right by 2/3 for 32/64 because incssp multiplies the argument by 4/8.
   unsigned ShrRIOpc = (PVT == MVT::i64) ? X86::SHR64ri : X86::SHR32ri;
   unsigned Offset = (PVT == MVT::i64) ? 3 : 2;
-  unsigned SspFirstShrReg = MRI.createVirtualRegister(PtrRC);
+  Register SspFirstShrReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowMBB, DL, TII->get(ShrRIOpc), SspFirstShrReg)
       .addReg(SspSubReg)
       .addImm(Offset);
@@ -30094,7 +30104,7 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   BuildMI(fixShadowMBB, DL, TII->get(IncsspOpc)).addReg(SspFirstShrReg);
 
   // Reset the lower 8 bits.
-  unsigned SspSecondShrReg = MRI.createVirtualRegister(PtrRC);
+  Register SspSecondShrReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowMBB, DL, TII->get(ShrRIOpc), SspSecondShrReg)
       .addReg(SspFirstShrReg)
       .addImm(8);
@@ -30106,12 +30116,12 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
 
   // Do a single shift left.
   unsigned ShlR1Opc = (PVT == MVT::i64) ? X86::SHL64r1 : X86::SHL32r1;
-  unsigned SspAfterShlReg = MRI.createVirtualRegister(PtrRC);
+  Register SspAfterShlReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowLoopPrepareMBB, DL, TII->get(ShlR1Opc), SspAfterShlReg)
       .addReg(SspSecondShrReg);
 
   // Save the value 128 to a register (will be used next with incssp).
-  unsigned Value128InReg = MRI.createVirtualRegister(PtrRC);
+  Register Value128InReg = MRI.createVirtualRegister(PtrRC);
   unsigned MovRIOpc = (PVT == MVT::i64) ? X86::MOV64ri32 : X86::MOV32ri;
   BuildMI(fixShadowLoopPrepareMBB, DL, TII->get(MovRIOpc), Value128InReg)
       .addImm(128);
@@ -30119,8 +30129,8 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
 
   // Since incssp only looks at the lower 8 bits, we might need to do several
   // iterations of incssp until we finish fixing the shadow stack.
-  unsigned DecReg = MRI.createVirtualRegister(PtrRC);
-  unsigned CounterReg = MRI.createVirtualRegister(PtrRC);
+  Register DecReg = MRI.createVirtualRegister(PtrRC);
+  Register CounterReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowLoopMBB, DL, TII->get(X86::PHI), CounterReg)
       .addReg(SspAfterShlReg)
       .addMBB(fixShadowLoopPrepareMBB)
@@ -30160,11 +30170,11 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   const TargetRegisterClass *RC =
     (PVT == MVT::i64) ? &X86::GR64RegClass : &X86::GR32RegClass;
-  unsigned Tmp = MRI.createVirtualRegister(RC);
+  Register Tmp = MRI.createVirtualRegister(RC);
   // Since FP is only updated here but NOT referenced, it's treated as GPR.
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   unsigned FP = (PVT == MVT::i64) ? X86::RBP : X86::EBP;
-  unsigned SP = RegInfo->getStackRegister();
+  Register SP = RegInfo->getStackRegister();
 
   MachineInstrBuilder MIB;
 
@@ -30362,8 +30372,8 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     X86MachineFunctionInfo *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setRestoreBasePointer(MF);
 
-    unsigned FP = RI.getFrameRegister(*MF);
-    unsigned BP = RI.getBaseRegister();
+    Register FP = RI.getFrameRegister(*MF);
+    Register BP = RI.getBaseRegister();
     unsigned Op = FPIs64Bit ? X86::MOV64rm : X86::MOV32rm;
     addRegOffset(BuildMI(DispatchBB, DL, TII->get(Op), BP), FP, true,
                  MFI->getRestoreBasePointerOffset())
@@ -30374,7 +30384,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   }
 
   // IReg is used as an index in a memory operand and therefore can't be SP
-  unsigned IReg = MRI->createVirtualRegister(&X86::GR32_NOSPRegClass);
+  Register IReg = MRI->createVirtualRegister(&X86::GR32_NOSPRegClass);
   addFrameReference(BuildMI(DispatchBB, DL, TII->get(X86::MOV32rm), IReg), FI,
                     Subtarget.is64Bit() ? 8 : 4);
   BuildMI(DispatchBB, DL, TII->get(X86::CMP32ri))
@@ -30383,8 +30393,8 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   BuildMI(DispatchBB, DL, TII->get(X86::JCC_1)).addMBB(TrapBB).addImm(X86::COND_AE);
 
   if (Subtarget.is64Bit()) {
-    unsigned BReg = MRI->createVirtualRegister(&X86::GR64RegClass);
-    unsigned IReg64 = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
+    Register BReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+    Register IReg64 = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
 
     // leaq .LJTI0_0(%rip), BReg
     BuildMI(DispContBB, DL, TII->get(X86::LEA64r), BReg)
@@ -30410,9 +30420,9 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           .addReg(0);
       break;
     case MachineJumpTableInfo::EK_LabelDifference32: {
-      unsigned OReg = MRI->createVirtualRegister(&X86::GR32RegClass);
-      unsigned OReg64 = MRI->createVirtualRegister(&X86::GR64RegClass);
-      unsigned TReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register OReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+      Register OReg64 = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register TReg = MRI->createVirtualRegister(&X86::GR64RegClass);
 
       // movl (BReg,IReg64,4), OReg
       BuildMI(DispContBB, DL, TII->get(X86::MOV32rm), OReg)
@@ -30606,20 +30616,18 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                               TII->get(X86::FNSTCW16m)), OrigCWFrameIdx);
 
     // Load the old value of the control word...
-    unsigned OldCW =
-      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    Register OldCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOVZX32rm16), OldCW),
                       OrigCWFrameIdx);
 
     // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
-    unsigned NewCW =
-      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, DL, TII->get(X86::OR32ri), NewCW)
       .addReg(OldCW, RegState::Kill).addImm(0xC00);
 
     // Extract to 16 bits.
-    unsigned NewCW16 =
-      MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
+    Register NewCW16 =
+        MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), NewCW16)
       .addReg(NewCW, RegState::Kill, X86::sub_16bit);
 
@@ -30723,7 +30731,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineRegisterInfo &MRI = MF->getRegInfo();
     MVT SPTy = getPointerTy(MF->getDataLayout());
     const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
-    unsigned computedAddrVReg = MRI.createVirtualRegister(AddrRegClass);
+    Register computedAddrVReg = MRI.createVirtualRegister(AddrRegClass);
 
     X86AddressMode AM = getAddressFromInstr(&MI, 0);
     // Regalloc does not need any help when the memory operand of CMPXCHG8B
@@ -35395,9 +35403,9 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unexpected caller");
 
-  // TODO: Allow FADD with reduction and/or reassociation and no-signed-zeros.
   ISD::NodeType Opc;
-  SDValue Rdx = DAG.matchBinOpReduction(ExtElt, Opc, {ISD::ADD}, true);
+  SDValue Rdx =
+      DAG.matchBinOpReduction(ExtElt, Opc, {ISD::ADD, ISD::FADD}, true);
   if (!Rdx)
     return SDValue();
 
@@ -44785,7 +44793,7 @@ void X86TargetLowering::insertCopiesSplitCSR(
     else
       llvm_unreachable("Unexpected register class in CSRsViaCopy!");
 
-    unsigned NewVR = MRI->createVirtualRegister(RC);
+    Register NewVR = MRI->createVirtualRegister(RC);
     // Create copy from CSR to a virtual register.
     // FIXME: this currently does not emit CFI pseudo-instructions, it works
     // fine for CXX_FAST_TLS since the C++-style TLS access functions should be

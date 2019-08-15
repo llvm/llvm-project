@@ -154,7 +154,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         continue;
       }
 
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
@@ -177,7 +177,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
 
     for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
       MachineOperand &MO = *Defs[i];
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
@@ -329,7 +329,7 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
     if (!MO.isReg())
       continue;
 
-    unsigned MOReg = MO.getReg();
+    Register MOReg = MO.getReg();
     if (!MOReg || !Register::isPhysicalRegister(MOReg))
       continue;
 

@@ -114,7 +114,7 @@ Expected<DbiModuleDescriptorBuilder &>
 DbiStreamBuilder::addModuleInfo(StringRef ModuleName) {
   uint32_t Index = ModiList.size();
   ModiList.push_back(
-      llvm::make_unique<DbiModuleDescriptorBuilder>(ModuleName, Index, Msf));
+      std::make_unique<DbiModuleDescriptorBuilder>(ModuleName, Index, Msf));
   return *ModiList.back();
 }
 

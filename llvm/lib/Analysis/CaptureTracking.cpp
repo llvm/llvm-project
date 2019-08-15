@@ -251,7 +251,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // marked with nocapture do not capture. This means that places like
       // GetUnderlyingObject in ValueTracking or DecomposeGEPExpression
       // in BasicAA also need to know about this property.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call)) {
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call,
+                                                                      true)) {
         AddUses(Call);
         break;
       }

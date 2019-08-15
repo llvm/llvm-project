@@ -911,6 +911,39 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
       int NumSubElts = SubLT.second.getVectorNumElements();
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
         return SubLT.first;
+      // Handle some cases for widening legalization. For now we only handle
+      // cases where the original subvector was naturally aligned and evenly
+      // fit in its legalized subvector type.
+      // FIXME: Remove some of the alignment restrictions.
+      // FIXME: We can use permq for 64-bit or larger extracts from 256-bit
+      // vectors.
+      int OrigSubElts = SubTp->getVectorNumElements();
+      if (NumSubElts > OrigSubElts &&
+          (Index % OrigSubElts) == 0 && (NumSubElts % OrigSubElts) == 0 &&
+          LT.second.getVectorElementType() ==
+            SubLT.second.getVectorElementType() &&
+          LT.second.getVectorElementType().getSizeInBits() ==
+            Tp->getVectorElementType()->getPrimitiveSizeInBits()) {
+        assert(NumElts >= NumSubElts && NumElts > OrigSubElts &&
+               "Unexpected number of elements!");
+        Type *VecTy = VectorType::get(Tp->getVectorElementType(),
+                                      LT.second.getVectorNumElements());
+        Type *SubTy = VectorType::get(Tp->getVectorElementType(),
+                                      SubLT.second.getVectorNumElements());
+        int ExtractIndex = alignDown((Index % NumElts), NumSubElts);
+        int ExtractCost = getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
+                                         ExtractIndex, SubTy);
+
+        // If the original size is 32-bits or more, we can use pshufd. Otherwise
+        // if we have SSSE3 we can use pshufb.
+        if (SubTp->getPrimitiveSizeInBits() >= 32 || ST->hasSSSE3())
+          return ExtractCost + 1; // pshufd or pshufb
+
+        assert(SubTp->getPrimitiveSizeInBits() == 16 &&
+               "Unexpected vector size");
+
+        return ExtractCost + 2; // worst case pshufhw + pshufd
+      }
     }
   }
 

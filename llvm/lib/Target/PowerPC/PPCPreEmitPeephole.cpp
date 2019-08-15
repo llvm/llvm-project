@@ -91,7 +91,7 @@ namespace {
 
         LLVM_DEBUG(dbgs() << "Scanning after load immediate: "; BBI->dump(););
 
-        unsigned Reg = BBI->getOperand(0).getReg();
+        Register Reg = BBI->getOperand(0).getReg();
         int64_t Imm = BBI->getOperand(1).getImm();
         MachineOperand *DeadOrKillToUnset = nullptr;
         if (BBI->getOperand(0).isDead()) {
@@ -214,7 +214,7 @@ namespace {
         if (Br->getOpcode() != PPC::BC && Br->getOpcode() != PPC::BCn)
           continue;
         MachineInstr *CRSetMI = nullptr;
-        unsigned CRBit = Br->getOperand(0).getReg();
+        Register CRBit = Br->getOperand(0).getReg();
         unsigned CRReg = getCRFromCRBit(CRBit);
         bool SeenUse = false;
         MachineBasicBlock::reverse_iterator It = Br, Er = MBB.rend();

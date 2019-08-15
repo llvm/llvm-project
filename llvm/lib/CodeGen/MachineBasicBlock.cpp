@@ -500,14 +500,14 @@ MachineBasicBlock::addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC) 
   if (LiveIn)
     for (;I != E && I->isCopy(); ++I)
       if (I->getOperand(1).getReg() == PhysReg) {
-        unsigned VirtReg = I->getOperand(0).getReg();
+        Register VirtReg = I->getOperand(0).getReg();
         if (!MRI.constrainRegClass(VirtReg, RC))
           llvm_unreachable("Incompatible live-in register class.");
         return VirtReg;
       }
 
   // No luck, create a virtual register.
-  unsigned VirtReg = MRI.createVirtualRegister(RC);
+  Register VirtReg = MRI.createVirtualRegister(RC);
   BuildMI(*this, I, DebugLoc(), TII.get(TargetOpcode::COPY), VirtReg)
     .addReg(PhysReg, RegState::Kill);
   if (!LiveIn)
@@ -907,7 +907,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
         if (!OI->isReg() || OI->getReg() == 0 ||
             !OI->isUse() || !OI->isKill() || OI->isUndef())
           continue;
-        unsigned Reg = OI->getReg();
+        Register Reg = OI->getReg();
         if (Register::isPhysicalRegister(Reg) ||
             LV->getVarInfo(Reg).removeKill(*MI)) {
           KilledRegs.push_back(Reg);
@@ -928,7 +928,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
         if (!OI->isReg() || OI->getReg() == 0)
           continue;
 
-        unsigned Reg = OI->getReg();
+        Register Reg = OI->getReg();
         if (!is_contained(UsedRegs, Reg))
           UsedRegs.push_back(Reg);
       }
@@ -1033,7 +1033,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
       for (unsigned ni = 1, ne = I->getNumOperands(); ni != ne; ni += 2) {
         if (I->getOperand(ni+1).getMBB() == NMBB) {
           MachineOperand &MO = I->getOperand(ni);
-          unsigned Reg = MO.getReg();
+          Register Reg = MO.getReg();
           PHISrcRegs.insert(Reg);
           if (MO.isUndef())
             continue;

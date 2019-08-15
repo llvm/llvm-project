@@ -571,7 +571,7 @@ protected:
     assert(IDomNode && "Not immediate dominator specified for block!");
     DFSInfoValid = false;
     return (DomTreeNodes[BB] = IDomNode->addChild(
-                llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode))).get();
+                std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode))).get();
   }
 
   /// Add a new node to the forward dominator tree and make it a new root.
@@ -585,7 +585,7 @@ protected:
            "Cannot change root of post-dominator tree");
     DFSInfoValid = false;
     DomTreeNodeBase<NodeT> *NewNode = (DomTreeNodes[BB] =
-      llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, nullptr)).get();
+      std::make_unique<DomTreeNodeBase<NodeT>>(BB, nullptr)).get();
     if (Roots.empty()) {
       addRoot(BB);
     } else {

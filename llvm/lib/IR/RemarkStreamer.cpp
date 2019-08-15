@@ -126,7 +126,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 
   std::error_code EC;
   auto RemarksFile =
-      llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::OF_None);
+      std::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::OF_None);
   // We don't use llvm::FileError here because some diagnostics want the file
   // name separately.
   if (EC)
@@ -141,7 +141,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (Error E = RemarkSerializer.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 
-  Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
+  Context.setRemarkStreamer(std::make_unique<RemarkStreamer>(
       RemarksFilename, std::move(*RemarkSerializer)));
 
   if (!RemarksPasses.empty())

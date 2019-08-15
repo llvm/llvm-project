@@ -186,7 +186,7 @@ DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  return llvm::make_unique<DynamicLibrarySearchGenerator>(
+  return std::make_unique<DynamicLibrarySearchGenerator>(
       std::move(Lib), GlobalPrefix, std::move(Allow));
 }
 

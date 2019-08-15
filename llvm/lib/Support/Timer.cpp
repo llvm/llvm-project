@@ -58,23 +58,23 @@ namespace {
 std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
-    return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+    return std::make_unique<raw_fd_ostream>(2, false); // stderr.
   if (OutputFilename == "-")
-    return llvm::make_unique<raw_fd_ostream>(1, false); // stdout.
+    return std::make_unique<raw_fd_ostream>(1, false); // stdout.
 
   // Append mode is used because the info output file is opened and closed
   // each time -stats or -time-passes wants to print output to it. To
   // compensate for this, the test-suite Makefiles have code to delete the
   // info output file before running commands which write to it.
   std::error_code EC;
-  auto Result = llvm::make_unique<raw_fd_ostream>(
+  auto Result = std::make_unique<raw_fd_ostream>(
       OutputFilename, EC, sys::fs::OF_Append | sys::fs::OF_Text);
   if (!EC)
     return Result;
 
   errs() << "Error opening info-output-file '"
     << OutputFilename << " for appending!\n";
-  return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+  return std::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 
 namespace {

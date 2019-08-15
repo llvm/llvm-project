@@ -16895,6 +16895,42 @@ a constant.
 On the other hand, if constant folding is not run, it will never
 evaluate to true, even in simple cases.
 
+.. _int_ptrmask:
+
+'``llvm.ptrmask``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptrty llvm.ptrmask(ptrty %ptr, intty %mask) readnone speculatable
+
+Arguments:
+""""""""""
+
+The first argument is a pointer. The second argument is an integer.
+
+Overview:
+""""""""""
+
+The ``llvm.ptrmask`` intrinsic masks out bits of the pointer according to a mask.
+This allows stripping data from tagged pointers without converting them to an
+integer (ptrtoint/inttoptr). As a consequence, we can preserve more information
+to facilitate alias analysis and underlying-object detection.
+
+Semantics:
+""""""""""
+
+The result of ``ptrmask(ptr, mask)`` is equivalent to
+``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
+pointer and the first argument are based on the same underlying object (for more
+information on the *based on* terminology see
+:ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
+mask argument does not match the pointer size of the target, the mask is
+zero-extended or truncated accordingly.
+
 Stack Map Intrinsics
 --------------------
 

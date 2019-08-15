@@ -5067,7 +5067,7 @@ struct VerifierLegacyPass : public FunctionPass {
   }
 
   bool doInitialization(Module &M) override {
-    V = llvm::make_unique<Verifier>(
+    V = std::make_unique<Verifier>(
         &dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/false, M);
     return false;
   }

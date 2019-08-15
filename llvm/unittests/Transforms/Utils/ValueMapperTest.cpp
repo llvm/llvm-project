@@ -66,9 +66,9 @@ TEST(ValueMapperTest, mapMDNodeCycle) {
 TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
   LLVMContext Context;
   auto *PtrTy = Type::getInt8Ty(Context)->getPointerTo();
-  std::unique_ptr<GlobalVariable> G0 = llvm::make_unique<GlobalVariable>(
+  std::unique_ptr<GlobalVariable> G0 = std::make_unique<GlobalVariable>(
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G0");
-  std::unique_ptr<GlobalVariable> G1 = llvm::make_unique<GlobalVariable>(
+  std::unique_ptr<GlobalVariable> G1 = std::make_unique<GlobalVariable>(
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G1");
 
   // Create a cycle that references G0.

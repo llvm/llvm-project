@@ -4117,7 +4117,7 @@ void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
 
   SDValue Src = getValue(SrcV);
   // Create a virtual register, then update the virtual register.
-  unsigned VReg =
+  Register VReg =
       SwiftError.getOrCreateVRegDefAt(&I, FuncInfo.MBB, I.getPointerOperand());
   // Chain, DL, Reg, N or Chain, DL, Reg, N, Glue
   // Chain can be getRoot or getControlRoot.
@@ -6859,6 +6859,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Val);
     return;
   }
+  case Intrinsic::ptrmask: {
+    SDValue Ptr = getValue(I.getOperand(0));
+    SDValue Const = getValue(I.getOperand(1));
+
+    EVT DestVT =
+        EVT(DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
+
+    setValue(&I, DAG.getNode(ISD::AND, getCurSDLoc(), DestVT, Ptr,
+                             DAG.getZExtOrTrunc(Const, getCurSDLoc(), DestVT)));
+    return;
+  }
   }
 }
 
@@ -7143,7 +7154,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    unsigned VReg = SwiftError.getOrCreateVRegDefAt(
+    Register VReg = SwiftError.getOrCreateVRegDefAt(
         CS.getInstruction(), FuncInfo.MBB, SwiftErrorVal);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
     DAG.setRoot(CopyNode);
@@ -9714,7 +9725,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     MachineFunction& MF = SDB->DAG.getMachineFunction();
     MachineRegisterInfo& RegInfo = MF.getRegInfo();
-    unsigned SRetReg = RegInfo.createVirtualRegister(TLI->getRegClassFor(RegVT));
+    Register SRetReg =
+        RegInfo.createVirtualRegister(TLI->getRegClassFor(RegVT));
     FuncInfo->DemoteRegister = SRetReg;
     NewRoot =
         SDB->DAG.getCopyToReg(NewRoot, SDB->getCurSDLoc(), SRetReg, ArgValue);

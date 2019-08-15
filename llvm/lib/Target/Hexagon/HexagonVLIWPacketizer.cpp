@@ -136,9 +136,9 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
-  addMutation(llvm::make_unique<HexagonSubtarget::UsrOverflowMutation>());
-  addMutation(llvm::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
-  addMutation(llvm::make_unique<HexagonSubtarget::BankConflictMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.
@@ -148,7 +148,7 @@ static bool hasWriteToReadDep(const MachineInstr &FirstI,
   for (auto &MO : FirstI.operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (SecondI.readsRegister(R, TRI))
       return true;
   }
@@ -422,7 +422,7 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
     dbgs() << "Checking CUR against ";
     MJ.dump();
   });
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   bool FoundMatch = false;
   for (auto &MO : MJ.operands())
     if (MO.isReg() && MO.getReg() == DestReg)
@@ -515,7 +515,7 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
   unsigned BPJ, OPJ;
   if (!HII->getBaseAndOffsetPosition(MJ, BPJ, OPJ))
     return false;
-  unsigned Reg = MI.getOperand(BPI).getReg();
+  Register Reg = MI.getOperand(BPI).getReg();
   if (Reg != MJ.getOperand(BPJ).getReg())
     return false;
   // Make sure that the dependences do not restrict adding MI to the packet.
@@ -788,7 +788,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
       return false;
     if (!MO.isReg() || !MO.isDef() || !MO.isImplicit())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (R == DepReg || HRI->isSuperRegister(DepReg, R))
       return false;
   }
@@ -1208,7 +1208,7 @@ bool HexagonPacketizerList::hasDeadDependence(const MachineInstr &I,
   for (auto &MO : J.operands()) {
     if (!MO.isReg() || !MO.isDef() || !MO.isDead())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (R != Hexagon::USR_OVF && DeadDefs[R])
       return true;
   }
@@ -1585,7 +1585,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // subset of the volatile register set.
       for (const MachineOperand &Op : I.operands()) {
         if (Op.isReg() && Op.isDef()) {
-          unsigned R = Op.getReg();
+          Register R = Op.getReg();
           if (!J.readsRegister(R, HRI) && !J.modifiesRegister(R, HRI))
             continue;
         } else if (!Op.isRegMask()) {

@@ -600,7 +600,7 @@ void Filter::recurse() {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
     FilterChooserMap.insert(
-        std::make_pair(-1U, llvm::make_unique<FilterChooser>(
+        std::make_pair(-1U, std::make_unique<FilterChooser>(
                                 Owner->AllInstructions, VariableInstructions,
                                 Owner->Operands, BitValueArray, *Owner)));
   }
@@ -626,7 +626,7 @@ void Filter::recurse() {
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
     FilterChooserMap.insert(std::make_pair(
-        Inst.first, llvm::make_unique<FilterChooser>(
+        Inst.first, std::make_unique<FilterChooser>(
                                 Owner->AllInstructions, Inst.second,
                                 Owner->Operands, BitValueArray, *Owner)));
   }

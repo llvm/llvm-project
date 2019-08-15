@@ -55,7 +55,7 @@ bool XCoreFTAOElim::runOnMachineFunction(MachineFunction &MF) {
          MBBI != EE; ++MBBI) {
       if (MBBI->getOpcode() == XCore::FRAME_TO_ARGS_OFFSET) {
         MachineInstr &OldInst = *MBBI;
-        unsigned Reg = OldInst.getOperand(0).getReg();
+        Register Reg = OldInst.getOperand(0).getReg();
         MBBI = TII.loadImmediate(MBB, MBBI, Reg, StackSize);
         OldInst.eraseFromParent();
       }

@@ -182,7 +182,7 @@ public:
     MachineBasicBlock *MBB = MI->getParent();
     auto &DL = MI->getDebugLoc();
 
-    unsigned Reg = MRI->createVirtualRegister(
+    Register Reg = MRI->createVirtualRegister(
         TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo(),
                          *MBB->getParent()));
     MachineInstrBuilder Bld = BuildMI(*MBB, MI, DL, TII->get(DstOpcode), Reg);
@@ -219,12 +219,12 @@ public:
 
     // Don't allow copies to/flow GR8/GR16 physical registers.
     // FIXME: Is there some better way to support this?
-    unsigned DstReg = MI->getOperand(0).getReg();
+    Register DstReg = MI->getOperand(0).getReg();
     if (Register::isPhysicalRegister(DstReg) &&
         (X86::GR8RegClass.contains(DstReg) ||
          X86::GR16RegClass.contains(DstReg)))
       return false;
-    unsigned SrcReg = MI->getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
     if (Register::isPhysicalRegister(SrcReg) &&
         (X86::GR8RegClass.contains(SrcReg) ||
          X86::GR16RegClass.contains(SrcReg)))
@@ -593,7 +593,7 @@ void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
         if (!DefOp.isReg())
           continue;
 
-        unsigned DefReg = DefOp.getReg();
+        Register DefReg = DefOp.getReg();
         if (!Register::isVirtualRegister(DefReg)) {
           C.setAllIllegal();
           continue;

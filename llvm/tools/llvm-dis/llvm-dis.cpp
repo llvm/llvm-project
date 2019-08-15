@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
-      llvm::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
+      std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   std::unique_ptr<MemoryBuffer> MB =

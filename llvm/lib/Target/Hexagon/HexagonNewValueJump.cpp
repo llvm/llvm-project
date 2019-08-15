@@ -177,7 +177,7 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
         (II->getOperand(i).isUse() || II->getOperand(i).isDef())) {
       MachineBasicBlock::iterator localII = II;
       ++localII;
-      unsigned Reg = II->getOperand(i).getReg();
+      Register Reg = II->getOperand(i).getReg();
       for (MachineBasicBlock::iterator localBegin = localII; localBegin != end;
            ++localBegin) {
         if (localBegin == skip)
@@ -603,7 +603,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
              (isSecondOpReg &&
               MI.getOperand(0).getReg() == (unsigned)cmpOp2))) {
 
-          unsigned feederReg = MI.getOperand(0).getReg();
+          Register feederReg = MI.getOperand(0).getReg();
 
           // First try to see if we can get the feeder from the first operand
           // of the compare. If we can not, and if secondOpReg is true
@@ -651,7 +651,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
             for (MachineOperand &MO : MI.operands()) {
               if (!MO.isReg() || !MO.isUse())
                 continue;
-              unsigned UseR = MO.getReg();
+              Register UseR = MO.getReg();
               for (auto I = std::next(MI.getIterator()); I != jmpPos; ++I) {
                 if (I == cmpPos)
                   continue;

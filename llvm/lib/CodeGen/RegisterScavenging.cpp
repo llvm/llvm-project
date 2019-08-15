@@ -133,7 +133,7 @@ void RegScavenger::determineKillsAndDefs() {
     }
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isPhysicalRegister(Reg) || isReserved(Reg))
       continue;
 
@@ -204,7 +204,7 @@ void RegScavenger::forward() {
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isPhysicalRegister(Reg) || isReserved(Reg))
       continue;
     if (MO.isUse()) {
@@ -694,7 +694,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
       for (const MachineOperand &MO : NMI.operands()) {
         if (!MO.isReg())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         // We only care about virtual registers and ignore virtual registers
         // created by the target callbacks in the process (those will be handled
         // in a scavenging round).
@@ -716,7 +716,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
     for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       // Only vregs, no newly created vregs (see above).
       if (!Register::isVirtualRegister(Reg) ||
           Register::virtReg2Index(Reg) >= InitialNumVirtRegs)

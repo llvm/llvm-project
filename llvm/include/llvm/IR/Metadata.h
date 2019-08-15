@@ -806,7 +806,7 @@ public:
   /// Ensure that this has RAUW support, and then return it.
   ReplaceableMetadataImpl *getOrCreateReplaceableUses() {
     if (!hasReplaceableUses())
-      makeReplaceable(llvm::make_unique<ReplaceableMetadataImpl>(getContext()));
+      makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(getContext()));
     return getReplaceableUses();
   }
 

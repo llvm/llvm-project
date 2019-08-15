@@ -378,8 +378,8 @@ static void HandleVRSaveUpdate(MachineInstr &MI, const TargetInstrInfo &TII) {
     return;
   }
 
-  unsigned SrcReg = MI.getOperand(1).getReg();
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
 
   if ((UsedRegMask & 0xFFFF) == UsedRegMask) {
     if (DstReg != SrcReg)
@@ -830,7 +830,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool HasRedZone = isPPC64 || !isSVR4ABI;
 
   unsigned SPReg       = isPPC64 ? PPC::X1  : PPC::R1;
-  unsigned BPReg       = RegInfo->getBaseRegister(MF);
+  Register BPReg = RegInfo->getBaseRegister(MF);
   unsigned FPReg       = isPPC64 ? PPC::X31 : PPC::R31;
   unsigned LRReg       = isPPC64 ? PPC::LR8 : PPC::LR;
   unsigned TOCReg      = isPPC64 ? PPC::X2 :  PPC::R2;
@@ -1401,7 +1401,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   bool HasRedZone = Subtarget.isPPC64() || !Subtarget.isSVR4ABI();
 
   unsigned SPReg      = isPPC64 ? PPC::X1  : PPC::R1;
-  unsigned BPReg      = RegInfo->getBaseRegister(MF);
+  Register BPReg = RegInfo->getBaseRegister(MF);
   unsigned FPReg      = isPPC64 ? PPC::X31 : PPC::R31;
   unsigned ScratchReg = 0;
   unsigned TempReg     = isPPC64 ? PPC::X12 : PPC::R12; // another scratch reg
@@ -1981,7 +1981,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     assert(FI && "No Base Pointer Save Slot!");
     MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
 
-    unsigned BP = RegInfo->getBaseRegister(MF);
+    Register BP = RegInfo->getBaseRegister(MF);
     if (PPC::G8RCRegClass.contains(BP)) {
       MinG8R = std::min<unsigned>(MinG8R, BP);
       HasG8SaveArea = true;

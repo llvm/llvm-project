@@ -153,7 +153,7 @@ public:
     assert(!ValueLoc && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
-    ValueLoc = llvm::make_unique<DbgValueLoc>(Value);
+    ValueLoc = std::make_unique<DbgValueLoc>(Value);
     if (auto *E = ValueLoc->getExpression())
       if (E->getNumElements())
         FrameIndexExprs.push_back({0, E});

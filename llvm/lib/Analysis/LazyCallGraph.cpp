@@ -100,12 +100,14 @@ LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
   for (BasicBlock &BB : *F)
     for (Instruction &I : BB) {
       if (auto CS = CallSite(&I))
-        if (Function *Callee = CS.getCalledFunction())
+        for (Function *Callee : CS.getKnownCallees())
           if (!Callee->isDeclaration())
             if (Callees.insert(Callee).second) {
               Visited.insert(Callee);
+              auto EdgeK = CS.getCalledFunction() ? LazyCallGraph::Edge::Call
+                                                  : LazyCallGraph::Edge::Ref;
               addEdge(Edges->Edges, Edges->EdgeIndexMap, G->get(*Callee),
-                      LazyCallGraph::Edge::Call);
+                      EdgeK);
             }
 
       for (Value *Op : I.operand_values())

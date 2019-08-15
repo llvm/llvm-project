@@ -391,8 +391,8 @@ void PPCDAGToDAGISel::InsertVRSaveCode(MachineFunction &Fn) {
 
   // Create two vregs - one to hold the VRSAVE register that is live-in to the
   // function and one for the value after having bits or'd into it.
-  unsigned InVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
-  unsigned UpdatedVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
+  Register InVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
+  Register UpdatedVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
 
   const TargetInstrInfo &TII = *PPCSubTarget->getInstrInfo();
   MachineBasicBlock &EntryBB = *Fn.begin();
@@ -447,7 +447,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
         } else {
           BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MovePCtoLR));
           BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR), GlobalBaseReg);
-          unsigned TempReg = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
+          Register TempReg = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
           BuildMI(FirstMBB, MBBI, dl,
                   TII.get(PPC::UpdateGBR), GlobalBaseReg)
                   .addReg(TempReg, RegState::Define).addReg(GlobalBaseReg);

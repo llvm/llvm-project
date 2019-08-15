@@ -117,5 +117,5 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createWebAssemblyWasmObjectWriter(bool Is64Bit) {
-  return llvm::make_unique<WebAssemblyWasmObjectWriter>(Is64Bit);
+  return std::make_unique<WebAssemblyWasmObjectWriter>(Is64Bit);
 }

@@ -38,7 +38,7 @@ struct Context {
 
     MRI.reset(TheTarget->createMCRegInfo(Triple));
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, Triple));
-    Ctx = llvm::make_unique<MCContext>(MAI.get(), MRI.get(), nullptr);
+    Ctx = std::make_unique<MCContext>(MAI.get(), MRI.get(), nullptr);
   }
 
   operator bool() { return Ctx.get(); }

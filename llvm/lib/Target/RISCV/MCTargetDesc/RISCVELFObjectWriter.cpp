@@ -133,5 +133,5 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createRISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
-  return llvm::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit);
+  return std::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit);
 }

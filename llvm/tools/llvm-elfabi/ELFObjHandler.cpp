@@ -292,7 +292,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   using Elf_Phdr_Range = typename ELFT::PhdrRange;
   using Elf_Sym_Range = typename ELFT::SymRange;
   using Elf_Sym = typename ELFT::Sym;
-  std::unique_ptr<ELFStub> DestStub = make_unique<ELFStub>();
+  std::unique_ptr<ELFStub> DestStub = std::make_unique<ELFStub>();
   const ELFFile<ELFT> *ElfFile = ElfObj.getELFFile();
   // Fetch .dynamic table.
   Expected<Elf_Dyn_Range> DynTable = ElfFile->dynamicEntries();

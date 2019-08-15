@@ -396,12 +396,12 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_sum(<16 x i8> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v16i8_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI25_0@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vaddubm 3, 2, 3
 ; CHECK-NEXT:    vcmpgtub 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
   %c = icmp ugt <16 x i8> %x, %a
@@ -413,7 +413,7 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_notval(<16 x i8> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v16i8_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI26_1@toc@ha
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI26_1@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI26_0@toc@ha
@@ -421,7 +421,7 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_notval(<16 x i8> %x) {
 ; CHECK-NEXT:    vcmpgtub 3, 2, 3
 ; CHECK-NEXT:    lvx 4, 0, 3
 ; CHECK-NEXT:    vaddubm 2, 2, 4
-; CHECK-NEXT:    xxsel 34, 34, 37, 35
+; CHECK-NEXT:    xxsel 34, 34, 0, 35
 ; CHECK-NEXT:    blr
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
   %c = icmp ugt <16 x i8> %x, <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
@@ -451,12 +451,12 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_sum(<8 x i16> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v8i16_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI28_0@toc@ha
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI28_0@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vadduhm 3, 2, 3
 ; CHECK-NEXT:    vcmpgtuh 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
   %c = icmp ugt <8 x i16> %x, %a
@@ -468,7 +468,7 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_notval(<8 x i16> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v8i16_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI29_1@toc@ha
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI29_1@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI29_0@toc@ha
@@ -476,7 +476,7 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_notval(<8 x i16> %x) {
 ; CHECK-NEXT:    vcmpgtuh 3, 2, 3
 ; CHECK-NEXT:    lvx 4, 0, 3
 ; CHECK-NEXT:    vadduhm 2, 2, 4
-; CHECK-NEXT:    xxsel 34, 34, 37, 35
+; CHECK-NEXT:    xxsel 34, 34, 0, 35
 ; CHECK-NEXT:    blr
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
   %c = icmp ugt <8 x i16> %x, <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
@@ -506,12 +506,12 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_sum(<4 x i32> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v4i32_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI31_0@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vadduwm 3, 2, 3
 ; CHECK-NEXT:    vcmpgtuw 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ugt <4 x i32> %x, %a
@@ -523,7 +523,7 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI32_1@toc@ha
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI32_1@toc@l
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI32_0@toc@ha
@@ -531,7 +531,7 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; CHECK-NEXT:    vcmpgtuw 3, 2, 3
 ; CHECK-NEXT:    lvx 4, 0, 3
 ; CHECK-NEXT:    vadduwm 2, 2, 4
-; CHECK-NEXT:    xxsel 34, 34, 37, 35
+; CHECK-NEXT:    xxsel 34, 34, 0, 35
 ; CHECK-NEXT:    blr
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ugt <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
@@ -563,13 +563,13 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI34_0@toc@ha
-; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    addi 3, 3, .LCPI34_0@toc@l
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vaddudm 3, 2, 3
 ; CHECK-NEXT:    vcmpgtud 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <2 x i64> %x, <i64 42, i64 42>
   %c = icmp ugt <2 x i64> %x, %a
@@ -581,17 +581,17 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI35_1@toc@ha
-; CHECK-NEXT:    vspltisb 5, -1
 ; CHECK-NEXT:    addi 3, 3, .LCPI35_1@toc@l
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI35_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI35_0@toc@l
+; CHECK-NEXT:    lxvd2x 1, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxleqv 0, 0, 0
+; CHECK-NEXT:    xxswapd 36, 1
 ; CHECK-NEXT:    vcmpgtud 3, 2, 3
-; CHECK-NEXT:    xxswapd 36, 0
 ; CHECK-NEXT:    vaddudm 2, 2, 4
-; CHECK-NEXT:    xxsel 34, 34, 37, 35
+; CHECK-NEXT:    xxsel 34, 34, 0, 35
 ; CHECK-NEXT:    blr
   %a = add <2 x i64> %x, <i64 42, i64 42>
   %c = icmp ugt <2 x i64> %x, <i64 -43, i64 -43>
@@ -617,9 +617,9 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_sum(<16 x i8> %x, <16 x 
 ; CHECK-LABEL: unsigned_sat_variable_v16i8_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddubm 3, 2, 3
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtub 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <16 x i8> %x, %y
   %c = icmp ugt <16 x i8> %x, %a
@@ -631,10 +631,10 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_notval(<16 x i8> %x, <16
 ; CHECK-LABEL: unsigned_sat_variable_v16i8_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtub 4, 2, 4
 ; CHECK-NEXT:    vaddubm 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 34, 37, 36
+; CHECK-NEXT:    xxsel 34, 34, 0, 36
 ; CHECK-NEXT:    blr
   %noty = xor <16 x i8> %y, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %a = add <16 x i8> %x, %y
@@ -661,9 +661,9 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_sum(<8 x i16> %x, <8 x i
 ; CHECK-LABEL: unsigned_sat_variable_v8i16_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vadduhm 3, 2, 3
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtuh 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <8 x i16> %x, %y
   %c = icmp ugt <8 x i16> %x, %a
@@ -675,10 +675,10 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_notval(<8 x i16> %x, <8 
 ; CHECK-LABEL: unsigned_sat_variable_v8i16_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtuh 4, 2, 4
 ; CHECK-NEXT:    vadduhm 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 34, 37, 36
+; CHECK-NEXT:    xxsel 34, 34, 0, 36
 ; CHECK-NEXT:    blr
   %noty = xor <8 x i16> %y, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %a = add <8 x i16> %x, %y
@@ -705,9 +705,9 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_sum(<4 x i32> %x, <4 x i
 ; CHECK-LABEL: unsigned_sat_variable_v4i32_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vadduwm 3, 2, 3
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtuw 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <4 x i32> %x, %y
   %c = icmp ugt <4 x i32> %x, %a
@@ -719,10 +719,10 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 ; CHECK-LABEL: unsigned_sat_variable_v4i32_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtuw 4, 2, 4
 ; CHECK-NEXT:    vadduwm 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 34, 37, 36
+; CHECK-NEXT:    xxsel 34, 34, 0, 36
 ; CHECK-NEXT:    blr
   %noty = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
   %a = add <4 x i32> %x, %y
@@ -749,9 +749,9 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 ; CHECK-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddudm 3, 2, 3
-; CHECK-NEXT:    vspltisb 4, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtud 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 35, 36, 34
+; CHECK-NEXT:    xxsel 34, 35, 0, 34
 ; CHECK-NEXT:    blr
   %a = add <2 x i64> %x, %y
   %c = icmp ugt <2 x i64> %x, %a
@@ -763,10 +763,10 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ; CHECK-LABEL: unsigned_sat_variable_v2i64_using_cmp_notval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vspltisb 5, -1
+; CHECK-NEXT:    xxleqv 0, 0, 0
 ; CHECK-NEXT:    vcmpgtud 4, 2, 4
 ; CHECK-NEXT:    vaddudm 2, 2, 3
-; CHECK-NEXT:    xxsel 34, 34, 37, 36
+; CHECK-NEXT:    xxsel 34, 34, 0, 36
 ; CHECK-NEXT:    blr
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>
   %a = add <2 x i64> %x, %y

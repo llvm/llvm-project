@@ -226,7 +226,7 @@ void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
 // - on exit we have set the Require, Change, and initial Exit modes.
 void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
                                         const SIInstrInfo *TII) {
-  auto NewInfo = llvm::make_unique<BlockData>();
+  auto NewInfo = std::make_unique<BlockData>();
   MachineInstr *InsertionPoint = nullptr;
   // RequirePending is used to indicate whether we are collecting the initial
   // requirements for the block, and need to defer the first InsertionPoint to

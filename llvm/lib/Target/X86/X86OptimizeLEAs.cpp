@@ -612,8 +612,8 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
         // Loop over all uses of the Last LEA and update their operands. Note
         // that the correctness of this has already been checked in the
         // isReplaceable function.
-        unsigned FirstVReg = First.getOperand(0).getReg();
-        unsigned LastVReg = Last.getOperand(0).getReg();
+        Register FirstVReg = First.getOperand(0).getReg();
+        Register LastVReg = Last.getOperand(0).getReg();
         for (auto UI = MRI->use_begin(LastVReg), UE = MRI->use_end();
              UI != UE;) {
           MachineOperand &MO = *UI++;

@@ -20,8 +20,8 @@
 using namespace llvm;
 
 CFGHolder::CFGHolder(StringRef ModuleName, StringRef FunctionName)
-    : Context(llvm::make_unique<LLVMContext>()),
-      M(llvm::make_unique<Module>(ModuleName, *Context)) {
+    : Context(std::make_unique<LLVMContext>()),
+      M(std::make_unique<Module>(ModuleName, *Context)) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Context), {}, false);
   F = Function::Create(FTy, Function::ExternalLinkage, FunctionName, M.get());
 }

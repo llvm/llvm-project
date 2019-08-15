@@ -253,7 +253,7 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isReg())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (isAnyVecReg(Reg, Partial)) {
           RelevantInstr = true;
           break;
@@ -601,7 +601,7 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!MO.isReg())
         continue;
 
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!isVecReg(Reg) && !isScalarVecReg(Reg))
         continue;
 
@@ -667,7 +667,7 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
     // than a swap instruction.
     else if (SwapVector[EntryIdx].IsLoad && SwapVector[EntryIdx].IsSwap) {
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
-      unsigned DefReg = MI->getOperand(0).getReg();
+      Register DefReg = MI->getOperand(0).getReg();
 
       // We skip debug instructions in the analysis.  (Note that debug
       // location information is still maintained by this optimization
@@ -695,9 +695,9 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
     // other than a swap instruction.
     } else if (SwapVector[EntryIdx].IsStore && SwapVector[EntryIdx].IsSwap) {
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
-      unsigned UseReg = MI->getOperand(0).getReg();
+      Register UseReg = MI->getOperand(0).getReg();
       MachineInstr *DefMI = MRI->getVRegDef(UseReg);
-      unsigned DefReg = DefMI->getOperand(0).getReg();
+      Register DefReg = DefMI->getOperand(0).getReg();
       int DefIdx = SwapMap[DefMI];
 
       if (!SwapVector[DefIdx].IsSwap || SwapVector[DefIdx].IsLoad ||
@@ -756,7 +756,7 @@ void PPCVSXSwapRemoval::markSwapsForRemoval() {
 
       if (!SwapVector[Repr].WebRejected) {
         MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
-        unsigned DefReg = MI->getOperand(0).getReg();
+        Register DefReg = MI->getOperand(0).getReg();
 
         for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
           int UseIdx = SwapMap[&UseMI];
@@ -772,7 +772,7 @@ void PPCVSXSwapRemoval::markSwapsForRemoval() {
 
       if (!SwapVector[Repr].WebRejected) {
         MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
-        unsigned UseReg = MI->getOperand(0).getReg();
+        Register UseReg = MI->getOperand(0).getReg();
         MachineInstr *DefMI = MRI->getVRegDef(UseReg);
         int DefIdx = SwapMap[DefMI];
         SwapVector[DefIdx].WillRemove = 1;
@@ -869,8 +869,8 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
       Selector = 3 - Selector;
     MI->getOperand(3).setImm(Selector);
 
-    unsigned Reg1 = MI->getOperand(1).getReg();
-    unsigned Reg2 = MI->getOperand(2).getReg();
+    Register Reg1 = MI->getOperand(1).getReg();
+    Register Reg2 = MI->getOperand(2).getReg();
     MI->getOperand(1).setReg(Reg2);
     MI->getOperand(2).setReg(Reg1);
 
@@ -894,9 +894,9 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
     LLVM_DEBUG(dbgs() << "Changing SUBREG_TO_REG: ");
     LLVM_DEBUG(MI->dump());
 
-    unsigned DstReg = MI->getOperand(0).getReg();
+    Register DstReg = MI->getOperand(0).getReg();
     const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
-    unsigned NewVReg = MRI->createVirtualRegister(DstRC);
+    Register NewVReg = MRI->createVirtualRegister(DstRC);
 
     MI->getOperand(0).setReg(NewVReg);
     LLVM_DEBUG(dbgs() << "  Into: ");
@@ -910,8 +910,8 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
     // prior to the swap, and from VSRC to VRRC following the swap.
     // Coalescing will usually remove all this mess.
     if (DstRC == &PPC::VRRCRegClass) {
-      unsigned VSRCTmp1 = MRI->createVirtualRegister(&PPC::VSRCRegClass);
-      unsigned VSRCTmp2 = MRI->createVirtualRegister(&PPC::VSRCRegClass);
+      Register VSRCTmp1 = MRI->createVirtualRegister(&PPC::VSRCRegClass);
+      Register VSRCTmp2 = MRI->createVirtualRegister(&PPC::VSRCRegClass);
 
       BuildMI(*MI->getParent(), InsertPoint, MI->getDebugLoc(),
               TII->get(PPC::COPY), VSRCTmp1)

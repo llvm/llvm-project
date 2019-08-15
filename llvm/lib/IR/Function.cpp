@@ -251,7 +251,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 
   // We only need a symbol table for a function if the context keeps value names
   if (!getContext().shouldDiscardValueNames())
-    SymTab = make_unique<ValueSymbolTable>();
+    SymTab = std::make_unique<ValueSymbolTable>();
 
   // If the function has arguments, mark them as lazily built.
   if (Ty->getNumParams())

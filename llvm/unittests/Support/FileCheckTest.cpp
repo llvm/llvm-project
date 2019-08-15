@@ -87,9 +87,9 @@ TEST_F(FileCheckTest, NumericVariable) {
   // returns true, getValue and eval return value of expression, setValue
   // clears expression.
   std::unique_ptr<FileCheckNumericVariableUse> FooVarUsePtr =
-      llvm::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
+      std::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
   std::unique_ptr<FileCheckExpressionLiteral> One =
-      llvm::make_unique<FileCheckExpressionLiteral>(1);
+      std::make_unique<FileCheckExpressionLiteral>(1);
   FileCheckASTBinop Binop =
       FileCheckASTBinop(doAdd, std::move(FooVarUsePtr), std::move(One));
   FileCheckNumericVariable FoobarExprVar =
@@ -126,11 +126,11 @@ TEST_F(FileCheckTest, Binop) {
   FileCheckNumericVariable FooVar = FileCheckNumericVariable("FOO", 1);
   FooVar.setValue(42);
   std::unique_ptr<FileCheckNumericVariableUse> FooVarUse =
-      llvm::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
+      std::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
   FileCheckNumericVariable BarVar = FileCheckNumericVariable("BAR", 2);
   BarVar.setValue(18);
   std::unique_ptr<FileCheckNumericVariableUse> BarVarUse =
-      llvm::make_unique<FileCheckNumericVariableUse>("BAR", &BarVar);
+      std::make_unique<FileCheckNumericVariableUse>("BAR", &BarVar);
   FileCheckASTBinop Binop =
       FileCheckASTBinop(doAdd, std::move(FooVarUse), std::move(BarVarUse));
 
@@ -453,8 +453,8 @@ TEST_F(FileCheckTest, Substitution) {
   LineVar.setValue(42);
   NVar.setValue(10);
   auto LineVarUse =
-      llvm::make_unique<FileCheckNumericVariableUse>("@LINE", &LineVar);
-  auto NVarUse = llvm::make_unique<FileCheckNumericVariableUse>("N", &NVar);
+      std::make_unique<FileCheckNumericVariableUse>("@LINE", &LineVar);
+  auto NVarUse = std::make_unique<FileCheckNumericVariableUse>("N", &NVar);
   FileCheckNumericSubstitution SubstitutionLine = FileCheckNumericSubstitution(
       &Context, "@LINE", std::move(LineVarUse), 12);
   FileCheckNumericSubstitution SubstitutionN =

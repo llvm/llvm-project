@@ -600,5 +600,5 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createX86MachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
-  return llvm::make_unique<X86MachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+  return std::make_unique<X86MachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
 }

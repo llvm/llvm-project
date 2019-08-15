@@ -97,7 +97,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       assert(RegOp.isReg() && "Operand must be a register when you're"
                               "using 'A'..'Z' operand extracodes.");
-      unsigned Reg = RegOp.getReg();
+      Register Reg = RegOp.getReg();
 
       unsigned ByteNumber = ExtraCode[0] - 'A';
 

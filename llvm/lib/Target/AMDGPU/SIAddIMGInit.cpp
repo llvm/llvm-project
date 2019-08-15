@@ -129,7 +129,7 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
             continue;
 
           // Create a register for the intialization value.
-          unsigned PrevDst =
+          Register PrevDst =
               MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
           unsigned NewDst = 0; // Final initialized value will be in here
 
@@ -150,7 +150,7 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
               NewDst =
                   MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
               // Initialize dword
-              unsigned SubReg =
+              Register SubReg =
                   MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
               BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), SubReg)
                   .addImm(0);

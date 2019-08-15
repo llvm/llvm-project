@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -80,7 +79,7 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
     const CCValAssign &ArgLoc = ArgLocs[I];
     if (!ArgLoc.isRegLoc())
       continue;
-    unsigned Reg = ArgLoc.getLocReg();
+    Register Reg = ArgLoc.getLocReg();
     // Only look at callee saved registers.
     if (MachineOperand::clobbersPhysReg(CallerPreservedMask, Reg))
       continue;

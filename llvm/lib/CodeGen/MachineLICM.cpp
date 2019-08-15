@@ -424,7 +424,7 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI,
 
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     assert(Register::isPhysicalRegister(Reg) &&
@@ -526,7 +526,7 @@ void MachineLICMBase::HoistRegionPostRA() {
     for (const MachineOperand &MO : TI->operands()) {
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
@@ -554,7 +554,7 @@ void MachineLICMBase::HoistRegionPostRA() {
       for (const MachineOperand &MO : MI->operands()) {
         if (!MO.isReg() || MO.isDef() || !MO.getReg())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (PhysRegDefs.test(Reg) ||
             PhysRegClobbers.test(Reg)) {
           // If it's using a non-loop-invariant register, then it's obviously
@@ -852,7 +852,7 @@ MachineLICMBase::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.isImplicit())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
 
@@ -922,7 +922,7 @@ static bool isInvariantStore(const MachineInstr &MI,
   // Check that all register operands are caller-preserved physical registers.
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       // If operand is a virtual register, check if it comes from a copy of a
       // physical register.
       if (Register::isVirtualRegister(Reg))
@@ -955,14 +955,14 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 
   const MachineFunction *MF = MI.getMF();
   // Check that we are copying a constant physical register.
-  unsigned CopySrcReg = MI.getOperand(1).getReg();
+  Register CopySrcReg = MI.getOperand(1).getReg();
   if (Register::isVirtualRegister(CopySrcReg))
     return false;
 
   if (!TRI->isCallerPreservedPhysReg(CopySrcReg, *MF))
     return false;
 
-  unsigned CopyDstReg = MI.getOperand(0).getReg();
+  Register CopyDstReg = MI.getOperand(0).getReg();
   // Check if any of the uses of the copy are invariant stores.
   assert(Register::isVirtualRegister(CopyDstReg) &&
          "copy dst is not a virtual reg");
@@ -1010,7 +1010,7 @@ bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I) {
     if (!MO.isReg())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
     // Don't hoist an instruction that uses or defines a physical register.
@@ -1061,7 +1061,7 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI) const {
     for (const MachineOperand &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Register::isVirtualRegister(Reg))
         continue;
       for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
@@ -1104,7 +1104,7 @@ bool MachineLICMBase::HasHighOperandLatency(MachineInstr &MI,
       const MachineOperand &MO = UseMI.getOperand(i);
       if (!MO.isReg() || !MO.isUse())
         continue;
-      unsigned MOReg = MO.getReg();
+      Register MOReg = MO.getReg();
       if (MOReg != Reg)
         continue;
 
@@ -1132,7 +1132,7 @@ bool MachineLICMBase::IsCheapInstruction(MachineInstr &MI) const {
     if (!DefMO.isReg() || !DefMO.isDef())
       continue;
     --NumDefs;
-    unsigned Reg = DefMO.getReg();
+    Register Reg = DefMO.getReg();
     if (Register::isPhysicalRegister(Reg))
       continue;
 
@@ -1225,7 +1225,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
     const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || MO.isImplicit())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
     if (MO.isDef() && HasHighOperandLatency(MI, i, Reg)) {
@@ -1304,7 +1304,7 @@ MachineInstr *MachineLICMBase::ExtractHoistableLoad(MachineInstr *MI) {
   MachineFunction &MF = *MI->getMF();
   const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI, MF);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
-  unsigned Reg = MRI->createVirtualRegister(RC);
+  Register Reg = MRI->createVirtualRegister(RC);
 
   SmallVector<MachineInstr *, 2> NewMIs;
   bool Success = TII->unfoldMemoryOperand(MF, *MI, Reg,
@@ -1390,8 +1390,8 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
     SmallVector<const TargetRegisterClass*, 2> OrigRCs;
     for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
       unsigned Idx = Defs[i];
-      unsigned Reg = MI->getOperand(Idx).getReg();
-      unsigned DupReg = Dup->getOperand(Idx).getReg();
+      Register Reg = MI->getOperand(Idx).getReg();
+      Register DupReg = Dup->getOperand(Idx).getReg();
       OrigRCs.push_back(MRI->getRegClass(DupReg));
 
       if (!MRI->constrainRegClass(DupReg, MRI->getRegClass(Reg))) {
@@ -1403,8 +1403,8 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
     }
 
     for (unsigned Idx : Defs) {
-      unsigned Reg = MI->getOperand(Idx).getReg();
-      unsigned DupReg = Dup->getOperand(Idx).getReg();
+      Register Reg = MI->getOperand(Idx).getReg();
+      Register DupReg = Dup->getOperand(Idx).getReg();
       MRI->replaceRegWith(Reg, DupReg);
       MRI->clearKillFlags(DupReg);
     }

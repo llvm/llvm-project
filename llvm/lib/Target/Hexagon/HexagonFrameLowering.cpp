@@ -303,7 +303,7 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
         if (MO.isFI())
           return true;
         if (MO.isReg()) {
-          unsigned R = MO.getReg();
+          Register R = MO.getReg();
           // Virtual registers will need scavenging, which then may require
           // a stack slot.
           if (Register::isVirtualRegister(R))
@@ -973,8 +973,8 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       // understand paired registers for cfi_offset.
       // Eg .cfi_offset r1:0, -64
 
-      unsigned HiReg = HRI.getSubReg(Reg, Hexagon::isub_hi);
-      unsigned LoReg = HRI.getSubReg(Reg, Hexagon::isub_lo);
+      Register HiReg = HRI.getSubReg(Reg, Hexagon::isub_hi);
+      Register LoReg = HRI.getSubReg(Reg, Hexagon::isub_lo);
       unsigned HiDwarfReg = HRI.getDwarfRegNum(HiReg, true);
       unsigned LoDwarfReg = HRI.getDwarfRegNum(LoReg, true);
       auto OffHi = MCCFIInstruction::createOffset(FrameLabel, HiDwarfReg,
@@ -1570,13 +1570,13 @@ bool HexagonFrameLowering::expandCopy(MachineBasicBlock &B,
       const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
   MachineInstr *MI = &*It;
   DebugLoc DL = MI->getDebugLoc();
-  unsigned DstR = MI->getOperand(0).getReg();
-  unsigned SrcR = MI->getOperand(1).getReg();
+  Register DstR = MI->getOperand(0).getReg();
+  Register SrcR = MI->getOperand(1).getReg();
   if (!Hexagon::ModRegsRegClass.contains(DstR) ||
       !Hexagon::ModRegsRegClass.contains(SrcR))
     return false;
 
-  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR).add(MI->getOperand(1));
   BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), DstR)
     .addReg(TmpR, RegState::Kill);
@@ -1595,13 +1595,13 @@ bool HexagonFrameLowering::expandStoreInt(MachineBasicBlock &B,
 
   DebugLoc DL = MI->getDebugLoc();
   unsigned Opc = MI->getOpcode();
-  unsigned SrcR = MI->getOperand(2).getReg();
+  Register SrcR = MI->getOperand(2).getReg();
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
   // TmpR = C2_tfrpr SrcR   if SrcR is a predicate register
   // TmpR = A2_tfrcrr SrcR  if SrcR is a modifier register
-  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   unsigned TfrOpc = (Opc == Hexagon::STriw_pred) ? Hexagon::C2_tfrpr
                                                  : Hexagon::A2_tfrcrr;
   BuildMI(B, It, DL, HII.get(TfrOpc), TmpR)
@@ -1628,11 +1628,11 @@ bool HexagonFrameLowering::expandLoadInt(MachineBasicBlock &B,
 
   DebugLoc DL = MI->getDebugLoc();
   unsigned Opc = MI->getOpcode();
-  unsigned DstR = MI->getOperand(0).getReg();
+  Register DstR = MI->getOperand(0).getReg();
   int FI = MI->getOperand(1).getIndex();
 
   // TmpR = L2_loadri_io FI, 0
-  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   BuildMI(B, It, DL, HII.get(Hexagon::L2_loadri_io), TmpR)
       .addFrameIndex(FI)
       .addImm(0)
@@ -1658,7 +1658,7 @@ bool HexagonFrameLowering::expandStoreVecPred(MachineBasicBlock &B,
     return false;
 
   DebugLoc DL = MI->getDebugLoc();
-  unsigned SrcR = MI->getOperand(2).getReg();
+  Register SrcR = MI->getOperand(2).getReg();
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
   auto *RC = &Hexagon::HvxVRRegClass;
@@ -1667,8 +1667,8 @@ bool HexagonFrameLowering::expandStoreVecPred(MachineBasicBlock &B,
   //   TmpR0 = A2_tfrsi 0x01010101
   //   TmpR1 = V6_vandqrt Qx, TmpR0
   //   store FI, 0, TmpR1
-  unsigned TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-  unsigned TmpR1 = MRI.createVirtualRegister(RC);
+  Register TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register TmpR1 = MRI.createVirtualRegister(RC);
 
   BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrsi), TmpR0)
     .addImm(0x01010101);
@@ -1695,15 +1695,15 @@ bool HexagonFrameLowering::expandLoadVecPred(MachineBasicBlock &B,
     return false;
 
   DebugLoc DL = MI->getDebugLoc();
-  unsigned DstR = MI->getOperand(0).getReg();
+  Register DstR = MI->getOperand(0).getReg();
   int FI = MI->getOperand(1).getIndex();
   auto *RC = &Hexagon::HvxVRRegClass;
 
   // TmpR0 = A2_tfrsi 0x01010101
   // TmpR1 = load FI, 0
   // DstR = V6_vandvrt TmpR1, TmpR0
-  unsigned TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-  unsigned TmpR1 = MRI.createVirtualRegister(RC);
+  Register TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register TmpR1 = MRI.createVirtualRegister(RC);
 
   BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrsi), TmpR0)
     .addImm(0x01010101);
@@ -1745,9 +1745,9 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   }
 
   DebugLoc DL = MI->getDebugLoc();
-  unsigned SrcR = MI->getOperand(2).getReg();
-  unsigned SrcLo = HRI.getSubReg(SrcR, Hexagon::vsub_lo);
-  unsigned SrcHi = HRI.getSubReg(SrcR, Hexagon::vsub_hi);
+  Register SrcR = MI->getOperand(2).getReg();
+  Register SrcLo = HRI.getSubReg(SrcR, Hexagon::vsub_lo);
+  Register SrcHi = HRI.getSubReg(SrcR, Hexagon::vsub_hi);
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
@@ -1793,9 +1793,9 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
     return false;
 
   DebugLoc DL = MI->getDebugLoc();
-  unsigned DstR = MI->getOperand(0).getReg();
-  unsigned DstHi = HRI.getSubReg(DstR, Hexagon::vsub_hi);
-  unsigned DstLo = HRI.getSubReg(DstR, Hexagon::vsub_lo);
+  Register DstR = MI->getOperand(0).getReg();
+  Register DstHi = HRI.getSubReg(DstR, Hexagon::vsub_hi);
+  Register DstLo = HRI.getSubReg(DstR, Hexagon::vsub_lo);
   int FI = MI->getOperand(1).getIndex();
 
   unsigned Size = HRI.getSpillSize(Hexagon::HvxVRRegClass);
@@ -1834,7 +1834,7 @@ bool HexagonFrameLowering::expandStoreVec(MachineBasicBlock &B,
 
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   DebugLoc DL = MI->getDebugLoc();
-  unsigned SrcR = MI->getOperand(2).getReg();
+  Register SrcR = MI->getOperand(2).getReg();
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
@@ -1863,7 +1863,7 @@ bool HexagonFrameLowering::expandLoadVec(MachineBasicBlock &B,
 
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   DebugLoc DL = MI->getDebugLoc();
-  unsigned DstR = MI->getOperand(0).getReg();
+  Register DstR = MI->getOperand(0).getReg();
   int FI = MI->getOperand(1).getIndex();
 
   unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
@@ -2299,7 +2299,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           int TFI;
           if (!HII.isLoadFromStackSlot(MI, TFI) || TFI != FI)
             continue;
-          unsigned DstR = MI.getOperand(0).getReg();
+          Register DstR = MI.getOperand(0).getReg();
           assert(MI.getOperand(0).getSubReg() == 0);
           MachineInstr *CopyOut = nullptr;
           if (DstR != FoundR) {

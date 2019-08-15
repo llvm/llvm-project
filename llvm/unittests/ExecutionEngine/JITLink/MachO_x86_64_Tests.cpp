@@ -39,7 +39,7 @@ public:
       return;
     }
 
-    auto JTCtx = llvm::make_unique<TestJITLinkContext>(
+    auto JTCtx = std::make_unique<TestJITLinkContext>(
         **TR, [&](AtomGraph &G) { RunGraphTest(G, (*TR)->getDisassembler()); });
 
     JTCtx->externals() = std::move(Externals);

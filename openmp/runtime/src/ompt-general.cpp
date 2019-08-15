@@ -430,10 +430,8 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_callback(ompt_callbacks_t which,
 
 #define ompt_event_macro(event_name, callback_type, event_id)                  \
   case event_name:                                                             \
-    if (ompt_event_implementation_status(event_name)) {                        \
-      ompt_callbacks.ompt_callback(event_name) = (callback_type)callback;      \
-      ompt_enabled.event_name = (callback != 0);                               \
-    }                                                                          \
+    ompt_callbacks.ompt_callback(event_name) = (callback_type)callback;        \
+    ompt_enabled.event_name = (callback != 0);                                 \
     if (callback)                                                              \
       return ompt_event_implementation_status(event_name);                     \
     else                                                                       \
@@ -456,16 +454,15 @@ OMPT_API_ROUTINE int ompt_get_callback(ompt_callbacks_t which,
   switch (which) {
 
 #define ompt_event_macro(event_name, callback_type, event_id)                  \
-  case event_name:                                                             \
-    if (ompt_event_implementation_status(event_name)) {                        \
-      ompt_callback_t mycb =                                                   \
-          (ompt_callback_t)ompt_callbacks.ompt_callback(event_name);           \
-      if (ompt_enabled.event_name && mycb) {                                   \
-        *callback = mycb;                                                      \
-        return ompt_get_callback_success;                                      \
-      }                                                                        \
+  case event_name: {                                                           \
+    ompt_callback_t mycb =                                                     \
+        (ompt_callback_t)ompt_callbacks.ompt_callback(event_name);             \
+    if (ompt_enabled.event_name && mycb) {                                     \
+      *callback = mycb;                                                        \
+      return ompt_get_callback_success;                                        \
     }                                                                          \
-    return ompt_get_callback_failure;
+    return ompt_get_callback_failure;                                          \
+  }
 
     FOREACH_OMPT_EVENT(ompt_event_macro)
 
