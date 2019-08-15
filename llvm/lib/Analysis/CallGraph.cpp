@@ -179,7 +179,7 @@ CallGraphNode *CallGraph::getOrInsertNodeForCalleesMD(MDNode *Callees) {
   auto &CGN = DummyNodeMap[Callees];
   if (CGN)
     return CGN.get();
-  CGN = llvm::make_unique<CallGraphNode>(nullptr);
+  CGN = std::make_unique<CallGraphNode>(nullptr);
   for (const MDOperand &Op : Callees->operands())
     if (auto *MDConstant = mdconst::extract_or_null<Constant>(Op)) {
       auto *F = cast<Function>(MDConstant);
