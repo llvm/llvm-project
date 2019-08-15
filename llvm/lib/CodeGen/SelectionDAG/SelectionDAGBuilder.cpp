@@ -6811,6 +6811,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // MachineFunction in SelectionDAGISel::PrepareEHLandingPad. We can safely
     // delete it now.
     return;
+
+  case Intrinsic::ptrmask: {
+    SDValue Ptr = getValue(I.getOperand(0));
+    SDValue Const = getValue(I.getOperand(1));
+
+    EVT DestVT =
+        EVT(DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
+
+    setValue(&I, DAG.getNode(ISD::AND, getCurSDLoc(), DestVT, Ptr,
+                             DAG.getZExtOrTrunc(Const, getCurSDLoc(), DestVT)));
+    return;
+  }
   }
 }
 
