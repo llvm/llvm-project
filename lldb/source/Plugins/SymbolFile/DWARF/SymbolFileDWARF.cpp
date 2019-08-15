@@ -178,11 +178,10 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
-static FileSpecList
-ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
-                              const llvm::DWARFDebugLine::Prologue &prologue,
-                              llvm::StringRef compile_dir = {},
-                              FileSpec first_file = {}) {
+static FileSpecList ParseSupportFilesFromPrologue(
+    const lldb::ModuleSP &module,
+    const llvm::DWARFDebugLine::Prologue &prologue, FileSpec::Style style,
+    llvm::StringRef compile_dir = {}, FileSpec first_file = {}) {
   FileSpecList support_files;
   support_files.Append(first_file);
 
@@ -193,8 +192,8 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
     std::string original_file;
     if (!prologue.getFileNameByIndex(
             idx, compile_dir,
-            llvm::DILineInfoSpecifier::FileLineInfoKind::Default,
-            original_file)) {
+            llvm::DILineInfoSpecifier::FileLineInfoKind::Default, original_file,
+            style)) {
       // Always add an entry so the indexes remain correct.
       support_files.EmplaceBack();
       continue;
@@ -212,7 +211,7 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
     if (!prologue.getFileNameByIndex(
             idx, compile_dir,
             llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            remapped_file)) {
+            remapped_file, style)) {
       // Always add an entry so the indexes remain correct.
       support_files.EmplaceBack(original_file, style);
       continue;
@@ -899,8 +898,8 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
                      "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
                      "the line table prologue");
     } else {
-      list =
-          ParseSupportFilesFromPrologue(GetObjectFile()->GetModule(), prologue);
+      list = ParseSupportFilesFromPrologue(GetObjectFile()->GetModule(),
+                                           prologue, tu.GetPathStyle());
     }
   }
   return list;
@@ -1019,7 +1018,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   }
 
   comp_unit.SetSupportFiles(ParseSupportFilesFromPrologue(
-      comp_unit.GetModule(), line_table->Prologue,
+      comp_unit.GetModule(), line_table->Prologue, dwarf_cu->GetPathStyle(),
       dwarf_cu->GetCompilationDirectory().GetCString(), FileSpec(comp_unit)));
 
   return true;
