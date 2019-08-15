@@ -72,7 +72,7 @@ FileSpec::FileSpec(llvm::StringRef path, Style style) : m_style(style) {
   SetFile(path, style);
 }
 
-FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &Triple)
+FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &triple)
     : FileSpec{path, Triple.isOSWindows() ? Style::windows : Style::posix} {}
 
 // Copy constructor

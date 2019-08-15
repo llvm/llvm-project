@@ -76,7 +76,7 @@ class SymbolizerTool {
 // SymbolizerProcess may not be used from two threads simultaneously.
 class SymbolizerProcess {
  public:
-  explicit SymbolizerProcess(const char *path, bool use_forkpty = false);
+  explicit SymbolizerProcess(const char *path, bool use_posix_spawn = false);
   const char *SendCommand(const char *command);
 
  protected:
@@ -114,7 +114,7 @@ class SymbolizerProcess {
   uptr times_restarted_;
   bool failed_to_start_;
   bool reported_invalid_path_;
-  bool use_forkpty_;
+  bool use_posix_spawn_;
 };
 
 class LLVMSymbolizerProcess;
