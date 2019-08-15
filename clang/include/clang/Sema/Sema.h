@@ -1628,7 +1628,7 @@ public:
 
     template <std::size_t... Is>
     void emit(const SemaDiagnosticBuilder &DB,
-              llvm::index_sequence<Is...>) const {
+              std::index_sequence<Is...>) const {
       // Apply all tuple elements to the builder in order.
       bool Dummy[] = {false, (DB << getPrintable(std::get<Is>(Args)))...};
       (void)Dummy;
@@ -1642,7 +1642,7 @@ public:
 
     void diagnose(Sema &S, SourceLocation Loc, QualType T) override {
       const SemaDiagnosticBuilder &DB = S.Diag(Loc, DiagID);
-      emit(DB, llvm::index_sequence_for<Ts...>());
+      emit(DB, std::index_sequence_for<Ts...>());
       DB << T;
     }
   };
