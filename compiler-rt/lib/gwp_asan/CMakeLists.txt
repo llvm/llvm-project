@@ -100,19 +100,23 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       CFLAGS ${GWP_ASAN_CFLAGS} ${SANITIZER_COMMON_CFLAGS})
 
   # Build the stack trace compressor fuzzer.
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_executable(stack_trace_compressor_fuzzer
-      stack_trace_compressor_fuzzer.cpp
-      ${GWP_ASAN_SOURCES}
-      ${GWP_ASAN_HEADERS})
-    set_target_properties(stack_trace_compressor_fuzzer
-      PROPERTIES FOLDER "Fuzzers")
-    target_compile_options(stack_trace_compressor_fuzzer
-      PRIVATE -fsanitize=fuzzer-no-link)
-    set_target_properties(
-      stack_trace_compressor_fuzzer PROPERTIES LINK_FLAGS -fsanitize=fuzzer)
-    add_dependencies(gwp_asan stack_trace_compressor_fuzzer)
-  endif()
+  # Currently commented out in order to give me some time to figure out what the
+  # issue is. Rolling back would require rolling back 5 CL's, so this should be
+  # okay until I can get to a real computer and actually fix it tomorrow.
+  # - hctim
+  #if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  #  add_executable(stack_trace_compressor_fuzzer
+  #    stack_trace_compressor_fuzzer.cpp
+  #    ${GWP_ASAN_SOURCES}
+  #    ${GWP_ASAN_HEADERS})
+  #  set_target_properties(stack_trace_compressor_fuzzer
+  #    PROPERTIES FOLDER "Fuzzers")
+  #  target_compile_options(stack_trace_compressor_fuzzer
+  #    PRIVATE -fsanitize=fuzzer-no-link)
+  #  set_target_properties(
+  #    stack_trace_compressor_fuzzer PROPERTIES LINK_FLAGS -fsanitize=fuzzer)
+  #  add_dependencies(gwp_asan stack_trace_compressor_fuzzer)
+  #endif()
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
