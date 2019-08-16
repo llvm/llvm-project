@@ -6794,12 +6794,8 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (BaseType->isObjCObjectOrInterfaceType()) {
+  if (!BaseType->isRecordType()) {
     ObjectType = ParsedType::make(BaseType);
-    MayBePseudoDestructor = true;
-    return Base;
-  } else if (!BaseType->isRecordType()) {
-    ObjectType = nullptr;
     MayBePseudoDestructor = true;
     return Base;
   }

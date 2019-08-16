@@ -34,7 +34,7 @@ void f(A* a, Foo *f, int *i, double *d, int ii) {
   g().~Bar(); // expected-error{{non-scalar}}
   
   f->::~Bar();
-  f->N::~Wibble(); // FIXME: technically, Wibble isn't a class-name
+  f->N::~Wibble(); // expected-error{{'N' does not refer to a type}} expected-error{{'Wibble' does not refer to a type}}
   
   f->::~Bar(17, 42); // expected-error{{cannot have any arguments}}
 
@@ -79,7 +79,7 @@ namespace PR11339 {
   template<class T>
   void destroy(T* p) {
     p->~T(); // ok
-    p->~oops(); // expected-error{{expected the class name after '~' to name a destructor}}
+    p->~oops(); // expected-error{{identifier 'oops' in object destruction expression does not name a type}}
   }
 
   template void destroy(int*); // expected-note{{in instantiation of function template specialization}}
