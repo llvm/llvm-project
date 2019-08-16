@@ -265,6 +265,8 @@ public:
 
   lldb::Format GetFormat() const;
 
+  uint64_t GetAlignedBitSize() const;
+
   llvm::Optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
 
   uint32_t GetNumChildren(bool omit_empty_base_classes,
