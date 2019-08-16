@@ -120,7 +120,7 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
     return false;
   // If this is a load instruction where the result has been coalesced with an operand, then we cannot clause it.
   for (const MachineOperand &ResMO : MI.defs()) {
-    unsigned ResReg = ResMO.getReg();
+    Register ResReg = ResMO.getReg();
     for (const MachineOperand &MO : MI.uses()) {
       if (!MO.isReg() || MO.isDef())
         continue;
@@ -216,7 +216,7 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
     if (!MO.isReg())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
 
     // If it is tied we will need to write same register as we read.
     if (MO.isTied())
@@ -265,7 +265,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
 

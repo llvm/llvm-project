@@ -672,8 +672,6 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return sym.getGotVA() + a - p;
-  case R_HEXAGON_GOT:
-    return sym.getGotVA() - in.gotPlt->getVA();
   case R_MIPS_GOTREL:
     return sym.getVA(a) - in.mipsGot->getGp(file);
   case R_MIPS_GOT_GP:

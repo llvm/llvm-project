@@ -477,7 +477,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     // Otherwise, just build the predicate state itself by zeroing a register
     // as we don't need any initial state.
     PS->InitialReg = MRI->createVirtualRegister(PS->RC);
-    unsigned PredStateSubReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+    Register PredStateSubReg = MRI->createVirtualRegister(&X86::GR32RegClass);
     auto ZeroI = BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::MOV32r0),
                          PredStateSubReg);
     ++NumInstsInserted;
@@ -750,7 +750,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
             int PredStateSizeInBytes = TRI->getRegSizeInBits(*PS->RC) / 8;
             auto CMovOp = X86::getCMovOpcode(PredStateSizeInBytes);
 
-            unsigned UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
+            Register UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
             // Note that we intentionally use an empty debug location so that
             // this picks up the preceding location.
             auto CMovI = BuildMI(CheckingMBB, InsertPt, DebugLoc(),
@@ -907,7 +907,7 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
                      MI.dump(); dbgs() << "\n");
           report_fatal_error("Unable to unfold load!");
         }
-        unsigned Reg = MRI->createVirtualRegister(UnfoldedRC);
+        Register Reg = MRI->createVirtualRegister(UnfoldedRC);
         SmallVector<MachineInstr *, 2> NewMIs;
         // If we were able to compute an unfolded reg class, any failure here
         // is just a programming error so just assert.
@@ -1102,7 +1102,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
       // synthetic target in the predecessor. We do this at the bottom of the
       // predecessor.
       auto InsertPt = Pred->getFirstTerminator();
-      unsigned TargetReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register TargetReg = MRI->createVirtualRegister(&X86::GR64RegClass);
       if (MF.getTarget().getCodeModel() == CodeModel::Small &&
           !Subtarget->isPositionIndependent()) {
         // Directly materialize it into an immediate.
@@ -1153,7 +1153,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
       LLVM_DEBUG(dbgs() << "  Inserting cmp: "; CheckI->dump(); dbgs() << "\n");
     } else {
       // Otherwise compute the address into a register first.
-      unsigned AddrReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register AddrReg = MRI->createVirtualRegister(&X86::GR64RegClass);
       auto AddrI =
           BuildMI(MBB, InsertPt, DebugLoc(), TII->get(X86::LEA64r), AddrReg)
               .addReg(/*Base*/ X86::RIP)
@@ -1175,7 +1175,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
     // Now cmov over the predicate if the comparison wasn't equal.
     int PredStateSizeInBytes = TRI->getRegSizeInBits(*PS->RC) / 8;
     auto CMovOp = X86::getCMovOpcode(PredStateSizeInBytes);
-    unsigned UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
+    Register UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
     auto CMovI =
         BuildMI(MBB, InsertPt, DebugLoc(), TII->get(CMovOp), UpdatedStateReg)
             .addReg(PS->InitialReg)
@@ -1878,7 +1878,7 @@ unsigned X86SpeculativeLoadHardeningPass::saveEFLAGS(
     DebugLoc Loc) {
   // FIXME: Hard coding this to a 32-bit register class seems weird, but matches
   // what instruction selection does.
-  unsigned Reg = MRI->createVirtualRegister(&X86::GR32RegClass);
+  Register Reg = MRI->createVirtualRegister(&X86::GR32RegClass);
   // We directly copy the FLAGS register and rely on later lowering to clean
   // this up into the appropriate setCC instructions.
   BuildMI(MBB, InsertPt, Loc, TII->get(X86::COPY), Reg).addReg(X86::EFLAGS);
@@ -1905,7 +1905,7 @@ void X86SpeculativeLoadHardeningPass::restoreEFLAGS(
 void X86SpeculativeLoadHardeningPass::mergePredStateIntoSP(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt, DebugLoc Loc,
     unsigned PredStateReg) {
-  unsigned TmpReg = MRI->createVirtualRegister(PS->RC);
+  Register TmpReg = MRI->createVirtualRegister(PS->RC);
   // FIXME: This hard codes a shift distance based on the number of bits needed
   // to stay canonical on 64-bit. We should compute this somehow and support
   // 32-bit as part of that.
@@ -1925,8 +1925,8 @@ void X86SpeculativeLoadHardeningPass::mergePredStateIntoSP(
 unsigned X86SpeculativeLoadHardeningPass::extractPredStateFromSP(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
     DebugLoc Loc) {
-  unsigned PredStateReg = MRI->createVirtualRegister(PS->RC);
-  unsigned TmpReg = MRI->createVirtualRegister(PS->RC);
+  Register PredStateReg = MRI->createVirtualRegister(PS->RC);
+  Register TmpReg = MRI->createVirtualRegister(PS->RC);
 
   // We know that the stack pointer will have any preserved predicate state in
   // its high bit. We just want to smear this across the other bits. Turns out,
@@ -2031,9 +2031,9 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
   }
 
   for (MachineOperand *Op : HardenOpRegs) {
-    unsigned OpReg = Op->getReg();
+    Register OpReg = Op->getReg();
     auto *OpRC = MRI->getRegClass(OpReg);
-    unsigned TmpReg = MRI->createVirtualRegister(OpRC);
+    Register TmpReg = MRI->createVirtualRegister(OpRC);
 
     // If this is a vector register, we'll need somewhat custom logic to handle
     // hardening it.
@@ -2045,7 +2045,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
       // Move our state into a vector register.
       // FIXME: We could skip this at the cost of longer encodings with AVX-512
       // but that doesn't seem likely worth it.
-      unsigned VStateReg = MRI->createVirtualRegister(&X86::VR128RegClass);
+      Register VStateReg = MRI->createVirtualRegister(&X86::VR128RegClass);
       auto MovI =
           BuildMI(MBB, InsertPt, Loc, TII->get(X86::VMOV64toPQIrr), VStateReg)
               .addReg(StateReg);
@@ -2054,7 +2054,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
       LLVM_DEBUG(dbgs() << "  Inserting mov: "; MovI->dump(); dbgs() << "\n");
 
       // Broadcast it across the vector register.
-      unsigned VBStateReg = MRI->createVirtualRegister(OpRC);
+      Register VBStateReg = MRI->createVirtualRegister(OpRC);
       auto BroadcastI = BuildMI(MBB, InsertPt, Loc,
                                 TII->get(Is128Bit ? X86::VPBROADCASTQrr
                                                   : X86::VPBROADCASTQYrr),
@@ -2084,7 +2084,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
         assert(Subtarget->hasVLX() && "AVX512VL-specific register classes!");
 
       // Broadcast our state into a vector register.
-      unsigned VStateReg = MRI->createVirtualRegister(OpRC);
+      Register VStateReg = MRI->createVirtualRegister(OpRC);
       unsigned BroadcastOp =
           Is128Bit ? X86::VPBROADCASTQrZ128r
                    : Is256Bit ? X86::VPBROADCASTQrZ256r : X86::VPBROADCASTQrZr;
@@ -2153,7 +2153,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
   // See if we can sink hardening the loaded value.
   auto SinkCheckToSingleUse =
       [&](MachineInstr &MI) -> Optional<MachineInstr *> {
-    unsigned DefReg = MI.getOperand(0).getReg();
+    Register DefReg = MI.getOperand(0).getReg();
 
     // We need to find a single use which we can sink the check. We can
     // primarily do this because many uses may already end up checked on their
@@ -2210,7 +2210,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
       // If this register isn't a virtual register we can't walk uses of sanely,
       // just bail. Also check that its register class is one of the ones we
       // can harden.
-      unsigned UseDefReg = UseMI.getOperand(0).getReg();
+      Register UseDefReg = UseMI.getOperand(0).getReg();
       if (!Register::isVirtualRegister(UseDefReg) ||
           !canHardenRegister(UseDefReg))
         return {};
@@ -2289,7 +2289,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
   if (Bytes != 8) {
     unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
     unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
-    unsigned NarrowStateReg = MRI->createVirtualRegister(RC);
+    Register NarrowStateReg = MRI->createVirtualRegister(RC);
     BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
         .addReg(StateReg, 0, SubRegImm);
     StateReg = NarrowStateReg;
@@ -2299,7 +2299,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
   if (isEFLAGSLive(MBB, InsertPt, *TRI))
     FlagsReg = saveEFLAGS(MBB, InsertPt, Loc);
 
-  unsigned NewReg = MRI->createVirtualRegister(RC);
+  Register NewReg = MRI->createVirtualRegister(RC);
   unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
   unsigned OrOpCode = OrOpCodes[Log2_32(Bytes)];
   auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOpCode), NewReg)
@@ -2329,13 +2329,13 @@ unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   DebugLoc Loc = MI.getDebugLoc();
 
   auto &DefOp = MI.getOperand(0);
-  unsigned OldDefReg = DefOp.getReg();
+  Register OldDefReg = DefOp.getReg();
   auto *DefRC = MRI->getRegClass(OldDefReg);
 
   // Because we want to completely replace the uses of this def'ed value with
   // the hardened value, create a dedicated new register that will only be used
   // to communicate the unhardened value to the hardening.
-  unsigned UnhardenedReg = MRI->createVirtualRegister(DefRC);
+  Register UnhardenedReg = MRI->createVirtualRegister(DefRC);
   DefOp.setReg(UnhardenedReg);
 
   // Now harden this register's value, getting a hardened reg that is safe to
@@ -2537,7 +2537,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
         .addReg(ExpectedRetAddrReg, RegState::Kill)
         .addSym(RetSymbol);
   } else {
-    unsigned ActualRetAddrReg = MRI->createVirtualRegister(AddrRC);
+    Register ActualRetAddrReg = MRI->createVirtualRegister(AddrRC);
     BuildMI(MBB, InsertPt, Loc, TII->get(X86::LEA64r), ActualRetAddrReg)
         .addReg(/*Base*/ X86::RIP)
         .addImm(/*Scale*/ 1)
@@ -2554,7 +2554,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
   int PredStateSizeInBytes = TRI->getRegSizeInBits(*PS->RC) / 8;
   auto CMovOp = X86::getCMovOpcode(PredStateSizeInBytes);
 
-  unsigned UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
+  Register UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
   auto CMovI = BuildMI(MBB, InsertPt, Loc, TII->get(CMovOp), UpdatedStateReg)
                    .addReg(NewStateReg, RegState::Kill)
                    .addReg(PS->PoisonReg)
@@ -2611,7 +2611,7 @@ void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
   // For all of these, the target register is the first operand of the
   // instruction.
   auto &TargetOp = MI.getOperand(0);
-  unsigned OldTargetReg = TargetOp.getReg();
+  Register OldTargetReg = TargetOp.getReg();
 
   // Try to lookup a hardened version of this register. We retain a reference
   // here as we want to update the map to track any newly computed hardened

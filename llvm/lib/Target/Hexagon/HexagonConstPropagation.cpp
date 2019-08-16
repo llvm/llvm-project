@@ -2813,7 +2813,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isReg() || !MO.isUse() || MO.isImplicit())
             continue;
-          unsigned R = MO.getReg();
+          Register R = MO.getReg();
           dbgs() << printReg(R, &TRI) << ": " << Inputs.get(R) << "\n";
         }
       }
@@ -2831,7 +2831,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (!Register::isVirtualRegister(R))
       continue;
     assert(!MO.getSubReg());
@@ -2871,7 +2871,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
       const MCInstrDesc *NewD = (Ps & P::Zero) ?
         &HII.get(Hexagon::PS_false) :
         &HII.get(Hexagon::PS_true);
-      unsigned NewR = MRI->createVirtualRegister(PredRC);
+      Register NewR = MRI->createVirtualRegister(PredRC);
       const MachineInstrBuilder &MIB = BuildMI(B, At, DL, *NewD, NewR);
       (void)MIB;
 #ifndef NDEBUG
@@ -2893,7 +2893,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
         NewRC = &Hexagon::IntRegsRegClass;
       else
         NewRC = &Hexagon::DoubleRegsRegClass;
-      unsigned NewR = MRI->createVirtualRegister(NewRC);
+      Register NewR = MRI->createVirtualRegister(NewRC);
       const MachineInstr *NewMI;
 
       if (W == 32) {
@@ -3009,7 +3009,7 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
       if (V < 0)
         V = -V;
       const TargetRegisterClass *RC = MRI->getRegClass(DefR.Reg);
-      unsigned NewR = MRI->createVirtualRegister(RC);
+      Register NewR = MRI->createVirtualRegister(RC);
       const MachineOperand &Src1 = MI.getOperand(1);
       NewMI = BuildMI(B, At, DL, D, NewR)
                 .addReg(Src1.getReg(), getRegState(Src1), Src1.getSubReg())

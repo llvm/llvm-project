@@ -203,17 +203,11 @@ int main(int argc, const char **argv) {
                                   tooling::ArgumentInsertPosition::END),
         ArgAdjuster);
 
-  llvm::SmallString<128> SourceRootDir;
-  // Check if the --source-root flag has a value
-  if (SourceRoot.empty())
-    // If it's empty the current path is used as the default
-    llvm::sys::fs::current_path(SourceRootDir);
-
   clang::doc::ClangDocContext CDCtx = {
       Exec->get()->getExecutionContext(),
       PublicOnly,
       OutDirectory,
-      SourceRootDir.str(),
+      SourceRoot,
       RepositoryUrl,
       {UserStylesheets.begin(), UserStylesheets.end()},
       {"index.js", "index_json.js"}};

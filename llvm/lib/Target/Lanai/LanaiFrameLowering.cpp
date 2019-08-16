@@ -72,8 +72,8 @@ void LanaiFrameLowering::replaceAdjDynAllocPseudo(MachineFunction &MF) const {
       MachineInstr &MI = *MBBI++;
       if (MI.getOpcode() == Lanai::ADJDYNALLOC) {
         DebugLoc DL = MI.getDebugLoc();
-        unsigned Dst = MI.getOperand(0).getReg();
-        unsigned Src = MI.getOperand(1).getReg();
+        Register Dst = MI.getOperand(0).getReg();
+        Register Src = MI.getOperand(1).getReg();
 
         BuildMI(*MBB, MI, DL, LII.get(Lanai::ADD_I_LO), Dst)
             .addReg(Src)

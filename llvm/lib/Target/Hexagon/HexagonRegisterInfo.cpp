@@ -217,7 +217,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
     auto &MRI = MF.getRegInfo();
-    unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
     const DebugLoc &DL = MI.getDebugLoc();
     BuildMI(MB, II, DL, HII.get(Hexagon::A2_addi), TmpR)
       .addReg(BP)
@@ -249,8 +249,8 @@ bool HexagonRegisterInfo::shouldCoalesce(MachineInstr *MI,
   if (!SmallSrc && !SmallDst)
     return true;
 
-  unsigned DstReg = MI->getOperand(0).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();
   auto HasCall = [&Indexes] (const LiveInterval::Segment &S) {
     for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();

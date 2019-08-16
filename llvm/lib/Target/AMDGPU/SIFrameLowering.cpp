@@ -202,15 +202,15 @@ void SIFrameLowering::emitFlatScratchInit(const GCNSubtarget &ST,
   DebugLoc DL;
   MachineBasicBlock::iterator I = MBB.begin();
 
-  unsigned FlatScratchInitReg
-    = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
+  Register FlatScratchInitReg =
+      MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.addLiveIn(FlatScratchInitReg);
   MBB.addLiveIn(FlatScratchInitReg);
 
-  unsigned FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
-  unsigned FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
+  Register FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
+  Register FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
 
   unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
 
@@ -424,8 +424,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       getReservedPrivateSegmentWaveByteOffsetReg(ST, TII, TRI, MFI, MF);
 
   // We need to insert initialization of the scratch resource descriptor.
-  unsigned PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
-    AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+  Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
+      AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
   if (ST.isAmdHsaOrMesa(F)) {
@@ -539,9 +539,9 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
   if (ST.isAmdPalOS()) {
     // The pointer to the GIT is formed from the offset passed in and either
     // the amdgpu-git-ptr-high function attribute or the top part of the PC
-    unsigned RsrcLo = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
-    unsigned RsrcHi = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
-    unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+    Register RsrcLo = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+    Register RsrcHi = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+    Register Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
@@ -601,14 +601,14 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
     assert(!ST.isAmdHsaOrMesa(Fn));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
-    unsigned Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
-    unsigned Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
+    Register Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
+    Register Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
 
     // Use relocations to get the pointer, and setup the other bits manually.
     uint64_t Rsrc23 = TII->getScratchRsrcWords23();
 
     if (MFI->hasImplicitBufferPtr()) {
-      unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+      Register Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
       if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
         const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
@@ -640,8 +640,8 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
         MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
       }
     } else {
-      unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
-      unsigned Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+      Register Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+      Register Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
 
       BuildMI(MBB, I, DL, SMovB32, Rsrc0)
         .addExternalSymbol("SCRATCH_RSRC_DWORD0")

@@ -270,7 +270,7 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   }
 
   // Is the result already member of a X/Y/Z/W class ?
-  unsigned DestReg = MI->getOperand(0).getReg();
+  Register DestReg = MI->getOperand(0).getReg();
   if (regBelongsToClass(DestReg, &R600::R600_TReg32_XRegClass) ||
       regBelongsToClass(DestReg, &R600::R600_AddrRegClass))
     return AluT_X;
@@ -357,7 +357,7 @@ void R600SchedStrategy::AssignSlot(MachineInstr* MI, unsigned Slot) {
   if (DstIndex == -1) {
     return;
   }
-  unsigned DestReg = MI->getOperand(DstIndex).getReg();
+  Register DestReg = MI->getOperand(DstIndex).getReg();
   // PressureRegister crashes if an operand is def and used in the same inst
   // and we try to constraint its regclass
   for (MachineInstr::mop_iterator It = MI->operands_begin(),

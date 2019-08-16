@@ -1728,7 +1728,7 @@ bool MipsFastISel::selectRet(const Instruction *I) {
       return false;
 
     unsigned SrcReg = Reg + VA.getValNo();
-    unsigned DestReg = VA.getLocReg();
+    Register DestReg = VA.getLocReg();
     // Avoid a cross-class copy. This is very unlikely.
     if (!MRI.getRegClass(SrcReg)->contains(DestReg))
       return false;

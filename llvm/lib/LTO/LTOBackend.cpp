@@ -28,6 +28,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -165,7 +166,10 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                         PGOOptions::IRUse, PGOOptions::CSIRUse);
   }
 
-  PassBuilder PB(TM, PipelineTuningOptions(), PGOOpt);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI;
+  SI.registerCallbacks(PIC);
+  PassBuilder PB(TM, PipelineTuningOptions(),PGOOpt, &PIC);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.

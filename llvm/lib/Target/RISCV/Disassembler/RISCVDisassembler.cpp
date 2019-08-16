@@ -13,6 +13,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "Utils/RISCVBaseInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
@@ -56,7 +57,7 @@ extern "C" void LLVMInitializeRISCVDisassembler() {
                                          createRISCVDisassembler);
 }
 
-static const unsigned GPRDecoderTable[] = {
+static const Register GPRDecoderTable[] = {
   RISCV::X0,  RISCV::X1,  RISCV::X2,  RISCV::X3,
   RISCV::X4,  RISCV::X5,  RISCV::X6,  RISCV::X7,
   RISCV::X8,  RISCV::X9,  RISCV::X10, RISCV::X11,
@@ -82,12 +83,12 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   // We must define our own mapping from RegNo to register identifier.
   // Accessing index RegNo in the register class will work in the case that
   // registers were added in ascending order, but not in general.
-  unsigned Reg = GPRDecoderTable[RegNo];
+  Register Reg = GPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static const unsigned FPR32DecoderTable[] = {
+static const Register FPR32DecoderTable[] = {
   RISCV::F0_32,  RISCV::F1_32,  RISCV::F2_32,  RISCV::F3_32,
   RISCV::F4_32,  RISCV::F5_32,  RISCV::F6_32,  RISCV::F7_32,
   RISCV::F8_32,  RISCV::F9_32,  RISCV::F10_32, RISCV::F11_32,
@@ -107,7 +108,7 @@ static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
   // We must define our own mapping from RegNo to register identifier.
   // Accessing index RegNo in the register class will work in the case that
   // registers were added in ascending order, but not in general.
-  unsigned Reg = FPR32DecoderTable[RegNo];
+  Register Reg = FPR32DecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -118,12 +119,12 @@ static DecodeStatus DecodeFPR32CRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 8) {
     return MCDisassembler::Fail;
   }
-  unsigned Reg = FPR32DecoderTable[RegNo + 8];
+  Register Reg = FPR32DecoderTable[RegNo + 8];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static const unsigned FPR64DecoderTable[] = {
+static const Register FPR64DecoderTable[] = {
   RISCV::F0_64,  RISCV::F1_64,  RISCV::F2_64,  RISCV::F3_64,
   RISCV::F4_64,  RISCV::F5_64,  RISCV::F6_64,  RISCV::F7_64,
   RISCV::F8_64,  RISCV::F9_64,  RISCV::F10_64, RISCV::F11_64,
@@ -143,7 +144,7 @@ static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   // We must define our own mapping from RegNo to register identifier.
   // Accessing index RegNo in the register class will work in the case that
   // registers were added in ascending order, but not in general.
-  unsigned Reg = FPR64DecoderTable[RegNo];
+  Register Reg = FPR64DecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -154,7 +155,7 @@ static DecodeStatus DecodeFPR64CRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 8) {
     return MCDisassembler::Fail;
   }
-  unsigned Reg = FPR64DecoderTable[RegNo + 8];
+  Register Reg = FPR64DecoderTable[RegNo + 8];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -185,7 +186,7 @@ static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 8)
     return MCDisassembler::Fail;
 
-  unsigned Reg = GPRDecoderTable[RegNo + 8];
+  Register Reg = GPRDecoderTable[RegNo + 8];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }

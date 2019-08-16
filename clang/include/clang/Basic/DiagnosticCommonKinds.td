@@ -300,7 +300,7 @@ def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
 
 // Static Analyzer Core
-def err_unknown_analyzer_checker : Error<
+def err_unknown_analyzer_checker_or_package : Error<
     "no analyzer checkers or packages are associated with '%0'">;
 def note_suggest_disabling_all_checkers : Note<
     "use -analyzer-disable-all-checks to disable all static analyzer checkers">;

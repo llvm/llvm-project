@@ -172,9 +172,9 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
   const MachineOperand &WB = isLoad ? MI.getOperand(1) : MI.getOperand(0);
   const MachineOperand &Base = MI.getOperand(2);
   const MachineOperand &Offset = MI.getOperand(NumOps - 3);
-  unsigned WBReg = WB.getReg();
-  unsigned BaseReg = Base.getReg();
-  unsigned OffReg = Offset.getReg();
+  Register WBReg = WB.getReg();
+  Register BaseReg = Base.getReg();
+  Register OffReg = Offset.getReg();
   unsigned OffImm = MI.getOperand(NumOps - 2).getImm();
   ARMCC::CondCodes Pred = (ARMCC::CondCodes)MI.getOperand(NumOps - 1).getImm();
   switch (AddrMode) {
@@ -277,7 +277,7 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
 
         LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
         if (MO.isDef()) {
@@ -966,8 +966,8 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   SmallSet<unsigned, 4> DstRegs;
 #endif
   for (unsigned i = 0; i != SubRegs; ++i) {
-    unsigned Dst = TRI->getSubReg(DestReg, BeginIdx + i * Spacing);
-    unsigned Src = TRI->getSubReg(SrcReg, BeginIdx + i * Spacing);
+    Register Dst = TRI->getSubReg(DestReg, BeginIdx + i * Spacing);
+    Register Src = TRI->getSubReg(SrcReg, BeginIdx + i * Spacing);
     assert(Dst && Src && "Bad sub-register");
 #ifndef NDEBUG
     assert(!DstRegs.count(Src) && "destructive vector copy");
@@ -1583,8 +1583,8 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   // Look for a copy between even S-registers.  That is where we keep floats
   // when using NEON v2f32 instructions for f32 arithmetic.
-  unsigned DstRegS = MI.getOperand(0).getReg();
-  unsigned SrcRegS = MI.getOperand(1).getReg();
+  Register DstRegS = MI.getOperand(0).getReg();
+  Register SrcRegS = MI.getOperand(1).getReg();
   if (!ARM::SPRRegClass.contains(DstRegS, SrcRegS))
     return false;
 
@@ -1794,8 +1794,8 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     if (MI0.getNumOperands() != MI1.getNumOperands())
       return false;
 
-    unsigned Addr0 = MI0.getOperand(1).getReg();
-    unsigned Addr1 = MI1.getOperand(1).getReg();
+    Register Addr0 = MI0.getOperand(1).getReg();
+    Register Addr1 = MI1.getOperand(1).getReg();
     if (Addr0 != Addr1) {
       if (!MRI || !Register::isVirtualRegister(Addr0) ||
           !Register::isVirtualRegister(Addr1))
@@ -2210,7 +2210,7 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
 
   // Find new register class to use.
   MachineOperand FalseReg = MI.getOperand(Invert ? 2 : 1);
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
     return nullptr;
@@ -3271,9 +3271,9 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   }
 
   unsigned OpIdx = Commute ? 2 : 1;
-  unsigned Reg1 = UseMI.getOperand(OpIdx).getReg();
+  Register Reg1 = UseMI.getOperand(OpIdx).getReg();
   bool isKill = UseMI.getOperand(OpIdx).isKill();
-  unsigned NewReg = MRI->createVirtualRegister(MRI->getRegClass(Reg));
+  Register NewReg = MRI->createVirtualRegister(MRI->getRegClass(Reg));
   BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(), get(NewUseOpc),
           NewReg)
       .addReg(Reg1, getKillRegState(isKill))
@@ -3335,15 +3335,15 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
 
   case ARM::LDRSB_POST:
   case ARM::LDRSH_POST: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     return (Rt == Rm) ? 4 : 3;
   }
 
   case ARM::LDR_PRE_REG:
   case ARM::LDRB_PRE_REG: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     if (Rt == Rm)
       return 3;
     unsigned ShOpVal = MI.getOperand(4).getImm();
@@ -3372,8 +3372,8 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
 
   case ARM::LDRH_PRE:
   case ARM::STRH_PRE: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     if (!Rm)
       return 2;
     if (Rt == Rm)
@@ -3384,8 +3384,8 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
   case ARM::LDR_POST_REG:
   case ARM::LDRB_POST_REG:
   case ARM::LDRH_POST: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     return (Rt == Rm) ? 3 : 2;
   }
 
@@ -3404,10 +3404,10 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
 
   case ARM::LDRSB_PRE:
   case ARM::LDRSH_PRE: {
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     if (Rm == 0)
       return 3;
-    unsigned Rt = MI.getOperand(0).getReg();
+    Register Rt = MI.getOperand(0).getReg();
     if (Rt == Rm)
       return 4;
     unsigned ShOpVal = MI.getOperand(4).getImm();
@@ -3422,9 +3422,9 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
   }
 
   case ARM::LDRD: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rn = MI.getOperand(2).getReg();
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rn = MI.getOperand(2).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     if (Rm)
       return (ARM_AM::getAM3Op(MI.getOperand(4).getImm()) == ARM_AM::sub) ? 4
                                                                           : 3;
@@ -3432,7 +3432,7 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
   }
 
   case ARM::STRD: {
-    unsigned Rm = MI.getOperand(3).getReg();
+    Register Rm = MI.getOperand(3).getReg();
     if (Rm)
       return (ARM_AM::getAM3Op(MI.getOperand(4).getImm()) == ARM_AM::sub) ? 4
                                                                           : 3;
@@ -3448,9 +3448,9 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
     return 4;
 
   case ARM::LDRD_PRE: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rn = MI.getOperand(3).getReg();
-    unsigned Rm = MI.getOperand(4).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rn = MI.getOperand(3).getReg();
+    Register Rm = MI.getOperand(4).getReg();
     if (Rm)
       return (ARM_AM::getAM3Op(MI.getOperand(5).getImm()) == ARM_AM::sub) ? 5
                                                                           : 4;
@@ -3458,13 +3458,13 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
   }
 
   case ARM::t2LDRD_PRE: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rn = MI.getOperand(3).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rn = MI.getOperand(3).getReg();
     return (Rt == Rn) ? 4 : 3;
   }
 
   case ARM::STRD_PRE: {
-    unsigned Rm = MI.getOperand(4).getReg();
+    Register Rm = MI.getOperand(4).getReg();
     if (Rm)
       return (ARM_AM::getAM3Op(MI.getOperand(5).getImm()) == ARM_AM::sub) ? 5
                                                                           : 4;
@@ -3495,8 +3495,8 @@ static unsigned getNumMicroOpsSwiftLdSt(const InstrItineraryData *ItinData,
     return 2;
 
   case ARM::t2LDRDi8: {
-    unsigned Rt = MI.getOperand(0).getReg();
-    unsigned Rn = MI.getOperand(2).getReg();
+    Register Rt = MI.getOperand(0).getReg();
+    Register Rn = MI.getOperand(2).getReg();
     return (Rt == Rn) ? 3 : 2;
   }
 
@@ -3745,7 +3745,7 @@ ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
 }
 
 bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
-  unsigned BaseReg = MI.getOperand(0).getReg();
+  Register BaseReg = MI.getOperand(0).getReg();
   for (unsigned i = 1, sz = MI.getNumOperands(); i < sz; ++i) {
     const auto &Op = MI.getOperand(i);
     if (Op.isReg() && Op.getReg() == BaseReg)
@@ -4219,7 +4219,7 @@ int ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     return -1;
 
   const MachineOperand &DefMO = DefMI.getOperand(DefIdx);
-  unsigned Reg = DefMO.getReg();
+  Register Reg = DefMO.getReg();
 
   const MachineInstr *ResolvedDefMI = &DefMI;
   unsigned DefAdj = 0;
@@ -4708,7 +4708,7 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (MI.getOperand(i).isImplicit() ||
           !MI.getOperand(i).isReg())
         continue;
-      unsigned Reg = MI.getOperand(i).getReg();
+      Register Reg = MI.getOperand(i).getReg();
       if (Reg < ARM::R0 || Reg > ARM::R7) {
         if (!(MI.getOpcode() == ARM::tPUSH && Reg == ARM::LR) &&
             !(MI.getOpcode() == ARM::tPOP_RET && Reg == ARM::PC)) {
@@ -4731,7 +4731,7 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
 
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
-  unsigned Reg = MI->getOperand(0).getReg();
+  Register Reg = MI->getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
   MachineInstrBuilder MIB;
@@ -5104,7 +5104,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
   const MachineOperand &MO = MI.getOperand(OpNum);
   if (MO.readsReg())
     return 0;
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   int UseOp = -1;
 
   switch (MI.getOpcode()) {
@@ -5159,7 +5159,7 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
   assert(TRI && "Need TRI instance");
 
   const MachineOperand &MO = MI.getOperand(OpNum);
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   assert(Register::isPhysicalRegister(Reg) &&
          "Can't break virtual register dependencies.");
   unsigned DReg = Reg;
@@ -5337,7 +5337,7 @@ MachineInstr *llvm::findCMPToFoldIntoCBZ(MachineInstr *Br,
   // is not redefined between the cmp and the br.
   if (CmpMI->getOpcode() != ARM::tCMPi8 && CmpMI->getOpcode() != ARM::t2CMPri)
     return nullptr;
-  unsigned Reg = CmpMI->getOperand(0).getReg();
+  Register Reg = CmpMI->getOperand(0).getReg();
   unsigned PredReg = 0;
   ARMCC::CondCodes Pred = getInstrPredicate(*CmpMI, PredReg);
   if (Pred != ARMCC::AL || CmpMI->getOperand(1).getImm() != 0)

@@ -211,7 +211,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
     return AMDGPU::NoRegister;
 
   MachineOperand *AndCC = &And->getOperand(1);
-  unsigned CmpReg = AndCC->getReg();
+  Register CmpReg = AndCC->getReg();
   unsigned CmpSubReg = AndCC->getSubReg();
   if (CmpReg == ExecReg) {
     AndCC = &And->getOperand(2);
@@ -234,7 +234,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   if (!Op1->isReg() || !Op2->isImm() || Op2->getImm() != 1)
     return AMDGPU::NoRegister;
 
-  unsigned SelReg = Op1->getReg();
+  Register SelReg = Op1->getReg();
   auto *Sel = TRI->findReachingDef(SelReg, Op1->getSubReg(), *Cmp, MRI, LIS);
   if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
     return AMDGPU::NoRegister;
@@ -253,7 +253,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t'
                     << *Cmp << '\t' << *And);
 
-  unsigned CCReg = CC->getReg();
+  Register CCReg = CC->getReg();
   LIS->RemoveMachineInstrFromMaps(*And);
   MachineInstr *Andn2 = BuildMI(MBB, *And, And->getDebugLoc(),
                                 TII->get(Andn2Opc), And->getOperand(0).getReg())
@@ -412,7 +412,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     if (!SaveExec || !SaveExec->isFullCopy())
       continue;
 
-    unsigned SavedExec = SaveExec->getOperand(0).getReg();
+    Register SavedExec = SaveExec->getOperand(0).getReg();
     bool SafeToReplace = true;
     for (auto& U : MRI.use_nodbg_instructions(SavedExec)) {
       if (U.getParent() != SaveExec->getParent()) {

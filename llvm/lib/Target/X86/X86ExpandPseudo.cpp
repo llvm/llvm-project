@@ -287,7 +287,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     assert(DestAddr.isReg() && "Offset should be in register!");
     const bool Uses64BitFramePtr =
         STI->isTarget64BitLP64() || STI->isTargetNaCl64();
-    unsigned StackPtr = TRI->getStackRegister();
+    Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
@@ -347,7 +347,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // actualcmpxchg Addr
     // [E|R]BX = SaveRbx
     const MachineOperand &InArg = MBBI->getOperand(6);
-    unsigned SaveRbx = MBBI->getOperand(7).getReg();
+    Register SaveRbx = MBBI->getOperand(7).getReg();
 
     unsigned ActualInArg =
         Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;

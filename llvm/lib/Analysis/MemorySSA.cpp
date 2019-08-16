@@ -1886,8 +1886,6 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
             }
             DTNode = DTNode->getIDom();
           }
-          assert((DTNode || IncAcc == getLiveOnEntryDef()) &&
-                 "Expected LoE inc");
         } else if (auto *DefList = getBlockDefs(Pred)) {
           // If Pred has unreachable predecessors, but has at least a Def, the
           // incoming access can be the last Def in Pred, or it could have been
@@ -1897,8 +1895,7 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
                  "Incorrect incoming access into phi.");
         } else {
           // If Pred has unreachable predecessors and no Defs, incoming access
-          // should be LoE.
-          assert(IncAcc == getLiveOnEntryDef() && "Expected LoE inc");
+          // should be LoE; In practice, after an update, it may be any access.
         }
       }
     }

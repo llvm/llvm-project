@@ -288,8 +288,8 @@ namespace {
 
     // Check if a COPY instruction is using FP registers.
     static bool isFPCopy(MachineInstr &MI) {
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
 
       return X86::RFP80RegClass.contains(DstReg) ||
         X86::RFP80RegClass.contains(SrcReg);
@@ -313,7 +313,7 @@ FunctionPass *llvm::createX86FloatingPointStackifierPass() { return new FPS(); }
 /// For example, this returns 3 for X86::FP3.
 static unsigned getFPReg(const MachineOperand &MO) {
   assert(MO.isReg() && "Expected an FP register!");
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   assert(Reg >= X86::FP0 && Reg <= X86::FP6 && "Expected FP register!");
   return Reg - X86::FP0;
 }

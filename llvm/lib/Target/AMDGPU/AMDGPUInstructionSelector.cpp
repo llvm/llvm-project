@@ -220,7 +220,7 @@ AMDGPUInstructionSelector::getSubOperand64(MachineOperand &MO,
 
   if (MO.isReg()) {
     unsigned ComposedSubIdx = TRI.composeSubRegIndices(MO.getSubReg(), SubIdx);
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
             .addReg(Reg, 0, ComposedSubIdx);
 
@@ -676,12 +676,12 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = I.getDebugLoc();
 
-  unsigned SrcReg = I.getOperand(2).getReg();
+  Register SrcReg = I.getOperand(2).getReg();
   unsigned Size = RBI.getSizeInBits(SrcReg, MRI, TRI);
 
   auto Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
 
-  unsigned CCReg = I.getOperand(0).getReg();
+  Register CCReg = I.getOperand(0).getReg();
   if (isSCC(CCReg, MRI)) {
     int Opcode = getS_CMPOpcode(Pred, Size);
     if (Opcode == -1)
@@ -758,9 +758,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     const DebugLoc &DL = I.getDebugLoc();
     int64_t Tgt = getConstant(MRI.getVRegDef(I.getOperand(1).getReg()));
     int64_t Enabled = getConstant(MRI.getVRegDef(I.getOperand(2).getReg()));
-    unsigned Reg0 = I.getOperand(3).getReg();
-    unsigned Reg1 = I.getOperand(4).getReg();
-    unsigned Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register Reg0 = I.getOperand(3).getReg();
+    Register Reg1 = I.getOperand(4).getReg();
+    Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     int64_t Done = getConstant(MRI.getVRegDef(I.getOperand(5).getReg()));
     int64_t VM = getConstant(MRI.getVRegDef(I.getOperand(6).getReg()));
 
@@ -796,11 +796,11 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = I.getDebugLoc();
 
-  unsigned DstReg = I.getOperand(0).getReg();
+  Register DstReg = I.getOperand(0).getReg();
   unsigned Size = RBI.getSizeInBits(DstReg, MRI, TRI);
   assert(Size <= 32 || Size == 64);
   const MachineOperand &CCOp = I.getOperand(1);
-  unsigned CCReg = CCOp.getReg();
+  Register CCReg = CCOp.getReg();
   if (isSCC(CCReg, MRI)) {
     unsigned SelectOpcode = Size == 64 ? AMDGPU::S_CSELECT_B64 :
                                          AMDGPU::S_CSELECT_B32;
@@ -870,8 +870,8 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  unsigned DstReg = I.getOperand(0).getReg();
-  unsigned SrcReg = I.getOperand(1).getReg();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
   const LLT DstTy = MRI.getType(DstReg);
   const LLT SrcTy = MRI.getType(SrcReg);
   if (!DstTy.isScalar())
@@ -927,8 +927,8 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const unsigned DstReg = I.getOperand(0).getReg();
-  const unsigned SrcReg = I.getOperand(1).getReg();
+  const Register DstReg = I.getOperand(0).getReg();
+  const Register SrcReg = I.getOperand(1).getReg();
 
   const LLT DstTy = MRI.getType(DstReg);
   const LLT SrcTy = MRI.getType(SrcReg);
@@ -951,7 +951,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
     // FIXME: Create an extra copy to avoid incorrectly constraining the result
     // of the scc producer.
-    unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register TmpReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(MBB, I, DL, TII.get(AMDGPU::COPY), TmpReg)
       .addReg(SrcReg);
     BuildMI(MBB, I, DL, TII.get(AMDGPU::COPY), AMDGPU::SCC)
@@ -1026,10 +1026,8 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
     // Scalar BFE is encoded as S1[5:0] = offset, S1[22:16]= width.
     if (DstSize > 32 && SrcSize <= 32) {
       // We need a 64-bit register source, but the high bits don't matter.
-      unsigned ExtReg
-        = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-      unsigned UndefReg
-        = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register ExtReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+      Register UndefReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
       BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
       BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), ExtReg)
         .addReg(SrcReg)
@@ -1077,7 +1075,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
     ImmOp.ChangeToImmediate(ImmOp.getCImm()->getZExtValue());
   }
 
-  unsigned DstReg = I.getOperand(0).getReg();
+  Register DstReg = I.getOperand(0).getReg();
   unsigned Size;
   bool IsSgpr;
   const RegisterBank *RB = MRI.getRegBankOrNull(I.getOperand(0).getReg());
@@ -1103,8 +1101,8 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   DebugLoc DL = I.getDebugLoc();
   const TargetRegisterClass *RC = IsSgpr ? &AMDGPU::SReg_32_XM0RegClass :
                                            &AMDGPU::VGPR_32RegClass;
-  unsigned LoReg = MRI.createVirtualRegister(RC);
-  unsigned HiReg = MRI.createVirtualRegister(RC);
+  Register LoReg = MRI.createVirtualRegister(RC);
+  Register HiReg = MRI.createVirtualRegister(RC);
   const APInt &Imm = APInt(Size, I.getOperand(1).getImm());
 
   BuildMI(*BB, &I, DL, TII.get(Opcode), LoReg)
@@ -1516,7 +1514,7 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
   // failed trying to select this load into one of the _IMM variants since
   // the _IMM Patterns are considered before the _SGPR patterns.
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  unsigned OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
           .addImm(GEPInfo.Imm);
   return {{

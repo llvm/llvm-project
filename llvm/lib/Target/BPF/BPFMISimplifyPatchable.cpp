@@ -100,8 +100,8 @@ bool BPFMISimplifyPatchable::removeLD() {
       if (!MI.getOperand(2).isImm() || MI.getOperand(2).getImm())
         continue;
 
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
       int64_t ImmVal = MI.getOperand(2).getImm();
 
       MachineInstr *DefInst = MRI->getUniqueVRegDef(SrcReg);

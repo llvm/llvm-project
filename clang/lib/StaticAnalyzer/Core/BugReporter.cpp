@@ -1924,15 +1924,22 @@ PathDiagnosticBuilder::PathDiagnosticBuilder(
 
 std::unique_ptr<PathDiagnostic>
 PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
-
-  if (!PDC->shouldGenerateDiagnostics())
-    return generateEmptyDiagnosticForReport(R, getSourceManager());
-
   PathDiagnosticConstruct Construct(PDC, ErrorNode, R);
 
   const SourceManager &SM = getSourceManager();
   const BugReport *R = getBugReport();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
+  StringRef ErrorTag = ErrorNode->getLocation().getTag()->getTagDescription();
+
+  // See whether we need to silence the checker/package.
+  // FIXME: This will not work if the report was emitted with an incorrect tag.
+  for (const std::string &CheckerOrPackage : Opts.SilencedCheckersAndPackages) {
+    if (ErrorTag.startswith(CheckerOrPackage))
+      return nullptr;
+  }
+
+  if (!PDC->shouldGenerateDiagnostics())
+    return generateEmptyDiagnosticForReport(R, getSourceManager());
 
   // Construct the final (warning) event for the bug report.
   auto EndNotes = VisitorsDiagnostics->find(ErrorNode);
@@ -2028,7 +2035,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
   return std::move(Construct.PD);
 }
-
 
 //===----------------------------------------------------------------------===//
 // Methods for BugType and subclasses.
@@ -2646,9 +2652,13 @@ GRBugReporter::generatePathDiagnostics(
   Optional<PathDiagnosticBuilder> PDB =
       PathDiagnosticBuilder::findValidReport(bugReports, *this);
 
-  if (PDB)
-    for (PathDiagnosticConsumer *PC : consumers)
-      (*Out)[PC] = PDB->generate(PC);
+  if (PDB) {
+    for (PathDiagnosticConsumer *PC : consumers) {
+      if (std::unique_ptr<PathDiagnostic> PD = PDB->generate(PC)) {
+        (*Out)[PC] = std::move(PD);
+      }
+    }
+  }
 
   return Out;
 }

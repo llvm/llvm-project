@@ -303,7 +303,7 @@ private:
       if (!MO.isReg())
         continue;
       if (MO.isDef()) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (R600::R600_Reg128RegClass.contains(Reg))
           DstMI = Reg;
         else
@@ -312,7 +312,7 @@ private:
               &R600::R600_Reg128RegClass);
       }
       if (MO.isUse()) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (R600::R600_Reg128RegClass.contains(Reg))
           SrcMI = Reg;
         else

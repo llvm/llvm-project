@@ -224,6 +224,10 @@ private:
       addToken(Loc, HighlightingKind::TemplateParameter);
       return;
     }
+    if (isa<NonTypeTemplateParmDecl>(D)) {
+      addToken(Loc, HighlightingKind::TemplateParameter);
+      return;
+    }
   }
 
   void addToken(SourceLocation Loc, HighlightingKind Kind) {

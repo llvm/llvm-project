@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/Path.h"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -128,9 +129,11 @@ public:
 
     bool hasFileAtIndex(uint64_t FileIndex) const;
 
-    bool getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
-                            DILineInfoSpecifier::FileLineInfoKind Kind,
-                            std::string &Result) const;
+    bool
+    getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
+                       DILineInfoSpecifier::FileLineInfoKind Kind,
+                       std::string &Result,
+                       sys::path::Style Style = sys::path::Style::native) const;
 
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;

@@ -205,7 +205,7 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   if (ExitMI) {
     for (const MachineOperand &MO : ExitMI->operands()) {
       if (!MO.isReg() || MO.isDef()) continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg)) {
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
       } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
@@ -285,7 +285,7 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
 void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   MachineInstr *MI = SU->getInstr();
   MachineOperand &MO = MI->getOperand(OperIdx);
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   // We do not need to track any dependencies for constant registers.
   if (MRI.isConstantPhysReg(Reg))
     return;
@@ -361,7 +361,7 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
 
 LaneBitmask ScheduleDAGInstrs::getLaneMaskForMO(const MachineOperand &MO) const
 {
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   // No point in tracking lanemasks if we don't have interesting subregisters.
   const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
   if (!RC.HasDisjunctSubRegs)
@@ -382,7 +382,7 @@ LaneBitmask ScheduleDAGInstrs::getLaneMaskForMO(const MachineOperand &MO) const
 void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
   MachineInstr *MI = SU->getInstr();
   MachineOperand &MO = MI->getOperand(OperIdx);
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
 
   LaneBitmask DefLaneMask;
   LaneBitmask KillLaneMask;
@@ -491,7 +491,7 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
 void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   const MachineInstr *MI = SU->getInstr();
   const MachineOperand &MO = MI->getOperand(OperIdx);
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
 
   // Remember the use. Data dependencies will be added when we find the def.
   LaneBitmask LaneMask = TrackLaneMasks ? getLaneMaskForMO(MO)
@@ -821,7 +821,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       const MachineOperand &MO = MI.getOperand(j);
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg)) {
         addPhysRegDeps(SU, j);
       } else if (Register::isVirtualRegister(Reg)) {
@@ -838,7 +838,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       // additional use dependencies.
       if (!MO.isReg() || !MO.isUse())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg)) {
         addPhysRegDeps(SU, j);
       } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
@@ -1071,7 +1071,7 @@ static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
   for (MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.readsReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
 
@@ -1102,7 +1102,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
       if (MO.isReg()) {
         if (!MO.isDef())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (!Reg)
           continue;
         LiveRegs.removeReg(Reg);

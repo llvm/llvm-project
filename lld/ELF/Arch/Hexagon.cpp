@@ -29,6 +29,7 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
+  RelType getDynRel(RelType type) const override;
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, uint64_t gotPltEntryAddr, uint64_t pltEntryAddr,
@@ -102,7 +103,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_GOT_11_X:
   case R_HEX_GOT_16_X:
   case R_HEX_GOT_32_6_X:
-    return R_HEXAGON_GOT;
+    return R_GOTPLT;
   default:
     return R_ABS;
   }
@@ -283,6 +284,12 @@ void Hexagon::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
 
   relocateOne(buf, R_HEX_B32_PCREL_X, gotPltEntryAddr - pltEntryAddr);
   relocateOne(buf + 4, R_HEX_6_PCREL_X, gotPltEntryAddr - pltEntryAddr);
+}
+
+RelType Hexagon::getDynRel(RelType type) const {
+  if (type == R_HEX_32)
+    return type;
+  return R_HEX_NONE;
 }
 
 TargetInfo *elf::getHexagonTargetInfo() {

@@ -1257,7 +1257,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 static unsigned
 addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
 {
-  unsigned VReg = MF.getRegInfo().createVirtualRegister(RC);
+  Register VReg = MF.getRegInfo().createVirtualRegister(RC);
   MF.getRegInfo().addLiveIn(PReg, VReg);
   return VReg;
 }
@@ -1477,10 +1477,10 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr &MI,
     llvm_unreachable("Unknown pseudo atomic for replacement!");
   }
 
-  unsigned OldVal = MI.getOperand(0).getReg();
-  unsigned Ptr = MI.getOperand(1).getReg();
-  unsigned Incr = MI.getOperand(2).getReg();
-  unsigned Scratch = RegInfo.createVirtualRegister(RegInfo.getRegClass(OldVal));
+  Register OldVal = MI.getOperand(0).getReg();
+  Register Ptr = MI.getOperand(1).getReg();
+  Register Incr = MI.getOperand(2).getReg();
+  Register Scratch = RegInfo.createVirtualRegister(RegInfo.getRegClass(OldVal));
 
   MachineBasicBlock::iterator II(MI);
 
@@ -1519,8 +1519,8 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr &MI,
   //     containing the word.
   //
 
-  unsigned PtrCopy = RegInfo.createVirtualRegister(RegInfo.getRegClass(Ptr));
-  unsigned IncrCopy = RegInfo.createVirtualRegister(RegInfo.getRegClass(Incr));
+  Register PtrCopy = RegInfo.createVirtualRegister(RegInfo.getRegClass(Ptr));
+  Register IncrCopy = RegInfo.createVirtualRegister(RegInfo.getRegClass(Incr));
 
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), IncrCopy).addReg(Incr);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), PtrCopy).addReg(Ptr);
@@ -1556,7 +1556,7 @@ MachineBasicBlock *MipsTargetLowering::emitSignExtendToI32InReg(
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
   const TargetRegisterClass *RC = getRegClassFor(MVT::i32);
-  unsigned ScrReg = RegInfo.createVirtualRegister(RC);
+  Register ScrReg = RegInfo.createVirtualRegister(RC);
 
   assert(Size < 32);
   int64_t ShiftImm = 32 - (Size * 8);
@@ -1581,21 +1581,21 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest = MI.getOperand(0).getReg();
-  unsigned Ptr = MI.getOperand(1).getReg();
-  unsigned Incr = MI.getOperand(2).getReg();
+  Register Dest = MI.getOperand(0).getReg();
+  Register Ptr = MI.getOperand(1).getReg();
+  Register Incr = MI.getOperand(2).getReg();
 
-  unsigned AlignedAddr = RegInfo.createVirtualRegister(RCp);
-  unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
-  unsigned Mask = RegInfo.createVirtualRegister(RC);
-  unsigned Mask2 = RegInfo.createVirtualRegister(RC);
-  unsigned Incr2 = RegInfo.createVirtualRegister(RC);
-  unsigned MaskLSB2 = RegInfo.createVirtualRegister(RCp);
-  unsigned PtrLSB2 = RegInfo.createVirtualRegister(RC);
-  unsigned MaskUpper = RegInfo.createVirtualRegister(RC);
-  unsigned Scratch = RegInfo.createVirtualRegister(RC);
-  unsigned Scratch2 = RegInfo.createVirtualRegister(RC);
-  unsigned Scratch3 = RegInfo.createVirtualRegister(RC);
+  Register AlignedAddr = RegInfo.createVirtualRegister(RCp);
+  Register ShiftAmt = RegInfo.createVirtualRegister(RC);
+  Register Mask = RegInfo.createVirtualRegister(RC);
+  Register Mask2 = RegInfo.createVirtualRegister(RC);
+  Register Incr2 = RegInfo.createVirtualRegister(RC);
+  Register MaskLSB2 = RegInfo.createVirtualRegister(RCp);
+  Register PtrLSB2 = RegInfo.createVirtualRegister(RC);
+  Register MaskUpper = RegInfo.createVirtualRegister(RC);
+  Register Scratch = RegInfo.createVirtualRegister(RC);
+  Register Scratch2 = RegInfo.createVirtualRegister(RC);
+  Register Scratch3 = RegInfo.createVirtualRegister(RC);
 
   unsigned AtomicOp = 0;
   switch (MI.getOpcode()) {
@@ -1678,7 +1678,7 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
-    unsigned Off = RegInfo.createVirtualRegister(RC);
+    Register Off = RegInfo.createVirtualRegister(RC);
     BuildMI(BB, DL, TII->get(Mips::XORi), Off)
       .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
@@ -1738,12 +1738,12 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
   unsigned AtomicOp = MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I32
                           ? Mips::ATOMIC_CMP_SWAP_I32_POSTRA
                           : Mips::ATOMIC_CMP_SWAP_I64_POSTRA;
-  unsigned Dest = MI.getOperand(0).getReg();
-  unsigned Ptr = MI.getOperand(1).getReg();
-  unsigned OldVal = MI.getOperand(2).getReg();
-  unsigned NewVal = MI.getOperand(3).getReg();
+  Register Dest = MI.getOperand(0).getReg();
+  Register Ptr = MI.getOperand(1).getReg();
+  Register OldVal = MI.getOperand(2).getReg();
+  Register NewVal = MI.getOperand(3).getReg();
 
-  unsigned Scratch = MRI.createVirtualRegister(RC);
+  Register Scratch = MRI.createVirtualRegister(RC);
   MachineBasicBlock::iterator II(MI);
 
   // We need to create copies of the various registers and kill them at the
@@ -1751,9 +1751,9 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
   // after fast register allocation, the spills will end up outside of the
   // blocks that their values are defined in, causing livein errors.
 
-  unsigned PtrCopy = MRI.createVirtualRegister(MRI.getRegClass(Ptr));
-  unsigned OldValCopy = MRI.createVirtualRegister(MRI.getRegClass(OldVal));
-  unsigned NewValCopy = MRI.createVirtualRegister(MRI.getRegClass(NewVal));
+  Register PtrCopy = MRI.createVirtualRegister(MRI.getRegClass(Ptr));
+  Register OldValCopy = MRI.createVirtualRegister(MRI.getRegClass(OldVal));
+  Register NewValCopy = MRI.createVirtualRegister(MRI.getRegClass(NewVal));
 
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), PtrCopy).addReg(Ptr);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), OldValCopy).addReg(OldVal);
@@ -1790,22 +1790,22 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest = MI.getOperand(0).getReg();
-  unsigned Ptr = MI.getOperand(1).getReg();
-  unsigned CmpVal = MI.getOperand(2).getReg();
-  unsigned NewVal = MI.getOperand(3).getReg();
+  Register Dest = MI.getOperand(0).getReg();
+  Register Ptr = MI.getOperand(1).getReg();
+  Register CmpVal = MI.getOperand(2).getReg();
+  Register NewVal = MI.getOperand(3).getReg();
 
-  unsigned AlignedAddr = RegInfo.createVirtualRegister(RCp);
-  unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
-  unsigned Mask = RegInfo.createVirtualRegister(RC);
-  unsigned Mask2 = RegInfo.createVirtualRegister(RC);
-  unsigned ShiftedCmpVal = RegInfo.createVirtualRegister(RC);
-  unsigned ShiftedNewVal = RegInfo.createVirtualRegister(RC);
-  unsigned MaskLSB2 = RegInfo.createVirtualRegister(RCp);
-  unsigned PtrLSB2 = RegInfo.createVirtualRegister(RC);
-  unsigned MaskUpper = RegInfo.createVirtualRegister(RC);
-  unsigned MaskedCmpVal = RegInfo.createVirtualRegister(RC);
-  unsigned MaskedNewVal = RegInfo.createVirtualRegister(RC);
+  Register AlignedAddr = RegInfo.createVirtualRegister(RCp);
+  Register ShiftAmt = RegInfo.createVirtualRegister(RC);
+  Register Mask = RegInfo.createVirtualRegister(RC);
+  Register Mask2 = RegInfo.createVirtualRegister(RC);
+  Register ShiftedCmpVal = RegInfo.createVirtualRegister(RC);
+  Register ShiftedNewVal = RegInfo.createVirtualRegister(RC);
+  Register MaskLSB2 = RegInfo.createVirtualRegister(RCp);
+  Register PtrLSB2 = RegInfo.createVirtualRegister(RC);
+  Register MaskUpper = RegInfo.createVirtualRegister(RC);
+  Register MaskedCmpVal = RegInfo.createVirtualRegister(RC);
+  Register MaskedNewVal = RegInfo.createVirtualRegister(RC);
   unsigned AtomicOp = MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I8
                           ? Mips::ATOMIC_CMP_SWAP_I8_POSTRA
                           : Mips::ATOMIC_CMP_SWAP_I16_POSTRA;
@@ -1820,8 +1820,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   // value isn't a problem.
   // The Dead flag is needed as the value in scratch isn't used by any other
   // instruction. Kill isn't used as Dead is more precise.
-  unsigned Scratch = RegInfo.createVirtualRegister(RC);
-  unsigned Scratch2 = RegInfo.createVirtualRegister(RC);
+  Register Scratch = RegInfo.createVirtualRegister(RC);
+  Register Scratch2 = RegInfo.createVirtualRegister(RC);
 
   // insert new blocks after the current block
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
@@ -1859,7 +1859,7 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   if (Subtarget.isLittle()) {
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
-    unsigned Off = RegInfo.createVirtualRegister(RC);
+    Register Off = RegInfo.createVirtualRegister(RC);
     BuildMI(BB, DL, TII->get(Mips::XORi), Off)
       .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
@@ -3167,7 +3167,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                    Arg, DAG.getConstant(1, DL, MVT::i32));
           if (!Subtarget.isLittle())
             std::swap(Lo, Hi);
-          unsigned LocRegLo = VA.getLocReg();
+          Register LocRegLo = VA.getLocReg();
           unsigned LocRegHigh = getNextIntArgReg(LocRegLo);
           RegsToPass.push_back(std::make_pair(LocRegLo, Lo));
           RegsToPass.push_back(std::make_pair(LocRegHigh, Hi));
@@ -3523,7 +3523,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
     // Arguments stored on registers
     if (IsRegLoc) {
       MVT RegVT = VA.getLocVT();
-      unsigned ArgReg = VA.getLocReg();
+      Register ArgReg = VA.getLocReg();
       const TargetRegisterClass *RC = getRegClassFor(RegVT);
 
       // Transform the arguments stored on

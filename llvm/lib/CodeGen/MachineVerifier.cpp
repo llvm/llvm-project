@@ -1609,7 +1609,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
   switch (MO->getType()) {
   case MachineOperand::MO_Register: {
-    const unsigned Reg = MO->getReg();
+    const Register Reg = MO->getReg();
     if (!Reg)
       return;
     if (MRI->tracksLiveness() && !MI->isDebugValue())
@@ -2184,7 +2184,7 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
     if (MODef.isTied() || MODef.isImplicit() || MODef.isInternalRead() ||
         MODef.isEarlyClobber() || MODef.isDebug())
       report("Unexpected flag on PHI operand", &MODef, 0);
-    unsigned DefReg = MODef.getReg();
+    Register DefReg = MODef.getReg();
     if (!Register::isVirtualRegister(DefReg))
       report("Expected first PHI operand to be a virtual register", &MODef, 0);
 

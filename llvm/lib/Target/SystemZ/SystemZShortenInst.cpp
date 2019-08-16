@@ -75,7 +75,7 @@ static void tieOpsIfNeeded(MachineInstr &MI) {
 // instead of IIxF.
 bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
                                     unsigned LLIxH) {
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   // The new opcode will clear the other half of the GR64 reg, so
   // cancel if that is live.
   unsigned thisSubRegIdx =
@@ -86,7 +86,7 @@ bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
                                             : SystemZ::subreg_l32);
   unsigned GR64BitReg =
       TRI->getMatchingSuperReg(Reg, thisSubRegIdx, &SystemZ::GR64BitRegClass);
-  unsigned OtherReg = TRI->getSubReg(GR64BitReg, otherSubRegIdx);
+  Register OtherReg = TRI->getSubReg(GR64BitReg, otherSubRegIdx);
   if (LiveRegs.contains(OtherReg))
     return false;
 

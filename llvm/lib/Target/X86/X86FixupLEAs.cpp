@@ -372,9 +372,9 @@ bool FixupLEAPass::optTwoAddrLEA(MachineBasicBlock::iterator &I,
       !TII->isSafeToClobberEFLAGS(MBB, I))
     return false;
 
-  unsigned DestReg  = MI.getOperand(0).getReg();
-  unsigned BaseReg  = Base.getReg();
-  unsigned IndexReg = Index.getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register BaseReg = Base.getReg();
+  Register IndexReg = Index.getReg();
 
   // Don't change stack adjustment LEAs.
   if (UseLEAForSP && (DestReg == X86::ESP || DestReg == X86::RSP))
@@ -500,9 +500,9 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   if (Segment.getReg() != 0 || !Offset.isImm() ||
       !TII->isSafeToClobberEFLAGS(MBB, I))
     return;
-  const unsigned DstR = Dst.getReg();
-  const unsigned SrcR1 = Base.getReg();
-  const unsigned SrcR2 = Index.getReg();
+  const Register DstR = Dst.getReg();
+  const Register SrcR1 = Base.getReg();
+  const Register SrcR2 = Index.getReg();
   if ((SrcR1 == 0 || SrcR1 != DstR) && (SrcR2 == 0 || SrcR2 != DstR))
     return;
   if (Scale.getImm() > 1)
@@ -553,8 +553,8 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
     return nullptr;
 
   unsigned DstR = Dst.getReg();
-  unsigned BaseR = Base.getReg();
-  unsigned IndexR = Index.getReg();
+  Register BaseR = Base.getReg();
+  Register IndexR = Index.getReg();
   unsigned SSDstR =
       (LEAOpcode == X86::LEA64_32r) ? getX86SubSuperRegister(DstR, 64) : DstR;
   bool IsScale1 = Scale.getImm() == 1;

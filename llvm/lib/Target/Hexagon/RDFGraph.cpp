@@ -633,7 +633,7 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
   // uses or defs, and those lists do not allow sub-registers.
   if (Op.getSubReg() != 0)
     return false;
-  RegisterId Reg = Op.getReg();
+  Register Reg = Op.getReg();
   const MCPhysReg *ImpR = Op.isDef() ? D.getImplicitDefs()
                                      : D.getImplicitUses();
   if (!ImpR)
@@ -1291,7 +1291,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     MachineOperand &Op = In.getOperand(OpN);
     if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
       continue;
-    unsigned R = Op.getReg();
+    Register R = Op.getReg();
     if (!R || !Register::isPhysicalRegister(R))
       continue;
     uint16_t Flags = NodeAttrs::None;
@@ -1336,7 +1336,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     MachineOperand &Op = In.getOperand(OpN);
     if (!Op.isReg() || !Op.isDef() || !Op.isImplicit())
       continue;
-    unsigned R = Op.getReg();
+    Register R = Op.getReg();
     if (!R || !Register::isPhysicalRegister(R) || DoneDefs.test(R))
       continue;
     RegisterRef RR = makeRegRef(Op);
@@ -1365,7 +1365,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     MachineOperand &Op = In.getOperand(OpN);
     if (!Op.isReg() || !Op.isUse())
       continue;
-    unsigned R = Op.getReg();
+    Register R = Op.getReg();
     if (!R || !Register::isPhysicalRegister(R))
       continue;
     uint16_t Flags = NodeAttrs::None;

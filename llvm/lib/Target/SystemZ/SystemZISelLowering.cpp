@@ -1335,7 +1335,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
         break;
       }
 
-      unsigned VReg = MRI.createVirtualRegister(RC);
+      Register VReg = MRI.createVirtualRegister(RC);
       MRI.addLiveIn(VA.getLocReg(), VReg);
       ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
     } else {
@@ -1430,7 +1430,7 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
       return false;
     if (!VA.isRegLoc())
       return false;
-    unsigned Reg = VA.getLocReg();
+    Register Reg = VA.getLocReg();
     if (Reg == SystemZ::R6H || Reg == SystemZ::R6L || Reg == SystemZ::R6D)
       return false;
     if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftError())
@@ -1674,7 +1674,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetValue = convertValVTToLocVT(DAG, DL, VA, RetValue);
 
     // Chain and glue the copies together.
-    unsigned Reg = VA.getLocReg();
+    Register Reg = VA.getLocReg();
     Chain = DAG.getCopyToReg(Chain, DL, Reg, RetValue, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(Reg, VA.getLocVT()));
@@ -6574,9 +6574,9 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd;
        MIIt = skipDebugInstructionsForward(++MIIt, MIItEnd)) {
-    unsigned DestReg = MIIt->getOperand(0).getReg();
-    unsigned TrueReg = MIIt->getOperand(1).getReg();
-    unsigned FalseReg = MIIt->getOperand(2).getReg();
+    Register DestReg = MIIt->getOperand(0).getReg();
+    Register TrueReg = MIIt->getOperand(1).getReg();
+    Register FalseReg = MIIt->getOperand(2).getReg();
 
     // If this Select we are generating is the opposite condition from
     // the jump we generated, then we have to swap the operands for the
@@ -6678,10 +6678,10 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
-  unsigned SrcReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(0).getReg();
   MachineOperand Base = MI.getOperand(1);
   int64_t Disp = MI.getOperand(2).getImm();
-  unsigned IndexReg = MI.getOperand(3).getReg();
+  Register IndexReg = MI.getOperand(3).getReg();
   unsigned CCValid = MI.getOperand(4).getImm();
   unsigned CCMask = MI.getOperand(5).getImm();
   DebugLoc DL = MI.getDebugLoc();
@@ -6773,7 +6773,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
 
   // Extract the operands.  Base can be a register or a frame index.
   // Src2 can be a register or immediate.
-  unsigned Dest = MI.getOperand(0).getReg();
+  Register Dest = MI.getOperand(0).getReg();
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
   MachineOperand Src2 = earlyUseOperand(MI.getOperand(3));
@@ -6833,7 +6833,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
       .addReg(OldVal).addReg(BitShift).addImm(0);
   if (Invert) {
     // Perform the operation normally and then invert every bit of the field.
-    unsigned Tmp = MRI.createVirtualRegister(RC);
+    Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(MBB, DL, TII->get(BinOpcode), Tmp).addReg(RotatedOldVal).add(Src2);
     if (BitSize <= 32)
       // XILF with the upper BitSize bits set.
@@ -6842,7 +6842,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
     else {
       // Use LCGR and add -1 to the result, which is more compact than
       // an XILF, XILH pair.
-      unsigned Tmp2 = MRI.createVirtualRegister(RC);
+      Register Tmp2 = MRI.createVirtualRegister(RC);
       BuildMI(MBB, DL, TII->get(SystemZ::LCGR), Tmp2).addReg(Tmp);
       BuildMI(MBB, DL, TII->get(SystemZ::AGHI), RotatedNewVal)
         .addReg(Tmp2).addImm(-1);
@@ -6891,7 +6891,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   bool IsSubWord = (BitSize < 32);
 
   // Extract the operands.  Base can be a register or a frame index.
-  unsigned Dest = MI.getOperand(0).getReg();
+  Register Dest = MI.getOperand(0).getReg();
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
   Register Src2 = MI.getOperand(3).getReg();
@@ -7005,13 +7005,13 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Extract the operands.  Base can be a register or a frame index.
-  unsigned Dest = MI.getOperand(0).getReg();
+  Register Dest = MI.getOperand(0).getReg();
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
-  unsigned OrigCmpVal = MI.getOperand(3).getReg();
-  unsigned OrigSwapVal = MI.getOperand(4).getReg();
-  unsigned BitShift = MI.getOperand(5).getReg();
-  unsigned NegBitShift = MI.getOperand(6).getReg();
+  Register OrigCmpVal = MI.getOperand(3).getReg();
+  Register OrigSwapVal = MI.getOperand(4).getReg();
+  Register BitShift = MI.getOperand(5).getReg();
+  Register NegBitShift = MI.getOperand(6).getReg();
   int64_t BitSize = MI.getOperand(7).getImm();
   DebugLoc DL = MI.getDebugLoc();
 
@@ -7023,14 +7023,14 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   assert(LOpcode && CSOpcode && "Displacement out of range");
 
   // Create virtual registers for temporary results.
-  unsigned OrigOldVal   = MRI.createVirtualRegister(RC);
-  unsigned OldVal       = MRI.createVirtualRegister(RC);
-  unsigned CmpVal       = MRI.createVirtualRegister(RC);
-  unsigned SwapVal      = MRI.createVirtualRegister(RC);
-  unsigned StoreVal     = MRI.createVirtualRegister(RC);
-  unsigned RetryOldVal  = MRI.createVirtualRegister(RC);
-  unsigned RetryCmpVal  = MRI.createVirtualRegister(RC);
-  unsigned RetrySwapVal = MRI.createVirtualRegister(RC);
+  Register OrigOldVal = MRI.createVirtualRegister(RC);
+  Register OldVal = MRI.createVirtualRegister(RC);
+  Register CmpVal = MRI.createVirtualRegister(RC);
+  Register SwapVal = MRI.createVirtualRegister(RC);
+  Register StoreVal = MRI.createVirtualRegister(RC);
+  Register RetryOldVal = MRI.createVirtualRegister(RC);
+  Register RetryCmpVal = MRI.createVirtualRegister(RC);
+  Register RetrySwapVal = MRI.createVirtualRegister(RC);
 
   // Insert 2 basic blocks for the loop.
   MachineBasicBlock *StartMBB = MBB;
@@ -7129,11 +7129,11 @@ SystemZTargetLowering::emitPair128(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest = MI.getOperand(0).getReg();
-  unsigned Hi = MI.getOperand(1).getReg();
-  unsigned Lo = MI.getOperand(2).getReg();
-  unsigned Tmp1 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
-  unsigned Tmp2 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+  Register Dest = MI.getOperand(0).getReg();
+  Register Hi = MI.getOperand(1).getReg();
+  Register Lo = MI.getOperand(2).getReg();
+  Register Tmp1 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+  Register Tmp2 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
 
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Tmp1);
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Tmp2)
@@ -7157,14 +7157,14 @@ MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest = MI.getOperand(0).getReg();
-  unsigned Src = MI.getOperand(1).getReg();
-  unsigned In128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+  Register Dest = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register In128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
 
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), In128);
   if (ClearEven) {
-    unsigned NewIn128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
-    unsigned Zero64   = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
+    Register NewIn128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+    Register Zero64 = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
 
     BuildMI(*MBB, MI, DL, TII->get(SystemZ::LLILL), Zero64)
       .addImm(0);
@@ -7308,7 +7308,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     // The previous iteration might have created out-of-range displacements.
     // Apply them using LAY if so.
     if (!isUInt<12>(DestDisp)) {
-      unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
           .add(DestBase)
           .addImm(DestDisp)
@@ -7317,7 +7317,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       DestDisp = 0;
     }
     if (!isUInt<12>(SrcDisp)) {
-      unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
           .add(SrcBase)
           .addImm(SrcDisp)
@@ -7474,11 +7474,11 @@ MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
   DebugLoc DL = MI.getDebugLoc();
 
-  unsigned SrcReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(0).getReg();
 
   // Create new virtual register of the same class as source.
   const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
-  unsigned DstReg = MRI->createVirtualRegister(RC);
+  Register DstReg = MRI->createVirtualRegister(RC);
 
   // Replace pseudo with a normal load-and-test that models the def as
   // well.

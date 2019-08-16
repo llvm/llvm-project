@@ -1517,11 +1517,11 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
 
   unsigned ShiftAmtReg = RI.createVirtualRegister(&AVR::LD8RegClass);
   unsigned ShiftAmtReg2 = RI.createVirtualRegister(&AVR::LD8RegClass);
-  unsigned ShiftReg = RI.createVirtualRegister(RC);
-  unsigned ShiftReg2 = RI.createVirtualRegister(RC);
-  unsigned ShiftAmtSrcReg = MI.getOperand(2).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register ShiftReg = RI.createVirtualRegister(RC);
+  Register ShiftReg2 = RI.createVirtualRegister(RC);
+  Register ShiftAmtSrcReg = MI.getOperand(2).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
 
   // BB:
   // cpi N, 0
@@ -1568,7 +1568,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
 
 static bool isCopyMulResult(MachineBasicBlock::iterator const &I) {
   if (I->getOpcode() == AVR::COPY) {
-    unsigned SrcReg = I->getOperand(1).getReg();
+    Register SrcReg = I->getOperand(1).getReg();
     return (SrcReg == AVR::R0 || SrcReg == AVR::R1);
   }
 

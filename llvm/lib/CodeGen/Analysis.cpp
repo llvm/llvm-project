@@ -536,9 +536,11 @@ bool llvm::isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM) {
       // Debug info intrinsics do not get in the way of tail call optimization.
       if (isa<DbgInfoIntrinsic>(BBI))
         continue;
-      // A lifetime end intrinsic should not stop tail call optimization.
+      // A lifetime end or assume intrinsic should not stop tail call
+      // optimization.
       if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
-        if (II->getIntrinsicID() == Intrinsic::lifetime_end)
+        if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
+            II->getIntrinsicID() == Intrinsic::assume)
           continue;
       if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
           !isSafeToSpeculativelyExecute(&*BBI))

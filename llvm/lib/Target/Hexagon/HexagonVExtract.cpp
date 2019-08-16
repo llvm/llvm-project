@@ -67,9 +67,9 @@ unsigned HexagonVExtract::genElemLoad(MachineInstr *ExtI, unsigned BaseR,
                                       MachineRegisterInfo &MRI) {
   MachineBasicBlock &ExtB = *ExtI->getParent();
   DebugLoc DL = ExtI->getDebugLoc();
-  unsigned ElemR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register ElemR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
 
-  unsigned ExtIdxR = ExtI->getOperand(2).getReg();
+  Register ExtIdxR = ExtI->getOperand(2).getReg();
   unsigned ExtIdxS = ExtI->getOperand(2).getSubReg();
 
   // Simplified check for a compile-time constant value of ExtIdxR.
@@ -86,7 +86,7 @@ unsigned HexagonVExtract::genElemLoad(MachineInstr *ExtI, unsigned BaseR,
     }
   }
 
-  unsigned IdxR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  Register IdxR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::A2_andir), IdxR)
     .add(ExtI->getOperand(2))
     .addImm(-4);
@@ -111,7 +111,7 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       unsigned Opc = MI.getOpcode();
       if (Opc != Hexagon::V6_extractw)
         continue;
-      unsigned VecR = MI.getOperand(1).getReg();
+      Register VecR = MI.getOperand(1).getReg();
       VExtractMap[VecR].push_back(&MI);
     }
   }
@@ -144,13 +144,13 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
       DebugLoc DL = ExtI->getDebugLoc();
-      unsigned BaseR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      Register BaseR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
       BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::PS_fi), BaseR)
         .addFrameIndex(FI)
         .addImm(SR == 0 ? 0 : VecSize/2);
 
       unsigned ElemR = genElemLoad(ExtI, BaseR, MRI);
-      unsigned ExtR = ExtI->getOperand(0).getReg();
+      Register ExtR = ExtI->getOperand(0).getReg();
       MRI.replaceRegWith(ExtR, ElemR);
       ExtB.erase(ExtI);
       Changed = true;

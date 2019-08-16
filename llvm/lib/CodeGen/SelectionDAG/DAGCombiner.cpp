@@ -379,6 +379,7 @@ namespace {
     SDValue visitSUBE(SDNode *N);
     SDValue visitSUBCARRY(SDNode *N);
     SDValue visitMUL(SDNode *N);
+    SDValue visitMULFIX(SDNode *N);
     SDValue useDivRem(SDNode *N);
     SDValue visitSDIV(SDNode *N);
     SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
@@ -1696,6 +1697,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::ADDCARRY:           return visitADDCARRY(N);
   case ISD::SUBE:               return visitSUBE(N);
   case ISD::SUBCARRY:           return visitSUBCARRY(N);
+  case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
+  case ISD::UMULFIX:            return visitMULFIX(N);
   case ISD::MUL:                return visitMUL(N);
   case ISD::SDIV:               return visitSDIV(N);
   case ISD::UDIV:               return visitUDIV(N);
@@ -3461,6 +3465,29 @@ SDValue DAGCombiner::visitSUBCARRY(SDNode *N) {
         TLI.isOperationLegalOrCustom(ISD::USUBO, N->getValueType(0)))
       return DAG.getNode(ISD::USUBO, SDLoc(N), N->getVTList(), N0, N1);
   }
+
+  return SDValue();
+}
+
+// Notice that "mulfix" can be any of SMULFIX, SMULFIXSAT and UMULFIX here.
+SDValue DAGCombiner::visitMULFIX(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue Scale = N->getOperand(2);
+  EVT VT = N0.getValueType();
+
+  // fold (mulfix x, undef, scale) -> 0
+  if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, SDLoc(N), VT);
+
+  // Canonicalize constant to RHS (vector doesn't have to splat)
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
+     !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0, Scale);
+
+  // fold (mulfix x, 0, scale) -> 0
+  if (isNullConstant(N1))
+    return DAG.getConstant(0, SDLoc(N), VT);
 
   return SDValue();
 }

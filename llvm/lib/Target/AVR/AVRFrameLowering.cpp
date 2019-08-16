@@ -323,7 +323,7 @@ static void fixStackStores(MachineBasicBlock &MBB,
            "Invalid register, should be SP!");
     if (insertPushes) {
       // Replace this instruction with a push.
-      unsigned SrcReg = MI.getOperand(2).getReg();
+      Register SrcReg = MI.getOperand(2).getReg();
       bool SrcIsKill = MI.getOperand(2).isKill();
 
       // We can't use PUSHWRr here because when expanded the order of the new

@@ -83,6 +83,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
   }
 
+  // Meta-instructions emit no code.
+  if (MI.isMetaInstruction())
+    return 0;
+
   // FIXME: We currently only handle pseudoinstructions that don't get expanded
   //        before the assembly printer.
   unsigned NumBytes = 0;
@@ -91,12 +95,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     // Anything not explicitly designated otherwise is a normal 4-byte insn.
     NumBytes = 4;
-    break;
-  case TargetOpcode::DBG_VALUE:
-  case TargetOpcode::EH_LABEL:
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::KILL:
-    NumBytes = 0;
     break;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
@@ -4767,10 +4765,13 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_COFFSTUB, "aarch64-coffstub"},
-      {MO_GOT, "aarch64-got"},   {MO_NC, "aarch64-nc"},
-      {MO_S, "aarch64-s"},       {MO_TLS, "aarch64-tls"},
+      {MO_GOT, "aarch64-got"},
+      {MO_NC, "aarch64-nc"},
+      {MO_S, "aarch64-s"},
+      {MO_TLS, "aarch64-tls"},
       {MO_DLLIMPORT, "aarch64-dllimport"},
-      {MO_PREL, "aarch64-prel"}};
+      {MO_PREL, "aarch64-prel"},
+      {MO_TAGGED, "aarch64-tagged"}};
   return makeArrayRef(TargetFlags);
 }
 

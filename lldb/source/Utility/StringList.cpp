@@ -61,10 +61,7 @@ void StringList::AppendList(const char **strv, int strc) {
 }
 
 void StringList::AppendList(StringList strings) {
-  size_t len = strings.GetSize();
-
-  for (size_t i = 0; i < len; ++i)
-    m_strings.push_back(strings.GetStringAtIndex(i));
+  m_strings.insert(m_strings.end(), strings.begin(), strings.end());
 }
 
 size_t StringList::GetSize() const { return m_strings.size(); }

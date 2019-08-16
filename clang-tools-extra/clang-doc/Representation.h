@@ -32,6 +32,7 @@ using SymbolID = std::array<uint8_t, 20>;
 struct Info;
 struct FunctionInfo;
 struct EnumInfo;
+struct BaseRecordInfo;
 
 enum class InfoType {
   IT_default,
@@ -198,10 +199,11 @@ struct MemberTypeInfo : public FieldTypeInfo {
            std::tie(Other.Type, Other.Name, Other.Access);
   }
 
-  AccessSpecifier Access = AccessSpecifier::AS_none; // Access level associated
-                                                     // with this info (public,
-                                                     // protected, private,
-                                                     // none).
+  // Access level associated with this info (public, protected, private, none).
+  // AS_public is set as default because the bitcode writer requires the enum
+  // with value 0 to be used as the default.
+  // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
+  AccessSpecifier Access = AccessSpecifier::AS_public;
 };
 
 struct Location {
@@ -291,7 +293,8 @@ struct SymbolInfo : public Info {
   SymbolInfo(InfoType IT) : Info(IT) {}
   SymbolInfo(InfoType IT, SymbolID USR) : Info(IT, USR) {}
   SymbolInfo(InfoType IT, SymbolID USR, StringRef Name) : Info(IT, USR, Name) {}
-  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path) : Info(IT, USR, Name, Path) {}
+  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path)
+      : Info(IT, USR, Name, Path) {}
 
   void merge(SymbolInfo &&I);
 
@@ -312,7 +315,10 @@ struct FunctionInfo : public SymbolInfo {
   TypeInfo ReturnType;   // Info about the return type of this function.
   llvm::SmallVector<FieldTypeInfo, 4> Params; // List of parameters.
   // Access level for this method (public, private, protected, none).
-  AccessSpecifier Access = AccessSpecifier::AS_none;
+  // AS_public is set as default because the bitcode writer requires the enum
+  // with value 0 to be used as the default.
+  // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
+  AccessSpecifier Access = AccessSpecifier::AS_public;
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,
@@ -340,13 +346,31 @@ struct RecordInfo : public SymbolInfo {
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  // Records are references because they will be properly
-  // documented in their own info, while the entirety of Functions and Enums are
-  // included here because they should not have separate documentation from
-  // their scope.
+  std::vector<BaseRecordInfo>
+      Bases; // List of base/parent records; this includes inherited methods and
+             // attributes
+
+  // Records are references because they will be properly documented in their
+  // own info, while the entirety of Functions and Enums are included here
+  // because they should not have separate documentation from their scope.
   std::vector<Reference> ChildRecords;
   std::vector<FunctionInfo> ChildFunctions;
   std::vector<EnumInfo> ChildEnums;
+};
+
+struct BaseRecordInfo : public RecordInfo {
+  BaseRecordInfo() : RecordInfo() {}
+  BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
+                 AccessSpecifier Access, bool IsParent)
+      : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+        IsParent(IsParent) {}
+
+  // Indicates if base corresponds to a virtual inheritance
+  bool IsVirtual = false;
+  // Access level associated with this inherited info (public, protected,
+  // private).
+  AccessSpecifier Access = AccessSpecifier::AS_public;
+  bool IsParent = false; // Indicates if this base is a direct parent
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -364,13 +388,14 @@ struct EnumInfo : public SymbolInfo {
 
 struct Index : public Reference {
   Index() = default;
+  Index(StringRef Name) : Reference(Name) {}
   Index(StringRef Name, StringRef JumpToSection)
       : Reference(Name), JumpToSection(JumpToSection) {}
   Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
       : Reference(USR, Name, IT, Path) {}
   // This is used to look for a USR in a vector of Indexes using std::find
   bool operator==(const SymbolID &Other) const { return USR == Other; }
-  bool operator<(const Index &Other) const { return Name < Other.Name; }
+  bool operator<(const Index &Other) const;
 
   llvm::Optional<SmallString<16>> JumpToSection;
   std::vector<Index> Children;

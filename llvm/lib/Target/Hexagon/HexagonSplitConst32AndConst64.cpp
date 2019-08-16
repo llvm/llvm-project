@@ -76,18 +76,18 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
       unsigned Opc = MI.getOpcode();
 
       if (Opc == Hexagon::CONST32) {
-        unsigned DestReg = MI.getOperand(0).getReg();
+        Register DestReg = MI.getOperand(0).getReg();
         uint64_t ImmValue = MI.getOperand(1).getImm();
         const DebugLoc &DL = MI.getDebugLoc();
         BuildMI(B, MI, DL, TII->get(Hexagon::A2_tfrsi), DestReg)
             .addImm(ImmValue);
         B.erase(&MI);
       } else if (Opc == Hexagon::CONST64) {
-        unsigned DestReg = MI.getOperand(0).getReg();
+        Register DestReg = MI.getOperand(0).getReg();
         int64_t ImmValue = MI.getOperand(1).getImm();
         const DebugLoc &DL = MI.getDebugLoc();
-        unsigned DestLo = TRI->getSubReg(DestReg, Hexagon::isub_lo);
-        unsigned DestHi = TRI->getSubReg(DestReg, Hexagon::isub_hi);
+        Register DestLo = TRI->getSubReg(DestReg, Hexagon::isub_lo);
+        Register DestHi = TRI->getSubReg(DestReg, Hexagon::isub_hi);
 
         int32_t LowWord = (ImmValue & 0xFFFFFFFF);
         int32_t HighWord = (ImmValue >> 32) & 0xFFFFFFFF;

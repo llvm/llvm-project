@@ -725,15 +725,15 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI) {
 
   const TargetRegisterClass *SuperRC =
       (CI.EltSize == 4) ? &AMDGPU::VReg_64RegClass : &AMDGPU::VReg_128RegClass;
-  unsigned DestReg = MRI->createVirtualRegister(SuperRC);
+  Register DestReg = MRI->createVirtualRegister(SuperRC);
 
   DebugLoc DL = CI.I->getDebugLoc();
 
-  unsigned BaseReg = AddrReg->getReg();
+  Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
-    unsigned ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
@@ -823,11 +823,11 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI) {
   const MCInstrDesc &Write2Desc = TII->get(Opc);
   DebugLoc DL = CI.I->getDebugLoc();
 
-  unsigned BaseReg = AddrReg->getReg();
+  Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
-    unsigned ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
@@ -869,7 +869,7 @@ SILoadStoreOptimizer::mergeSBufferLoadImmPair(CombineInfo &CI) {
 
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI);
 
-  unsigned DestReg = MRI->createVirtualRegister(SuperRC);
+  Register DestReg = MRI->createVirtualRegister(SuperRC);
   unsigned MergedOffset = std::min(CI.Offset0, CI.Offset1);
 
   // It shouldn't be possible to get this far if the two instructions
@@ -921,7 +921,7 @@ SILoadStoreOptimizer::mergeBufferLoadPair(CombineInfo &CI) {
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI);
 
   // Copy to the new source register.
-  unsigned DestReg = MRI->createVirtualRegister(SuperRC);
+  Register DestReg = MRI->createVirtualRegister(SuperRC);
   unsigned MergedOffset = std::min(CI.Offset0, CI.Offset1);
 
   auto MIB = BuildMI(*MBB, CI.Paired, DL, TII->get(Opcode), DestReg);
@@ -1103,7 +1103,7 @@ SILoadStoreOptimizer::mergeBufferStorePair(CombineInfo &CI) {
 
   // Copy to the new source register.
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI);
-  unsigned SrcReg = MRI->createVirtualRegister(SuperRC);
+  Register SrcReg = MRI->createVirtualRegister(SuperRC);
 
   const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Src1 = TII->getNamedOperand(*CI.Paired, AMDGPU::OpName::vdata);
@@ -1154,7 +1154,7 @@ SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) {
   if (TII->isInlineConstant(V))
     return MachineOperand::CreateImm(Val);
 
-  unsigned Reg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register Reg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   MachineInstr *Mov =
   BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
           TII->get(AMDGPU::S_MOV_B32), Reg)
@@ -1185,11 +1185,11 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
 
   const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
-  unsigned CarryReg = MRI->createVirtualRegister(CarryRC);
-  unsigned DeadCarryReg = MRI->createVirtualRegister(CarryRC);
+  Register CarryReg = MRI->createVirtualRegister(CarryRC);
+  Register DeadCarryReg = MRI->createVirtualRegister(CarryRC);
 
-  unsigned DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  unsigned DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   MachineInstr *LoHalf =
     BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_I32_e64), DestSub0)
       .addReg(CarryReg, RegState::Define)
@@ -1209,7 +1209,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   (void)HiHalf;
   LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
 
-  unsigned FullDestReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  Register FullDestReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
   MachineInstr *FullBase =
     BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::REG_SEQUENCE), FullDestReg)
       .addReg(DestSub0)

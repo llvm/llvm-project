@@ -1237,7 +1237,7 @@ bool AArch64InstructionSelector::earlySelectLoad(
 
   // Don't handle atomic loads/stores yet.
   auto &MemOp = **I.memoperands_begin();
-  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+  if (MemOp.isAtomic()) {
     LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
     return false;
   }
@@ -1739,7 +1739,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     auto &MemOp = **I.memoperands_begin();
-    if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+    if (MemOp.isAtomic()) {
       // For now we just support s8 acquire loads to be able to compile stack
       // protector code.
       if (MemOp.getOrdering() == AtomicOrdering::Acquire &&

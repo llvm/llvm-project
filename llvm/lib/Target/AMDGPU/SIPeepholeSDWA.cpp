@@ -1189,7 +1189,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
     }
 
-    unsigned VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
                         TII->get(AMDGPU::V_MOV_B32_e32), VGPR);
     if (Op.isImm())

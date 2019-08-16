@@ -209,7 +209,7 @@ TEST(FilterIteratorTest, FunctionPointer) {
 
 TEST(FilterIteratorTest, Composition) {
   auto IsOdd = [](int N) { return N % 2 == 1; };
-  std::unique_ptr<int> A[] = {make_unique<int>(0), std::make_unique<int>(1),
+  std::unique_ptr<int> A[] = {std::make_unique<int>(0), std::make_unique<int>(1),
                               std::make_unique<int>(2), std::make_unique<int>(3),
                               std::make_unique<int>(4), std::make_unique<int>(5),
                               std::make_unique<int>(6)};

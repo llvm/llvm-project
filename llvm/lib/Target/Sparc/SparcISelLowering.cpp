@@ -417,7 +417,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       if (VA.needsCustom()) {
         assert(VA.getLocVT() == MVT::f64 || VA.getLocVT() == MVT::v2i32);
 
-        unsigned VRegHi = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+        Register VRegHi = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
         MF.getRegInfo().addLiveIn(VA.getLocReg(), VRegHi);
         SDValue HiVal = DAG.getCopyFromReg(Chain, dl, VRegHi, MVT::i32);
 
@@ -445,7 +445,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
         InVals.push_back(WholeValue);
         continue;
       }
-      unsigned VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+      Register VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
       MF.getRegInfo().addLiveIn(VA.getLocReg(), VReg);
       SDValue Arg = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
       if (VA.getLocVT() == MVT::f32)
@@ -552,7 +552,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     std::vector<SDValue> OutChains;
 
     for (; CurArgReg != ArgRegEnd; ++CurArgReg) {
-      unsigned VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+      Register VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
       MF.getRegInfo().addLiveIn(*CurArgReg, VReg);
       SDValue Arg = DAG.getCopyFromReg(DAG.getRoot(), dl, VReg, MVT::i32);
 

@@ -340,8 +340,8 @@ static bool propagateLocalCopies(MachineBasicBlock *MBB) {
     if (!MI->getOperand(1).isReg())
       continue;
 
-    const unsigned Dst = MI->getOperand(0).getReg();
-    const unsigned Src = MI->getOperand(1).getReg();
+    const Register Dst = MI->getOperand(0).getReg();
+    const Register Src = MI->getOperand(1).getReg();
 
     if (!Register::isVirtualRegister(Dst))
       continue;
@@ -386,7 +386,7 @@ static std::vector<MachineInstr *> populateCandidates(MachineBasicBlock *MBB) {
     bool DoesMISideEffect = false;
 
     if (MI->getNumOperands() > 0 && MI->getOperand(0).isReg()) {
-      const unsigned Dst = MI->getOperand(0).getReg();
+      const Register Dst = MI->getOperand(0).getReg();
       DoesMISideEffect |= !Register::isVirtualRegister(Dst);
 
       for (auto UI = MRI.use_begin(Dst); UI != MRI.use_end(); ++UI) {
@@ -754,7 +754,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   for (unsigned i = 0; i < IdempotentInstCount && MII != MBB->end(); ++i) {
     MachineInstr &MI = *MII++;
     Changed = true;
-    unsigned vRegToRename = MI.getOperand(0).getReg();
+    Register vRegToRename = MI.getOperand(0).getReg();
     auto Rename = NVC.createVirtualRegister(vRegToRename);
 
     std::vector<MachineOperand *> RenameMOs;

@@ -527,7 +527,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   // Fortunately, a frame greater than 32K is rare.
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
   if (MaxAlign < TargetAlign && isInt<16>(FrameSize)) {
     if (LP64)
@@ -549,7 +549,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   }
 
   bool KillNegSizeReg = MI.getOperand(1).isKill();
-  unsigned NegSizeReg = MI.getOperand(1).getReg();
+  Register NegSizeReg = MI.getOperand(1).getReg();
 
   // Grow the stack and update the stack pointer link, then determine the
   // address of new allocated space.
@@ -655,8 +655,8 @@ void PPCRegisterInfo::lowerCRSpilling(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
-  unsigned SrcReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register SrcReg = MI.getOperand(0).getReg();
 
   // We need to store the CR in the low 4-bits of the saved value. First, issue
   // an MFOCRF to save all of the CRBits and, if needed, kill the SrcReg.
@@ -700,8 +700,8 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register DestReg = MI.getOperand(0).getReg();
   assert(MI.definesRegister(DestReg) &&
     "RESTORE_CR does not define its destination");
 
@@ -744,8 +744,8 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
-  unsigned SrcReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register SrcReg = MI.getOperand(0).getReg();
 
   // Search up the BB to find the definition of the CR bit.
   MachineBasicBlock::reverse_iterator Ins;
@@ -823,8 +823,8 @@ void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register DestReg = MI.getOperand(0).getReg();
   assert(MI.definesRegister(DestReg) &&
     "RESTORE_CRBIT does not define its destination");
 
@@ -833,7 +833,7 @@ void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
 
   BuildMI(MBB, II, dl, TII.get(TargetOpcode::IMPLICIT_DEF), DestReg);
 
-  unsigned RegO = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
+  Register RegO = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
   BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), RegO)
           .addReg(getCRFromCRBit(DestReg));
 
@@ -870,8 +870,8 @@ void PPCRegisterInfo::lowerVRSAVESpilling(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
 
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(GPRC);
-  unsigned SrcReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(GPRC);
+  Register SrcReg = MI.getOperand(0).getReg();
 
   BuildMI(MBB, II, dl, TII.get(PPC::MFVRSAVEv), Reg)
       .addReg(SrcReg, getKillRegState(MI.getOperand(0).isKill()));
@@ -896,8 +896,8 @@ void PPCRegisterInfo::lowerVRSAVERestore(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
 
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
-  unsigned Reg = MF.getRegInfo().createVirtualRegister(GPRC);
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register Reg = MF.getRegInfo().createVirtualRegister(GPRC);
+  Register DestReg = MI.getOperand(0).getReg();
   assert(MI.definesRegister(DestReg) &&
     "RESTORE_VRSAVE does not define its destination");
 
@@ -1128,7 +1128,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     OperandBase = OffsetOperandNo;
   }
 
-  unsigned StackReg = MI.getOperand(FIOperandNum).getReg();
+  Register StackReg = MI.getOperand(FIOperandNum).getReg();
   MI.getOperand(OperandBase).ChangeToRegister(StackReg, false);
   MI.getOperand(OperandBase + 1).ChangeToRegister(SReg, false, false, true);
 }

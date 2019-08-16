@@ -677,7 +677,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         if (!MO.isReg())
           continue;
 
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         switch (Reg) {
         case AMDGPU::EXEC:
         case AMDGPU::EXEC_LO:

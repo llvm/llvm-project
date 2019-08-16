@@ -660,9 +660,9 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
         DbgValueLoc DbgLocVal(ParamValue->second, Val);
         finishCallSiteParam(DbgLocVal, Reg);
       } else if (ParamValue->first->isReg()) {
-        unsigned RegLoc = ParamValue->first->getReg();
+        Register RegLoc = ParamValue->first->getReg();
         unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-        unsigned FP = TRI->getFrameRegister(*MF);
+        Register FP = TRI->getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
         if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
           DbgValueLoc DbgLocVal(ParamValue->second,

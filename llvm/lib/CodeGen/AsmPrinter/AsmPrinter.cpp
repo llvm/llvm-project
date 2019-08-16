@@ -783,7 +783,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
 /// emitImplicitDef - This method emits the specified machine instruction
 /// that is an implicit def.
 void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
-  unsigned RegNo = MI->getOperand(0).getReg();
+  Register RegNo = MI->getOperand(0).getReg();
 
   SmallString<128> Str;
   raw_svector_ostream OS(Str);

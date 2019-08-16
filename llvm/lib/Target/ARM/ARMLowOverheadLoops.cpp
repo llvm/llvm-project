@@ -251,10 +251,10 @@ void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                                     TII->get(ARM::t2CMPri));
-  MIB.addReg(ARM::LR);
+  MIB.add(MI->getOperand(0));
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::CPSR);
+  MIB.addReg(ARM::NoRegister);
 
   // TODO: Try to use tBcc instead
   MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2Bcc));
@@ -292,7 +292,7 @@ void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI) const {
   MIB.addReg(ARM::LR);
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::CPSR);
+  MIB.addReg(ARM::NoRegister);
 
   // TODO Try to use tBcc instead.
   // Create bne

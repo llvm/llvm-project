@@ -1638,7 +1638,7 @@ ARMConstantIslands::fixupConditionalBr(ImmBranch &Br) {
   // L2:
   ARMCC::CondCodes CC = (ARMCC::CondCodes)MI->getOperand(1).getImm();
   CC = ARMCC::getOppositeCondition(CC);
-  unsigned CCReg = MI->getOperand(2).getReg();
+  Register CCReg = MI->getOperand(2).getReg();
 
   // If the branch is at the end of its MBB and that has a fall-through block,
   // direct the updated conditional branch to the fall-through block. Otherwise,
@@ -1870,7 +1870,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     if (!CmpMI || CmpMI->getOpcode() != ARM::tCMPi8)
       continue;
 
-    unsigned Reg = CmpMI->getOperand(0).getReg();
+    Register Reg = CmpMI->getOperand(0).getReg();
 
     // Check for Kill flags on Reg. If they are present remove them and set kill
     // on the new CBZ.
@@ -1949,8 +1949,8 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   //      of BaseReg, but only if the t2ADDrs can be removed.
   //    + Some instruction other than t2ADDrs computing the entry. Not seen in
   //      the wild, but we should be careful.
-  unsigned EntryReg = JumpMI->getOperand(0).getReg();
-  unsigned BaseReg = LEAMI->getOperand(0).getReg();
+  Register EntryReg = JumpMI->getOperand(0).getReg();
+  Register BaseReg = LEAMI->getOperand(0).getReg();
 
   CanDeleteLEA = true;
   BaseRegKill = false;
@@ -2027,7 +2027,7 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   // but the JT now uses PC. Finds the last ADD (if any) that def's EntryReg
   // and is not clobbered / used.
   MachineInstr *RemovableAdd = nullptr;
-  unsigned EntryReg = JumpMI->getOperand(0).getReg();
+  Register EntryReg = JumpMI->getOperand(0).getReg();
 
   // Find the last ADD to set EntryReg
   MachineBasicBlock::iterator I(LEAMI);
@@ -2124,7 +2124,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       //   %idx = tLSLri %idx, 2
       //   %base = tLEApcrelJT
       //   %t = tLDRr %base, %idx
-      unsigned BaseReg = User.MI->getOperand(0).getReg();
+      Register BaseReg = User.MI->getOperand(0).getReg();
 
       if (User.MI->getIterator() == User.MI->getParent()->begin())
         continue;
@@ -2134,7 +2134,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
           !Shift->getOperand(2).isKill())
         continue;
       IdxReg = Shift->getOperand(2).getReg();
-      unsigned ShiftedIdxReg = Shift->getOperand(0).getReg();
+      Register ShiftedIdxReg = Shift->getOperand(0).getReg();
 
       // It's important that IdxReg is live until the actual TBB/TBH. Most of
       // the range is checked later, but the LEA might still clobber it and not

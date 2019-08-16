@@ -73,7 +73,7 @@ bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
 
 void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
-  unsigned Reg = MI->getOperand(0).getReg();
+  Register Reg = MI->getOperand(0).getReg();
 
   if (Register::isVirtualRegister(Reg)) {
     // For virtual registers, mark all uses as <undef>, and convert users to
@@ -100,7 +100,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
     for (MachineOperand &MO : UserMI->operands()) {
       if (!MO.isReg())
         continue;
-      unsigned UserReg = MO.getReg();
+      Register UserReg = MO.getReg();
       if (!Register::isPhysicalRegister(UserReg) ||
           !TRI->regsOverlap(Reg, UserReg))
         continue;

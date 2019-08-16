@@ -376,7 +376,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = RegInfo->getFrameRegister(MF);
 
   // Determine the sizes of each callee-save spill areas and record which frame
   // belongs to which callee-save spill areas.
@@ -780,7 +780,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
   unsigned ArgRegsSaveSize = AFI->getArgRegsSaveSize();
   int NumBytes = (int)MFI.getStackSize();
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = RegInfo->getFrameRegister(MF);
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
@@ -1623,7 +1623,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = RegInfo->getFrameRegister(MF);
 
   // Spill R4 if Thumb2 function requires stack realignment - it will be used as
   // scratch register. Also spill R4 if Thumb2 function has varsized objects,

@@ -958,7 +958,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
   //                  <opcode>, <operands>
 
-  unsigned DefRegister = FaultingMI.getOperand(0).getReg();
+  Register DefRegister = FaultingMI.getOperand(0).getReg();
   FaultMaps::FaultKind FK =
       static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
   MCSymbol *HandlerLabel = FaultingMI.getOperand(2).getMBB()->getSymbol();
@@ -1079,7 +1079,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
     // Emit MOV to materialize the target address and the CALL to target.
     // This is encoded with 12-13 bytes, depending on which register is used.
-    unsigned ScratchReg = MI.getOperand(ScratchIdx).getReg();
+    Register ScratchReg = MI.getOperand(ScratchIdx).getReg();
     if (X86II::isX86_64ExtendedReg(ScratchReg))
       EncodedBytes = 13;
     else
@@ -1650,7 +1650,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     // Lower these as normal, but add some comments.
-    unsigned Reg = MI->getOperand(0).getReg();
+    Register Reg = MI->getOperand(0).getReg();
     OutStreamer->AddComment(StringRef("eh_return, addr: %") +
                             X86ATTInstPrinter::getRegisterName(Reg));
     break;
@@ -1699,9 +1699,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
     const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
-    unsigned Reg = MI->getOperand(0).getReg();
-    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
-    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+    Register Reg = MI->getOperand(0).getReg();
+    Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
 
     // Load the first mask register
     MCInstBuilder MIB = MCInstBuilder(X86::KMOVWkm);
@@ -1732,9 +1732,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
     const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
-    unsigned Reg = MI->getOperand(X86::AddrNumOperands).getReg();
-    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
-    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+    Register Reg = MI->getOperand(X86::AddrNumOperands).getReg();
+    Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
 
     // Store the first mask register
     MCInstBuilder MIB = MCInstBuilder(X86::KMOVWmk);

@@ -986,7 +986,7 @@ public:
         MO.setIsKill(false);
       }
 
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
       if (Register::isVirtualRegister(Reg)) {
@@ -1644,7 +1644,7 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
   unsigned Reg = LI.reg;
   const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   for (unsigned I = 1; I < NumComp; ++I) {
-    unsigned NewVReg = MRI->createVirtualRegister(RegClass);
+    Register NewVReg = MRI->createVirtualRegister(RegClass);
     LiveInterval &NewLI = createEmptyInterval(NewVReg);
     SplitLIs.push_back(&NewLI);
   }

@@ -38,3 +38,9 @@ void test_f() {
 // CHECK: call void asm sideeffect "", "f"(double [[FLT_ARG]])
   asm volatile ("" :: "f"(d));
 }
+
+void test_A(int *p) {
+// CHECK-LABEL: define void @test_A(i32* %p)
+// CHECK: call void asm sideeffect "", "*A"(i32* %p)
+  asm volatile("" :: "A"(*p));
+}

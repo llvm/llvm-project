@@ -1,9 +1,8 @@
 ; Test that llvm-reduce can remove uninteresting functions as well as
 ; their InstCalls.
 ;
-; RUN: llvm-reduce --test %p/Inputs/remove-funcs.py %s
-; RUN: cat reduced.ll | FileCheck %s
-; REQUIRES: plugins
+; RUN: llvm-reduce --test %p/Inputs/remove-funcs.py %s -o - | FileCheck %s
+; REQUIRES: plugins, shell
 
 ; CHECK-NOT: uninteresting1()
 define i32 @uninteresting1() {

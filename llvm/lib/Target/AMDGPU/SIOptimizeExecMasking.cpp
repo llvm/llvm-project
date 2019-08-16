@@ -328,7 +328,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
-    unsigned CopyFromExec = CopyFromExecInst->getOperand(0).getReg();
+    Register CopyFromExec = CopyFromExecInst->getOperand(0).getReg();
     MachineInstr *SaveExecInst = nullptr;
     SmallVector<MachineInstr *, 4> OtherUseInsts;
 

@@ -432,25 +432,38 @@ if( MSVC )
     endif()
   endif()
 
-elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
-  append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
-  add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
-  add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
-  check_cxx_compiler_flag("-std=${LLVM_CXX_STD}" CXX_SUPPORTS_CXX_STD)
-  if (CXX_SUPPORTS_CXX_STD)
-   if (CYGWIN OR MINGW)
-      # MinGW and Cygwin are a bit stricter and lack things like
-      # 'strdup', 'stricmp', etc in c++11 mode.
-      string(REPLACE "c++" "gnu++" gnu_LLVM_CXX_STD "${LLVM_CXX_STD}")
-      append("-std=${gnu_LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
+else( MSVC )
+  # Warnings-as-errors handling for GCC-compatible compilers:
+  if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
+    append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
+  endif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
+
+  # Specific default warnings-as-errors for compilers accepting GCC-compatible warning flags:
+  if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
+    add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
+    add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
+  endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
+
+  # C++ language standard selection for compilers accepting the GCC-style option:
+  if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
+    check_cxx_compiler_flag("-std=${LLVM_CXX_STD}" CXX_SUPPORTS_CXX_STD)
+    if (CXX_SUPPORTS_CXX_STD)
+     if (CYGWIN OR MINGW)
+        # MinGW and Cygwin are a bit stricter and lack things like
+        # 'strdup', 'stricmp', etc in c++11 mode.
+        string(REPLACE "c++" "gnu++" gnu_LLVM_CXX_STD "${LLVM_CXX_STD}")
+        append("-std=${gnu_LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
+      else()
+        append("-std=${LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
+      endif()
     else()
-      append("-std=${LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
+      message(FATAL_ERROR "The host compiler does not support '-std=${LLVM_CXX_STD}'.")
     endif()
-  else()
-    message(FATAL_ERROR "The host compiler does not support '-std=${LLVM_CXX_STD}'.")
-  endif()
-  if (LLVM_ENABLE_MODULES)
+  endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
+
+  # Modules enablement for GCC-compatible compilers:
+  if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
     set(module_flags "-fmodules -fmodules-cache-path=${PROJECT_BINARY_DIR}/module.cache")
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -481,7 +494,7 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
     else()
       message(FATAL_ERROR "LLVM_ENABLE_MODULES is not supported by this compiler")
     endif()
-  endif(LLVM_ENABLE_MODULES)
+  endif( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
 endif( MSVC )
 
 if (MSVC)

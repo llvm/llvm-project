@@ -118,6 +118,97 @@ define float @f32_one_step(float %x) #1 {
   ret float %div
 }
 
+define float @f32_one_step_variables(float %x, float %y) #1 {
+; SSE-LABEL: f32_one_step_variables:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rcpss %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm2, %xmm1
+; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE-NEXT:    subss %xmm1, %xmm3
+; SSE-NEXT:    mulss %xmm2, %xmm3
+; SSE-NEXT:    addss %xmm2, %xmm3
+; SSE-NEXT:    mulss %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-RECIP-LABEL: f32_one_step_variables:
+; AVX-RECIP:       # %bb.0:
+; AVX-RECIP-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; AVX-RECIP-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX-RECIP-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX-RECIP-NEXT:    vsubss %xmm1, %xmm3, %xmm1
+; AVX-RECIP-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX-RECIP-NEXT:    vaddss %xmm1, %xmm2, %xmm1
+; AVX-RECIP-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX-RECIP-NEXT:    retq
+;
+; FMA-RECIP-LABEL: f32_one_step_variables:
+; FMA-RECIP:       # %bb.0:
+; FMA-RECIP-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm1 = -(xmm2 * xmm1) + mem
+; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; FMA-RECIP-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; FMA-RECIP-NEXT:    retq
+;
+; BDVER2-LABEL: f32_one_step_variables:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; BDVER2-NEXT:    vfnmaddss {{.*}}(%rip), %xmm2, %xmm1, %xmm1
+; BDVER2-NEXT:    vfmaddss %xmm2, %xmm1, %xmm2, %xmm1
+; BDVER2-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; BDVER2-NEXT:    retq
+;
+; BTVER2-LABEL: f32_one_step_variables:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; BTVER2-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; BTVER2-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; BTVER2-NEXT:    vsubss %xmm1, %xmm3, %xmm1
+; BTVER2-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; BTVER2-NEXT:    vaddss %xmm1, %xmm2, %xmm1
+; BTVER2-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; BTVER2-NEXT:    retq
+;
+; SANDY-LABEL: f32_one_step_variables:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; SANDY-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; SANDY-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SANDY-NEXT:    vsubss %xmm1, %xmm3, %xmm1
+; SANDY-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; SANDY-NEXT:    vaddss %xmm1, %xmm2, %xmm1
+; SANDY-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; SANDY-NEXT:    retq
+;
+; HASWELL-LABEL: f32_one_step_variables:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm1 = -(xmm2 * xmm1) + mem
+; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; HASWELL-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; HASWELL-NEXT:    retq
+;
+; HASWELL-NO-FMA-LABEL: f32_one_step_variables:
+; HASWELL-NO-FMA:       # %bb.0:
+; HASWELL-NO-FMA-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; HASWELL-NO-FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; HASWELL-NO-FMA-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; HASWELL-NO-FMA-NEXT:    vsubss %xmm1, %xmm3, %xmm1
+; HASWELL-NO-FMA-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; HASWELL-NO-FMA-NEXT:    vaddss %xmm1, %xmm2, %xmm1
+; HASWELL-NO-FMA-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; HASWELL-NO-FMA-NEXT:    retq
+;
+; AVX512-LABEL: f32_one_step_variables:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
+; AVX512-NEXT:    vfnmadd213ss {{.*#+}} xmm1 = -(xmm2 * xmm1) + mem
+; AVX512-NEXT:    vfmadd132ss {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %div = fdiv fast float %x, %y
+  ret float %div
+}
+
 define float @f32_two_step(float %x) #2 {
 ; SSE-LABEL: f32_two_step:
 ; SSE:       # %bb.0:
@@ -386,6 +477,107 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
 ; SKX-NEXT:    retq
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %x
+  ret <4 x float> %div
+}
+
+define <4 x float> @v4f32_one_step_variables(<4 x float> %x, <4 x float> %y) #1 {
+; SSE-LABEL: v4f32_one_step_variables:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rcpps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SSE-NEXT:    subps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm2, %xmm3
+; SSE-NEXT:    addps %xmm2, %xmm3
+; SSE-NEXT:    mulps %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-RECIP-LABEL: v4f32_one_step_variables:
+; AVX-RECIP:       # %bb.0:
+; AVX-RECIP-NEXT:    vrcpps %xmm1, %xmm2
+; AVX-RECIP-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; AVX-RECIP-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX-RECIP-NEXT:    vaddps %xmm1, %xmm2, %xmm1
+; AVX-RECIP-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX-RECIP-NEXT:    retq
+;
+; FMA-RECIP-LABEL: v4f32_one_step_variables:
+; FMA-RECIP:       # %bb.0:
+; FMA-RECIP-NEXT:    vrcpps %xmm1, %xmm2
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm1 = -(xmm2 * xmm1) + mem
+; FMA-RECIP-NEXT:    vfmadd132ps {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; FMA-RECIP-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; FMA-RECIP-NEXT:    retq
+;
+; BDVER2-LABEL: v4f32_one_step_variables:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vrcpps %xmm1, %xmm2
+; BDVER2-NEXT:    vfnmaddps {{.*}}(%rip), %xmm2, %xmm1, %xmm1
+; BDVER2-NEXT:    vfmaddps %xmm2, %xmm1, %xmm2, %xmm1
+; BDVER2-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; BDVER2-NEXT:    retq
+;
+; BTVER2-LABEL: v4f32_one_step_variables:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vmovaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vrcpps %xmm1, %xmm2
+; BTVER2-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; BTVER2-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; BTVER2-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; BTVER2-NEXT:    vaddps %xmm1, %xmm2, %xmm1
+; BTVER2-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; BTVER2-NEXT:    retq
+;
+; SANDY-LABEL: v4f32_one_step_variables:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    vrcpps %xmm1, %xmm2
+; SANDY-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; SANDY-NEXT:    vmovaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SANDY-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; SANDY-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; SANDY-NEXT:    vaddps %xmm1, %xmm2, %xmm1
+; SANDY-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; SANDY-NEXT:    retq
+;
+; HASWELL-LABEL: v4f32_one_step_variables:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    vrcpps %xmm1, %xmm2
+; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm1 = -(xmm2 * xmm1) + xmm3
+; HASWELL-NEXT:    vfmadd132ps {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; HASWELL-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; HASWELL-NEXT:    retq
+;
+; HASWELL-NO-FMA-LABEL: v4f32_one_step_variables:
+; HASWELL-NO-FMA:       # %bb.0:
+; HASWELL-NO-FMA-NEXT:    vrcpps %xmm1, %xmm2
+; HASWELL-NO-FMA-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; HASWELL-NO-FMA-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NO-FMA-NEXT:    vsubps %xmm1, %xmm3, %xmm1
+; HASWELL-NO-FMA-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; HASWELL-NO-FMA-NEXT:    vaddps %xmm1, %xmm2, %xmm1
+; HASWELL-NO-FMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; HASWELL-NO-FMA-NEXT:    retq
+;
+; KNL-LABEL: v4f32_one_step_variables:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vrcpps %xmm1, %xmm2
+; KNL-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} xmm1 = -(xmm2 * xmm1) + xmm3
+; KNL-NEXT:    vfmadd132ps {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; KNL-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v4f32_one_step_variables:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vrcpps %xmm1, %xmm2
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm1 = -(xmm2 * xmm1) + mem
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm1 = (xmm1 * xmm2) + xmm2
+; SKX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; SKX-NEXT:    retq
+  %div = fdiv fast <4 x float> %x, %y
   ret <4 x float> %div
 }
 

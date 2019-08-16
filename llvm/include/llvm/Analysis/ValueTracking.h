@@ -660,6 +660,12 @@ class Value;
   Optional<bool> isImpliedByDomCondition(const Value *Cond,
                                          const Instruction *ContextI,
                                          const DataLayout &DL);
+
+  /// Return true if Ptr1 is provably equal to Ptr2 plus a constant offset, and
+  /// return that constant offset. For example, Ptr1 might be &A[42], and Ptr2
+  /// might be &A[40]. In this case offset would be -8.
+  bool isPointerOffset(Value *Ptr1, Value *Ptr2, int64_t &Offset,
+                       const DataLayout &DL);
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

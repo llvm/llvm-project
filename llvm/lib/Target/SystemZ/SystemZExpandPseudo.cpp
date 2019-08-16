@@ -68,8 +68,8 @@ bool SystemZExpandPseudo::expandLOCRMux(MachineBasicBlock &MBB,
   const BasicBlock *BB = MBB.getBasicBlock();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(2).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
   unsigned CCValid = MI.getOperand(3).getImm();
   unsigned CCMask = MI.getOperand(4).getImm();
 

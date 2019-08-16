@@ -227,8 +227,8 @@ private:
 
     /// The constructor for spill locations.
     VarLoc(const MachineInstr &MI, unsigned SpillBase, int SpillOffset,
-           LexicalScopes &LS)
-        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS) {
+           LexicalScopes &LS, const MachineInstr &OrigMI)
+        : Var(MI), MI(OrigMI), UVS(MI.getDebugLoc(), LS) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       Kind = SpillLocKind;
@@ -567,11 +567,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     ID = VarLocIDs.insert(VL);
     OpenRanges.insert(ID, VL.Var);
   } else if (MI.hasOneMemOperand()) {
-    // It's a stack spill -- fetch spill base and offset.
-    VarLoc::SpillLoc SpillLocation = extractSpillBaseRegAndOffset(MI);
-    VarLoc VL(MI, SpillLocation.SpillBase, SpillLocation.SpillOffset, LS);
-    ID = VarLocIDs.insert(VL);
-    OpenRanges.insert(ID, VL.Var);
+    llvm_unreachable("DBG_VALUE with mem operand encountered after regalloc?");
   } else {
     // This must be an undefined location. We should leave OpenRanges closed.
     assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
@@ -678,7 +674,7 @@ void LiveDebugValues::insertTransferDebugPair(
         *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), true,
         SpillLocation.SpillBase, DebugInstr->getDebugVariable(), SpillExpr);
     VarLoc VL(*NewDebugInstr, SpillLocation.SpillBase,
-              SpillLocation.SpillOffset, LS);
+              SpillLocation.SpillOffset, LS, *DebugInstr);
     ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
                NewDebugInstr->print(dbgs(), /*IsStandalone*/false,
@@ -691,9 +687,11 @@ void LiveDebugValues::insertTransferDebugPair(
            "No register supplied when handling a restore of a debug value");
     MachineFunction *MF = MI.getMF();
     DIBuilder DIB(*const_cast<Function &>(MF->getFunction()).getParent());
-    NewDebugInstr =
-        BuildMI(*MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false,
-                NewReg, DebugInstr->getDebugVariable(), DIB.createExpression());
+    // DebugInstr refers to the pre-spill location, therefore we can reuse
+    // its expression.
+    NewDebugInstr = BuildMI(
+        *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false, NewReg,
+        DebugInstr->getDebugVariable(), DebugInstr->getDebugExpression());
     VarLoc VL(*NewDebugInstr, LS);
     ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register restore: ";
@@ -885,8 +883,8 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
     return false;
   };
 
-  unsigned SrcReg = SrcRegOp->getReg();
-  unsigned DestReg = DestRegOp->getReg();
+  Register SrcReg = SrcRegOp->getReg();
+  Register DestReg = DestRegOp->getReg();
 
   // We want to recognize instructions where destination register is callee
   // saved register. If register that could be clobbered by the call is
@@ -1108,13 +1106,24 @@ bool LiveDebugValues::join(
                    DebugInstr->getDebugVariable(),
                    DebugInstr->getDebugExpression());
     } else {
+      auto *DebugExpr = DebugInstr->getDebugExpression();
+      Register Reg = DebugInstr->getOperand(0).getReg();
+      bool IsIndirect = DebugInstr->isIndirectDebugValue();
+
+      if (DiffIt.Kind == VarLoc::SpillLocKind) {
+        // This is is a spilt location; DebugInstr refers to the unspilt
+        // location. We need to rebuild the spilt location expression and
+        // point the DBG_VALUE at the frame register.
+        DebugExpr = DIExpression::prepend(DebugInstr->getDebugExpression(),
+                                          DIExpression::ApplyOffset,
+                                          DiffIt.Loc.SpillLocation.SpillOffset);
+        Reg = TRI->getFrameRegister(*DebugInstr->getMF());
+        IsIndirect = true;
+      }
+
       MI = BuildMI(MBB, MBB.instr_begin(), DebugInstr->getDebugLoc(),
-                   DebugInstr->getDesc(), DebugInstr->isIndirectDebugValue(),
-                   DebugInstr->getOperand(0).getReg(),
-                   DebugInstr->getDebugVariable(),
-                   DebugInstr->getDebugExpression());
-      if (DebugInstr->isIndirectDebugValue())
-        MI->getOperand(1).setImm(DebugInstr->getOperand(1).getImm());
+                   DebugInstr->getDesc(), IsIndirect, Reg,
+                   DebugInstr->getDebugVariable(), DebugExpr);
     }
     LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     ILS.set(ID);
@@ -1169,7 +1178,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-  unsigned FP = TRI->getFrameRegister(MF);
+  Register FP = TRI->getFrameRegister(MF);
   auto IsRegOtherThanSPAndFP = [&](const MachineOperand &Op) -> bool {
     return Op.isReg() && Op.getReg() != SP && Op.getReg() != FP;
   };

@@ -497,8 +497,8 @@ void SILowerI1Copies::lowerCopiesFromI1() {
       if (MI.getOpcode() != AMDGPU::COPY)
         continue;
 
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
       if (!isVreg1(SrcReg))
         continue;
 
@@ -544,7 +544,7 @@ void SILowerI1Copies::lowerPhis() {
     LF.initialize(MBB);
 
     for (MachineInstr &MI : MBB.phis()) {
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       if (!isVreg1(DstReg))
         continue;
 
@@ -556,7 +556,7 @@ void SILowerI1Copies::lowerPhis() {
       // Collect incoming values.
       for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
         assert(i + 1 < MI.getNumOperands());
-        unsigned IncomingReg = MI.getOperand(i).getReg();
+        Register IncomingReg = MI.getOperand(i).getReg();
         MachineBasicBlock *IncomingMBB = MI.getOperand(i + 1).getMBB();
         MachineInstr *IncomingDef = MRI->getUniqueVRegDef(IncomingReg);
 
@@ -669,7 +669,7 @@ void SILowerI1Copies::lowerCopiesToI1() {
           MI.getOpcode() != AMDGPU::COPY)
         continue;
 
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       if (!isVreg1(DstReg))
         continue;
 
@@ -686,7 +686,7 @@ void SILowerI1Copies::lowerCopiesToI1() {
         continue;
 
       DebugLoc DL = MI.getDebugLoc();
-      unsigned SrcReg = MI.getOperand(1).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
       assert(!MI.getOperand(1).getSubReg());
 
       if (!Register::isVirtualRegister(SrcReg) ||

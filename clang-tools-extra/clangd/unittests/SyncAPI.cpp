@@ -40,11 +40,9 @@ template <typename T> struct CaptureProxy {
   operator llvm::unique_function<void(T)>() && {
     assert(!Future.valid() && "conversion to callback called multiple times");
     Future = Promise.get_future();
-    return Bind(
-        [](std::promise<std::shared_ptr<T>> Promise, T Value) {
-          Promise.set_value(std::make_shared<T>(std::move(Value)));
-        },
-        std::move(Promise));
+    return [Promise = std::move(Promise)](T Value) mutable {
+      Promise.set_value(std::make_shared<T>(std::move(Value)));
+    };
   }
 
   ~CaptureProxy() {

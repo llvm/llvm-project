@@ -162,7 +162,7 @@ class PPCFastISel final : public FastISel {
     bool PPCEmitCmp(const Value *Src1Value, const Value *Src2Value,
                     bool isZExt, unsigned DestReg,
                     const PPC::Predicate Pred);
-    bool PPCEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
+    bool PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
                      const TargetRegisterClass *RC, bool IsZExt = true,
                      unsigned FP64LoadOpc = PPC::LFD);
     bool PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr);
@@ -451,7 +451,7 @@ void PPCFastISel::PPCSimplifyAddress(Address &Addr, bool &UseOffset,
 // Emit a load instruction if possible, returning true if we succeeded,
 // otherwise false.  See commentary below for how the register class of
 // the load is determined.
-bool PPCFastISel::PPCEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
+bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
                               const TargetRegisterClass *RC,
                               bool IsZExt, unsigned FP64LoadOpc) {
   unsigned Opc;
@@ -612,7 +612,7 @@ bool PPCFastISel::SelectLoad(const Instruction *I) {
   const TargetRegisterClass *RC =
     AssignedReg ? MRI.getRegClass(AssignedReg) : nullptr;
 
-  unsigned ResultReg = 0;
+  Register ResultReg = 0;
   if (!PPCEmitLoad(VT, ResultReg, Addr, RC, true,
       PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
     return false;
@@ -1051,7 +1051,7 @@ unsigned PPCFastISel::PPCMoveToFPReg(MVT SrcVT, unsigned SrcReg,
   }
 
   const TargetRegisterClass *RC = &PPC::F8RCRegClass;
-  unsigned ResultReg = 0;
+  Register ResultReg = 0;
   if (!PPCEmitLoad(MVT::f64, ResultReg, Addr, RC, !IsSigned, LoadOpc))
     return 0;
 
@@ -1176,7 +1176,7 @@ unsigned PPCFastISel::PPCMoveToIntReg(const Instruction *I, MVT VT,
   const TargetRegisterClass *RC =
     AssignedReg ? MRI.getRegClass(AssignedReg) : nullptr;
 
-  unsigned ResultReg = 0;
+  Register ResultReg = 0;
   if (!PPCEmitLoad(VT, ResultReg, Addr, RC, !IsSigned))
     return 0;
 
@@ -1717,7 +1717,7 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
     if (const ConstantInt *CI = dyn_cast<ConstantInt>(RV)) {
       CCValAssign &VA = ValLocs[0];
 
-      unsigned RetReg = VA.getLocReg();
+      Register RetReg = VA.getLocReg();
       // We still need to worry about properly extending the sign. For example,
       // we could have only a single bit or a constant that needs zero
       // extension rather than sign extension. Make sure we pass the return
@@ -2353,7 +2353,7 @@ bool PPCFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   if (!PPCComputeAddress(LI->getOperand(0), Addr))
     return false;
 
-  unsigned ResultReg = MI->getOperand(0).getReg();
+  Register ResultReg = MI->getOperand(0).getReg();
 
   if (!PPCEmitLoad(VT, ResultReg, Addr, nullptr, IsZExt,
         PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
