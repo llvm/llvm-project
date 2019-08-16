@@ -331,7 +331,7 @@ static std::unique_ptr<ExprAST> ParseExpression();
 
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
-  auto Result = std::make_unique<NumberExprAST>(NumVal);
+  auto Result = llvm::make_unique<NumberExprAST>(NumVal);
   getNextToken(); // consume the number
   return std::move(Result);
 }
@@ -358,7 +358,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken(); // eat identifier.
 
   if (CurTok != '(') // Simple variable ref.
-    return std::make_unique<VariableExprAST>(IdName);
+    return llvm::make_unique<VariableExprAST>(IdName);
 
   // Call.
   getNextToken(); // eat (
@@ -382,7 +382,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   // Eat the ')'.
   getNextToken();
 
-  return std::make_unique<CallExprAST>(IdName, std::move(Args));
+  return llvm::make_unique<CallExprAST>(IdName, std::move(Args));
 }
 
 /// ifexpr ::= 'if' expression 'then' expression 'else' expression
@@ -411,7 +411,7 @@ static std::unique_ptr<ExprAST> ParseIfExpr() {
   if (!Else)
     return nullptr;
 
-  return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then),
+  return llvm::make_unique<IfExprAST>(std::move(Cond), std::move(Then),
                                       std::move(Else));
 }
 
@@ -457,7 +457,7 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
   if (!Body)
     return nullptr;
 
-  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(End),
+  return llvm::make_unique<ForExprAST>(IdName, std::move(Start), std::move(End),
                                        std::move(Step), std::move(Body));
 }
 
@@ -506,7 +506,7 @@ static std::unique_ptr<ExprAST> ParseVarExpr() {
   if (!Body)
     return nullptr;
 
-  return std::make_unique<VarExprAST>(std::move(VarNames), std::move(Body));
+  return llvm::make_unique<VarExprAST>(std::move(VarNames), std::move(Body));
 }
 
 /// primary
@@ -547,7 +547,7 @@ static std::unique_ptr<ExprAST> ParseUnary() {
   int Opc = CurTok;
   getNextToken();
   if (auto Operand = ParseUnary())
-    return std::make_unique<UnaryExprAST>(Opc, std::move(Operand));
+    return llvm::make_unique<UnaryExprAST>(Opc, std::move(Operand));
   return nullptr;
 }
 
@@ -584,7 +584,7 @@ static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 
     // Merge LHS/RHS.
     LHS =
-        std::make_unique<BinaryExprAST>(BinOp, std::move(LHS), std::move(RHS));
+        llvm::make_unique<BinaryExprAST>(BinOp, std::move(LHS), std::move(RHS));
   }
 }
 
@@ -661,7 +661,7 @@ static std::unique_ptr<PrototypeAST> ParsePrototype() {
   if (Kind && ArgNames.size() != Kind)
     return LogErrorP("Invalid number of operands for operator");
 
-  return std::make_unique<PrototypeAST>(FnName, ArgNames, Kind != 0,
+  return llvm::make_unique<PrototypeAST>(FnName, ArgNames, Kind != 0,
                                          BinaryPrecedence);
 }
 
@@ -673,7 +673,7 @@ static std::unique_ptr<FunctionAST> ParseDefinition() {
     return nullptr;
 
   if (auto E = ParseExpression())
-    return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+    return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   return nullptr;
 }
 
@@ -684,12 +684,12 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
     auto PEArgs = std::vector<std::unique_ptr<ExprAST>>();
     PEArgs.push_back(std::move(E));
     auto PrintExpr =
-      std::make_unique<CallExprAST>("printExprResult", std::move(PEArgs));
+      llvm::make_unique<CallExprAST>("printExprResult", std::move(PEArgs));
 
     // Make an anonymous proto.
-    auto Proto = std::make_unique<PrototypeAST>("__anon_expr",
+    auto Proto = llvm::make_unique<PrototypeAST>("__anon_expr",
                                                  std::vector<std::string>());
-    return std::make_unique<FunctionAST>(std::move(Proto),
+    return llvm::make_unique<FunctionAST>(std::move(Proto),
                                           std::move(PrintExpr));
   }
   return nullptr;
@@ -1119,7 +1119,7 @@ Function *FunctionAST::codegen() {
 
 static void InitializeModule() {
   // Open a new module.
-  TheModule = std::make_unique<Module>("my cool jit", TheContext);
+  TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
   TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
 }
 
@@ -1138,7 +1138,7 @@ irgenAndTakeOwnership(FunctionAST &FnAST, const std::string &Suffix) {
 static void HandleDefinition() {
   if (auto FnAST = ParseDefinition()) {
     FunctionProtos[FnAST->getProto().getName()] =
-      std::make_unique<PrototypeAST>(FnAST->getProto());
+      llvm::make_unique<PrototypeAST>(FnAST->getProto());
     ExitOnErr(TheJIT->addFunctionAST(std::move(FnAST)));
   } else {
     // Skip token for error recovery.
@@ -1164,7 +1164,7 @@ static void HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
   if (auto FnAST = ParseTopLevelExpr()) {
     FunctionProtos[FnAST->getName()] =
-      std::make_unique<PrototypeAST>(FnAST->getProto());
+      llvm::make_unique<PrototypeAST>(FnAST->getProto());
     if (FnAST->codegen()) {
       // JIT the module containing the anonymous expression, keeping a handle so
       // we can free it later.
@@ -1253,7 +1253,7 @@ std::unique_ptr<FDRPCChannel> connect() {
     exit(1);
   }
 
-  return std::make_unique<FDRPCChannel>(sockfd, sockfd);
+  return llvm::make_unique<FDRPCChannel>(sockfd, sockfd);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1281,11 +1281,11 @@ int main(int argc, char *argv[]) {
   ExecutionSession ES;
   auto TCPChannel = connect();
   auto Remote = ExitOnErr(MyRemote::Create(*TCPChannel, ES));
-  TheJIT = std::make_unique<KaleidoscopeJIT>(ES, *Remote);
+  TheJIT = llvm::make_unique<KaleidoscopeJIT>(ES, *Remote);
 
   // Automatically inject a definition for 'printExprResult'.
   FunctionProtos["printExprResult"] =
-    std::make_unique<PrototypeAST>("printExprResult",
+    llvm::make_unique<PrototypeAST>("printExprResult",
                                     std::vector<std::string>({"Val"}));
 
   // Prime the first token.

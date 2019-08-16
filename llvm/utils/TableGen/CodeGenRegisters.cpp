@@ -670,7 +670,7 @@ struct TupleExpander : SetTheory::Expander {
       // is only for consumption by CodeGenRegister, it is not added to the
       // RecordKeeper.
       SynthDefs.emplace_back(
-          std::make_unique<Record>(Name, Def->getLoc(), Def->getRecords()));
+          llvm::make_unique<Record>(Name, Def->getLoc(), Def->getRecords()));
       Record *NewReg = SynthDefs.back().get();
       Elts.insert(NewReg);
 
@@ -1098,7 +1098,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
   Sets.addExpander("RegisterTuples",
-                   std::make_unique<TupleExpander>(SynthDefs));
+                   llvm::make_unique<TupleExpander>(SynthDefs));
 
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.

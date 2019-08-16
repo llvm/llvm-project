@@ -88,7 +88,7 @@ public:
   RandomAccessVisitorTest() {}
 
   static void SetUpTestCase() {
-    GlobalState = std::make_unique<GlobalTestState>();
+    GlobalState = llvm::make_unique<GlobalTestState>();
 
     AppendingTypeTableBuilder Builder(GlobalState->Allocator);
 
@@ -120,7 +120,7 @@ public:
   static void TearDownTestCase() { GlobalState.reset(); }
 
   void SetUp() override {
-    TestState = std::make_unique<PerTestState>();
+    TestState = llvm::make_unique<PerTestState>();
   }
 
   void TearDown() override { TestState.reset(); }

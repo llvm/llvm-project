@@ -484,7 +484,7 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {

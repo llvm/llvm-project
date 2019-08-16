@@ -25,8 +25,8 @@ public:
 
   void SetUp() override {
     Refs.clear();
-    TTB = std::make_unique<AppendingTypeTableBuilder>(Storage);
-    CRB = std::make_unique<ContinuationRecordBuilder>();
+    TTB = make_unique<AppendingTypeTableBuilder>(Storage);
+    CRB = make_unique<ContinuationRecordBuilder>();
     Symbols.clear();
   }
 

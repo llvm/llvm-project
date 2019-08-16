@@ -502,7 +502,7 @@ bool Parser::parseError(const char *Msg) {
     }
   }
   Err.emplace(
-      std::make_unique<ParseError>(Msg, Line, P - StartOfLine, P - Start));
+      llvm::make_unique<ParseError>(Msg, Line, P - StartOfLine, P - Start));
   return false;
 }
 } // namespace

@@ -53,7 +53,7 @@ static cl::opt<unsigned>
                               "call callsite"));
 
 ICallPromotionAnalysis::ICallPromotionAnalysis() {
-  ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
+  ValueDataArray = llvm::make_unique<InstrProfValueData[]>(MaxNumPromotions);
 }
 
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,

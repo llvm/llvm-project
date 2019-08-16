@@ -68,22 +68,22 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
 
 std::unique_ptr<SnippetGenerator>
 ExegesisTarget::createLatencySnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<LatencySnippetGenerator>(State);
+  return llvm::make_unique<LatencySnippetGenerator>(State);
 }
 
 std::unique_ptr<SnippetGenerator>
 ExegesisTarget::createUopsSnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<UopsSnippetGenerator>(State);
+  return llvm::make_unique<UopsSnippetGenerator>(State);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
     const LLVMState &State, InstructionBenchmark::ModeE Mode) const {
-  return std::make_unique<LatencyBenchmarkRunner>(State, Mode);
+  return llvm::make_unique<LatencyBenchmarkRunner>(State, Mode);
 }
 
 std::unique_ptr<BenchmarkRunner>
 ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
-  return std::make_unique<UopsBenchmarkRunner>(State);
+  return llvm::make_unique<UopsBenchmarkRunner>(State);
 }
 
 void ExegesisTarget::randomizeMCOperand(

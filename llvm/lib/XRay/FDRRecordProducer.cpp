@@ -40,32 +40,32 @@ metadataRecordType(const XRayFileHeader &Header, uint8_t T) {
                              "Invalid metadata record type: %d", T);
   switch (T) {
   case MetadataRecordKinds::NewBufferKind:
-    return std::make_unique<NewBufferRecord>();
+    return make_unique<NewBufferRecord>();
   case MetadataRecordKinds::EndOfBufferKind:
     if (Header.Version >= 2)
       return createStringError(
           std::make_error_code(std::errc::executable_format_error),
           "End of buffer records are no longer supported starting version "
           "2 of the log.");
-    return std::make_unique<EndBufferRecord>();
+    return make_unique<EndBufferRecord>();
   case MetadataRecordKinds::NewCPUIdKind:
-    return std::make_unique<NewCPUIDRecord>();
+    return make_unique<NewCPUIDRecord>();
   case MetadataRecordKinds::TSCWrapKind:
-    return std::make_unique<TSCWrapRecord>();
+    return make_unique<TSCWrapRecord>();
   case MetadataRecordKinds::WalltimeMarkerKind:
-    return std::make_unique<WallclockRecord>();
+    return make_unique<WallclockRecord>();
   case MetadataRecordKinds::CustomEventMarkerKind:
     if (Header.Version >= 5)
-      return std::make_unique<CustomEventRecordV5>();
-    return std::make_unique<CustomEventRecord>();
+      return make_unique<CustomEventRecordV5>();
+    return make_unique<CustomEventRecord>();
   case MetadataRecordKinds::CallArgumentKind:
-    return std::make_unique<CallArgRecord>();
+    return make_unique<CallArgRecord>();
   case MetadataRecordKinds::BufferExtentsKind:
-    return std::make_unique<BufferExtents>();
+    return make_unique<BufferExtents>();
   case MetadataRecordKinds::TypedEventMarkerKind:
-    return std::make_unique<TypedEventRecord>();
+    return make_unique<TypedEventRecord>();
   case MetadataRecordKinds::PidKind:
-    return std::make_unique<PIDRecord>();
+    return make_unique<PIDRecord>();
   case MetadataRecordKinds::EnumEndMarker:
     llvm_unreachable("Invalid MetadataRecordKind");
   }
@@ -167,7 +167,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
               LoadedType, PreReadOffset));
     R = std::move(MetadataRecordOrErr.get());
   } else {
-    R = std::make_unique<FunctionRecord>();
+    R = llvm::make_unique<FunctionRecord>();
   }
   RecordInitializer RI(E, OffsetPtr);
 

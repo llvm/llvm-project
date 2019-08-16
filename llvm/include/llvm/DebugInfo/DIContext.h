@@ -293,7 +293,7 @@ public:
   LoadedObjectInfoHelper(Ts &&... Args) : Base(std::forward<Ts>(Args)...) {}
 
   std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
-    return std::make_unique<Derived>(static_cast<const Derived &>(*this));
+    return llvm::make_unique<Derived>(static_cast<const Derived &>(*this));
   }
 };
 

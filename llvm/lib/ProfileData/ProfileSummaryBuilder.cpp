@@ -93,14 +93,14 @@ void ProfileSummaryBuilder::computeDetailedSummary() {
 
 std::unique_ptr<ProfileSummary> SampleProfileSummaryBuilder::getSummary() {
   computeDetailedSummary();
-  return std::make_unique<ProfileSummary>(
+  return llvm::make_unique<ProfileSummary>(
       ProfileSummary::PSK_Sample, DetailedSummary, TotalCount, MaxCount, 0,
       MaxFunctionCount, NumCounts, NumFunctions);
 }
 
 std::unique_ptr<ProfileSummary> InstrProfSummaryBuilder::getSummary() {
   computeDetailedSummary();
-  return std::make_unique<ProfileSummary>(
+  return llvm::make_unique<ProfileSummary>(
       ProfileSummary::PSK_Instr, DetailedSummary, TotalCount, MaxCount,
       MaxInternalBlockCount, MaxFunctionCount, NumCounts, NumFunctions);
 }

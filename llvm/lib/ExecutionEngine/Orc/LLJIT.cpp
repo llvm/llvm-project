@@ -68,9 +68,9 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
-  auto GetMemMgr = []() { return std::make_unique<SectionMemoryManager>(); };
+  auto GetMemMgr = []() { return llvm::make_unique<SectionMemoryManager>(); };
   auto ObjLinkingLayer =
-      std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
+      llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
   if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
     ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
@@ -102,7 +102,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 }
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
-    : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()),
+    : ES(S.ES ? std::move(S.ES) : llvm::make_unique<ExecutionSession>()),
       Main(this->ES->getMainJITDylib()), DL(""), CtorRunner(Main),
       DtorRunner(Main) {
 
@@ -123,13 +123,13 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
       Err = CompileFunction.takeError();
       return;
     }
-    CompileLayer = std::make_unique<IRCompileLayer>(
+    CompileLayer = llvm::make_unique<IRCompileLayer>(
         *ES, *ObjLinkingLayer, std::move(*CompileFunction));
   }
 
   if (S.NumCompileThreads > 0) {
     CompileLayer->setCloneToNewContextOnEmit(true);
-    CompileThreads = std::make_unique<ThreadPool>(S.NumCompileThreads);
+    CompileThreads = llvm::make_unique<ThreadPool>(S.NumCompileThreads);
     ES->setDispatchMaterialization(
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
           // FIXME: Switch to move capture once we have c++14.
@@ -226,10 +226,10 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
   }
 
   // Create the transform layer.
-  TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
+  TransformLayer = llvm::make_unique<IRTransformLayer>(*ES, *CompileLayer);
 
   // Create the COD layer.
-  CODLayer = std::make_unique<CompileOnDemandLayer>(
+  CODLayer = llvm::make_unique<CompileOnDemandLayer>(
       *ES, *TransformLayer, *LCTMgr, std::move(ISMBuilder));
 
   if (S.NumCompileThreads > 0)

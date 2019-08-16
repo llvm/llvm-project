@@ -87,7 +87,7 @@ public:
   }
   GISelKnownBits &get(MachineFunction &MF) {
     if (!Info)
-      Info = std::make_unique<GISelKnownBits>(MF);
+      Info = make_unique<GISelKnownBits>(MF);
     return *Info.get();
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override;

@@ -226,7 +226,7 @@ struct LTOLLVMContext : LLVMContext {
     setDiscardValueNames(C.ShouldDiscardValueNames);
     enableDebugTypeODRUniquing();
     setDiagnosticHandler(
-        std::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
+        llvm::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
   }
   DiagnosticHandlerFunction DiagHandler;
 };

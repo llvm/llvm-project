@@ -83,11 +83,11 @@ void DWARFUnitVector::addUnitsImpl(
         return nullptr;
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
-        U = std::make_unique<DWARFTypeUnit>(Context, InfoSection, Header, DA,
+        U = llvm::make_unique<DWARFTypeUnit>(Context, InfoSection, Header, DA,
                                              RS, LocSection, SS, SOS, AOS, LS,
                                              LE, IsDWO, *this);
       else
-        U = std::make_unique<DWARFCompileUnit>(Context, InfoSection, Header,
+        U = llvm::make_unique<DWARFCompileUnit>(Context, InfoSection, Header,
                                                 DA, RS, LocSection, SS, SOS,
                                                 AOS, LS, LE, IsDWO, *this);
       return U;

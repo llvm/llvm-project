@@ -385,7 +385,7 @@ InputFile::getOrCreateTypeCollection(TypeCollectionKind Kind) {
     uint32_t Count = Stream.getNumTypeRecords();
     auto Offsets = Stream.getTypeIndexOffsets();
     Collection =
-        std::make_unique<LazyRandomTypeCollection>(Array, Count, Offsets);
+        llvm::make_unique<LazyRandomTypeCollection>(Array, Count, Offsets);
     return *Collection;
   }
 
@@ -398,11 +398,11 @@ InputFile::getOrCreateTypeCollection(TypeCollectionKind Kind) {
     if (!isDebugTSection(Section, Records))
       continue;
 
-    Types = std::make_unique<LazyRandomTypeCollection>(Records, 100);
+    Types = llvm::make_unique<LazyRandomTypeCollection>(Records, 100);
     return *Types;
   }
 
-  Types = std::make_unique<LazyRandomTypeCollection>(100);
+  Types = llvm::make_unique<LazyRandomTypeCollection>(100);
   return *Types;
 }
 

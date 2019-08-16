@@ -607,9 +607,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     });
 
     if (!DT)
-      DT = std::make_unique<DominatorTree>(F);
+      DT = make_unique<DominatorTree>(F);
     if (!PDT)
-      PDT = std::make_unique<PostDominatorTree>(F);
+      PDT = make_unique<PostDominatorTree>(F);
 
     auto Regions = OutliningRegion::create(*BB, *DT, *PDT);
     for (OutliningRegion &Region : Regions) {

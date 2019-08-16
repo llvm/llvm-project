@@ -1296,12 +1296,12 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
 
       // Separate out the producers and target features sections
       if (Name == "producers") {
-        ProducersSection = std::make_unique<WasmCustomSection>(Name, &Section);
+        ProducersSection = llvm::make_unique<WasmCustomSection>(Name, &Section);
         continue;
       }
       if (Name == "target_features") {
         TargetFeaturesSection =
-            std::make_unique<WasmCustomSection>(Name, &Section);
+            llvm::make_unique<WasmCustomSection>(Name, &Section);
         continue;
       }
 
@@ -1618,5 +1618,5 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
 std::unique_ptr<MCObjectWriter>
 llvm::createWasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS) {
-  return std::make_unique<WasmObjectWriter>(std::move(MOTW), OS);
+  return llvm::make_unique<WasmObjectWriter>(std::move(MOTW), OS);
 }

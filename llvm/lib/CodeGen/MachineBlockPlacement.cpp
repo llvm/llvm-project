@@ -3015,7 +3015,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   F = &MF;
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  MBFI = std::make_unique<BranchFolder::MBFIWrapper>(
+  MBFI = llvm::make_unique<BranchFolder::MBFIWrapper>(
       getAnalysis<MachineBlockFrequencyInfo>());
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = MF.getSubtarget().getInstrInfo();

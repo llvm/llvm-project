@@ -824,11 +824,11 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   if (!VRegsToAlloc.empty()) {
     const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
     std::unique_ptr<PBQPRAConstraintList> ConstraintsRoot =
-      std::make_unique<PBQPRAConstraintList>();
-    ConstraintsRoot->addConstraint(std::make_unique<SpillCosts>());
-    ConstraintsRoot->addConstraint(std::make_unique<Interference>());
+      llvm::make_unique<PBQPRAConstraintList>();
+    ConstraintsRoot->addConstraint(llvm::make_unique<SpillCosts>());
+    ConstraintsRoot->addConstraint(llvm::make_unique<Interference>());
     if (PBQPCoalescing)
-      ConstraintsRoot->addConstraint(std::make_unique<Coalescing>());
+      ConstraintsRoot->addConstraint(llvm::make_unique<Coalescing>());
     ConstraintsRoot->addConstraint(Subtarget.getCustomPBQPConstraints());
 
     bool PBQPAllocComplete = false;

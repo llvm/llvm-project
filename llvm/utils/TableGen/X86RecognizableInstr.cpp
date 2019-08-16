@@ -749,7 +749,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::RawFrmImm8:
   case X86Local::RawFrmImm16:
   case X86Local::AddCCFrm:
-    filter = std::make_unique<DumbFilter>();
+    filter = llvm::make_unique<DumbFilter>();
     break;
   case X86Local::MRMDestReg:
   case X86Local::MRMSrcReg:
@@ -758,7 +758,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::MRMSrcRegCC:
   case X86Local::MRMXrCC:
   case X86Local::MRMXr:
-    filter = std::make_unique<ModFilter>(true);
+    filter = llvm::make_unique<ModFilter>(true);
     break;
   case X86Local::MRMDestMem:
   case X86Local::MRMSrcMem:
@@ -767,22 +767,22 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::MRMSrcMemCC:
   case X86Local::MRMXmCC:
   case X86Local::MRMXm:
-    filter = std::make_unique<ModFilter>(false);
+    filter = llvm::make_unique<ModFilter>(false);
     break;
   case X86Local::MRM0r: case X86Local::MRM1r:
   case X86Local::MRM2r: case X86Local::MRM3r:
   case X86Local::MRM4r: case X86Local::MRM5r:
   case X86Local::MRM6r: case X86Local::MRM7r:
-    filter = std::make_unique<ExtendedFilter>(true, Form - X86Local::MRM0r);
+    filter = llvm::make_unique<ExtendedFilter>(true, Form - X86Local::MRM0r);
     break;
   case X86Local::MRM0m: case X86Local::MRM1m:
   case X86Local::MRM2m: case X86Local::MRM3m:
   case X86Local::MRM4m: case X86Local::MRM5m:
   case X86Local::MRM6m: case X86Local::MRM7m:
-    filter = std::make_unique<ExtendedFilter>(false, Form - X86Local::MRM0m);
+    filter = llvm::make_unique<ExtendedFilter>(false, Form - X86Local::MRM0m);
     break;
   X86_INSTR_MRM_MAPPING
-    filter = std::make_unique<ExactFilter>(0xC0 + Form - X86Local::MRM_C0);
+    filter = llvm::make_unique<ExactFilter>(0xC0 + Form - X86Local::MRM_C0);
     break;
   } // switch (Form)
 

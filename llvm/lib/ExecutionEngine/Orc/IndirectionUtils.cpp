@@ -66,7 +66,7 @@ JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
     std::lock_guard<std::mutex> Lock(CCMgrMutex);
     AddrToSymbol[*TrampolineAddr] = CallbackName;
     cantFail(CallbacksJD.define(
-        std::make_unique<CompileCallbackMaterializationUnit>(
+        llvm::make_unique<CompileCallbackMaterializationUnit>(
             std::move(CallbackName), std::move(Compile),
             ES.allocateVModule())));
     return *TrampolineAddr;
@@ -162,50 +162,50 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
   switch (T.getArch()) {
     default:
       return [](){
-        return std::make_unique<
+        return llvm::make_unique<
                        orc::LocalIndirectStubsManager<orc::OrcGenericABI>>();
       };
 
     case Triple::aarch64:
       return [](){
-        return std::make_unique<
+        return llvm::make_unique<
                        orc::LocalIndirectStubsManager<orc::OrcAArch64>>();
       };
 
     case Triple::x86:
       return [](){
-        return std::make_unique<
+        return llvm::make_unique<
                        orc::LocalIndirectStubsManager<orc::OrcI386>>();
       };
 
     case Triple::mips:
       return [](){
-          return std::make_unique<
+          return llvm::make_unique<
                       orc::LocalIndirectStubsManager<orc::OrcMips32Be>>();
       };
 
     case Triple::mipsel:
       return [](){
-          return std::make_unique<
+          return llvm::make_unique<
                       orc::LocalIndirectStubsManager<orc::OrcMips32Le>>();
       };
 
     case Triple::mips64:
     case Triple::mips64el:
       return [](){
-          return std::make_unique<
+          return llvm::make_unique<
                       orc::LocalIndirectStubsManager<orc::OrcMips64>>();
       };
       
     case Triple::x86_64:
       if (T.getOS() == Triple::OSType::Win32) {
         return [](){
-          return std::make_unique<
+          return llvm::make_unique<
                      orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
         };
       } else {
         return [](){
-          return std::make_unique<
+          return llvm::make_unique<
                      orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
         };
       }
