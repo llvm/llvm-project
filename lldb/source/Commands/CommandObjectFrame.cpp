@@ -573,9 +573,9 @@ protected:
                                                entry.c_str());
               }
             } else {
-              char regex_error[1024];
-              if (regex.GetErrorAsCString(regex_error, sizeof(regex_error)))
-                result.GetErrorStream().Printf("error: %s\n", regex_error);
+              if (llvm::Error err = regex.GetError())
+                result.GetErrorStream().Printf(
+                    "error: %s\n", llvm::toString(std::move(err)).c_str());
               else
                 result.GetErrorStream().Printf(
                     "error: unknown regex error when compiling '%s'\n",

@@ -36,7 +36,7 @@ public:
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
-    m_regex.Clear();
+    m_regex = RegularExpression();
     m_value_was_set = false;
     return true;
   }
@@ -52,7 +52,7 @@ public:
     if (value && value[0])
       m_regex.Compile(llvm::StringRef(value));
     else
-      m_regex.Clear();
+      m_regex = RegularExpression();
   }
 
   bool IsValid() const { return m_regex.IsValid(); }

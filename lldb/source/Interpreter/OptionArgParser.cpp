@@ -211,29 +211,21 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
     // pointer types.
     static RegularExpression g_symbol_plus_offset_regex(
         "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
-    RegularExpression::Match regex_match(3);
-    if (g_symbol_plus_offset_regex.Execute(sref, &regex_match)) {
-      uint64_t offset = 0;
-      bool add = true;
-      std::string name;
-      std::string str;
-      if (regex_match.GetMatchAtIndex(s, 1, name)) {
-        if (regex_match.GetMatchAtIndex(s, 2, str)) {
-          add = str[0] == '+';
 
-          if (regex_match.GetMatchAtIndex(s, 3, str)) {
-            if (!llvm::StringRef(str).getAsInteger(0, offset)) {
-              Status error;
-              addr = ToAddress(exe_ctx, name.c_str(), LLDB_INVALID_ADDRESS,
-                               &error);
-              if (addr != LLDB_INVALID_ADDRESS) {
-                if (add)
-                  return addr + offset;
-                else
-                  return addr - offset;
-              }
-            }
-          }
+    llvm::SmallVector<llvm::StringRef, 4> matches;
+    if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
+      uint64_t offset = 0;
+      std::string name = matches[1].str();
+      std::string sign = matches[2].str();
+      std::string str_offset = matches[3].str();
+      if (!llvm::StringRef(str_offset).getAsInteger(0, offset)) {
+        Status error;
+        addr = ToAddress(exe_ctx, name.c_str(), LLDB_INVALID_ADDRESS, &error);
+        if (addr != LLDB_INVALID_ADDRESS) {
+          if (sign[0] == '+')
+            return addr + offset;
+          else
+            return addr - offset;
         }
       }
     }

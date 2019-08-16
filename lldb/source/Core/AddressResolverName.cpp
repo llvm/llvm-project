@@ -46,9 +46,9 @@ AddressResolverName::AddressResolverName(const char *func_name,
   }
 }
 
-AddressResolverName::AddressResolverName(RegularExpression &func_regex)
+AddressResolverName::AddressResolverName(RegularExpression func_regex)
     : AddressResolver(), m_func_name(nullptr), m_class_name(nullptr),
-      m_regex(func_regex), m_match_type(AddressResolver::Regexp) {}
+      m_regex(std::move(func_regex)), m_match_type(AddressResolver::Regexp) {}
 
 AddressResolverName::AddressResolverName(const char *class_name,
                                          const char *method,

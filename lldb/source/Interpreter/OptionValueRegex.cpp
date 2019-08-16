@@ -49,13 +49,10 @@ Status OptionValueRegex::SetValueFromString(llvm::StringRef value,
     if (m_regex.Compile(value)) {
       m_value_was_set = true;
       NotifyValueChanged();
+    } else if (llvm::Error err = m_regex.GetError()) {
+      error.SetErrorString(llvm::toString(std::move(err)));
     } else {
-      char regex_error[1024];
-      if (m_regex.GetErrorAsCString(regex_error, sizeof(regex_error)))
-        error.SetErrorString(regex_error);
-      else
-        error.SetErrorStringWithFormat("regex error %u",
-                                       m_regex.GetErrorCode());
+      error.SetErrorString("regex error");
     }
     break;
   }

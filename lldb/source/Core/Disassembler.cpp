@@ -355,12 +355,9 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
     const char *function_name =
         sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments)
             .GetCString();
-    if (function_name) {
-      RegularExpression::Match regex_match(1);
-      if (avoid_regex->Execute(function_name, &regex_match)) {
-        // skip this source line
-        return true;
-      }
+    if (function_name && avoid_regex->Execute(function_name)) {
+      // skip this source line
+      return true;
     }
   }
   // don't skip this source line
@@ -793,10 +790,9 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
       std::string value;
       static RegularExpression g_reg_exp(
           llvm::StringRef("^[ \t]*([^ \t]+)[ \t]*$"));
-      RegularExpression::Match regex_match(1);
-      bool reg_exp_success = g_reg_exp.Execute(line, &regex_match);
-      if (reg_exp_success)
-        regex_match.GetMatchAtIndex(line.c_str(), 1, value);
+      llvm::SmallVector<llvm::StringRef, 2> matches;
+      if (g_reg_exp.Execute(line, &matches))
+        value = matches[1].str();
       else
         value = line;
 
@@ -856,14 +852,15 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
     if (!line.empty()) {
       static RegularExpression g_reg_exp(llvm::StringRef(
           "^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=[ \t]*(.*)[ \t]*$"));
-      RegularExpression::Match regex_match(2);
 
-      bool reg_exp_success = g_reg_exp.Execute(line, &regex_match);
+      llvm::SmallVector<llvm::StringRef, 3> matches;
+
+      bool reg_exp_success = g_reg_exp.Execute(line, &matches);
       std::string key;
       std::string value;
       if (reg_exp_success) {
-        regex_match.GetMatchAtIndex(line.c_str(), 1, key);
-        regex_match.GetMatchAtIndex(line.c_str(), 2, value);
+        key = matches[1].str();
+        value = matches[2].str();
       } else {
         out_stream->Printf("Instruction::ReadDictionary: Failure executing "
                            "regular expression.\n");

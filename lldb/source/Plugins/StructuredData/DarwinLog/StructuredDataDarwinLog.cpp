@@ -288,11 +288,8 @@ private:
 
     // Instantiate the regex so we can report any errors.
     auto regex = RegularExpression(op_arg);
-    if (!regex.IsValid()) {
-      char error_text[256];
-      error_text[0] = '\0';
-      regex.GetErrorAsCString(error_text, sizeof(error_text));
-      error.SetErrorString(error_text);
+    if (llvm::Error err = regex.GetError()) {
+      error.SetErrorString(llvm::toString(std::move(err)));
       return FilterRuleSP();
     }
 
