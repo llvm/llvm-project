@@ -4944,7 +4944,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return std::make_unique<FunctionCallCCC>(*this);
+    return llvm::make_unique<FunctionCallCCC>(*this);
   }
 
 private:

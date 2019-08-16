@@ -91,7 +91,7 @@ class VariableBindAction : public ASTFrontendAction {
 public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
-    return std::make_unique<VariableBindConsumer>(Compiler);
+    return llvm::make_unique<VariableBindConsumer>(Compiler);
   }
 };
 

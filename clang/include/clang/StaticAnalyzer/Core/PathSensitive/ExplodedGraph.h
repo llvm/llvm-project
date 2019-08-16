@@ -337,7 +337,7 @@ public:
     bool IsSink = false);
 
   std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
-    return std::make_unique<ExplodedGraph>();
+    return llvm::make_unique<ExplodedGraph>();
   }
 
   /// addRoot - Add an untyped node to the set of roots.

@@ -142,7 +142,7 @@ llvm::Error CommonOptionsParser::init(
     }
   }
   auto AdjustingCompilations =
-      std::make_unique<ArgumentsAdjustingCompilations>(
+      llvm::make_unique<ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   Adjuster =
       getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN);

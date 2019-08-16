@@ -249,11 +249,11 @@ MultiplexConsumer::MultiplexConsumer(
   }
   if (!mutationListeners.empty()) {
     MutationListener =
-        std::make_unique<MultiplexASTMutationListener>(mutationListeners);
+        llvm::make_unique<MultiplexASTMutationListener>(mutationListeners);
   }
   if (!serializationListeners.empty()) {
     DeserializationListener =
-        std::make_unique<MultiplexASTDeserializationListener>(
+        llvm::make_unique<MultiplexASTDeserializationListener>(
             serializationListeners);
   }
 }

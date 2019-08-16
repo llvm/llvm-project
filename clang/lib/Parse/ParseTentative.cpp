@@ -1193,7 +1193,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return std::make_unique<TentativeParseCCC>(*this);
+    return llvm::make_unique<TentativeParseCCC>(*this);
   }
 };
 }

@@ -629,7 +629,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return std::make_unique<RecordMemberExprValidatorCCC>(*this);
+    return llvm::make_unique<RecordMemberExprValidatorCCC>(*this);
   }
 
 private:

@@ -10473,7 +10473,7 @@ ASTContext::getParents(const ast_type_traits::DynTypedNode &Node) {
   if (!Parents)
     // We build the parent map for the traversal scope (usually whole TU), as
     // hasAncestor can escape any subtree.
-    Parents = std::make_unique<ParentMap>(*this);
+    Parents = llvm::make_unique<ParentMap>(*this);
   return Parents->getParents(Node);
 }
 

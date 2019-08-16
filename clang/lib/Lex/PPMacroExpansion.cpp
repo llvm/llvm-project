@@ -804,7 +804,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
           return nullptr;
         }
         // Do not lose the EOF/EOD.
-        auto Toks = std::make_unique<Token[]>(1);
+        auto Toks = llvm::make_unique<Token[]>(1);
         Toks[0] = Tok;
         EnterTokenStream(std::move(Toks), 1, true, /*IsReinject*/ false);
         break;

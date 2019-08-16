@@ -265,122 +265,122 @@ struct PragmaAttributeHandler : public PragmaHandler {
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
-  AlignHandler = std::make_unique<PragmaAlignHandler>();
+  AlignHandler = llvm::make_unique<PragmaAlignHandler>();
   PP.AddPragmaHandler(AlignHandler.get());
 
-  GCCVisibilityHandler = std::make_unique<PragmaGCCVisibilityHandler>();
+  GCCVisibilityHandler = llvm::make_unique<PragmaGCCVisibilityHandler>();
   PP.AddPragmaHandler("GCC", GCCVisibilityHandler.get());
 
-  OptionsHandler = std::make_unique<PragmaOptionsHandler>();
+  OptionsHandler = llvm::make_unique<PragmaOptionsHandler>();
   PP.AddPragmaHandler(OptionsHandler.get());
 
-  PackHandler = std::make_unique<PragmaPackHandler>();
+  PackHandler = llvm::make_unique<PragmaPackHandler>();
   PP.AddPragmaHandler(PackHandler.get());
 
-  MSStructHandler = std::make_unique<PragmaMSStructHandler>();
+  MSStructHandler = llvm::make_unique<PragmaMSStructHandler>();
   PP.AddPragmaHandler(MSStructHandler.get());
 
-  UnusedHandler = std::make_unique<PragmaUnusedHandler>();
+  UnusedHandler = llvm::make_unique<PragmaUnusedHandler>();
   PP.AddPragmaHandler(UnusedHandler.get());
 
-  WeakHandler = std::make_unique<PragmaWeakHandler>();
+  WeakHandler = llvm::make_unique<PragmaWeakHandler>();
   PP.AddPragmaHandler(WeakHandler.get());
 
-  RedefineExtnameHandler = std::make_unique<PragmaRedefineExtnameHandler>();
+  RedefineExtnameHandler = llvm::make_unique<PragmaRedefineExtnameHandler>();
   PP.AddPragmaHandler(RedefineExtnameHandler.get());
 
-  FPContractHandler = std::make_unique<PragmaFPContractHandler>();
+  FPContractHandler = llvm::make_unique<PragmaFPContractHandler>();
   PP.AddPragmaHandler("STDC", FPContractHandler.get());
 
-  STDCFENVHandler = std::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
+  STDCFENVHandler = llvm::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
   PP.AddPragmaHandler("STDC", STDCFENVHandler.get());
 
-  STDCCXLIMITHandler = std::make_unique<PragmaSTDC_CX_LIMITED_RANGEHandler>();
+  STDCCXLIMITHandler = llvm::make_unique<PragmaSTDC_CX_LIMITED_RANGEHandler>();
   PP.AddPragmaHandler("STDC", STDCCXLIMITHandler.get());
 
-  STDCUnknownHandler = std::make_unique<PragmaSTDC_UnknownHandler>();
+  STDCUnknownHandler = llvm::make_unique<PragmaSTDC_UnknownHandler>();
   PP.AddPragmaHandler("STDC", STDCUnknownHandler.get());
 
-  PCSectionHandler = std::make_unique<PragmaClangSectionHandler>(Actions);
+  PCSectionHandler = llvm::make_unique<PragmaClangSectionHandler>(Actions);
   PP.AddPragmaHandler("clang", PCSectionHandler.get());
 
   if (getLangOpts().OpenCL) {
-    OpenCLExtensionHandler = std::make_unique<PragmaOpenCLExtensionHandler>();
+    OpenCLExtensionHandler = llvm::make_unique<PragmaOpenCLExtensionHandler>();
     PP.AddPragmaHandler("OPENCL", OpenCLExtensionHandler.get());
 
     PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
   }
   if (getLangOpts().OpenMP)
-    OpenMPHandler = std::make_unique<PragmaOpenMPHandler>();
+    OpenMPHandler = llvm::make_unique<PragmaOpenMPHandler>();
   else
-    OpenMPHandler = std::make_unique<PragmaNoOpenMPHandler>();
+    OpenMPHandler = llvm::make_unique<PragmaNoOpenMPHandler>();
   PP.AddPragmaHandler(OpenMPHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
-    MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
+    MSCommentHandler = llvm::make_unique<PragmaCommentHandler>(Actions);
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
 
   if (getLangOpts().MicrosoftExt) {
     MSDetectMismatchHandler =
-        std::make_unique<PragmaDetectMismatchHandler>(Actions);
+        llvm::make_unique<PragmaDetectMismatchHandler>(Actions);
     PP.AddPragmaHandler(MSDetectMismatchHandler.get());
-    MSPointersToMembers = std::make_unique<PragmaMSPointersToMembers>();
+    MSPointersToMembers = llvm::make_unique<PragmaMSPointersToMembers>();
     PP.AddPragmaHandler(MSPointersToMembers.get());
-    MSVtorDisp = std::make_unique<PragmaMSVtorDisp>();
+    MSVtorDisp = llvm::make_unique<PragmaMSVtorDisp>();
     PP.AddPragmaHandler(MSVtorDisp.get());
-    MSInitSeg = std::make_unique<PragmaMSPragma>("init_seg");
+    MSInitSeg = llvm::make_unique<PragmaMSPragma>("init_seg");
     PP.AddPragmaHandler(MSInitSeg.get());
-    MSDataSeg = std::make_unique<PragmaMSPragma>("data_seg");
+    MSDataSeg = llvm::make_unique<PragmaMSPragma>("data_seg");
     PP.AddPragmaHandler(MSDataSeg.get());
-    MSBSSSeg = std::make_unique<PragmaMSPragma>("bss_seg");
+    MSBSSSeg = llvm::make_unique<PragmaMSPragma>("bss_seg");
     PP.AddPragmaHandler(MSBSSSeg.get());
-    MSConstSeg = std::make_unique<PragmaMSPragma>("const_seg");
+    MSConstSeg = llvm::make_unique<PragmaMSPragma>("const_seg");
     PP.AddPragmaHandler(MSConstSeg.get());
-    MSCodeSeg = std::make_unique<PragmaMSPragma>("code_seg");
+    MSCodeSeg = llvm::make_unique<PragmaMSPragma>("code_seg");
     PP.AddPragmaHandler(MSCodeSeg.get());
-    MSSection = std::make_unique<PragmaMSPragma>("section");
+    MSSection = llvm::make_unique<PragmaMSPragma>("section");
     PP.AddPragmaHandler(MSSection.get());
-    MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
+    MSRuntimeChecks = llvm::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
+    MSIntrinsic = llvm::make_unique<PragmaMSIntrinsicHandler>();
     PP.AddPragmaHandler(MSIntrinsic.get());
-    MSOptimize = std::make_unique<PragmaMSOptimizeHandler>();
+    MSOptimize = llvm::make_unique<PragmaMSOptimizeHandler>();
     PP.AddPragmaHandler(MSOptimize.get());
   }
 
   if (getLangOpts().CUDA) {
     CUDAForceHostDeviceHandler =
-        std::make_unique<PragmaForceCUDAHostDeviceHandler>(Actions);
+        llvm::make_unique<PragmaForceCUDAHostDeviceHandler>(Actions);
     PP.AddPragmaHandler("clang", CUDAForceHostDeviceHandler.get());
   }
 
-  OptimizeHandler = std::make_unique<PragmaOptimizeHandler>(Actions);
+  OptimizeHandler = llvm::make_unique<PragmaOptimizeHandler>(Actions);
   PP.AddPragmaHandler("clang", OptimizeHandler.get());
 
-  LoopHintHandler = std::make_unique<PragmaLoopHintHandler>();
+  LoopHintHandler = llvm::make_unique<PragmaLoopHintHandler>();
   PP.AddPragmaHandler("clang", LoopHintHandler.get());
 
-  UnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("unroll");
+  UnrollHintHandler = llvm::make_unique<PragmaUnrollHintHandler>("unroll");
   PP.AddPragmaHandler(UnrollHintHandler.get());
 
-  NoUnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("nounroll");
+  NoUnrollHintHandler = llvm::make_unique<PragmaUnrollHintHandler>("nounroll");
   PP.AddPragmaHandler(NoUnrollHintHandler.get());
 
   UnrollAndJamHintHandler =
-      std::make_unique<PragmaUnrollHintHandler>("unroll_and_jam");
+      llvm::make_unique<PragmaUnrollHintHandler>("unroll_and_jam");
   PP.AddPragmaHandler(UnrollAndJamHintHandler.get());
 
   NoUnrollAndJamHintHandler =
-      std::make_unique<PragmaUnrollHintHandler>("nounroll_and_jam");
+      llvm::make_unique<PragmaUnrollHintHandler>("nounroll_and_jam");
   PP.AddPragmaHandler(NoUnrollAndJamHintHandler.get());
 
-  FPHandler = std::make_unique<PragmaFPHandler>();
+  FPHandler = llvm::make_unique<PragmaFPHandler>();
   PP.AddPragmaHandler("clang", FPHandler.get());
 
   AttributePragmaHandler =
-      std::make_unique<PragmaAttributeHandler>(AttrFactory);
+      llvm::make_unique<PragmaAttributeHandler>(AttrFactory);
   PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
 }
 
@@ -1621,7 +1621,7 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  auto Toks = std::make_unique<Token[]>(1);
+  auto Toks = llvm::make_unique<Token[]>(1);
   Toks[0].startToken();
   Toks[0].setKind(tok::annot_pragma_vis);
   Toks[0].setLocation(VisLoc);
@@ -2237,7 +2237,7 @@ void PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
   Tok.setLocation(EodLoc);
   Pragma.push_back(Tok);
 
-  auto Toks = std::make_unique<Token[]>(Pragma.size());
+  auto Toks = llvm::make_unique<Token[]>(Pragma.size());
   std::copy(Pragma.begin(), Pragma.end(), Toks.get());
   PP.EnterTokenStream(std::move(Toks), Pragma.size(),
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
@@ -2454,7 +2454,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
   TokenVector.push_back(EoF);
   // We must allocate this array with new because EnterTokenStream is going to
   // delete it later.
-  auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
+  auto TokenArray = llvm::make_unique<Token[]>(TokenVector.size());
   std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
   auto Value = new (PP.getPreprocessorAllocator())
       std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
@@ -2739,7 +2739,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  auto TokenArray = llvm::make_unique<Token[]>(TokenList.size());
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
@@ -2924,7 +2924,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  auto TokenArray = llvm::make_unique<Token[]>(TokenList.size());
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
@@ -2996,7 +2996,7 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
   }
 
   // Generate the hint token.
-  auto TokenArray = std::make_unique<Token[]>(1);
+  auto TokenArray = llvm::make_unique<Token[]>(1);
   TokenArray[0].startToken();
   TokenArray[0].setKind(tok::annot_pragma_loop_hint);
   TokenArray[0].setLocation(PragmaName.getLocation());
@@ -3268,7 +3268,7 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
         << "clang attribute";
 
   // Generate the annotated pragma token.
-  auto TokenArray = std::make_unique<Token[]>(1);
+  auto TokenArray = llvm::make_unique<Token[]>(1);
   TokenArray[0].startToken();
   TokenArray[0].setKind(tok::annot_pragma_attribute);
   TokenArray[0].setLocation(FirstToken.getLocation());

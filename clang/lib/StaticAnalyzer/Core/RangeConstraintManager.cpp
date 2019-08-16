@@ -330,7 +330,7 @@ private:
 
 std::unique_ptr<ConstraintManager>
 ento::CreateRangeConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
-  return std::make_unique<RangeConstraintManager>(Eng, StMgr.getSValBuilder());
+  return llvm::make_unique<RangeConstraintManager>(Eng, StMgr.getSValBuilder());
 }
 
 bool RangeConstraintManager::canReasonAbout(SVal X) const {

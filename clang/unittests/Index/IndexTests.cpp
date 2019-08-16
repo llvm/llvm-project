@@ -134,7 +134,7 @@ protected:
         indexTopLevelDecls(Ctx, *PP, DeclsToIndex, *Index, Opts);
       }
     };
-    return std::make_unique<Consumer>(Index, CI.getPreprocessorPtr(), Opts);
+    return llvm::make_unique<Consumer>(Index, CI.getPreprocessorPtr(), Opts);
   }
 
 private:

@@ -3792,7 +3792,7 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
 
   QualType rettype;
   CallExpr *callExpr;
-  auto result = std::make_unique<ExprEvalResult>();
+  auto result = llvm::make_unique<ExprEvalResult>();
   result->EvalType = CXEval_UnExposed;
   result->IsUnsignedInt = false;
 

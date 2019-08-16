@@ -187,7 +187,7 @@ protected:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     llvm::StringRef /* dummy */) override {
-    return std::make_unique<clang::ASTConsumer>();
+    return llvm::make_unique<clang::ASTConsumer>();
   }
 
   void ExecuteAction() override {

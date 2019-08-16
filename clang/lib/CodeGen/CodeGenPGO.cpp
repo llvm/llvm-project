@@ -980,7 +980,7 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
     return;
   }
   ProfRecord =
-      std::make_unique<llvm::InstrProfRecord>(std::move(RecordExpected.get()));
+      llvm::make_unique<llvm::InstrProfRecord>(std::move(RecordExpected.get()));
   RegionCounts = ProfRecord->Counts;
 }
 

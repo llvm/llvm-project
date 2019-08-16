@@ -141,7 +141,7 @@ public:
                                     clang::ADOF_Default);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);
-    return std::make_unique<clang::ASTConsumer>();
+    return llvm::make_unique<clang::ASTConsumer>();
   }
 };
 

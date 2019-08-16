@@ -48,7 +48,7 @@ public:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
-    return std::make_unique<Visitor>(CI, ActOnEndOfTranslationUnit,
+    return llvm::make_unique<Visitor>(CI, ActOnEndOfTranslationUnit,
                                       decl_names);
   }
 

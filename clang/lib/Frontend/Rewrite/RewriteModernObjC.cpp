@@ -663,7 +663,7 @@ std::unique_ptr<ASTConsumer> clang::CreateModernObjCRewriter(
     const std::string &InFile, std::unique_ptr<raw_ostream> OS,
     DiagnosticsEngine &Diags, const LangOptions &LOpts,
     bool SilenceRewriteMacroWarning, bool LineInfo) {
-  return std::make_unique<RewriteModernObjC>(InFile, std::move(OS), Diags,
+  return llvm::make_unique<RewriteModernObjC>(InFile, std::move(OS), Diags,
                                               LOpts, SilenceRewriteMacroWarning,
                                               LineInfo);
 }

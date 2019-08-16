@@ -50,7 +50,7 @@ FixItAction::~FixItAction() {}
 
 std::unique_ptr<ASTConsumer>
 FixItAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  return std::make_unique<ASTConsumer>();
+  return llvm::make_unique<ASTConsumer>();
 }
 
 namespace {
@@ -295,7 +295,7 @@ bool RewriteIncludesAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (CI.getPreprocessorOutputOpts().RewriteImports) {
     CI.createModuleManager();
     CI.getModuleManager()->addListener(
-        std::make_unique<RewriteImportsListener>(CI, OutputStream));
+        llvm::make_unique<RewriteImportsListener>(CI, OutputStream));
   }
 
   return true;

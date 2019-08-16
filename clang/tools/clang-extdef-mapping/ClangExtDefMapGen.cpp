@@ -105,7 +105,7 @@ class MapExtDefNamesAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) {
-    return std::make_unique<MapExtDefNamesConsumer>(CI.getASTContext());
+    return llvm::make_unique<MapExtDefNamesConsumer>(CI.getASTContext());
   }
 };
 

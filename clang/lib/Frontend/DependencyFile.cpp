@@ -168,13 +168,13 @@ bool DependencyCollector::sawDependency(StringRef Filename, bool FromModule,
 
 DependencyCollector::~DependencyCollector() { }
 void DependencyCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(std::make_unique<DepCollectorPPCallbacks>(
+  PP.addPPCallbacks(llvm::make_unique<DepCollectorPPCallbacks>(
       *this, PP.getSourceManager(), PP.getDiagnostics()));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
-      std::make_unique<DepCollectorMMCallbacks>(*this));
+      llvm::make_unique<DepCollectorMMCallbacks>(*this));
 }
 void DependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(std::make_unique<DepCollectorASTListener>(*this));
+  R.addListener(llvm::make_unique<DepCollectorASTListener>(*this));
 }
 
 DependencyFileGenerator::DependencyFileGenerator(

@@ -388,10 +388,10 @@ TEST(ParserTest, ParseBindOnLet) {
 
     EXPECT_TRUE(matchAndVerifyResultTrue(
         "void foo(int a);", M,
-        std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
     EXPECT_TRUE(matchAndVerifyResultFalse(
         "void foo(int b);", M,
-        std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
   }
 
   {
@@ -404,10 +404,10 @@ TEST(ParserTest, ParseBindOnLet) {
 
     EXPECT_TRUE(matchAndVerifyResultTrue(
         "void foo(int a);", M,
-        std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
     EXPECT_TRUE(matchAndVerifyResultFalse(
         "void foo(int b);", M,
-        std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
   }
 }
 

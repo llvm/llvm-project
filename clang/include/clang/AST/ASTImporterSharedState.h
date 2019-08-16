@@ -47,7 +47,7 @@ public:
   ASTImporterSharedState() = default;
 
   ASTImporterSharedState(TranslationUnitDecl &ToTU) {
-    LookupTable = std::make_unique<ASTImporterLookupTable>(ToTU);
+    LookupTable = llvm::make_unique<ASTImporterLookupTable>(ToTU);
   }
 
   ASTImporterLookupTable *getLookupTable() { return LookupTable.get(); }

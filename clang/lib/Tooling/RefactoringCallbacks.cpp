@@ -66,7 +66,7 @@ private:
 };
 
 std::unique_ptr<ASTConsumer> ASTMatchRefactorer::newASTConsumer() {
-  return std::make_unique<RefactoringASTConsumer>(*this);
+  return llvm::make_unique<RefactoringASTConsumer>(*this);
 }
 
 static Replacement replaceStmtWithText(SourceManager &Sources, const Stmt &From,

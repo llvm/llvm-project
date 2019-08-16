@@ -79,11 +79,11 @@ public:
 WorkList::~WorkList() = default;
 
 std::unique_ptr<WorkList> WorkList::makeDFS() {
-  return std::make_unique<DFS>();
+  return llvm::make_unique<DFS>();
 }
 
 std::unique_ptr<WorkList> WorkList::makeBFS() {
-  return std::make_unique<BFS>();
+  return llvm::make_unique<BFS>();
 }
 
 namespace {
@@ -124,7 +124,7 @@ namespace {
 } // namespace
 
 std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
-  return std::make_unique<BFSBlockDFSContents>();
+  return llvm::make_unique<BFSBlockDFSContents>();
 }
 
 namespace {
@@ -186,7 +186,7 @@ public:
 } // namespace
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
-  return std::make_unique<UnexploredFirstStack>();
+  return llvm::make_unique<UnexploredFirstStack>();
 }
 
 namespace {
@@ -249,7 +249,7 @@ public:
 } // namespace
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityQueue() {
-  return std::make_unique<UnexploredFirstPriorityQueue>();
+  return llvm::make_unique<UnexploredFirstPriorityQueue>();
 }
 
 namespace {
@@ -309,5 +309,5 @@ public:
 }
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityLocationQueue() {
-  return std::make_unique<UnexploredFirstPriorityLocationQueue>();
+  return llvm::make_unique<UnexploredFirstPriorityLocationQueue>();
 }

@@ -428,9 +428,9 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     }
 
     auto R =
-        std::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
+        llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
                                      MoveNode->getLocationContext()->getDecl());
-    R->addVisitor(std::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
+    R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
     return N;
   }
