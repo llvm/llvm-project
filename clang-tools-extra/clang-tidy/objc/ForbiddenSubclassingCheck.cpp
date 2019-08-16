@@ -37,33 +37,6 @@ constexpr char DefaultForbiddenSuperClassNames[] =
     "UITextInputMode;"
     "UIWebView";
 
-/// \brief Matches Objective-C classes that directly or indirectly
-/// have a superclass matching \c Base.
-///
-/// Note that a class is not considered to be a subclass of itself.
-///
-/// Example matches Y, Z
-/// (matcher = objcInterfaceDecl(hasName("X")))
-/// \code
-///   @interface X
-///   @end
-///   @interface Y : X  // directly derived
-///   @end
-///   @interface Z : Y  // indirectly derived
-///   @end
-/// \endcode
-AST_MATCHER_P(ObjCInterfaceDecl, isSubclassOf,
-              ast_matchers::internal::Matcher<ObjCInterfaceDecl>, Base) {
-  for (const auto *SuperClass = Node.getSuperClass();
-       SuperClass != nullptr;
-       SuperClass = SuperClass->getSuperClass()) {
-    if (Base.matches(*SuperClass, Finder, Builder)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 } // namespace
 
 ForbiddenSubclassingCheck::ForbiddenSubclassingCheck(
@@ -82,7 +55,7 @@ void ForbiddenSubclassingCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       objcInterfaceDecl(
-          isSubclassOf(
+          isDerivedFrom(
               objcInterfaceDecl(
                   hasAnyName(
                       std::vector<StringRef>(

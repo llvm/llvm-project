@@ -32,6 +32,7 @@ using SymbolID = std::array<uint8_t, 20>;
 struct Info;
 struct FunctionInfo;
 struct EnumInfo;
+struct BaseRecordInfo;
 
 enum class InfoType {
   IT_default,
@@ -345,13 +346,31 @@ struct RecordInfo : public SymbolInfo {
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  // Records are references because they will be properly
-  // documented in their own info, while the entirety of Functions and Enums are
-  // included here because they should not have separate documentation from
-  // their scope.
+  std::vector<BaseRecordInfo>
+      Bases; // List of base/parent records; this includes inherited methods and
+             // attributes
+
+  // Records are references because they will be properly documented in their
+  // own info, while the entirety of Functions and Enums are included here
+  // because they should not have separate documentation from their scope.
   std::vector<Reference> ChildRecords;
   std::vector<FunctionInfo> ChildFunctions;
   std::vector<EnumInfo> ChildEnums;
+};
+
+struct BaseRecordInfo : public RecordInfo {
+  BaseRecordInfo() : RecordInfo() {}
+  BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
+                 AccessSpecifier Access, bool IsParent)
+      : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+        IsParent(IsParent) {}
+
+  // Indicates if base corresponds to a virtual inheritance
+  bool IsVirtual = false;
+  // Access level associated with this inherited info (public, protected,
+  // private).
+  AccessSpecifier Access = AccessSpecifier::AS_public;
+  bool IsParent = false; // Indicates if this base is a direct parent
 };
 
 // TODO: Expand to allow for documenting templating.

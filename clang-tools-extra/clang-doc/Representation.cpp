@@ -178,6 +178,8 @@ void RecordInfo::merge(RecordInfo &&Other) {
     TagType = Other.TagType;
   if (Members.empty())
     Members = std::move(Other.Members);
+  if (Bases.empty())
+    Bases = std::move(Other.Bases);
   if (Parents.empty())
     Parents = std::move(Other.Parents);
   if (VirtualParents.empty())

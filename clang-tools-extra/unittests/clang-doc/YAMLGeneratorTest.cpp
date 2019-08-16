@@ -84,6 +84,12 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.Members.emplace_back("int", "path/to/int", "X",
                          AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
+  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
+                       AccessSpecifier::AS_public, true);
+  I.Bases.back().ChildFunctions.emplace_back();
+  I.Bases.back().ChildFunctions.back().Name = "InheritedFunctionOne";
+  I.Bases.back().Members.emplace_back("int", "path/to/int", "N",
+                                      AccessSpecifier::AS_private);
   // F is in the global namespace
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
@@ -123,6 +129,24 @@ Members:
       Path:            'path/to/int'
     Name:            'X'
     Access:          Private
+Bases:
+  - USR:             '0000000000000000000000000000000000000000'
+    Name:            'F'
+    Path:            'path/to/F'
+    Members:
+      - Type:
+          Name:            'int'
+          Path:            'path/to/int'
+        Name:            'N'
+        Access:          Private
+    ChildFunctions:
+      - USR:             '0000000000000000000000000000000000000000'
+        Name:            'InheritedFunctionOne'
+        ReturnType:      {}
+        Access:          Public
+    IsVirtual:       true
+    Access:          Public
+    IsParent:        true
 Parents:
   - Type:            Record
     Name:            'F'

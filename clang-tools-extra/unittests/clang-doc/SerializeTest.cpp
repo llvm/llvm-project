@@ -321,15 +321,16 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
-TEST(SerializeTest, ) {
+TEST(SerializeTest, emitInheritedRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode(R"raw(class F {};
-class G {} ;
+  ExtractInfosFromCode(R"raw(class F { protected: void set(int N); };
+class G { public: int get() { return 1; } protected: int I; };
 class E : public F, virtual private G {};
+class H : private E {};
 template <typename T>
-class H {} ;
-class I : public H<int> {} ;)raw",
-                       10, /*Public=*/false, Infos);
+class I {} ;
+class J : public I<int> {} ;)raw",
+                       14, /*Public=*/false, Infos);
 
   RecordInfo *F = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedF(EmptySID, "F");
@@ -337,32 +338,91 @@ class I : public H<int> {} ;)raw",
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
-  RecordInfo *G = InfoAsRecord(Infos[2].get());
+  RecordInfo *G = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedG(EmptySID, "G");
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedG.Members.emplace_back("int", "I", AccessSpecifier::AS_protected);
   CheckRecordInfo(&ExpectedG, G);
 
-  RecordInfo *E = InfoAsRecord(Infos[4].get());
+  RecordInfo *E = InfoAsRecord(Infos[6].get());
   RecordInfo ExpectedE(EmptySID, "E");
   ExpectedE.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   ExpectedE.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
+  ExpectedE.Bases.emplace_back(EmptySID, "F", "", false,
+                               AccessSpecifier::AS_public, true);
+  FunctionInfo FunctionSet;
+  FunctionSet.Name = "set";
+  FunctionSet.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  FunctionSet.Loc.emplace_back();
+  FunctionSet.Params.emplace_back("int", "N");
+  FunctionSet.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSet.Access = AccessSpecifier::AS_protected;
+  FunctionSet.IsMethod = true;
+  ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSet));
+  ExpectedE.Bases.emplace_back(EmptySID, "G", "", true,
+                               AccessSpecifier::AS_private, true);
+  FunctionInfo FunctionGet;
+  FunctionGet.Name = "get";
+  FunctionGet.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  FunctionGet.DefLoc = Location();
+  FunctionGet.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGet.Access = AccessSpecifier::AS_private;
+  FunctionGet.IsMethod = true;
+  ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGet));
+  ExpectedE.Bases.back().Members.emplace_back("int", "I",
+                                              AccessSpecifier::AS_private);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *H = InfoAsRecord(Infos[6].get());
+  RecordInfo *H = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedH(EmptySID, "H");
   ExpectedH.TagType = TagTypeKind::TTK_Class;
   ExpectedH.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedH.Parents.emplace_back(EmptySID, "E", InfoType::IT_record);
+  ExpectedH.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
+  ExpectedH.Bases.emplace_back(EmptySID, "E", "", false,
+                               AccessSpecifier::AS_private, true);
+  ExpectedH.Bases.emplace_back(EmptySID, "F", "", false,
+                               AccessSpecifier::AS_private, false);
+  FunctionInfo FunctionSetNew;
+  FunctionSetNew.Name = "set";
+  FunctionSetNew.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  FunctionSetNew.Loc.emplace_back();
+  FunctionSetNew.Params.emplace_back("int", "N");
+  FunctionSetNew.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSetNew.Access = AccessSpecifier::AS_private;
+  FunctionSetNew.IsMethod = true;
+  ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSetNew));
+  ExpectedH.Bases.emplace_back(EmptySID, "G", "", true,
+                               AccessSpecifier::AS_private, false);
+  FunctionInfo FunctionGetNew;
+  FunctionGetNew.Name = "get";
+  FunctionGetNew.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  FunctionGetNew.DefLoc = Location();
+  FunctionGetNew.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGetNew.Access = AccessSpecifier::AS_private;
+  FunctionGetNew.IsMethod = true;
+  ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGetNew));
+  ExpectedH.Bases.back().Members.emplace_back("int", "I",
+                                              AccessSpecifier::AS_private);
   CheckRecordInfo(&ExpectedH, H);
 
-  RecordInfo *I = InfoAsRecord(Infos[8].get());
+  RecordInfo *I = InfoAsRecord(Infos[10].get());
   RecordInfo ExpectedI(EmptySID, "I");
-  ExpectedI.Parents.emplace_back(EmptySID, "H<int>", InfoType::IT_record);
-  ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedI.TagType = TagTypeKind::TTK_Class;
+  ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedI, I);
+
+  RecordInfo *J = InfoAsRecord(Infos[12].get());
+  RecordInfo ExpectedJ(EmptySID, "J");
+  ExpectedJ.Parents.emplace_back(EmptySID, "I<int>", InfoType::IT_record);
+  ExpectedJ.Bases.emplace_back(EmptySID, "I<int>", "", false,
+                               AccessSpecifier::AS_public, true);
+  ExpectedJ.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedJ.TagType = TagTypeKind::TTK_Class;
+  CheckRecordInfo(&ExpectedJ, J);
 }
 
 TEST(SerializeTest, emitModulePublicLFunctions) {

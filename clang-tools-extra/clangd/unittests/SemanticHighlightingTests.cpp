@@ -323,6 +323,59 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       $Primitive[[auto]] $Variable[[Form]] = 10.2 + 2 * 4;
       $Primitive[[decltype]]($Variable[[Form]]) $Variable[[F]] = 10;
       auto $Variable[[Fun]] = []()->$Primitive[[void]]{};
+    )cpp",
+    R"cpp(
+      class $Class[[G]] {};
+      template<$Class[[G]] *$TemplateParameter[[U]]>
+      class $Class[[GP]] {};
+      template<$Class[[G]] &$TemplateParameter[[U]]>
+      class $Class[[GR]] {};
+      template<$Primitive[[int]] *$TemplateParameter[[U]]>
+      class $Class[[IP]] {
+        $Primitive[[void]] $Method[[f]]() {
+          *$TemplateParameter[[U]] += 5;
+        }
+      };
+      template<$Primitive[[unsigned]] $TemplateParameter[[U]] = 2>
+      class $Class[[Foo]] {
+        $Primitive[[void]] $Method[[f]]() {
+          for($Primitive[[int]] $Variable[[I]] = 0;
+            $Variable[[I]] < $TemplateParameter[[U]];) {}
+        }
+      };
+
+      $Class[[G]] $Variable[[L]];
+      $Primitive[[void]] $Function[[f]]() {
+        $Class[[Foo]]<123> $Variable[[F]];
+        $Class[[GP]]<&$Variable[[L]]> $Variable[[LL]];
+        $Class[[GR]]<$Variable[[L]]> $Variable[[LLL]];
+      }
+    )cpp",
+    R"cpp(
+      template<typename $TemplateParameter[[T]], 
+        $Primitive[[void]] (T::*$TemplateParameter[[method]])($Primitive[[int]])>
+      struct $Class[[G]] {
+        $Primitive[[void]] $Method[[foo]](
+            $TemplateParameter[[T]] *$Variable[[O]]) {
+          ($Variable[[O]]->*$TemplateParameter[[method]])(10);
+        }
+      };
+      struct $Class[[F]] {
+        $Primitive[[void]] $Method[[f]]($Primitive[[int]]);
+      };
+      template<$Primitive[[void]] (*$TemplateParameter[[Func]])()>
+      struct $Class[[A]] {
+        $Primitive[[void]] $Method[[f]]() {
+          (*$TemplateParameter[[Func]])();
+        }
+      };
+
+      $Primitive[[void]] $Function[[foo]]() {
+        $Class[[F]] $Variable[[FF]];
+        $Class[[G]]<$Class[[F]], &$Class[[F]]::$Method[[f]]> $Variable[[GG]];
+        $Variable[[GG]].$Method[[foo]](&$Variable[[FF]]);
+        $Class[[A]]<$Function[[foo]]> $Variable[[AA]];
+      }
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

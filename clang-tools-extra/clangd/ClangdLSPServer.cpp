@@ -603,8 +603,11 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
     // 6. The editor applies the changes (applyEdit), and sends us a reply
     // 7. We unwrap the reply and send a reply to the editor.
     ApplyEdit(*Params.workspaceEdit,
-              Bind(ReplyAfterApplyingEdit, std::move(Reply),
-                   std::string("Fix applied.")));
+              [Reply = std::move(Reply), ReplyAfterApplyingEdit](
+                  llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
+                ReplyAfterApplyingEdit(std::move(Reply), "Fix applied.",
+                                       std::move(Response));
+              });
   } else if (Params.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK &&
              Params.tweakArgs) {
     auto Code = DraftMgr.getDraft(Params.tweakArgs->file.file());
@@ -624,8 +627,13 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
         WorkspaceEdit WE;
         WE.changes.emplace();
         (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R->ApplyEdit);
-        ApplyEdit(std::move(WE), Bind(ReplyAfterApplyingEdit, std::move(Reply),
-                                      std::string("Tweak applied.")));
+        ApplyEdit(
+            std::move(WE),
+            [Reply = std::move(Reply), ReplyAfterApplyingEdit](
+                llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
+              ReplyAfterApplyingEdit(std::move(Reply), "Tweak applied.",
+                                     std::move(Response));
+            });
       }
       if (R->ShowMessage) {
         ShowMessageParams Msg;
