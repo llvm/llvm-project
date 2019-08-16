@@ -841,7 +841,7 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
   // Set the dependency tracker.
   if (auto g = repro::Reproducer::Instance().GetGenerator()) {
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    m_dependency_tracker = llvm::make_unique<swift::DependencyTracker>(
+    m_dependency_tracker = std::make_unique<swift::DependencyTracker>(
         true, fp.GetFileCollector());
   }
   // rdar://53971116
@@ -2670,7 +2670,7 @@ swift::SourceManager &SwiftASTContext::GetSourceManager() {
     auto OverlayFS = llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>(
         new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
     OverlayFS->pushOverlay(FileSystem::Instance().GetVirtualFileSystem());
-    m_source_manager_up = llvm::make_unique<swift::SourceManager>(OverlayFS);
+    m_source_manager_up = std::make_unique<swift::SourceManager>(OverlayFS);
   }
   return *m_source_manager_up;
 }
@@ -3313,7 +3313,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
         auto props = ModuleList::GetGlobalModuleListProperties();
         if (props.GetUseDWARFImporter())
           m_dwarf_importer_delegate_up =
-              llvm::make_unique<SwiftDWARFImporterDelegate>(*this);
+              std::make_unique<SwiftDWARFImporterDelegate>(*this);
       }
       clang_importer_ap = swift::ClangImporter::create(
           *m_ast_context_ap, clang_importer_options, "", nullptr,

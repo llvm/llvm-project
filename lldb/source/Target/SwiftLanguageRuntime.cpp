@@ -1540,7 +1540,7 @@ SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
     return *known->second;
 
   // Initialize a new remote AST context.
-  auto remote_ast_up = llvm::make_unique<swift::remoteAST::RemoteASTContext>(
+  auto remote_ast_up = std::make_unique<swift::remoteAST::RemoteASTContext>(
       *swift_ast_ctx.GetASTContext(), GetMemoryReader());
   auto &remote_ast = *remote_ast_up;
   m_remote_ast_contexts.insert(

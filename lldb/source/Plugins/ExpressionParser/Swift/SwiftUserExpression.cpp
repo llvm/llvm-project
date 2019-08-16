@@ -378,7 +378,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   } while (0);
 
   m_parser =
-      llvm::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
+      std::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
 
   unsigned error_code = m_parser->Parse(
       diagnostic_manager, first_body_line,
