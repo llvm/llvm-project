@@ -57,6 +57,7 @@ my %Options = (
   KeepEmpty => 0,            # Don't remove output directory even with 0 results.
   EnableCheckers => {},
   DisableCheckers => {},
+  SilenceCheckers => {},
   Excludes => [],
   UseCC => undef,            # C compiler to use for compilation.
   UseCXX => undef,           # C++ compiler to use for compilation.
@@ -1742,9 +1743,15 @@ sub ProcessArgs {
     if ($arg eq "-disable-checker") {
       shift @$Args;
       my $Checker = shift @$Args;
-      # Store $NumArgs to preserve the order the checkers were disabled.
-      $Options{DisableCheckers}{$Checker} = $NumArgs;
-      delete $Options{EnableCheckers}{$Checker};
+      # Store $NumArgs to preserve the order the checkers are disabled/silenced.
+      # See whether it is a core checker to disable. That means we do not want
+      # to emit a report from that checker so we have to silence it.
+      if (index($Checker, "core") == 0) {
+        $Options{SilenceCheckers}{$Checker} = $NumArgs;
+      } else {
+        $Options{DisableCheckers}{$Checker} = $NumArgs;
+        delete $Options{EnableCheckers}{$Checker};
+      }
       next;
     }
 
@@ -1881,6 +1888,11 @@ foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} 
          keys %{$Options{DisableCheckers}}) {
   # Push checkers in order they were disabled.
   push @AnalysesToRun, "-analyzer-disable-checker", $_;
+}
+foreach (sort { $Options{SilenceCheckers}{$a} <=> $Options{SilenceCheckers}{$b} }
+         keys %{$Options{SilenceCheckers}}) {
+  # Push checkers in order they were silenced.
+  push @AnalysesToRun, "-analyzer-config silence-checker", $_;
 }
 if ($Options{AnalyzeHeaders}) { push @AnalysesToRun, "-analyzer-opt-analyze-headers"; }
 if ($Options{AnalyzerStats}) { push @AnalysesToRun, '-analyzer-checker=debug.Stats'; }
