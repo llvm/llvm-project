@@ -172,8 +172,8 @@ Args::Args(llvm::StringRef command) { SetCommandString(command); }
 Args::Args(const Args &rhs) { *this = rhs; }
 
 Args::Args(const StringList &list) : Args() {
-  for (size_t i = 0; i < list.GetSize(); ++i)
-    AppendArgument(list[i]);
+  for (const std::string &arg : list)
+    AppendArgument(arg);
 }
 
 Args &Args::operator=(const Args &rhs) {
