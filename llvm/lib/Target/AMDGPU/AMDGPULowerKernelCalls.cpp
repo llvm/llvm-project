@@ -1,15 +1,19 @@
-//===-- AMDGPULowerKernelCalls.cpp - Fix kernel-calling-kernel in HSAIL ------===//
+//===-- AMDGPULowerKernelCalls.cpp - Fix kernel calls ---------------------===//
 //
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 // \file
 //
 // \brief replace calls to OpenCL kernels with equivalent non-kernel
 //        functions
 //
-// In OpenCL, a kernel may call another kernel as if it was a
-// non-kernel function. But in HSAIL, such a call is not allowed. To
-// fix this, we copy the body of kernel A into a new non-kernel
-// function fA, if we encounter a call to A. All calls to A are then
-// transferred to fA.
+// In OpenCL, a kernel may call another kernel as if it was a non-kernel
+// function. However, kernels and functions have different ABI. To fix this,
+// we copy the body of kernel A into a new non-kernel function fA, if we
+// encounter a call to A. All calls to A are then transferred to fA.
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPU.h"
@@ -60,10 +64,6 @@ AMDGPULowerKernelCalls::AMDGPULowerKernelCalls() : ModulePass(ID) {
 
 static void setNameForBody(Function *FBody, const Function &FKernel) {
   StringRef Name = FKernel.getName();
-  if (Name.startswith("__OpenCL_")) {
-    assert(Name.endswith("_kernel"));
-    Name = Name.slice(strlen("__OpenCL_"), Name.size() - strlen("_kernel"));
-  }
   SmallString<128> NewName("__amdgpu_");
   NewName += Name;
   NewName += "_kernel_body";
