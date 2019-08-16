@@ -470,11 +470,16 @@ immediateOffsetOpcode(unsigned opcode)
 
 bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                                unsigned FrameReg, int &Offset,
-                               const ARMBaseInstrInfo &TII) {
+                               const ARMBaseInstrInfo &TII,
+                               const TargetRegisterInfo *TRI) {
   unsigned Opcode = MI.getOpcode();
   const MCInstrDesc &Desc = MI.getDesc();
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   bool isSub = false;
+
+  MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetRegisterClass *RegClass =
+      TII.getRegClass(Desc, FrameRegIdx, TRI, MF);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
@@ -645,10 +650,21 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     MachineOperand &ImmOp = MI.getOperand(FrameRegIdx+1);
 
     // Attempt to fold address computation
-    // Common case: small offset, fits into instruction.
+    // Common case: small offset, fits into instruction. We need to make sure
+    // the register class is correct too, for instructions like the MVE
+    // VLDRH.32, which only accepts low tGPR registers.
     int ImmedOffset = Offset / Scale;
     unsigned Mask = (1 << NumBits) - 1;
-    if ((unsigned)Offset <= Mask * Scale) {
+    if ((unsigned)Offset <= Mask * Scale &&
+        (Register::isVirtualRegister(FrameReg) ||
+         RegClass->contains(FrameReg))) {
+      if (Register::isVirtualRegister(FrameReg)) {
+        // Make sure the register class for the virtual register is correct
+        MachineRegisterInfo *MRI = &MF.getRegInfo();
+        if (!MRI->constrainRegClass(FrameReg, RegClass))
+          llvm_unreachable("Unable to constrain virtual register class.");
+      }
+
       // Replace the FrameIndex with fp/sp
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
       if (isSub) {
@@ -681,7 +697,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   }
 
   Offset = (isSub) ? -Offset : Offset;
-  return Offset == 0;
+  return Offset == 0 && (Register::isVirtualRegister(FrameReg) ||
+                         RegClass->contains(FrameReg));
 }
 
 ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,

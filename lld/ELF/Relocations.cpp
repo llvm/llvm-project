@@ -344,9 +344,9 @@ static bool needsPlt(RelExpr expr) {
 // returns false for TLS variables even though they need GOT, because
 // TLS variables uses GOT differently than the regular variables.
 static bool needsGot(RelExpr expr) {
-  return oneof<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
-               R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
-               R_GOT_PC, R_GOTPLT>(expr);
+  return oneof<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
+               R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT>(
+      expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -369,7 +369,7 @@ static bool isRelExpr(RelExpr expr) {
 static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
                                      InputSectionBase &s, uint64_t relOff) {
   // These expressions always compute a constant
-  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
+  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_TLSLD_GOT_OFF,
             R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,

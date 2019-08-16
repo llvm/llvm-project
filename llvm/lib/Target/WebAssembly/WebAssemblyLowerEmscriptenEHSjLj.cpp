@@ -274,6 +274,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
 
   bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
+  bool isEmAsmCall(Module &M, const Value *Callee) const;
 
   void rebuildSSA(Function &F);
 
@@ -535,6 +536,23 @@ bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(Module &M,
 
   // Otherwise we don't know
   return true;
+}
+
+bool WebAssemblyLowerEmscriptenEHSjLj::isEmAsmCall(Module &M,
+                                                   const Value *Callee) const {
+  // This is an exhaustive list from Emscripten's <emscripten/em_asm.h>.
+  Function *EmAsmConstIntF = M.getFunction("emscripten_asm_const_int");
+  Function *EmAsmConstDoubleF = M.getFunction("emscripten_asm_const_double");
+  Function *EmAsmConstIntSyncMainF =
+      M.getFunction("emscripten_asm_const_int_sync_on_main_thread");
+  Function *EmAsmConstDoubleSyncMainF =
+      M.getFunction("emscripten_asm_const_double_sync_on_main_thread");
+  Function *EmAsmConstAsyncMainF =
+      M.getFunction("emscripten_asm_const_async_on_main_thread");
+
+  return Callee == EmAsmConstIntF || Callee == EmAsmConstDoubleF ||
+         Callee == EmAsmConstIntSyncMainF ||
+         Callee == EmAsmConstDoubleSyncMainF || Callee == EmAsmConstAsyncMainF;
 }
 
 // Generate testSetjmp function call seqence with preamble and postamble.
@@ -983,6 +1001,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       const Value *Callee = CI->getCalledValue();
       if (!canLongjmp(M, Callee))
         continue;
+      if (isEmAsmCall(M, Callee))
+        report_fatal_error("Cannot use EM_ASM* alongside setjmp/longjmp in " +
+                               F.getName() +
+                               ". Please consider using EM_JS, or move the "
+                               "EM_ASM into another function.",
+                           false);
 
       Value *Threw = nullptr;
       BasicBlock *Tail;

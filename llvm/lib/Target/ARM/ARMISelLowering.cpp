@@ -16157,6 +16157,12 @@ bool ARMTargetLowering::isLegalInterleavedAccessType(
   return VecSize == 64 || VecSize % 128 == 0;
 }
 
+unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
+  if (Subtarget->hasNEON())
+    return 4;
+  return TargetLoweringBase::getMaxSupportedInterleaveFactor();
+}
+
 /// Lower an interleaved load into a vldN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):

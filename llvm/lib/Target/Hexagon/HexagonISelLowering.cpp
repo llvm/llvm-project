@@ -1501,11 +1501,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
-  for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v2i32, MVT::v4i16, MVT::v2i32}) {
-    setCondCodeAction(ISD::SETLT,  VT, Expand);
+  for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
+                 MVT::v2i32}) {
+    setCondCodeAction(ISD::SETNE,  VT, Expand);
     setCondCodeAction(ISD::SETLE,  VT, Expand);
-    setCondCodeAction(ISD::SETULT, VT, Expand);
+    setCondCodeAction(ISD::SETGE,  VT, Expand);
+    setCondCodeAction(ISD::SETLT,  VT, Expand);
     setCondCodeAction(ISD::SETULE, VT, Expand);
+    setCondCodeAction(ISD::SETUGE, VT, Expand);
+    setCondCodeAction(ISD::SETULT, VT, Expand);
   }
 
   // Custom-lower bitcasts from i8 to v8i1.
@@ -1559,6 +1563,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FADD, MVT::f64, Legal);
     setOperationAction(ISD::FSUB, MVT::f64, Legal);
   }
+
+  setTargetDAGCombine(ISD::VSELECT);
 
   if (Subtarget.useHVXOps())
     initializeHVXLowering();
@@ -1649,6 +1655,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VINSERTW0:     return "HexagonISD::VINSERTW0";
   case HexagonISD::VROR:          return "HexagonISD::VROR";
   case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
+  case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
+  case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
   case HexagonISD::VZERO:         return "HexagonISD::VZERO";
   case HexagonISD::VSPLATW:       return "HexagonISD::VSPLATW";
   case HexagonISD::D2P:           return "HexagonISD::D2P";
@@ -2464,6 +2472,23 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return buildVector64(Ops, dl, VecTy, DAG);
 
   if (VecTy == MVT::v8i1 || VecTy == MVT::v4i1 || VecTy == MVT::v2i1) {
+    // Check if this is a special case or all-0 or all-1.
+    bool All0 = true, All1 = true;
+    for (SDValue P : Ops) {
+      auto *CN = dyn_cast<ConstantSDNode>(P.getNode());
+      if (CN == nullptr) {
+        All0 = All1 = false;
+        break;
+      }
+      uint32_t C = CN->getZExtValue();
+      All0 &= (C == 0);
+      All1 &= (C == 1);
+    }
+    if (All0)
+      return DAG.getNode(HexagonISD::PFALSE, dl, VecTy);
+    if (All1)
+      return DAG.getNode(HexagonISD::PTRUE, dl, VecTy);
+
     // For each i1 element in the resulting predicate register, put 1
     // shifted by the index of the element into a general-purpose register,
     // then or them together and transfer it back into a predicate register.
@@ -2890,7 +2915,37 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   if (isHvxOperation(Op)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
+    return SDValue();
   }
+
+  const SDLoc &dl(Op);
+  unsigned Opc = Op.getOpcode();
+
+  if (Opc == HexagonISD::P2D) {
+    SDValue P = Op.getOperand(0);
+    switch (P.getOpcode()) {
+      case HexagonISD::PTRUE:
+        return DCI.DAG.getConstant(-1, dl, ty(Op));
+      case HexagonISD::PFALSE:
+        return getZero(dl, ty(Op), DCI.DAG);
+      default:
+        break;
+    }
+  } else if (Opc == ISD::VSELECT) {
+    // This is pretty much duplicated in HexagonISelLoweringHVX...
+    //
+    // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
+    SDValue Cond = Op.getOperand(0);
+    if (Cond->getOpcode() == ISD::XOR) {
+      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+      if (C1->getOpcode() == HexagonISD::PTRUE) {
+        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                                       Op.getOperand(2), Op.getOperand(1));
+        return VSel;
+      }
+    }
+  }
+
   return SDValue();
 }
 

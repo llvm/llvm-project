@@ -186,6 +186,21 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     if (const auto *Entry = ConvertCostTableLookup(
             LoadConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
+
+    static const TypeConversionCostTblEntry MVELoadConversionTbl[] = {
+        {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 0},
+        {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 0},
+        {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 0},
+        {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 0},
+        {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 0},
+        {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 0},
+    };
+    if (SrcTy.isVector() && ST->hasMVEIntegerOps()) {
+      if (const auto *Entry =
+              ConvertCostTableLookup(MVELoadConversionTbl, ISD,
+                                     DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+        return Entry->Cost;
+    }
   }
 
   // Some arithmetic, load and store operations have specific instructions

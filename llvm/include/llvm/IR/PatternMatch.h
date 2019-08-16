@@ -1258,6 +1258,12 @@ inline CastClass_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::Trunc>(Op);
 }
 
+template <typename OpTy>
+inline match_combine_or<CastClass_match<OpTy, Instruction::Trunc>, OpTy>
+m_TruncOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_Trunc(Op), Op);
+}
+
 /// Matches SExt.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::SExt> m_SExt(const OpTy &Op) {

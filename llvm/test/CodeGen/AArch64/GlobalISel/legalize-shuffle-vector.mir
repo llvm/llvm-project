@@ -44,3 +44,29 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            shuffle_1elt_mask
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+
+    ; CHECK-LABEL: name: shuffle_1elt_mask
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $d1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CHECK: $d0 = COPY [[COPY2]](s64)
+    ; CHECK: $d1 = COPY [[COPY3]](s64)
+    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1
+    %0:_(s64) = COPY $d0
+    %1:_(s64) = COPY $d1
+    %3:_(s64) = G_SHUFFLE_VECTOR %0:_(s64), %1:_, shufflemask(0)
+    %4:_(s64) = G_SHUFFLE_VECTOR %0:_(s64), %1:_, shufflemask(1)
+    $d0 = COPY %3(s64)
+    $d1 = COPY %4(s64)
+    RET_ReallyLR implicit $d0, implicit $d1
+
+...

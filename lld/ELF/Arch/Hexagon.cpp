@@ -103,7 +103,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_GOT_11_X:
   case R_HEX_GOT_16_X:
   case R_HEX_GOT_32_6_X:
-    return R_HEXAGON_GOT;
+    return R_GOTPLT;
   default:
     return R_ABS;
   }

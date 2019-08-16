@@ -99,12 +99,20 @@ def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
 def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
 def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
 
+def SDTVecLeaf:
+  SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecVecIntOp:
   SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
                        SDTCisVT<3,i32>]>;
 
+def HexagonPTRUE:      SDNode<"HexagonISD::PTRUE",      SDTVecLeaf>;
+def HexagonPFALSE:     SDNode<"HexagonISD::PFALSE",     SDTVecLeaf>;
 def HexagonVALIGN:     SDNode<"HexagonISD::VALIGN",     SDTVecVecIntOp>;
 def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
+
+def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
+def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
+def pnot:   PatFrag<(ops node:$Pu), (xor node:$Pu, ptrue)>;
 
 def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
@@ -320,6 +328,17 @@ multiclass SelMinMax_pats<PatFrag CmpOp, PatFrag Val,
            (InstB Val:$A, Val:$B)>;
 }
 
+multiclass MinMax_pats<InstHexagon PickT, InstHexagon PickS,
+                       PatFrag Sel, PatFrag CmpOp,
+                       ValueType CmpType, PatFrag CmpPred> {
+  def: Pat<(Sel (CmpType (CmpOp CmpPred:$Vs, CmpPred:$Vt)),
+                CmpPred:$Vt, CmpPred:$Vs),
+           (PickT CmpPred:$Vs, CmpPred:$Vt)>;
+  def: Pat<(Sel (CmpType (CmpOp CmpPred:$Vs, CmpPred:$Vt)),
+                CmpPred:$Vs, CmpPred:$Vt),
+           (PickS CmpPred:$Vs, CmpPred:$Vt)>;
+}
+
 
 // Frags for commonly used SDNodes.
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
@@ -497,7 +516,9 @@ def: Pat<(v2i16 (trunc V2I32:$Rs)),
 //
 
 def: Pat<(not I1:$Ps),      (C2_not I1:$Ps)>;
-def: Pat<(not V8I1:$Ps),    (C2_not V8I1:$Ps)>;
+def: Pat<(pnot V2I1:$Ps),   (C2_not V2I1:$Ps)>;
+def: Pat<(pnot V4I1:$Ps),   (C2_not V4I1:$Ps)>;
+def: Pat<(pnot V8I1:$Ps),   (C2_not V8I1:$Ps)>;
 def: Pat<(add I1:$Ps, -1),  (C2_not I1:$Ps)>;
 
 multiclass BoolOpR_RR_pat<InstHexagon MI, PatFrag Op> {
@@ -823,6 +844,14 @@ def: Pat<(vselect V4I1:$Pu, V4I16:$Rs, V4I16:$Rt),
 def: Pat<(vselect V2I1:$Pu, V2I32:$Rs, V2I32:$Rt),
          (C2_vmux V2I1:$Pu, V2I32:$Rs, V2I32:$Rt)>;
 
+def: Pat<(vselect (pnot V8I1:$Pu), V8I8:$Rs, V8I8:$Rt),
+         (C2_vmux V8I1:$Pu, V8I8:$Rt, V8I8:$Rs)>;
+def: Pat<(vselect (pnot V4I1:$Pu), V4I16:$Rs, V4I16:$Rt),
+         (C2_vmux V4I1:$Pu, V4I16:$Rt, V4I16:$Rs)>;
+def: Pat<(vselect (pnot V2I1:$Pu), V2I32:$Rs, V2I32:$Rt),
+         (C2_vmux V2I1:$Pu, V2I32:$Rt, V2I32:$Rs)>;
+
+
 // From LegalizeDAG.cpp: (Pu ? Pv : Pw) <=> (Pu & Pv) | (!Pu & Pw).
 def: Pat<(select I1:$Pu, I1:$Pv, I1:$Pw),
          (C2_or (C2_and  I1:$Pu, I1:$Pv),
@@ -855,32 +884,44 @@ let AddedComplexity = 200 in {
 }
 
 let AddedComplexity = 200 in {
-  defm: SelMinMax_pats<setge,  I32, A2_max,   A2_min>;
-  defm: SelMinMax_pats<setgt,  I32, A2_max,   A2_min>;
-  defm: SelMinMax_pats<setle,  I32, A2_min,   A2_max>;
-  defm: SelMinMax_pats<setlt,  I32, A2_min,   A2_max>;
-  defm: SelMinMax_pats<setuge, I32, A2_maxu,  A2_minu>;
-  defm: SelMinMax_pats<setugt, I32, A2_maxu,  A2_minu>;
-  defm: SelMinMax_pats<setule, I32, A2_minu,  A2_maxu>;
-  defm: SelMinMax_pats<setult, I32, A2_minu,  A2_maxu>;
+  defm: MinMax_pats<A2_min,   A2_max,   select,  setgt, i1, I32>;
+  defm: MinMax_pats<A2_min,   A2_max,   select,  setge, i1, I32>;
+  defm: MinMax_pats<A2_max,   A2_min,   select,  setlt, i1, I32>;
+  defm: MinMax_pats<A2_max,   A2_min,   select,  setle, i1, I32>;
+  defm: MinMax_pats<A2_minu,  A2_maxu,  select, setugt, i1, I32>;
+  defm: MinMax_pats<A2_minu,  A2_maxu,  select, setuge, i1, I32>;
+  defm: MinMax_pats<A2_maxu,  A2_minu,  select, setult, i1, I32>;
+  defm: MinMax_pats<A2_maxu,  A2_minu,  select, setule, i1, I32>;
 
-  defm: SelMinMax_pats<setge,  I64, A2_maxp,  A2_minp>;
-  defm: SelMinMax_pats<setgt,  I64, A2_maxp,  A2_minp>;
-  defm: SelMinMax_pats<setle,  I64, A2_minp,  A2_maxp>;
-  defm: SelMinMax_pats<setlt,  I64, A2_minp,  A2_maxp>;
-  defm: SelMinMax_pats<setuge, I64, A2_maxup, A2_minup>;
-  defm: SelMinMax_pats<setugt, I64, A2_maxup, A2_minup>;
-  defm: SelMinMax_pats<setule, I64, A2_minup, A2_maxup>;
-  defm: SelMinMax_pats<setult, I64, A2_minup, A2_maxup>;
+  defm: MinMax_pats<A2_minp,  A2_maxp,  select,  setgt, i1, I64>;
+  defm: MinMax_pats<A2_minp,  A2_maxp,  select,  setge, i1, I64>;
+  defm: MinMax_pats<A2_maxp,  A2_minp,  select,  setlt, i1, I64>;
+  defm: MinMax_pats<A2_maxp,  A2_minp,  select,  setle, i1, I64>;
+  defm: MinMax_pats<A2_minup, A2_maxup, select, setugt, i1, I64>;
+  defm: MinMax_pats<A2_minup, A2_maxup, select, setuge, i1, I64>;
+  defm: MinMax_pats<A2_maxup, A2_minup, select, setult, i1, I64>;
+  defm: MinMax_pats<A2_maxup, A2_minup, select, setule, i1, I64>;
 }
 
 let AddedComplexity = 100 in {
-  defm: SelMinMax_pats<setolt, F32, F2_sfmin, F2_sfmax>;
-  defm: SelMinMax_pats<setole, F32, F2_sfmin, F2_sfmax>;
-  defm: SelMinMax_pats<setogt, F32, F2_sfmax, F2_sfmin>;
-  defm: SelMinMax_pats<setoge, F32, F2_sfmax, F2_sfmin>;
+  defm: MinMax_pats<F2_sfmin, F2_sfmax, select, setogt, i1, F32>;
+  defm: MinMax_pats<F2_sfmin, F2_sfmax, select, setoge, i1, F32>;
+  defm: MinMax_pats<F2_sfmax, F2_sfmin, select, setolt, i1, F32>;
+  defm: MinMax_pats<F2_sfmax, F2_sfmin, select, setole, i1, F32>;
 }
 
+defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setgt,  v8i1,  V8I8>;
+defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setge,  v8i1,  V8I8>;
+defm: MinMax_pats<A2_vminh,  A2_vmaxh,  vselect,  setgt,  v4i1, V4I16>;
+defm: MinMax_pats<A2_vminh,  A2_vmaxh,  vselect,  setge,  v4i1, V4I16>;
+defm: MinMax_pats<A2_vminw,  A2_vmaxw,  vselect,  setgt,  v2i1, V2I32>;
+defm: MinMax_pats<A2_vminw,  A2_vmaxw,  vselect,  setge,  v2i1, V2I32>;
+defm: MinMax_pats<A2_vminub, A2_vmaxub, vselect, setugt,  v8i1,  V8I8>;
+defm: MinMax_pats<A2_vminub, A2_vmaxub, vselect, setuge,  v8i1,  V8I8>;
+defm: MinMax_pats<A2_vminuh, A2_vmaxuh, vselect, setugt,  v4i1, V4I16>;
+defm: MinMax_pats<A2_vminuh, A2_vmaxuh, vselect, setuge,  v4i1, V4I16>;
+defm: MinMax_pats<A2_vminuw, A2_vmaxuw, vselect, setugt,  v2i1, V2I32>;
+defm: MinMax_pats<A2_vminuw, A2_vmaxuw, vselect, setuge,  v2i1, V2I32>;
 
 // --(7) Insert/extract --------------------------------------------------
 //

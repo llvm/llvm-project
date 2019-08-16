@@ -83,6 +83,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
   }
 
+  // Meta-instructions emit no code.
+  if (MI.isMetaInstruction())
+    return 0;
+
   // FIXME: We currently only handle pseudoinstructions that don't get expanded
   //        before the assembly printer.
   unsigned NumBytes = 0;
@@ -91,12 +95,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     // Anything not explicitly designated otherwise is a normal 4-byte insn.
     NumBytes = 4;
-    break;
-  case TargetOpcode::DBG_VALUE:
-  case TargetOpcode::EH_LABEL:
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::KILL:
-    NumBytes = 0;
     break;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow

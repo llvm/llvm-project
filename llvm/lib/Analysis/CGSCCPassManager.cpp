@@ -449,7 +449,7 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
   // irrelevant.
   for (Instruction &I : instructions(F))
     if (auto CS = CallSite(&I))
-      for (Function *Callee : CS.getKnownCallees()) {
+      if (Function *Callee = CS.getCalledFunction())
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
           Node &CalleeN = *G.lookup(*Callee);
           Edge *E = N->lookup(CalleeN);
@@ -467,7 +467,6 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
           if (!E->isCall())
             PromotedRefTargets.insert(&CalleeN);
         }
-      }
 
   // Now walk all references.
   for (Instruction &I : instructions(F))

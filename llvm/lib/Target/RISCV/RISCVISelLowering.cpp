@@ -706,7 +706,7 @@ SDValue RISCVTargetLowering::lowerRETURNADDR(SDValue Op,
 
   // Return the value of the return address register, marking it an implicit
   // live-in.
-  unsigned Reg = MF.addLiveIn(RI.getRARegister(), getRegClassFor(XLenVT));
+  Register Reg = MF.addLiveIn(RI.getRARegister(), getRegClassFor(XLenVT));
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, XLenVT);
 }
 
@@ -1246,7 +1246,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   auto CC = static_cast<ISD::CondCode>(MI.getOperand(3).getImm());
 
   SmallVector<MachineInstr *, 4> SelectDebugValues;
-  SmallSet<unsigned, 4> SelectDests;
+  SmallSet<Register, 4> SelectDests;
   SelectDests.insert(MI.getOperand(0).getReg());
 
   MachineInstr *LastSelectPseudo = &MI;
@@ -1404,7 +1404,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
                                 MVT ValVT2, MVT LocVT2,
                                 ISD::ArgFlagsTy ArgFlags2) {
   unsigned XLenInBytes = XLen / 8;
-  if (unsigned Reg = State.AllocateReg(ArgGPRs)) {
+  if (Register Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
                                      VA1.getLocVT(), CCValAssign::Full));
@@ -1421,7 +1421,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
     return false;
   }
 
-  if (unsigned Reg = State.AllocateReg(ArgGPRs)) {
+  if (Register Reg = State.AllocateReg(ArgGPRs)) {
     // The second half can also be passed via register.
     State.addLoc(
         CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
@@ -1521,7 +1521,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
     // cases.
-    unsigned Reg = State.AllocateReg(ArgGPRs);
+    Register Reg = State.AllocateReg(ArgGPRs);
     LocVT = MVT::i32;
     if (!Reg) {
       unsigned StackOffset = State.AllocateStack(8, 8);
@@ -1563,7 +1563,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   }
 
   // Allocate to a register if possible, or else a stack slot.
-  unsigned Reg;
+  Register Reg;
   if (ValVT == MVT::f32 && !UseGPRForF32)
     Reg = State.AllocateReg(ArgFPR32s, ArgFPR64s);
   else if (ValVT == MVT::f64 && !UseGPRForF64)
@@ -2083,7 +2083,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   // Copy argument values to their designated locations.
-  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+  SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
   SDValue StackPtr;
   for (unsigned i = 0, j = 0, e = ArgLocs.size(); i != e; ++i) {
@@ -2113,7 +2113,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getStore(Chain, DL, Hi, StackPtr, MachinePointerInfo()));
       } else {
         // Second half of f64 is passed in another GPR.
-        unsigned RegHigh = RegLo + 1;
+        Register RegHigh = RegLo + 1;
         RegsToPass.push_back(std::make_pair(RegHigh, Hi));
       }
       continue;
@@ -2329,7 +2329,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
       Register RegLo = VA.getLocReg();
-      unsigned RegHi = RegLo + 1;
+      Register RegHi = RegLo + 1;
       Chain = DAG.getCopyToReg(Chain, DL, RegLo, Lo, Glue);
       Glue = Chain.getValue(1);
       RetOps.push_back(DAG.getRegister(RegLo, MVT::i32));
@@ -2469,7 +2469,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // official names. However, other frontends like `rustc` do not. This allows
   // users of these frontends to use the ABI names for registers in LLVM-style
   // register constraints.
-  unsigned XRegFromAlias = StringSwitch<unsigned>(Constraint.lower())
+  Register XRegFromAlias = StringSwitch<Register>(Constraint.lower())
                                .Case("{zero}", RISCV::X0)
                                .Case("{ra}", RISCV::X1)
                                .Case("{sp}", RISCV::X2)
@@ -2514,8 +2514,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // The second case is the ABI name of the register, so that frontends can also
   // use the ABI names in register constraint lists.
   if (Subtarget.hasStdExtF() || Subtarget.hasStdExtD()) {
-    std::pair<unsigned, unsigned> FReg =
-        StringSwitch<std::pair<unsigned, unsigned>>(Constraint.lower())
+    std::pair<Register, Register> FReg =
+        StringSwitch<std::pair<Register, Register>>(Constraint.lower())
             .Cases("{f0}", "{ft0}", {RISCV::F0_32, RISCV::F0_64})
             .Cases("{f1}", "{ft1}", {RISCV::F1_32, RISCV::F1_64})
             .Cases("{f2}", "{ft2}", {RISCV::F2_32, RISCV::F2_64})

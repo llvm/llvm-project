@@ -48,3 +48,71 @@ entry:
   %or11 = or i32 %or7, %shl10
   ret i32 %or11
 }
+
+define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+; CHECK-LABEL: @PR16739_byref(
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[GEP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[TMP4]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[X2]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[X2]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %gep0 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 0
+  %gep1 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 1
+  %gep2 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 2
+  %x0 = load float, float* %gep0
+  %x1 = load float, float* %gep1
+  %x2 = load float, float* %gep2
+  %i0 = insertelement <4 x float> undef, float %x0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %x1, i32 1
+  %i2 = insertelement <4 x float> %i1, float %x2, i32 2
+  %i3 = insertelement <4 x float> %i2, float %x2, i32 3
+  ret <4 x float> %i3
+}
+
+define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+; CHECK-LABEL: @PR16739_byval(
+; CHECK-NEXT:    [[T0:%.*]] = bitcast <4 x float>* [[X:%.*]] to i64*
+; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[T0]], align 16
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
+; CHECK-NEXT:    [[T3:%.*]] = bitcast float* [[T2]] to i64*
+; CHECK-NEXT:    [[T4:%.*]] = load i64, i64* [[T3]], align 8
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[T1]] to i32
+; CHECK-NEXT:    [[T6:%.*]] = bitcast i32 [[T5]] to float
+; CHECK-NEXT:    [[T7:%.*]] = insertelement <4 x float> undef, float [[T6]], i32 0
+; CHECK-NEXT:    [[T8:%.*]] = lshr i64 [[T1]], 32
+; CHECK-NEXT:    [[T9:%.*]] = trunc i64 [[T8]] to i32
+; CHECK-NEXT:    [[T10:%.*]] = bitcast i32 [[T9]] to float
+; CHECK-NEXT:    [[T11:%.*]] = insertelement <4 x float> [[T7]], float [[T10]], i32 1
+; CHECK-NEXT:    [[T12:%.*]] = trunc i64 [[T4]] to i32
+; CHECK-NEXT:    [[T13:%.*]] = bitcast i32 [[T12]] to float
+; CHECK-NEXT:    [[T14:%.*]] = insertelement <4 x float> [[T11]], float [[T13]], i32 2
+; CHECK-NEXT:    [[T15:%.*]] = insertelement <4 x float> [[T14]], float [[T13]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[T15]]
+;
+  %t0 = bitcast <4 x float>* %x to i64*
+  %t1 = load i64, i64* %t0, align 16
+  %t2 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 2
+  %t3 = bitcast float* %t2 to i64*
+  %t4 = load i64, i64* %t3, align 8
+  %t5 = trunc i64 %t1 to i32
+  %t6 = bitcast i32 %t5 to float
+  %t7 = insertelement <4 x float> undef, float %t6, i32 0
+  %t8 = lshr i64 %t1, 32
+  %t9 = trunc i64 %t8 to i32
+  %t10 = bitcast i32 %t9 to float
+  %t11 = insertelement <4 x float> %t7, float %t10, i32 1
+  %t12 = trunc i64 %t4 to i32
+  %t13 = bitcast i32 %t12 to float
+  %t14 = insertelement <4 x float> %t11, float %t13, i32 2
+  %t15 = insertelement <4 x float> %t14, float %t13, i32 3
+  ret <4 x float> %t15
+}

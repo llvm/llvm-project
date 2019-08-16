@@ -536,7 +536,7 @@ class VectorType;
     Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
                                    AtomicOrdering Ord) const override;
 
-    unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
+    unsigned getMaxSupportedInterleaveFactor() const override;
 
     bool lowerInterleavedLoad(LoadInst *LI,
                               ArrayRef<ShuffleVectorInst *> Shuffles,

@@ -291,8 +291,8 @@ int main(int argc, char **argv) {
     IsInDevelopmentTree = true;
     DevelopmentTreeLayout = CMakeStyle;
     ActiveObjRoot = LLVM_OBJ_ROOT;
-  } else if (sys::fs::equivalent(CurrentExecPrefix,
-                                 Twine(LLVM_OBJ_ROOT) + "/bin")) {
+  } else if (sys::fs::equivalent(sys::path::parent_path(CurrentExecPrefix),
+                                 LLVM_OBJ_ROOT)) {
     IsInDevelopmentTree = true;
     DevelopmentTreeLayout = CMakeBuildModeStyle;
     ActiveObjRoot = LLVM_OBJ_ROOT;
@@ -319,11 +319,14 @@ int main(int argc, char **argv) {
       ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
       break;
     case CMakeBuildModeStyle:
+      // FIXME: Should we consider the build-mode-specific path as the prefix?
       ActivePrefix = ActiveObjRoot;
-      ActiveBinDir = ActiveObjRoot + "/bin/" + build_mode;
+      ActiveBinDir = ActiveObjRoot + "/" + build_mode + "/bin";
       ActiveLibDir =
-          ActiveObjRoot + "/lib" + LLVM_LIBDIR_SUFFIX + "/" + build_mode;
-      ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
+          ActiveObjRoot + "/" + build_mode + "/lib" + LLVM_LIBDIR_SUFFIX;
+      // The CMake directory isn't separated by build mode.
+      ActiveCMakeDir =
+          ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX + "/cmake/llvm";
       break;
     }
 

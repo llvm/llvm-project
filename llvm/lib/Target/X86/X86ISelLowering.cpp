@@ -7089,18 +7089,25 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 /// remaining input indices in case we now have a unary shuffle and adjust the
 /// inputs accordingly.
 /// Returns true if the target shuffle mask was decoded.
-static bool resolveTargetShuffleInputs(SDValue Op,
+static bool resolveTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
                                        SmallVectorImpl<SDValue> &Inputs,
                                        SmallVectorImpl<int> &Mask,
                                        SelectionDAG &DAG, unsigned Depth) {
-  unsigned NumElts = Op.getValueType().getVectorNumElements();
-  APInt DemandedElts = APInt::getAllOnesValue(NumElts);
   if (!setTargetShuffleZeroElements(Op, Mask, Inputs))
     if (!getFauxShuffleMask(Op, DemandedElts, Mask, Inputs, DAG, Depth))
       return false;
 
   resolveTargetShuffleInputsAndMask(Inputs, Mask);
   return true;
+}
+
+static bool resolveTargetShuffleInputs(SDValue Op,
+                                       SmallVectorImpl<SDValue> &Inputs,
+                                       SmallVectorImpl<int> &Mask,
+                                       SelectionDAG &DAG, unsigned Depth) {
+  unsigned NumElts = Op.getValueType().getVectorNumElements();
+  APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+  return resolveTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, DAG, Depth);
 }
 
 /// Returns the scalar element that will make up the ith
@@ -35202,6 +35209,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  SDLoc dl(N);
   SDValue Src = N->getOperand(0);
   SDValue Idx = N->getOperand(1);
 
@@ -35221,6 +35229,16 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     SDValue SrcOp = SrcBC.getOperand(0);
     if (SrcOp.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, SrcOp);
+  }
+
+  // Handle extract(truncate(x)) for 0'th index.
+  // TODO: Treat this as a faux shuffle?
+  // TODO: When can we use this for general indices?
+  if (ISD::TRUNCATE == Src.getOpcode() && SrcVT.is128BitVector() &&
+      isNullConstant(Idx)) {
+    Src = extract128BitVector(Src.getOperand(0), 0, DAG, dl);
+    Src = DAG.getBitcast(SrcVT, Src);
+    return DAG.getNode(N->getOpcode(), dl, VT, Src, Idx);
   }
 
   // Resolve the target shuffle inputs and mask.
@@ -35260,7 +35278,6 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   int SrcIdx = Mask[N->getConstantOperandVal(1)];
-  SDLoc dl(N);
 
   // If the shuffle source element is undef/zero then we can just accept it.
   if (SrcIdx == SM_SentinelUndef)
