@@ -623,15 +623,17 @@ static void DiagHandler(const SMDiagnostic &Diag, void *Context) {
 }
 
 Expected<std::unique_ptr<InterfaceFile>>
-TextAPIReader::get(std::unique_ptr<MemoryBuffer> InputBuffer) {
+TextAPIReader::get(MemoryBufferRef InputBuffer) {
   TextAPIContext Ctx;
-  Ctx.Path = InputBuffer->getBufferIdentifier();
-  yaml::Input YAMLIn(InputBuffer->getBuffer(), &Ctx, DiagHandler, &Ctx);
+  Ctx.Path = InputBuffer.getBufferIdentifier();
+  yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);
 
   // Fill vector with interface file objects created by parsing the YAML file.
   std::vector<const InterfaceFile *> Files;
   YAMLIn >> Files;
 
+  // YAMLIn dynamically allocates for Interface file and in case of error,
+  // memory leak will occur unless wrapped around unique_ptr
   auto File = std::unique_ptr<InterfaceFile>(
       const_cast<InterfaceFile *>(Files.front()));
 
