@@ -106,7 +106,7 @@ public:
 
       std::unique_ptr<ASTConsumer>
       CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-        return llvm::make_unique<ASTConsumer>();
+        return std::make_unique<ASTConsumer>();
       }
 
     private:

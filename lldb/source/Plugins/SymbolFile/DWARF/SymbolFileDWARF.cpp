@@ -186,8 +186,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   FileSpecList support_files;
   support_files.Append(first_file);
 
-  llvm::Optional<FileSpec::Style> compile_dir_style =
-      FileSpec::GuessPathStyle(compile_dir);
   const size_t number_of_files = prologue.FileNames.size();
   for (size_t idx = 1; idx <= number_of_files; ++idx) {
     std::string original_file;
@@ -200,26 +198,22 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
       continue;
     }
 
-    FileSpec::Style style = FileSpec::Style::native;
-    if (compile_dir_style) {
-      style = *compile_dir_style;
-    } else if (llvm::Optional<FileSpec::Style> file_style =
-                   FileSpec::GuessPathStyle(original_file)) {
-      style = *file_style;
-    }
-
     std::string remapped_file;
     if (!prologue.getFileNameByIndex(
             idx, compile_dir,
             llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             remapped_file)) {
       // Always add an entry so the indexes remain correct.
-      support_files.EmplaceBack(original_file, style);
+      support_files.EmplaceBack(original_file,
+                                FileSpec::GuessPathStyle(original_file)
+                                    .getValueOr(FileSpec::Style::native));
       continue;
     }
 
     module->RemapSourceFile(llvm::StringRef(original_file), remapped_file);
-    support_files.EmplaceBack(remapped_file, style);
+    support_files.EmplaceBack(remapped_file,
+                              FileSpec::GuessPathStyle(remapped_file)
+                                  .getValueOr(FileSpec::Style::native));
   }
 
   return support_files;
@@ -480,7 +474,7 @@ void SymbolFileDWARF::InitializeObject() {
     }
   }
 
-  m_index = llvm::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(),
+  m_index = std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(),
                                                 DebugInfo());
 }
 
@@ -618,7 +612,7 @@ DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  auto abbr = llvm::make_unique<DWARFDebugAbbrev>();
+  auto abbr = std::make_unique<DWARFDebugAbbrev>();
   llvm::Error error = abbr->parse(debug_abbrev_data);
   if (error) {
     Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
@@ -641,7 +635,7 @@ DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
     if (m_context.getOrLoadDebugInfoData().GetByteSize() > 0)
-      m_info = llvm::make_unique<DWARFDebugInfo>(*this, m_context);
+      m_info = std::make_unique<DWARFDebugInfo>(*this, m_context);
   }
   return m_info.get();
 }
@@ -995,7 +989,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // into LLDB, we should explore using a callback to populate the line table
   // while we parse to reduce memory usage.
   std::unique_ptr<LineTable> line_table_up =
-      llvm::make_unique<LineTable>(&comp_unit);
+      std::make_unique<LineTable>(&comp_unit);
   LineSequence *sequence = line_table_up->CreateLineSequenceContainer();
   for (auto &row : line_table->Rows) {
     line_table_up->AppendLineEntryToSequence(
@@ -1591,7 +1585,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (dwo_obj_file == nullptr)
     return nullptr;
 
-  return llvm::make_unique<SymbolFileDWARFDwo>(dwo_obj_file, *dwarf_cu);
+  return std::make_unique<SymbolFileDWARFDwo>(dwo_obj_file, *dwarf_cu);
 }
 
 void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {

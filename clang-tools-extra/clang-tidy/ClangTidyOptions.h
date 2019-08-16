@@ -199,7 +199,7 @@ public:
   /// FileOptionsProvider::ConfigFileHandlers ConfigHandlers;
   /// ConfigHandlers.emplace_back(".my-tidy-config", parseMyConfigFormat);
   /// ConfigHandlers.emplace_back(".clang-tidy", parseConfiguration);
-  /// return llvm::make_unique<FileOptionsProvider>(
+  /// return std::make_unique<FileOptionsProvider>(
   ///     GlobalOptions, DefaultOptions, OverrideOptions, ConfigHandlers);
   /// \endcode
   ///

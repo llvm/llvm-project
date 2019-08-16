@@ -2268,7 +2268,7 @@ CreateVTableLayout(const ItaniumVTableBuilder &Builder) {
   SmallVector<VTableLayout::VTableThunkTy, 1>
     VTableThunks(Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
 
-  return llvm::make_unique<VTableLayout>(
+  return std::make_unique<VTableLayout>(
       Builder.VTableIndices, Builder.vtable_components(), VTableThunks,
       Builder.getAddressPoints());
 }
@@ -3253,7 +3253,7 @@ void MicrosoftVTableContext::computeVTablePaths(bool ForVBTables,
 
   // Base case: this subobject has its own vptr.
   if (ForVBTables ? Layout.hasOwnVBPtr() : Layout.hasOwnVFPtr())
-    Paths.push_back(llvm::make_unique<VPtrInfo>(RD));
+    Paths.push_back(std::make_unique<VPtrInfo>(RD));
 
   // Recursive case: get all the vbtables from our bases and remove anything
   // that shares a virtual base.
@@ -3276,7 +3276,7 @@ void MicrosoftVTableContext::computeVTablePaths(bool ForVBTables,
         continue;
 
       // Copy the path and adjust it as necessary.
-      auto P = llvm::make_unique<VPtrInfo>(*BaseInfo);
+      auto P = std::make_unique<VPtrInfo>(*BaseInfo);
 
       // We mangle Base into the path if the path would've been ambiguous and it
       // wasn't already extended with Base.
@@ -3562,7 +3562,7 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
   const VTableLayout::AddressPointsMapTy EmptyAddressPointsMap;
 
   {
-    auto VFPtrs = llvm::make_unique<VPtrInfoVector>();
+    auto VFPtrs = std::make_unique<VPtrInfoVector>();
     computeVTablePaths(/*ForVBTables=*/false, RD, *VFPtrs);
     computeFullPathsForVFTables(Context, RD, *VFPtrs);
     VFPtrLocations[RD] = std::move(VFPtrs);
@@ -3576,7 +3576,7 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     assert(VFTableLayouts.count(id) == 0);
     SmallVector<VTableLayout::VTableThunkTy, 1> VTableThunks(
         Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
-    VFTableLayouts[id] = llvm::make_unique<VTableLayout>(
+    VFTableLayouts[id] = std::make_unique<VTableLayout>(
         ArrayRef<size_t>{0}, Builder.vtable_components(), VTableThunks,
         EmptyAddressPointsMap);
     Thunks.insert(Builder.thunks_begin(), Builder.thunks_end());
@@ -3668,7 +3668,7 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
     std::unique_ptr<VirtualBaseInfo> &Entry = VBaseInfo[RD];
     if (Entry)
       return *Entry;
-    Entry = llvm::make_unique<VirtualBaseInfo>();
+    Entry = std::make_unique<VirtualBaseInfo>();
     VBI = Entry.get();
   }
 

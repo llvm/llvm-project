@@ -817,7 +817,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                bool isLeak)
     : BugReport(D, D.getDescription(), n), Sym(sym), isLeak(isLeak) {
   if (!isLeak)
-    addVisitor(llvm::make_unique<RefCountReportVisitor>(sym));
+    addVisitor(std::make_unique<RefCountReportVisitor>(sym));
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
@@ -825,7 +825,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                StringRef endText)
     : BugReport(D, D.getDescription(), endText, n) {
 
-  addVisitor(llvm::make_unique<RefCountReportVisitor>(sym));
+  addVisitor(std::make_unique<RefCountReportVisitor>(sym));
 }
 
 void RefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
@@ -917,5 +917,5 @@ RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
 
   createDescription(Ctx);
 
-  addVisitor(llvm::make_unique<RefLeakReportVisitor>(sym));
+  addVisitor(std::make_unique<RefLeakReportVisitor>(sym));
 }

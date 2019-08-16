@@ -105,7 +105,7 @@ class CoverageCheckerConsumer : public ASTConsumer {
 public:
   CoverageCheckerConsumer(CoverageChecker &Checker, Preprocessor &PP) {
     // PP takes ownership.
-    PP.addPPCallbacks(llvm::make_unique<CoverageCheckerCallbacks>(Checker));
+    PP.addPPCallbacks(std::make_unique<CoverageCheckerCallbacks>(Checker));
   }
 };
 
@@ -116,7 +116,7 @@ public:
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
     StringRef InFile) override {
-    return llvm::make_unique<CoverageCheckerConsumer>(Checker,
+    return std::make_unique<CoverageCheckerConsumer>(Checker,
       CI.getPreprocessor());
   }
 
@@ -154,7 +154,7 @@ std::unique_ptr<CoverageChecker> CoverageChecker::createCoverageChecker(
     StringRef ModuleMapPath, std::vector<std::string> &IncludePaths,
     ArrayRef<std::string> CommandLine, clang::ModuleMap *ModuleMap) {
 
-  return llvm::make_unique<CoverageChecker>(ModuleMapPath, IncludePaths,
+  return std::make_unique<CoverageChecker>(ModuleMapPath, IncludePaths,
                                             CommandLine, ModuleMap);
 }
 

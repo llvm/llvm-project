@@ -1111,8 +1111,8 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
   if (!CU)
     return Lines;
 
-  std::string FunctionName = "<invalid>";
   uint32_t StartLine = 0;
+  std::string FunctionName(DILineInfo::BadString);
   getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind,
                                         FunctionName, StartLine);
 

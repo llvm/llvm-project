@@ -228,8 +228,8 @@ public:
   bool canVectorize(bool UseVPlanNativePath);
 
   /// Return true if we can vectorize this loop while folding its tail by
-  /// masking.
-  bool canFoldTailByMasking();
+  /// masking, and mark all respective loads/stores for masking.
+  bool prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
@@ -355,9 +355,16 @@ private:
   bool canVectorizeOuterLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
-  /// executed. \p SafePtrs is a list of addresses that are known to be legal
-  /// and we know that we can read from them without segfault.
-  bool blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs);
+  /// executed, and record the loads/stores that require masking. If's that
+  /// guard loads can be ignored under "assume safety" unless \p PreserveGuards
+  /// is true. This can happen when we introduces guards for which the original
+  /// "unguarded-loads are safe" assumption does not hold. For example, the
+  /// vectorizer's fold-tail transformation changes the loop to execute beyond
+  /// its original trip-count, under a proper guard, which should be preserved.
+  /// \p SafePtrs is a list of addresses that are known to be legal and we know
+  /// that we can read from them without segfault.
+  bool blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+                            bool PreserveGuards = false);
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a

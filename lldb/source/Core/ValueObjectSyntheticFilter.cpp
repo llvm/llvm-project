@@ -140,7 +140,7 @@ void ValueObjectSynthetic::CreateSynthFilter() {
   }
   m_synth_filter_up = (m_synth_sp->GetFrontEnd(*valobj_for_frontend));
   if (!m_synth_filter_up)
-    m_synth_filter_up = llvm::make_unique<DummySyntheticFrontEnd>(*m_parent);
+    m_synth_filter_up = std::make_unique<DummySyntheticFrontEnd>(*m_parent);
 }
 
 bool ValueObjectSynthetic::UpdateValue() {

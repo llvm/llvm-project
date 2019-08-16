@@ -36,7 +36,7 @@ reduce(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty())
     return llvm::make_error<llvm::StringError>(" No values to reduce.\n",
                                                llvm::inconvertibleErrorCode());
-  std::unique_ptr<Info> Merged = llvm::make_unique<T>(Values[0]->USR);
+  std::unique_ptr<Info> Merged = std::make_unique<T>(Values[0]->USR);
   T *Tmp = static_cast<T *>(Merged.get());
   for (auto &I : Values)
     Tmp->merge(std::move(*static_cast<T *>(I.get())));

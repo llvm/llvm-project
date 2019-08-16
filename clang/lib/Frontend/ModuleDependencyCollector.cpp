@@ -99,14 +99,14 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
 }
 
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
+  R.addListener(std::make_unique<ModuleDependencyListener>(*this));
 }
 
 void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(llvm::make_unique<ModuleDependencyPPCallbacks>(
+  PP.addPPCallbacks(std::make_unique<ModuleDependencyPPCallbacks>(
       *this, PP.getSourceManager()));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
-      llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
+      std::make_unique<ModuleDependencyMMCallbacks>(*this));
 }
 
 static bool isCaseSensitivePath(StringRef Path) {

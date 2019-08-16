@@ -135,7 +135,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
       ;
 
     m_merger_up =
-        llvm::make_unique<clang::ExternalASTMerger>(target, sources);
+        std::make_unique<clang::ExternalASTMerger>(target, sources);
   } else {
     m_ast_importer_sp->InstallMapCompleter(&ast_context, *this);
   }

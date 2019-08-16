@@ -148,7 +148,7 @@ createRefactoringActionRule(const RequirementTypes &... Requirements) {
     std::tuple<RequirementTypes...> Requirements;
   };
 
-  return llvm::make_unique<Rule>(std::make_tuple(Requirements...));
+  return std::make_unique<Rule>(std::make_tuple(Requirements...));
 }
 
 } // end namespace tooling

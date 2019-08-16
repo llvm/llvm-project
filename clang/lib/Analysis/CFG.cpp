@@ -5615,6 +5615,10 @@ void CFG::print(raw_ostream &OS, const LangOptions &LO, bool ShowColors) const {
   OS.flush();
 }
 
+size_t CFGBlock::getIndexInCFG() const {
+  return llvm::find(*getParent(), this) - getParent()->begin();
+}
+
 /// dump - A simply pretty printer of a CFGBlock that outputs to stderr.
 void CFGBlock::dump(const CFG* cfg, const LangOptions &LO,
                     bool ShowColors) const {

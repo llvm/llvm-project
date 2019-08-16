@@ -132,7 +132,7 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
-    return llvm::make_unique<MicrosoftNumberingContext>();
+    return std::make_unique<MicrosoftNumberingContext>();
   }
 };
 }

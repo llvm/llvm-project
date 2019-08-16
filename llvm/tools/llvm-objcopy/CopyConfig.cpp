@@ -232,6 +232,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
             .CaseLower("weak", [&SI] { SI.Bind = ELF::STB_WEAK; })
             .CaseLower("default", [&SI] { SI.Visibility = ELF::STV_DEFAULT; })
             .CaseLower("hidden", [&SI] { SI.Visibility = ELF::STV_HIDDEN; })
+            .CaseLower("protected", [&SI] { SI.Visibility = ELF::STV_PROTECTED; })
             .CaseLower("file", [&SI] { SI.Type = ELF::STT_FILE; })
             .CaseLower("section", [&SI] { SI.Type = ELF::STT_SECTION; })
             .CaseLower("object", [&SI] { SI.Type = ELF::STT_OBJECT; })

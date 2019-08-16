@@ -56,12 +56,12 @@ choice.
 C++ Standard Versions
 ---------------------
 
-LLVM, Clang, and LLD are currently written using C++11 conforming code,
+LLVM, Clang, and LLD are currently written using C++14 conforming code,
 although we restrict ourselves to features which are available in the major
 toolchains supported as host compilers. The LLDB project is even more
 aggressive in the set of host compilers supported and thus uses still more
 features. Regardless of the supported features, code is expected to (when
-reasonable) be standard, portable, and modern C++11 code. We avoid unnecessary
+reasonable) be standard, portable, and modern C++14 code. We avoid unnecessary
 vendor-specific extensions, etc.
 
 C++ Standard Library
@@ -78,10 +78,10 @@ There are some exceptions such as the standard I/O streams library which are
 avoided. Also, there is much more detailed information on these subjects in the
 :doc:`ProgrammersManual`.
 
-Supported C++11 Language and Library Features
+Supported C++14 Language and Library Features
 ---------------------------------------------
 
-While LLVM, Clang, and LLD use C++11, not all features are available in all of
+While LLVM, Clang, and LLD use C++14, not all features are available in all of
 the toolchains which we support. The set of features supported for use in LLVM
 is the intersection of those supported in the minimum requirements described
 in the :doc:`GettingStarted` page, section `Software`.
@@ -92,99 +92,8 @@ guidance below to help you know what to expect.
 Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
-* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx11
+* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx14
 * MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
-
-In most cases, the MSVC list will be the dominating factor. Here is a summary
-of the features that are expected to work. Features not on this list are
-unlikely to be supported by our host compilers.
-
-* Rvalue references: N2118_
-
-  * But *not* Rvalue references for ``*this`` or member qualifiers (N2439_)
-
-* Static assert: N1720_
-* ``auto`` type deduction: N1984_, N1737_
-* Trailing return types: N2541_
-* Lambdas: N2927_
-
-  * But *not* lambdas with default arguments.
-
-* ``decltype``: N2343_
-* Nested closing right angle brackets: N1757_
-* Extern templates: N1987_
-* ``nullptr``: N2431_
-* Strongly-typed and forward declarable enums: N2347_, N2764_
-* Local and unnamed types as template arguments: N2657_
-* Range-based for-loop: N2930_
-
-  * But ``{}`` are required around inner ``do {} while()`` loops.  As a result,
-    ``{}`` are required around function-like macros inside range-based for
-    loops.
-
-* ``override`` and ``final``: N2928_, N3206_, N3272_
-* Atomic operations and the C++11 memory model: N2429_
-* Variadic templates: N2242_
-* Explicit conversion operators: N2437_
-* Defaulted and deleted functions: N2346_
-* Initializer lists: N2627_
-* Delegating constructors: N1986_
-* Default member initializers (non-static data member initializers): N2756_
-
-  * Feel free to use these wherever they make sense and where the `=`
-    syntax is allowed. Don't use braced initialization syntax.
-
-.. _N2118: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html
-.. _N2439: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2439.htm
-.. _N1720: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1720.html
-.. _N1984: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1984.pdf
-.. _N1737: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1737.pdf
-.. _N2541: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2541.htm
-.. _N2927: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2927.pdf
-.. _N2343: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2343.pdf
-.. _N1757: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1757.html
-.. _N1987: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1987.htm
-.. _N2431: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2431.pdf
-.. _N2347: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2347.pdf
-.. _N2764: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2764.pdf
-.. _N2657: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm
-.. _N2930: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2930.html
-.. _N2928: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2928.htm
-.. _N3206: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3206.htm
-.. _N3272: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3272.htm
-.. _N2429: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2429.htm
-.. _N2242: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2242.pdf
-.. _N2437: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2437.pdf
-.. _N2346: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm
-.. _N2627: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2672.htm
-.. _N1986: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf
-.. _N2756: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2756.htm
-
-The supported features in the C++11 standard libraries are less well tracked,
-but also much greater. Most of the standard libraries implement most of C++11's
-library. The most likely lowest common denominator is Linux support. For
-libc++, the support is just poorly tested and undocumented but expected to be
-largely complete. YMMV. For libstdc++, the support is documented in detail in
-`the libstdc++ manual`_. There are some very minor missing facilities that are
-unlikely to be common problems, and there are a few larger gaps that are worth
-being aware of:
-
-* Not all of the type traits are implemented
-* No regular expression library.
-* While most of the atomics library is well implemented, the fences are
-  missing. Fortunately, they are rarely needed.
-* The locale support is incomplete.
-
-Other than these areas you should assume the standard library is available and
-working as expected until some build bot tells you otherwise. If you're in an
-uncertain area of one of the above points, but you cannot test on a Linux
-system, your best approach is to minimize your use of these features, and watch
-the Linux build bots to find out if your usage triggered a bug. For example, if
-you hit a type trait which doesn't work we can then add support to LLVM's
-traits header to emulate it.
-
-.. _the libstdc++ manual:
-  https://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
 
 Other Languages
 ---------------
@@ -807,6 +716,9 @@ readable or easier to maintain. Don't "almost always" use ``auto``, but do use
 type is already obvious from the context. Another time when ``auto`` works well
 for these purposes is when the type would have been abstracted away anyways,
 often behind a container's typedef such as ``std::vector<T>::iterator``.
+
+Similarly, C++14 adds generic lambda expressions where parameter types can be
+``auto``. Use these where you would have used a template.
 
 Beware unnecessary copies with ``auto``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

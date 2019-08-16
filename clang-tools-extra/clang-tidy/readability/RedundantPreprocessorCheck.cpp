@@ -99,7 +99,7 @@ private:
 void RedundantPreprocessorCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
-      ::llvm::make_unique<RedundantPreprocessorCallbacks>(*this, *PP));
+      ::std::make_unique<RedundantPreprocessorCallbacks>(*this, *PP));
 }
 
 } // namespace readability

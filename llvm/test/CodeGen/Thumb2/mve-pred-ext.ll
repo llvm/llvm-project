@@ -163,6 +163,67 @@ entry:
 }
 
 
+define arm_aapcs_vfpcc <4 x i32> @trunc_v4i1_v4i32(<4 x i32> %src) {
+; CHECK-LABEL: trunc_v4i1_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = trunc <4 x i32> %src to <4 x i1>
+  %1 = select <4 x i1> %0, <4 x i32> %src, <4 x i32> zeroinitializer
+  ret <4 x i32> %1
+}
+
+define arm_aapcs_vfpcc <8 x i16> @trunc_v8i1_v8i16(<8 x i16> %src) {
+; CHECK-LABEL: trunc_v8i1_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = trunc <8 x i16> %src to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x i16> %src, <8 x i16> zeroinitializer
+  ret <8 x i16> %1
+}
+
+define arm_aapcs_vfpcc <16 x i8> @trunc_v16i1_v16i8(<16 x i8> %src) {
+; CHECK-LABEL: trunc_v16i1_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = trunc <16 x i8> %src to <16 x i1>
+  %1 = select <16 x i1> %0, <16 x i8> %src, <16 x i8> zeroinitializer
+  ret <16 x i8> %1
+}
+
+define arm_aapcs_vfpcc <2 x i64> @trunc_v2i1_v2i64(<2 x i64> %src) {
+; CHECK-LABEL: trunc_v2i1_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    and r1, r1, #1
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.32 q1[1], r1
+; CHECK-NEXT:    vmov.32 q1[2], r0
+; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    vand q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = trunc <2 x i64> %src to <2 x i1>
+  %1 = select <2 x i1> %0, <2 x i64> %src, <2 x i64> zeroinitializer
+  ret <2 x i64> %1
+}
+
+
 define arm_aapcs_vfpcc <4 x float> @uitofp_v4i1_v4f32(<4 x i32> %src) {
 ; CHECK-LABEL: uitofp_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry

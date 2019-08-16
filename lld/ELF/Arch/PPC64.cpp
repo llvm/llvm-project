@@ -536,6 +536,21 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
 RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
+  case R_PPC64_NONE:
+    return R_NONE;
+  case R_PPC64_ADDR16:
+  case R_PPC64_ADDR16_DS:
+  case R_PPC64_ADDR16_HA:
+  case R_PPC64_ADDR16_HI:
+  case R_PPC64_ADDR16_HIGHER:
+  case R_PPC64_ADDR16_HIGHERA:
+  case R_PPC64_ADDR16_HIGHEST:
+  case R_PPC64_ADDR16_HIGHESTA:
+  case R_PPC64_ADDR16_LO:
+  case R_PPC64_ADDR16_LO_DS:
+  case R_PPC64_ADDR32:
+  case R_PPC64_ADDR64:
+    return R_ABS;
   case R_PPC64_GOT16:
   case R_PPC64_GOT16_DS:
   case R_PPC64_GOT16_HA:
@@ -611,7 +626,9 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    return R_ABS;
+    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+          ") against symbol " + toString(s));
+    return R_NONE;
   }
 }
 
@@ -874,7 +891,7 @@ void PPC64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     write64(loc, val - dynamicThreadPointerOffset);
     break;
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

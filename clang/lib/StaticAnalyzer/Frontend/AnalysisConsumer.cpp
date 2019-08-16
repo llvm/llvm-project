@@ -212,13 +212,13 @@ public:
         Plugins(plugins), Injector(injector), CTU(CI) {
     DigestAnalyzerOptions();
     if (Opts->PrintStats || Opts->ShouldSerializeStats) {
-      AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
+      AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
-      SyntaxCheckTimer = llvm::make_unique<llvm::Timer>(
+      SyntaxCheckTimer = std::make_unique<llvm::Timer>(
           "syntaxchecks", "Syntax-based analysis time", *AnalyzerTimers);
-      ExprEngineTimer = llvm::make_unique<llvm::Timer>(
+      ExprEngineTimer = std::make_unique<llvm::Timer>(
           "exprengine", "Path exploration time", *AnalyzerTimers);
-      BugReporterTimer = llvm::make_unique<llvm::Timer>(
+      BugReporterTimer = std::make_unique<llvm::Timer>(
           "bugreporter", "Path-sensitive report post-processing time",
           *AnalyzerTimers);
       llvm::EnableStatistics(/* PrintOnExit= */ false);
@@ -311,7 +311,7 @@ public:
     checkerMgr = createCheckerManager(
         *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
-    Mgr = llvm::make_unique<AnalysisManager>(
+    Mgr = std::make_unique<AnalysisManager>(
         *Ctx, PP.getDiagnostics(), PathConsumers, CreateStoreMgr,
         CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
   }
@@ -826,7 +826,7 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
   AnalyzerOptionsRef analyzerOpts = CI.getAnalyzerOpts();
   bool hasModelPath = analyzerOpts->Config.count("model-path") > 0;
 
-  return llvm::make_unique<AnalysisConsumer>(
+  return std::make_unique<AnalysisConsumer>(
       CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
       hasModelPath ? new ModelInjector(CI) : nullptr);

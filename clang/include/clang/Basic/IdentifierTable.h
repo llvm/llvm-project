@@ -750,6 +750,12 @@ public:
     return getIdentifierInfoFlag() == ZeroArg;
   }
 
+  /// If this selector is the specific keyword selector described by Names.
+  bool isKeywordSelector(ArrayRef<StringRef> Names) const;
+
+  /// If this selector is the specific unary selector described by Name.
+  bool isUnarySelector(StringRef Name) const;
+
   unsigned getNumArgs() const;
 
   /// Retrieve the identifier at a given position in the selector.

@@ -302,7 +302,7 @@ public:
 } // end anonymous namespace
 
 std::unique_ptr<ASTConsumer> ReorderFieldsAction::newASTConsumer() {
-  return llvm::make_unique<ReorderingConsumer>(RecordName, DesiredFieldsOrder,
+  return std::make_unique<ReorderingConsumer>(RecordName, DesiredFieldsOrder,
                                                Replacements);
 }
 

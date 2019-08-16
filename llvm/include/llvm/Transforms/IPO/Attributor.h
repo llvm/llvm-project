@@ -104,6 +104,7 @@ namespace llvm {
 
 struct AbstractAttribute;
 struct InformationCache;
+struct AAIsDead;
 
 class Function;
 
@@ -118,6 +119,368 @@ enum class ChangeStatus {
 ChangeStatus operator|(ChangeStatus l, ChangeStatus r);
 ChangeStatus operator&(ChangeStatus l, ChangeStatus r);
 ///}
+
+/// Helper to describe and deal with positions in the LLVM-IR.
+///
+/// A position in the IR is described by an anchor value and an "offset" that
+/// could be the argument number, for call sites and arguments, or an indicator
+/// of the "position kind". The kinds, specified in the Kind enum below, include
+/// the locations in the attribute list, i.a., function scope and return value,
+/// as well as a distinction between call sites and functions. Finally, there
+/// are floating values that do not have a corresponding attribute list
+/// position.
+struct IRPosition {
+  virtual ~IRPosition() {}
+
+  /// The positions we distinguish in the IR.
+  ///
+  /// The values are chosen such that the KindOrArgNo member has a value >= 1
+  /// if it is an argument or call site argument while a value < 1 indicates the
+  /// respective kind of that value.
+  enum Kind : int {
+    IRP_INVALID = -6, ///< An invalid position.
+    IRP_FLOAT = -5, ///< A position that is not associated with a spot suitable
+                    ///< for attributes. This could be any value or instruction.
+    IRP_RETURNED = -4, ///< An attribute for the function return value.
+    IRP_CALL_SITE_RETURNED = -3, ///< An attribute for a call site return value.
+    IRP_FUNCTION = -2,           ///< An attribute for a function (scope).
+    IRP_CALL_SITE = -1, ///< An attribute for a call site (function scope).
+    IRP_ARGUMENT = 0,   ///< An attribute for a function argument.
+    IRP_CALL_SITE_ARGUMENT = 1, ///< An attribute for a call site argument.
+  };
+
+  /// Default constructor available to create invalid positions implicitly. All
+  /// other positions need to be created explicitly through the appropriate
+  /// static member function.
+  IRPosition() : AnchorVal(nullptr), KindOrArgNo(IRP_INVALID) { verify(); }
+
+  /// Create a position describing the value of \p V.
+  static const IRPosition value(const Value &V) {
+    if (auto *Arg = dyn_cast<Argument>(&V))
+      return IRPosition::argument(*Arg);
+    if (auto *CB = dyn_cast<CallBase>(&V))
+      return IRPosition::callsite_returned(*CB);
+    return IRPosition(const_cast<Value &>(V), IRP_FLOAT);
+  }
+
+  /// Create a position describing the function scope of \p F.
+  static const IRPosition function(const Function &F) {
+    return IRPosition(const_cast<Function &>(F), IRP_FUNCTION);
+  }
+
+  /// Create a position describing the returned value of \p F.
+  static const IRPosition returned(const Function &F) {
+    return IRPosition(const_cast<Function &>(F), IRP_RETURNED);
+  }
+
+  /// Create a position describing the argument \p Arg.
+  static const IRPosition argument(const Argument &Arg) {
+    return IRPosition(const_cast<Argument &>(Arg), Kind(Arg.getArgNo()));
+  }
+
+  /// Create a position describing the function scope of \p CB.
+  static const IRPosition callsite_function(const CallBase &CB) {
+    return IRPosition(const_cast<CallBase &>(CB), IRP_CALL_SITE);
+  }
+
+  /// Create a position describing the returned value of \p CB.
+  static const IRPosition callsite_returned(const CallBase &CB) {
+    return IRPosition(const_cast<CallBase &>(CB), IRP_CALL_SITE_RETURNED);
+  }
+
+  /// Create a position describing the argument of \p CB at position \p ArgNo.
+  static const IRPosition callsite_argument(const CallBase &CB,
+                                            unsigned ArgNo) {
+    return IRPosition(const_cast<CallBase &>(CB), Kind(ArgNo));
+  }
+
+  /// Create a position describing the function scope of \p ICS.
+  static const IRPosition callsite_function(ImmutableCallSite ICS) {
+    return IRPosition::callsite_function(cast<CallBase>(*ICS.getInstruction()));
+  }
+
+  /// Create a position describing the returned value of \p ICS.
+  static const IRPosition callsite_returned(ImmutableCallSite ICS) {
+    return IRPosition::callsite_returned(cast<CallBase>(*ICS.getInstruction()));
+  }
+
+  /// Create a position describing the argument of \p ICS at position \p ArgNo.
+  static const IRPosition callsite_argument(ImmutableCallSite ICS,
+                                            unsigned ArgNo) {
+    return IRPosition::callsite_argument(cast<CallBase>(*ICS.getInstruction()),
+                                         ArgNo);
+  }
+
+  /// Create a position with function scope matching the "context" of \p IRP.
+  /// If \p IRP is a call site (see isAnyCallSitePosition()) then the result
+  /// will be a call site position, otherwise the function position of the
+  /// associated function.
+  static const IRPosition function_scope(const IRPosition &IRP) {
+    if (IRP.isAnyCallSitePosition()) {
+      return IRPosition::callsite_function(
+          cast<CallBase>(IRP.getAnchorValue()));
+    }
+    assert(IRP.getAssociatedFunction());
+    return IRPosition::function(*IRP.getAssociatedFunction());
+  }
+
+  bool operator==(const IRPosition &RHS) const {
+    return (AnchorVal == RHS.AnchorVal) && (KindOrArgNo == RHS.KindOrArgNo);
+  }
+  bool operator!=(const IRPosition &RHS) const { return !(*this == RHS); }
+
+  /// Return the value this abstract attribute is anchored with.
+  ///
+  /// The anchor value might not be the associated value if the latter is not
+  /// sufficient to determine where arguments will be manifested. This is, so
+  /// far, only the case for call site arguments as the value is not sufficient
+  /// to pinpoint them. Instead, we can use the call site as an anchor.
+  ///
+  ///{
+  Value &getAnchorValue() {
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an anchor value!");
+    return *AnchorVal;
+  }
+  const Value &getAnchorValue() const {
+    return const_cast<IRPosition *>(this)->getAnchorValue();
+  }
+  ///}
+
+  /// Return the associated function, if any.
+  ///
+  ///{
+  Function *getAssociatedFunction() {
+    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
+      return CB->getCalledFunction();
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an anchor scope!");
+    Value &V = getAnchorValue();
+    if (isa<Function>(V))
+      return &cast<Function>(V);
+    if (isa<Argument>(V))
+      return cast<Argument>(V).getParent();
+    if (isa<Instruction>(V))
+      return cast<Instruction>(V).getFunction();
+    return nullptr;
+  }
+  const Function *getAssociatedFunction() const {
+    return const_cast<IRPosition *>(this)->getAssociatedFunction();
+  }
+  ///}
+
+  /// Return the Function surrounding the anchor value.
+  ///
+  ///{
+  Function *getAnchorScope() {
+    Value &V = getAnchorValue();
+    if (isa<Function>(V))
+      return &cast<Function>(V);
+    if (isa<Argument>(V))
+      return cast<Argument>(V).getParent();
+    if (isa<Instruction>(V))
+      return cast<Instruction>(V).getFunction();
+    return nullptr;
+  }
+  const Function *getAnchorScope() const {
+    return const_cast<IRPosition *>(this)->getAnchorScope();
+  }
+  ///}
+
+  /// Return the context instruction, if any.
+  ///
+  ///{
+  Instruction *getCtxI() {
+    Value &V = getAnchorValue();
+    if (auto *I = dyn_cast<Instruction>(&V))
+      return I;
+    if (auto *Arg = dyn_cast<Argument>(&V))
+      if (!Arg->getParent()->isDeclaration())
+        return &Arg->getParent()->getEntryBlock().front();
+    return nullptr;
+  }
+  const Instruction *getCtxI() const {
+    return const_cast<IRPosition *>(this)->getCtxI();
+  }
+  ///}
+
+  /// Return the value this abstract attribute is associated with.
+  ///
+  ///{
+  Value &getAssociatedValue() {
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an associated value!");
+    if (getArgNo() < 0 || isa<Argument>(AnchorVal))
+      return *AnchorVal;
+    assert(isa<CallBase>(AnchorVal) && "Expected a call base!");
+    return *cast<CallBase>(AnchorVal)->getArgOperand(getArgNo());
+  }
+  const Value &getAssociatedValue() const {
+    return const_cast<IRPosition *>(this)->getAssociatedValue();
+  }
+  ///}
+
+  /// Return the argument number of the associated value if it is an argument or
+  /// call site argument, otherwise a negative value.
+  int getArgNo() const { return KindOrArgNo; }
+
+  /// Return the index in the attribute list for this position.
+  unsigned getAttrIdx() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_INVALID:
+    case IRPosition::IRP_FLOAT:
+      break;
+    case IRPosition::IRP_FUNCTION:
+    case IRPosition::IRP_CALL_SITE:
+      return AttributeList::FunctionIndex;
+    case IRPosition::IRP_RETURNED:
+    case IRPosition::IRP_CALL_SITE_RETURNED:
+      return AttributeList::ReturnIndex;
+    case IRPosition::IRP_ARGUMENT:
+    case IRPosition::IRP_CALL_SITE_ARGUMENT:
+      return KindOrArgNo + AttributeList::FirstArgIndex;
+    }
+    llvm_unreachable(
+        "There is no attribute index for a floating or invalid position!");
+  }
+
+  /// Return the associated position kind.
+  Kind getPositionKind() const {
+    if (getArgNo() >= 0) {
+      assert(((isa<Argument>(getAnchorValue()) &&
+               isa<Argument>(getAssociatedValue())) ||
+              isa<CallBase>(getAnchorValue())) &&
+             "Expected argument or call base due to argument number!");
+      if (isa<CallBase>(getAnchorValue()))
+        return IRP_CALL_SITE_ARGUMENT;
+      return IRP_ARGUMENT;
+    }
+
+    assert(KindOrArgNo < 0 &&
+           "Expected (call site) arguments to never reach this point!");
+    assert(!isa<Argument>(getAnchorValue()) &&
+           "Expected arguments to have an associated argument position!");
+    return Kind(KindOrArgNo);
+  }
+
+  /// TODO: Figure out if the attribute related helper functions should live
+  ///       here or somewhere else.
+
+  /// Return true if any kind in \p AKs existing in the IR at a position that
+  /// will affect this one. See also getAttrs(...).
+  bool hasAttr(ArrayRef<Attribute::AttrKind> AKs) const;
+
+  /// Return the attributes of any kind in \p AKs existing in the IR at a
+  /// position that will affect this one. While each position can only have a
+  /// single attribute of any kind in \p AKs, there are "subsuming" positions
+  /// that could have an attribute as well. This method returns all attributes
+  /// found in \p Attrs.
+  void getAttrs(ArrayRef<Attribute::AttrKind> AKs,
+                SmallVectorImpl<Attribute> &Attrs) const;
+
+  /// Return the attribute of kind \p AK existing in the IR at this position.
+  Attribute getAttr(Attribute::AttrKind AK) const {
+    if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
+      return Attribute();
+
+    AttributeList AttrList;
+    if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
+      AttrList = ICS.getAttributes();
+    else
+      AttrList = getAssociatedFunction()->getAttributes();
+
+    if (AttrList.hasAttribute(getAttrIdx(), AK))
+      return AttrList.getAttribute(getAttrIdx(), AK);
+    return Attribute();
+  }
+
+  bool isAnyCallSitePosition() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_CALL_SITE:
+    case IRPosition::IRP_CALL_SITE_RETURNED:
+    case IRPosition::IRP_CALL_SITE_ARGUMENT:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// Special DenseMap key values.
+  ///
+  ///{
+  static const IRPosition EmptyKey;
+  static const IRPosition TombstoneKey;
+  ///}
+
+private:
+  /// Private constructor for special values only!
+  explicit IRPosition(int KindOrArgNo)
+      : AnchorVal(0), KindOrArgNo(KindOrArgNo) {}
+
+  /// IRPosition anchored at \p AnchorVal with kind/argument numbet \p PK.
+  explicit IRPosition(Value &AnchorVal, Kind PK)
+      : AnchorVal(&AnchorVal), KindOrArgNo(PK) {
+    verify();
+  }
+
+  /// Verify internal invariants.
+  void verify();
+
+  /// The value this position is anchored at.
+  Value *AnchorVal;
+
+  /// The argument number, if non-negative, or the position "kind".
+  int KindOrArgNo;
+};
+
+/// Helper that allows IRPosition as a key in a DenseMap.
+template <> struct DenseMapInfo<IRPosition> {
+  static inline IRPosition getEmptyKey() { return IRPosition::EmptyKey; }
+  static inline IRPosition getTombstoneKey() {
+    return IRPosition::TombstoneKey;
+  }
+  static unsigned getHashValue(const IRPosition &IRP) {
+    return (DenseMapInfo<Value *>::getHashValue(&IRP.getAnchorValue()) << 4) ^
+           (unsigned(IRP.getArgNo()));
+  }
+  static bool isEqual(const IRPosition &LHS, const IRPosition &RHS) {
+    return LHS == RHS;
+  }
+};
+
+/// A visitor class for IR positions.
+///
+/// Given a position P, the SubsumingPositionIterator allows to visit "subsuming
+/// positions" wrt. attributes/information. Thus, if a piece of information
+/// holds for a subsuming position, it also holds for the position P.
+///
+/// The subsuming positions always include the initial position and then,
+/// depending on the position kind, additionally the following ones:
+/// - for IRP_RETURNED:
+///   - the function (IRP_FUNCTION)
+/// - for IRP_ARGUMENT:
+///   - the function (IRP_FUNCTION)
+/// - for IRP_CALL_SITE:
+///   - the callee (IRP_FUNCTION), if known
+/// - for IRP_CALL_SITE_RETURNED:
+///   - the callee (IRP_RETURNED), if known
+///   - the call site (IRP_FUNCTION)
+///   - the callee (IRP_FUNCTION), if known
+/// - for IRP_CALL_SITE_ARGUMENT:
+///   - the argument of the callee (IRP_ARGUMENT), if known
+///   - the callee (IRP_FUNCTION), if known
+///   - the position the call site argument is associated with if it is not
+///     anchored to the call site, e.g., if it is an arugment then the argument
+///     (IRP_ARGUMENT)
+class SubsumingPositionIterator {
+  SmallVector<IRPosition, 4> IRPositions;
+  using iterator = decltype(IRPositions)::iterator;
+
+public:
+  SubsumingPositionIterator(const IRPosition &IRP);
+  iterator begin() { return IRPositions.begin(); }
+  iterator end() { return IRPositions.end(); }
+};
 
 /// Data structure to hold cached (LLVM-IR) information.
 ///
@@ -212,10 +575,11 @@ struct Attributor {
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
   ChangeStatus run();
 
-  /// Lookup an abstract attribute of type \p AAType anchored at value \p V and
-  /// argument number \p ArgNo. If no attribute is found and \p V is a call base
-  /// instruction, the called function is tried as a value next. Thus, the
-  /// returned abstract attribute might be anchored at the callee of \p V.
+  /// Lookup an abstract attribute of type \p AAType at position \p IRP. While
+  /// no abstract attribute is found equivalent positions are checked, see
+  /// SubsumingPositionIterator. Thus, the returned abstract attribute
+  /// might be anchored at a different position, e.g., the callee if \p IRP is a
+  /// call base.
   ///
   /// This method is the only (supported) way an abstract attribute can retrieve
   /// information from another abstract attribute. As an example, take an
@@ -225,45 +589,29 @@ struct Attributor {
   /// the one reasoning about the "captured" state for the argument or the one
   /// reasoning on the memory access behavior of the function as a whole.
   template <typename AAType>
-  const AAType *getAAFor(const AbstractAttribute &QueryingAA, const Value &V,
-                         int ArgNo = -1) {
+  const AAType *getAAFor(const AbstractAttribute &QueryingAA,
+                         const IRPosition &IRP) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
 
-    // Determine the argument number automatically for llvm::Arguments if none
-    // is set. Do not override a given one as it could be a use of the argument
-    // in a call site.
-    if (ArgNo == -1)
-      if (auto *Arg = dyn_cast<Argument>(&V))
-        ArgNo = Arg->getArgNo();
-
-    // If a function was given together with an argument number, perform the
-    // lookup for the actual argument instead. Don't do it for variadic
-    // arguments.
-    if (ArgNo >= 0 && isa<Function>(&V) &&
-        cast<Function>(&V)->arg_size() > (size_t)ArgNo)
-      return getAAFor<AAType>(
-          QueryingAA, *(cast<Function>(&V)->arg_begin() + ArgNo), ArgNo);
-
-    // Lookup the abstract attribute of type AAType. If found, return it after
-    // registering a dependence of QueryingAA on the one returned attribute.
-    const auto &KindToAbstractAttributeMap = AAMap.lookup({&V, ArgNo});
-    if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
-      // Do not return an attribute with an invalid state. This minimizes checks
-      // at the calls sites and allows the fallback below to kick in.
-      if (AA->getState().isValidState()) {
-        QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
-        return AA;
+    // Let's try an equivalent position if available, see
+    // SubsumingPositionIterator for more information.
+    for (const IRPosition &EquivIRP : SubsumingPositionIterator(IRP)) {
+      // Lookup the abstract attribute of type AAType. If found, return it after
+      // registering a dependence of QueryingAA on the one returned attribute.
+      const auto &KindToAbstractAttributeMap =
+          AAMap.lookup(const_cast<IRPosition &>(EquivIRP));
+      if (AAType *AA = static_cast<AAType *>(
+              KindToAbstractAttributeMap.lookup(&AAType::ID))) {
+        // Do not return an attribute with an invalid state. This minimizes
+        // checks at the calls sites and allows the fallback below to kick in.
+        if (AA->getState().isValidState()) {
+          QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
+          return AA;
+        }
       }
     }
-
-    // If no abstract attribute was found and we look for a call site argument,
-    // defer to the actual argument instead.
-    ImmutableCallSite ICS(&V);
-    if (ICS && ICS.getCalledValue())
-      return getAAFor<AAType>(QueryingAA, *ICS.getCalledValue(), ArgNo);
 
     // No matching attribute found
     return nullptr;
@@ -274,27 +622,16 @@ struct Attributor {
   /// Note that ownership of the attribute is given to the Attributor. It will
   /// invoke delete for the Attributor on destruction of the Attributor.
   ///
-  /// Attributes are identified by
-  ///  (1) their anchored value (see AA.getAnchoredValue()),
-  ///  (2) their argument number (\p ArgNo, or Argument::getArgNo()), and
-  ///  (3) the address of their static member (see AAType::ID).
-  template <typename AAType> AAType &registerAA(AAType &AA, int ArgNo = -1) {
+  /// Attributes are identified by their IR position (AAType::getIRPosition())
+  /// and the address of their static member (see AAType::ID).
+  template <typename AAType> AAType &registerAA(AAType &AA) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot register an attribute with a type not derived from "
                   "'AbstractAttribute'!");
-
-    // Determine the anchor value and the argument number which are used to
-    // lookup the attribute together with AAType::ID. If passed an argument,
-    // use its argument number but do not override a given one as it could be a
-    // use of the argument at a call site.
-    Value &AnchorVal = AA.getIRPosition().getAnchorValue();
-    if (ArgNo == -1)
-      if (auto *Arg = dyn_cast<Argument>(&AnchorVal))
-        ArgNo = Arg->getArgNo();
-
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
-    AAMap[{&AnchorVal, ArgNo}][&AAType::ID] = &AA;
+    IRPosition &IRP = AA.getIRPosition();
+    AAMap[IRP][&AAType::ID] = &AA;
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -316,39 +653,43 @@ struct Attributor {
   void identifyDefaultAbstractAttributes(
       Function &F, DenseSet<const char *> *Whitelist = nullptr);
 
+  /// Return true if \p AA (or its context instruction) is assumed dead.
+  ///
+  /// If \p LivenessAA is not provided it is queried.
+  bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA);
+
   /// Check \p Pred on all function call sites.
   ///
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
-  bool checkForAllCallSites(Function &F, std::function<bool(CallSite)> &Pred,
+  bool checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
                             const AbstractAttribute &QueryingAA,
                             bool RequireAllCallSites);
 
   /// Check \p Pred on all values potentially returned by \p F.
   ///
   /// This method will evaluate \p Pred on all values potentially returned by
-  /// \p F associated to their respective return instructions. Return true if
-  /// \p Pred holds on all of them.
+  /// the function associated with \p QueryingAA. The returned values are
+  /// matched with their respective return instructions. Returns true if \p Pred
+  /// holds on all of them.
   bool checkForAllReturnedValuesAndReturnInsts(
-      const Function &F,
       const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
           &Pred,
       const AbstractAttribute &QueryingAA);
 
-  /// Check \p Pred on all values potentially returned by \p F.
+  /// Check \p Pred on all values potentially returned by the function
+  /// associated with \p QueryingAA.
   ///
   /// This is the context insensitive version of the method above.
-  bool checkForAllReturnedValues(const Function &F,
-                                 const function_ref<bool(Value &)> &Pred,
+  bool checkForAllReturnedValues(const function_ref<bool(Value &)> &Pred,
                                  const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
   ///
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
-  bool checkForAllInstructions(const Function &F,
-                               const function_ref<bool(Instruction &)> &Pred,
+  bool checkForAllInstructions(const function_ref<bool(Instruction &)> &Pred,
                                const AbstractAttribute &QueryingAA,
                                const ArrayRef<unsigned> &Opcodes);
 
@@ -356,10 +697,9 @@ struct Attributor {
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
   bool
-  checkForAllCallLikeInstructions(const Function &F,
-                                  const function_ref<bool(Instruction &)> &Pred,
+  checkForAllCallLikeInstructions(const function_ref<bool(Instruction &)> &Pred,
                                   const AbstractAttribute &QueryingAA) {
-    return checkForAllInstructions(F, Pred, QueryingAA,
+    return checkForAllInstructions(Pred, QueryingAA,
                                    {(unsigned)Instruction::Invoke,
                                     (unsigned)Instruction::CallBr,
                                     (unsigned)Instruction::Call});
@@ -371,7 +711,7 @@ struct Attributor {
   /// to memory present in the information cache and return true if \p Pred
   /// holds on all of them.
   bool checkForAllReadWriteInstructions(
-      const Function &F, const llvm::function_ref<bool(Instruction &)> &Pred,
+      const llvm::function_ref<bool(Instruction &)> &Pred,
       AbstractAttribute &QueryingAA);
 
   /// Return the data layout associated with the anchor scope.
@@ -384,13 +724,13 @@ private:
   AAVector AllAbstractAttributes;
   ///}
 
-  /// A nested map to lookup abstract attributes based on the anchored value and
-  /// an argument positions (or -1) on the outer level, and the addresses of the
-  /// static member (AAType::ID) on the inner level.
+  /// A nested map to lookup abstract attributes based on the argument position
+  /// on the outer level, and the addresses of the static member (AAType::ID) on
+  /// the inner level.
   ///{
   using KindToAbstractAttributeMap =
       DenseMap<const char *, AbstractAttribute *>;
-  DenseMap<std::pair<const Value *, int>, KindToAbstractAttributeMap> AAMap;
+  DenseMap<IRPosition, KindToAbstractAttributeMap> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
@@ -547,6 +887,31 @@ struct IntegerState : public AbstractState {
            this->getKnown() == R.getKnown();
   }
 
+  /// Inequality for IntegerState.
+  bool operator!=(const IntegerState &R) const { return !(*this == R); }
+
+  /// "Clamp" this state with \p R. The result is the maximum of the known
+  /// information but the minimum of the assumed.
+  IntegerState operator^=(const IntegerState &R) {
+    takeKnownMaximum(R.Known);
+    takeAssumedMinimum(R.Assumed);
+    return *this;
+  }
+
+  /// Make this the minimum, known and assumed, of this state and \p R.
+  IntegerState operator&=(const IntegerState &R) {
+    Known = std::min(Known, R.Known);
+    Assumed = std::min(Assumed, R.Assumed);
+    return *this;
+  }
+
+  /// Make this the maximum, known and assumed, of this state and \p R.
+  IntegerState operator|=(const IntegerState &R) {
+    Known = std::max(Known, R.Known);
+    Assumed = std::max(Assumed, R.Assumed);
+    return *this;
+  }
+
 private:
   /// The known state encoding in an integer of type base_t.
   base_t Known = getWorstState();
@@ -558,142 +923,6 @@ private:
 /// Simple wrapper for a single bit (boolean) state.
 struct BooleanState : public IntegerState {
   BooleanState() : IntegerState(1){};
-};
-
-/// Struct to encode the position in the LLVM-IR with regards to the associated
-/// value but also the attribute lists.
-struct IRPosition {
-
-  /// The positions attributes can be manifested in.
-  enum Kind {
-    IRP_FUNCTION = AttributeList::FunctionIndex, ///< An attribute for a
-                                                 ///< function as a whole.
-    IRP_RETURNED = AttributeList::ReturnIndex,   ///< An attribute for the
-                                                 ///< function return value.
-    IRP_ARGUMENT,           ///< An attribute for a function argument.
-    IRP_CALL_SITE_ARGUMENT, ///< An attribute for a call site argument.
-  };
-
-  /// Create an IRPosition for an argument.
-  explicit IRPosition(Argument &Arg) : IRPosition(&Arg, Arg, Arg.getArgNo()) {}
-
-  /// Create an IRPosition for a function return or function body position.
-  ///
-  /// \param Fn The value this abstract attributes is anchored at and
-  ///            associated with.
-  /// \param PK  The kind of attribute position, can not be a (call site)
-  ///            argument.
-  explicit IRPosition(Function &Fn, Kind PK)
-      : AssociatedVal(&Fn), AnchorVal(Fn), AttributeIdx(PK) {
-    assert((PK == IRP_RETURNED || PK == IRP_FUNCTION) &&
-           "Expected non-argument position!");
-  }
-
-  /// An abstract attribute associated with \p AssociatedVal and anchored at
-  /// \p AnchorVal.
-  ///
-  /// \param AssociatedVal The value this abstract attribute is associated with.
-  /// \param AnchorVal The value this abstract attributes is anchored at.
-  /// \param ArgumentNo The index in the attribute list, encodes also the
-  ///                     argument number if this is one.
-  explicit IRPosition(Value *AssociatedVal, Value &AnchorVal,
-                      unsigned ArgumentNo)
-      : AssociatedVal(AssociatedVal), AnchorVal(AnchorVal),
-        AttributeIdx(ArgumentNo + AttributeList::FirstArgIndex) {
-    assert(((isa<CallBase>(&AnchorVal) &&
-             cast<CallBase>(&AnchorVal)->arg_size() > ArgumentNo) ||
-            (isa<Argument>(AnchorVal) &&
-             cast<Argument>(AnchorVal).getArgNo() == ArgumentNo)) &&
-           "Expected a valid argument index!");
-  }
-
-#define IRPositionConstructorForward(NAME, BASE)                               \
-  explicit NAME(Argument &Arg) : BASE(Arg) {}                                  \
-  explicit NAME(Function &Fn, IRPosition::Kind PK) : BASE(Fn, PK) {}           \
-  NAME(Value *AssociatedVal, Value &AnchorVal, unsigned ArgumentNo)            \
-      : BASE(AssociatedVal, AnchorVal, ArgumentNo) {}
-
-  IRPosition(const IRPosition &AAP)
-      : IRPosition(AAP.AssociatedVal, AAP.AnchorVal, AAP.AttributeIdx) {}
-
-  /// Virtual destructor.
-  virtual ~IRPosition() {}
-
-  /// Return the value this abstract attribute is anchored with.
-  ///
-  /// The anchored value might not be the associated value if the latter is not
-  /// sufficient to determine where arguments will be manifested. This is mostly
-  /// the case for call site arguments as the value is not sufficient to
-  /// pinpoint them. Instead, we can use the call site as an anchor.
-  ///
-  ///{
-  Value &getAnchorValue() { return AnchorVal; }
-  const Value &getAnchorValue() const { return AnchorVal; }
-  ///}
-
-  /// Return the llvm::Function surrounding the anchored value.
-  ///
-  ///{
-  Function &getAnchorScope() {
-    Value &V = getAnchorValue();
-    if (isa<Function>(V))
-      return cast<Function>(V);
-    if (isa<Argument>(V))
-      return *cast<Argument>(V).getParent();
-    if (isa<Instruction>(V))
-      return *cast<Instruction>(V).getFunction();
-    llvm_unreachable("No scope for anchored value found!");
-  }
-  const Function &getAnchorScope() const {
-    return const_cast<IRPosition *>(this)->getAnchorScope();
-  }
-  ///}
-
-  /// Return the value this abstract attribute is associated with.
-  ///
-  /// The abstract state usually represents this value.
-  ///
-  ///{
-  Value *getAssociatedValue() { return AssociatedVal; }
-  const Value *getAssociatedValue() const { return AssociatedVal; }
-  ///}
-
-  /// Return the argument number of the associated value if it is an argument or
-  /// call site argument, otherwise a negative value.
-  int getArgNo() const { return AttributeIdx - AttributeList::FirstArgIndex; }
-
-  /// Return the position this abstract state is manifested in.
-  Kind getPositionKind() const {
-    if (getArgNo() >= 0) {
-      if (isa<CallBase>(getAnchorValue()))
-        return IRP_CALL_SITE_ARGUMENT;
-      assert((isa<Argument>(getAnchorValue()) ||
-              isa_and_nonnull<Argument>(getAssociatedValue()) ||
-              (!getAssociatedValue() && isa<Function>(getAnchorValue()))) &&
-             "Expected argument or call base due to argument number!");
-      return IRP_ARGUMENT;
-    }
-    return (Kind)AttributeIdx;
-  }
-
-  /// Return the index in the attribute list for this position.
-  int getAttrIdx() const { return AttributeIdx; }
-
-  /// Change the associated value.
-  void setAssociatedValue(Value *V) { AssociatedVal = V; }
-
-  /// Change the associated attribue list position.
-  void setAttributeIdx(int AttrIdx) { AttributeIdx = AttrIdx; }
-
-protected:
-  /// The value this abstract attribute is associated with.
-  Value *AssociatedVal;
-
-  /// The value this abstract attribute is anchored at.
-  Value &AnchorVal;
-
-  /// The index in the attribute list.
-  int AttributeIdx;
 };
 
 /// Helper struct necessary as the modular build fails if the virtual method
@@ -719,18 +948,13 @@ struct StateWrapper : public StateTy, public Base {
 /// Helper class that provides common functionality to manifest IR attributes.
 template <Attribute::AttrKind AK, typename Base>
 struct IRAttribute : public IRPosition, public Base {
+  IRAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
   ~IRAttribute() {}
 
-  /// Constructors for the IRPosition.
-  ///
-  ///{
-  IRPositionConstructorForward(IRAttribute, IRPosition);
-  ///}
-
   /// See AbstractAttribute::manifest(...).
-  ChangeStatus manifest(Attributor &A) {
+  ChangeStatus manifest(Attributor &A) override {
     SmallVector<Attribute, 4> DeducedAttrs;
-    getDeducedAttributes(getAnchorScope().getContext(), DeducedAttrs);
+    getDeducedAttributes(getAnchorValue().getContext(), DeducedAttrs);
     return IRAttributeManifest::manifestAttrs(A, getIRPosition(), DeducedAttrs);
   }
 
@@ -746,8 +970,8 @@ struct IRAttribute : public IRPosition, public Base {
   /// Return an IR position, see struct IRPosition.
   ///
   ///{
-  IRPosition &getIRPosition() { return *this; }
-  const IRPosition &getIRPosition() const { return *this; }
+  IRPosition &getIRPosition() override { return *this; }
+  const IRPosition &getIRPosition() const override { return *this; }
   ///}
 };
 
@@ -890,7 +1114,12 @@ Pass *createAttributorLegacyPass();
 /// An abstract attribute for the returned values of a function.
 struct AAReturnedValues
     : public IRAttribute<Attribute::Returned, AbstractAttribute> {
-  IRPositionConstructorForward(AAReturnedValues, IRAttribute);
+  AAReturnedValues(const IRPosition &IRP) : IRAttribute(IRP) {}
+
+  /// Return an assumed unique return value if a single candidate is found. If
+  /// there cannot be one, return a nullptr. If it is not clear yet, return the
+  /// Optional::NoneType.
+  Optional<Value *> getAssumedUniqueReturnValue(Attributor &A) const;
 
   /// Check \p Pred on all returned values.
   ///
@@ -904,6 +1133,15 @@ struct AAReturnedValues
       const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
           &Pred) const = 0;
 
+  using iterator = DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>>::iterator;
+  using const_iterator =
+      DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>>::const_iterator;
+  virtual llvm::iterator_range<iterator> returned_values() = 0;
+  virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
+
+  virtual size_t getNumReturnValues() const = 0;
+  virtual const SmallPtrSetImpl<CallBase *> &getUnresolvedCalls() const = 0;
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -911,7 +1149,7 @@ struct AAReturnedValues
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoUnwind, IRAttribute);
+  AANoUnwind(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Returns true if nounwind is assumed.
   bool isAssumedNoUnwind() const { return getAssumed(); }
@@ -926,7 +1164,7 @@ struct AANoUnwind
 struct AANoSync
     : public IRAttribute<Attribute::NoSync,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoSync, IRAttribute);
+  AANoSync(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
@@ -942,7 +1180,7 @@ struct AANoSync
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANonNull, IRAttribute);
+  AANonNull(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -958,7 +1196,7 @@ struct AANonNull
 struct AANoRecurse
     : public IRAttribute<Attribute::NoRecurse,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoRecurse, IRAttribute);
+  AANoRecurse(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if "norecurse" is assumed.
   bool isAssumedNoRecurse() const { return getAssumed(); }
@@ -974,7 +1212,7 @@ struct AANoRecurse
 struct AAWillReturn
     : public IRAttribute<Attribute::WillReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AAWillReturn, IRAttribute);
+  AAWillReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if "willreturn" is assumed.
   bool isAssumedWillReturn() const { return getAssumed(); }
@@ -990,7 +1228,7 @@ struct AAWillReturn
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoAlias, IRAttribute);
+  AANoAlias(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
@@ -1006,7 +1244,7 @@ struct AANoAlias
 struct AANoFree
     : public IRAttribute<Attribute::NoFree,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoFree, IRAttribute);
+  AANoFree(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -1022,7 +1260,7 @@ struct AANoFree
 struct AANoReturn
     : public IRAttribute<Attribute::NoReturn,
                          StateWrapper<BooleanState, AbstractAttribute>> {
-  IRPositionConstructorForward(AANoReturn, IRAttribute);
+  AANoReturn(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if the underlying object is assumed to never return.
   bool isAssumedNoReturn() const { return getAssumed(); }
@@ -1037,7 +1275,7 @@ struct AANoReturn
 /// An abstract interface for liveness abstract attribute.
 struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
-  IRPositionConstructorForward(AAIsDead, IRPosition);
+  AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
@@ -1055,7 +1293,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   /// of instructions is live.
   template <typename T> bool isLiveInstSet(T begin, T end) const {
     for (const auto &I : llvm::make_range(begin, end)) {
-      assert(I->getFunction() == &getIRPosition().getAnchorScope() &&
+      assert(I->getFunction() == getIRPosition().getAnchorScope() &&
              "Instruction must be in the same anchor scope function.");
 
       if (!isAssumedDead(I))
@@ -1079,13 +1317,10 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 /// An abstract interface for all dereferenceable attribute.
 struct AADereferenceable
     : public IRAttribute<Attribute::Dereferenceable, AbstractAttribute> {
-  IRPositionConstructorForward(AADereferenceable, IRAttribute);
+  AADereferenceable(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
   virtual bool isAssumedNonNull() const = 0;
-
-  /// Return true if we know that underlying value is nonnull.
-  virtual bool isKnownNonNull() const = 0;
 
   /// Return true if we assume that underlying value is
   /// dereferenceable(_or_null) globally.
@@ -1109,7 +1344,7 @@ struct AADereferenceable
 struct AAAlign
     : public IRAttribute<Attribute::Alignment,
                          StateWrapper<IntegerState, AbstractAttribute>> {
-  IRPositionConstructorForward(AAAlign, IRAttribute);
+  AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
   unsigned getAssumedAlign() const { return getAssumed(); }

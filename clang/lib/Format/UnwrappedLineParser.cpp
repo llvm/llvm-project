@@ -145,7 +145,7 @@ public:
     else if (!Parser.Line->Tokens.empty())
       Parser.CurrentLines = &Parser.Line->Tokens.back().Children;
     PreBlockLine = std::move(Parser.Line);
-    Parser.Line = llvm::make_unique<UnwrappedLine>();
+    Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
   }

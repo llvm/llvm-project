@@ -38,8 +38,17 @@ INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   struct SCUDO_MALLINFO Info = {};
   scudo::StatCounters Stats;
   SCUDO_ALLOCATOR.getStats(Stats);
+  // Space allocated in mmapped regions (bytes)
+  Info.hblkhd = static_cast<__scudo_mallinfo_data_t>(Stats[scudo::StatMapped]);
+  // Maximum total allocated space (bytes)
+  Info.usmblks = Info.hblkhd;
+  // Space in freed fastbin blocks (bytes)
+  Info.fsmblks = static_cast<__scudo_mallinfo_data_t>(Stats[scudo::StatFree]);
+  // Total allocated space (bytes)
   Info.uordblks =
       static_cast<__scudo_mallinfo_data_t>(Stats[scudo::StatAllocated]);
+  // Total free space (bytes)
+  Info.fordblks = Info.fsmblks;
   return Info;
 }
 

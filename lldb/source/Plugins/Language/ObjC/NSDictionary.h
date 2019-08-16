@@ -68,10 +68,10 @@ public:
     };
     typedef Matcher::UP MatcherUP;
 
-    MatcherUP GetFullMatch(ConstString n) { return llvm::make_unique<Full>(n); }
+    MatcherUP GetFullMatch(ConstString n) { return std::make_unique<Full>(n); }
 
     MatcherUP GetPrefixMatch(ConstString p) {
-      return llvm::make_unique<Prefix>(p);
+      return std::make_unique<Prefix>(p);
     }
   };
 

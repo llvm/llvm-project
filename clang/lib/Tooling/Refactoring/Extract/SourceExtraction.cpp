@@ -45,6 +45,7 @@ bool isSemicolonRequiredAfter(const Stmt *S) {
   if(const auto *Case = dyn_cast<SwitchCase>(S))
     return isSemicolonRequiredAfter(Case->getSubStmt());
   switch (S->getStmtClass()) {
+  case Stmt::DeclStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:

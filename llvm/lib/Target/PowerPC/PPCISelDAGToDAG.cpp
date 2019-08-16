@@ -5073,7 +5073,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     // PowerPC only support small, medium and large code model.
     const CodeModel::Model CModel = TM.getCodeModel();
-    assert((CModel != CodeModel::Tiny || CModel != CodeModel::Kernel) &&
+    assert(!(CModel == CodeModel::Tiny || CModel == CodeModel::Kernel) &&
            "PowerPC doesn't support tiny or kernel code models.");
 
     if (isAIXABI && CModel == CodeModel::Medium)

@@ -36,7 +36,7 @@ TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  IncludeInserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+  IncludeInserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                               IncludeStyle);
   PP->addPPCallbacks(IncludeInserter->CreatePPCallbacks());
 }

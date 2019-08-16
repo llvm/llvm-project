@@ -41,7 +41,7 @@ public:
     CI.setExternalSemaSource(SemaSource);
     SemaSource->setFilePath(InFile);
     SemaSource->setCompilerInstance(&CI);
-    return llvm::make_unique<ASTConsumerManagerWrapper>(SymbolIndexMgr);
+    return std::make_unique<ASTConsumerManagerWrapper>(SymbolIndexMgr);
   }
 
   void ExecuteAction() override {} // Do nothing.

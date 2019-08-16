@@ -101,7 +101,7 @@ public:
     auto file = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     auto *filePtr = file.get();
     auto *ctx = const_cast<MachOLinkingContext *>(this);
-    ctx->getNodes().push_back(llvm::make_unique<FileNode>(std::move(file)));
+    ctx->getNodes().push_back(std::make_unique<FileNode>(std::move(file)));
     return filePtr;
   }
 

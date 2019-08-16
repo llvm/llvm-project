@@ -252,7 +252,7 @@ std::string InputFile::getSrcMsg(const Symbol &sym, InputSectionBase &sec,
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
-  dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
+  dwarf = std::make_unique<DWARFContext>(std::make_unique<LLDDwarfObj<ELFT>>(this));
   for (std::unique_ptr<DWARFUnit> &cu : dwarf->compile_units()) {
     auto report = [](Error err) {
       handleAllErrors(std::move(err),

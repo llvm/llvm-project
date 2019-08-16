@@ -189,15 +189,22 @@ static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
 static void annotateDereferenceableBytes(CallInst *CI,
                                          ArrayRef<unsigned> ArgNos,
                                          uint64_t DereferenceableBytes) {
+  const Function *F = CI->getFunction();
+  if (!F)
+    return;
   for (unsigned ArgNo : ArgNos) {
-    uint64_t DerefBytes = std::max(
-        CI->getDereferenceableOrNullBytes(ArgNo + AttributeList::FirstArgIndex),
-        DereferenceableBytes);
+    uint64_t DerefBytes = DereferenceableBytes;
+    unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
+    if (!llvm::NullPointerIsDefined(F, AS))
+      DerefBytes = std::max(CI->getDereferenceableOrNullBytes(
+                                ArgNo + AttributeList::FirstArgIndex),
+                            DereferenceableBytes);
 
     if (CI->getDereferenceableBytes(ArgNo + AttributeList::FirstArgIndex) <
         DerefBytes) {
       CI->removeParamAttr(ArgNo, Attribute::Dereferenceable);
-      CI->removeParamAttr(ArgNo, Attribute::DereferenceableOrNull);
+      if (!llvm::NullPointerIsDefined(F, AS))
+        CI->removeParamAttr(ArgNo, Attribute::DereferenceableOrNull);
       CI->addParamAttr(ArgNo, Attribute::getWithDereferenceableBytes(
                                   CI->getContext(), DerefBytes));
     }
@@ -460,9 +467,6 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilder<> &B) {
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
 
-  CI->addParamAttr(0, Attribute::NoAlias);
-  CI->addParamAttr(1, Attribute::NoAlias);
-
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
   if (Len == 0)
@@ -504,9 +508,6 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *LenOp = CI->getArgOperand(2);
-
-  CI->addParamAttr(0, Attribute::NoAlias);
-  CI->addParamAttr(1, Attribute::NoAlias);
 
   // See if we can get the length of the input string.
   uint64_t SrcLen = GetStringLength(Src);
@@ -988,9 +989,6 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B,
   Value *Size = CI->getArgOperand(2);
   if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
     annotateDereferenceableBytes(CI, {0, 1}, LenC->getZExtValue());
-
-  CI->addParamAttr(0, Attribute::NoAlias);
-  CI->addParamAttr(1, Attribute::NoAlias);
 
   if (isIntrinsic)
     return nullptr;

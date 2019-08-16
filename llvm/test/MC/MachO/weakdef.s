@@ -39,7 +39,7 @@ __ZTI3optIbE:
 // CHECK-NEXT:     Alignment: 0
 // CHECK-NEXT:     RelocationOffset: 0x0
 // CHECK-NEXT:     RelocationCount: 0
-// CHECK-NEXT:     Type: 0x0
+// CHECK-NEXT:     Type: Regular (0x0)
 // CHECK-NEXT:     Attributes [ (0x800000)
 // CHECK-NEXT:       PureInstructions (0x800000)
 // CHECK-NEXT:     ]
@@ -58,7 +58,7 @@ __ZTI3optIbE:
 // CHECK-NEXT:     Alignment: 0
 // CHECK-NEXT:     RelocationOffset: 0x19C
 // CHECK-NEXT:     RelocationCount: 1
-// CHECK-NEXT:     Type: 0xB
+// CHECK-NEXT:     Type: Coalesced (0xB)
 // CHECK-NEXT:     Attributes [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Reserved1: 0x0
@@ -77,7 +77,7 @@ __ZTI3optIbE:
 // CHECK-NEXT:     Alignment: 0
 // CHECK-NEXT:     RelocationOffset: 0x0
 // CHECK-NEXT:     RelocationCount: 0
-// CHECK-NEXT:     Type: 0xB
+// CHECK-NEXT:     Type: Coalesced (0xB)
 // CHECK-NEXT:     Attributes [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Reserved1: 0x0

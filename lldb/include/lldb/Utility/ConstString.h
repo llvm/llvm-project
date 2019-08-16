@@ -204,9 +204,7 @@ public:
   /// \param[in] rhs
   ///     Another string object to compare this object to.
   ///
-  /// \return
-  ///     \li \b true if this object is not equal to \a rhs.
-  ///     \li \b false if this object is equal to \a rhs.
+  /// \return \b true if this object is not equal to \a rhs, false otherwise.
   bool operator!=(const char *rhs) const { return !(*this == rhs); }
 
   bool operator<(ConstString rhs) const;
@@ -218,8 +216,7 @@ public:
   ///
   /// If \a value_if_empty is nullptr, then nullptr will be returned.
   ///
-  /// \return
-  ///     Returns \a value_if_empty if the string is empty, otherwise
+  /// \return Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
   const char *AsCString(const char *value_if_empty = nullptr) const {
     return (IsEmpty() ? value_if_empty : m_string);
@@ -269,7 +266,7 @@ public:
   /// in a pointer comparison since all strings are in a uniqued in a global
   /// string pool.
   ///
-  /// \param[in] rhs
+  /// \param[in] lhs
   ///     The Left Hand Side const ConstString object reference.
   ///
   /// \param[in] rhs
@@ -279,9 +276,7 @@ public:
   ///     Case sensitivity. If true, case sensitive equality
   ///     will be tested, otherwise character case will be ignored
   ///
-  /// \return
-  ///     \li \b true if this object is equal to \a rhs.
-  ///     \li \b false if this object is not equal to \a rhs.
+  /// \return \b true if this object is equal to \a rhs, \b false otherwise.
   static bool Equals(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 
@@ -305,10 +300,7 @@ public:
   ///     Case sensitivity of compare. If true, case sensitive compare
   ///     will be performed, otherwise character case will be ignored
   ///
-  /// \return
-  ///     \li -1 if lhs < rhs
-  ///     \li 0 if lhs == rhs
-  ///     \li 1 if lhs > rhs
+  /// \return -1 if lhs < rhs, 0 if lhs == rhs, 1 if lhs > rhs
   static int Compare(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 

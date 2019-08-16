@@ -238,6 +238,8 @@ struct Info {
   Info(InfoType IT, SymbolID USR) : USR(USR), IT(IT) {}
   Info(InfoType IT, SymbolID USR, StringRef Name)
       : USR(USR), IT(IT), Name(Name) {}
+  Info(InfoType IT, SymbolID USR, StringRef Name, StringRef Path)
+      : USR(USR), IT(IT), Name(Name), Path(Path) {}
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
 
@@ -269,6 +271,8 @@ struct NamespaceInfo : public Info {
   NamespaceInfo(SymbolID USR) : Info(InfoType::IT_namespace, USR) {}
   NamespaceInfo(SymbolID USR, StringRef Name)
       : Info(InfoType::IT_namespace, USR, Name) {}
+  NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
+      : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
   void merge(NamespaceInfo &&I);
 
@@ -287,6 +291,7 @@ struct SymbolInfo : public Info {
   SymbolInfo(InfoType IT) : Info(IT) {}
   SymbolInfo(InfoType IT, SymbolID USR) : Info(IT, USR) {}
   SymbolInfo(InfoType IT, SymbolID USR, StringRef Name) : Info(IT, USR, Name) {}
+  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path) : Info(IT, USR, Name, Path) {}
 
   void merge(SymbolInfo &&I);
 
@@ -318,6 +323,8 @@ struct RecordInfo : public SymbolInfo {
   RecordInfo(SymbolID USR) : SymbolInfo(InfoType::IT_record, USR) {}
   RecordInfo(SymbolID USR, StringRef Name)
       : SymbolInfo(InfoType::IT_record, USR, Name) {}
+  RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
+      : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
   void merge(RecordInfo &&I);
 

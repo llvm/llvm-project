@@ -90,7 +90,7 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
   for (comments::Comment *Child :
        llvm::make_range(C->child_begin(), C->child_end())) {
-    CurrentCI.Children.emplace_back(llvm::make_unique<CommentInfo>());
+    CurrentCI.Children.emplace_back(std::make_unique<CommentInfo>());
     ClangDocCommentVisitor Visitor(*CurrentCI.Children.back());
     Visitor.parseComment(Child);
   }
@@ -379,7 +379,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
-  auto I = llvm::make_unique<NamespaceInfo>();
+  auto I = std::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*I, D, FC, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace || D->isAnonymousNamespace()) ||
@@ -392,7 +392,7 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
   if (I->Namespace.empty() && I->USR == SymbolID())
     return {std::unique_ptr<Info>{std::move(I)}, nullptr};
 
-  auto ParentI = llvm::make_unique<NamespaceInfo>();
+  auto ParentI = std::make_unique<NamespaceInfo>();
   ParentI->USR = I->Namespace.empty() ? SymbolID() : I->Namespace[0].USR;
   ParentI->ChildNamespaces.emplace_back(I->USR, I->Name, InfoType::IT_namespace,
                                         getInfoRelativePath(I->Namespace));
@@ -405,7 +405,7 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
-  auto I = llvm::make_unique<RecordInfo>();
+  auto I = std::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*I, D, FC, LineNumber, File, IsFileInRootDir,
                      IsInAnonymousNamespace);
@@ -425,7 +425,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   I->Path = getInfoRelativePath(I->Namespace);
 
   if (I->Namespace.empty()) {
-    auto ParentI = llvm::make_unique<NamespaceInfo>();
+    auto ParentI = std::make_unique<NamespaceInfo>();
     ParentI->USR = SymbolID();
     ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
                                        getInfoRelativePath(I->Namespace));
@@ -436,7 +436,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
 
   switch (I->Namespace[0].RefType) {
   case InfoType::IT_namespace: {
-    auto ParentI = llvm::make_unique<NamespaceInfo>();
+    auto ParentI = std::make_unique<NamespaceInfo>();
     ParentI->USR = I->Namespace[0].USR;
     ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
                                        getInfoRelativePath(I->Namespace));
@@ -444,7 +444,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
             std::unique_ptr<Info>{std::move(ParentI)}};
   }
   case InfoType::IT_record: {
-    auto ParentI = llvm::make_unique<RecordInfo>();
+    auto ParentI = std::make_unique<RecordInfo>();
     ParentI->USR = I->Namespace[0].USR;
     ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
                                        getInfoRelativePath(I->Namespace));
@@ -470,7 +470,7 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
   Func.Access = clang::AccessSpecifier::AS_none;
 
   // Wrap in enclosing scope
-  auto ParentI = llvm::make_unique<NamespaceInfo>();
+  auto ParentI = std::make_unique<NamespaceInfo>();
   if (!Func.Namespace.empty())
     ParentI->USR = Func.Namespace[0].USR;
   else
@@ -508,7 +508,7 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
   Func.Access = D->getAccess();
 
   // Wrap in enclosing scope
-  auto ParentI = llvm::make_unique<RecordInfo>();
+  auto ParentI = std::make_unique<RecordInfo>();
   ParentI->USR = ParentUSR;
   if (Func.Namespace.empty())
     ParentI->Path = getInfoRelativePath(ParentI->Namespace);
@@ -533,7 +533,7 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
 
   // Put in global namespace
   if (Enum.Namespace.empty()) {
-    auto ParentI = llvm::make_unique<NamespaceInfo>();
+    auto ParentI = std::make_unique<NamespaceInfo>();
     ParentI->USR = SymbolID();
     ParentI->ChildEnums.emplace_back(std::move(Enum));
     ParentI->Path = getInfoRelativePath(ParentI->Namespace);
@@ -545,7 +545,7 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
   // Wrap in enclosing scope
   switch (Enum.Namespace[0].RefType) {
   case InfoType::IT_namespace: {
-    auto ParentI = llvm::make_unique<NamespaceInfo>();
+    auto ParentI = std::make_unique<NamespaceInfo>();
     ParentI->USR = Enum.Namespace[0].USR;
     ParentI->ChildEnums.emplace_back(std::move(Enum));
     // Info is wrapped in its parent scope so it's returned in the second
@@ -553,7 +553,7 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
     return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
   }
   case InfoType::IT_record: {
-    auto ParentI = llvm::make_unique<RecordInfo>();
+    auto ParentI = std::make_unique<RecordInfo>();
     ParentI->USR = Enum.Namespace[0].USR;
     ParentI->ChildEnums.emplace_back(std::move(Enum));
     // Info is wrapped in its parent scope so it's returned in the second

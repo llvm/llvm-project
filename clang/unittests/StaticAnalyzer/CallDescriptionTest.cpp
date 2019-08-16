@@ -93,7 +93,7 @@ public:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
-    return llvm::make_unique<CallDescriptionConsumer>(Compiler, RM);
+    return std::make_unique<CallDescriptionConsumer>(Compiler, RM);
   }
 };
 

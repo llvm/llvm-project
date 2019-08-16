@@ -129,7 +129,7 @@ void printSectionHeaders(const object::ObjectFile *O);
 void printSectionContents(const object::ObjectFile *O);
 void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
                       StringRef ArchitectureName = StringRef());
-void warn(StringRef Message);
+void warn(Twine Message);
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message);
 LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File);

@@ -573,11 +573,13 @@ connect operations with different type sizes. They are usually trivial to suppor
 since G_ANYEXT doesn't define the value of the additional bits and G_TRUNC is
 discarding bits. The other conversions can be lowered into G_ANYEXT/G_TRUNC
 with some additional operations that are subject to further legalization. For
-example, G_SEXT can lower to:
+example, G_SEXT can lower to::
+
   %1 = G_ANYEXT %0
   %2 = G_CONSTANT ...
   %3 = G_SHL %1, %2
   %4 = G_ASHR %3, %2
+
 and the G_CONSTANT/G_SHL/G_ASHR can further lower to other operations or target
 instructions. Similarly, G_FPEXT has no legality requirement since it can lower
 to a G_ANYEXT followed by a target instruction.
@@ -622,6 +624,7 @@ The rules for G_ANYEXT, G_MERGE_VALUES, G_BITCAST, G_BUILD_VECTOR,
 G_BUILD_VECTOR_TRUNC, G_CONCAT_VECTORS, G_UNMERGE_VALUES, G_PTRTOINT, and
 G_INTTOPTR have already been noted above. In addition to those, the following
 operations have requirements:
+
 * At least one G_IMPLICIT_DEF must be legal. This is usually trivial as it
   requires no code to be selected.
 * G_PHI must be legal for all types in the producer and consumer typesets. This

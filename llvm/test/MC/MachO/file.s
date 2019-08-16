@@ -16,7 +16,7 @@
 // CHECK-NEXT:    Alignment: 0
 // CHECK-NEXT:    RelocationOffset: 0x0
 // CHECK-NEXT:    RelocationCount: 0
-// CHECK-NEXT:    Type: 0x0
+// CHECK-NEXT:    Type: Regular (0x0)
 // CHECK-NEXT:    Attributes [ (0x20000)
 // CHECK-NEXT:      Debug (0x20000)
 // CHECK-NEXT:    ]

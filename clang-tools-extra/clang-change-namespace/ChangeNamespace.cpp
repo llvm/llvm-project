@@ -109,7 +109,7 @@ getLexerStartingFromLoc(SourceLocation Loc, const SourceManager &SM,
 
   const char *TokBegin = File.data() + LocInfo.second;
   // Lex from the start of the given location.
-  return llvm::make_unique<Lexer>(SM.getLocForStartOfFile(LocInfo.first),
+  return std::make_unique<Lexer>(SM.getLocForStartOfFile(LocInfo.first),
                                   LangOpts, File.begin(), TokBegin, File.end());
 }
 

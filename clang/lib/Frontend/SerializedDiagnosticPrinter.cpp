@@ -296,7 +296,7 @@ namespace clang {
 namespace serialized_diags {
 std::unique_ptr<DiagnosticConsumer>
 create(StringRef OutputFile, DiagnosticOptions *Diags, bool MergeChildRecords) {
-  return llvm::make_unique<SDiagsWriter>(OutputFile, Diags, MergeChildRecords);
+  return std::make_unique<SDiagsWriter>(OutputFile, Diags, MergeChildRecords);
 }
 
 } // end namespace serialized_diags
@@ -743,7 +743,7 @@ DiagnosticsEngine *SDiagsWriter::getMetaDiags() {
     IntrusiveRefCntPtr<DiagnosticIDs> IDs(new DiagnosticIDs());
     auto Client =
         new TextDiagnosticPrinter(llvm::errs(), State->DiagOpts.get());
-    State->MetaDiagnostics = llvm::make_unique<DiagnosticsEngine>(
+    State->MetaDiagnostics = std::make_unique<DiagnosticsEngine>(
         IDs, State->DiagOpts.get(), Client);
   }
   return State->MetaDiagnostics.get();
@@ -780,7 +780,7 @@ void SDiagsWriter::finish() {
   }
 
   std::error_code EC;
-  auto OS = llvm::make_unique<llvm::raw_fd_ostream>(State->OutputFile.c_str(),
+  auto OS = std::make_unique<llvm::raw_fd_ostream>(State->OutputFile.c_str(),
                                                     EC, llvm::sys::fs::OF_None);
   if (EC) {
     getMetaDiags()->Report(diag::warn_fe_serialized_diag_failure)

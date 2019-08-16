@@ -277,7 +277,7 @@ getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
   assert(Base && "Null base to SystemIncludeExtractor");
   if (QueryDriverGlobs.empty())
     return Base;
-  return llvm::make_unique<QueryDriverDatabase>(QueryDriverGlobs,
+  return std::make_unique<QueryDriverDatabase>(QueryDriverGlobs,
                                                 std::move(Base));
 }
 

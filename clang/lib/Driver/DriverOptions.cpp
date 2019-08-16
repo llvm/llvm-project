@@ -40,7 +40,7 @@ public:
 }
 
 std::unique_ptr<OptTable> clang::driver::createDriverOptTable() {
-  auto Result = llvm::make_unique<DriverOptTable>();
+  auto Result = std::make_unique<DriverOptTable>();
   // Options.inc is included in DriverOptions.cpp, and calls OptTable's
   // addValues function.
   // Opt is a variable used in the code fragment in Options.inc.

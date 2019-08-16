@@ -22,7 +22,7 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
   std::set<Function *> FuncsToKeep;
   unsigned I = 0, FunctionCount = 0;
   for (auto &F : *Program)
-    if (!F.isDeclaration() && I < ChunksToKeep.size()) {
+    if (I < ChunksToKeep.size()) {
       if (ChunksToKeep[I].contains(++FunctionCount))
         FuncsToKeep.insert(&F);
       if (FunctionCount == ChunksToKeep[I].end)
@@ -31,41 +31,34 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
 
   // Delete out-of-chunk functions, and replace their calls with undef
   std::vector<Function *> FuncsToRemove;
+  std::vector<CallInst *> CallsToRemove;
   for (auto &F : *Program)
-    if (!F.isDeclaration() && !FuncsToKeep.count(&F)) {
+    if (!FuncsToKeep.count(&F)) {
+      for (auto U : F.users())
+        if (auto *Call = dyn_cast<CallInst>(U)) {
+          Call->replaceAllUsesWith(UndefValue::get(Call->getType()));
+          CallsToRemove.push_back(Call);
+        }
       F.replaceAllUsesWith(UndefValue::get(F.getType()));
       FuncsToRemove.push_back(&F);
     }
 
+  for (auto *C : CallsToRemove)
+    C->eraseFromParent();
+
   for (auto *F : FuncsToRemove)
     F->eraseFromParent();
-
-  // Delete instructions with undef calls
-  std::vector<Instruction *> InstToRemove;
-  for (auto &F : *Program)
-    for (auto &BB : F)
-      for (auto &I : BB)
-        if (auto *Call = dyn_cast<CallInst>(&I))
-          if (!Call->getCalledFunction()) {
-            // Instruction might be stored / used somewhere else
-            I.replaceAllUsesWith(UndefValue::get(I.getType()));
-            InstToRemove.push_back(&I);
-          }
-
-  for (auto *I : InstToRemove)
-    I->eraseFromParent();
 }
 
 /// Counts the amount of non-declaration functions and prints their
 /// respective name & index
-static unsigned countDefinedFunctions(Module *Program) {
+static unsigned countFunctions(Module *Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   outs() << "Function Index Reference:\n";
   unsigned FunctionCount = 0;
   for (auto &F : *Program)
-    if (!F.isDeclaration())
-      outs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
+    outs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
 
   outs() << "----------------------------\n";
   return FunctionCount;
@@ -73,7 +66,7 @@ static unsigned countDefinedFunctions(Module *Program) {
 
 void llvm::reduceFunctionsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Functions...\n";
-  unsigned Functions = countDefinedFunctions(Test.getProgram());
+  unsigned Functions = countFunctions(Test.getProgram());
   runDeltaPass(Test, Functions, extractFunctionsFromModule);
   outs() << "----------------------------\n";
 }

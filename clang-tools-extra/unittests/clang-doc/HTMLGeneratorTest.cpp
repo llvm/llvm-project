@@ -335,34 +335,34 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   CommentInfo Top;
   Top.Kind = "FullComment";
 
-  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *BlankLine = Top.Children.back().get();
   BlankLine->Kind = "ParagraphComment";
-  BlankLine->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
   BlankLine->Children.back()->Kind = "TextComment";
 
-  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Brief = Top.Children.back().get();
   Brief->Kind = "ParagraphComment";
-  Brief->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
   Brief->Children.back()->Kind = "TextComment";
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = " Brief description.";
 
-  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Extended = Top.Children.back().get();
   Extended->Kind = "ParagraphComment";
-  Extended->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
   Extended->Children.back()->Kind = "TextComment";
   Extended->Children.back()->Text = " Extended description that";
-  Extended->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
   Extended->Children.back()->Kind = "TextComment";
   Extended->Children.back()->Text = " continues onto the next line.";
 
-  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *Entities = Top.Children.back().get();
   Entities->Kind = "ParagraphComment";
-  Entities->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Entities->Children.emplace_back(std::make_unique<CommentInfo>());
   Entities->Children.back()->Kind = "TextComment";
   Entities->Children.back()->Name = "ParagraphComment";
   Entities->Children.back()->Text =

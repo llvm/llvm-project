@@ -59,7 +59,7 @@ CallGraphNode *HelperDeclRefGraph::getOrInsertNode(Decl *F) {
   if (Node)
     return Node.get();
 
-  Node = llvm::make_unique<CallGraphNode>(F);
+  Node = std::make_unique<CallGraphNode>(F);
   return Node.get();
 }
 

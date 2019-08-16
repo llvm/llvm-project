@@ -95,7 +95,7 @@ void CallAndMessageChecker::emitBadCall(BugType *BT, CheckerContext &C,
   if (!N)
     return;
 
-  auto R = llvm::make_unique<BugReport>(*BT, BT->getName(), N);
+  auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
   if (BadE) {
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
@@ -175,7 +175,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     if (PSV.isUndef()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         LazyInit_BT(BD, BT);
-        auto R = llvm::make_unique<BugReport>(*BT, Os.str(), N);
+        auto R = std::make_unique<BugReport>(*BT, Os.str(), N);
         R->addRange(ArgRange);
         if (ArgEx)
           bugreporter::trackExpressionValue(N, ArgEx, *R);
@@ -252,7 +252,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
       SmallString<200> Buf;
       llvm::raw_svector_ostream Os(Buf);
       describeUninitializedArgumentInCall(Call, ArgumentNumber, Os);
-      auto R = llvm::make_unique<BugReport>(*BT, Os.str(), N);
+      auto R = std::make_unique<BugReport>(*BT, Os.str(), N);
 
       R->addRange(ArgRange);
       if (ArgEx)
@@ -295,7 +295,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         }
 
         // Generate a report for this bug.
-        auto R = llvm::make_unique<BugReport>(*BT, os.str(), N);
+        auto R = std::make_unique<BugReport>(*BT, os.str(), N);
         R->addRange(ArgRange);
 
         if (ArgEx)
@@ -358,7 +358,7 @@ void CallAndMessageChecker::checkPreStmt(const CXXDeleteExpr *DE,
     else
       Desc = "Argument to 'delete' is uninitialized";
     BugType *BT = BT_cxx_delete_undef.get();
-    auto R = llvm::make_unique<BugReport>(*BT, Desc, N);
+    auto R = std::make_unique<BugReport>(*BT, Desc, N);
     bugreporter::trackExpressionValue(N, DE, *R);
     C.emitReport(std::move(R));
     return;
@@ -421,7 +421,7 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
          << Call.getNumArgs() << ")";
 
       C.emitReport(
-          llvm::make_unique<BugReport>(*BT_call_few_args, os.str(), N));
+          std::make_unique<BugReport>(*BT_call_few_args, os.str(), N));
     }
   }
 
@@ -482,7 +482,7 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       }
       assert(BT && "Unknown message kind.");
 
-      auto R = llvm::make_unique<BugReport>(*BT, BT->getName(), N);
+      auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
       const ObjCMessageExpr *ME = msg.getOriginExpr();
       R->addRange(ME->getReceiverRange());
 
@@ -525,7 +525,7 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
     os << "' that will be garbage";
   }
 
-  auto report = llvm::make_unique<BugReport>(*BT_msg_ret, os.str(), N);
+  auto report = std::make_unique<BugReport>(*BT_msg_ret, os.str(), N);
   report->addRange(ME->getReceiverRange());
   // FIXME: This won't track "self" in messages to super.
   if (const Expr *receiver = ME->getInstanceReceiver()) {

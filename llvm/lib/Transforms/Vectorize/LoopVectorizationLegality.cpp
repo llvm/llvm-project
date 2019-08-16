@@ -869,7 +869,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) {
 }
 
 bool LoopVectorizationLegality::blockCanBePredicated(
-    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs) {
+    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs, bool PreserveGuards) {
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
   for (Instruction &I : *BB) {
@@ -888,7 +888,7 @@ bool LoopVectorizationLegality::blockCanBePredicated(
         // !llvm.mem.parallel_loop_access implies if-conversion safety.
         // Otherwise, record that the load needs (real or emulated) masking
         // and let the cost model decide.
-        if (!IsAnnotatedParallel)
+        if (!IsAnnotatedParallel || PreserveGuards)
           MaskedOp.insert(LI);
         continue;
       }
@@ -1159,7 +1159,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   return Result;
 }
 
-bool LoopVectorizationLegality::canFoldTailByMasking() {
+bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
@@ -1202,7 +1202,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() {
   // Check and mark all blocks for predication, including those that ordinarily
   // do not need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!blockCanBePredicated(BB, SafePointers)) {
+    if (!blockCanBePredicated(BB, SafePointers, /* MaskAllLoads= */ true)) {
       reportVectorizationFailure(
           "Cannot fold tail by masking as required",
           "control flow cannot be substituted for a select",

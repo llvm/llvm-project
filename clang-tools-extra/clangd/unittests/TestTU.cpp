@@ -83,7 +83,7 @@ SymbolSlab TestTU::headerSymbols() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = llvm::make_unique<FileIndex>(/*UseDex=*/true);
+  auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true);
   Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getCanonicalIncludes());
   Idx->updateMain(Filename, AST);

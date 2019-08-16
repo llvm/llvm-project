@@ -356,7 +356,7 @@ private:
   /// Activate parser-specific variables
   void EnableParserVars() {
     if (!m_parser_vars.get())
-      m_parser_vars = llvm::make_unique<ParserVars>();
+      m_parser_vars = std::make_unique<ParserVars>();
   }
 
   /// Deallocate parser-specific variables

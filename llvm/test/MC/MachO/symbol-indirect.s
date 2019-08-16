@@ -94,7 +94,7 @@ sym_nlp_G:
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x0
+// CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x800000)
 // CHECK:       PureInstructions (0x800000)
 // CHECK:     ]
@@ -111,7 +111,7 @@ sym_nlp_G:
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x7
+// CHECK:     Type: LazySymbolPointers (0x7)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x0
@@ -127,7 +127,7 @@ sym_nlp_G:
 // CHECK:     Alignment: 2
 // CHECK:     RelocationOffset: 0x0
 // CHECK:     RelocationCount: 0
-// CHECK:     Type: 0x6
+// CHECK:     Type: NonLazySymbolPointers (0x6)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
 // CHECK:     Reserved1: 0x5

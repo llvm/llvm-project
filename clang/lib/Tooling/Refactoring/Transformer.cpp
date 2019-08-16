@@ -80,12 +80,14 @@ void tooling::addInclude(RewriteRule &Rule, StringRef Header,
     Case.AddedIncludes.emplace_back(Header.str(), Format);
 }
 
+#ifndef NDEBUG
 // Filters for supported matcher kinds. FIXME: Explicitly list the allowed kinds
 // (all node matcher types except for `QualType` and `Type`), rather than just
 // banning `QualType` and `Type`.
 static bool hasValidKind(const DynTypedMatcher &M) {
   return !M.canConvertTo<QualType>();
 }
+#endif
 
 // Binds each rule's matcher to a unique (and deterministic) tag based on
 // `TagBase` and the id paired with the case.
@@ -96,8 +98,10 @@ static std::vector<DynTypedMatcher> taggedMatchers(
   Matchers.reserve(Cases.size());
   for (const auto &Case : Cases) {
     std::string Tag = (TagBase + Twine(Case.first)).str();
-    auto M = Case.second.Matcher.tryBind(Tag);
-    assert(M && "RewriteRule matchers should be bindable.");
+    // HACK: Many matchers are not bindable, so ensure that tryBind will work.
+    DynTypedMatcher BoundMatcher(Case.second.Matcher);
+    BoundMatcher.setAllowBind(true);
+    auto M = BoundMatcher.tryBind(Tag);
     Matchers.push_back(*std::move(M));
   }
   return Matchers;
