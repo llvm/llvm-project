@@ -136,9 +136,9 @@ bool CommandObjectMultiword::Execute(const char *args_string,
 
   if (num_subcmd_matches > 0) {
     error_msg.append(" Possible completions:");
-    for (size_t i = 0; i < matches.GetSize(); i++) {
+    for (const std::string &match : matches) {
       error_msg.append("\n\t");
-      error_msg.append(matches.GetStringAtIndex(i));
+      error_msg.append(match);
     }
   }
   error_msg.append("\n");

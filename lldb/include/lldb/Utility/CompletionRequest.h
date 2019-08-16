@@ -116,8 +116,8 @@ public:
   ///
   /// \see AddCompletion
   void AddCompletions(const StringList &completions) {
-    for (std::size_t i = 0; i < completions.GetSize(); ++i)
-      AddCompletion(completions.GetStringAtIndex(i));
+    for (const std::string &completion : completions)
+      AddCompletion(completion);
   }
 
   /// Adds multiple possible completion strings alongside their descriptions.

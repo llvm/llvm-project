@@ -65,10 +65,8 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
               "The following commands may relate to '%s':\n", args[0].c_str());
           size_t max_len = 0;
 
-          for (size_t i = 0; i < commands_found.GetSize(); ++i) {
-            size_t len = strlen(commands_found.GetStringAtIndex(i));
-            if (len > max_len)
-              max_len = len;
+          for (const std::string &command : commands_found) {
+            max_len = std::max(max_len, command.size());
           }
 
           for (size_t i = 0; i < commands_found.GetSize(); ++i)

@@ -196,8 +196,8 @@ bool EditlineAdapter::IsInputComplete(lldb_private::Editline *editline,
   int start_block_count = 0;
   int brace_balance = 0;
 
-  for (size_t i = 0; i < lines.GetSize(); ++i) {
-    for (auto ch : lines[i]) {
+  for (const std::string &line : lines) {
+    for (auto ch : line) {
       if (ch == '{') {
         ++start_block_count;
         ++brace_balance;
@@ -312,8 +312,8 @@ TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText) {
   // Without any auto indentation support, our output should directly match our
   // input.
   std::vector<std::string> reported_lines;
-  for (size_t i = 0; i < el_reported_lines.GetSize(); ++i)
-    reported_lines.push_back(el_reported_lines[i]);
+  for (const std::string &line : el_reported_lines)
+    reported_lines.push_back(line);
 
   EXPECT_THAT(reported_lines, testing::ContainerEq(input_lines));
 }

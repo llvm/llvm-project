@@ -23,6 +23,8 @@ class Stream;
 namespace lldb_private {
 
 class StringList {
+  typedef std::vector<std::string> StorageType;
+
 public:
   StringList();
 
@@ -51,6 +53,14 @@ public:
   void SetSize(size_t n) { m_strings.resize(n); }
 
   size_t GetMaxStringLength() const;
+
+  typedef StorageType::iterator iterator;
+  typedef StorageType::const_iterator const_iterator;
+
+  iterator begin() { return m_strings.begin(); }
+  iterator end() { return m_strings.end(); }
+  const_iterator begin() const { return m_strings.begin(); }
+  const_iterator end() const { return m_strings.end(); }
 
   std::string &operator[](size_t idx) {
     // No bounds checking, verify "idx" is good prior to calling this function
@@ -125,7 +135,7 @@ public:
   }
 
 private:
-  std::vector<std::string> m_strings;
+  StorageType m_strings;
 };
 
 } // namespace lldb_private
