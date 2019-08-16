@@ -243,7 +243,7 @@ RawCoverage::read(const std::string &FileName) {
     return make_error_code(errc::illegal_byte_sequence);
   }
 
-  auto Addrs = llvm::make_unique<std::set<uint64_t>>();
+  auto Addrs = std::make_unique<std::set<uint64_t>>();
 
   switch (Header->Bitness) {
   case Bitness64:
@@ -458,7 +458,7 @@ static std::string parseScalarString(yaml::Node *N) {
 
 std::unique_ptr<SymbolizedCoverage>
 SymbolizedCoverage::read(const std::string &InputFile) {
-  auto Coverage(make_unique<SymbolizedCoverage>());
+  auto Coverage(std::make_unique<SymbolizedCoverage>());
 
   std::map<std::string, CoveragePoint> Points;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
@@ -958,7 +958,7 @@ static bool isSymbolizedCoverageFile(const std::string &FileName) {
 
 static std::unique_ptr<SymbolizedCoverage>
 symbolize(const RawCoverage &Data, const std::string ObjectFile) {
-  auto Coverage = make_unique<SymbolizedCoverage>();
+  auto Coverage = std::make_unique<SymbolizedCoverage>();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFile(ObjectFile);
@@ -1112,7 +1112,7 @@ merge(const std::vector<std::unique_ptr<SymbolizedCoverage>> &Coverages) {
   if (Coverages.empty())
     return nullptr;
 
-  auto Result = make_unique<SymbolizedCoverage>();
+  auto Result = std::make_unique<SymbolizedCoverage>();
 
   for (size_t I = 0; I < Coverages.size(); ++I) {
     const SymbolizedCoverage &Coverage = *Coverages[I];

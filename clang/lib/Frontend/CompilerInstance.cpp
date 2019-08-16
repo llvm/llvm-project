@@ -215,7 +215,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
   raw_ostream *OS = &llvm::errs();
   if (DiagOpts->DiagnosticLogFile != "-") {
     // Create the output stream.
-    auto FileOS = llvm::make_unique<llvm::raw_fd_ostream>(
+    auto FileOS = std::make_unique<llvm::raw_fd_ostream>(
         DiagOpts->DiagnosticLogFile, EC,
         llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text);
     if (EC) {
@@ -229,7 +229,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
   }
 
   // Chain in the diagnostic client which will log the diagnostics.
-  auto Logger = llvm::make_unique<LogDiagnosticPrinter>(*OS, DiagOpts,
+  auto Logger = std::make_unique<LogDiagnosticPrinter>(*OS, DiagOpts,
                                                         std::move(StreamOwner));
   if (CodeGenOpts)
     Logger->setDwarfDebugFlags(CodeGenOpts->DwarfDebugFlags);
@@ -667,7 +667,7 @@ CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
 }
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
-  return llvm::make_unique<llvm::raw_null_ostream>();
+  return std::make_unique<llvm::raw_null_ostream>();
 }
 
 std::unique_ptr<raw_pwrite_stream>
@@ -793,7 +793,7 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
   if (!Binary || OS->supportsSeeking())
     return std::move(OS);
 
-  auto B = llvm::make_unique<llvm::buffer_ostream>(*OS);
+  auto B = std::make_unique<llvm::buffer_ostream>(*OS);
   assert(!NonSeekStream);
   NonSeekStream = std::move(OS);
   return std::move(B);
@@ -988,7 +988,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   StringRef StatsFile = getFrontendOpts().StatsFile;
   if (!StatsFile.empty()) {
     std::error_code EC;
-    auto StatS = llvm::make_unique<llvm::raw_fd_ostream>(
+    auto StatS = std::make_unique<llvm::raw_fd_ostream>(
         StatsFile, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       getDiagnostics().Report(diag::warn_fe_unable_to_open_stats_file)
@@ -1471,7 +1471,7 @@ void CompilerInstance::createModuleManager() {
     const PreprocessorOptions &PPOpts = getPreprocessorOpts();
     std::unique_ptr<llvm::Timer> ReadTimer;
     if (FrontendTimerGroup)
-      ReadTimer = llvm::make_unique<llvm::Timer>("reading_modules",
+      ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
                                                  "Reading modules",
                                                  *FrontendTimerGroup);
     ModuleManager = new ASTReader(
@@ -1566,7 +1566,7 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
                                           SourceLocation())
         <= DiagnosticsEngine::Warning;
 
-  auto Listener = llvm::make_unique<ReadModuleNames>(*this);
+  auto Listener = std::make_unique<ReadModuleNames>(*this);
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*ModuleManager,
                                                    std::move(Listener));

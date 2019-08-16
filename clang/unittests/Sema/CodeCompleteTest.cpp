@@ -101,7 +101,7 @@ ParsedSourceLocation offsetToPosition(llvm::StringRef Code, size_t Offset) {
 
 CompletionContext runCompletion(StringRef Code, size_t Offset) {
   CompletionContext ResultCtx;
-  auto Action = llvm::make_unique<CodeCompleteAction>(
+  auto Action = std::make_unique<CodeCompleteAction>(
       offsetToPosition(Code, Offset), ResultCtx);
   clang::tooling::runToolOnCodeWithArgs(Action.release(), Code, {"-std=c++11"},
                                         TestCCName);

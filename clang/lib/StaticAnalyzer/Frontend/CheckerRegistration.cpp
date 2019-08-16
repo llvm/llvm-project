@@ -30,7 +30,7 @@ std::unique_ptr<CheckerManager> ento::createCheckerManager(
     ArrayRef<std::string> plugins,
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
     DiagnosticsEngine &diags) {
-  auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
+  auto checkerMgr = std::make_unique<CheckerManager>(context, opts);
 
   CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts(),
                               checkerRegistrationFns);
@@ -74,11 +74,22 @@ void ento::printCheckerConfigList(raw_ostream &OS,
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {
-  out << "OVERVIEW: Clang Static Analyzer -analyzer-config Option List\n\n";
-  out << "USAGE: -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
-  out << "       -analyzer-config OPTION1=VALUE, -analyzer-config "
-         "OPTION2=VALUE, ...\n\n";
-  out << "OPTIONS:\n\n";
+  // FIXME: This message sounds scary, should be scary, but incorrectly states
+  // that all configs are super dangerous. In reality, many of them should be
+  // accessible to the user. We should create a user-facing subset of config
+  // options under a different frontend flag.
+  out << R"(
+OVERVIEW: Clang Static Analyzer -analyzer-config Option List
+
+The following list of configurations are meant for development purposes only, as
+some of the variables they define are set to result in the most optimal
+analysis. Setting them to other values may drastically change how the analyzer
+behaves, and may even result in instabilities, crashes!
+
+USAGE: -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>
+       -analyzer-config OPTION1=VALUE, -analyzer-config OPTION2=VALUE, ...
+OPTIONS:
+)";
 
   using OptionAndDescriptionTy = std::pair<StringRef, std::string>;
   OptionAndDescriptionTy PrintableOptions[] = {

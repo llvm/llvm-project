@@ -83,7 +83,7 @@ void DynamicTypeChecker::reportTypeError(QualType DynamicType,
   std::unique_ptr<BugReport> R(
       new BugReport(*BT, OS.str(), C.generateNonFatalErrorNode()));
   R->markInteresting(Reg);
-  R->addVisitor(llvm::make_unique<DynamicTypeBugVisitor>(Reg));
+  R->addVisitor(std::make_unique<DynamicTypeBugVisitor>(Reg));
   R->addRange(ReportedNode->getSourceRange());
   C.emitReport(std::move(R));
 }

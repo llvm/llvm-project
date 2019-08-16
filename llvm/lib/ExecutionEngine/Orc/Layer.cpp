@@ -19,7 +19,7 @@ IRLayer::IRLayer(ExecutionSession &ES) : ES(ES) {}
 IRLayer::~IRLayer() {}
 
 Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
-  return JD.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
+  return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
       *this, std::move(K), std::move(TSM)));
 }
 

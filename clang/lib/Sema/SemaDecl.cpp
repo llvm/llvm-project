@@ -106,7 +106,7 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<TypeNameValidatorCCC>(*this);
+    return std::make_unique<TypeNameValidatorCCC>(*this);
   }
 
  private:
@@ -7785,7 +7785,7 @@ class DifferentNameValidatorCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<DifferentNameValidatorCCC>(*this);
+    return std::make_unique<DifferentNameValidatorCCC>(*this);
   }
 
  private:
@@ -16791,7 +16791,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
         continue;
 
       // Create new vector and push values onto it.
-      auto Vec = llvm::make_unique<ECDVector>();
+      auto Vec = std::make_unique<ECDVector>();
       Vec->push_back(D);
       Vec->push_back(ECD);
 

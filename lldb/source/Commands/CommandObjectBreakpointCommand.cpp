@@ -238,7 +238,7 @@ are no syntax errors may indicate that a function was declared but never called.
       if (!bp_options)
         continue;
 
-      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+      auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
       cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
       bp_options->SetCommandDataCallback(cmd_data);
     }
@@ -260,7 +260,7 @@ are no syntax errors may indicate that a function was declared but never called.
   SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
                                const char *oneliner) {
     for (auto bp_options : bp_options_vec) {
-      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+      auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
 
       cmd_data->user_source.AppendString(oneliner);
       cmd_data->stop_on_error = m_options.m_stop_on_error;

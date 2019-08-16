@@ -65,7 +65,7 @@ private:
   std::unique_ptr<PDBSymbol> wrap(std::unique_ptr<PDBSymbol> S) const {
     if (!S)
       return nullptr;
-    auto NTFA = llvm::make_unique<NativeTypeFunctionArg>(Session, std::move(S));
+    auto NTFA = std::make_unique<NativeTypeFunctionArg>(Session, std::move(S));
     return PDBSymbol::create(Session, std::move(NTFA));
   }
   NativeSession &Session;
@@ -133,9 +133,9 @@ void NativeTypeFunctionSig::dump(raw_ostream &OS, int Indent,
 std::unique_ptr<IPDBEnumSymbols>
 NativeTypeFunctionSig::findChildren(PDB_SymType Type) const {
   if (Type != PDB_SymType::FunctionArg)
-    return llvm::make_unique<NullEnumerator<PDBSymbol>>();
+    return std::make_unique<NullEnumerator<PDBSymbol>>();
 
-  auto NET = llvm::make_unique<NativeEnumTypes>(Session,
+  auto NET = std::make_unique<NativeEnumTypes>(Session,
                                                 /* copy */ ArgList.ArgIndices);
   return std::unique_ptr<IPDBEnumSymbols>(
       new NativeEnumFunctionArgs(Session, std::move(NET)));

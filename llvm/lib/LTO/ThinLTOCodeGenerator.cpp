@@ -295,7 +295,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     // Run codegen now. resulting binary is in OutputBuffer.
     PM.run(TheModule);
   }
-  return make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+  return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
 }
 
 /// Manage caching for a single Module.
@@ -442,7 +442,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, &PSI);
       WriteBitcodeToFile(TheModule, OS, true, &Index);
     }
-    return make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+    return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
   }
 
   return codegenModule(TheModule, TM);
@@ -557,7 +557,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
  */
 std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex =
-      llvm::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   uint64_t NextModuleId = 0;
   for (auto &Mod : Modules) {
     auto &M = Mod->getSingleBitcodeModule();

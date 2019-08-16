@@ -1252,7 +1252,7 @@ public:
     //   - completion results based on the AST.
     //   - partial identifier and context. We need these for the index query.
     CodeCompleteResult Output;
-    auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
+    auto RecorderOwner = std::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
       CCContextKind = Recorder->CCContext.getKind();
       auto Style = getFormatStyleForFile(
@@ -1756,7 +1756,7 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeBriefComments = false;
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(
-      llvm::make_unique<SignatureHelpCollector>(Options, Index, Result),
+      std::make_unique<SignatureHelpCollector>(Options, Index, Result),
       Options,
       {FileName, Command, Preamble, Contents, *Offset, std::move(VFS)});
   return Result;

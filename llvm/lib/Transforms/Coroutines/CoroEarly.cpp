@@ -247,7 +247,7 @@ struct CoroEarly : public FunctionPass {
                                      "llvm.coro.promise",
                                      "llvm.coro.resume",
                                      "llvm.coro.suspend"}))
-      L = llvm::make_unique<Lowerer>(M);
+      L = std::make_unique<Lowerer>(M);
     return false;
   }
 

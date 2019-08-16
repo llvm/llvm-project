@@ -21,65 +21,78 @@ namespace mca {
 
 RetireControlUnit::RetireControlUnit(const MCSchedModel &SM)
     : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
-      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0) {
+      NumROBEntries(SM.MicroOpBufferSize),
+      AvailableEntries(SM.MicroOpBufferSize), MaxRetirePerCycle(0) {
   // Check if the scheduling model provides extra information about the machine
   // processor. If so, then use that information to set the reorder buffer size
   // and the maximum number of instructions retired per cycle.
   if (SM.hasExtraProcessorInfo()) {
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
     if (EPI.ReorderBufferSize)
-      AvailableSlots = EPI.ReorderBufferSize;
+      AvailableEntries = EPI.ReorderBufferSize;
     MaxRetirePerCycle = EPI.MaxRetirePerCycle;
   }
-
-  assert(AvailableSlots && "Invalid reorder buffer size!");
-  Queue.resize(AvailableSlots);
+  NumROBEntries = AvailableEntries;
+  assert(NumROBEntries && "Invalid reorder buffer size!");
+  Queue.resize(2 * NumROBEntries);
 }
 
 // Reserves a number of slots, and returns a new token.
-unsigned RetireControlUnit::reserveSlot(const InstRef &IR,
-                                        unsigned NumMicroOps) {
-  assert(isAvailable(NumMicroOps) && "Reorder Buffer unavailable!");
-  unsigned NormalizedQuantity =
-      std::min(NumMicroOps, static_cast<unsigned>(Queue.size()));
-  // Zero latency instructions may have zero uOps. Artificially bump this
-  // value to 1. Although zero latency instructions don't consume scheduler
-  // resources, they still consume one slot in the retire queue.
-  NormalizedQuantity = std::max(NormalizedQuantity, 1U);
+unsigned RetireControlUnit::dispatch(const InstRef &IR) {
+  const Instruction &Inst = *IR.getInstruction();
+  unsigned Entries = normalizeQuantity(Inst.getNumMicroOps());
+  assert((AvailableEntries >= Entries) && "Reorder Buffer unavailable!");
+
   unsigned TokenID = NextAvailableSlotIdx;
-  Queue[NextAvailableSlotIdx] = {IR, NormalizedQuantity, false};
-  NextAvailableSlotIdx += NormalizedQuantity;
+  Queue[NextAvailableSlotIdx] = {IR, Entries, false};
+  NextAvailableSlotIdx += std::max(1U, Entries);
   NextAvailableSlotIdx %= Queue.size();
-  AvailableSlots -= NormalizedQuantity;
+
+  AvailableEntries -= Entries;
   return TokenID;
 }
 
-const RetireControlUnit::RUToken &RetireControlUnit::peekCurrentToken() const {
-  return Queue[CurrentInstructionSlotIdx];
+const RetireControlUnit::RUToken &RetireControlUnit::getCurrentToken() const {
+  const RetireControlUnit::RUToken &Current = Queue[CurrentInstructionSlotIdx];
+#ifndef NDEBUG
+  const Instruction *Inst = Current.IR.getInstruction();
+  assert(Inst && "Invalid RUToken in the RCU queue.");
+#endif
+  return Current;
+}
+
+unsigned RetireControlUnit::computeNextSlotIdx() const {
+  const RetireControlUnit::RUToken &Current = getCurrentToken();
+  unsigned NextSlotIdx = CurrentInstructionSlotIdx + std::max(1U, Current.NumSlots);
+  return NextSlotIdx % Queue.size();
+}
+
+const RetireControlUnit::RUToken &RetireControlUnit::peekNextToken() const {
+  return Queue[computeNextSlotIdx()];
 }
 
 void RetireControlUnit::consumeCurrentToken() {
   RetireControlUnit::RUToken &Current = Queue[CurrentInstructionSlotIdx];
-  assert(Current.NumSlots && "Reserved zero slots?");
-  assert(Current.IR && "Invalid RUToken in the RCU queue.");
   Current.IR.getInstruction()->retire();
 
   // Update the slot index to be the next item in the circular queue.
-  CurrentInstructionSlotIdx += Current.NumSlots;
+  CurrentInstructionSlotIdx += std::max(1U, Current.NumSlots);
   CurrentInstructionSlotIdx %= Queue.size();
-  AvailableSlots += Current.NumSlots;
+  AvailableEntries += Current.NumSlots;
+  Current = { InstRef(), 0U, false };
 }
 
 void RetireControlUnit::onInstructionExecuted(unsigned TokenID) {
   assert(Queue.size() > TokenID);
-  assert(Queue[TokenID].Executed == false && Queue[TokenID].IR);
+  assert(Queue[TokenID].IR.getInstruction() && "Instruction was not dispatched!");
+  assert(Queue[TokenID].Executed == false && "Instruction already executed!");
   Queue[TokenID].Executed = true;
 }
 
 #ifndef NDEBUG
 void RetireControlUnit::dump() const {
-  dbgs() << "Retire Unit: { Total Slots=" << Queue.size()
-         << ", Available Slots=" << AvailableSlots << " }\n";
+  dbgs() << "Retire Unit: { Total ROB Entries =" << NumROBEntries
+         << ", Available ROB entries=" << AvailableEntries << " }\n";
 }
 #endif
 

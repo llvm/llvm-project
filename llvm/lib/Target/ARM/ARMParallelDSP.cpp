@@ -92,7 +92,7 @@ namespace {
     /// Record a MulCandidate, rooted at a Mul instruction, that is a part of
     /// this reduction.
     void InsertMul(Instruction *I, Value *LHS, Value *RHS) {
-      Muls.push_back(make_unique<MulCandidate>(I, LHS, RHS));
+      Muls.push_back(std::make_unique<MulCandidate>(I, LHS, RHS));
     }
 
     /// Add the incoming accumulator value, returns true if a value had not
@@ -707,7 +707,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
   OffsetSExt->replaceAllUsesWith(NewOffsetSExt);
 
   WideLoads.emplace(std::make_pair(Base,
-                                   make_unique<WidenedLoad>(Loads, WideLoad)));
+                                   std::make_unique<WidenedLoad>(Loads, WideLoad)));
   return WideLoad;
 }
 

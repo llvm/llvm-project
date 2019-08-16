@@ -3389,7 +3389,7 @@ public:
   void print(raw_ostream &OS) const override;
 
   static std::unique_ptr<ARMOperand> CreateITMask(unsigned Mask, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_ITCondMask);
+    auto Op = std::make_unique<ARMOperand>(k_ITCondMask);
     Op->ITMask.Mask = Mask;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3398,7 +3398,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateCondCode(ARMCC::CondCodes CC,
                                                     SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_CondCode);
+    auto Op = std::make_unique<ARMOperand>(k_CondCode);
     Op->CC.Val = CC;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3407,7 +3407,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateVPTPred(ARMVCC::VPTCodes CC,
                                                    SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_VPTPred);
+    auto Op = std::make_unique<ARMOperand>(k_VPTPred);
     Op->VCC.Val = CC;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3415,7 +3415,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateCoprocNum(unsigned CopVal, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_CoprocNum);
+    auto Op = std::make_unique<ARMOperand>(k_CoprocNum);
     Op->Cop.Val = CopVal;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3423,7 +3423,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateCoprocReg(unsigned CopVal, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_CoprocReg);
+    auto Op = std::make_unique<ARMOperand>(k_CoprocReg);
     Op->Cop.Val = CopVal;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3432,7 +3432,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateCoprocOption(unsigned Val, SMLoc S,
                                                         SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_CoprocOption);
+    auto Op = std::make_unique<ARMOperand>(k_CoprocOption);
     Op->Cop.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3440,7 +3440,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateCCOut(unsigned RegNum, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_CCOut);
+    auto Op = std::make_unique<ARMOperand>(k_CCOut);
     Op->Reg.RegNum = RegNum;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3448,7 +3448,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateToken(StringRef Str, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_Token);
+    auto Op = std::make_unique<ARMOperand>(k_Token);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
     Op->StartLoc = S;
@@ -3458,7 +3458,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateReg(unsigned RegNum, SMLoc S,
                                                SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_Register);
+    auto Op = std::make_unique<ARMOperand>(k_Register);
     Op->Reg.RegNum = RegNum;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3469,7 +3469,7 @@ public:
   CreateShiftedRegister(ARM_AM::ShiftOpc ShTy, unsigned SrcReg,
                         unsigned ShiftReg, unsigned ShiftImm, SMLoc S,
                         SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_ShiftedRegister);
+    auto Op = std::make_unique<ARMOperand>(k_ShiftedRegister);
     Op->RegShiftedReg.ShiftTy = ShTy;
     Op->RegShiftedReg.SrcReg = SrcReg;
     Op->RegShiftedReg.ShiftReg = ShiftReg;
@@ -3482,7 +3482,7 @@ public:
   static std::unique_ptr<ARMOperand>
   CreateShiftedImmediate(ARM_AM::ShiftOpc ShTy, unsigned SrcReg,
                          unsigned ShiftImm, SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_ShiftedImmediate);
+    auto Op = std::make_unique<ARMOperand>(k_ShiftedImmediate);
     Op->RegShiftedImm.ShiftTy = ShTy;
     Op->RegShiftedImm.SrcReg = SrcReg;
     Op->RegShiftedImm.ShiftImm = ShiftImm;
@@ -3493,7 +3493,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateShifterImm(bool isASR, unsigned Imm,
                                                       SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_ShifterImmediate);
+    auto Op = std::make_unique<ARMOperand>(k_ShifterImmediate);
     Op->ShifterImm.isASR = isASR;
     Op->ShifterImm.Imm = Imm;
     Op->StartLoc = S;
@@ -3503,7 +3503,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateRotImm(unsigned Imm, SMLoc S,
                                                   SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_RotateImmediate);
+    auto Op = std::make_unique<ARMOperand>(k_RotateImmediate);
     Op->RotImm.Imm = Imm;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3512,7 +3512,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateModImm(unsigned Bits, unsigned Rot,
                                                   SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_ModifiedImmediate);
+    auto Op = std::make_unique<ARMOperand>(k_ModifiedImmediate);
     Op->ModImm.Bits = Bits;
     Op->ModImm.Rot = Rot;
     Op->StartLoc = S;
@@ -3522,7 +3522,7 @@ public:
 
   static std::unique_ptr<ARMOperand>
   CreateConstantPoolImm(const MCExpr *Val, SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_ConstantPoolImmediate);
+    auto Op = std::make_unique<ARMOperand>(k_ConstantPoolImmediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3531,7 +3531,7 @@ public:
 
   static std::unique_ptr<ARMOperand>
   CreateBitfield(unsigned LSB, unsigned Width, SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_BitfieldDescriptor);
+    auto Op = std::make_unique<ARMOperand>(k_BitfieldDescriptor);
     Op->Bitfield.LSB = LSB;
     Op->Bitfield.Width = Width;
     Op->StartLoc = S;
@@ -3565,7 +3565,7 @@ public:
     assert(std::is_sorted(Regs.begin(), Regs.end()) &&
            "Register list must be sorted by encoding");
 
-    auto Op = make_unique<ARMOperand>(Kind);
+    auto Op = std::make_unique<ARMOperand>(Kind);
     for (const auto &P : Regs)
       Op->Registers.push_back(P.second);
 
@@ -3578,7 +3578,7 @@ public:
                                                       unsigned Count,
                                                       bool isDoubleSpaced,
                                                       SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_VectorList);
+    auto Op = std::make_unique<ARMOperand>(k_VectorList);
     Op->VectorList.RegNum = RegNum;
     Op->VectorList.Count = Count;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
@@ -3590,7 +3590,7 @@ public:
   static std::unique_ptr<ARMOperand>
   CreateVectorListAllLanes(unsigned RegNum, unsigned Count, bool isDoubleSpaced,
                            SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_VectorListAllLanes);
+    auto Op = std::make_unique<ARMOperand>(k_VectorListAllLanes);
     Op->VectorList.RegNum = RegNum;
     Op->VectorList.Count = Count;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
@@ -3602,7 +3602,7 @@ public:
   static std::unique_ptr<ARMOperand>
   CreateVectorListIndexed(unsigned RegNum, unsigned Count, unsigned Index,
                           bool isDoubleSpaced, SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_VectorListIndexed);
+    auto Op = std::make_unique<ARMOperand>(k_VectorListIndexed);
     Op->VectorList.RegNum = RegNum;
     Op->VectorList.Count = Count;
     Op->VectorList.LaneIndex = Index;
@@ -3614,7 +3614,7 @@ public:
 
   static std::unique_ptr<ARMOperand>
   CreateVectorIndex(unsigned Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<ARMOperand>(k_VectorIndex);
+    auto Op = std::make_unique<ARMOperand>(k_VectorIndex);
     Op->VectorIndex.Val = Idx;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3623,7 +3623,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateImm(const MCExpr *Val, SMLoc S,
                                                SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_Immediate);
+    auto Op = std::make_unique<ARMOperand>(k_Immediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -3635,7 +3635,7 @@ public:
             unsigned OffsetRegNum, ARM_AM::ShiftOpc ShiftType,
             unsigned ShiftImm, unsigned Alignment, bool isNegative, SMLoc S,
             SMLoc E, SMLoc AlignmentLoc = SMLoc()) {
-    auto Op = make_unique<ARMOperand>(k_Memory);
+    auto Op = std::make_unique<ARMOperand>(k_Memory);
     Op->Memory.BaseRegNum = BaseRegNum;
     Op->Memory.OffsetImm = OffsetImm;
     Op->Memory.OffsetRegNum = OffsetRegNum;
@@ -3652,7 +3652,7 @@ public:
   static std::unique_ptr<ARMOperand>
   CreatePostIdxReg(unsigned RegNum, bool isAdd, ARM_AM::ShiftOpc ShiftTy,
                    unsigned ShiftImm, SMLoc S, SMLoc E) {
-    auto Op = make_unique<ARMOperand>(k_PostIndexRegister);
+    auto Op = std::make_unique<ARMOperand>(k_PostIndexRegister);
     Op->PostIdxReg.RegNum = RegNum;
     Op->PostIdxReg.isAdd = isAdd;
     Op->PostIdxReg.ShiftTy = ShiftTy;
@@ -3664,7 +3664,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateMemBarrierOpt(ARM_MB::MemBOpt Opt,
                                                          SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_MemBarrierOpt);
+    auto Op = std::make_unique<ARMOperand>(k_MemBarrierOpt);
     Op->MBOpt.Val = Opt;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3673,7 +3673,7 @@ public:
 
   static std::unique_ptr<ARMOperand>
   CreateInstSyncBarrierOpt(ARM_ISB::InstSyncBOpt Opt, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_InstSyncBarrierOpt);
+    auto Op = std::make_unique<ARMOperand>(k_InstSyncBarrierOpt);
     Op->ISBOpt.Val = Opt;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3682,7 +3682,7 @@ public:
 
   static std::unique_ptr<ARMOperand>
   CreateTraceSyncBarrierOpt(ARM_TSB::TraceSyncBOpt Opt, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_TraceSyncBarrierOpt);
+    auto Op = std::make_unique<ARMOperand>(k_TraceSyncBarrierOpt);
     Op->TSBOpt.Val = Opt;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3691,7 +3691,7 @@ public:
 
   static std::unique_ptr<ARMOperand> CreateProcIFlags(ARM_PROC::IFlags IFlags,
                                                       SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_ProcIFlags);
+    auto Op = std::make_unique<ARMOperand>(k_ProcIFlags);
     Op->IFlags.Val = IFlags;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3699,7 +3699,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateMSRMask(unsigned MMask, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_MSRMask);
+    auto Op = std::make_unique<ARMOperand>(k_MSRMask);
     Op->MMask.Val = MMask;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -3707,7 +3707,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand> CreateBankedReg(unsigned Reg, SMLoc S) {
-    auto Op = make_unique<ARMOperand>(k_BankedReg);
+    auto Op = std::make_unique<ARMOperand>(k_BankedReg);
     Op->BankedReg.Val = Reg;
     Op->StartLoc = S;
     Op->EndLoc = S;

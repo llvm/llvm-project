@@ -187,7 +187,7 @@ NonNullParamChecker::genReportNullAttrNonNull(const ExplodedNode *ErrorNode,
     BTAttrNonNull.reset(new BugType(
         this, "Argument with 'nonnull' attribute passed null", "API"));
 
-  auto R = llvm::make_unique<BugReport>(
+  auto R = std::make_unique<BugReport>(
       *BTAttrNonNull,
       "Null pointer passed as an argument to a 'nonnull' parameter", ErrorNode);
   if (ArgE)
@@ -201,7 +201,7 @@ std::unique_ptr<BugReport> NonNullParamChecker::genReportReferenceToNullPointer(
   if (!BTNullRefArg)
     BTNullRefArg.reset(new BuiltinBug(this, "Dereference of null pointer"));
 
-  auto R = llvm::make_unique<BugReport>(
+  auto R = std::make_unique<BugReport>(
       *BTNullRefArg, "Forming reference to null pointer", ErrorNode);
   if (ArgE) {
     const Expr *ArgEDeref = bugreporter::getDerefExpr(ArgE);

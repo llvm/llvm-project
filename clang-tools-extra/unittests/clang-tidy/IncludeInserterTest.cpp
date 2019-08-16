@@ -33,7 +33,7 @@ public:
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override {
-    Inserter = llvm::make_unique<utils::IncludeInserter>(
+    Inserter = std::make_unique<utils::IncludeInserter>(
         SM, getLangOpts(), utils::IncludeSorter::IS_Google);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }

@@ -2236,7 +2236,7 @@ class FieldInitializerValidatorCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<FieldInitializerValidatorCCC>(*this);
+    return std::make_unique<FieldInitializerValidatorCCC>(*this);
   }
 
  private:
@@ -6610,7 +6610,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
              OO == OverloadedOperatorKind::OO_Star;
     }
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("front", "back", "at", true)
+        .Cases("front", "back", "at", "top", "value", true)
         .Default(false);
   }
   return false;

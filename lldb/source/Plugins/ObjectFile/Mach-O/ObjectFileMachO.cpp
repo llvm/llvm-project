@@ -874,7 +874,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
       return nullptr;
     data_offset = 0;
   }
-  auto objfile_up = llvm::make_unique<ObjectFileMachO>(
+  auto objfile_up = std::make_unique<ObjectFileMachO>(
       module_sp, data_sp, data_offset, file, file_offset, length);
   if (!objfile_up || !objfile_up->ParseHeader())
     return nullptr;

@@ -1740,7 +1740,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     auto &MemOp = **I.memoperands_begin();
     if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-      LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+      // For now we just support s8 acquire loads to be able to compile stack
+      // protector code.
+      if (MemOp.getOrdering() == AtomicOrdering::Acquire &&
+          MemOp.getSize() == 1) {
+        I.setDesc(TII.get(AArch64::LDARB));
+        return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      }
+      LLVM_DEBUG(dbgs() << "Atomic load/store not fully supported yet\n");
       return false;
     }
     unsigned MemSizeInBits = MemOp.getSize() * 8;

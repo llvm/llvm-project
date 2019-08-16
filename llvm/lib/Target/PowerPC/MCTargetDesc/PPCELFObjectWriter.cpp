@@ -443,5 +443,5 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createPPCELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
-  return llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
+  return std::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
 }

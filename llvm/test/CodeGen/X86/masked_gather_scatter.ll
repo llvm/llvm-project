@@ -2460,45 +2460,86 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
   ret <8 x i32> %g
 }
 
+define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
+; KNL_64-LABEL: test_global_array_zeroinitializer_index:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; KNL_64-NEXT:    vmovdqa %ymm1, %ymm0
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: test_global_array_zeroinitializer_index:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; KNL_32-NEXT:    vmovdqa %ymm1, %ymm0
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: test_global_array_zeroinitializer_index:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; SKX_SMALL-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: test_global_array_zeroinitializer_index:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    movabsq $glob_array, %rax
+; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
+; SKX_LARGE-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: test_global_array_zeroinitializer_index:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; SKX_32-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX_32-NEXT:    retl
+  %p = getelementptr inbounds [16 x i32], [16 x i32]* @glob_array, <8 x i64> zeroinitializer, <8 x i64> %indxs
+  %g = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  ret <8 x i32> %g
+}
+
 define void @v1_scatter(<1 x i32>%a1, <1 x i32*> %ptr, <1 x i1> %mask) {
 ; KNL_64-LABEL: v1_scatter:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    testb $1, %dl
-; KNL_64-NEXT:    je .LBB43_2
+; KNL_64-NEXT:    je .LBB44_2
 ; KNL_64-NEXT:  # %bb.1: # %cond.store
 ; KNL_64-NEXT:    movl %edi, (%rsi)
-; KNL_64-NEXT:  .LBB43_2: # %else
+; KNL_64-NEXT:  .LBB44_2: # %else
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: v1_scatter:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; KNL_32-NEXT:    je .LBB43_2
+; KNL_32-NEXT:    je .LBB44_2
 ; KNL_32-NEXT:  # %bb.1: # %cond.store
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; KNL_32-NEXT:    movl %ecx, (%eax)
-; KNL_32-NEXT:  .LBB43_2: # %else
+; KNL_32-NEXT:  .LBB44_2: # %else
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: v1_scatter:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    testb $1, %dl
-; SKX-NEXT:    je .LBB43_2
+; SKX-NEXT:    je .LBB44_2
 ; SKX-NEXT:  # %bb.1: # %cond.store
 ; SKX-NEXT:    movl %edi, (%rsi)
-; SKX-NEXT:  .LBB43_2: # %else
+; SKX-NEXT:  .LBB44_2: # %else
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: v1_scatter:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; SKX_32-NEXT:    je .LBB43_2
+; SKX_32-NEXT:    je .LBB44_2
 ; SKX_32-NEXT:  # %bb.1: # %cond.store
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SKX_32-NEXT:    movl %ecx, (%eax)
-; SKX_32-NEXT:  .LBB43_2: # %else
+; SKX_32-NEXT:  .LBB44_2: # %else
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v1i32.v1p0i32(<1 x i32> %a1, <1 x i32*> %ptr, i32 4, <1 x i1> %mask)
   ret void

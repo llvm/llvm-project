@@ -127,7 +127,7 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
           BT_BreakJail.reset(new BuiltinBug(
               this, "Break out of jail", "No call of chdir(\"/\") immediately "
                                          "after chroot"));
-        C.emitReport(llvm::make_unique<BugReport>(
+        C.emitReport(std::make_unique<BugReport>(
             *BT_BreakJail, BT_BreakJail->getDescription(), N));
       }
 }

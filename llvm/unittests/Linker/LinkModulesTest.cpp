@@ -277,7 +277,7 @@ TEST_F(LinkModuleTest, MoveDistinctMDs) {
   EXPECT_EQ(M3, M4->getOperand(0));
 
   // Link into destination module.
-  auto Dst = llvm::make_unique<Module>("Linked", C);
+  auto Dst = std::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
   Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
   Linker::linkModules(*Dst, std::move(Src));
@@ -346,7 +346,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   ASSERT_TRUE(Bar->getFunction("llvm.memset.p0s_struct.rtx_def.0s.i32"));
 
   // Link two modules together.
-  auto Dst = llvm::make_unique<Module>("Linked", C);
+  auto Dst = std::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
   Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
   bool Failed = Linker::linkModules(*Foo, std::move(Bar));

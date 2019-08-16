@@ -102,8 +102,8 @@ bool UseAfterMoveFinder::find(Stmt *FunctionBody, const Expr *MovingCall,
     return false;
 
   Sequence =
-      llvm::make_unique<ExprSequence>(TheCFG.get(), FunctionBody, Context);
-  BlockMap = llvm::make_unique<StmtToBlockMap>(TheCFG.get(), Context);
+      std::make_unique<ExprSequence>(TheCFG.get(), FunctionBody, Context);
+  BlockMap = std::make_unique<StmtToBlockMap>(TheCFG.get(), Context);
   Visited.clear();
 
   const CFGBlock *Block = BlockMap->blockContainingStmt(MovingCall);

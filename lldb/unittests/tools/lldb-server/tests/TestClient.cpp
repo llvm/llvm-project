@@ -111,7 +111,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
 
   Socket *accept_socket;
   listen_socket.Accept(accept_socket);
-  auto Conn = llvm::make_unique<ConnectionFileDescriptor>(accept_socket);
+  auto Conn = std::make_unique<ConnectionFileDescriptor>(accept_socket);
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 
   if (Error E = Client->initializeConnection())

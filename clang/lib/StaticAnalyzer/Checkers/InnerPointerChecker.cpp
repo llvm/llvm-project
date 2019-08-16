@@ -261,7 +261,7 @@ namespace ento {
 namespace allocation_state {
 
 std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
-  return llvm::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
+  return std::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
 }
 
 const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym) {

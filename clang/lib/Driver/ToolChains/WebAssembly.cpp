@@ -89,7 +89,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Linker, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, Linker, CmdArgs, Inputs));
 }
 
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,

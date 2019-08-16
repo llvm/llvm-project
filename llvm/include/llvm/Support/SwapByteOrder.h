@@ -39,10 +39,9 @@ inline uint16_t SwapByteOrder_16(uint16_t value) {
 #endif
 }
 
-/// SwapByteOrder_32 - This function returns a byte-swapped representation of
-/// the 32-bit argument.
+/// This function returns a byte-swapped representation of the 32-bit argument.
 inline uint32_t SwapByteOrder_32(uint32_t value) {
-#if defined(__llvm__) || (LLVM_GNUC_PREREQ(4, 3, 0) && !defined(__ICC))
+#if defined(__llvm__) || (defined(__GNUC__) && !defined(__ICC))
   return __builtin_bswap32(value);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
   return _byteswap_ulong(value);
@@ -55,10 +54,9 @@ inline uint32_t SwapByteOrder_32(uint32_t value) {
 #endif
 }
 
-/// SwapByteOrder_64 - This function returns a byte-swapped representation of
-/// the 64-bit argument.
+/// This function returns a byte-swapped representation of the 64-bit argument.
 inline uint64_t SwapByteOrder_64(uint64_t value) {
-#if defined(__llvm__) || (LLVM_GNUC_PREREQ(4, 3, 0) && !defined(__ICC))
+#if defined(__llvm__) || (defined(__GNUC__) && !defined(__ICC))
   return __builtin_bswap64(value);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
   return _byteswap_uint64(value);

@@ -83,7 +83,7 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
   private:
     CanonicalIncludes *const Includes;
   };
-  return llvm::make_unique<PragmaCommentHandler>(Includes);
+  return std::make_unique<PragmaCommentHandler>(Includes);
 }
 
 void addSystemHeadersMapping(CanonicalIncludes *Includes,

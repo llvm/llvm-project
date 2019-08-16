@@ -135,7 +135,7 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
         reinterpret_cast<const uint8_t *>(HashBuffer.data()),
         calculateHashBufferSize());
     HashValueStream =
-        llvm::make_unique<BinaryByteStream>(Bytes, llvm::support::little);
+        std::make_unique<BinaryByteStream>(Bytes, llvm::support::little);
   }
   return Error::success();
 }

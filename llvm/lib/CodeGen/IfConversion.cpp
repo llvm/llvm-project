@@ -1200,7 +1200,7 @@ void IfConverter::AnalyzeBlock(
           //   \ /
           //  TailBB
           // Note TailBB can be empty.
-          Tokens.push_back(llvm::make_unique<IfcvtToken>(
+          Tokens.push_back(std::make_unique<IfcvtToken>(
               BBI, ICDiamond, TNeedSub | FNeedSub, Dups, Dups2,
               (bool) TrueBBICalc.ClobbersPred, (bool) FalseBBICalc.ClobbersPred));
           Enqueued = true;
@@ -1218,7 +1218,7 @@ void IfConverter::AnalyzeBlock(
           //        / \ /   \
           //  FalseBB TrueBB FalseBB
           //
-          Tokens.push_back(llvm::make_unique<IfcvtToken>(
+          Tokens.push_back(std::make_unique<IfcvtToken>(
               BBI, ICForkedDiamond, TNeedSub | FNeedSub, Dups, Dups2,
               (bool) TrueBBICalc.ClobbersPred, (bool) FalseBBICalc.ClobbersPred));
           Enqueued = true;
@@ -1238,7 +1238,7 @@ void IfConverter::AnalyzeBlock(
       //   |  /
       //   FBB
       Tokens.push_back(
-          llvm::make_unique<IfcvtToken>(BBI, ICTriangle, TNeedSub, Dups));
+          std::make_unique<IfcvtToken>(BBI, ICTriangle, TNeedSub, Dups));
       Enqueued = true;
     }
 
@@ -1247,7 +1247,7 @@ void IfConverter::AnalyzeBlock(
                            TrueBBI.ExtraCost2, Prediction) &&
         FeasibilityAnalysis(TrueBBI, BBI.BrCond, true, true)) {
       Tokens.push_back(
-          llvm::make_unique<IfcvtToken>(BBI, ICTriangleRev, TNeedSub, Dups));
+          std::make_unique<IfcvtToken>(BBI, ICTriangleRev, TNeedSub, Dups));
       Enqueued = true;
     }
 
@@ -1263,7 +1263,7 @@ void IfConverter::AnalyzeBlock(
       //   |
       //   FBB
       Tokens.push_back(
-          llvm::make_unique<IfcvtToken>(BBI, ICSimple, TNeedSub, Dups));
+          std::make_unique<IfcvtToken>(BBI, ICSimple, TNeedSub, Dups));
       Enqueued = true;
     }
 
@@ -1275,7 +1275,7 @@ void IfConverter::AnalyzeBlock(
                              FalseBBI.NonPredSize + FalseBBI.ExtraCost,
                              FalseBBI.ExtraCost2, Prediction.getCompl()) &&
           FeasibilityAnalysis(FalseBBI, RevCond, true)) {
-        Tokens.push_back(llvm::make_unique<IfcvtToken>(BBI, ICTriangleFalse,
+        Tokens.push_back(std::make_unique<IfcvtToken>(BBI, ICTriangleFalse,
                                                        FNeedSub, Dups));
         Enqueued = true;
       }
@@ -1287,7 +1287,7 @@ void IfConverter::AnalyzeBlock(
                            FalseBBI.ExtraCost2, Prediction.getCompl()) &&
         FeasibilityAnalysis(FalseBBI, RevCond, true, true)) {
         Tokens.push_back(
-            llvm::make_unique<IfcvtToken>(BBI, ICTriangleFRev, FNeedSub, Dups));
+            std::make_unique<IfcvtToken>(BBI, ICTriangleFRev, FNeedSub, Dups));
         Enqueued = true;
       }
 
@@ -1297,7 +1297,7 @@ void IfConverter::AnalyzeBlock(
                              FalseBBI.ExtraCost2, Prediction.getCompl()) &&
           FeasibilityAnalysis(FalseBBI, RevCond)) {
         Tokens.push_back(
-            llvm::make_unique<IfcvtToken>(BBI, ICSimpleFalse, FNeedSub, Dups));
+            std::make_unique<IfcvtToken>(BBI, ICSimpleFalse, FNeedSub, Dups));
         Enqueued = true;
       }
     }

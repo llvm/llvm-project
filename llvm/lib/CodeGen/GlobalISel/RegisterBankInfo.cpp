@@ -283,7 +283,7 @@ RegisterBankInfo::getPartialMapping(unsigned StartIdx, unsigned Length,
   ++NumPartialMappingsCreated;
 
   auto &PartMapping = MapOfPartialMappings[Hash];
-  PartMapping = llvm::make_unique<PartialMapping>(StartIdx, Length, RegBank);
+  PartMapping = std::make_unique<PartialMapping>(StartIdx, Length, RegBank);
   return *PartMapping;
 }
 
@@ -317,7 +317,7 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
   ++NumValueMappingsCreated;
 
   auto &ValMapping = MapOfValueMappings[Hash];
-  ValMapping = llvm::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
+  ValMapping = std::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
   return *ValMapping;
 }
 
@@ -341,7 +341,7 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
   // mapping, because we use the pointer of the ValueMapping
   // to hash and we expect them to uniquely identify an instance
   // of value mapping.
-  Res = llvm::make_unique<ValueMapping[]>(std::distance(Begin, End));
+  Res = std::make_unique<ValueMapping[]>(std::distance(Begin, End));
   unsigned Idx = 0;
   for (Iterator It = Begin; It != End; ++It, ++Idx) {
     const ValueMapping *ValMap = *It;
@@ -391,7 +391,7 @@ RegisterBankInfo::getInstructionMappingImpl(
   ++NumInstructionMappingsCreated;
 
   auto &InstrMapping = MapOfInstructionMappings[Hash];
-  InstrMapping = llvm::make_unique<InstructionMapping>(
+  InstrMapping = std::make_unique<InstructionMapping>(
       ID, Cost, OperandsMapping, NumOperands);
   return *InstrMapping;
 }

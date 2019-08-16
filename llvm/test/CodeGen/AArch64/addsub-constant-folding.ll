@@ -19,15 +19,15 @@ define i32 @add_const_add_const(i32 %arg) {
 define i32 @add_const_add_const_extrause(i32 %arg) {
 ; CHECK-LABEL: add_const_add_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    add w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    add w0, w19, #10 // =10
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = add i32 %arg, 8
   call void @use(i32 %t0)
@@ -96,15 +96,15 @@ define i32 @add_const_sub_const(i32 %arg) {
 define i32 @add_const_sub_const_extrause(i32 %arg) {
 ; CHECK-LABEL: add_const_sub_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    add w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    add w0, w19, #6 // =6
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = add i32 %arg, 8
   call void @use(i32 %t0)
@@ -174,16 +174,16 @@ define i32 @add_const_const_sub(i32 %arg) {
 define i32 @add_const_const_sub_extrause(i32 %arg) {
 ; CHECK-LABEL: add_const_const_sub_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    add w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov w8, #-6
 ; CHECK-NEXT:    sub w0, w8, w19
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = add i32 %arg, 8
   call void @use(i32 %t0)
@@ -252,15 +252,15 @@ define i32 @sub_const_add_const(i32 %arg) {
 define i32 @sub_const_add_const_extrause(i32 %arg) {
 ; CHECK-LABEL: sub_const_add_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    sub w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    sub w0, w19, #6 // =6
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %arg, 8
   call void @use(i32 %t0)
@@ -329,15 +329,15 @@ define i32 @sub_const_sub_const(i32 %arg) {
 define i32 @sub_const_sub_const_extrause(i32 %arg) {
 ; CHECK-LABEL: sub_const_sub_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    sub w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    sub w0, w19, #10 // =10
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %arg, 8
   call void @use(i32 %t0)
@@ -407,16 +407,16 @@ define i32 @sub_const_const_sub(i32 %arg) {
 define i32 @sub_const_const_sub_extrause(i32 %arg) {
 ; CHECK-LABEL: sub_const_const_sub_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    sub w0, w0, #8 // =8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov w8, #10
 ; CHECK-NEXT:    sub w0, w8, w19
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %arg, 8
   call void @use(i32 %t0)
@@ -486,17 +486,17 @@ define i32 @const_sub_add_const(i32 %arg) {
 define i32 @const_sub_add_const_extrause(i32 %arg) {
 ; CHECK-LABEL: const_sub_add_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w8, #8
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    sub w0, w8, w0
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov w8, #10
 ; CHECK-NEXT:    sub w0, w8, w19
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 8, %arg
   call void @use(i32 %t0)
@@ -566,17 +566,17 @@ define i32 @const_sub_sub_const(i32 %arg) {
 define i32 @const_sub_sub_const_extrause(i32 %arg) {
 ; CHECK-LABEL: const_sub_sub_const_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w8, #8
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    sub w0, w8, w0
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov w8, #6
 ; CHECK-NEXT:    sub w0, w8, w19
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 8, %arg
   call void @use(i32 %t0)
@@ -645,17 +645,17 @@ define i32 @const_sub_const_sub(i32 %arg) {
 define i32 @const_sub_const_sub_extrause(i32 %arg) {
 ; CHECK-LABEL: const_sub_const_sub_extrause:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x19, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w8, #8
 ; CHECK-NEXT:    sub w19, w8, w0
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    mov w8, #2
 ; CHECK-NEXT:    sub w0, w8, w19
-; CHECK-NEXT:    ldp x19, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %t0 = sub i32 8, %arg
   call void @use(i32 %t0)

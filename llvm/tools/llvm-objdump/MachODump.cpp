@@ -3131,7 +3131,7 @@ static void method_reference(struct DisassembleInfo *info,
     if (strcmp(*ReferenceName, "_objc_msgSend") == 0) {
       if (info->selector_name != nullptr) {
         if (info->class_name != nullptr) {
-          info->method = llvm::make_unique<char[]>(
+          info->method = std::make_unique<char[]>(
               5 + strlen(info->class_name) + strlen(info->selector_name));
           char *method = info->method.get();
           if (method != nullptr) {
@@ -3145,7 +3145,7 @@ static void method_reference(struct DisassembleInfo *info,
           }
         } else {
           info->method =
-              llvm::make_unique<char[]>(9 + strlen(info->selector_name));
+              std::make_unique<char[]>(9 + strlen(info->selector_name));
           char *method = info->method.get();
           if (method != nullptr) {
             if (Arch == Triple::x86_64)
@@ -3165,7 +3165,7 @@ static void method_reference(struct DisassembleInfo *info,
     } else if (strcmp(*ReferenceName, "_objc_msgSendSuper2") == 0) {
       if (info->selector_name != nullptr) {
         info->method =
-            llvm::make_unique<char[]>(17 + strlen(info->selector_name));
+            std::make_unique<char[]>(17 + strlen(info->selector_name));
         char *method = info->method.get();
         if (method != nullptr) {
           if (Arch == Triple::x86_64)
@@ -10411,7 +10411,7 @@ void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
 static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
                                                  struct DisassembleInfo *info) {
   if (info->bindtable == nullptr) {
-    info->bindtable = llvm::make_unique<SymbolAddressMap>();
+    info->bindtable = std::make_unique<SymbolAddressMap>();
     Error Err = Error::success();
     for (const object::MachOBindEntry &Entry : info->O->bindTable(Err)) {
       uint64_t Address = Entry.address();

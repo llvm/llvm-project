@@ -299,5 +299,5 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU) {
-  return llvm::make_unique<HexagonELFObjectWriter>(OSABI, CPU);
+  return std::make_unique<HexagonELFObjectWriter>(OSABI, CPU);
 }

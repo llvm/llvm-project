@@ -616,7 +616,7 @@ void AArch64A57FPLoadBalancing::scanInstruction(
     LLVM_DEBUG(dbgs() << "New chain started for register "
                       << printReg(DestReg, TRI) << " at " << *MI);
 
-    auto G = llvm::make_unique<Chain>(MI, Idx, getColor(DestReg));
+    auto G = std::make_unique<Chain>(MI, Idx, getColor(DestReg));
     ActiveChains[DestReg] = G.get();
     AllChains.push_back(std::move(G));
 
@@ -661,7 +661,7 @@ void AArch64A57FPLoadBalancing::scanInstruction(
 
     LLVM_DEBUG(dbgs() << "Creating new chain for dest register "
                       << printReg(DestReg, TRI) << "\n");
-    auto G = llvm::make_unique<Chain>(MI, Idx, getColor(DestReg));
+    auto G = std::make_unique<Chain>(MI, Idx, getColor(DestReg));
     ActiveChains[DestReg] = G.get();
     AllChains.push_back(std::move(G));
 

@@ -1313,11 +1313,11 @@ TEST(TypeMatching, PointerTypes) {
   //EXPECT_TRUE(matchAndVerifyResultTrue(
   //    "int* a;",
   //    pointerTypeLoc(pointeeLoc(typeLoc().bind("loc"))),
-  //    llvm::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
+  //    std::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
   //EXPECT_TRUE(matchAndVerifyResultTrue(
   //    "int* a;",
   //    pointerTypeLoc().bind("loc"),
-  //    llvm::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
+  //    std::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
   EXPECT_TRUE(matches(
     "int** a;",
     loc(pointerType(pointee(qualType())))));
@@ -1576,14 +1576,14 @@ public:
 TEST(IsEqualTo, MatchesNodesByIdentity) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "class X { class Y {}; };", recordDecl(hasName("::X::Y")).bind(""),
-    llvm::make_unique<VerifyAncestorHasChildIsEqual<CXXRecordDecl>>()));
+    std::make_unique<VerifyAncestorHasChildIsEqual<CXXRecordDecl>>()));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "void f() { if (true) if(true) {} }", ifStmt().bind(""),
-    llvm::make_unique<VerifyAncestorHasChildIsEqual<IfStmt>>()));
+    std::make_unique<VerifyAncestorHasChildIsEqual<IfStmt>>()));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "class X { class Y {} y; };",
     fieldDecl(hasName("y"), hasType(type().bind(""))).bind("decl"),
-    llvm::make_unique<VerifyAncestorHasChildIsEqual<Type>>()));
+    std::make_unique<VerifyAncestorHasChildIsEqual<Type>>()));
 }
 
 TEST(TypedefDeclMatcher, Match) {

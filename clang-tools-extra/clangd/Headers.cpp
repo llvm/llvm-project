@@ -112,7 +112,7 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
 std::unique_ptr<PPCallbacks>
 collectIncludeStructureCallback(const SourceManager &SM,
                                 IncludeStructure *Out) {
-  return llvm::make_unique<RecordHeaders>(SM, Out);
+  return std::make_unique<RecordHeaders>(SM, Out);
 }
 
 void IncludeStructure::recordInclude(llvm::StringRef IncludingName,

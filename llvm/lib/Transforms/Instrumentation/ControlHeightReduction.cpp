@@ -2070,7 +2070,7 @@ bool ControlHeightReductionLegacyPass::runOnFunction(Function &F) {
       getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE =
-      llvm::make_unique<OptimizationRemarkEmitter>(&F);
+      std::make_unique<OptimizationRemarkEmitter>(&F);
   return CHR(F, BFI, DT, PSI, RI, *OwnedORE.get()).run();
 }
 

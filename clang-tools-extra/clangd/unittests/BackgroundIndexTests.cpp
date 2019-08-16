@@ -74,7 +74,7 @@ public:
       return nullptr;
     }
     CacheHits++;
-    return llvm::make_unique<IndexFileIn>(std::move(*IndexFile));
+    return std::make_unique<IndexFileIn>(std::move(*IndexFile));
   }
 
   mutable llvm::StringSet<> AccessedPaths;
@@ -575,7 +575,7 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
 class BackgroundIndexRebuilderTest : public testing::Test {
 protected:
   BackgroundIndexRebuilderTest()
-      : Target(llvm::make_unique<MemIndex>()),
+      : Target(std::make_unique<MemIndex>()),
         Rebuilder(&Target, &Source, /*Threads=*/10) {
     // Prepare FileSymbols with TestSymbol in it, for checkRebuild.
     TestSymbol.ID = SymbolID("foo");
@@ -588,7 +588,7 @@ protected:
     TestSymbol.Name = VersionStorage.back();
     SymbolSlab::Builder SB;
     SB.insert(TestSymbol);
-    Source.update("", llvm::make_unique<SymbolSlab>(std::move(SB).build()),
+    Source.update("", std::make_unique<SymbolSlab>(std::move(SB).build()),
                   nullptr, nullptr, false);
     // Now maybe update the index.
     Action();

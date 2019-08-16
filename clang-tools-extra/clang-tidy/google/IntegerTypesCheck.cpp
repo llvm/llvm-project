@@ -68,7 +68,7 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
                                  callee(functionDecl(hasAttr(attr::Format)))))))
                          .bind("tl"),
                      this);
-  IdentTable = llvm::make_unique<IdentifierTable>(getLangOpts());
+  IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
 }
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {

@@ -1308,7 +1308,7 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TFI = MF.getSubtarget().getFrameLowering();
   TFI->determineCalleeSaves(MF, CalleeSavedRegs,
-                            make_unique<RegScavenger>().get());
+                            std::make_unique<RegScavenger>().get());
   LS.initialize(MF);
 
   bool Changed = ExtendRanges(MF);

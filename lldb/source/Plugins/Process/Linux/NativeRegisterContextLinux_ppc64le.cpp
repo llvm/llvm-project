@@ -118,7 +118,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc64le:
-    return llvm::make_unique<NativeRegisterContextLinux_ppc64le>(target_arch,
+    return std::make_unique<NativeRegisterContextLinux_ppc64le>(target_arch,
                                                                  native_thread);
   default:
     llvm_unreachable("have no register context for architecture");

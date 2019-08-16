@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -verify-machineinstrs  -amdgpu-s-branch-bits=4 < %s 2>&1 | FileCheck -check-prefix=FAIL %s
+; RUN: not llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs  -amdgpu-s-branch-bits=4 < %s 2>&1 | FileCheck -check-prefix=FAIL %s
 
 ; FIXME: This should be able to compile, but requires inserting an
 ; extra block to restore the scavenged register.
@@ -109,8 +109,6 @@ entry:
   %sgpr99 = tail call i32 asm sideeffect "s_mov_b32 s99, 0", "={s99}"() #0
   %sgpr100 = tail call i32 asm sideeffect "s_mov_b32 s100, 0", "={s100}"() #0
   %sgpr101 = tail call i32 asm sideeffect "s_mov_b32 s101, 0", "={s101}"() #0
-  %sgpr102 = tail call i32 asm sideeffect "s_mov_b32 s102, 0", "={s102}"() #0
-  %sgpr103 = tail call i32 asm sideeffect "s_mov_b32 s103, 0", "={s103}"() #0
   %vcc_lo = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_lo}"() #0
   %vcc_hi = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_hi}"() #0
   %cmp = icmp eq i32 %cnd, 0
@@ -228,8 +226,6 @@ bb3:
   tail call void asm sideeffect "; reg use $0", "{s99}"(i32 %sgpr99) #0
   tail call void asm sideeffect "; reg use $0", "{s100}"(i32 %sgpr100) #0
   tail call void asm sideeffect "; reg use $0", "{s101}"(i32 %sgpr101) #0
-  tail call void asm sideeffect "; reg use $0", "{s102}"(i32 %sgpr102) #0
-  tail call void asm sideeffect "; reg use $0", "{s103}"(i32 %sgpr103) #0
   tail call void asm sideeffect "; reg use $0", "{vcc_lo}"(i32 %vcc_lo) #0
   tail call void asm sideeffect "; reg use $0", "{vcc_hi}"(i32 %vcc_hi) #0
   ret void

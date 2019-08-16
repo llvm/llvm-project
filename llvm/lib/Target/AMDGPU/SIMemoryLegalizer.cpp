@@ -656,10 +656,10 @@ SICacheControl::SICacheControl(const GCNSubtarget &ST) {
 std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
   if (Generation <= AMDGPUSubtarget::SOUTHERN_ISLANDS)
-    return make_unique<SIGfx6CacheControl>(ST);
+    return std::make_unique<SIGfx6CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX10)
-    return make_unique<SIGfx7CacheControl>(ST);
-  return make_unique<SIGfx10CacheControl>(ST, ST.isCuModeEnabled());
+    return std::make_unique<SIGfx7CacheControl>(ST);
+  return std::make_unique<SIGfx10CacheControl>(ST, ST.isCuModeEnabled());
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(

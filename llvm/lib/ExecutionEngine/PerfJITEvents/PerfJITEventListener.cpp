@@ -203,7 +203,7 @@ PerfJITEventListener::PerfJITEventListener() : Pid(::getpid()) {
     return;
   }
 
-  Dumpstream = make_unique<raw_fd_ostream>(DumpFd, true);
+  Dumpstream = std::make_unique<raw_fd_ostream>(DumpFd, true);
 
   LLVMPerfJitHeader Header = {0};
   if (!FillMachine(Header))

@@ -351,13 +351,13 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
-    llvm::make_unique<LLVMLinkDiagnosticHandler>(), true);
+    std::make_unique<LLVMLinkDiagnosticHandler>(), true);
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
 
-  auto Composite = make_unique<Module>("llvm-link", Context);
+  auto Composite = std::make_unique<Module>("llvm-link", Context);
   Linker L(*Composite);
 
   unsigned Flags = Linker::Flags::None;

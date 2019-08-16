@@ -570,7 +570,7 @@ UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
   }
 
   userValues.push_back(
-      llvm::make_unique<UserValue>(Var, Expr, DL, allocator));
+      std::make_unique<UserValue>(Var, Expr, DL, allocator));
   UserValue *UV = userValues.back().get();
   Leader = UserValue::merge(Leader, UV);
   return UV;
@@ -666,7 +666,7 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
     }
   }
   if (!Found)
-    userLabels.push_back(llvm::make_unique<UserLabel>(Label, DL, Idx));
+    userLabels.push_back(std::make_unique<UserLabel>(Label, DL, Idx));
 
   return true;
 }

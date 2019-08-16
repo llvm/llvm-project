@@ -1662,9 +1662,9 @@ static bool annotateAllFunctions(
          F.getName().equals(ViewBlockFreqFuncName))) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
-          llvm::make_unique<BranchProbabilityInfo>(F, LI);
+          std::make_unique<BranchProbabilityInfo>(F, LI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
-          llvm::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
+          std::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
       if (PGOViewCounts == PGOVCT_Graph)
         NewBFI->view();
       else if (PGOViewCounts == PGOVCT_Text) {

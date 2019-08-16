@@ -336,7 +336,7 @@ bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
   if (shouldUseGPUDivergenceAnalysis(F)) {
     // run the new GPU divergence analysis
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    gpuDA = llvm::make_unique<GPUDivergenceAnalysis>(F, DT, PDT, LI, TTI);
+    gpuDA = std::make_unique<GPUDivergenceAnalysis>(F, DT, PDT, LI, TTI);
 
   } else {
     // run LLVM's existing DivergenceAnalysis

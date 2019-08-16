@@ -450,7 +450,7 @@ static void computeImportForFunction(
         } else if (PrintImportFailures) {
           assert(!FailureInfo &&
                  "Expected no FailureInfo for newly rejected candidate");
-          FailureInfo = llvm::make_unique<FunctionImporter::ImportFailureInfo>(
+          FailureInfo = std::make_unique<FunctionImporter::ImportFailureInfo>(
               VI, Edge.second.getHotness(), Reason, 1);
         }
         LLVM_DEBUG(

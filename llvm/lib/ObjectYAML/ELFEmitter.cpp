@@ -188,7 +188,7 @@ template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
   if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
     Doc.Sections.insert(
         Doc.Sections.begin(),
-        llvm::make_unique<ELFYAML::Section>(
+        std::make_unique<ELFYAML::Section>(
             ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
 
   std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
@@ -201,7 +201,7 @@ template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
     if (DocSections.count(SecName))
       continue;
 
-    std::unique_ptr<ELFYAML::Section> Sec = llvm::make_unique<ELFYAML::Section>(
+    std::unique_ptr<ELFYAML::Section> Sec = std::make_unique<ELFYAML::Section>(
         ELFYAML::Section::SectionKind::RawContent, true /*IsImplicit*/);
     Sec->Name = SecName;
     Doc.Sections.push_back(std::move(Sec));

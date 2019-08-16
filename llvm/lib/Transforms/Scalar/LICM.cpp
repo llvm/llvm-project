@@ -346,7 +346,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
     CurAST = collectAliasInfoForLoop(L, LI, AA);
   } else {
     LLVM_DEBUG(dbgs() << "LICM: Using MemorySSA.\n");
-    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
     unsigned AccessCapCount = 0;
     for (auto *BB : L->getBlocks()) {
@@ -2168,7 +2168,7 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
     LoopToAliasSetMap.erase(MapI);
   }
   if (!CurAST)
-    CurAST = make_unique<AliasSetTracker>(*AA);
+    CurAST = std::make_unique<AliasSetTracker>(*AA);
 
   // Add everything from the sub loops that are no longer directly available.
   for (Loop *InnerL : RecomputeLoops)
@@ -2187,7 +2187,7 @@ std::unique_ptr<AliasSetTracker>
 LoopInvariantCodeMotion::collectAliasInfoForLoopWithMSSA(
     Loop *L, AliasAnalysis *AA, MemorySSAUpdater *MSSAU) {
   auto *MSSA = MSSAU->getMemorySSA();
-  auto CurAST = make_unique<AliasSetTracker>(*AA, MSSA, L);
+  auto CurAST = std::make_unique<AliasSetTracker>(*AA, MSSA, L);
   CurAST->addAllInstructionsInLoopUsingMSSA();
   return CurAST;
 }

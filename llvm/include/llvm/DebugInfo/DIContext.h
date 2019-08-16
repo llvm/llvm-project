@@ -28,6 +28,10 @@ namespace llvm {
 
 /// A format-neutral container for source line information.
 struct DILineInfo {
+  // DILineInfo contains "<invalid>" for function/filename it cannot fetch.
+  static constexpr const char *const BadString = "<invalid>";
+  // Use "??" instead of "<invalid>" to make our output closer to addr2line.
+  static constexpr const char *const Addr2LineBadString = "??";
   std::string FileName;
   std::string FunctionName;
   Optional<StringRef> Source;
@@ -38,7 +42,7 @@ struct DILineInfo {
   // DWARF-specific.
   uint32_t Discriminator = 0;
 
-  DILineInfo() : FileName("<invalid>"), FunctionName("<invalid>") {}
+  DILineInfo() : FileName(BadString), FunctionName(BadString) {}
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&
@@ -61,9 +65,9 @@ struct DILineInfo {
 
   void dump(raw_ostream &OS) {
     OS << "Line info: ";
-    if (FileName != "<invalid>")
+    if (FileName != BadString)
       OS << "file '" << FileName << "', ";
-    if (FunctionName != "<invalid>")
+    if (FunctionName != BadString)
       OS << "function '" << FunctionName << "', ";
     OS << "line " << Line << ", ";
     OS << "column " << Column << ", ";
@@ -109,7 +113,7 @@ struct DIGlobal {
   uint64_t Start = 0;
   uint64_t Size = 0;
 
-  DIGlobal() : Name("<invalid>") {}
+  DIGlobal() : Name(DILineInfo::BadString) {}
 };
 
 struct DILocal {
@@ -289,7 +293,7 @@ public:
   LoadedObjectInfoHelper(Ts &&... Args) : Base(std::forward<Ts>(Args)...) {}
 
   std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
-    return llvm::make_unique<Derived>(static_cast<const Derived &>(*this));
+    return std::make_unique<Derived>(static_cast<const Derived &>(*this));
   }
 };
 

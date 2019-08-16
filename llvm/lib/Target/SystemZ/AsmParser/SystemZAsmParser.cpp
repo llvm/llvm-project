@@ -155,11 +155,11 @@ public:
   // Create particular kinds of operand.
   static std::unique_ptr<SystemZOperand> createInvalid(SMLoc StartLoc,
                                                        SMLoc EndLoc) {
-    return make_unique<SystemZOperand>(KindInvalid, StartLoc, EndLoc);
+    return std::make_unique<SystemZOperand>(KindInvalid, StartLoc, EndLoc);
   }
 
   static std::unique_ptr<SystemZOperand> createToken(StringRef Str, SMLoc Loc) {
-    auto Op = make_unique<SystemZOperand>(KindToken, Loc, Loc);
+    auto Op = std::make_unique<SystemZOperand>(KindToken, Loc, Loc);
     Op->Token.Data = Str.data();
     Op->Token.Length = Str.size();
     return Op;
@@ -167,7 +167,7 @@ public:
 
   static std::unique_ptr<SystemZOperand>
   createReg(RegisterKind Kind, unsigned Num, SMLoc StartLoc, SMLoc EndLoc) {
-    auto Op = make_unique<SystemZOperand>(KindReg, StartLoc, EndLoc);
+    auto Op = std::make_unique<SystemZOperand>(KindReg, StartLoc, EndLoc);
     Op->Reg.Kind = Kind;
     Op->Reg.Num = Num;
     return Op;
@@ -175,7 +175,7 @@ public:
 
   static std::unique_ptr<SystemZOperand>
   createImm(const MCExpr *Expr, SMLoc StartLoc, SMLoc EndLoc) {
-    auto Op = make_unique<SystemZOperand>(KindImm, StartLoc, EndLoc);
+    auto Op = std::make_unique<SystemZOperand>(KindImm, StartLoc, EndLoc);
     Op->Imm = Expr;
     return Op;
   }
@@ -184,7 +184,7 @@ public:
   createMem(MemoryKind MemKind, RegisterKind RegKind, unsigned Base,
             const MCExpr *Disp, unsigned Index, const MCExpr *LengthImm,
             unsigned LengthReg, SMLoc StartLoc, SMLoc EndLoc) {
-    auto Op = make_unique<SystemZOperand>(KindMem, StartLoc, EndLoc);
+    auto Op = std::make_unique<SystemZOperand>(KindMem, StartLoc, EndLoc);
     Op->Mem.MemKind = MemKind;
     Op->Mem.RegKind = RegKind;
     Op->Mem.Base = Base;
@@ -200,7 +200,7 @@ public:
   static std::unique_ptr<SystemZOperand>
   createImmTLS(const MCExpr *Imm, const MCExpr *Sym,
                SMLoc StartLoc, SMLoc EndLoc) {
-    auto Op = make_unique<SystemZOperand>(KindImmTLS, StartLoc, EndLoc);
+    auto Op = std::make_unique<SystemZOperand>(KindImmTLS, StartLoc, EndLoc);
     Op->ImmTLS.Imm = Imm;
     Op->ImmTLS.Sym = Sym;
     return Op;

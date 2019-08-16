@@ -154,21 +154,21 @@ private:
   template <typename Response>
   void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
     // Wrap the callback with LSP conversion and error-handling.
-    auto HandleReply = [](decltype(CB) CB,
-                          llvm::Expected<llvm::json::Value> RawResponse) {
-      Response Rsp;
-      if (!RawResponse) {
-        CB(RawResponse.takeError());
-      } else if (fromJSON(*RawResponse, Rsp)) {
-        CB(std::move(Rsp));
-      } else {
-        elog("Failed to decode {0} response", *RawResponse);
-        CB(llvm::make_error<LSPError>("failed to decode reponse",
-                                      ErrorCode::InvalidParams));
-      }
-    };
-    callRaw(Method, std::move(Params),
-            Bind(std::move(HandleReply), std::move(CB)));
+    auto HandleReply =
+        [CB = std::move(CB)](
+            llvm::Expected<llvm::json::Value> RawResponse) mutable {
+          Response Rsp;
+          if (!RawResponse) {
+            CB(RawResponse.takeError());
+          } else if (fromJSON(*RawResponse, Rsp)) {
+            CB(std::move(Rsp));
+          } else {
+            elog("Failed to decode {0} response", *RawResponse);
+            CB(llvm::make_error<LSPError>("failed to decode reponse",
+                                          ErrorCode::InvalidParams));
+          }
+        };
+    callRaw(Method, std::move(Params), std::move(HandleReply));
   }
   void callRaw(StringRef Method, llvm::json::Value Params,
                Callback<llvm::json::Value> CB);

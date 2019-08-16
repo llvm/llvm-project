@@ -173,7 +173,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   }
 
   std::unique_ptr<Matcher> TheMatcher =
-    llvm::make_unique<ScopeMatcher>(PatternMatchers);
+    std::make_unique<ScopeMatcher>(PatternMatchers);
 
   OptimizeMatcher(TheMatcher, CGP);
   //Matcher->dump();

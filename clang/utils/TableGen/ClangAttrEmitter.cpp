@@ -1255,51 +1255,51 @@ createArgument(const Record &Arg, StringRef Attr,
   llvm::StringRef ArgName = Search->getName();
 
   if (ArgName == "AlignedArgument")
-    Ptr = llvm::make_unique<AlignedArgument>(Arg, Attr);
+    Ptr = std::make_unique<AlignedArgument>(Arg, Attr);
   else if (ArgName == "EnumArgument")
-    Ptr = llvm::make_unique<EnumArgument>(Arg, Attr);
+    Ptr = std::make_unique<EnumArgument>(Arg, Attr);
   else if (ArgName == "ExprArgument")
-    Ptr = llvm::make_unique<ExprArgument>(Arg, Attr);
+    Ptr = std::make_unique<ExprArgument>(Arg, Attr);
   else if (ArgName == "FunctionArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "FunctionDecl *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "FunctionDecl *");
   else if (ArgName == "NamedArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "NamedDecl *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "NamedDecl *");
   else if (ArgName == "IdentifierArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "IdentifierInfo *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "IdentifierInfo *");
   else if (ArgName == "DefaultBoolArgument")
-    Ptr = llvm::make_unique<DefaultSimpleArgument>(
+    Ptr = std::make_unique<DefaultSimpleArgument>(
         Arg, Attr, "bool", Arg.getValueAsBit("Default"));
   else if (ArgName == "BoolArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "bool");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "bool");
   else if (ArgName == "DefaultIntArgument")
-    Ptr = llvm::make_unique<DefaultSimpleArgument>(
+    Ptr = std::make_unique<DefaultSimpleArgument>(
         Arg, Attr, "int", Arg.getValueAsInt("Default"));
   else if (ArgName == "IntArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "int");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "int");
   else if (ArgName == "StringArgument")
-    Ptr = llvm::make_unique<StringArgument>(Arg, Attr);
+    Ptr = std::make_unique<StringArgument>(Arg, Attr);
   else if (ArgName == "TypeArgument")
-    Ptr = llvm::make_unique<TypeArgument>(Arg, Attr);
+    Ptr = std::make_unique<TypeArgument>(Arg, Attr);
   else if (ArgName == "UnsignedArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "unsigned");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "unsigned");
   else if (ArgName == "VariadicUnsignedArgument")
-    Ptr = llvm::make_unique<VariadicArgument>(Arg, Attr, "unsigned");
+    Ptr = std::make_unique<VariadicArgument>(Arg, Attr, "unsigned");
   else if (ArgName == "VariadicStringArgument")
-    Ptr = llvm::make_unique<VariadicStringArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicStringArgument>(Arg, Attr);
   else if (ArgName == "VariadicEnumArgument")
-    Ptr = llvm::make_unique<VariadicEnumArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicEnumArgument>(Arg, Attr);
   else if (ArgName == "VariadicExprArgument")
-    Ptr = llvm::make_unique<VariadicExprArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicExprArgument>(Arg, Attr);
   else if (ArgName == "VariadicParamIdxArgument")
-    Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicParamIdxArgument>(Arg, Attr);
   else if (ArgName == "VariadicParamOrParamIdxArgument")
-    Ptr = llvm::make_unique<VariadicParamOrParamIdxArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicParamOrParamIdxArgument>(Arg, Attr);
   else if (ArgName == "ParamIdxArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VariadicIdentifierArgument")
-    Ptr = llvm::make_unique<VariadicIdentifierArgument>(Arg, Attr);
+    Ptr = std::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
-    Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
+    Ptr = std::make_unique<VersionArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.

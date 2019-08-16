@@ -74,7 +74,7 @@ void MacroUsageCheck::registerPPCallbacks(const SourceManager &SM,
   if (!getLangOpts().CPlusPlus11)
     return;
 
-  PP->addPPCallbacks(llvm::make_unique<MacroUsageCallbacks>(
+  PP->addPPCallbacks(std::make_unique<MacroUsageCallbacks>(
       this, SM, AllowedRegexp, CheckCapsOnly, IgnoreCommandLineMacros));
 }
 

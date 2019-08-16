@@ -66,7 +66,7 @@ void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
 
 void LambdaFunctionNameCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(llvm::make_unique<MacroExpansionsWithFileAndLine>(
+  PP->addPPCallbacks(std::make_unique<MacroExpansionsWithFileAndLine>(
       &SuppressMacroExpansions));
 }
 

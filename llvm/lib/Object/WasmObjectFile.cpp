@@ -56,7 +56,7 @@ LLVM_DUMP_METHOD void WasmSymbol::dump() const { print(dbgs()); }
 Expected<std::unique_ptr<WasmObjectFile>>
 ObjectFile::createWasmObjectFile(MemoryBufferRef Buffer) {
   Error Err = Error::success();
-  auto ObjectFile = llvm::make_unique<WasmObjectFile>(Buffer, Err);
+  auto ObjectFile = std::make_unique<WasmObjectFile>(Buffer, Err);
   if (Err)
     return std::move(Err);
 

@@ -171,7 +171,7 @@ std::unique_ptr<Module> llvm::parseModule(
 
   if (Size <= 1)
     // We get bogus data given an empty corpus - just create a new module.
-    return llvm::make_unique<Module>("M", Context);
+    return std::make_unique<Module>("M", Context);
 
   auto Buffer = MemoryBuffer::getMemBuffer(
       StringRef(reinterpret_cast<const char *>(Data), Size), "Fuzzer input",

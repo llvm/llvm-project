@@ -696,7 +696,7 @@ void GCOVProfiler::emitProfileNotes() {
         ++It;
       EntryBlock.splitBasicBlock(It);
 
-      Funcs.push_back(make_unique<GCOVFunction>(SP, &F, &out, FunctionIdent++,
+      Funcs.push_back(std::make_unique<GCOVFunction>(SP, &F, &out, FunctionIdent++,
                                                 Options.UseCfgChecksum,
                                                 Options.ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();

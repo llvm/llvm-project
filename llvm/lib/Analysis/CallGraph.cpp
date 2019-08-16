@@ -29,7 +29,7 @@ using namespace llvm;
 
 CallGraph::CallGraph(Module &M)
     : M(M), ExternalCallingNode(getOrInsertFunction(nullptr)),
-      CallsExternalNode(llvm::make_unique<CallGraphNode>(nullptr)) {
+      CallsExternalNode(std::make_unique<CallGraphNode>(nullptr)) {
   // Add every function to the call graph.
   for (Function &F : M)
     addToCallGraph(&F);
@@ -150,7 +150,7 @@ CallGraphNode *CallGraph::getOrInsertFunction(const Function *F) {
     return CGN.get();
 
   assert((!F || F->getParent() == &M) && "Function not in current module!");
-  CGN = llvm::make_unique<CallGraphNode>(const_cast<Function *>(F));
+  CGN = std::make_unique<CallGraphNode>(const_cast<Function *>(F));
   return CGN.get();
 }
 

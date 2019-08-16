@@ -78,7 +78,7 @@ private:
 
 public:
   TestDiagnosticConsumer()
-      : Passthrough(llvm::make_unique<TextDiagnosticBuffer>()) {}
+      : Passthrough(std::make_unique<TextDiagnosticBuffer>()) {}
 
   virtual void BeginSourceFile(const LangOptions &LangOpts,
                                const Preprocessor *PP = nullptr) override {
@@ -158,12 +158,12 @@ private:
 };
 
 std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
-  auto Ins = llvm::make_unique<CompilerInstance>();
-  auto DC = llvm::make_unique<TestDiagnosticConsumer>();
+  auto Ins = std::make_unique<CompilerInstance>();
+  auto DC = std::make_unique<TestDiagnosticConsumer>();
   const bool ShouldOwnClient = true;
   Ins->createDiagnostics(DC.release(), ShouldOwnClient);
 
-  auto Inv = llvm::make_unique<CompilerInvocation>();
+  auto Inv = std::make_unique<CompilerInvocation>();
 
   std::vector<const char *> ClangArgv(ClangArgs.size());
   std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
@@ -215,7 +215,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
 
 std::unique_ptr<ASTContext>
 BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
-  auto AST = llvm::make_unique<ASTContext>(
+  auto AST = std::make_unique<ASTContext>(
       CI.getLangOpts(), CI.getSourceManager(),
       CI.getPreprocessor().getIdentifierTable(), ST, BC);
   AST->InitBuiltinTypes(CI.getTarget());
@@ -267,15 +267,15 @@ void AddExternalSource(CIAndOrigins &CI,
   for (CIAndOrigins &Import : Imports)
     Sources.push_back({Import.getASTContext(), Import.getFileManager(),
                        Import.getOriginMap()});
-  auto ES = llvm::make_unique<ExternalASTMerger>(Target, Sources);
+  auto ES = std::make_unique<ExternalASTMerger>(Target, Sources);
   CI.getASTContext().setExternalSource(ES.release());
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage();
 }
 
 CIAndOrigins BuildIndirect(CIAndOrigins &CI) {
   CIAndOrigins IndirectCI{init_convenience::BuildCompilerInstance()};
-  auto ST = llvm::make_unique<SelectorTable>();
-  auto BC = llvm::make_unique<Builtin::Context>();
+  auto ST = std::make_unique<SelectorTable>();
+  auto BC = std::make_unique<Builtin::Context>();
   std::unique_ptr<ASTContext> AST = init_convenience::BuildASTContext(
       IndirectCI.getCompilerInstance(), *ST, *BC);
   IndirectCI.getCompilerInstance().setASTContext(AST.release());
@@ -300,8 +300,8 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
                                    llvm::MutableArrayRef<CIAndOrigins> Imports,
                                    bool ShouldDumpAST, bool ShouldDumpIR) {
   CIAndOrigins CI{init_convenience::BuildCompilerInstance()};
-  auto ST = llvm::make_unique<SelectorTable>();
-  auto BC = llvm::make_unique<Builtin::Context>();
+  auto ST = std::make_unique<SelectorTable>();
+  auto BC = std::make_unique<Builtin::Context>();
   std::unique_ptr<ASTContext> AST =
       init_convenience::BuildASTContext(CI.getCompilerInstance(), *ST, *BC);
   CI.getCompilerInstance().setASTContext(AST.release());
@@ -310,7 +310,7 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
 
   std::vector<std::unique_ptr<ASTConsumer>> ASTConsumers;
 
-  auto LLVMCtx = llvm::make_unique<llvm::LLVMContext>();
+  auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   ASTConsumers.push_back(
       init_convenience::BuildCodeGen(CI.getCompilerInstance(), *LLVMCtx));
   auto &CG = *static_cast<CodeGenerator *>(ASTConsumers.back().get());

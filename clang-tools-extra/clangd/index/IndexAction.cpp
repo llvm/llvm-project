@@ -136,7 +136,7 @@ public:
     addSystemHeadersMapping(Includes.get(), CI.getLangOpts());
     if (IncludeGraphCallback != nullptr)
       CI.getPreprocessor().addPPCallbacks(
-          llvm::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
+          std::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
     return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
   }
 
@@ -199,9 +199,9 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
     Opts.RefFilter = RefKind::All;
     Opts.RefsInHeaders = true;
   }
-  auto Includes = llvm::make_unique<CanonicalIncludes>();
+  auto Includes = std::make_unique<CanonicalIncludes>();
   Opts.Includes = Includes.get();
-  return llvm::make_unique<IndexAction>(
+  return std::make_unique<IndexAction>(
       std::make_shared<SymbolCollector>(std::move(Opts)), std::move(Includes),
       IndexOpts, SymbolsCallback, RefsCallback, RelationsCallback,
       IncludeGraphCallback);

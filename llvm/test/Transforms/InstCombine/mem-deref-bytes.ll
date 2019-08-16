@@ -55,9 +55,18 @@ define i32 @memcmp_const_size_update_deref4(i8* nocapture readonly %d, i8* nocap
   ret i32 %call
 }
 
-define i32 @memcmp_const_size_update_deref5(i8* nocapture readonly %d, i8* nocapture readonly %s) {
+define i32 @memcmp_const_size_update_deref5(i8* nocapture readonly %d, i8* nocapture readonly %s) "null-pointer-is-valid"="false" {
 ; CHECK-LABEL: @memcmp_const_size_update_deref5(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* dereferenceable(40) [[D:%.*]], i8* dereferenceable(16) [[S:%.*]], i64 16)
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = tail call i32 @memcmp(i8* dereferenceable_or_null(40) %d, i8* %s, i64 16)
+  ret i32 %call
+}
+
+define i32 @memcmp_const_size_update_deref6(i8* nocapture readonly %d, i8* nocapture readonly %s) "null-pointer-is-valid"="true" {
+; CHECK-LABEL: @memcmp_const_size_update_deref6(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* dereferenceable(16) dereferenceable_or_null(40) [[D:%.*]], i8* dereferenceable(16) [[S:%.*]], i64 16)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = tail call i32 @memcmp(i8* dereferenceable_or_null(40) %d, i8* %s, i64 16)

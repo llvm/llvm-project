@@ -139,7 +139,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
 
     std::unique_ptr<MCAsmBackend> MAB(
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
-    auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
+    auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
         Context, std::move(FOut), Options.MCOptions.AsmVerbose,
         Options.MCOptions.MCUseDwarfDirectory, InstPrinter, std::move(MCE),

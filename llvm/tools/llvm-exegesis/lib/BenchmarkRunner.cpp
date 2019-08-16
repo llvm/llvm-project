@@ -29,7 +29,7 @@ BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
                                  InstructionBenchmark::ModeE Mode)
-    : State(State), Mode(Mode), Scratch(llvm::make_unique<ScratchSpace>()) {}
+    : State(State), Mode(Mode), Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 

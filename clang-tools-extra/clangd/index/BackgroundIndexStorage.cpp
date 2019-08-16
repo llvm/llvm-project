@@ -91,7 +91,7 @@ public:
     if (!Buffer)
       return nullptr;
     if (auto I = readIndexFile(Buffer->get()->getBuffer()))
-      return llvm::make_unique<IndexFileIn>(std::move(*I));
+      return std::make_unique<IndexFileIn>(std::move(*I));
     else
       elog("Error while reading shard {0}: {1}", ShardIdentifier,
            I.takeError());
@@ -128,7 +128,7 @@ class DiskBackedIndexStorageManager {
 public:
   DiskBackedIndexStorageManager(
       std::function<llvm::Optional<ProjectInfo>(PathRef)> GetProjectInfo)
-      : IndexStorageMapMu(llvm::make_unique<std::mutex>()),
+      : IndexStorageMapMu(std::make_unique<std::mutex>()),
         GetProjectInfo(std::move(GetProjectInfo)) {
     llvm::SmallString<128> HomeDir;
     llvm::sys::path::home_directory(HomeDir);
@@ -151,9 +151,9 @@ private:
   std::unique_ptr<BackgroundIndexStorage> create(PathRef CDBDirectory) {
     if (CDBDirectory.empty()) {
       elog("Tried to create storage for empty directory!");
-      return llvm::make_unique<NullStorage>();
+      return std::make_unique<NullStorage>();
     }
-    return llvm::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
   }
 
   Path HomeDir;

@@ -144,7 +144,7 @@ AtomicScopeModel::create(AtomicScopeModelKind K) {
   case AtomicScopeModelKind::None:
     return std::unique_ptr<AtomicScopeModel>{};
   case AtomicScopeModelKind::OpenCL:
-    return llvm::make_unique<AtomicScopeOpenCLModel>();
+    return std::make_unique<AtomicScopeOpenCLModel>();
   }
   llvm_unreachable("Invalid atomic scope model kind");
 }

@@ -240,7 +240,7 @@ static bool containsUnconditionalCallSafepoint(Loop *L, BasicBlock *Header,
 static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
                                     BasicBlock *Pred) {
   // A conservative bound on the loop as a whole.
-  const SCEV *MaxTrips = SE->getMaxBackedgeTakenCount(L);
+  const SCEV *MaxTrips = SE->getConstantMaxBackedgeTakenCount(L);
   if (MaxTrips != SE->getCouldNotCompute() &&
       SE->getUnsignedRange(MaxTrips).getUnsignedMax().isIntN(
           CountedLoopTripWidth))

@@ -186,7 +186,7 @@ void DirectoryWatcherLinux::InotifyPollingLoop() {
   struct Buffer {
     alignas(struct inotify_event) char buffer[EventBufferLength];
   };
-  auto ManagedBuffer = llvm::make_unique<Buffer>();
+  auto ManagedBuffer = std::make_unique<Buffer>();
   char *const Buf = ManagedBuffer->buffer;
 
   const int EpollFD = epoll_create1(EPOLL_CLOEXEC);
@@ -354,7 +354,7 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
         std::string("SemaphorePipe::create() error: ") + strerror(errno),
         llvm::inconvertibleErrorCode());
 
-  return llvm::make_unique<DirectoryWatcherLinux>(
+  return std::make_unique<DirectoryWatcherLinux>(
       Path, Receiver, WaitForInitialSync, InotifyFD, InotifyWD,
       std::move(*InotifyPollingStopper));
 }

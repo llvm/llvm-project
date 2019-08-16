@@ -410,7 +410,7 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
   // The very first one shall always be the main thread.
   assert(m_threads.empty());
-  m_threads.push_back(llvm::make_unique<NativeThreadWindows>(
+  m_threads.push_back(std::make_unique<NativeThreadWindows>(
       *this, m_session_data->m_debugger->GetMainThread()));
 }
 
@@ -514,7 +514,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
   llvm::sys::ScopedLock lock(m_mutex);
   m_threads.push_back(
-      llvm::make_unique<NativeThreadWindows>(*this, new_thread));
+      std::make_unique<NativeThreadWindows>(*this, new_thread));
 }
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,

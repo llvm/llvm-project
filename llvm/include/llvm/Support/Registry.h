@@ -115,7 +115,7 @@ namespace llvm {
       entry Entry;
       node Node;
 
-      static std::unique_ptr<T> CtorFn() { return make_unique<V>(); }
+      static std::unique_ptr<T> CtorFn() { return std::make_unique<V>(); }
 
     public:
       Add(StringRef Name, StringRef Desc)

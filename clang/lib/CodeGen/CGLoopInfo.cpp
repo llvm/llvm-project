@@ -253,12 +253,18 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
   // Setting vectorize.predicate
-  if (Attrs.VectorizePredicateEnable != LoopAttributes::Unspecified) {
+  bool IsVectorPredicateEnabled = false;
+  if (Attrs.VectorizePredicateEnable != LoopAttributes::Unspecified &&
+      Attrs.VectorizeEnable != LoopAttributes::Disable &&
+      Attrs.VectorizeWidth < 1) {
+
+    IsVectorPredicateEnabled =
+        (Attrs.VectorizePredicateEnable == LoopAttributes::Enable);
+
     Metadata *Vals[] = {
         MDString::get(Ctx, "llvm.loop.vectorize.predicate.enable"),
-        ConstantAsMetadata::get(ConstantInt::get(
-            llvm::Type::getInt1Ty(Ctx),
-            (Attrs.VectorizePredicateEnable == LoopAttributes::Enable)))};
+        ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt1Ty(Ctx),
+                                                 IsVectorPredicateEnabled))};
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
@@ -281,12 +287,15 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   }
 
   // Setting vectorize.enable
-  if (Attrs.VectorizeEnable != LoopAttributes::Unspecified) {
+  if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
+      IsVectorPredicateEnabled) {
     Metadata *Vals[] = {
         MDString::get(Ctx, "llvm.loop.vectorize.enable"),
         ConstantAsMetadata::get(ConstantInt::get(
             llvm::Type::getInt1Ty(Ctx),
-            (Attrs.VectorizeEnable == LoopAttributes::Enable)))};
+            IsVectorPredicateEnabled
+                ? true
+                : (Attrs.VectorizeEnable == LoopAttributes::Enable)))};
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 

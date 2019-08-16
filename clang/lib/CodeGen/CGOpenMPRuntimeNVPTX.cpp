@@ -2030,7 +2030,7 @@ llvm::Function *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
         auto I = Rt.FunctionGlobalizedDecls.try_emplace(CGF.CurFn).first;
         I->getSecond().GlobalRecord = GlobalizedRD;
         I->getSecond().MappedParams =
-            llvm::make_unique<CodeGenFunction::OMPMapVars>();
+            std::make_unique<CodeGenFunction::OMPMapVars>();
         DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
         for (const auto &Pair : MappedDeclsFields) {
           assert(Pair.getFirst()->isCanonicalDecl() &&
@@ -4637,7 +4637,7 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
     return;
   auto I = FunctionGlobalizedDecls.try_emplace(CGF.CurFn).first;
   I->getSecond().MappedParams =
-      llvm::make_unique<CodeGenFunction::OMPMapVars>();
+      std::make_unique<CodeGenFunction::OMPMapVars>();
   I->getSecond().GlobalRecord = GlobalizedVarsRecord;
   I->getSecond().EscapedParameters.insert(
       VarChecker.getEscapedParameters().begin(),

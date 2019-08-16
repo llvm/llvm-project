@@ -63,7 +63,7 @@ private:
 
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbolTypeFunctionSig::getArguments() const {
-  return llvm::make_unique<FunctionArgEnumerator>(Session, *this);
+  return std::make_unique<FunctionArgEnumerator>(Session, *this);
 }
 
 void PDBSymbolTypeFunctionSig::dump(PDBSymDumper &Dumper) const {

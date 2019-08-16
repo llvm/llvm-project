@@ -176,7 +176,7 @@ std::unique_ptr<ScheduleDAGMutation>
 llvm::createMacroFusionDAGMutation(
      ShouldSchedulePredTy shouldScheduleAdjacent) {
   if(EnableMacroFusion)
-    return llvm::make_unique<MacroFusion>(shouldScheduleAdjacent, true);
+    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, true);
   return nullptr;
 }
 
@@ -184,6 +184,6 @@ std::unique_ptr<ScheduleDAGMutation>
 llvm::createBranchMacroFusionDAGMutation(
      ShouldSchedulePredTy shouldScheduleAdjacent) {
   if(EnableMacroFusion)
-    return llvm::make_unique<MacroFusion>(shouldScheduleAdjacent, false);
+    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, false);
   return nullptr;
 }

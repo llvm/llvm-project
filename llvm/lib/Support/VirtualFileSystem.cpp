@@ -349,7 +349,7 @@ IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
 }
 
 std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
-  return llvm::make_unique<RealFileSystem>(false);
+  return std::make_unique<RealFileSystem>(false);
 }
 
 namespace {
@@ -754,7 +754,7 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
           ResolvedUser, ResolvedGroup, 0, sys::fs::file_type::directory_file,
           NewDirectoryPerms);
       Dir = cast<detail::InMemoryDirectory>(Dir->addChild(
-          Name, llvm::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
+          Name, std::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
     }
 
@@ -1209,7 +1209,7 @@ class llvm::vfs::RedirectingFileSystemParser {
 
     // ... or create a new one
     std::unique_ptr<RedirectingFileSystem::Entry> E =
-        llvm::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
+        std::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
             Name, Status("", getNextVirtualUniqueID(),
                          std::chrono::system_clock::now(), 0, 0, 0,
                          file_type::directory_file, sys::fs::all_all));
@@ -1252,7 +1252,7 @@ class llvm::vfs::RedirectingFileSystemParser {
       auto *DE = dyn_cast<RedirectingFileSystem::RedirectingDirectoryEntry>(
           NewParentE);
       DE->addContent(
-          llvm::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
+          std::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
               Name, FE->getExternalContentsPath(), FE->getUseName()));
       break;
     }
@@ -1423,12 +1423,12 @@ class llvm::vfs::RedirectingFileSystemParser {
     std::unique_ptr<RedirectingFileSystem::Entry> Result;
     switch (Kind) {
     case RedirectingFileSystem::EK_File:
-      Result = llvm::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
+      Result = std::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
           LastComponent, std::move(ExternalContentsPath), UseExternalName);
       break;
     case RedirectingFileSystem::EK_Directory:
       Result =
-          llvm::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
+          std::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
               LastComponent, std::move(EntryArrayContents),
               Status("", getNextVirtualUniqueID(),
                      std::chrono::system_clock::now(), 0, 0, 0,
@@ -1447,7 +1447,7 @@ class llvm::vfs::RedirectingFileSystemParser {
       std::vector<std::unique_ptr<RedirectingFileSystem::Entry>> Entries;
       Entries.push_back(std::move(Result));
       Result =
-          llvm::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
+          std::make_unique<RedirectingFileSystem::RedirectingDirectoryEntry>(
               *I, std::move(Entries),
               Status("", getNextVirtualUniqueID(),
                      std::chrono::system_clock::now(), 0, 0, 0,
@@ -1763,7 +1763,7 @@ RedirectingFileSystem::openFileForRead(const Twine &Path) {
   Status S = getRedirectedFileStatus(Path, F->useExternalName(UseExternalNames),
                                      *ExternalStatus);
   return std::unique_ptr<File>(
-      llvm::make_unique<FileWithFixedStatus>(std::move(*Result), S));
+      std::make_unique<FileWithFixedStatus>(std::move(*Result), S));
 }
 
 std::error_code

@@ -88,7 +88,7 @@ DependencyScanningFilesystemSharedCache::
   // FIXME: A better heuristic might also consider the OS to account for
   // the different cost of lock contention on different OSes.
   NumShards = std::max(2u, llvm::hardware_concurrency() / 4);
-  CacheShards = llvm::make_unique<CacheShard[]>(NumShards);
+  CacheShards = std::make_unique<CacheShard[]>(NumShards);
 }
 
 /// Returns a cache entry for the corresponding key.
@@ -176,7 +176,7 @@ createFile(const CachedFileSystemEntry *Entry) {
   llvm::ErrorOr<StringRef> Contents = Entry->getContents();
   if (!Contents)
     return Contents.getError();
-  return llvm::make_unique<MinimizedVFSFile>(
+  return std::make_unique<MinimizedVFSFile>(
       llvm::MemoryBuffer::getMemBuffer(*Contents, Entry->getName(),
                                        /*RequiresNullTerminator=*/false),
       *Entry->getStatus());

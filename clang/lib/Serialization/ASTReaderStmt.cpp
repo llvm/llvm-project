@@ -2060,6 +2060,18 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
   for (unsigned i = 0; i < CollapsedNum; ++i)
     Sub.push_back(Record.readSubExpr());
   D->setFinals(Sub);
+  Sub.clear();
+  for (unsigned i = 0; i < CollapsedNum; ++i)
+    Sub.push_back(Record.readSubExpr());
+  D->setDependentCounters(Sub);
+  Sub.clear();
+  for (unsigned i = 0; i < CollapsedNum; ++i)
+    Sub.push_back(Record.readSubExpr());
+  D->setDependentInits(Sub);
+  Sub.clear();
+  for (unsigned i = 0; i < CollapsedNum; ++i)
+    Sub.push_back(Record.readSubExpr());
+  D->setFinalsConditions(Sub);
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {

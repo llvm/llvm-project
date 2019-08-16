@@ -156,7 +156,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lc");
   }
 
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
 /// Fuchsia - Fuchsia tool chain which can call as(1) and ld(1) directly.

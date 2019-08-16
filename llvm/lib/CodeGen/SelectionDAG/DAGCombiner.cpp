@@ -24,7 +24,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -15396,7 +15395,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
   bool RV = false;
   while (StoreNodes.size() > 1) {
-    unsigned StartIdx = 0;
+    size_t StartIdx = 0;
     while ((StartIdx + 1 < StoreNodes.size()) &&
            StoreNodes[StartIdx].OffsetFromBase + ElementSizeBytes !=
                StoreNodes[StartIdx + 1].OffsetFromBase)

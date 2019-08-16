@@ -135,5 +135,5 @@ bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createSparcELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
-  return llvm::make_unique<SparcELFObjectWriter>(Is64Bit, OSABI);
+  return std::make_unique<SparcELFObjectWriter>(Is64Bit, OSABI);
 }

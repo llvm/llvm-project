@@ -104,7 +104,7 @@ void ResourceState::dump() const {
 static std::unique_ptr<ResourceStrategy>
 getStrategyFor(const ResourceState &RS) {
   if (RS.isAResourceGroup() || RS.getNumUnits() > 1)
-    return llvm::make_unique<DefaultResourceStrategy>(RS.getReadyMask());
+    return std::make_unique<DefaultResourceStrategy>(RS.getReadyMask());
   return std::unique_ptr<ResourceStrategy>(nullptr);
 }
 
@@ -114,7 +114,8 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
       Resource2Groups(SM.getNumProcResourceKinds() - 1, 0),
       ProcResID2Mask(SM.getNumProcResourceKinds(), 0),
       ResIndex2ProcResID(SM.getNumProcResourceKinds() - 1, 0),
-      ProcResUnitMask(0), ReservedResourceGroups(0) {
+      ProcResUnitMask(0), ReservedResourceGroups(0),
+      AvailableBuffers(~0ULL), ReservedBuffers(0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
 
   // initialize vector ResIndex2ProcResID.
@@ -127,7 +128,7 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     Resources[Index] =
-        llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
 
@@ -241,33 +242,41 @@ void ResourceManager::release(const ResourceRef &RR) {
 }
 
 ResourceStateEvent
-ResourceManager::canBeDispatched(ArrayRef<uint64_t> Buffers) const {
-  ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
-  for (uint64_t Buffer : Buffers) {
-    ResourceState &RS = *Resources[getResourceStateIndex(Buffer)];
-    Result = RS.isBufferAvailable();
-    if (Result != ResourceStateEvent::RS_BUFFER_AVAILABLE)
-      break;
-  }
-  return Result;
+ResourceManager::canBeDispatched(uint64_t ConsumedBuffers) const {
+  if (ConsumedBuffers & ReservedBuffers)
+    return ResourceStateEvent::RS_RESERVED;
+  if (ConsumedBuffers & (~AvailableBuffers))
+    return ResourceStateEvent::RS_BUFFER_UNAVAILABLE;
+  return ResourceStateEvent::RS_BUFFER_AVAILABLE;
 }
 
-void ResourceManager::reserveBuffers(ArrayRef<uint64_t> Buffers) {
-  for (const uint64_t Buffer : Buffers) {
-    ResourceState &RS = *Resources[getResourceStateIndex(Buffer)];
+void ResourceManager::reserveBuffers(uint64_t ConsumedBuffers) {
+  while (ConsumedBuffers) {
+    uint64_t CurrentBuffer = ConsumedBuffers & (-ConsumedBuffers);
+    ResourceState &RS = *Resources[getResourceStateIndex(CurrentBuffer)];
+    ConsumedBuffers ^= CurrentBuffer;
     assert(RS.isBufferAvailable() == ResourceStateEvent::RS_BUFFER_AVAILABLE);
-    RS.reserveBuffer();
-
+    if (!RS.reserveBuffer())
+      AvailableBuffers ^= CurrentBuffer;
     if (RS.isADispatchHazard()) {
-      assert(!RS.isReserved());
-      RS.setReserved();
+      // Reserve this buffer now, and release it once pipeline resources
+      // consumed by the instruction become available again.
+      // We do this to simulate an in-order dispatch/issue of instructions.
+      ReservedBuffers ^= CurrentBuffer;
     }
   }
 }
 
-void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
-  for (const uint64_t R : Buffers)
-    Resources[getResourceStateIndex(R)]->releaseBuffer();
+void ResourceManager::releaseBuffers(uint64_t ConsumedBuffers) {
+  AvailableBuffers |= ConsumedBuffers;
+  while (ConsumedBuffers) {
+    uint64_t CurrentBuffer = ConsumedBuffers & (-ConsumedBuffers);
+    ResourceState &RS = *Resources[getResourceStateIndex(CurrentBuffer)];
+    ConsumedBuffers ^= CurrentBuffer;
+    RS.releaseBuffer();
+    // Do not unreserve dispatch hazard resource buffers. Wait until all
+    // pipeline resources have been freed too.
+  }
 }
 
 uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
@@ -322,7 +331,6 @@ void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
 
       if (countPopulation(RR.first) == 1)
         release(RR);
-
       releaseResource(RR.first);
       ResourcesFreed.push_back(RR);
     }
@@ -336,7 +344,7 @@ void ResourceManager::reserveResource(uint64_t ResourceID) {
   const unsigned Index = getResourceStateIndex(ResourceID);
   ResourceState &Resource = *Resources[Index];
   assert(Resource.isAResourceGroup() && !Resource.isReserved() &&
-         "Unexpected resource found!");
+         "Unexpected resource state found!");
   Resource.setReserved();
   ReservedResourceGroups ^= 1ULL << Index;
 }
@@ -347,6 +355,9 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
   Resource.clearReserved();
   if (Resource.isAResourceGroup())
     ReservedResourceGroups ^= 1ULL << Index;
+  // Now it is safe to release dispatch/issue resources.
+  if (Resource.isADispatchHazard())
+    ReservedBuffers ^= 1ULL << Index;
 }
 
 } // namespace mca

@@ -558,7 +558,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       if (!bp_options)
         continue;
 
-      auto data_up = llvm::make_unique<CommandDataPython>();
+      auto data_up = std::make_unique<CommandDataPython>();
       if (!data_up)
         break;
       data_up->user_source.SplitIntoLines(data);
@@ -583,7 +583,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
   case eIOHandlerWatchpoint: {
     WatchpointOptions *wp_options =
         (WatchpointOptions *)io_handler.GetUserData();
-    auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
+    auto data_up = std::make_unique<WatchpointOptions::CommandData>();
     data_up->user_source.SplitIntoLines(data);
 
     if (GenerateWatchpointCommandCallbackData(data_up->user_source,
@@ -1290,7 +1290,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the breakpoint.
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
-  auto data_up = llvm::make_unique<CommandDataPython>();
+  auto data_up = std::make_unique<CommandDataPython>();
 
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
@@ -1313,7 +1313,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *oneliner) {
-  auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
+  auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
   // The former is used to generate callback description (as in watchpoint

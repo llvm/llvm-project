@@ -320,7 +320,7 @@ ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,
 void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
   for (const ImporterSource &S : Sources) {
     assert(&S.AST != &Target.AST);
-    Importers.push_back(llvm::make_unique<LazyASTImporter>(
+    Importers.push_back(std::make_unique<LazyASTImporter>(
         *this, Target.AST, Target.FM, S.AST, S.FM, S.OM));
   }
 }

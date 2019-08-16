@@ -798,7 +798,7 @@ static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
 bool PredicateInfoPrinterLegacyPass::runOnFunction(Function &F) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto PredInfo = make_unique<PredicateInfo>(F, DT, AC);
+  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
   PredInfo->print(dbgs());
   if (VerifyPredicateInfo)
     PredInfo->verifyPredicateInfo();
@@ -812,7 +812,7 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   OS << "PredicateInfo for function: " << F.getName() << "\n";
-  auto PredInfo = make_unique<PredicateInfo>(F, DT, AC);
+  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
   PredInfo->print(OS);
 
   replaceCreatedSSACopys(*PredInfo, F);
@@ -871,7 +871,7 @@ PreservedAnalyses PredicateInfoVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  make_unique<PredicateInfo>(F, DT, AC)->verifyPredicateInfo();
+  std::make_unique<PredicateInfo>(F, DT, AC)->verifyPredicateInfo();
 
   return PreservedAnalyses::all();
 }

@@ -189,15 +189,22 @@ static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
 static void annotateDereferenceableBytes(CallInst *CI,
                                          ArrayRef<unsigned> ArgNos,
                                          uint64_t DereferenceableBytes) {
+  const Function *F = CI->getFunction();
+  if (!F)
+    return;
   for (unsigned ArgNo : ArgNos) {
-    uint64_t DerefBytes = std::max(
-        CI->getDereferenceableOrNullBytes(ArgNo + AttributeList::FirstArgIndex),
-        DereferenceableBytes);
+    uint64_t DerefBytes = DereferenceableBytes;
+    unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
+    if (!llvm::NullPointerIsDefined(F, AS))
+      DerefBytes = std::max(CI->getDereferenceableOrNullBytes(
+                                ArgNo + AttributeList::FirstArgIndex),
+                            DereferenceableBytes);
 
     if (CI->getDereferenceableBytes(ArgNo + AttributeList::FirstArgIndex) <
         DerefBytes) {
       CI->removeParamAttr(ArgNo, Attribute::Dereferenceable);
-      CI->removeParamAttr(ArgNo, Attribute::DereferenceableOrNull);
+      if (!llvm::NullPointerIsDefined(F, AS))
+        CI->removeParamAttr(ArgNo, Attribute::DereferenceableOrNull);
       CI->addParamAttr(ArgNo, Attribute::getWithDereferenceableBytes(
                                   CI->getContext(), DerefBytes));
     }

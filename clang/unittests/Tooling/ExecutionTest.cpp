@@ -125,7 +125,7 @@ class TestToolExecutorPlugin : public ToolExecutorPlugin {
 public:
   llvm::Expected<std::unique_ptr<ToolExecutor>>
   create(CommonOptionsParser &OptionsParser) override {
-    return llvm::make_unique<TestToolExecutor>(std::move(OptionsParser));
+    return std::make_unique<TestToolExecutor>(std::move(OptionsParser));
   }
 };
 

@@ -52,6 +52,7 @@
 // AMDGCN-based processors.
 //
 
+// RUN: %clang -### -target amdgcn %s 2>&1 | FileCheck --check-prefix=GCNDEFAULT %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefix=GFX600 %s
 // RUN: %clang -### -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefix=TAHITI %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefix=GFX601 %s
@@ -90,6 +91,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx1011 %s 2>&1 | FileCheck --check-prefix=GFX1011 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1012 %s 2>&1 | FileCheck --check-prefix=GFX1012 %s
 
+// GCNDEFAULT-NOT: -target-cpu
 // GFX600:    "-target-cpu" "gfx600"
 // TAHITI:    "-target-cpu" "tahiti"
 // GFX601:    "-target-cpu" "gfx601"

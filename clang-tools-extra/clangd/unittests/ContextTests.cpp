@@ -26,7 +26,7 @@ TEST(ContextTests, Simple) {
 TEST(ContextTests, MoveOps) {
   Key<std::unique_ptr<int>> Param;
 
-  Context Ctx = Context::empty().derive(Param, llvm::make_unique<int>(10));
+  Context Ctx = Context::empty().derive(Param, std::make_unique<int>(10));
   EXPECT_EQ(**Ctx.get(Param), 10);
 
   Context NewCtx = std::move(Ctx);

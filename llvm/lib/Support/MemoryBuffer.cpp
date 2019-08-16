@@ -458,7 +458,9 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     return make_error_code(errc::not_enough_memory);
   }
 
-  sys::fs::readNativeFileSlice(FD, Buf->getBuffer(), Offset);
+  if (std::error_code EC =
+          sys::fs::readNativeFileSlice(FD, Buf->getBuffer(), Offset))
+    return EC;
 
   return std::move(Buf);
 }

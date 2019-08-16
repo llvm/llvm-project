@@ -156,6 +156,16 @@ public:
     return -1;
   }
 
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const {
+    return false;
+  }
+
+  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                        Value *OldV, Value *NewV) const {
+    return false;
+  }
+
   bool isLoweredToCall(const Function *F) {
     assert(F && "A concrete function must be provided to this routine.");
 

@@ -704,7 +704,7 @@ bool windows_manifest::isAvailable() { return false; }
 #endif
 
 WindowsManifestMerger::WindowsManifestMerger()
-    : Impl(make_unique<WindowsManifestMergerImpl>()) {}
+    : Impl(std::make_unique<WindowsManifestMergerImpl>()) {}
 
 WindowsManifestMerger::~WindowsManifestMerger() {}
 

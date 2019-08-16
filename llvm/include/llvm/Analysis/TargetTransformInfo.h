@@ -368,6 +368,20 @@ public:
   /// optimize away.
   unsigned getFlatAddressSpace() const;
 
+  /// Return any intrinsic address operand indexes which may be rewritten if
+  /// they use a flat address space pointer.
+  ///
+  /// \returns true if the intrinsic was handled.
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const;
+
+  /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
+  /// NewV, which has a different address space. This should happen for every
+  /// operand index that collectFlatAddressOperands returned for the intrinsic.
+  /// \returns true if the intrinsic /// was handled.
+  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                        Value *OldV, Value *NewV) const;
+
   /// Test whether calls to a function lower to actual program function
   /// calls.
   ///
@@ -1160,6 +1174,10 @@ public:
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual unsigned getFlatAddressSpace() = 0;
+  virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                          Intrinsic::ID IID) const = 0;
+  virtual bool rewriteIntrinsicWithAddressSpace(
+    IntrinsicInst *II, Value *OldV, Value *NewV) const = 0;
   virtual bool isLoweredToCall(const Function *F) = 0;
   virtual void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                        UnrollingPreferences &UP) = 0;
@@ -1398,6 +1416,16 @@ public:
 
   unsigned getFlatAddressSpace() override {
     return Impl.getFlatAddressSpace();
+  }
+
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const override {
+    return Impl.collectFlatAddressOperands(OpIndexes, IID);
+  }
+
+  bool rewriteIntrinsicWithAddressSpace(
+    IntrinsicInst *II, Value *OldV, Value *NewV) const override {
+    return Impl.rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
   }
 
   bool isLoweredToCall(const Function *F) override {

@@ -72,7 +72,7 @@ static void srcMgrDiagHandler(const SMDiagnostic &Diag, void *diagInfo) {
 unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
                                             const MDNode *LocMDNode) const {
   if (!DiagInfo) {
-    DiagInfo = make_unique<SrcMgrDiagInfo>();
+    DiagInfo = std::make_unique<SrcMgrDiagInfo>();
 
     MCContext &Context = MMI->getContext();
     Context.setInlineSourceManager(&DiagInfo->SrcMgr);

@@ -11,6 +11,12 @@
 
 #include <vector>
 
+#ifdef _MSC_VER
+// Disable warnings about potential divide by 0.
+#pragma warning(push)
+#pragma warning(disable : 4723)
+#endif
+
 using namespace llvm;
 
 namespace {
@@ -298,3 +304,7 @@ TEST(AlignmentDeathTest, CompareAlignToUndefMaybeAlign) {
 #endif // NDEBUG
 
 } // end anonymous namespace
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

@@ -52,7 +52,7 @@ public:
   // and this also allows us to look up the parent Span's information.
   Context beginSpan(llvm::StringRef Name, llvm::json::Object *Args) override {
     return Context::current().derive(
-        SpanKey, llvm::make_unique<JSONSpan>(this, Name, Args));
+        SpanKey, std::make_unique<JSONSpan>(this, Name, Args));
   }
 
   // Trace viewer requires each thread to properly stack events.
@@ -200,7 +200,7 @@ Session::~Session() { T = nullptr; }
 
 std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
                                               bool Pretty) {
-  return llvm::make_unique<JSONTracer>(OS, Pretty);
+  return std::make_unique<JSONTracer>(OS, Pretty);
 }
 
 void log(const llvm::Twine &Message) {

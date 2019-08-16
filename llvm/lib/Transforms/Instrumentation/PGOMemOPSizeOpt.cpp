@@ -138,7 +138,7 @@ public:
                OptimizationRemarkEmitter &ORE, DominatorTree *DT)
       : Func(Func), BFI(BFI), ORE(ORE), DT(DT), Changed(false) {
     ValueDataArray =
-        llvm::make_unique<InstrProfValueData[]>(MemOPMaxVersion + 2);
+        std::make_unique<InstrProfValueData[]>(MemOPMaxVersion + 2);
     // Get the MemOPSize range information from option MemOPSizeRange,
     getMemOPSizeRangeFromOption(MemOPSizeRange, PreciseRangeStart,
                                 PreciseRangeLast);

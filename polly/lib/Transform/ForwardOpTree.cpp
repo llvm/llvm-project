@@ -914,7 +914,7 @@ public:
 
     {
       IslMaxOperationsGuard MaxOpGuard(S.getIslCtx().get(), MaxOps, false);
-      Impl = llvm::make_unique<ForwardOpTreeImpl>(&S, &LI, MaxOpGuard);
+      Impl = std::make_unique<ForwardOpTreeImpl>(&S, &LI, MaxOpGuard);
 
       if (AnalyzeKnown) {
         LLVM_DEBUG(dbgs() << "Prepare forwarders...\n");

@@ -34,7 +34,7 @@ void BoolAssignmentChecker::emitReport(ProgramStateRef state,
   if (ExplodedNode *N = C.generateNonFatalErrorNode(state)) {
     if (!BT)
       BT.reset(new BuiltinBug(this, "Assignment of a non-Boolean value"));
-    C.emitReport(llvm::make_unique<BugReport>(*BT, BT->getDescription(), N));
+    C.emitReport(std::make_unique<BugReport>(*BT, BT->getDescription(), N));
   }
 }
 

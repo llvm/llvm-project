@@ -35,7 +35,7 @@ void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+  Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }

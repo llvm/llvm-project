@@ -648,9 +648,9 @@ void CodeViewDebug::emitTypeInformation() {
 
   if (OS.isVerboseAsm()) {
     // To construct block comment describing the type record for readability.
-    SP = llvm::make_unique<ScopedPrinter>(CommentOS);
+    SP = std::make_unique<ScopedPrinter>(CommentOS);
     SP->setPrefix(CommentPrefix);
-    TDV = llvm::make_unique<TypeDumpVisitor>(Table, SP.get(), false);
+    TDV = std::make_unique<TypeDumpVisitor>(Table, SP.get(), false);
     Pipeline.addCallbackToPipeline(*TDV);
   }
 
@@ -1363,7 +1363,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   const Function &GV = MF->getFunction();
-  auto Insertion = FnDebugInfo.insert({&GV, llvm::make_unique<FunctionInfo>()});
+  auto Insertion = FnDebugInfo.insert({&GV, std::make_unique<FunctionInfo>()});
   assert(Insertion.second && "function already has info");
   CurFn = Insertion.first->second.get();
   CurFn->FuncId = NextFuncId++;
@@ -3015,7 +3015,7 @@ void CodeViewDebug::collectGlobalVariableInfo() {
         auto Insertion = ScopeGlobals.insert(
             {Scope, std::unique_ptr<GlobalVariableList>()});
         if (Insertion.second)
-          Insertion.first->second = llvm::make_unique<GlobalVariableList>();
+          Insertion.first->second = std::make_unique<GlobalVariableList>();
         VariableList = Insertion.first->second.get();
       } else if (GV->hasComdat())
         // Emit this global variable into a COMDAT section.

@@ -110,7 +110,7 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
   // FileManager to report "file/directory doesn't exist".  This
   // avoids the possibility of the result of this test being affected
   // by what's in the real file system.
-  manager.setStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(std::make_unique<FakeStatCache>());
 
   ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
   ASSERT_FALSE(manager.getDirectory("virtual/dir"));
@@ -120,7 +120,7 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
 // When a virtual file is added, all of its ancestors should be created.
 TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
   // Fake an empty real file system.
-  manager.setStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(std::make_unique<FakeStatCache>());
 
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
@@ -137,7 +137,7 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
 // getFile() returns non-NULL if a real file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   // Inject fake files into the file system.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
 
@@ -172,7 +172,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 // getFile() returns non-NULL if a virtual file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   // Fake an empty real file system.
-  manager.setStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(std::make_unique<FakeStatCache>());
 
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   auto file = manager.getFile("virtual/dir/bar.h");
@@ -190,7 +190,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
 TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
   // Inject two fake files into the file system.  Different inodes
   // mean the files are not symlinked together.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory(".", 41);
   statCache->InjectFile("foo.cpp", 42);
   statCache->InjectFile("bar.cpp", 43);
@@ -209,7 +209,7 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
 // exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   // Inject a fake foo.cpp into the file system.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory(".", 41);
   statCache->InjectFile("foo.cpp", 42);
   statCache->InjectDirectory("MyDirectory", 49);
@@ -238,7 +238,7 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
 // getFile() returns the same FileEntry for real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
   // Inject two real files with the same inode.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("abc", 41);
   statCache->InjectFile("abc/foo.cpp", 42);
   statCache->InjectFile("abc/bar.cpp", 42);
@@ -255,7 +255,7 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
 // corresponding real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
   // Inject two real files with the same inode.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("abc", 41);
   statCache->InjectFile("abc/foo.cpp", 42);
   statCache->InjectFile("abc/bar.cpp", 42);
@@ -277,7 +277,7 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
 // here by checking the size.
 TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   // Inject fake files into the file system.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("c:\\tmp", 42);
   statCache->InjectFile("c:\\tmp\\test", 43);
 
@@ -348,7 +348,7 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   FileManager Manager(Opts, FS);
 
   // Inject fake files into the file system.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
 
@@ -381,7 +381,7 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   FileManager Manager(Opts, FS);
 
   // Inject fake files into the file system.
-  auto statCache = llvm::make_unique<FakeStatCache>();
+  auto statCache = std::make_unique<FakeStatCache>();
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
 

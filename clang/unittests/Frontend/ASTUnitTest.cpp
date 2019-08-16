@@ -34,7 +34,7 @@ protected:
   std::unique_ptr<ASTUnit> createASTUnit(bool isVolatile) {
     EXPECT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "cpp", FD,
                                                     InputFileName));
-    input_file = llvm::make_unique<ToolOutputFile>(InputFileName, FD);
+    input_file = std::make_unique<ToolOutputFile>(InputFileName, FD);
     input_file->os() << "";
 
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};

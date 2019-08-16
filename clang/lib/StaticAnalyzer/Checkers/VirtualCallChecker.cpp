@@ -268,8 +268,8 @@ void VirtualCallChecker::reportBug(StringRef Msg, bool IsSink,
         this, "Call to virtual function during construction or destruction",
         "C++ Object Lifecycle"));
 
-  auto Reporter = llvm::make_unique<BugReport>(*BT, Msg, N);
-  Reporter->addVisitor(llvm::make_unique<VirtualBugVisitor>(Reg));
+  auto Reporter = std::make_unique<BugReport>(*BT, Msg, N);
+  Reporter->addVisitor(std::make_unique<VirtualBugVisitor>(Reg));
   C.emitReport(std::move(Reporter));
 }
 

@@ -51,7 +51,7 @@ Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
   switch (ParserFormat) {
   case Format::YAML:
-    return llvm::make_unique<YAMLRemarkParser>(Buf);
+    return std::make_unique<YAMLRemarkParser>(Buf);
   case Format::YAMLStrTab:
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -75,7 +75,7 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
                              "The YAML format can't be used with a string "
                              "table. Use yaml-strtab instead.");
   case Format::YAMLStrTab:
-    return llvm::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(StrTab));
+    return std::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(StrTab));
   case Format::Bitstream:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Parsing bitstream remarks is not supported.");

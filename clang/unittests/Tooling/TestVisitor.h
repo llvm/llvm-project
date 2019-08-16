@@ -109,7 +109,7 @@ protected:
     std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(CompilerInstance &, llvm::StringRef dummy) override {
       /// TestConsumer will be deleted by the framework calling us.
-      return llvm::make_unique<FindConsumer>(Visitor);
+      return std::make_unique<FindConsumer>(Visitor);
     }
 
   protected:

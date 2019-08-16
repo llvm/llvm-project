@@ -2099,7 +2099,7 @@ OptimizationRemarkAnalysis &LoopAccessInfo::recordAnalysis(StringRef RemarkName,
       DL = I->getDebugLoc();
   }
 
-  Report = make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName, DL,
+  Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName, DL,
                                                    CodeRegion);
   return *Report;
 }
@@ -2344,9 +2344,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                                DominatorTree *DT, LoopInfo *LI)
-    : PSE(llvm::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
-      DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
+    : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
+      PtrRtChecking(std::make_unique<RuntimePointerChecking>(SE)),
+      DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
       NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
       HasConvergentOp(false),
       HasDependenceInvolvingLoopInvariantAddress(false) {
@@ -2401,7 +2401,7 @@ const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
   auto &LAI = LoopAccessInfoMap[L];
 
   if (!LAI)
-    LAI = llvm::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI);
+    LAI = std::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI);
 
   return *LAI.get();
 }
