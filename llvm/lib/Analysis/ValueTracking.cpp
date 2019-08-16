@@ -1373,7 +1373,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
           else if (LR == I)
             L = LL;
           else
-            break;
+            continue; // Check for recurrence with L and R flipped.
           // Ok, we have a PHI of the form L op= R. Check for low
           // zero bits.
           computeKnownBits(R, Known2, Depth + 1, Q);

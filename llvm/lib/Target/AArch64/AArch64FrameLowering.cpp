@@ -44,15 +44,11 @@
 // |                                   |
 // |-----------------------------------|
 // |                                   |
-// | callee-saved gpr registers        | <--.
-// |                                   |    | On Darwin platforms these
-// |- - - - - - - - - - - - - - - - - -|    | callee saves are swapped,
-// |                                   |    | (frame record first)
-// | prev_fp, prev_lr                  | <--'
+// | prev_fp, prev_lr                  |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
 // |                                   |
-// | callee-saved fp/simd/SVE regs     |
+// | other callee-saved registers      |
 // |                                   |
 // |-----------------------------------|
 // |.empty.space.to.make.part.below....|
@@ -83,20 +79,6 @@
 //   variables with more-than-default alignment requirements.
 // * A frame pointer is definitely needed when there are local variables with
 //   more-than-default alignment requirements.
-//
-// For Darwin platforms the frame-record (fp, lr) is stored at the top of the
-// callee-saved area, since the unwind encoding does not allow for encoding
-// this dynamically and existing tools depend on this layout. For other
-// platforms, the frame-record is stored at the bottom of the (gpr) callee-saved
-// area to allow SVE stack objects (allocated directly below the callee-saves,
-// if available) to be accessed directly from the framepointer.
-// The SVE spill/fill instructions have VL-scaled addressing modes such
-// as:
-//    ldr z8, [fp, #-7 mul vl]
-// For SVE the size of the vector length (VL) is not known at compile-time, so
-// '#-7 mul vl' is an offset that can only be evaluated at runtime. With this
-// layout, we don't need to add an unscaled offset to the framepointer before
-// accessing the SVE object in the frame.
 //
 // In some cases when a base pointer is not strictly needed, it is generated
 // anyway when offsets from the frame pointer to access local variables become
@@ -811,10 +793,6 @@ static bool needsWinCFI(const MachineFunction &MF) {
          F.needsUnwindTableEntry();
 }
 
-static bool isTargetDarwin(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetDarwin();
-}
-
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -974,9 +952,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (HasFP) {
-    // Only set up FP if we actually need to.
-    int FPOffset = isTargetDarwin(MF) ? (AFI->getCalleeSavedStackSize() - 16) : 0;
-
+    // Only set up FP if we actually need to. Frame pointer is fp =
+    // sp - fixedobject - 16.
+    int FPOffset = AFI->getCalleeSavedStackSize() - 16;
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
 
@@ -1158,9 +1136,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (needsFrameMoves) {
     const DataLayout &TD = MF.getDataLayout();
-    const int StackGrowth = isTargetDarwin(MF)
-                                ? (2 * -TD.getPointerSize(0))
-                                : -AFI->getCalleeSavedStackSize();
+    const int StackGrowth = -TD.getPointerSize(0);
     Register FramePtr = RegInfo->getFrameRegister(MF);
     // An example of the prologue:
     //
@@ -1232,7 +1208,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       // Define the current CFA rule to use the provided FP.
       unsigned Reg = RegInfo->getDwarfRegNum(FramePtr, true);
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
-          nullptr, Reg, StackGrowth - FixedObject));
+          nullptr, Reg, 2 * StackGrowth - FixedObject));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -1486,13 +1462,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // FIXME: Rather than doing the math here, we should instead just use
   // non-post-indexed loads for the restores if we aren't actually going to
   // be able to save any instructions.
-  if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned())) {
-    int64_t OffsetToFrameRecord =
-        isTargetDarwin(MF) ? (-(int64_t)AFI->getCalleeSavedStackSize() + 16) : 0;
+  if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned()))
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
-                    {OffsetToFrameRecord, MVT::i8},
+                    {-(int64_t)AFI->getCalleeSavedStackSize() + 16, MVT::i8},
                     TII, MachineInstr::FrameDestroy, false, NeedsWinCFI);
-  } else if (NumBytes)
+  else if (NumBytes)
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
                     {NumBytes, MVT::i8}, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI);
@@ -1552,8 +1526,7 @@ static StackOffset getFPOffset(const MachineFunction &MF, int ObjectOffset) {
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
-  unsigned FPAdjust = isTargetDarwin(MF) ? 16 : AFI->getCalleeSavedStackSize();
-  return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
+  return {ObjectOffset + FixedObject + 16, MVT::i8};
 }
 
 static StackOffset getStackOffset(const MachineFunction &MF, int ObjectOffset) {
@@ -1716,23 +1689,6 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
   return true;
 }
 
-/// Returns true if Reg1 and Reg2 cannot be paired using a ldp/stp instruction.
-/// WindowsCFI requires that only consecutive registers can be paired.
-/// LR and FP need to be allocated together when the frame needs to save
-/// the frame-record. This means any other register pairing with LR is invalid.
-static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool NeedsWinCFI, bool NeedsFrameRecord) {
-  if (NeedsWinCFI)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, true);
-
-  // If we need to store the frame record, don't pair any register
-  // with LR other than FP.
-  if (NeedsFrameRecord)
-    return Reg2 == AArch64::LR;
-
-  return false;
-}
-
 namespace {
 
 struct RegPairInfo {
@@ -1752,7 +1708,7 @@ struct RegPairInfo {
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, const std::vector<CalleeSavedInfo> &CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
-    bool &NeedShadowCallStackProlog, bool NeedsFrameRecord) {
+    bool &NeedShadowCallStackProlog) {
 
   if (CSI.empty())
     return;
@@ -1794,8 +1750,7 @@ static void computeCalleeSaveRegisterPairs(
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
-                                       NeedsFrameRecord))
+            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
@@ -1828,10 +1783,6 @@ static void computeCalleeSaveRegisterPairs(
     assert((!RPI.isPaired() ||
             (CSI[i].getFrameIdx() + 1 == CSI[i + 1].getFrameIdx())) &&
            "Out of order callee saved regs!");
-
-    assert((!RPI.isPaired() || RPI.Reg2 != AArch64::FP ||
-            RPI.Reg1 == AArch64::LR) &&
-           "FrameRecord must be allocated together with LR");
 
     // MachO's compact unwind format relies on all registers being stored in
     // adjacent register pairs.
@@ -1881,7 +1832,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
   bool NeedShadowCallStackProlog = false;
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+                                 NeedShadowCallStackProlog);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (NeedShadowCallStackProlog) {
@@ -2011,7 +1962,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   bool NeedShadowCallStackProlog = false;
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs,
-                                 NeedShadowCallStackProlog, hasFP(MF));
+                                 NeedShadowCallStackProlog);
 
   auto EmitMI = [&](const RegPairInfo &RPI) {
     unsigned Reg1 = RPI.Reg1;

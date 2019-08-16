@@ -95,6 +95,7 @@ static_library("Support") {
     "Parallel.cpp",
     "PluginLoader.cpp",
     "PrettyStackTrace.cpp",
+    "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",
     "SHA1.cpp",

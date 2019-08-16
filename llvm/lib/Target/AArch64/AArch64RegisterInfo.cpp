@@ -64,9 +64,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
-    return CSR_Darwin_AArch64_AAPCS_SaveList;
-  return CSR_AArch64_AAPCS_SaveList;
+  else
+    return CSR_AArch64_AAPCS_SaveList;
 }
 
 const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(

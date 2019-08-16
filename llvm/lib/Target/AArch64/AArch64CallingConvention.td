@@ -317,12 +317,6 @@ def CC_AArch64_GHC : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X19, X20, X21, X22, X23, X24, X25, X26, X27, X28]>>
 ]>;
 
-// The order of the callee-saves in this file is important, because the
-// FrameLowering code will use this order to determine the layout the
-// callee-save area in the stack frame. As can be observed below, Darwin
-// requires the frame-record (LR, FP) to be at the top the callee-save area,
-// whereas for other platforms they are at the bottom.
-
 // FIXME: LR is only callee-saved in the sense that *we* preserve it and are
 // presumably a callee to someone. External functions may not do so, but this
 // is currently safe since BL has LR as an implicit-def and what happens after a
@@ -331,13 +325,7 @@ def CC_AArch64_GHC : CallingConv<[
 // It would be better to model its preservation semantics properly (create a
 // vreg on entry, use it in RET & tail call generation; make that vreg def if we
 // end up saving LR as part of a call frame). Watch this space...
-def CSR_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
-                                           X25, X26, X27, X28, LR, FP,
-                                           D8,  D9,  D10, D11,
-                                           D12, D13, D14, D15)>;
-
-// Darwin puts the frame-record at the top of the callee-save area.
-def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+def CSR_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
                                            X23, X24, X25, X26, X27, X28,
                                            D8,  D9,  D10, D11,
                                            D12, D13, D14, D15)>;
@@ -345,21 +333,21 @@ def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 // Win64 has unwinding codes for an (FP,LR) pair, save_fplr and save_fplr_x.
 // We put FP before LR, so that frame lowering logic generates (FP,LR) pairs,
 // and not (LR,FP) pairs.
-def CSR_Win_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
-                                               X25, X26, X27, X28, FP, LR,
+def CSR_Win_AArch64_AAPCS : CalleeSavedRegs<(add FP, LR, X19, X20, X21, X22,
+                                               X23, X24, X25, X26, X27, X28,
                                                D8, D9, D10, D11,
                                                D12, D13, D14, D15)>;
 
 // AArch64 PCS for vector functions (VPCS)
 // must (additionally) preserve full Q8-Q23 registers
-def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
-                                          X25, X26, X27, X28, LR, FP,
+def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+                                          X23, X24, X25, X26, X27, X28,
                                           (sequence "Q%u", 8, 23))>;
 
 // Functions taking SVE arguments or returning an SVE type
 // must (additionally) preserve full Z8-Z23 and predicate registers P4-P15
-def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
-                                               X25, X26, X27, X28, LR, FP,
+def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+                                               X23, X24, X25, X26, X27, X28,
                                                (sequence "Z%u", 8, 23),
                                                (sequence "P%u", 4, 15))>;
 
@@ -374,7 +362,7 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
 
 def CSR_AArch64_AAPCS_SwiftError
-    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X21)>;
+    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X21)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the
@@ -390,7 +378,7 @@ def CSR_AArch64_TLS_Darwin
 // fast path calls a function that follows CSR_AArch64_TLS_Darwin,
 // CSR_AArch64_CXX_TLS_Darwin should be a subset of CSR_AArch64_TLS_Darwin.
 def CSR_AArch64_CXX_TLS_Darwin
-    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS,
+    : CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                            (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
                            (sequence "D%u", 0, 31))>;
 

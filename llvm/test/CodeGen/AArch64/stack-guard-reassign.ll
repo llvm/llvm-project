@@ -5,4 +5,4 @@
 ; CHECK-LABEL: fn:
 ; CHECK:      adrp x8, __stack_chk_guard
 ; CHECK-NEXT: ldr x8, [x8, :lo12:__stack_chk_guard]
-; CHECK-NEXT: stur x8, [x29, #-8]
+; CHECK-NEXT: stur x8, [x29, #-24]
