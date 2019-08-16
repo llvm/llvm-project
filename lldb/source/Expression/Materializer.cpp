@@ -962,13 +962,6 @@ public:
     lldb::ProcessSP process_sp =
         map.GetBestExecutionContextScope()->CalculateProcess();
 
-    if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-      SwiftLanguageRuntime *language_runtime =
-          SwiftLanguageRuntime::Get(*process_sp);
-      if (language_runtime && frame_sp)
-        m_type = language_runtime->DoArchetypeBindingForType(*frame_sp, m_type);
-    }
-
     lldb::ExpressionVariableSP ret = persistent_state->CreatePersistentVariable(
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());
 
