@@ -4308,6 +4308,7 @@ bool BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL,
     resetSchedule();
     initialFillReadyList(ReadyInsts);
   }
+  assert(Bundle && "Failed to find schedule bundle");
 
   LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle << " in block "
                     << BB->getName() << "\n");

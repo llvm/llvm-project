@@ -227,8 +227,8 @@ private:
 
     /// The constructor for spill locations.
     VarLoc(const MachineInstr &MI, unsigned SpillBase, int SpillOffset,
-           LexicalScopes &LS)
-        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS) {
+           LexicalScopes &LS, const MachineInstr &OrigMI)
+        : Var(MI), MI(OrigMI), UVS(MI.getDebugLoc(), LS) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       Kind = SpillLocKind;
@@ -567,11 +567,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     ID = VarLocIDs.insert(VL);
     OpenRanges.insert(ID, VL.Var);
   } else if (MI.hasOneMemOperand()) {
-    // It's a stack spill -- fetch spill base and offset.
-    VarLoc::SpillLoc SpillLocation = extractSpillBaseRegAndOffset(MI);
-    VarLoc VL(MI, SpillLocation.SpillBase, SpillLocation.SpillOffset, LS);
-    ID = VarLocIDs.insert(VL);
-    OpenRanges.insert(ID, VL.Var);
+    llvm_unreachable("DBG_VALUE with mem operand encountered after regalloc?");
   } else {
     // This must be an undefined location. We should leave OpenRanges closed.
     assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
@@ -678,7 +674,7 @@ void LiveDebugValues::insertTransferDebugPair(
         *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), true,
         SpillLocation.SpillBase, DebugInstr->getDebugVariable(), SpillExpr);
     VarLoc VL(*NewDebugInstr, SpillLocation.SpillBase,
-              SpillLocation.SpillOffset, LS);
+              SpillLocation.SpillOffset, LS, *DebugInstr);
     ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
                NewDebugInstr->print(dbgs(), /*IsStandalone*/false,
@@ -691,17 +687,11 @@ void LiveDebugValues::insertTransferDebugPair(
            "No register supplied when handling a restore of a debug value");
     MachineFunction *MF = MI.getMF();
     DIBuilder DIB(*const_cast<Function &>(MF->getFunction()).getParent());
-
-    const DIExpression *NewExpr;
-    if (auto Fragment = DebugInstr->getDebugExpression()->getFragmentInfo())
-      NewExpr = *DIExpression::createFragmentExpression(DIB.createExpression(),
-        Fragment->OffsetInBits, Fragment->SizeInBits);
-    else
-      NewExpr = DIB.createExpression();
-
-    NewDebugInstr =
-        BuildMI(*MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false,
-                NewReg, DebugInstr->getDebugVariable(), NewExpr);
+    // DebugInstr refers to the pre-spill location, therefore we can reuse
+    // its expression.
+    NewDebugInstr = BuildMI(
+        *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false, NewReg,
+        DebugInstr->getDebugVariable(), DebugInstr->getDebugExpression());
     VarLoc VL(*NewDebugInstr, LS);
     ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register restore: ";
@@ -856,14 +846,9 @@ void LiveDebugValues::transferSpillOrRestoreInst(MachineInstr &MI,
                       << "\n");
   }
   // Check if the register or spill location is the location of a debug value.
-  // FIXME: Don't create a spill transfer if there is a complex expression,
-  // because we currently cannot recover the original expression on restore.
   for (unsigned ID : OpenRanges.getVarLocs()) {
-    const MachineInstr *DebugInstr = &VarLocIDs[ID].MI;
-
     if (TKind == TransferKind::TransferSpill &&
-        VarLocIDs[ID].isDescribedByReg() == Reg &&
-        !DebugInstr->getDebugExpression()->isComplex()) {
+        VarLocIDs[ID].isDescribedByReg() == Reg) {
       LLVM_DEBUG(dbgs() << "Spilling Register " << printReg(Reg, TRI) << '('
                         << VarLocIDs[ID].Var.getVar()->getName() << ")\n");
     } else if (TKind == TransferKind::TransferRestore &&
@@ -1121,13 +1106,24 @@ bool LiveDebugValues::join(
                    DebugInstr->getDebugVariable(),
                    DebugInstr->getDebugExpression());
     } else {
+      auto *DebugExpr = DebugInstr->getDebugExpression();
+      Register Reg = DebugInstr->getOperand(0).getReg();
+      bool IsIndirect = DebugInstr->isIndirectDebugValue();
+
+      if (DiffIt.Kind == VarLoc::SpillLocKind) {
+        // This is is a spilt location; DebugInstr refers to the unspilt
+        // location. We need to rebuild the spilt location expression and
+        // point the DBG_VALUE at the frame register.
+        DebugExpr = DIExpression::prepend(DebugInstr->getDebugExpression(),
+                                          DIExpression::ApplyOffset,
+                                          DiffIt.Loc.SpillLocation.SpillOffset);
+        Reg = TRI->getFrameRegister(*DebugInstr->getMF());
+        IsIndirect = true;
+      }
+
       MI = BuildMI(MBB, MBB.instr_begin(), DebugInstr->getDebugLoc(),
-                   DebugInstr->getDesc(), DebugInstr->isIndirectDebugValue(),
-                   DebugInstr->getOperand(0).getReg(),
-                   DebugInstr->getDebugVariable(),
-                   DebugInstr->getDebugExpression());
-      if (DebugInstr->isIndirectDebugValue())
-        MI->getOperand(1).setImm(DebugInstr->getOperand(1).getImm());
+                   DebugInstr->getDesc(), IsIndirect, Reg,
+                   DebugInstr->getDebugVariable(), DebugExpr);
     }
     LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     ILS.set(ID);
