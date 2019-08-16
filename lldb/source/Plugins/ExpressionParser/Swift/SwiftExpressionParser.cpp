@@ -126,7 +126,7 @@ SwiftExpressionParser::SwiftExpressionParser(
 
   if (target_sp) {
     Status error;
-    m_swift_ast_context = llvm::make_unique<SwiftASTContextReader>(
+    m_swift_ast_context = std::make_unique<SwiftASTContextReader>(
         target_sp->GetScratchSwiftASTContext(error, *exe_scope, true));
   }
 }
@@ -1288,7 +1288,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
     code_manipulator =
-        llvm::make_unique<SwiftASTManipulator>(*source_file, repl);
+        std::make_unique<SwiftASTManipulator>(*source_file, repl);
 
     if (!playground) {
       code_manipulator->RewriteResult();

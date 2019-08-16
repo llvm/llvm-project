@@ -358,9 +358,9 @@ ClangExpressionParser::ClangExpressionParser(
   std::shared_ptr<clang::PCHContainerOperations> pch_operations =
       m_compiler->getPCHContainerOperations();
   pch_operations->registerWriter(
-      llvm::make_unique<ObjectFilePCHContainerWriter>());
+      std::make_unique<ObjectFilePCHContainerWriter>());
   pch_operations->registerReader(
-      llvm::make_unique<ObjectFilePCHContainerReader>());
+      std::make_unique<ObjectFilePCHContainerReader>());
 
   // 2. Install the target.
   lldb::LanguageType frame_lang =

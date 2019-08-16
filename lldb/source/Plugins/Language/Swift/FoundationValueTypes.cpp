@@ -616,7 +616,7 @@ public:
     if (!class_descriptor_sp)
       return false;
 
-    m_synth_backend_up = llvm::make_unique<ObjCRuntimeSyntheticProvider>(
+    m_synth_backend_up = std::make_unique<ObjCRuntimeSyntheticProvider>(
         SyntheticChildren::Flags(), class_descriptor_sp);
     m_synth_frontend_up = m_synth_backend_up->GetFrontEnd(*underlying_sp);
     if (!m_synth_frontend_up)
