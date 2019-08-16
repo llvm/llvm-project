@@ -46,7 +46,7 @@ using namespace lld::coff;
 static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
   std::error_code ec;
   auto ret =
-      std::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
+      llvm::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
   if (ec) {
     error("cannot open " + file + ": " + ec.message());
     return nullptr;
@@ -105,7 +105,7 @@ BitcodeCompiler::BitcodeCompiler() {
     backend = lto::createInProcessThinBackend(config->thinLTOJobs);
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
+  ltoObj = llvm::make_unique<lto::LTO>(createConfig(), backend,
                                        config->ltoPartitions);
 }
 
@@ -160,8 +160,8 @@ std::vector<StringRef> BitcodeCompiler::compile() {
 
   checkError(ltoObj->run(
       [&](size_t task) {
-        return std::make_unique<lto::NativeObjectStream>(
-            std::make_unique<raw_svector_ostream>(buf[task]));
+        return llvm::make_unique<lto::NativeObjectStream>(
+            llvm::make_unique<raw_svector_ostream>(buf[task]));
       },
       cache));
 
