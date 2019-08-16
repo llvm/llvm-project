@@ -335,8 +335,8 @@ static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
 
 typedef std::vector<std::pair<std::string, bool>> CheckersList;
 
-static CheckersList getCheckersControlList(ClangTidyContext &Context,
-                                           bool IncludeExperimental) {
+static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
+                                                   bool IncludeExperimental) {
   CheckersList List;
 
   const auto &RegisteredCheckers =
@@ -420,9 +420,9 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   AnalyzerOptionsRef AnalyzerOptions = Compiler.getAnalyzerOpts();
-  AnalyzerOptions->CheckersControlList =
-      getCheckersControlList(Context, Context.canEnableAnalyzerAlphaCheckers());
-  if (!AnalyzerOptions->CheckersControlList.empty()) {
+  AnalyzerOptions->CheckersAndPackages = getAnalyzerCheckersAndPackages(
+      Context, Context.canEnableAnalyzerAlphaCheckers());
+  if (!AnalyzerOptions->CheckersAndPackages.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
     AnalyzerOptions->AnalysisStoreOpt = RegionStoreModel;
     AnalyzerOptions->AnalysisDiagOpt = PD_NONE;
@@ -448,7 +448,7 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
   }
 
 #if CLANG_ENABLE_STATIC_ANALYZER
-  for (const auto &AnalyzerCheck : getCheckersControlList(
+  for (const auto &AnalyzerCheck : getAnalyzerCheckersAndPackages(
            Context, Context.canEnableAnalyzerAlphaCheckers()))
     CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
 #endif // CLANG_ENABLE_STATIC_ANALYZER

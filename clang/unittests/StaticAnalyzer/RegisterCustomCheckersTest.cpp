@@ -46,7 +46,7 @@ public:
     std::unique_ptr<AnalysisASTConsumer> AnalysisConsumer =
         CreateAnalysisConsumer(Compiler);
     AnalysisConsumer->AddDiagnosticConsumer(new DiagConsumer(DiagsOutput));
-    Compiler.getAnalyzerOpts()->CheckersControlList = {
+    Compiler.getAnalyzerOpts()->CheckersAndPackages = {
         {"custom.CustomChecker", true}};
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
       Registry.addChecker<CheckerT>("custom.CustomChecker", "Description", "");
