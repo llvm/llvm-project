@@ -390,21 +390,15 @@ Status Variable::GetValuesForVariableExpressionPath(
   default: {
     static RegularExpression g_regex(
         llvm::StringRef("^([A-Za-z_:][A-Za-z_0-9:]*)(.*)"));
-    RegularExpression::Match regex_match(1);
-    std::string variable_name;
+    llvm::SmallVector<llvm::StringRef, 2> matches;
     variable_list.Clear();
-    if (!g_regex.Execute(variable_expr_path, &regex_match)) {
+    if (!g_regex.Execute(variable_expr_path, &matches)) {
       error.SetErrorStringWithFormat(
           "unable to extract a variable name from '%s'",
           variable_expr_path.str().c_str());
       return error;
     }
-    if (!regex_match.GetMatchAtIndex(variable_expr_path, 1, variable_name)) {
-      error.SetErrorStringWithFormat(
-          "unable to extract a variable name from '%s'",
-          variable_expr_path.str().c_str());
-      return error;
-    }
+    std::string variable_name = matches[1].str();
     if (!callback(baton, variable_name.c_str(), variable_list)) {
       error.SetErrorString("unknown error");
       return error;

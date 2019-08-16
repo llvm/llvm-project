@@ -9,102 +9,28 @@
 #ifndef liblldb_RegularExpression_h_
 #define liblldb_RegularExpression_h_
 
-#ifdef _WIN32
-#include "../lib/Support/regex_impl.h"
-
-typedef llvm_regmatch_t regmatch_t;
-typedef llvm_regex_t regex_t;
-
-inline int regcomp(llvm_regex_t *a, const char *b, int c) {
-  return llvm_regcomp(a, b, c);
-}
-
-inline size_t regerror(int a, const llvm_regex_t *b, char *c, size_t d) {
-  return llvm_regerror(a, b, c, d);
-}
-
-inline int regexec(const llvm_regex_t *a, const char *b, size_t c,
-                   llvm_regmatch_t d[], int e) {
-  return llvm_regexec(a, b, c, d, e);
-}
-
-inline void regfree(llvm_regex_t *a) { llvm_regfree(a); }
-#else
-#ifdef __ANDROID__
-#include <regex>
-#endif
-#include <regex.h>
-#endif
-
-#include <string>
-#include <vector>
-
-#include <stddef.h>
-#include <stdint.h>
-
-namespace llvm {
-class StringRef;
-} // namespace llvm
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 
 namespace lldb_private {
 
-/// \class RegularExpression RegularExpression.h
-/// "lldb/Utility/RegularExpression.h"
-/// A C++ wrapper class for regex.
-///
-/// This regular expression class wraps the posix regex functions \c
-/// regcomp(), \c regerror(), \c regexec(), and \c regfree() from the header
-/// file in \c /usr/include/regex\.h.
-class RegularExpression {
+class RegularExpression : public llvm::Regex {
 public:
-  class Match {
-  public:
-    Match(uint32_t max_matches) : m_matches() {
-      if (max_matches > 0)
-        m_matches.resize(max_matches + 1);
-    }
-
-    void Clear() {
-      const size_t num_matches = m_matches.size();
-      regmatch_t invalid_match = {-1, -1};
-      for (size_t i = 0; i < num_matches; ++i)
-        m_matches[i] = invalid_match;
-    }
-
-    size_t GetSize() const { return m_matches.size(); }
-
-    regmatch_t *GetData() {
-      return (m_matches.empty() ? nullptr : m_matches.data());
-    }
-
-    bool GetMatchAtIndex(llvm::StringRef s, uint32_t idx,
-                         std::string &match_str) const;
-
-    bool GetMatchAtIndex(llvm::StringRef s, uint32_t idx,
-                         llvm::StringRef &match_str) const;
-
-  protected:
-    std::vector<regmatch_t>
-        m_matches; ///< Where parenthesized subexpressions results are stored
-  };
-
   /// Default constructor.
   ///
   /// The default constructor that initializes the object state such that it
   /// contains no compiled regular expression.
-  RegularExpression();
+  RegularExpression() = default;
 
   explicit RegularExpression(llvm::StringRef string);
-
-  /// Destructor.
-  ///
-  /// Any previously compiled regular expression contained in this object will
-  /// be freed.
-  ~RegularExpression();
+  ~RegularExpression() = default;
 
   RegularExpression(const RegularExpression &rhs);
+  RegularExpression(RegularExpression &&rhs) = default;
 
-  const RegularExpression &operator=(const RegularExpression &rhs);
+  RegularExpression &operator=(RegularExpression &&rhs) = default;
+  RegularExpression &operator=(const RegularExpression &rhs) = default;
 
   /// Compile a regular expression.
   ///
@@ -118,11 +44,9 @@ public:
   ///     A NULL terminated C string that represents the regular
   ///     expression to compile.
   ///
-  /// \return
-  ///     \b true if the regular expression compiles successfully,
-  ///     \b false otherwise.
+  /// \return \b true if the regular expression compiles successfully, \b false
+  ///     otherwise.
   bool Compile(llvm::StringRef string);
-  bool Compile(const char *) = delete;
 
   /// Executes a regular expression.
   ///
@@ -140,19 +64,10 @@ public:
   ///     properly initialized with the desired number of maximum
   ///     matches, or nullptr if no parenthesized matching is needed.
   ///
-  /// \return
-  ///     \b true if \a string matches the compiled regular
-  ///     expression, \b false otherwise.
-  bool Execute(llvm::StringRef string, Match *match = nullptr) const;
-  bool Execute(const char *, Match * = nullptr) = delete;
-
-  size_t GetErrorAsCString(char *err_str, size_t err_str_max_len) const;
-
-  /// Free the compiled regular expression.
-  ///
-  /// If this object contains a valid compiled regular expression, this
-  /// function will free any resources it was consuming.
-  void Free();
+  /// \return \b true if \a string matches the compiled regular expression, \b
+  ///     false otherwise.
+  bool Execute(llvm::StringRef string,
+               llvm::SmallVectorImpl<llvm::StringRef> *matches = nullptr) const;
 
   /// Access the regular expression text.
   ///
@@ -168,26 +83,18 @@ public:
   ///
   /// Test if this object contains a valid regular expression.
   ///
-  /// \return
-  ///     \b true if the regular expression compiled and is ready
-  ///     for execution, \b false otherwise.
+  /// \return \b true if the regular expression compiled and is ready for
+  ///     execution, \b false otherwise.
   bool IsValid() const;
 
-  void Clear() {
-    Free();
-    m_re.clear();
-    m_comp_err = 1;
-  }
-
-  int GetErrorCode() const { return m_comp_err; }
-
-  bool operator<(const RegularExpression &rhs) const;
+  /// Return an error if the regular expression failed to compile.
+  llvm::Error GetError() const;
 
 private:
-  // Member variables
-  std::string m_re; ///< A copy of the original regular expression text
-  int m_comp_err;   ///< Status code for the regular expression compilation
-  regex_t m_preg;   ///< The compiled regular expression
+  /// A copy of the original regular expression text.
+  std::string m_regex_text;
+  /// The compiled regular expression.
+  mutable llvm::Regex m_regex;
 };
 
 } // namespace lldb_private
