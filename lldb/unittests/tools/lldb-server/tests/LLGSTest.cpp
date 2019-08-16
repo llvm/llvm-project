@@ -18,7 +18,9 @@ using namespace llvm;
 #undef SendMessage
 #endif
 
-#if !defined(__APPLE__)
+// Disable this test on Windows as it appears to have a race condition
+// that causes lldb-server not to exit after the inferior hangs up.
+#if !defined(_WIN32) || !defined(__APPLE__)
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 
