@@ -255,7 +255,7 @@ Putting this all together here is how the source of the tool looks like:
     return 0;
   };
 
-We may extend the ``CmakeLists.txt`` under let's say ``clang/tools`` with the build and link instructions:
+We may extend the ``CMakeLists.txt`` under let's say ``clang/tools`` with the build and link instructions:
 
 .. code-block:: bash
 
@@ -554,7 +554,7 @@ What's more there is a third prototype declaration merged to the chain.
 The functions are merged in a way that prototypes are added to the redecl chain if they refer to the same type, but we can have only one definition.
 The first two declarations are from ``bar.ast``, the third is from ``main.ast``.
 
-Now, Let's create an object file from the merged AST:
+Now, let's create an object file from the merged AST:
 
 .. code-block:: bash
 
