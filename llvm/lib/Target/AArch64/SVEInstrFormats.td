@@ -403,12 +403,12 @@ multiclass sve_int_count_r_x64<bits<5> opc, string asm> {
 }
 
 class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
-                      ZPRRegOp zprty>
-: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, PPRAny:$Pg),
-  asm, "\t$Zdn, $Pg",
+                      ZPRRegOp zprty, PPRRegOp pprty>
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, pprty:$Pm),
+  asm, "\t$Zdn, $Pm",
   "",
   []>, Sched<[]> {
-  bits<4> Pg;
+  bits<4> Pm;
   bits<5> Zdn;
   let Inst{31-24} = 0b00100101;
   let Inst{23-22} = sz8_64;
@@ -416,7 +416,7 @@ class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
   let Inst{18-16} = opc{4-2};
   let Inst{15-11} = 0b10000;
   let Inst{10-9}  = opc{1-0};
-  let Inst{8-5}   = Pg;
+  let Inst{8-5}   = Pm;
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
@@ -425,9 +425,16 @@ class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
 }
 
 multiclass sve_int_count_v<bits<5> opc, string asm> {
-  def _H : sve_int_count_v<0b01, opc, asm, ZPR16>;
-  def _S : sve_int_count_v<0b10, opc, asm, ZPR32>;
-  def _D : sve_int_count_v<0b11, opc, asm, ZPR64>;
+  def _H : sve_int_count_v<0b01, opc, asm, ZPR16, PPR16>;
+  def _S : sve_int_count_v<0b10, opc, asm, ZPR32, PPR32>;
+  def _D : sve_int_count_v<0b11, opc, asm, ZPR64, PPR64>;
+
+  def : InstAlias<asm # "\t$Zdn, $Pm",
+                 (!cast<Instruction>(NAME # "_H") ZPR16:$Zdn, PPRAny:$Pm), 0>;
+  def : InstAlias<asm # "\t$Zdn, $Pm",
+                 (!cast<Instruction>(NAME # "_S") ZPR32:$Zdn, PPRAny:$Pm), 0>;
+  def : InstAlias<asm # "\t$Zdn, $Pm",
+                  (!cast<Instruction>(NAME # "_D") ZPR64:$Zdn, PPRAny:$Pm), 0>;
 }
 
 class sve_int_pcount_pred<bits<2> sz8_64, bits<4> opc, string asm,

@@ -56,19 +56,37 @@ uqdecp  wzr, p15.d
 // CHECK-UNKNOWN: ff 89 eb 25 <unknown>
 
 uqdecp  z0.h, p0
-// CHECK-INST: uqdecp z0.h, p0
+// CHECK-INST: uqdecp z0.h, p0.h
+// CHECK-ENCODING: [0x00,0x80,0x6b,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 6b 25 <unknown>
+
+uqdecp  z0.h, p0.h
+// CHECK-INST: uqdecp z0.h, p0.h
 // CHECK-ENCODING: [0x00,0x80,0x6b,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 6b 25 <unknown>
 
 uqdecp  z0.s, p0
-// CHECK-INST: uqdecp z0.s, p0
+// CHECK-INST: uqdecp z0.s, p0.s
+// CHECK-ENCODING: [0x00,0x80,0xab,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 ab 25 <unknown>
+
+uqdecp  z0.s, p0.s
+// CHECK-INST: uqdecp z0.s, p0.s
 // CHECK-ENCODING: [0x00,0x80,0xab,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 ab 25 <unknown>
 
 uqdecp  z0.d, p0
-// CHECK-INST: uqdecp z0.d, p0
+// CHECK-INST: uqdecp z0.d, p0.d
+// CHECK-ENCODING: [0x00,0x80,0xeb,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 eb 25 <unknown>
+
+uqdecp  z0.d, p0.d
+// CHECK-INST: uqdecp z0.d, p0.d
 // CHECK-ENCODING: [0x00,0x80,0xeb,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 eb 25 <unknown>
@@ -83,8 +101,8 @@ movprfx z0, z7
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 bc 20 04 <unknown>
 
-uqdecp  z0.d, p0
-// CHECK-INST: uqdecp	z0.d, p0
+uqdecp  z0.d, p0.d
+// CHECK-INST: uqdecp	z0.d, p0.d
 // CHECK-ENCODING: [0x00,0x80,0xeb,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 eb 25 <unknown>

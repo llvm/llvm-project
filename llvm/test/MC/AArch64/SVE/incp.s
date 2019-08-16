@@ -56,19 +56,37 @@ incp    xzr, p15.d
 // CHECK-UNKNOWN: ff 89 ec 25 <unknown>
 
 incp    z31.h, p15
-// CHECK-INST: incp    z31.h, p15
+// CHECK-INST: incp    z31.h, p15.h
+// CHECK-ENCODING: [0xff,0x81,0x6c,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 81 6c 25 <unknown>
+
+incp    z31.h, p15.h
+// CHECK-INST: incp    z31.h, p15.h
 // CHECK-ENCODING: [0xff,0x81,0x6c,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 81 6c 25 <unknown>
 
 incp    z31.s, p15
-// CHECK-INST: incp    z31.s, p15
+// CHECK-INST: incp    z31.s, p15.s
+// CHECK-ENCODING: [0xff,0x81,0xac,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 81 ac 25 <unknown>
+
+incp    z31.s, p15.s
+// CHECK-INST: incp    z31.s, p15.s
 // CHECK-ENCODING: [0xff,0x81,0xac,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 81 ac 25 <unknown>
 
 incp    z31.d, p15
-// CHECK-INST: incp    z31.d, p15
+// CHECK-INST: incp    z31.d, p15.d
+// CHECK-ENCODING: [0xff,0x81,0xec,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 81 ec 25 <unknown>
+
+incp    z31.d, p15.d
+// CHECK-INST: incp    z31.d, p15.d
 // CHECK-ENCODING: [0xff,0x81,0xec,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 81 ec 25 <unknown>
@@ -83,8 +101,8 @@ movprfx z31, z6
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: df bc 20 04 <unknown>
 
-incp    z31.d, p15
-// CHECK-INST: incp	z31.d, p15
+incp    z31.d, p15.d
+// CHECK-INST: incp	z31.d, p15.d
 // CHECK-ENCODING: [0xff,0x81,0xec,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 81 ec 25 <unknown>
