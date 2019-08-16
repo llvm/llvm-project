@@ -378,6 +378,14 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
       Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
                               InfoType::IT_enum);
   }
+  // The global namespace should be added to the list of namespaces if the decl
+  // corresponds to a Record and if it doesn't have any namespace (because this
+  // means it's in the global namespace). Also if its outermost namespace is a
+  // record because that record matches the previous condition mentioned.
+  if ((Namespaces.empty() && dyn_cast<RecordDecl>(D)) ||
+      (!Namespaces.empty() && Namespaces.back().RefType == InfoType::IT_record))
+    Namespaces.emplace_back(SymbolID(), "GlobalNamespace",
+                            InfoType::IT_namespace);
 }
 
 template <typename T>
@@ -528,16 +536,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   }
   I->Path = getInfoRelativePath(I->Namespace);
 
-  if (I->Namespace.empty()) {
-    auto ParentI = std::make_unique<NamespaceInfo>();
-    ParentI->USR = SymbolID();
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
-                                       getInfoRelativePath(I->Namespace));
-    ParentI->Path = getInfoRelativePath(ParentI->Namespace);
-    return {std::unique_ptr<Info>{std::move(I)},
-            std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-
   switch (I->Namespace[0].RefType) {
   case InfoType::IT_namespace: {
     auto ParentI = std::make_unique<NamespaceInfo>();
@@ -611,8 +609,6 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
   // Wrap in enclosing scope
   auto ParentI = std::make_unique<RecordInfo>();
   ParentI->USR = ParentUSR;
-  if (Func.Namespace.empty())
-    ParentI->Path = getInfoRelativePath(ParentI->Namespace);
   ParentI->ChildFunctions.emplace_back(std::move(Func));
   // Info is wrapped in its parent scope so it's returned in the second position
   return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};

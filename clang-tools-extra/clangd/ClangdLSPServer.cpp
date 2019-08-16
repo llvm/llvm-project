@@ -570,28 +570,28 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
                                 Callback<llvm::json::Value> Reply) {
-  auto ApplyEdit = [this](WorkspaceEdit WE,
-                          Callback<ApplyWorkspaceEditResponse> Reply) {
+  auto ApplyEdit = [this](WorkspaceEdit WE, std::string SuccessMessage,
+                          decltype(Reply) Reply) {
     ApplyWorkspaceEditParams Edit;
     Edit.edit = std::move(WE);
-    call("workspace/applyEdit", std::move(Edit), std::move(Reply));
+    call<ApplyWorkspaceEditResponse>(
+        "workspace/applyEdit", std::move(Edit),
+        [Reply = std::move(Reply), SuccessMessage = std::move(SuccessMessage)](
+            llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
+          if (!Response)
+            return Reply(Response.takeError());
+          if (!Response->applied) {
+            std::string Reason = Response->failureReason
+                                     ? *Response->failureReason
+                                     : "unknown reason";
+            return Reply(llvm::createStringError(
+                llvm::inconvertibleErrorCode(),
+                ("edits were not applied: " + Reason).c_str()));
+          }
+          return Reply(SuccessMessage);
+        });
   };
-  // FIXME: this lambda is tangled and confusing, refactor it.
-  auto ReplyAfterApplyingEdit =
-      [](decltype(Reply) Reply, std::string SuccessMessage,
-         llvm::Expected<ApplyWorkspaceEditResponse> Response) {
-        if (!Response)
-          return Reply(Response.takeError());
-        if (!Response->applied) {
-          std::string Reason = Response->failureReason
-                                   ? *Response->failureReason
-                                   : "unknown reason";
-          return Reply(llvm::createStringError(
-              llvm::inconvertibleErrorCode(),
-              ("edits were not applied: " + Reason).c_str()));
-        }
-        return Reply(SuccessMessage);
-      };
+
   if (Params.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND &&
       Params.workspaceEdit) {
     // The flow for "apply-fix" :
@@ -602,12 +602,7 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
     // 5. We unwrap the changes and send them back to the editor
     // 6. The editor applies the changes (applyEdit), and sends us a reply
     // 7. We unwrap the reply and send a reply to the editor.
-    ApplyEdit(*Params.workspaceEdit,
-              [Reply = std::move(Reply), ReplyAfterApplyingEdit](
-                  llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
-                ReplyAfterApplyingEdit(std::move(Reply), "Fix applied.",
-                                       std::move(Response));
-              });
+    ApplyEdit(*Params.workspaceEdit, "Fix applied.", std::move(Reply));
   } else if (Params.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK &&
              Params.tweakArgs) {
     auto Code = DraftMgr.getDraft(Params.tweakArgs->file.file());
@@ -616,32 +611,29 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
           llvm::inconvertibleErrorCode(),
           "trying to apply a code action for a non-added file"));
 
-    auto Action = [this, ApplyEdit, ReplyAfterApplyingEdit,
-                   Reply = std::move(Reply), File = Params.tweakArgs->file,
-                   Code = std::move(*Code)](
+    auto Action = [this, ApplyEdit, Reply = std::move(Reply),
+                   File = Params.tweakArgs->file, Code = std::move(*Code)](
                       llvm::Expected<Tweak::Effect> R) mutable {
       if (!R)
         return Reply(R.takeError());
 
-      if (R->ApplyEdit) {
-        WorkspaceEdit WE;
-        WE.changes.emplace();
-        (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R->ApplyEdit);
-        ApplyEdit(
-            std::move(WE),
-            [Reply = std::move(Reply), ReplyAfterApplyingEdit](
-                llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
-              ReplyAfterApplyingEdit(std::move(Reply), "Tweak applied.",
-                                     std::move(Response));
-            });
-      }
+      assert(R->ShowMessage || (R->ApplyEdit && "tweak has no effect"));
+
       if (R->ShowMessage) {
         ShowMessageParams Msg;
         Msg.message = *R->ShowMessage;
         Msg.type = MessageType::Info;
         notify("window/showMessage", Msg);
-        Reply("Tweak applied.");
       }
+      if (R->ApplyEdit) {
+        WorkspaceEdit WE;
+        WE.changes.emplace();
+        (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R->ApplyEdit);
+        // ApplyEdit will take care of calling Reply().
+        return ApplyEdit(std::move(WE), "Tweak applied.", std::move(Reply));
+      }
+      // When no edit is specified, make sure we Reply().
+      return Reply("Tweak applied.");
     };
     Server->applyTweak(Params.tweakArgs->file.file(),
                        Params.tweakArgs->selection, Params.tweakArgs->tweakID,

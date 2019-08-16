@@ -137,7 +137,9 @@ typedef struct {} G;)raw",
                        10, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
-  RecordInfo ExpectedE(EmptySID, "E");
+  RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedE, E);
@@ -150,6 +152,8 @@ typedef struct {} G;)raw",
   EConstructor.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   EConstructor.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   EConstructor.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  EConstructor.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                      InfoType::IT_namespace);
   EConstructor.Access = AccessSpecifier::AS_public;
   EConstructor.IsMethod = true;
   ExpectedRecordWithEConstructor.ChildFunctions.emplace_back(
@@ -164,13 +168,17 @@ typedef struct {} G;)raw",
   Method.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   Method.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   Method.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  Method.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                InfoType::IT_namespace);
   Method.Access = AccessSpecifier::AS_protected;
   Method.IsMethod = true;
   ExpectedRecordWithMethod.ChildFunctions.emplace_back(std::move(Method));
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
 
   RecordInfo *F = InfoAsRecord(Infos[4].get());
-  RecordInfo ExpectedF(EmptySID, "F");
+  RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
+  ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedF.TagType = TagTypeKind::TTK_Struct;
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
@@ -183,6 +191,8 @@ typedef struct {} G;)raw",
   TemplateMethod.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   TemplateMethod.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   TemplateMethod.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  TemplateMethod.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   TemplateMethod.Access = AccessSpecifier::AS_public;
   TemplateMethod.IsMethod = true;
   ExpectedRecordWithTemplateMethod.ChildFunctions.emplace_back(
@@ -201,6 +211,8 @@ typedef struct {} G;)raw",
                                              llvm::SmallString<16>{"test.cpp"});
   SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "F",
                                                    InfoType::IT_record);
+  SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                                   InfoType::IT_namespace);
   SpecializedTemplateMethod.Access = AccessSpecifier::AS_public;
   SpecializedTemplateMethod.IsMethod = true;
   ExpectedTemplatedRecord.ChildFunctions.emplace_back(
@@ -208,7 +220,9 @@ typedef struct {} G;)raw",
   CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
 
   RecordInfo *G = InfoAsRecord(Infos[8].get());
-  RecordInfo ExpectedG(EmptySID, "G");
+  RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedG.TagType = TagTypeKind::TTK_Struct;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.IsTypeDef = true;
@@ -248,7 +262,9 @@ TEST(SerializeTest, emitUndefinedRecordInfo) {
   ExtractInfosFromCode("class E;", 2, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
-  RecordInfo ExpectedE(EmptySID, "E");
+  RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   ExpectedE.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedE, E);
@@ -259,7 +275,9 @@ TEST(SerializeTest, emitRecordMemberInfo) {
   ExtractInfosFromCode("struct E { int I; };", 2, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
-  RecordInfo ExpectedE(EmptySID, "E");
+  RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Struct;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.Members.emplace_back("int", "I", AccessSpecifier::AS_public);
@@ -271,16 +289,22 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   ExtractInfosFromCode("class E { class G {}; };", 4, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
-  RecordInfo ExpectedE(EmptySID, "E");
+  RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *G = InfoAsRecord(Infos[2].get());
-  RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"E");
+  llvm::SmallString<128> ExpectedGPath("GlobalNamespace/E");
+  llvm::sys::path::native(ExpectedGPath);
+  RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/ExpectedGPath);
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   CheckRecordInfo(&ExpectedG, G);
 }
 
@@ -333,23 +357,32 @@ class J : public I<int> {} ;)raw",
                        14, /*Public=*/false, Infos);
 
   RecordInfo *F = InfoAsRecord(Infos[0].get());
-  RecordInfo ExpectedF(EmptySID, "F");
+  RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
+  ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedF.TagType = TagTypeKind::TTK_Class;
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
   RecordInfo *G = InfoAsRecord(Infos[3].get());
-  RecordInfo ExpectedG(EmptySID, "G");
+  RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
+  ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.Members.emplace_back("int", "I", AccessSpecifier::AS_protected);
   CheckRecordInfo(&ExpectedG, G);
 
   RecordInfo *E = InfoAsRecord(Infos[6].get());
-  RecordInfo ExpectedE(EmptySID, "E");
-  ExpectedE.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
-  ExpectedE.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
-  ExpectedE.Bases.emplace_back(EmptySID, "F", "", false,
+  RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
+  ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
+  ExpectedE.Parents.emplace_back(EmptySID, /*Name=*/"F", InfoType::IT_record,
+                                 /*Path*=*/"GlobalNamespace");
+  ExpectedE.VirtualParents.emplace_back(
+      EmptySID, /*Name=*/"G", InfoType::IT_record, /*Path*=*/"GlobalNamespace");
+  ExpectedE.Bases.emplace_back(EmptySID, /*Name=*/"F",
+                               /*Path=*/"GlobalNamespace", false,
                                AccessSpecifier::AS_public, true);
   FunctionInfo FunctionSet;
   FunctionSet.Name = "set";
@@ -357,16 +390,21 @@ class J : public I<int> {} ;)raw",
   FunctionSet.Loc.emplace_back();
   FunctionSet.Params.emplace_back("int", "N");
   FunctionSet.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                     InfoType::IT_namespace);
   FunctionSet.Access = AccessSpecifier::AS_protected;
   FunctionSet.IsMethod = true;
   ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSet));
-  ExpectedE.Bases.emplace_back(EmptySID, "G", "", true,
+  ExpectedE.Bases.emplace_back(EmptySID, /*Name=*/"G",
+                               /*Path=*/"GlobalNamespace", true,
                                AccessSpecifier::AS_private, true);
   FunctionInfo FunctionGet;
   FunctionGet.Name = "get";
   FunctionGet.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
   FunctionGet.DefLoc = Location();
   FunctionGet.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                     InfoType::IT_namespace);
   FunctionGet.Access = AccessSpecifier::AS_private;
   FunctionGet.IsMethod = true;
   ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGet));
@@ -377,14 +415,20 @@ class J : public I<int> {} ;)raw",
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *H = InfoAsRecord(Infos[8].get());
-  RecordInfo ExpectedH(EmptySID, "H");
+  RecordInfo ExpectedH(EmptySID, /*Name=*/"H", /*Path=*/"GlobalNamespace");
+  ExpectedH.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedH.TagType = TagTypeKind::TTK_Class;
   ExpectedH.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedH.Parents.emplace_back(EmptySID, "E", InfoType::IT_record);
-  ExpectedH.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
-  ExpectedH.Bases.emplace_back(EmptySID, "E", "", false,
+  ExpectedH.Parents.emplace_back(EmptySID, /*Name=*/"E", InfoType::IT_record,
+                                 /*Path=*/"GlobalNamespace");
+  ExpectedH.VirtualParents.emplace_back(
+      EmptySID, /*Name=*/"G", InfoType::IT_record, /*Path=*/"GlobalNamespace");
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"E",
+                               /*Path=*/"GlobalNamespace", false,
                                AccessSpecifier::AS_private, true);
-  ExpectedH.Bases.emplace_back(EmptySID, "F", "", false,
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"F",
+                               /*Path=*/"GlobalNamespace", false,
                                AccessSpecifier::AS_private, false);
   FunctionInfo FunctionSetNew;
   FunctionSetNew.Name = "set";
@@ -392,16 +436,21 @@ class J : public I<int> {} ;)raw",
   FunctionSetNew.Loc.emplace_back();
   FunctionSetNew.Params.emplace_back("int", "N");
   FunctionSetNew.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  FunctionSetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   FunctionSetNew.Access = AccessSpecifier::AS_private;
   FunctionSetNew.IsMethod = true;
   ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSetNew));
-  ExpectedH.Bases.emplace_back(EmptySID, "G", "", true,
+  ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"G",
+                               /*Path=*/"GlobalNamespace", true,
                                AccessSpecifier::AS_private, false);
   FunctionInfo FunctionGetNew;
   FunctionGetNew.Name = "get";
   FunctionGetNew.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
   FunctionGetNew.DefLoc = Location();
   FunctionGetNew.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
+  FunctionGetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                        InfoType::IT_namespace);
   FunctionGetNew.Access = AccessSpecifier::AS_private;
   FunctionGetNew.IsMethod = true;
   ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGetNew));
@@ -410,15 +459,21 @@ class J : public I<int> {} ;)raw",
   CheckRecordInfo(&ExpectedH, H);
 
   RecordInfo *I = InfoAsRecord(Infos[10].get());
-  RecordInfo ExpectedI(EmptySID, "I");
+  RecordInfo ExpectedI(EmptySID, /*Name=*/"I", /*Path=*/"GlobalNamespace");
+  ExpectedI.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
   ExpectedI.TagType = TagTypeKind::TTK_Class;
   ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedI, I);
 
   RecordInfo *J = InfoAsRecord(Infos[12].get());
-  RecordInfo ExpectedJ(EmptySID, "J");
-  ExpectedJ.Parents.emplace_back(EmptySID, "I<int>", InfoType::IT_record);
-  ExpectedJ.Bases.emplace_back(EmptySID, "I<int>", "", false,
+  RecordInfo ExpectedJ(EmptySID, /*Name=*/"J", /*Path=*/"GlobalNamespace");
+  ExpectedJ.Namespace.emplace_back(EmptySID, "GlobalNamespace",
+                                   InfoType::IT_namespace);
+  ExpectedJ.Parents.emplace_back(EmptySID, /*Name=*/"I<int>",
+                                 InfoType::IT_record);
+  ExpectedJ.Bases.emplace_back(EmptySID, /*Name=*/"I<int>",
+                               /*Path=*/"GlobalNamespace", false,
                                AccessSpecifier::AS_public, true);
   ExpectedJ.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedJ.TagType = TagTypeKind::TTK_Class;
@@ -467,13 +522,16 @@ TEST(SerializeTest, emitChildRecords) {
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
-  ExpectedParentA.ChildRecords.emplace_back(EmptySID, "A", InfoType::IT_record);
+  ExpectedParentA.ChildRecords.emplace_back(EmptySID, "A", InfoType::IT_record,
+                                            "GlobalNamespace");
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   RecordInfo *ParentB = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedParentB(EmptySID);
+  llvm::SmallString<128> ExpectedParentBPath("GlobalNamespace/A");
+  llvm::sys::path::native(ExpectedParentBPath);
   ExpectedParentB.ChildRecords.emplace_back(EmptySID, "B", InfoType::IT_record,
-                                            "A");
+                                            ExpectedParentBPath);
   CheckRecordInfo(&ExpectedParentB, ParentB);
 
   NamespaceInfo *ParentC = InfoAsNamespace(Infos[7].get());
