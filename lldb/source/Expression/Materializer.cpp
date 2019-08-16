@@ -15,9 +15,9 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
@@ -566,22 +566,6 @@ public:
                 data.GetByteSize());
           }
           return;
-        }
-
-        // FIXME: It would be better to map the type into the context when the
-        //        variable is created. 
-        auto layout_type = m_variable_sp->GetType()->GetLayoutCompilerType();
-
-        // IRGen wants a fully realized type so we do archetype binding
-        // before asking informations about this type (e.g. its size).
-        if (layout_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-          lldb::ProcessSP process_sp =
-              map.GetBestExecutionContextScope()->CalculateProcess();
-          SwiftLanguageRuntime *language_runtime =
-              SwiftLanguageRuntime::Get(*process_sp);
-          if (language_runtime && frame_sp)
-            layout_type = language_runtime->DoArchetypeBindingForType(
-                *frame_sp, layout_type);
         }
 
         llvm::Optional<size_t> opt_bit_align =

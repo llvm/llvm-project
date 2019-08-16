@@ -307,6 +307,9 @@ public:
   /// Ask Remote mirrors for the stride of a Swift type.
   llvm::Optional<uint64_t> GetByteStride(CompilerType type);
 
+  /// Ask Remote mirrors for the alignment of a Swift type.
+  llvm::Optional<size_t> GetBitAlignment(CompilerType type);
+
   bool IsWhitelistedRuntimeValue(ConstString name) override;
 
   virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,

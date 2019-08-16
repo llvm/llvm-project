@@ -299,9 +299,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
   // For now we have to keep the old mangled name since the Objc->Swift bindings
   // that are in Foundation don't get the new mangling.
-  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs23_ContiguousArrayStorage"))
-      || valobj_typename.startswith("_TtCs23_ContiguousArrayStorage")
-      || valobj_typename.startswith("Swift._ContiguousArrayStorage")) {
+  if (valobj_typename.startswith("_TtCs23_ContiguousArrayStorage") ||
+      valobj_typename.startswith("Swift._ContiguousArrayStorage")) {
     CompilerType anyobject_type =
         valobj.GetTargetSP()->GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
@@ -314,9 +313,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     return nullptr;
   }
 
-  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"))
-      || valobj_typename.startswith("_TtCs22__SwiftDeferredNSArray")
-      || valobj_typename.startswith("Swift.__SwiftDeferredNSArray") ) {
+  if (valobj_typename.startswith("_TtCs22__SwiftDeferredNSArray") ||
+      valobj_typename.startswith("Swift.__SwiftDeferredNSArray")) {
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
       return nullptr;

@@ -42,7 +42,6 @@
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
-#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
@@ -3160,43 +3159,41 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   SwiftASTContext &m_swift_ast_ctx;
 
   /// Used to filter out types with mismatching kinds.
-  bool HasTypeKind(TypeSP clang_type_sp, swift::Demangle::Node::Kind kind) {
+  bool HasTypeKind(TypeSP clang_type_sp, swift::ClangTypeKind kind) {
     CompilerType fwd_type = clang_type_sp->GetForwardCompilerType();
     clang::QualType qual_type = ClangUtil::GetQualType(fwd_type);
     switch (kind) {
-    case swift::Demangle::Node::Kind::Protocol:
+    case swift::ClangTypeKind::Typedef:
+      /*=swift::ClangTypeKind::ObjCClass:*/
+      return !qual_type->isObjCObjectOrInterfaceType() &&
+             !qual_type->getAs<clang::TypedefType>();
+    case swift::ClangTypeKind::Tag:
+      return !qual_type->isStructureOrClassType() &&
+             !qual_type->isEnumeralType();
+    case swift::ClangTypeKind::ObjCProtocol:
       // Not implemented since Objective-C protocols aren't yet
       // described in DWARF.
       return true;
-    case swift::Demangle::Node::Kind::Class:
-      return !qual_type->isObjCObjectOrInterfaceType();
-    case swift::Demangle::Node::Kind::TypeAlias:
-      return !qual_type->getAs<clang::TypedefType>();
-      // Oddly, the swiftified mangled name of a C enum can have kind=Structure.
-    case swift::Demangle::Node::Kind::Structure:
-    case swift::Demangle::Node::Kind::Enum:
-      return !qual_type->isStructureOrClassType() &&
-             !qual_type->isEnumeralType();
     default:
       return true;
     }
   }
 
   clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
-                                     swift::Demangle::Node::Kind kind) {
+                                     swift::ClangTypeKind kind) {
     switch (kind) {
-    case swift::Demangle::Node::Kind::Class:
+    case swift::ClangTypeKind::Typedef:
+      /*=swift::ClangTypeKind::ObjCClass:*/
       if (auto *obj_type = qual_type->getAsObjCInterfaceType())
         return obj_type->getInterface();
-      break;
-    case swift::Demangle::Node::Kind::TypeAlias:
       if (auto *typedef_type = qual_type->getAs<clang::TypedefType>())
         return typedef_type->getDecl();
       break;
-    case swift::Demangle::Node::Kind::Structure:
-    case swift::Demangle::Node::Kind::Enum:
+    case swift::ClangTypeKind::Tag:
       return qual_type->getAsTagDecl();
-    default:
+    case swift::ClangTypeKind::ObjCProtocol:
+      // Not implemented since Objective-C protocols aren't yet
+      // described in DWARF.
       break;
     }
     return nullptr;
@@ -3207,13 +3204,13 @@ public:
       : m_swift_ast_ctx(swift_ast_ctx) {}
 
   void lookupValue(StringRef name,
-                   llvm::Optional<swift::Demangle::Node::Kind> kind,
+                   llvm::Optional<swift::ClangTypeKind> kind,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     std::vector<CompilerContext> decl_context;
     ConstString name_cs(name);
     decl_context.push_back({CompilerContextKind::Structure, name_cs});
-    auto *dwarf_importer = m_swift_ast_ctx.GetDWARFImporter();
-    if (!dwarf_importer)
+    auto clang_importer = m_swift_ast_ctx.GetClangImporter();
+    if (!clang_importer)
       return;
     Module *module = m_swift_ast_ctx.GetModule();
     if (!module)
@@ -3251,7 +3248,7 @@ public:
       // Realize the full type.
       CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
       // Import the type into the DWARFImporter's context.
-      clang::ASTContext &to_ctx = dwarf_importer->getClangASTContext();
+      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
       auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
           compiler_type.GetTypeSystem());
       if (!type_system)
@@ -3273,12 +3270,9 @@ public:
         if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, *kind))
           results.push_back(clang_decl);
       } else {
-        swift::Demangle::Node::Kind kinds[] = {
-            swift::Demangle::Node::Kind::Protocol,
-            swift::Demangle::Node::Kind::Class,
-            swift::Demangle::Node::Kind::TypeAlias,
-            swift::Demangle::Node::Kind::Structure,
-            swift::Demangle::Node::Kind::TypeAlias};
+        swift::ClangTypeKind kinds[] = {
+            swift::ClangTypeKind::Typedef, // =swift::ClangTypeKind::ObjCClass,
+            swift::ClangTypeKind::Tag, swift::ClangTypeKind::ObjCProtocol};
         for (auto kind : kinds)
           if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, kind))
             results.push_back(clang_decl);
@@ -3314,9 +3308,19 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
+      std::unique_ptr<SwiftDWARFImporterDelegate> dwarf_importer_up;
+      if (!m_is_scratch_context) {
+        // Create the DWARFImporterDelegate.
+        auto props = ModuleList::GetGlobalModuleListProperties();
+        if (props.GetUseDWARFImporter())
+          dwarf_importer_up =
+              llvm::make_unique<SwiftDWARFImporterDelegate>(*this);
+      }
       clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, clang_importer_options, {},
-          m_dependency_tracker.get());
+          *m_ast_context_ap, clang_importer_options, "", nullptr,
+          std::move(dwarf_importer_up));
+
+      // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
         std::string message;
         if (!HasErrors())
@@ -3425,22 +3429,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
                                       /*isClang=*/true);
   }
 
-  // 5. Create and install the DWARF importer, but only for the module AST
-  //    context.
-  if (!m_is_scratch_context) {
-    auto props = ModuleList::GetGlobalModuleListProperties();
-    if (props.GetUseDWARFImporter()) {
-      auto dwarf_importer_ap = swift::DWARFImporter::create(
-          *m_ast_context_ap, clang_importer_options,
-          llvm::make_unique<SwiftDWARFImporterDelegate>(*this));
-      if (dwarf_importer_ap) {
-        m_dwarf_importer = dwarf_importer_ap.get();
-        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
-                                          /*isClang=*/true, /*isDWARF=*/true);
-      }
-    }
-  }
-
   // Set up the required state for the evaluator in the TypeChecker.
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
 
@@ -3449,13 +3437,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   VALID_OR_RETURN(nullptr);
   return m_ast_context_ap.get();
 }
-
-swift::ValueDecl *SwiftASTContext::importDecl(clang::Decl *clangDecl) {
-  if (m_dwarf_importer)
-    return m_dwarf_importer->importDecl(clangDecl);
-  return nullptr;
-}
-
 
 swift::MemoryBufferSerializedModuleLoader *
 SwiftASTContext::GetMemoryBufferModuleLoader() {
@@ -3470,13 +3451,6 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clang_importer;
-}
-
-swift::DWARFImporter *SwiftASTContext::GetDWARFImporter() {
-  VALID_OR_RETURN(nullptr);
-
-  GetASTContext();
-  return m_dwarf_importer;
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
@@ -4215,12 +4189,6 @@ void SwiftASTContext::ValidateSectionModules(
   }
 }
 
-swift::Identifier SwiftASTContext::GetIdentifier(const char *name) {
-  VALID_OR_RETURN(swift::Identifier());
-
-  return GetASTContext()->getIdentifier(llvm::StringRef(name));
-}
-
 swift::Identifier SwiftASTContext::GetIdentifier(const llvm::StringRef &name) {
   VALID_OR_RETURN(swift::Identifier());
 
@@ -4585,7 +4553,7 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
   if (name && name[0] && swift_module) {
     swift::ModuleDecl::AccessPathTy access_path;
     llvm::SmallVector<swift::ValueDecl *, 4> value_decls;
-    swift::Identifier identifier(GetIdentifier(name));
+    swift::Identifier identifier(GetIdentifier(llvm::StringRef(name)));
     if (strchr(name, '.'))
       swift_module->lookupValue(access_path, identifier,
                                 swift::NLKind::QualifiedLookup, value_decls);
@@ -6161,14 +6129,35 @@ SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-size_t SwiftASTContext::GetTypeBitAlign(void *type) {
-  if (type) {
-    const swift::irgen::FixedTypeInfo *fixed_type_info =
-        GetSwiftFixedTypeInfo(type);
-    if (fixed_type_info)
-      return fixed_type_info->getFixedAlignment().getValue();
+llvm::Optional<size_t> SwiftASTContext::GetTypeBitAlign(void *type,
+                                                        ExecutionContextScope *exe_scope) {
+  if (!type)
+    return {};
+
+  // If the type has type parameters, bind them first.
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  if (swift_can_type->hasTypeParameter()) {
+    if (!exe_scope)
+      return {};
+    ExecutionContext exe_ctx;
+    exe_scope->CalculateExecutionContext(exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    // Note thay the bound type may be in a different AST context.
+    return bound_type.GetTypeBitAlign(exe_scope);
   }
-  return 0;
+
+  const swift::irgen::FixedTypeInfo *fixed_type_info =
+      GetSwiftFixedTypeInfo(type);
+  if (fixed_type_info)
+    return fixed_type_info->getFixedAlignment().getValue();
+
+  // Ask the dynamic type system.
+  if (!exe_scope)
+    return {};
+  if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
+    return runtime->GetBitAlignment({this, type});
+  return {};
 }
 
 lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {

@@ -7,3 +7,8 @@ enum CMYK {
 };
 
 typedef struct Point TPoint;
+
+union DoubleLongUnion {
+  double double_val;
+  long long_val;
+};
