@@ -249,7 +249,9 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
   // because BaseTy isn't complete at class instantiation time, but
   // will be by the time this function is instantiated.
   static void verifyTrailingObjectsAssertions() {
-    static_assert(std::is_final<BaseTy>(), "BaseTy must be final.");
+#ifdef LLVM_IS_FINAL
+    static_assert(LLVM_IS_FINAL(BaseTy), "BaseTy must be final.");
+#endif
   }
 
   // These two methods are the base of the recursion for this method.
