@@ -7926,14 +7926,17 @@ bool SwiftASTContext::IsImportedType(const CompilerType &type,
         if (const clang::ObjCInterfaceDecl *objc_interface_decl =
                 llvm::dyn_cast<clang::ObjCInterfaceDecl>(clang_decl)) {
           *original_type =
-              CompilerType(&objc_interface_decl->getASTContext(),
+              CompilerType(ClangASTContext::GetASTContext(
+                               &objc_interface_decl->getASTContext()),
                            clang::QualType::getFromOpaquePtr(
-                               objc_interface_decl->getTypeForDecl()));
+                               objc_interface_decl->getTypeForDecl())
+                               .getAsOpaquePtr());
         } else if (const clang::TypeDecl *type_decl =
                        llvm::dyn_cast<clang::TypeDecl>(clang_decl)) {
           *original_type = CompilerType(
-              &type_decl->getASTContext(),
-              clang::QualType::getFromOpaquePtr(type_decl->getTypeForDecl()));
+              ClangASTContext::GetASTContext(&type_decl->getASTContext()),
+              clang::QualType::getFromOpaquePtr(type_decl->getTypeForDecl())
+                  .getAsOpaquePtr());
         } else {
           // TODO: any more cases that we care about?
           *original_type = CompilerType();

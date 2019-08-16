@@ -4686,7 +4686,7 @@ ClangASTContext::GetCanonicalType(lldb::opaque_compiler_type_t type) {
 
 CompilerType ClangASTContext::GetInstanceType(void *type) {
   if (type)
-    return CompilerType(getASTContext(), GetQualType(type));
+    return CompilerType(this, GetQualType(type).getAsOpaquePtr());
   return CompilerType();
 }
 
@@ -5151,7 +5151,7 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 ClangASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
-  return CompilerType(getASTContext(), GetQualType(type));
+  return CompilerType(this, GetQualType(type).getAsOpaquePtr());
 }
 
 CompilerType ClangASTContext::RemoveFastQualifiers(const CompilerType &type) {
