@@ -85,9 +85,25 @@
 #endif
 
 #if __has_attribute(flag_enum)
-# define INDEXSTORE_OPTIONS __attribute__((flag_enum))
+# define _INDEXSTORE_FLAG_ENUM __attribute__((flag_enum))
 #else
-# define INDEXSTORE_OPTIONS
+# define _INDEXSTORE_FLAG_ENUM
+#endif
+
+#if __has_attribute(enum_extensibility)
+# define _INDEXSTORE_OPEN_ENUM __attribute__((enum_extensibility(open)))
+#else
+# define _INDEXSTORE_OPEN_ENUM
+#endif
+
+#define _INDEXSTORE_OPTIONS_ATTRS _INDEXSTORE_OPEN_ENUM _INDEXSTORE_FLAG_ENUM
+
+#if __has_extension(cxx_strong_enums)
+# define INDEXSTORE_OPTIONS(_name, _type) enum _INDEXSTORE_OPTIONS_ATTRS _name : _type
+#elif __has_feature(objc_fixed_enum)
+# define INDEXSTORE_OPTIONS(_name, _type) typedef enum _INDEXSTORE_OPTIONS_ATTRS _name : _type _name; enum _INDEXSTORE_OPTIONS_ATTRS _name : _type
+#else
+# define INDEXSTORE_OPTIONS(_name, _type) typedef _type _name; enum _INDEXSTORE_OPTIONS_ATTRS
 #endif
 
 INDEXSTORE_BEGIN_DECLS
@@ -269,7 +285,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY = 1015,
 } indexstore_symbol_subkind_t;
 
-typedef enum INDEXSTORE_OPTIONS {
+INDEXSTORE_OPTIONS(indexstore_symbol_property_t, uint64_t) {
   INDEXSTORE_SYMBOL_PROPERTY_GENERIC                          = 1 << 0,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_PARTIAL_SPECIALIZATION  = 1 << 1,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_SPECIALIZATION          = 1 << 2,
@@ -279,7 +295,7 @@ typedef enum INDEXSTORE_OPTIONS {
   INDEXSTORE_SYMBOL_PROPERTY_GKINSPECTABLE                    = 1 << 6,
   INDEXSTORE_SYMBOL_PROPERTY_LOCAL                            = 1 << 7,
   INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE               = 1 << 8,
-} indexstore_symbol_property_t;
+};
 
 typedef enum {
   INDEXSTORE_SYMBOL_LANG_C = 0,
@@ -289,7 +305,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_LANG_SWIFT = 100,
 } indexstore_symbol_language_t;
 
-typedef enum INDEXSTORE_OPTIONS {
+INDEXSTORE_OPTIONS(indexstore_symbol_role_t, uint64_t) {
   INDEXSTORE_SYMBOL_ROLE_DECLARATION  = 1 << 0,
   INDEXSTORE_SYMBOL_ROLE_DEFINITION   = 1 << 1,
   INDEXSTORE_SYMBOL_ROLE_REFERENCE    = 1 << 2,
@@ -313,7 +329,7 @@ typedef enum INDEXSTORE_OPTIONS {
   INDEXSTORE_SYMBOL_ROLE_REL_CONTAINEDBY = 1 << 16,
   INDEXSTORE_SYMBOL_ROLE_REL_IBTYPEOF    = 1 << 17,
   INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF = 1 << 18,
-} indexstore_symbol_role_t;
+};
 
 INDEXSTORE_PUBLIC indexstore_symbol_language_t
 indexstore_symbol_get_language(indexstore_symbol_t);
