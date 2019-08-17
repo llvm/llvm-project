@@ -1017,6 +1017,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   setOperationAction(ISD::SRL,       MVT::i64, Custom);
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
 
   // MVE lowers 64 bit shifts to lsll and lsrl
@@ -3542,6 +3543,48 @@ SDValue ARMTargetLowering::LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op,
   SDLoc dl(Op);
   return DAG.getNode(ARMISD::EH_SJLJ_SETUP_DISPATCH, dl, MVT::Other,
                      Op.getOperand(0));
+}
+
+SDValue ARMTargetLowering::LowerINTRINSIC_VOID(
+    SDValue Op, SelectionDAG &DAG, const ARMSubtarget *Subtarget) const {
+  unsigned IntNo =
+      cast<ConstantSDNode>(
+          Op.getOperand(Op.getOperand(0).getValueType() == MVT::Other))
+          ->getZExtValue();
+  switch (IntNo) {
+    default:
+      return SDValue();  // Don't custom lower most intrinsics.
+    case Intrinsic::arm_gnu_eabi_mcount: {
+      MachineFunction &MF = DAG.getMachineFunction();
+      EVT PtrVT = getPointerTy(DAG.getDataLayout());
+      SDLoc dl(Op);
+      SDValue Chain = Op.getOperand(0);
+      // call "\01__gnu_mcount_nc"
+      const ARMBaseRegisterInfo *ARI = Subtarget->getRegisterInfo();
+      const uint32_t *Mask =
+          ARI->getCallPreservedMask(DAG.getMachineFunction(), CallingConv::C);
+      assert(Mask && "Missing call preserved mask for calling convention");
+      // Mark LR an implicit live-in.
+      unsigned Reg = MF.addLiveIn(ARM::LR, getRegClassFor(MVT::i32));
+      SDValue ReturnAddress =
+          DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, PtrVT);
+      std::vector<EVT> ResultTys = {MVT::Other, MVT::Glue};
+      SDValue Callee =
+          DAG.getTargetExternalSymbol("\01__gnu_mcount_nc", PtrVT, 0);
+      SDValue RegisterMask = DAG.getRegisterMask(Mask);
+      if (Subtarget->isThumb())
+        return SDValue(
+            DAG.getMachineNode(
+                ARM::tBL_PUSHLR, dl, ResultTys,
+                {ReturnAddress, DAG.getTargetConstant(ARMCC::AL, dl, PtrVT),
+                 DAG.getRegister(0, PtrVT), Callee, RegisterMask, Chain}),
+            0);
+      return SDValue(
+          DAG.getMachineNode(ARM::BL_PUSHLR, dl, ResultTys,
+                             {ReturnAddress, Callee, RegisterMask, Chain}),
+          0);
+    }
+  }
 }
 
 SDValue
@@ -8835,6 +8878,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
   case ISD::EH_SJLJ_SETUP_DISPATCH: return LowerEH_SJLJ_SETUP_DISPATCH(Op, DAG);
+  case ISD::INTRINSIC_VOID: return LowerINTRINSIC_VOID(Op, DAG, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG,
                                                                Subtarget);
   case ISD::BITCAST:       return ExpandBITCAST(Op.getNode(), DAG, Subtarget);

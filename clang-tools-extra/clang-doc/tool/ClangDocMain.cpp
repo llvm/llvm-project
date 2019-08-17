@@ -52,6 +52,10 @@ using namespace clang;
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
 
+static llvm::cl::opt<std::string>
+    ProjectName("project-name", llvm::cl::desc("Name of project."),
+                llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<bool> IgnoreMappingFailures(
     "ignore-map-errors",
     llvm::cl::desc("Continue if files are not mapped correctly."),
@@ -205,6 +209,7 @@ int main(int argc, const char **argv) {
 
   clang::doc::ClangDocContext CDCtx = {
       Exec->get()->getExecutionContext(),
+      ProjectName,
       PublicOnly,
       OutDirectory,
       SourceRoot,

@@ -3823,7 +3823,6 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   Register Src1Reg = MI.getOperand(2).getReg();
   LLT Src0Ty = MRI.getType(Src0Reg);
   LLT DstTy = MRI.getType(DstReg);
-  LLT EltTy = DstTy.getElementType();
   LLT IdxTy = LLT::scalar(32);
 
   const Constant *ShufMask = MI.getOperand(3).getShuffleMask();
@@ -3831,8 +3830,25 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   SmallVector<int, 32> Mask;
   ShuffleVectorInst::getShuffleMask(ShufMask, Mask);
 
+  if (DstTy.isScalar()) {
+    if (Src0Ty.isVector())
+      return UnableToLegalize;
+
+    // This is just a SELECT.
+    assert(Mask.size() == 1 && "Expected a single mask element");
+    Register Val;
+    if (Mask[0] < 0 || Mask[0] > 1)
+      Val = MIRBuilder.buildUndef(DstTy).getReg(0);
+    else
+      Val = Mask[0] == 0 ? Src0Reg : Src1Reg;
+    MIRBuilder.buildCopy(DstReg, Val);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   Register Undef;
   SmallVector<Register, 32> BuildVec;
+  LLT EltTy = DstTy.getElementType();
 
   for (int Idx : Mask) {
     if (Idx < 0) {

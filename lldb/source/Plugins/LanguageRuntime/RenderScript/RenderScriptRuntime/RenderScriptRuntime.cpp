@@ -443,27 +443,28 @@ bool ParseCoordinate(llvm::StringRef coord_s, RSCoordinate &coord) {
   // returned, `true` otherwise
 
   RegularExpression regex;
-  RegularExpression::Match regex_match(3);
+  llvm::SmallVector<llvm::StringRef, 4> matches;
 
   bool matched = false;
   if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+),([0-9]+)$")) &&
-      regex.Execute(coord_s, &regex_match))
+      regex.Execute(coord_s, &matches))
     matched = true;
   else if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+)$")) &&
-           regex.Execute(coord_s, &regex_match))
+           regex.Execute(coord_s, &matches))
     matched = true;
   else if (regex.Compile(llvm::StringRef("^([0-9]+)$")) &&
-           regex.Execute(coord_s, &regex_match))
+           regex.Execute(coord_s, &matches))
     matched = true;
 
   if (!matched)
     return false;
 
-  auto get_index = [&](int idx, uint32_t &i) -> bool {
+  auto get_index = [&](size_t idx, uint32_t &i) -> bool {
     std::string group;
     errno = 0;
-    if (regex_match.GetMatchAtIndex(coord_s.str().c_str(), idx + 1, group))
-      return !llvm::StringRef(group).getAsInteger<uint32_t>(10, i);
+    if (idx + 1 < matches.size()) {
+      return !llvm::StringRef(matches[idx + 1]).getAsInteger<uint32_t>(10, i);
+    }
     return true;
   };
 
@@ -4147,13 +4148,12 @@ public:
       // Matching a comma separated list of known words is fairly
       // straightforward with PCRE, but we're using ERE, so we end up with a
       // little ugliness...
-      RegularExpression::Match match(/* max_matches */ 5);
       RegularExpression match_type_list(
           llvm::StringRef("^([[:alpha:]]+)(,[[:alpha:]]+){0,4}$"));
 
       assert(match_type_list.IsValid());
 
-      if (!match_type_list.Execute(option_val, &match)) {
+      if (!match_type_list.Execute(option_val)) {
         err_str.PutCString(
             "a comma-separated list of kernel types is required");
         return false;

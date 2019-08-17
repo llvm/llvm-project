@@ -21,6 +21,12 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand('type summary add -w llvm '
                            '-F lldbDataFormatters.SmallStringSummaryProvider '
                            '-x "^llvm::SmallString<.+>$"')
+    debugger.HandleCommand('type summary add -w llvm '
+                           '-F lldbDataFormatters.StringRefSummaryProvider '
+                           '-x "^llvm::StringRef$"')
+    debugger.HandleCommand('type summary add -w llvm '
+                           '-F lldbDataFormatters.ConstStringSummaryProvider '
+                           '-x "^lldb_private::ConstString$"')
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
 class SmallVectorSynthProvider:
@@ -115,3 +121,20 @@ def SmallStringSummaryProvider(valobj, internal_dict):
       res += valobj.GetChildAtIndex(i).GetValue().strip("'")
     res += "\""
     return res
+
+def StringRefSummaryProvider(valobj, internal_dict):
+    if valobj.GetNumChildren() == 2:
+        # StringRef's are also used to point at binary blobs in memory,
+        # so filter out suspiciously long strings.
+        max_length = 256
+        length = valobj.GetChildAtIndex(1).GetValueAsUnsigned(max_length)
+        if length == 0:
+            return "NULL"
+        if length < max_length:
+            return valobj.GetChildAtIndex(0).GetSummary()
+    return ""
+
+def ConstStringSummaryProvider(valobj, internal_dict):
+    if valobj.GetNumChildren() == 1:
+        return valobj.GetChildAtIndex(0).GetSummary()
+    return ""

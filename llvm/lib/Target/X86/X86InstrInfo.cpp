@@ -664,7 +664,7 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
 }
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
-                                  unsigned Opc, bool AllowSP, unsigned &NewSrc,
+                                  unsigned Opc, bool AllowSP, Register &NewSrc,
                                   bool &isKill, MachineOperand &ImplicitOp,
                                   LiveVariables *LV) const {
   MachineFunction &MF = *MI.getParent()->getParent();
@@ -911,7 +911,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     // LEA can't handle ESP.
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false,
                         SrcReg, isKill, ImplicitOp, LV))
@@ -947,7 +947,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned Opc = MIOpc == X86::INC64r ? X86::LEA64r :
         (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false, SrcReg, isKill,
                         ImplicitOp, LV))
@@ -970,7 +970,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
         : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
 
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false, SrcReg, isKill,
                         ImplicitOp, LV))
@@ -1005,7 +1005,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
       Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
                         SrcReg, isKill, ImplicitOp, LV))
@@ -1013,7 +1013,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     const MachineOperand &Src2 = MI.getOperand(2);
     bool isKill2;
-    unsigned SrcReg2;
+    Register SrcReg2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/ false,
                         SrcReg2, isKill2, ImplicitOp2, LV))
@@ -1054,7 +1054,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
                         SrcReg, isKill, ImplicitOp, LV))
@@ -1093,7 +1093,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
     bool isKill;
-    unsigned SrcReg;
+    Register SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
                         SrcReg, isKill, ImplicitOp, LV))

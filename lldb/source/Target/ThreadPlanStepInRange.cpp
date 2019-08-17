@@ -361,26 +361,17 @@ bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
           sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments)
               .GetCString();
       if (frame_function_name) {
-        size_t num_matches = 0;
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-        if (log)
-          num_matches = 1;
-
-        RegularExpression::Match regex_match(num_matches);
-
+        llvm::SmallVector<llvm::StringRef, 2> matches;
         bool return_value =
-            avoid_regexp_to_use->Execute(frame_function_name, &regex_match);
-        if (return_value) {
-          if (log) {
-            std::string match;
-            regex_match.GetMatchAtIndex(frame_function_name, 0, match);
-            LLDB_LOGF(log,
-                      "Stepping out of function \"%s\" because it matches "
-                      "the avoid regexp \"%s\" - match substring: \"%s\".",
-                      frame_function_name,
-                      avoid_regexp_to_use->GetText().str().c_str(),
-                      match.c_str());
-          }
+            avoid_regexp_to_use->Execute(frame_function_name, &matches);
+        if (return_value && matches.size() > 1) {
+          std::string match = matches[1].str();
+          LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP),
+                    "Stepping out of function \"%s\" because it matches "
+                    "the avoid regexp \"%s\" - match substring: \"%s\".",
+                    frame_function_name,
+                    avoid_regexp_to_use->GetText().str().c_str(),
+                    match.c_str());
         }
         return return_value;
       }

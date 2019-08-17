@@ -14,14 +14,16 @@
 ; Canonical scalar predicates
 ;------------------------------------------------------------------------------;
 
+!0 = !{!"branch_weights", i32 2000, i32 1}
+
 define i32 @p0_ult_65536(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p0_ult_65536(
 ; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535, !prof !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ult i32 %x, 65536
-  %r = select i1 %t, i32 %y, i32 65535
+  %r = select i1 %t, i32 %y, i32 65535, !prof !0
   ret i32 %r
 }
 define i32 @p1_ugt(i32 %x, i32 %y) {
@@ -211,41 +213,41 @@ define i32 @p15_commutativity2(i32 %x, i32 %y) {
 define <2 x i32> @n17_ult_zero(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n17_ult_zero(
 ; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 -1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 0>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 65535>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 -1>
   ret <2 x i32> %r
 }
 define <2 x i32> @n18_ugt_allones(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n18_ugt_allones(
 ; CHECK-NEXT:    [[T:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65534, i32 -1>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ugt <2 x i32> %x, <i32 65534, i32 -1>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 65535>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 0>
   ret <2 x i32> %r
 }
 define <2 x i32> @n19_slt_int_min(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n19_slt_int_min(
 ; CHECK-NEXT:    [[T:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 65536, i32 -2147483648>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 2147483647>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp slt <2 x i32> %x, <i32 65536, i32 -2147483648>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 65535>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 2147483647>
   ret <2 x i32> %r
 }
 define <2 x i32> @n20_sgt_int_max(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n20_sgt_int_max(
 ; CHECK-NEXT:    [[T:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 65534, i32 2147483647>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 -2147483648>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp sgt <2 x i32> %x, <i32 65534, i32 2147483647>
-  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 65535>
+  %r = select <2 x i1> %t, <2 x i32> %y, <2 x i32> <i32 65535, i32 -2147483648>
   ret <2 x i32> %r
 }
 
@@ -296,3 +298,29 @@ define i32 @n24_ult_65534(i32 %x, i32 %y) {
   %r = select i1 %t, i32 %y, i32 65535
   ret i32 %r
 }
+
+; If we already have a match, it's good enough.
+define i32 @n25_all_good0(i32 %x, i32 %y) {
+; CHECK-LABEL: @n25_all_good0(
+; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 65535, i32 65536
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t = icmp ult i32 %x, 65536
+  %r = select i1 %t, i32 65535, i32 65536
+  ret i32 %r
+}
+define i32 @n26_all_good1(i32 %x, i32 %y) {
+; CHECK-LABEL: @n26_all_good1(
+; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 65536, i32 65535
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t = icmp ult i32 %x, 65536
+  %r = select i1 %t, i32 65536, i32 65535
+  ret i32 %r
+}
+
+
+
+; CHECK: !0 = !{!"branch_weights", i32 2000, i32 1}

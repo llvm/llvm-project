@@ -552,11 +552,12 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
       Segment.getReg() != X86::NoRegister)
     return nullptr;
 
-  unsigned DstR = Dst.getReg();
+  Register DstR = Dst.getReg();
   Register BaseR = Base.getReg();
   Register IndexR = Index.getReg();
-  unsigned SSDstR =
-      (LEAOpcode == X86::LEA64_32r) ? getX86SubSuperRegister(DstR, 64) : DstR;
+  Register SSDstR =
+      (LEAOpcode == X86::LEA64_32r) ? Register(getX86SubSuperRegister(DstR, 64))
+                                    : DstR;
   bool IsScale1 = Scale.getImm() == 1;
   bool IsInefficientBase = isInefficientLEAReg(BaseR);
   bool IsInefficientIndex = isInefficientLEAReg(IndexR);

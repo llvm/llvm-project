@@ -1236,11 +1236,9 @@ Error JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
     if (!NewDefs)
       return NewDefs.takeError();
 
-    llvm::dbgs() << "NewDefs is " << *NewDefs << "\n";
     if (!NewDefs->empty()) {
       for (auto &D : *NewDefs)
         Unresolved.erase(D);
-      llvm::dbgs() << "NewDefs is now " << *NewDefs << "\n";
       lodgeQueryImpl(Q, *NewDefs, MatchNonExported, MUs);
       assert(NewDefs->empty() &&
              "All fallback defs should have been found by lookupImpl");

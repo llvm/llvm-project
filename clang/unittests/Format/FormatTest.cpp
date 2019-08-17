@@ -6618,7 +6618,10 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   EXPECT_EQ("auto x = [] { A<A<A<A>>> a; };",
             format("auto x=[]{A<A<A<A> >> a;};", getGoogleStyle()));
 
-  verifyFormat("A<A>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
+  verifyFormat("A<A<int>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
+
+  verifyFormat("int i = a<1> >> 1;");
+  verifyFormat("bool b = a<1> > 1;");
 
   verifyFormat("test >> a >> b;");
   verifyFormat("test << a >> b;");

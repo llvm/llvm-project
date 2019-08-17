@@ -259,11 +259,25 @@ define i1 @captureICmp(i32* %x) {
   ret i1 %1
 }
 
+; CHECK: define i1 @captureICmpRev(i32* readnone %x)
+define i1 @captureICmpRev(i32* %x) {
+  %1 = icmp eq i32* null, %x
+  ret i1 %1
+}
+
 ; CHECK: define i1 @nocaptureInboundsGEPICmp(i32* nocapture readnone %x)
 define i1 @nocaptureInboundsGEPICmp(i32* %x) {
   %1 = getelementptr inbounds i32, i32* %x, i32 5
   %2 = bitcast i32* %1 to i8*
   %3 = icmp eq i8* %2, null
+  ret i1 %3
+}
+
+; CHECK: define i1 @nocaptureInboundsGEPICmpRev(i32* nocapture readnone %x)
+define i1 @nocaptureInboundsGEPICmpRev(i32* %x) {
+  %1 = getelementptr inbounds i32, i32* %x, i32 5
+  %2 = bitcast i32* %1 to i8*
+  %3 = icmp eq i8* null, %2
   ret i1 %3
 }
 

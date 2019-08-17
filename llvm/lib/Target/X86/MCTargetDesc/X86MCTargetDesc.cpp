@@ -594,13 +594,13 @@ extern "C" void LLVMInitializeX86TargetMC() {
                                        createX86_64AsmBackend);
 }
 
-unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
-                                            bool High) {
+MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
+                                              bool High) {
   switch (Size) {
-  default: return 0;
+  default: return X86::NoRegister;
   case 8:
     if (High) {
-      switch (Reg) {
+      switch (Reg.id()) {
       default: return getX86SubSuperRegisterOrZero(Reg, 64);
       case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
         return X86::SI;
@@ -620,8 +620,8 @@ unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
         return X86::BH;
       }
     } else {
-      switch (Reg) {
-      default: return 0;
+      switch (Reg.id()) {
+      default: return X86::NoRegister;
       case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
         return X86::AL;
       case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -657,8 +657,8 @@ unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
       }
     }
   case 16:
-    switch (Reg) {
-    default: return 0;
+    switch (Reg.id()) {
+    default: return X86::NoRegister;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::AX;
     case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -693,8 +693,8 @@ unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
       return X86::R15W;
     }
   case 32:
-    switch (Reg) {
-    default: return 0;
+    switch (Reg.id()) {
+    default: return X86::NoRegister;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::EAX;
     case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -729,7 +729,7 @@ unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
       return X86::R15D;
     }
   case 64:
-    switch (Reg) {
+    switch (Reg.id()) {
     default: return 0;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::RAX;
@@ -767,9 +767,9 @@ unsigned llvm::getX86SubSuperRegisterOrZero(unsigned Reg, unsigned Size,
   }
 }
 
-unsigned llvm::getX86SubSuperRegister(unsigned Reg, unsigned Size, bool High) {
-  unsigned Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
-  assert(Res != 0 && "Unexpected register or VT");
+MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size, bool High) {
+  MCRegister Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
+  assert(Res != X86::NoRegister && "Unexpected register or VT");
   return Res;
 }
 

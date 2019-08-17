@@ -20,11 +20,11 @@ using namespace lldb_private;
 
 // BreakpointResolverFileRegex:
 BreakpointResolverFileRegex::BreakpointResolverFileRegex(
-    Breakpoint *bkpt, RegularExpression &regex,
+    Breakpoint *bkpt, RegularExpression regex,
     const std::unordered_set<std::string> &func_names, bool exact_match)
     : BreakpointResolver(bkpt, BreakpointResolver::FileRegexResolver),
-      m_regex(regex), m_exact_match(exact_match), m_function_names(func_names) {
-}
+      m_regex(std::move(regex)), m_exact_match(exact_match),
+      m_function_names(func_names) {}
 
 BreakpointResolverFileRegex::~BreakpointResolverFileRegex() {}
 
@@ -69,7 +69,8 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
     }
   }
 
-  return new BreakpointResolverFileRegex(bkpt, regex, names_set, exact_match);
+  return new BreakpointResolverFileRegex(bkpt, std::move(regex), names_set,
+                                         exact_match);
 }
 
 StructuredData::ObjectSP

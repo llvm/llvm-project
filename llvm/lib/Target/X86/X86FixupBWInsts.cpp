@@ -80,7 +80,7 @@ class FixupBWInstPass : public MachineFunctionPass {
   /// destination register of the MachineInstr passed in. It returns true if
   /// that super register is dead just prior to \p OrigMI, and false if not.
   bool getSuperRegDestIfDead(MachineInstr *OrigMI,
-                             unsigned &SuperDestReg) const;
+                             Register &SuperDestReg) const;
 
   /// Change the MachineInstr \p MI into the equivalent extending load to 32 bit
   /// register if it is safe to do so.  Return the replacement instruction if
@@ -169,7 +169,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 ///
 /// If so, return that super register in \p SuperDestReg.
 bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
-                                            unsigned &SuperDestReg) const {
+                                            Register &SuperDestReg) const {
   auto *TRI = &TII->getRegisterInfo();
 
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
@@ -268,7 +268,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
 
 MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
                                               MachineInstr *MI) const {
-  unsigned NewDestReg;
+  Register NewDestReg;
 
   // We are going to try to rewrite this load to a larger zero-extending
   // load.  This is safe if all portions of the 32 bit super-register
@@ -295,11 +295,11 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   auto &OldDest = MI->getOperand(0);
   auto &OldSrc = MI->getOperand(1);
 
-  unsigned NewDestReg;
+  Register NewDestReg;
   if (!getSuperRegDestIfDead(MI, NewDestReg))
     return nullptr;
 
-  unsigned NewSrcReg = getX86SubSuperRegister(OldSrc.getReg(), 32);
+  Register NewSrcReg = getX86SubSuperRegister(OldSrc.getReg(), 32);
 
   // This is only correct if we access the same subregister index: otherwise,
   // we could try to replace "movb %ah, %al" with "movl %eax, %eax".

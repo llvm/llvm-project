@@ -24,7 +24,7 @@ static void insertCall(Function &CurFn, StringRef Func,
 
   if (Func == "mcount" ||
       Func == ".mcount" ||
-      Func == "\01__gnu_mcount_nc" ||
+      Func == "llvm.arm.gnu.eabi.mcount" ||
       Func == "\01_mcount" ||
       Func == "\01mcount" ||
       Func == "__mcount" ||

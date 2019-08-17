@@ -37,13 +37,19 @@ declare i32* @unknown()
 declare align 8 i32* @align8()
 
 
-; ATTRIBUTOR: define align 8 i32* @test5_1()
+; FIXME: Until we have "on-demand" attribute generation we do not determine the
+;        alignment for the return value here.
+;             define align 8 i32* @test5_1()
+; ATTRIBUTOR: define i32* @test5_1()
 define i32* @test5_1() {
   %ret = tail call align 8 i32* @unknown()
   ret i32* %ret
 }
 
-; ATTRIBUTOR: define align 8 i32* @test5_2()
+; FIXME: Until we have "on-demand" attribute generation we do not determine the
+;        alignment for the return value here.
+;             define align 8 i32* @test5_2()
+; ATTRIBUTOR: define i32* @test5_2()
 define i32* @test5_2() {
   %ret = tail call i32* @align8()
   ret i32* %ret
@@ -83,7 +89,10 @@ define i32* @test6_2() #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f1(i8* nonnull readnone align 8 %0)
+; FIXME: Until we have "on-demand" attribute generation we do not determine the
+;        alignment for the return value here.
+;             define internal nonnull align 8 i8* @f1(i8* nonnull readnone align 8 %0)
+; ATTRIBUTOR: define internal nonnull i8* @f1(i8* nonnull readnone align 8 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 
@@ -99,7 +108,10 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f2(i8* nonnull readnone align 8 %0)
+; FIXME: Until we have "on-demand" attribute generation we do not determine the
+;        alignment for the return value here.
+;             define internal nonnull align 8 i8* @f2(i8* nonnull readnone align 8 %0)
+; ATTRIBUTOR: define internal nonnull i8* @f2(i8* nonnull readnone align 8 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
 
@@ -121,7 +133,10 @@ define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 i8* @f3(i8* nonnull readnone align 16 %0)
+; FIXME: Until we have "on-demand" attribute generation we do not determine the
+;        alignment for the return value here.
+;             define internal nonnull align 8 i8* @f3(i8* nonnull readnone align 16 %0)
+; ATTRIBUTOR: define internal nonnull i8* @f3(i8* nonnull readnone align 16 %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 
@@ -160,6 +175,13 @@ define void @test8_helper() {
 
 define internal void @test8(i32* %a, i32* %b, i32* %c) {
 ; ATTRIBUTOR: define internal void @test8(i32* align 4 %a, i32* align 4 %b, i32* %c)
+  ret void
+}
+
+declare void @test9_helper(i32* %A)
+define void @test9_traversal(i1 %c, i32* align 4 %B, i32* align 8 %C) {
+  %sel = select i1 %c, i32* %B, i32* %C
+  call void @test9_helper(i32* %sel)
   ret void
 }
 

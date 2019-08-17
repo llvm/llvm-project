@@ -919,6 +919,8 @@ private:
     case tok::greater:
       if (Style.Language != FormatStyle::LK_TextProto)
         Tok->Type = TT_BinaryOperator;
+      if (Tok->Previous && Tok->Previous->is(TT_TemplateCloser))
+        Tok->SpacesRequiredBefore = 1;
       break;
     case tok::kw_operator:
       if (Style.Language == FormatStyle::LK_TextProto ||

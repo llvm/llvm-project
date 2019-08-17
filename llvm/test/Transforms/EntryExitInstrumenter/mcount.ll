@@ -54,7 +54,7 @@ define void @f1() #1 { entry: ret void }
 
 define void @f2() #2 { entry: ret void }
 ; CHECK-LABEL: define void @f2
-; CHECK: call void @"\01__gnu_mcount_nc"
+; CHECK: call void @llvm.arm.gnu.eabi.mcount
 
 define void @f3() #3 { entry: ret void }
 ; CHECK-LABEL: define void @f3
@@ -105,7 +105,7 @@ define i8* @tailcaller2() #8 {
 
 attributes #0 = { "instrument-function-entry-inlined"="mcount" "instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit" }
 attributes #1 = { "instrument-function-entry-inlined"=".mcount" }
-attributes #2 = { "instrument-function-entry-inlined"="\01__gnu_mcount_nc" }
+attributes #2 = { "instrument-function-entry-inlined"="llvm.arm.gnu.eabi.mcount" }
 attributes #3 = { "instrument-function-entry-inlined"="\01_mcount" }
 attributes #4 = { "instrument-function-entry-inlined"="\01mcount" }
 attributes #5 = { "instrument-function-entry-inlined"="__mcount" }
