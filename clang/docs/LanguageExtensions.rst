@@ -496,9 +496,11 @@ Clang supports two half-precision (16-bit) floating point types: ``__fp16`` and
 ``__fp16`` is supported on every target, as it is purely a storage format; see below.
 ``_Float16`` is currently only supported on the following targets, with further
 targets pending ABI standardization:
-- 32-bit ARM
-- 64-bit ARM (AArch64)
-- SPIR
+
+* 32-bit ARM
+* 64-bit ARM (AArch64)
+* SPIR
+
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 
 ``__fp16`` is a storage and interchange format only.  This means that values of
@@ -531,10 +533,8 @@ Because ``__fp16`` operands are always immediately promoted to ``float``, the
 common real type of ``__fp16`` and ``_Float16`` for the purposes of the usual
 arithmetic conversions is ``float``.
 
-A literal can be given ``_Float16`` type using the suffix ``f16``; for example:
-```
-3.14f16
-```
+A literal can be given ``_Float16`` type using the suffix ``f16``. For example,
+``3.14f16``.
 
 Because default argument promotion only applies to the standard floating-point
 types, ``_Float16`` values are not promoted to ``double`` when passed as variadic

@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-int a, b;
+int a, b, z; // omp5-error {{variable captured in declare target region must appear in a to clause}}
 __thread int t; // expected-note {{defined as threadprivate or thread local}}
 
 #pragma omp declare target . // expected-error {{expected '(' after 'declare target'}}
@@ -65,11 +66,11 @@ void t2() {
 void cba();
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-#pragma omp declare target  
-  #pragma omp declare target
-    void def();
-  #pragma omp end declare target
-  void fed();
+#pragma omp declare target
+#pragma omp declare target
+void def();
+#pragma omp end declare target
+void fed();
 
 #pragma omp declare target
 #pragma omp threadprivate(a) // expected-note {{defined as threadprivate or thread local}}
@@ -112,7 +113,9 @@ void foo(int p) {
   c();
 }
 #pragma omp declare target
-void foo1() {}
+void foo1() {
+  [&](){ (void)(b+z);}(); // omp5-note {{variable 'z' is captured here}}
+}
 #pragma omp end declare target
 
 #pragma omp end declare target
