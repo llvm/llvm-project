@@ -1916,6 +1916,37 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     case ARM::CMP_SWAP_64:
       return ExpandCMP_SWAP_64(MBB, MBBI, NextMBBI);
+
+    case ARM::tBL_PUSHLR:
+    case ARM::BL_PUSHLR: {
+      const bool Thumb = Opcode == ARM::tBL_PUSHLR;
+      Register Reg = MI.getOperand(0).getReg();
+      assert(Reg == ARM::LR && "expect LR register!");
+      MachineInstrBuilder MIB;
+      if (Thumb) {
+        // push {lr}
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPUSH))
+            .add(predOps(ARMCC::AL))
+            .addReg(Reg);
+
+        // bl __gnu_mcount_nc
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tBL));
+      } else {
+        // stmdb   sp!, {lr}
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::STMDB_UPD))
+            .addReg(ARM::SP, RegState::Define)
+            .addReg(ARM::SP)
+            .add(predOps(ARMCC::AL))
+            .addReg(Reg);
+
+        // bl __gnu_mcount_nc
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::BL));
+      }
+      MIB.cloneMemRefs(MI);
+      for (unsigned i = 1; i < MI.getNumOperands(); ++i) MIB.add(MI.getOperand(i));
+      MI.eraseFromParent();
+      return true;
+    }
   }
 }
 

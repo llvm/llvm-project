@@ -544,7 +544,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
         "Stack realignment in presence of dynamic allocas is not supported with"
         "this calling convention.");
 
-    unsigned BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
+    Register BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
     for (MCSubRegIterator I(BasePtr, this, /*IncludeSelf=*/true);
          I.isValid(); ++I)
       Reserved.set(*I);
@@ -729,7 +729,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // register as source operand, semantic is the same and destination is
   // 32-bits. It saves one byte per lea in code since 0x67 prefix is avoided.
   // Don't change BasePtr since it is used later for stack adjustment.
-  unsigned MachineBasePtr = BasePtr;
+  Register MachineBasePtr = BasePtr;
   if (Opc == X86::LEA64_32r && X86::GR32RegClass.contains(BasePtr))
     MachineBasePtr = getX86SubSuperRegister(BasePtr, 64);
 

@@ -500,7 +500,7 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   void addGR32orGR64Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    unsigned RegNo = getReg();
+    MCRegister RegNo = getReg();
     if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
       RegNo = getX86SubSuperRegister(RegNo, 32);
     Inst.addOperand(MCOperand::createReg(RegNo));

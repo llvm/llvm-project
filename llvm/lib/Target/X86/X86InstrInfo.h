@@ -218,7 +218,7 @@ public:
   /// Reference parameters are set to indicate how caller should add this
   /// operand to the LEA instruction.
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
-                      unsigned LEAOpcode, bool AllowSP, unsigned &NewSrc,
+                      unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
                       bool &isKill, MachineOperand &ImplicitOp,
                       LiveVariables *LV) const;
 

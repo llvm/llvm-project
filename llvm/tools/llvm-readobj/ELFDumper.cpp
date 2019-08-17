@@ -4502,7 +4502,19 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     }
   };
 
-  if (Obj->getHeader()->e_type == ELF::ET_CORE) {
+  ArrayRef<Elf_Shdr> Sections = unwrapOrError(this->FileName, Obj->sections());
+  if (Obj->getHeader()->e_type != ELF::ET_CORE && !Sections.empty()) {
+    for (const auto &S : Sections) {
+      if (S.sh_type != SHT_NOTE)
+        continue;
+      PrintHeader(S.sh_offset, S.sh_size);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(S, Err))
+        ProcessNote(Note);
+      if (Err)
+        reportError(std::move(Err), this->FileName);
+    }
+  } else {
     for (const auto &P :
          unwrapOrError(this->FileName, Obj->program_headers())) {
       if (P.p_type != PT_NOTE)
@@ -4510,18 +4522,6 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       PrintHeader(P.p_offset, P.p_filesz);
       Error Err = Error::success();
       for (const auto &Note : Obj->notes(P, Err))
-        ProcessNote(Note);
-      if (Err)
-        reportError(std::move(Err), this->FileName);
-    }
-  } else {
-    for (const auto &S :
-         unwrapOrError(this->FileName, Obj->sections())) {
-      if (S.sh_type != SHT_NOTE)
-        continue;
-      PrintHeader(S.sh_offset, S.sh_size);
-      Error Err = Error::success();
-      for (const auto &Note : Obj->notes(S, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
@@ -5703,7 +5703,20 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     }
   };
 
-  if (Obj->getHeader()->e_type == ELF::ET_CORE) {
+  ArrayRef<Elf_Shdr> Sections = unwrapOrError(this->FileName, Obj->sections());
+  if (Obj->getHeader()->e_type != ELF::ET_CORE && !Sections.empty()) {
+    for (const auto &S : Sections) {
+      if (S.sh_type != SHT_NOTE)
+        continue;
+      DictScope D(W, "NoteSection");
+      PrintHeader(S.sh_offset, S.sh_size);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(S, Err))
+        ProcessNote(Note);
+      if (Err)
+        reportError(std::move(Err), this->FileName);
+    }
+  } else {
     for (const auto &P :
          unwrapOrError(this->FileName, Obj->program_headers())) {
       if (P.p_type != PT_NOTE)
@@ -5712,18 +5725,6 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       PrintHeader(P.p_offset, P.p_filesz);
       Error Err = Error::success();
       for (const auto &Note : Obj->notes(P, Err))
-        ProcessNote(Note);
-      if (Err)
-        reportError(std::move(Err), this->FileName);
-    }
-  } else {
-    for (const auto &S : unwrapOrError(this->FileName, Obj->sections())) {
-      if (S.sh_type != SHT_NOTE)
-        continue;
-      DictScope D(W, "NoteSection");
-      PrintHeader(S.sh_offset, S.sh_size);
-      Error Err = Error::success();
-      for (const auto &Note : Obj->notes(S, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);

@@ -20,16 +20,16 @@
 #include <shared_mutex>
 
 // std::shared_timed_mutex is only availble on macOS 10.12 and later.
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
-    defined(__MAC_10_12) &&                                                    \
-    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < __MAC_10_12
-#define USE_RW_MUTEX_IMPL
+#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
+#define LLVM_USE_RW_MUTEX_IMPL
+#endif
 #endif
 
 namespace llvm {
 namespace sys {
 
-#if defined(USE_RW_MUTEX_IMPL)
+#if defined(LLVM_USE_RW_MUTEX_IMPL)
 /// Platform agnostic RWMutex class.
 class RWMutexImpl {
   /// @name Constructors
@@ -97,7 +97,7 @@ template <bool mt_only> class SmartRWMutex {
 #if defined(_MSC_VER) || __cplusplus > 201402L
   std::shared_mutex impl;
 #else
-#if !defined(USE_RW_MUTEX_IMPL)
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
   std::shared_timed_mutex impl;
 #else
   RWMutexImpl impl;
@@ -162,7 +162,7 @@ public:
 typedef SmartRWMutex<false> RWMutex;
 
 /// ScopedReader - RAII acquisition of a reader lock
-#if !defined(USE_RW_MUTEX_IMPL)
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
 template <bool mt_only>
 using SmartScopedReader = const std::shared_lock<SmartRWMutex<mt_only>>;
 #else
@@ -179,7 +179,7 @@ template <bool mt_only> struct SmartScopedReader {
 typedef SmartScopedReader<false> ScopedReader;
 
 /// ScopedWriter - RAII acquisition of a writer lock
-#if !defined(USE_RW_MUTEX_IMPL)
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
 template <bool mt_only>
 using SmartScopedWriter = std::lock_guard<SmartRWMutex<mt_only>>;
 #else

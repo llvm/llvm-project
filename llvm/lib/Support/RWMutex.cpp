@@ -14,7 +14,7 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Config/config.h"
 
-#if defined(USE_RW_MUTEX_IMPL)
+#if defined(LLVM_USE_RW_MUTEX_IMPL)
 using namespace llvm;
 using namespace sys;
 

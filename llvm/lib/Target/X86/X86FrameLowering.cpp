@@ -1001,10 +1001,10 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI =
       !IsWin64Prologue && (MMI.hasDebugInfo() || Fn.needsUnwindTableEntry());
-  unsigned FramePtr = TRI->getFrameRegister(MF);
-  const unsigned MachineFramePtr =
+  Register FramePtr = TRI->getFrameRegister(MF);
+  const Register MachineFramePtr =
       STI.isTarget64BitILP32()
-          ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
+          ? Register(getX86SubSuperRegister(FramePtr, 64)) : FramePtr;
   Register BasePtr = TRI->getBaseRegister();
   bool HasWinCFI = false;
 
@@ -1080,7 +1080,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   int stackGrowth = -SlotSize;
 
   // Find the funclet establisher parameter
-  unsigned Establisher = X86::NoRegister;
+  Register Establisher = X86::NoRegister;
   if (IsClrFunclet)
     Establisher = Uses64BitFramePtr ? X86::RCX : X86::ECX;
   else if (IsFunclet)
@@ -1615,9 +1615,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     DL = MBBI->getDebugLoc();
   // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
   const bool Is64BitILP32 = STI.isTarget64BitILP32();
-  unsigned FramePtr = TRI->getFrameRegister(MF);
+  Register FramePtr = TRI->getFrameRegister(MF);
   unsigned MachineFramePtr =
-      Is64BitILP32 ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
+      Is64BitILP32 ? Register(getX86SubSuperRegister(FramePtr, 64)) : FramePtr;
 
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWin64CFI =

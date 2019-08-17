@@ -373,6 +373,7 @@ TEST_F(CoreAPIsStandardTest, TestTrivialCircularDependency) {
   ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Ready,
             OnCompletion, NoDependenciesToRegister);
 
+  FooR->addDependenciesForAll({{&JD, SymbolNameSet({Foo})}});
   FooR->notifyResolved({{Foo, FooSym}});
   FooR->notifyEmitted();
 
