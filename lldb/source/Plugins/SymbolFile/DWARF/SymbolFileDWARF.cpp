@@ -2502,32 +2502,29 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
   m_index->GetTypes(name, die_offsets);
   const size_t num_die_matches = die_offsets.size();
 
-  if (num_die_matches) {
-    size_t num_matches = 0;
-    for (size_t i = 0; i < num_die_matches; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE die = GetDIE(die_ref);
+  size_t num_matches = 0;
+  for (size_t i = 0; i < num_die_matches; ++i) {
+    const DIERef &die_ref = die_offsets[i];
+    DWARFDIE die = GetDIE(die_ref);
 
-      if (die) {
-        std::vector<CompilerContext> die_context;
-        die.GetDeclContext(die_context);
-        if (die_context != context)
-          continue;
+    if (die) {
+      std::vector<CompilerContext> die_context;
+      die.GetDeclContext(die_context);
+      if (die_context != context)
+        continue;
 
-        Type *matching_type = ResolveType(die, true, true);
-        if (matching_type) {
-          // We found a type pointer, now find the shared pointer form our type
-          // list
-          types.InsertUnique(matching_type->shared_from_this());
-          ++num_matches;
-        }
-      } else {
-        m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+      Type *matching_type = ResolveType(die, true, true);
+      if (matching_type) {
+        // We found a type pointer, now find the shared pointer form our type
+        // list
+        types.InsertUnique(matching_type->shared_from_this());
+        ++num_matches;
       }
+    } else {
+      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
     }
-    return num_matches;
   }
-  return 0;
+  return num_matches;
 }
 
 CompilerDeclContext

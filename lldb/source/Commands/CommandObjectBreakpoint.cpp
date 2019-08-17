@@ -682,12 +682,10 @@ protected:
                                  // name
       {
         RegularExpression regexp(m_options.m_func_regexp);
-        if (!regexp.IsValid()) {
-          char err_str[1024];
-          regexp.GetErrorAsCString(err_str, sizeof(err_str));
+        if (llvm::Error err = regexp.GetError()) {
           result.AppendErrorWithFormat(
               "Function name regular expression could not be compiled: \"%s\"",
-              err_str);
+              llvm::toString(std::move(err)).c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -718,12 +716,10 @@ protected:
       }
 
       RegularExpression regexp(m_options.m_source_text_regexp);
-      if (!regexp.IsValid()) {
-        char err_str[1024];
-        regexp.GetErrorAsCString(err_str, sizeof(err_str));
+      if (llvm::Error err = regexp.GetError()) {
         result.AppendErrorWithFormat(
             "Source text regular expression could not be compiled: \"%s\"",
-            err_str);
+            llvm::toString(std::move(err)).c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }

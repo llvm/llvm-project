@@ -21,8 +21,9 @@ add_lldb_unittest(UtilityTests
   RangeMapTest.cpp
   RangeTest.cpp
   RegisterValueTest.cpp
-  ReproducerTest.cpp
+  RegularExpressionTest.cpp
   ReproducerInstrumentationTest.cpp
+  ReproducerTest.cpp
   ScalarTest.cpp
   StateTest.cpp
   StatusTest.cpp
