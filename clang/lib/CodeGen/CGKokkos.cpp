@@ -48,54 +48,103 @@
  *
  ***************************************************************************/
 #include <cstdio>
+#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/CodeGen/CGFunctionInfo.h"
 #include "CodeGenFunction.h"
+
+
 using namespace clang;
 using namespace CodeGen;
 
 namespace {
 
-
-
+  /// Just a simple wrapper around some calls to prune down the 
+  /// expressions we walk when doing codegen for kokkos constructs. 
+  /// there are other options available within the Expr class to 
+  /// get down to the fundamental types so in the future some tweaks
+  /// to this implementation might be beneficial. 
   static const Expr *SimplifyExpr(const Expr *E) {
     return E->IgnoreImplicit()->IgnoreImpCasts();
   }
 
-  // A helper function used to extract the bounds of a parallel-for 
-  // construct.  This handles the case of sorting out if we have a 
-  // constant or binary expression to deal with. 
+  /// \brief Extract the various expressions from the parallel_for. 
+  ///
+  /// Extract the various components from the CallExpr that
+  /// corresponds to a kokkos parallel_for construct.  Given 
+  /// that the construct has already passed through parsing and 
+  /// sema we take some liberties here in sorting out the details
+  /// of the construct -- in some cases we do not yet support all
+  /// variants that are allowed in kokkos.  In particular, 
+  ///
+  ///    - functors are not supported. 
+  ///    - named constructs are extracted but not yet handed off to
+  ///      kokkos' underlying profiling/debugging infrastructure 
+  ///      hooks. 
+  ///    - there are likely still some holes in types that are legal 
+  ///      constructs but not yet captured by the code below; these
+  ///      cases should result in an 'llvm_unreachable' assertion. 
+  ///   
+
+  // FIXME -- functor support needs some thought... Seems unlikely 
+  // that we can support all general cases (e.g., code in separate 
+  // compilation units). 
   static void ExtractParallelForComponents(const CallExpr* CE,
 					   std::string &CN, 
 					   const Expr *& BE, 
 					   const LambdaExpr *& LE)
   {
-    // There are two forms of kokkos parallel_for that we support: 
+    // Currently supported kokkos constructs for parallel_for come
+    // in two forms: 
     // 
-    //   parallel_for(N, lambda...);
-    // 
-    // and 
+    //   1. parallel_for(N, lambda_expr...);
     //
-    //   parallel_for("name", N, lambda...);
+    //   2. parallel_for("name", N, lambda_expr...);
     // 
-    // 
-    // We currently don't support functors as they introduce some 
-    // messy challenges that will need to be visited at some point
-    // down the road... 
 
+    // The first form contains "N", which represents the upper bounds
+    // of the parallel_for execution (shorthand BE is used here for
+    // bounds expr).  It can be a literal type, or an binary
+    // expression.  The second parameter is the lamba expression (LE).
+    //
+    // The second form adds a string as the first parameter that is
+    // used to name the construct (currently extracted and returned in
+    // CN). The details of how this is utilized is up to the details
+    // of emiting the parallel_for construct (i.e. it is not used here
+    // and is simply returned to the caller).
 
     unsigned int curArgIndex = 0;
 
+    // If the call expr starts with a "construct name" (we will assume
+    // form #2 of parallel_for as shown above). We will extract the
+    // actual string from the argument and return it to the caller via
+    // the passed in 'CN' string.
+    //
+    // FIXME: All kokkos examples we have seen use a literal string
+    // value here.  We are essentailly hard-coded to deal with this
+    // form -- the code is not very robust in a situation where this
+    // is not the case and ripe for a bug if encountered.
     const Expr *SE = SimplifyExpr(CE->getArg(curArgIndex));
     if (SE->getStmtClass() == Expr::CXXConstructExprClass) {
-      // matches: parall_for("id-string", N, lambda)
       const CXXConstructExpr *CXXCE = dyn_cast<CXXConstructExpr>(SE);
       SE = CXXCE->getArg(0)->IgnoreImplicit();
       if (SE->getStmtClass() == Expr::StringLiteralClass) {
 	CN = dyn_cast<StringLiteral>(SE)->getString().str();
 	curArgIndex++;
 	SE = SimplifyExpr(CE->getArg(curArgIndex));
-      }
+      } 
     } 
 
+    // The next (or first if a string literal is not provided)
+    // argument is the bounds (trip count) for the parallel_for.
+    // It can take several forms depending on types of a literal 
+    // value or even as a (binary) expression.
+    //
+    // FIXME: There are likely some missing cases here that could trip
+    // us up at some point.  We have been through the parsing and sema
+    // checks but we are likely susceptible to some C/C++ type
+    // promotion/conversion rules.  Do we need to ponder our use of
+    // "SimplifyExpr()" so it doesn't bite us in terms of disabling an
+    // expected type converstion).
     if (SE->getStmtClass() == Expr::IntegerLiteralClass) {
       BE = SE;
       curArgIndex++;
@@ -109,36 +158,21 @@ namespace {
       curArgIndex++;
       SE = SimplifyExpr(CE->getArg(curArgIndex));
     } else {
-      CE->getArg(curArgIndex)->dump();
-      SE->dump();
-      llvm_unreachable("unknown size expr for parallel_for construct");
+      BE = nullptr;
+      LE = nullptr;
+      return;
     }
 
     if (SE->getStmtClass() == Expr::LambdaExprClass) {
       LE = dyn_cast<LambdaExpr>(SE);
+    } else {
+      LE = nullptr;
+      return;
     }
   }
 
-  // A helper function used to extract the lamba expression 
-  // used in Kokkos.  Note that the expression is sometimes 
-  // wrapped in other AST expressions (e.g. casts). 
-  static const LambdaExpr* ExtractLambdaExpr(const Expr *E) 
-  {
-    if (auto me = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = me->GetTemporaryExpr();
-    }
 
-    if (const CastExpr* c = dyn_cast<CastExpr>(E)) {
-      E = c->getSubExpr();
-    }
-
-    if (const CXXBindTemporaryExpr *c = dyn_cast<CXXBindTemporaryExpr>(E)) {
-      E = c->getSubExpr();
-    }
-
-    return dyn_cast<LambdaExpr>(E);
-  }
-
+  // FIXME: This should probably be moved out of the kokkos-centric implementation.  
   /// \brief Cleanup to ensure parent stack frame is synced.
   struct RethrowCleanup : public EHScopeStack::Cleanup {
     llvm::BasicBlock *InvokeDest;
@@ -150,14 +184,15 @@ namespace {
       llvm::BasicBlock *DetRethrowBlock = CGF.createBasicBlock("det.rethrow");
       if (InvokeDest)
         CGF.Builder.CreateInvoke(
-          CGF.CGM.getIntrinsic(llvm::Intrinsic::detached_rethrow),
-          DetRethrowBlock, InvokeDest);
+				 CGF.CGM.getIntrinsic(llvm::Intrinsic::detached_rethrow),
+				 DetRethrowBlock, InvokeDest);
       else
         CGF.Builder.CreateBr(DetRethrowBlock);
       CGF.EmitBlock(DetRethrowBlock);
     }
   };
 
+  // FIXME: This should probably be moved out of the kokkos-centric implementation.  
   // Helper routine copied from CodeGenFunction.cpp
   static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
     if (!BB) return;
@@ -165,22 +200,31 @@ namespace {
       return CGF.CurFn->getBasicBlockList().push_back(BB);
     delete BB;
   }
-
 }
 
+// FIXME: This should probably be moved out of the kokkos-centric implementation.  
 llvm::Instruction *CodeGenFunction::EmitSyncRegionStart() {
   // Start the sync region.  To ensure the syncregion.start call dominates all
   // uses of the generated token, we insert this call at the alloca insertion
   // point.
   llvm::Instruction *SRStart = llvm::CallInst::Create(
-      CGM.getIntrinsic(llvm::Intrinsic::syncregion_start),
-      "syncreg", AllocaInsertPt);
+				CGM.getIntrinsic(llvm::Intrinsic::syncregion_start),
+				"syncreg", AllocaInsertPt);
   return SRStart;
 }
 
-void CodeGenFunction::EmitKokkosConstruct(const CallExpr *CE) {
-  using namespace std;
-
+/// \brief Emit a kokkos-centric construct. 
+///
+/// This is our high-level entry point for lowering kokkos constructs
+/// into the parallel-ir.  See each of the individual emit routines
+/// for details on what is supported within each type of construct.
+/// 
+// FIXME: Right now this routine is somewhat redundant with the code in 
+// CGExpr...  Could stand some refactoring to clean it up. One particular 
+// feature that would be nice is a way to backtrack and fall through to 
+// default C++ codegen if we hit a particular case that is currently not 
+// supported. 
+bool CodeGenFunction::EmitKokkosConstruct(const CallExpr *CE) {
   assert(CE != 0 && "CodeGenFunction::EmitKokkosConstruct: null callexpr passed!");
 
   const FunctionDecl *Func = CE->getDirectCallee();
@@ -188,53 +232,43 @@ void CodeGenFunction::EmitKokkosConstruct(const CallExpr *CE) {
 
   // FIXME: This is repeated code from CGExpr... 
   if (Func->getQualifiedNameAsString() == "Kokkos::parallel_for") {
-    EmitKokkosParallelFor(CE);
+    return EmitKokkosParallelFor(CE);
   } else if (Func->getQualifiedNameAsString() == "Kokkos::parallel_reduce") {
-    EmitKokkosParallelReduce(CE);
+    return EmitKokkosParallelReduce(CE);
   } else {
-    assert(false && "unsupported Kokkos construct!");
+    llvm_unreachable("unsupported kokkos construct encountered");
   }
 }
 
 
-void CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
+// 
+// FIXME: Need to add attributes back into the mix (perhaps more for the compiler 
+// side of the house vs. the application folks at this point in time). 
+//
+// FIXME: As discussed above it would be nice to find a way to fallback to the 
+// standard C++ codegen if we hit an unhandled construct/feature. 
+// 
+bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
     
   ArrayRef<const Attr *> ForallAttrs; // FIXME: This is unused... 
 
-  // The Kokkos parallel_for has multiple forms and we have to sort out
-  // which one is being used to figure out the details of transformation 
-  // and lowering to IR.  At a high-level the pseudo code looks like:
-  //
-  //    parallel_for(N, lambda | functor) {
-  //      // parallel body... 
-  //    } 
-  //
-  // some older syntax appears to allow (not deprecated):
-  // 
-  //    parallel_for("name", N, lambda | functor) { 
-  //      // parallel body...
-  //    }  
-  // 
-  // Note each lamba/functor takes a single argument (the "active" index)
-  // that is an integer in simple cases and can be more complex when using 
-  // a range poicy...  Right now we are only supporting the simple cases 
-  // (i.e. no range policies). 
-  //  
-  // FIXME: The Kokkos wiki states: 
-  // 
-  //   "Kokkos lets users choose whether to use a functor or a
-  //   lambda. Lambdas are convenient for short loop bodies. For a
-  //   much more complicated loop body, you might find it easier for
-  //   testing to separate it out and name it as a functor."  
-  // 
-  // 
   std::string      PFName; 
   const Expr       *BE = nullptr; // "bounds" expression
   const LambdaExpr *LE = nullptr; // the lambda  
 
   ExtractParallelForComponents(CE, PFName, BE, LE);
-  assert(LE && "failed to extract lambda from kokkos statement!");  
-  assert(BE && "failed to extract loop bound from kokkos statement!");
+  
+  if (LE == nullptr) { 
+    DiagnosticsEngine &Diags = CGM.getDiags();
+    Diags.Report(CE->getExprLoc(), diag::warn_kokkos_no_functor);
+    return false;
+  }
+
+  if (BE == nullptr) {
+    DiagnosticsEngine &Diags = CGM.getDiags();
+    Diags.Report(CE->getExprLoc(), diag::warn_kokkos_unknown_bounds_expr);
+    return false;
+  }
 
   JumpDest LoopExit = getJumpDestInCurrentScope("kokkos.forall.end");
   PushSyncRegion();
@@ -430,9 +464,12 @@ void CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
     EmitBlock(SyncContinueBlock);
     PopSyncRegion();
   }
+
+  return true;
 }
 
-void CodeGenFunction::EmitKokkosParallelReduce(const CallExpr *CE) {
+bool CodeGenFunction::EmitKokkosParallelReduce(const CallExpr *CE) {
   assert(false && "kokkos reductions currently not supported!");
+  return false;
 }
 

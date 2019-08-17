@@ -3239,15 +3239,11 @@ public:
   llvm::Value *EmitSEHAbnormalTermination();
 
   // kitsune: Kokkos support  
-  void EmitKokkosConstruct(const CallExpr *CE);
-  void EmitKokkosParallelFor(const CallExpr *CE);
-  void EmitKokkosParallelReduce(const CallExpr *CE);
-  // FIXME?: Should we/can we refactor this away?
+  bool EmitKokkosConstruct(const CallExpr *CE);
+  bool EmitKokkosParallelFor(const CallExpr *CE);
+  bool EmitKokkosParallelReduce(const CallExpr *CE);
+  // FIXME?: Should/can we refactor this away?
   bool InKokkosConstruct = false;
-
-
-
-
 
 
   /// Emit simple code for OpenMP directives in Simd-only mode.

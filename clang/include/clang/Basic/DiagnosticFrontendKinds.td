@@ -262,6 +262,13 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
+def warn_kokkos_no_functor : Warning<
+    "-fkokkos : functors unsupported (reverting to C++ mode for construct).">,
+    InGroup<BackendOptimizationFailure>;
+def warn_kokkos_unknown_bounds_expr : Warning<
+    "-fkokkos : unrecognized bounds/limit expression (reverting to C++ mode for construct).">,
+    InGroup<BackendOptimizationFailure>;
+
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

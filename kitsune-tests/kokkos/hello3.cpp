@@ -6,13 +6,6 @@ using namespace std;
 
 const size_t SIZE_1 = 0;
 
-struct hello_world {
-  KOKKOS_INLINE_FUNCTION 
-  void operator() (const int i) const {
-    printf("hello from %i\n", i);
-  }
-};
-
 int value() {
   return 15;
 }
