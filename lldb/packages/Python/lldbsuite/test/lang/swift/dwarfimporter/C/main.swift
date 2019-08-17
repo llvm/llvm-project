@@ -14,12 +14,14 @@ let pureSwiftStruct = SwiftStruct()
 
 struct SwiftStructCMember {
   let point = Point(x: 3, y: 4)
+  let sub = FromSubmodule(x: 1, y: 2, z: 3)
   let name = "swift struct c member"
 }
 
 let swiftStructCMember = SwiftStructCMember()
 let typedef = TPoint(x: 5, y: 6)
 let union = DoubleLongUnion(long_val: 42)
+let fromSubmodule = FromSubmodule(x: 1, y: 2, z: 3)
 
 use(pureSwift) // break here
 use(point)
@@ -28,3 +30,4 @@ use(pureSwiftStruct)
 use(swiftStructCMember)
 use(typedef)
 use(union)
+use(fromSubmodule)

@@ -3193,8 +3193,8 @@ public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
       : m_swift_ast_ctx(swift_ast_ctx) {}
 
-  void lookupValue(StringRef name,
-                   llvm::Optional<swift::ClangTypeKind> kind,
+  void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+                   StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     std::vector<CompilerContext> decl_context;
     ConstString name_cs(name);
@@ -3208,21 +3208,41 @@ public:
 
     // Find the type in the debug info.
     TypeList clang_types;
-    const bool exact_match = true;
-    const uint32_t max_matches = UINT32_MAX;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    if (!module->FindTypes(name_cs, exact_match, max_matches,
-                           searched_symbol_files, clang_types))
-      return;
 
-    SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
-    if (!sym_file)
-      return;
-    // Filter out non-Clang types.
-    auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-        sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC));
-    if (!clang_ctx)
-      return;
+    // Perform a lookup in a specific module, if requested.
+    if (!inModule.empty()) {
+      TypeMap type_map;
+      std::vector<CompilerContext> decl_context;
+      ConstString mod_name(inModule);
+      ConstString type_name(name);
+      // There's a bit of an impedance mismatch between the
+      // interfaces, Swift passes in either inModule (when looking up
+      // an inner Clang type) or kind (when coming through
+      // ASTDemangler), but it would be much more efficient if we had
+      // both. Alternatively, adding a wildcard CompilerContextKind
+      // would also save us from doing reedundant lookups here.
+      CompilerContextKind cc_kinds[] = {
+          CompilerContextKind::Class, CompilerContextKind::Structure,
+          CompilerContextKind::Union, CompilerContextKind::Enumeration,
+          CompilerContextKind::Typedef};
+      for (auto cc_kind : cc_kinds)
+        if (module->GetSymbolVendor()->FindTypes(
+                {{CompilerContextKind::Module, mod_name}, {cc_kind, type_name}},
+                true, type_map))
+          break;
+      type_map.ForEach([&](lldb::TypeSP &type_sp) {
+        clang_types.Insert(type_sp);
+        return true;
+      });
+    } else {
+      // Search globally.
+      const bool exact_match = true;
+      const uint32_t max_matches = UINT32_MAX;
+      llvm::DenseSet<SymbolFile *> searched_symbol_files;
+      module->FindTypes(name_cs, exact_match, max_matches,
+                        searched_symbol_files, clang_types);
+    }
+
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);
     for (unsigned i = 0; i < clang_types.GetSize(); ++i) {
@@ -3236,12 +3256,15 @@ public:
 
       // Realize the full type.
       CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
-      // Import the type into the DWARFImporter's context.
-      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
+
+      // Filter our non-Clang types.
       auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
           compiler_type.GetTypeSystem());
       if (!type_system)
         continue;
+
+      // Import the type into the DWARFImporter's context.
+      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
       clang::ASTContext *from_ctx = type_system->getASTContext();
       if (!from_ctx)
         continue;

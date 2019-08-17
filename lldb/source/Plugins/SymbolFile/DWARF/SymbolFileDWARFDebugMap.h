@@ -121,6 +121,8 @@ public:
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
+  size_t FindTypes(const std::vector<lldb_private::CompilerContext> &context,
+                   bool append, lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
