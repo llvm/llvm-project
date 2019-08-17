@@ -10,10 +10,14 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "Serialize.h"
+#include "clang/Basic/Version.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
+
+static const std::string ClangDocVersion =
+    clang::getClangToolFullVersion("clang-doc");
 
 std::unique_ptr<Generator> getHTMLGenerator() {
   auto G = doc::findGeneratorByName("html");
@@ -25,7 +29,8 @@ std::unique_ptr<Generator> getHTMLGenerator() {
 ClangDocContext
 getClangDocContext(std::vector<std::string> UserStylesheets = {},
                    StringRef RepositoryUrl = "") {
-  ClangDocContext CDCtx{{}, {}, {}, {}, RepositoryUrl, UserStylesheets, {}};
+  ClangDocContext CDCtx{
+      {}, "test-project", {}, {}, {}, RepositoryUrl, UserStylesheets, {}};
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");
@@ -61,67 +66,76 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
 <link rel="stylesheet" href="user-provided-stylesheet.css"/>
 <script src="index.js"></script>
-<div id="index" path=""></div>
-<ul>
-  <li>
-    <span>
-      <a href="#Namespaces">Namespaces</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a href="#Records">Records</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a href="#Functions">Functions</a>
-    </span>
+<header id="project-title">test-project</header>
+<main>
+  <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <h1>namespace Namespace</h1>
+    <h2 id="Namespaces">Namespaces</h2>
     <ul>
       <li>
-        <span>
-          <a href="#0000000000000000000000000000000000000000">OneFunction</a>
-        </span>
+        <a href="Namespace/ChildNamespace.html">ChildNamespace</a>
       </li>
     </ul>
-  </li>
-  <li>
-    <span>
-      <a href="#Enums">Enums</a>
-    </span>
+    <h2 id="Records">Records</h2>
     <ul>
       <li>
-        <span>
-          <a href="#0000000000000000000000000000000000000000">OneEnum</a>
-        </span>
+        <a href="Namespace/ChildStruct.html">ChildStruct</a>
       </li>
     </ul>
-  </li>
-</ul>
-<div>
-  <h1>namespace Namespace</h1>
-  <h2 id="Namespaces">Namespaces</h2>
-  <ul>
-    <li>
-      <a href="Namespace/ChildNamespace.html">ChildNamespace</a>
-    </li>
-  </ul>
-  <h2 id="Records">Records</h2>
-  <ul>
-    <li>
-      <a href="Namespace/ChildStruct.html">ChildStruct</a>
-    </li>
-  </ul>
-  <h2 id="Functions">Functions</h2>
-  <div>
-    <h3 id="0000000000000000000000000000000000000000">OneFunction</h3>
-    <p>OneFunction()</p>
+    <h2 id="Functions">Functions</h2>
+    <div>
+      <h3 id="0000000000000000000000000000000000000000">OneFunction</h3>
+      <p>OneFunction()</p>
+    </div>
+    <h2 id="Enums">Enums</h2>
+    <div>
+      <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+    </div>
   </div>
-  <h2 id="Enums">Enums</h2>
-  <div>
-    <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+  <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+    <ol>
+      <li>
+        <span>
+          <a href="#Namespaces">Namespaces</a>
+        </span>
+      </li>
+      <li>
+        <span>
+          <a href="#Records">Records</a>
+        </span>
+      </li>
+      <li>
+        <span>
+          <a href="#Functions">Functions</a>
+        </span>
+        <ul>
+          <li>
+            <span>
+              <a href="#0000000000000000000000000000000000000000">OneFunction</a>
+            </span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span>
+          <a href="#Enums">Enums</a>
+        </span>
+        <ul>
+          <li>
+            <span>
+              <a href="#0000000000000000000000000000000000000000">OneEnum</a>
+            </span>
+          </li>
+        </ul>
+      </li>
+    </ol>
   </div>
-</div>
+</main>
+<footer>
+  <span class="no-break">)raw" +
+                         ClangDocVersion + R"raw(</span>
+</footer>
 )raw";
 
   EXPECT_EQ(Expected, Actual.str());
@@ -162,80 +176,89 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
 <title>class r</title>
 <link rel="stylesheet" href="../../../clang-doc-default-stylesheet.css"/>
 <script src="../../../index.js"></script>
-<div id="index" path="X/Y/Z"></div>
-<ul>
-  <li>
-    <span>
-      <a href="#Members">Members</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a href="#Records">Records</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a href="#Functions">Functions</a>
-    </span>
+<header id="project-title">test-project</header>
+<main>
+  <div id="sidebar-left" path="X/Y/Z" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <h1>class r</h1>
+    <p>
+      Defined at line 
+      <a href="http://www.repository.com/dir/test.cpp#10">10</a>
+       of file 
+      <a href="http://www.repository.com/dir/test.cpp">test.cpp</a>
+    </p>
+    <p>
+      Inherits from 
+      <a href="../../../path/to/F.html">F</a>
+      , G
+    </p>
+    <h2 id="Members">Members</h2>
     <ul>
       <li>
-        <span>
-          <a href="#0000000000000000000000000000000000000000">OneFunction</a>
-        </span>
+        private 
+        <a href="../int.html">int</a>
+         X
       </li>
     </ul>
-  </li>
-  <li>
-    <span>
-      <a href="#Enums">Enums</a>
-    </span>
+    <h2 id="Records">Records</h2>
     <ul>
       <li>
-        <span>
-          <a href="#0000000000000000000000000000000000000000">OneEnum</a>
-        </span>
+        <a href="r/ChildStruct.html">ChildStruct</a>
       </li>
     </ul>
-  </li>
-</ul>
-<div>
-  <h1>class r</h1>
-  <p>
-    Defined at line 
-    <a href="http://www.repository.com/dir/test.cpp#10">10</a>
-     of file 
-    <a href="http://www.repository.com/dir/test.cpp">test.cpp</a>
-  </p>
-  <p>
-    Inherits from 
-    <a href="../../../path/to/F.html">F</a>
-    , G
-  </p>
-  <h2 id="Members">Members</h2>
-  <ul>
-    <li>
-      private 
-      <a href="../int.html">int</a>
-       X
-    </li>
-  </ul>
-  <h2 id="Records">Records</h2>
-  <ul>
-    <li>
-      <a href="r/ChildStruct.html">ChildStruct</a>
-    </li>
-  </ul>
-  <h2 id="Functions">Functions</h2>
-  <div>
-    <h3 id="0000000000000000000000000000000000000000">OneFunction</h3>
-    <p>public OneFunction()</p>
+    <h2 id="Functions">Functions</h2>
+    <div>
+      <h3 id="0000000000000000000000000000000000000000">OneFunction</h3>
+      <p>public OneFunction()</p>
+    </div>
+    <h2 id="Enums">Enums</h2>
+    <div>
+      <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+    </div>
   </div>
-  <h2 id="Enums">Enums</h2>
-  <div>
-    <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+  <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+    <ol>
+      <li>
+        <span>
+          <a href="#Members">Members</a>
+        </span>
+      </li>
+      <li>
+        <span>
+          <a href="#Records">Records</a>
+        </span>
+      </li>
+      <li>
+        <span>
+          <a href="#Functions">Functions</a>
+        </span>
+        <ul>
+          <li>
+            <span>
+              <a href="#0000000000000000000000000000000000000000">OneFunction</a>
+            </span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span>
+          <a href="#Enums">Enums</a>
+        </span>
+        <ul>
+          <li>
+            <span>
+              <a href="#0000000000000000000000000000000000000000">OneEnum</a>
+            </span>
+          </li>
+        </ul>
+      </li>
+    </ol>
   </div>
-</div>
+</main>
+<footer>
+  <span class="no-break">)raw" +
+                         ClangDocVersion + R"raw(</span>
+</footer>
 )raw";
 
   EXPECT_EQ(Expected, Actual.str());
@@ -270,17 +293,25 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
 <script src="index.js"></script>
-<div id="index" path=""></div>
-<div>
-  <h3 id="0000000000000000000000000000000000000000">f</h3>
-  <p>
-    <a href="path/to/float.html">float</a>
-     f(
-    <a href="path/to/int.html">int</a>
-     P)
-  </p>
-  <p>Defined at line 10 of file dir/test.cpp</p>
-</div>
+<header id="project-title">test-project</header>
+<main>
+  <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <h3 id="0000000000000000000000000000000000000000">f</h3>
+    <p>
+      <a href="path/to/float.html">float</a>
+       f(
+      <a href="path/to/int.html">int</a>
+       P)
+    </p>
+    <p>Defined at line 10 of file dir/test.cpp</p>
+  </div>
+  <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
+</main>
+<footer>
+  <span class="no-break">)raw" +
+                         ClangDocVersion + R"raw(</span>
+</footer>
 )raw";
 
   EXPECT_EQ(Expected, Actual.str());
@@ -309,19 +340,27 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
 <script src="index.js"></script>
-<div id="index" path=""></div>
-<div>
-  <h3 id="0000000000000000000000000000000000000000">enum class e</h3>
-  <ul>
-    <li>X</li>
-  </ul>
-  <p>
-    Defined at line 
-    <a href="https://www.repository.com/test.cpp#10">10</a>
-     of file 
-    <a href="https://www.repository.com/test.cpp">test.cpp</a>
-  </p>
-</div>
+<header id="project-title">test-project</header>
+<main>
+  <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <h3 id="0000000000000000000000000000000000000000">enum class e</h3>
+    <ul>
+      <li>X</li>
+    </ul>
+    <p>
+      Defined at line 
+      <a href="https://www.repository.com/test.cpp#10">10</a>
+       of file 
+      <a href="https://www.repository.com/test.cpp">test.cpp</a>
+    </p>
+  </div>
+  <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
+</main>
+<footer>
+  <span class="no-break">)raw" +
+                         ClangDocVersion + R"raw(</span>
+</footer>
 )raw";
 
   EXPECT_EQ(Expected, Actual.str());
@@ -386,19 +425,27 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
 <title></title>
 <link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
 <script src="index.js"></script>
-<div id="index" path=""></div>
-<div>
-  <h3 id="0000000000000000000000000000000000000000">f</h3>
-  <p>void f(int I, int J)</p>
-  <p>Defined at line 10 of file test.cpp</p>
-  <div>
+<header id="project-title">test-project</header>
+<main>
+  <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <h3 id="0000000000000000000000000000000000000000">f</h3>
+    <p>void f(int I, int J)</p>
+    <p>Defined at line 10 of file test.cpp</p>
     <div>
-      <p> Brief description.</p>
-      <p> Extended description that continues onto the next line.</p>
-      <p> Comment with html entities: &amp;, &lt;, &gt;, &quot;, &apos;.</p>
+      <div>
+        <p> Brief description.</p>
+        <p> Extended description that continues onto the next line.</p>
+        <p> Comment with html entities: &amp;, &lt;, &gt;, &quot;, &apos;.</p>
+      </div>
     </div>
   </div>
-</div>
+  <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
+</main>
+<footer>
+  <span class="no-break">)raw" +
+                         ClangDocVersion + R"raw(</span>
+</footer>
 )raw";
 
   EXPECT_EQ(Expected, Actual.str());

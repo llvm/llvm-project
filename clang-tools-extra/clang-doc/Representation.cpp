@@ -274,12 +274,14 @@ void Index::sort() {
 }
 
 ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
-                                 bool PublicOnly, StringRef OutDirectory,
-                                 StringRef SourceRoot, StringRef RepositoryUrl,
+                                 StringRef ProjectName, bool PublicOnly,
+                                 StringRef OutDirectory, StringRef SourceRoot,
+                                 StringRef RepositoryUrl,
                                  std::vector<std::string> UserStylesheets,
                                  std::vector<std::string> JsScripts)
-    : ECtx(ECtx), PublicOnly(PublicOnly), OutDirectory(OutDirectory),
-      UserStylesheets(UserStylesheets), JsScripts(JsScripts) {
+    : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
+      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets),
+      JsScripts(JsScripts) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
