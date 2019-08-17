@@ -3,29 +3,29 @@
 
 # RUN: yaml2obj %s --docnum=1 -o %t.bad-size
 # RUN: llvm-readobj --all %t.bad-size 2>&1 \
-# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix WARN
+# RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning --check-prefix WARN
 # RUN: llvm-readelf --all %t.bad-size 2>&1 \
-# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix WARN-GNU
+# RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning --check-prefix WARN-GNU
 
 # WARN-NOT: warning
-# WARN: warning: invalid section size (4) or entity size (16)
+# WARN: warning: '[[FILE]]': invalid section size (4) or entity size (16)
 # WARN-EMPTY:
 # WARN-NEXT: File:
 # WARN:      Symbols [
 # WARN:      ]
 # WARN-EMPTY:
 ## A warning is printed at the place where a normal dynamic table should be. 
-# WARN-NEXT: warning: invalid section size (4) or entity size (16)
+# WARN-NEXT: warning: '[[FILE]]': invalid section size (4) or entity size (16)
 # WARN-NEXT: ProgramHeaders [
 
 # WARN-GNU-NOT:  warning
-# WARN-GNU:      warning: invalid section size (4) or entity size (16)
+# WARN-GNU:      warning: '[[FILE]]': invalid section size (4) or entity size (16)
 # WARN-GNU-NEXT: ELF Header:
 # WARN-GNU:      Symbol table '.symtab' contains 1 entries:
 # WARN-GNU:        0:
 # WARN-GNU-EMPTY:
 ## A warning is printed at the place where a normal dynamic table should be. 
-# WARN-GNU:      warning: invalid section size (4) or entity size (16)
+# WARN-GNU:      warning: '[[FILE]]': invalid section size (4) or entity size (16)
 # WARN-GNU-EMPTY:
 
 --- !ELF
@@ -162,9 +162,9 @@ ProgramHeaders:
 ## Test handling of DT_STRTAB pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
 
-# RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck %s --check-prefix BAD-STRTAB-ERR
-# RUN: llvm-readelf --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck %s --check-prefix BAD-STRTAB-ERR
-# BAD-STRTAB-ERR: warning: Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
+# RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck -DFILE=%t.bad-strtab %s --check-prefix BAD-STRTAB-ERR
+# RUN: llvm-readelf --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck -DFILE=%t.bad-strtab %s --check-prefix BAD-STRTAB-ERR
+# BAD-STRTAB-ERR: warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
 
 # RUN: llvm-readobj --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-LLVM
 # RUN: llvm-readelf --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-GNU
@@ -206,10 +206,10 @@ ProgramHeaders:
 
 ## Test handling of other d_ptr tags pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
-# RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA
-# RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA-GNU
+# RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck -DFILE=%t.bad-rela %s --check-prefixes=CHECK,BAD-RELA
+# RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck -DFILE=%t.bad-rela %s --check-prefixes=CHECK,BAD-RELA-GNU
 
-# CHECK: warning: Unable to parse DT_RELA: virtual address is not in any segment: 0x1000000
+# CHECK: warning: '[[FILE]]': Unable to parse DT_RELA: virtual address is not in any segment: 0x1000000
 
 # BAD-RELA:      DynamicSection [ (2 entries)
 # BAD-RELA-NEXT:   Tag                Type Name/Value

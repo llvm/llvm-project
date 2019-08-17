@@ -89,7 +89,7 @@ struct TagNode : public HTMLNode {
 
   HTMLTag Tag; // Name of HTML Tag (p, div, h1)
   std::vector<std::unique_ptr<HTMLNode>> Children; // List of child nodes
-  std::vector<std::pair<llvm::SmallString<16>, llvm::SmallString<16>>>
+  std::vector<std::pair<std::string, std::string>>
       Attributes; // List of key-value attributes for tag
 
   void Render(llvm::raw_ostream &OS, int IndentationLevel) override;
@@ -278,7 +278,7 @@ genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
                             llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(StylesheetPath, llvm::sys::path::Style::posix);
-    LinkNode->Attributes.emplace_back("href", StylesheetPath);
+    LinkNode->Attributes.emplace_back("href", StylesheetPath.str());
     Out.emplace_back(std::move(LinkNode));
   }
   return Out;
@@ -293,7 +293,7 @@ genJsScriptsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
     llvm::sys::path::append(ScriptPath, llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(ScriptPath, llvm::sys::path::Style::posix);
-    ScriptNode->Attributes.emplace_back("src", ScriptPath);
+    ScriptNode->Attributes.emplace_back("src", ScriptPath.str());
     Out.emplace_back(std::move(ScriptNode));
   }
   return Out;
@@ -454,7 +454,7 @@ writeFileDefinition(const Location &L,
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
       HTMLTag::TAG_A, llvm::sys::path::filename(FileURL));
-  LocFileNode->Attributes.emplace_back("href", FileURL);
+  LocFileNode->Attributes.emplace_back("href", FileURL.str());
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;
 }

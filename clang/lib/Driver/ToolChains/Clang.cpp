@@ -4057,11 +4057,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_64,
-                               options::OPT_mlong_double_128)) {
+  if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
     if (TC.getArch() == llvm::Triple::x86 ||
-        TC.getArch() == llvm::Triple::x86_64 ||
-        TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64())
+        TC.getArch() == llvm::Triple::x86_64)
+      A->render(Args, CmdArgs);
+    else if ((TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64()) &&
+             (A->getOption().getID() != options::OPT_mlong_double_80))
       A->render(Args, CmdArgs);
     else
       D.Diag(diag::err_drv_unsupported_opt_for_target)
