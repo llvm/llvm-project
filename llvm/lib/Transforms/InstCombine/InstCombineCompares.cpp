@@ -3321,12 +3321,15 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
                                m_Instruction(MaybeTruncation)))))
     return nullptr;
 
-  Instruction *UntruncatedShift = XShift;
-
   // We potentially looked past 'trunc', but only when matching YShift,
   // therefore YShift must have the widest type.
-  Type *WidestTy = YShift->getType();
-  assert(XShift->getType() == I.getOperand(0)->getType() &&
+  Instruction *WidestShift = YShift;
+  // Therefore XShift must have the shallowest type.
+  // Or they both have identical types if there was no truncation.
+  Instruction *NarrowestShift = XShift;
+
+  Type *WidestTy = WidestShift->getType();
+  assert(NarrowestShift->getType() == I.getOperand(0)->getType() &&
          "We did not look past any shifts while matching XShift though.");
   bool HadTrunc = WidestTy != I.getOperand(0)->getType();
 
@@ -3363,7 +3366,7 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
       // Due to the 'trunc', we will need to widen X. For that either the old
       // 'trunc' or the shift amt in the non-truncated shift should be one-use.
       if (!MaybeTruncation->hasOneUse() &&
-          !UntruncatedShift->getOperand(1)->hasOneUse())
+          !NarrowestShift->getOperand(1)->hasOneUse())
         return nullptr;
     }
   }

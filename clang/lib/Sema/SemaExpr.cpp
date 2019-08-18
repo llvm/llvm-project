@@ -9075,7 +9075,8 @@ static void DiagnoseDivisionSizeofPointer(Sema &S, Expr *LHS, Expr *RHS,
       RUE->getKind() != UETT_SizeOf)
     return;
 
-  QualType LHSTy = LUE->getArgumentExpr()->IgnoreParens()->getType();
+  const Expr *LHSArg = LUE->getArgumentExpr()->IgnoreParens();
+  QualType LHSTy = LHSArg->getType();
   QualType RHSTy;
 
   if (RUE->isArgumentType())
@@ -9085,10 +9086,15 @@ static void DiagnoseDivisionSizeofPointer(Sema &S, Expr *LHS, Expr *RHS,
 
   if (!LHSTy->isPointerType() || RHSTy->isPointerType())
     return;
-  if (LHSTy->getPointeeType() != RHSTy)
+  if (LHSTy->getPointeeType().getCanonicalType() != RHSTy.getCanonicalType())
     return;
 
   S.Diag(Loc, diag::warn_division_sizeof_ptr) << LHS << LHS->getSourceRange();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(LHSArg)) {
+    if (const ValueDecl *LHSArgDecl = DRE->getDecl())
+      S.Diag(LHSArgDecl->getLocation(), diag::note_pointer_declared_here)
+          << LHSArgDecl;
+  }
 }
 
 static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,

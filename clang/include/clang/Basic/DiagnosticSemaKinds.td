@@ -3346,6 +3346,8 @@ def warn_address_of_reference_null_compare : Warning<
   InGroup<TautologicalUndefinedCompare>;
 def note_reference_is_return_value : Note<"%0 returns a reference">;
 
+def note_pointer_declared_here : Note<
+  "pointer %0 declared here">;
 def warn_division_sizeof_ptr : Warning<
   "'%0' will return the size of the pointer, not the array itself">,
   InGroup<DiagGroup<"sizeof-pointer-div">>;
