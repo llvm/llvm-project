@@ -402,7 +402,8 @@ unsigned SILoadStoreOptimizer::getOpcodeWidth(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
 
   if (TII->isMUBUF(MI)) {
-    return AMDGPU::getMUBUFDwords(Opc);
+    // FIXME: Handle d16 correctly
+    return AMDGPU::getMUBUFElements(Opc);
   }
 
   switch (Opc) {
@@ -977,6 +978,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI) {
 
   switch (CI.InstClass) {
   default:
+    // FIXME: Handle d16 correctly
     return AMDGPU::getMUBUFOpcode(CI.InstClass, Width);
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");

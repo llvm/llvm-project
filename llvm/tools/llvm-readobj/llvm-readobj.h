@@ -21,12 +21,9 @@ namespace llvm {
   }
 
   // Various helper functions.
-  LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
-  void reportError(Error Err, StringRef Input); 
-  void reportWarning(Twine Msg);
-  void reportWarning(StringRef Input, Error Err);
-  void warn(llvm::Error Err);
-  void error(std::error_code EC);
+  LLVM_ATTRIBUTE_NORETURN void reportError(Error Err, StringRef Input); 
+  LLVM_ATTRIBUTE_NORETURN void reportError(std::error_code EC, StringRef Input);
+  void reportWarning(Error Err, StringRef Input);
 
   template <class T> T unwrapOrError(StringRef Input, Expected<T> EO) {
     if (EO)

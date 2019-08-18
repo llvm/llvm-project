@@ -101,7 +101,7 @@ private:
   void emitElse(MachineInstr &MI);
   void emitIfBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
-  void emitEndCf(MachineInstr &MI);
+  MachineBasicBlock *emitEndCf(MachineInstr &MI);
 
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
                         SmallVectorImpl<MachineOperand> &Src) const;
@@ -475,7 +475,7 @@ static MachineBasicBlock *insertInstWithExecFallthrough(MachineBasicBlock &MBB,
   return SplitMBB;
 }
 
-void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
+MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
@@ -495,7 +495,7 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
     = BuildMI(*MF, DL, TII->get(OrTermOpc), Exec)
     .addReg(Exec)
     .add(MI.getOperand(0));
-  insertInstWithExecFallthrough(MBB, MI, NewMI, DT, LIS, MLI);
+  return insertInstWithExecFallthrough(MBB, MI, NewMI, DT, LIS, MLI);
 }
 
 // Returns replace operands for a logical operation, either single result
@@ -623,7 +623,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         if (Next != MBB->end())
           NextMI = &*Next;
 
-        emitEndCf(MI);
+        MBB = emitEndCf(MI);
 
         if (NextMI) {
           MBB = NextMI->getParent();

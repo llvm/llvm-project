@@ -375,51 +375,45 @@ namespace opts {
 
 namespace llvm {
 
-LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
+LLVM_ATTRIBUTE_NORETURN static void error(Twine Msg) {
+  // Flush the standard output to print the error at a
+  // proper place.
   fouts().flush();
   errs() << "\n";
   WithColor::error(errs()) << Msg << "\n";
   exit(1);
 }
 
-void reportError(Error Err, StringRef Input) {
+LLVM_ATTRIBUTE_NORETURN void reportError(Error Err, StringRef Input) {
   assert(Err);
   if (Input == "-")
     Input = "<stdin>";
   handleAllErrors(createFileError(Input, std::move(Err)),
-                  [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
+                  [&](const ErrorInfoBase &EI) { error(EI.message()); });
+  llvm_unreachable("error() call should never return");
 }
 
-void reportWarning(Twine Msg) {
-  fouts().flush();
-  errs() << "\n";
-  WithColor::warning(errs()) << Msg << "\n";
-}
-
-void reportWarning(StringRef Input, Error Err) {
+void reportWarning(Error Err, StringRef Input) {
+  assert(Err);
   if (Input == "-")
     Input = "<stdin>";
-  warn(createFileError(Input, std::move(Err)));
+
+  // Flush the standard output to print the warning at a
+  // proper place.
+  fouts().flush();
+  handleAllErrors(createFileError(Input, std::move(Err)),
+                  [&](const ErrorInfoBase &EI) {
+                    errs() << "\n";
+                    WithColor::warning(errs()) << EI.message() << "\n";
+                  });
 }
 
-void warn(Error Err) {
-  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-    reportWarning(EI.message());
-  });
-}
-
-void error(std::error_code EC) {
-  if (!EC)
-    return;
-  reportError(EC.message());
-}
-
-} // namespace llvm
-
-static void reportError(std::error_code EC, StringRef Input) {
+LLVM_ATTRIBUTE_NORETURN void reportError(std::error_code EC, StringRef Input) {
   assert(EC != readobj_error::success);
   reportError(errorCodeToError(EC), Input);
 }
+
+} // namespace llvm
 
 static bool isMipsArch(unsigned Arch) {
   switch (Arch) {
