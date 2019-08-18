@@ -10,7 +10,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: si-lower-control-flow
     ; GCN: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-    ; GCN: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 16, 0
+    ; GCN: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 16, 0, 0
     ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0 = S_AND_B32 [[S_LOAD_DWORD_IMM]], 255, implicit-def $scc
     ; GCN: [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0 = S_AND_B32 65535, [[S_AND_B32_]], implicit-def $scc
     ; GCN: S_ENDPGM 0
@@ -49,5 +49,72 @@ body:             |
 
   bb.2:
     S_ENDPGM 0
+
+...
+
+---
+name: si_end_cf_lower_iterator_assert
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: name: si_end_cf_lower_iterator_assert
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN:   liveins: $sgpr30_sgpr31
+  ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY killed $sgpr30_sgpr31
+  ; GCN:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+  ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN:   [[V_CMP_NEQ_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NEQ_F32_e64 0, 0, 0, killed [[DEF]], 0, implicit $exec
+  ; GCN:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], killed [[V_CMP_NEQ_F32_e64_]], implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; GCN:   SI_MASK_BRANCH %bb.2, implicit $exec
+  ; GCN:   S_BRANCH %bb.1
+  ; GCN: bb.1:
+  ; GCN:   successors: %bb.2(0x80000000)
+  ; GCN: bb.2:
+  ; GCN:   successors: %bb.6(0x80000000)
+  ; GCN:   $exec = S_OR_B64_term $exec, killed [[COPY1]], implicit-def $scc
+  ; GCN: bb.6:
+  ; GCN:   successors: %bb.3(0x80000000)
+  ; GCN:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[S_MOV_B64_]], 0, 0, 0 :: (load 4, addrspace 4)
+  ; GCN: bb.3:
+  ; GCN:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
+  ; GCN:   S_CMP_EQ_U32 killed [[S_LOAD_DWORD_IMM]], 1, implicit-def $scc
+  ; GCN:   S_CBRANCH_SCC1 %bb.5, implicit killed $scc
+  ; GCN:   S_BRANCH %bb.4
+  ; GCN: bb.4:
+  ; GCN:   successors: %bb.5(0x80000000)
+  ; GCN:   SI_MASKED_UNREACHABLE
+  ; GCN: bb.5:
+  ; GCN:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY killed [[COPY]]
+  ; GCN:   S_SETPC_B64_return killed [[COPY2]]
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr30_sgpr31
+
+    %11:sreg_64 = COPY killed $sgpr30_sgpr31
+    %3:sreg_64 = S_MOV_B64 0
+    %7:vgpr_32 = IMPLICIT_DEF
+    %9:sreg_64 = V_CMP_NEQ_F32_e64 0, 0, 0, killed %7, 0, implicit $exec
+    %2:sreg_64 = SI_IF killed %9, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+
+  bb.2:
+    %4:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %3, 0, 0, 0 :: (load 4, addrspace 4)
+    SI_END_CF killed %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.3:
+    S_CMP_EQ_U32 killed %4, 1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit killed $scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    SI_MASKED_UNREACHABLE
+
+  bb.5:
+    %12:ccr_sgpr_64 = COPY killed %11
+    S_SETPC_B64_return killed %12
 
 ...

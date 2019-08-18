@@ -1755,10 +1755,9 @@ static bool isAssertlikeBlock(const CFGBlock *B, ASTContext &Context) {
   // B1, 'A && B' for B2, and 'A && B || C' for B3. Let's check whether we
   // reached the end of the condition!
   if (const Stmt *ElseCond = Else->getTerminatorCondition())
-    if (isa<BinaryOperator>(ElseCond)) {
-      assert(cast<BinaryOperator>(ElseCond)->isLogicalOp());
-      return isAssertlikeBlock(Else, Context);
-    }
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(ElseCond))
+      if (BinOp->isLogicalOp())
+        return isAssertlikeBlock(Else, Context);
 
   return false;
 }
