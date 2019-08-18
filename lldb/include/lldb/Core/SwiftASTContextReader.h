@@ -21,23 +21,33 @@ class SwiftASTContext;
 class ExecutionContext;
 class ExecutionContextRef;
 
-/// This is like llvm::sys::SmartRWMutex<false>, but with a try_lock method.
+/// This is like llvm::sys::SmartRWMutex<true>, but with a try_lock method.
 ///
 /// FIXME: Replace this with a C++14 shared_timed_mutex or a C++17
-/// share_mutex as soon as possible. This implementation still allows
-/// for a race condition in \c try_lock() between the checking of
-/// m_readers and the lock acquisition.
+/// share_mutex as soon as possible.
 class SharedMutex {
-  llvm::sys::RWMutexImpl m_impl;
+  llvm::sys::SmartRWMutex<true> m_impl;
   unsigned m_readers = 0;
+  std::mutex m_reader_mutex;
 public:
   SharedMutex() = default;
   SharedMutex(const SharedMutex &) = delete;
   SharedMutex &operator=(const SharedMutex &) = delete;
-  bool lock_shared() { ++m_readers; return m_impl.reader_acquire(); }
-  bool unlock_shared() { --m_readers; return m_impl.reader_release(); }
-  bool try_lock() { return m_readers ? false : m_impl.writer_acquire(); }
-  bool unlock() { return m_impl.writer_release(); }
+  bool lock_shared() {
+    std::lock_guard<std::mutex> lock(m_reader_mutex);
+    ++m_readers;
+    return m_impl.lock_shared();
+  }
+  bool unlock_shared() {
+    std::lock_guard<std::mutex> lock(m_reader_mutex);
+    --m_readers;
+    return m_impl.unlock_shared();
+  }
+  bool try_lock() {
+    std::lock_guard<std::mutex> lock(m_reader_mutex);
+    return m_readers ? false : m_impl.lock();
+  }
+  bool unlock() { return m_impl.unlock(); }
 };
 
 /// RAII acquisition of a reader lock.
