@@ -672,7 +672,6 @@ void AMDGPUPassConfig::addIRPasses() {
   // bitcast calls.
   addPass(createAMDGPUFixFunctionBitcastsPass());
 
-  addPass(createAtomicExpandPass());
   // this pass should be performed on linked module
   addPass(createAMDGPULowerKernelCallsPass());
   // A call to propagate attributes pass in the backend in case opt was not run.
