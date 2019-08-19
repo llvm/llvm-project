@@ -342,9 +342,15 @@ def parseOptionsAndInitTestdirs():
         configuration.skipCategories += test_categories.validate(
             args.skipCategories, False)
 
+    cflags_extras = ""
     if args.E:
-        cflags_extras = args.E
-        os.environ['CFLAGS_EXTRAS'] = cflags_extras
+        cflags_extras += args.E
+
+    if args.dwarf_version:
+        configuration.dwarf_version = args.dwarf_version
+        cflags_extras += '-gdwarf-{}'.format(args.dwarf_version)
+
+    os.environ['CFLAGS_EXTRAS'] = cflags_extras
 
     if args.d:
         sys.stdout.write(

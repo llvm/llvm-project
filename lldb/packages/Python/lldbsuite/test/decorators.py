@@ -194,11 +194,9 @@ def _decorateTest(mode,
                 macos_version[0],
                 macos_version[1],
                 platform.mac_ver()[0])))
-        skip_for_dwarf_version = (
-             dwarf_version is None) or (
-                 (self.getDebugInfo() is 'dwarf') and
-                 _check_expected_version(
-                     dwarf_version[0], dwarf_version[1], self.getDwarfVersion()))
+        skip_for_dwarf_version = (dwarf_version is None) or (
+            _check_expected_version(dwarf_version[0], dwarf_version[1],
+                                    self.getDwarfVersion()))
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip

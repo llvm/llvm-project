@@ -126,6 +126,12 @@ def create_parser():
         action='store_true',
         help='A flag to indicate an out-of-tree debug server is being used')
     group.add_argument(
+        '--dwarf-version',
+        metavar='dwarf_version',
+        dest='dwarf_version',
+        type=int,
+        help='Override the DWARF version.')
+    group.add_argument(
         '-s',
         metavar='name',
         help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')
