@@ -2516,29 +2516,37 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
       DWARFDIE die = GetDIE(die_ref);
 
       if (die) {
-        // LLDB never searches for Swift type definitions by context.
-        if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
-          continue;
-
         std::vector<CompilerContext> die_context;
         die.GetDeclContext(die_context);
         if (die_context != context)
           continue;
+  size_t num_matches = 0;
+  for (size_t i = 0; i < num_die_matches; ++i) {
+    const DIERef &die_ref = die_offsets[i];
+    DWARFDIE die = GetDIE(die_ref);
 
-        Type *matching_type = ResolveType(die, true, true);
-        if (matching_type) {
-          // We found a type pointer, now find the shared pointer form our type
-          // list
-          types.InsertUnique(matching_type->shared_from_this());
-          ++num_matches;
-        }
-      } else {
-        m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+    if (die) {
+      // LLDB never searches for Swift type definitions by context.
+      if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
+        continue;
+
+      std::vector<CompilerContext> die_context;
+      die.GetDeclContext(die_context);
+      if (die_context != context)
+        continue;
+
+      Type *matching_type = ResolveType(die, true, true);
+      if (matching_type) {
+        // We found a type pointer, now find the shared pointer form our type
+        // list
+        types.InsertUnique(matching_type->shared_from_this());
+        ++num_matches;
       }
+    } else {
+      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
     }
-    return num_matches;
   }
-  return 0;
+  return num_matches;
 }
 
 CompilerDeclContext

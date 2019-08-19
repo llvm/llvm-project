@@ -1027,20 +1027,17 @@ static void readConfigs(opt::InputArgList &args) {
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
-  bool hasExportDynamic =
-      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
-
   // Parses -dynamic-list and -export-dynamic-symbol. They make some
   // symbols private. Note that -export-dynamic takes precedence over them
   // as it says all symbols should be exported.
-  if (!hasExportDynamic) {
+  if (!config->exportDynamic) {
     for (auto *arg : args.filtered(OPT_dynamic_list))
       if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readDynamicList(*buffer);
 
     for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
       config->dynamicList.push_back(
-          {arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
+          {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
   // If --export-dynamic-symbol=foo is given and symbol foo is defined in
