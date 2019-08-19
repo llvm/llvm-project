@@ -16,6 +16,10 @@
 
 namespace clang {
 namespace clangd {
+  void PrintTo(const HighlightingToken &T, ::std::ostream *OS) {
+  *OS << "(" << T.R.start.line << ", " << T.R.start.character << ") -> (" << T.R.end.line << ", " << T.R.end.character << "): " << (int)T.Kind;
+}
+
 namespace {
 
 std::vector<HighlightingToken>
@@ -32,6 +36,7 @@ makeHighlightingTokens(llvm::ArrayRef<Range> Ranges, HighlightingKind Kind) {
 std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
   static const std::map<HighlightingKind, std::string> KindToString{
       {HighlightingKind::Variable, "Variable"},
+      {HighlightingKind::Parameter, "Parameter"},
       {HighlightingKind::Function, "Function"},
       {HighlightingKind::Class, "Class"},
       {HighlightingKind::Enum, "Enum"},
@@ -104,11 +109,11 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       };
       struct {
       } $Variable[[S]];
-      $Primitive[[void]] $Function[[foo]]($Primitive[[int]] $Variable[[A]], $Class[[AS]] $Variable[[As]]) {
+      $Primitive[[void]] $Function[[foo]]($Primitive[[int]] $Parameter[[A]], $Class[[AS]] $Parameter[[As]]) {
         $Primitive[[auto]] $Variable[[VeryLongVariableName]] = 12312;
         $Class[[AS]]     $Variable[[AA]];
-        $Primitive[[auto]] $Variable[[L]] = $Variable[[AA]].$Field[[SomeMember]] + $Variable[[A]];
-        auto $Variable[[FN]] = [ $Variable[[AA]]]($Primitive[[int]] $Variable[[A]]) -> $Primitive[[void]] {};
+        $Primitive[[auto]] $Variable[[L]] = $Variable[[AA]].$Field[[SomeMember]] + $Parameter[[A]];
+        auto $Variable[[FN]] = [ $Variable[[AA]]]($Primitive[[int]] $Parameter[[A]]) -> $Primitive[[void]] {};
         $Variable[[FN]](12312);
       }
     )cpp",
@@ -287,10 +292,10 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct $Class[[B]] {};
       struct $Class[[A]] {
         $Class[[B]] $Field[[BB]];
-        $Class[[A]] &operator=($Class[[A]] &&$Variable[[O]]);
+        $Class[[A]] &operator=($Class[[A]] &&$Parameter[[O]]);
       };
 
-      $Class[[A]] &$Class[[A]]::operator=($Class[[A]] &&$Variable[[O]]) = default;
+      $Class[[A]] &$Class[[A]]::operator=($Class[[A]] &&$Parameter[[O]]) = default;
     )cpp",
     R"cpp(
       enum $Enum[[En]] {
@@ -301,9 +306,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]] $Field[[Fo]];
         $Enum[[En]] $Field[[E]];
         $Primitive[[int]] $Field[[I]];
-        $Class[[Bar]] ($Class[[Foo]] $Variable[[F]],
-                $Enum[[En]] $Variable[[E]])
-        : $Field[[Fo]] ($Variable[[F]]), $Field[[E]] ($Variable[[E]]),
+        $Class[[Bar]] ($Class[[Foo]] $Parameter[[F]],
+                $Enum[[En]] $Parameter[[E]])
+        : $Field[[Fo]] ($Parameter[[F]]), $Field[[E]] ($Parameter[[E]]),
           $Field[[I]] (123) {}
       };
       class $Class[[Bar2]] : public $Class[[Bar]] {
@@ -356,8 +361,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Primitive[[void]] (T::*$TemplateParameter[[method]])($Primitive[[int]])>
       struct $Class[[G]] {
         $Primitive[[void]] $Method[[foo]](
-            $TemplateParameter[[T]] *$Variable[[O]]) {
-          ($Variable[[O]]->*$TemplateParameter[[method]])(10);
+            $TemplateParameter[[T]] *$Parameter[[O]]) {
+          ($Parameter[[O]]->*$TemplateParameter[[method]])(10);
         }
       };
       struct $Class[[F]] {
@@ -438,7 +443,7 @@ TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
   std::vector<SemanticHighlightingInformation> ActualResults =
       toSemanticHighlightingInformation(Tokens);
   std::vector<SemanticHighlightingInformation> ExpectedResults = {
-      {3, "AAAACAAEAAAAAAAEAAMAAQ=="}, {1, "AAAAAQAEAAA="}};
+      {3, "AAAACAAEAAAAAAAEAAMAAg=="}, {1, "AAAAAQAEAAA="}};
   EXPECT_EQ(ActualResults, ExpectedResults);
 }
 

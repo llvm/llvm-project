@@ -23,7 +23,7 @@ class Stream;
 namespace lldb_private {
 
 class StringList {
-  typedef std::vector<std::string> StorageType;
+  typedef std::vector<std::string> collection;
 
 public:
   StringList();
@@ -54,8 +54,8 @@ public:
 
   size_t GetMaxStringLength() const;
 
-  typedef StorageType::iterator iterator;
-  typedef StorageType::const_iterator const_iterator;
+  typedef collection::iterator iterator;
+  typedef collection::const_iterator const_iterator;
 
   iterator begin() { return m_strings.begin(); }
   iterator end() { return m_strings.end(); }
@@ -135,7 +135,7 @@ public:
   }
 
 private:
-  StorageType m_strings;
+  collection m_strings;
 };
 
 } // namespace lldb_private

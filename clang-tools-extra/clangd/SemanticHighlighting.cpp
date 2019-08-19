@@ -11,6 +11,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include <algorithm>
@@ -198,6 +199,10 @@ private:
     }
     if (isa<EnumConstantDecl>(D)) {
       addToken(Loc, HighlightingKind::EnumConstant);
+      return;
+    }
+    if (isa<ParmVarDecl>(D)) {
+      addToken(Loc, HighlightingKind::Parameter);
       return;
     }
     if (isa<VarDecl>(D)) {
@@ -406,6 +411,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.function.method.cpp";
   case HighlightingKind::Variable:
     return "variable.other.cpp";
+  case HighlightingKind::Parameter:
+    return "variable.parameter.cpp";
   case HighlightingKind::Field:
     return "variable.other.field.cpp";
   case HighlightingKind::Class:
