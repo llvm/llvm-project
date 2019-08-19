@@ -21,7 +21,6 @@ module asm ".symver foo,foo@@VER1"
 
 define i32 @io_cancel_0_4() {
 ; CHECK-DAG: T io_cancel@@LIBAIO_0.4
-; CHECK-DAG: T io_cancel_0_4
   ret i32 0
 }
 
@@ -29,19 +28,16 @@ define internal i32 @io_cancel_local_0_4() {
 ; INTERN: llvm.compiler.used {{.*}} @io_cancel_local_0_4
 ; INTERN: define internal i32 @io_cancel_local_0_4()
 ; CHECK-DAG: t io_cancel_local@@LIBAIO_0.4
-; CHECK-DAG: t io_cancel_local_0_4
   ret i32 0
 }
 
 define weak i32 @io_cancel_weak_0_4() {
 ; CHECK-DAG: W io_cancel_weak@@LIBAIO_0.4
 ; CHECK-DAG: W io_cancel_weak@@LIBAIO_0.4.1
-; CHECK-DAG: W io_cancel_weak_0_4
 ret i32 0
 }
 
 define i32 @"\01foo"() {
 ; CHECK-DAG: T foo@@VER1
-; CHECK-DAG: T foo
   ret i32 0
 }

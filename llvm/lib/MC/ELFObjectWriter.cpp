@@ -1285,8 +1285,21 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     Alias->setBinding(Symbol.getBinding());
     Alias->setOther(Symbol.getOther());
 
-    if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
+    // Record the rename. This serves two purposes: 1) detect multiple symbol
+    // version definitions, 2) consistently suppress the original symbol in the
+    // symbol table. GNU as keeps the original symbol for defined @ and @@, but
+    // suppresses in for other cases (@@@ or undefined). The original symbol is
+    // usually undesired and difficult to remove in an archive. Moreoever, it
+    // can cause linker issues like binutils PR/18703. If the user wants other
+    // aliases to the versioned symbol, they can copy the original symbol to
+    // other symbol names with .set directive.
+    auto R = Renames.try_emplace(&Symbol, Alias);
+    if (!R.second && R.first->second != Alias) {
+      Asm.getContext().reportError(
+          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
+                       Symbol.getName());
       continue;
+    }
 
     // FIXME: Get source locations for these errors or diagnose them earlier.
     if (Symbol.isUndefined() && Rest.startswith("@@") &&
@@ -1295,15 +1308,6 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                 " must be defined");
       continue;
     }
-
-    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
-      Asm.getContext().reportError(
-          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
-                       Symbol.getName());
-      continue;
-    }
-
-    Renames.insert(std::make_pair(&Symbol, Alias));
   }
 
   for (const MCSymbol *&Sym : AddrsigSyms) {
@@ -1437,22 +1441,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    // Let A, B and C being the components of Target and R be the location of
-    // the fixup. If the fixup is not pcrel, we want to compute (A - B + C).
-    // If it is pcrel, we want to compute (A - B + C - R).
-
-    // In general, ELF has no relocations for -B. It can only represent (A + C)
-    // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
-    // replace B to implement it: (A - R - K + C)
-    if (IsPCRel) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "No relocation available to represent this relative expression");
-      return;
-    }
-
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
-
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
@@ -1470,6 +1459,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
     uint64_t K = SymBOffset - FixupOffset;
+    assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
     C -= K;
   }

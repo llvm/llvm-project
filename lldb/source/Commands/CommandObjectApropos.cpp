@@ -63,11 +63,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         if (commands_found.GetSize() > 0) {
           result.AppendMessageWithFormat(
               "The following commands may relate to '%s':\n", args[0].c_str());
-          size_t max_len = 0;
-
-          for (const std::string &command : commands_found) {
-            max_len = std::max(max_len, command.size());
-          }
+          const size_t max_len = commands_found.GetMaxStringLength();
 
           for (size_t i = 0; i < commands_found.GetSize(); ++i)
             m_interpreter.OutputFormattedHelpText(

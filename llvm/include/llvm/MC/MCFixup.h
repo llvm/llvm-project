@@ -78,14 +78,14 @@ class MCFixup {
   /// The value to put into the fixup location. The exact interpretation of the
   /// expression is target dependent, usually it will be one of the operands to
   /// an instruction or an assembler directive.
-  const MCExpr *Value;
+  const MCExpr *Value = nullptr;
 
   /// The byte index of start of the relocation inside the MCFragment.
-  uint32_t Offset;
+  uint32_t Offset = 0;
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  unsigned Kind;
+  unsigned Kind = 0;
 
   /// The source location which gave rise to the fixup, if any.
   SMLoc Loc;

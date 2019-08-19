@@ -549,6 +549,12 @@ defm MVE_VADDVu8  : MVE_VADDV_A<"u8",  0b1, 0b00>;
 defm MVE_VADDVu16 : MVE_VADDV_A<"u16", 0b1, 0b01>;
 defm MVE_VADDVu32 : MVE_VADDV_A<"u32", 0b1, 0b10>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(i32 (vecreduce_add (v4i32 MQPR:$src))), (i32 (MVE_VADDVu32no_acc $src))>;
+  def : Pat<(i32 (vecreduce_add (v8i16 MQPR:$src))), (i32 (MVE_VADDVu16no_acc $src))>;
+  def : Pat<(i32 (vecreduce_add (v16i8 MQPR:$src))), (i32 (MVE_VADDVu8no_acc $src))>;
+}
+
 class MVE_VADDLV<string iname, string suffix, dag iops, string cstr,
                bit A, bit U, list<dag> pattern=[]>
   : MVE_rDest<(outs tGPREven:$RdaLo, tGPROdd:$RdaHi), iops, NoItinerary, iname,
