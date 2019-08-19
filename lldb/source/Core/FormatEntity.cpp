@@ -2347,7 +2347,7 @@ static void AddMatches(const FormatEntity::Entry::Definition *def,
 }
 
 size_t FormatEntity::AutoComplete(CompletionRequest &request) {
-  llvm::StringRef str = request.GetCursorArgumentPrefix().str();
+  llvm::StringRef str = request.GetCursorArgumentPrefix();
 
   request.SetWordComplete(false);
 
