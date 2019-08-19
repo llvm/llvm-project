@@ -1229,8 +1229,8 @@ std::error_code readNativeFileImpl(file_t FileHandle, char *BufPtr, size_t Bytes
   *BytesRead = BytesRead32;
   if (!Success) {
     DWORD Err = ::GetLastError();
-    // Pipe EOF is not an error.
-    if (Err == ERROR_BROKEN_PIPE)
+    // EOF is not an error.
+    if (Err == ERROR_BROKEN_PIPE || Err == ERROR_HANDLE_EOF)
       return std::error_code();
     return mapWindowsError(Err);
   }

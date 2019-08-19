@@ -156,6 +156,13 @@ public:
 
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
 
+  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const;
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    return false;
+  }
+
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        const Instruction *I = nullptr);
 

@@ -969,11 +969,14 @@ public:
       return nullptr;
     return reinterpret_cast<const dos_header *>(base());
   }
-  std::error_code getCOFFHeader(const coff_file_header *&Res) const;
-  std::error_code
-  getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const;
-  std::error_code getPE32Header(const pe32_header *&Res) const;
-  std::error_code getPE32PlusHeader(const pe32plus_header *&Res) const;
+
+  const coff_file_header *getCOFFHeader() const { return COFFHeader; }
+  const coff_bigobj_file_header *getCOFFBigObjHeader() const {
+    return COFFBigObjHeader;
+  }
+  const pe32_header *getPE32Header() const { return PE32Header; }
+  const pe32plus_header *getPE32PlusHeader() const { return PE32PlusHeader; }
+
   std::error_code getDataDirectory(uint32_t index,
                                    const data_directory *&Res) const;
   std::error_code getSection(int32_t index, const coff_section *&Res) const;

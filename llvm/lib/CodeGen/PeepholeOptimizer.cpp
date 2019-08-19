@@ -1853,6 +1853,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
     SrcIdx = OpIdx;
   }
 
+  // In some rare case, Def has no input, SrcIdx is out of bound,
+  // getOperand(SrcIdx) will fail below.
+  if (SrcIdx >= Def->getNumOperands())
+    return ValueTrackerResult();
+
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
   for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(DefOp.getReg())) {

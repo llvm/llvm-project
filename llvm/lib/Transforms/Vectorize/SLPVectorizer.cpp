@@ -2176,11 +2176,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (Res.second)
       UniqueValues.emplace_back(V);
   }
-  if (UniqueValues.size() == VL.size()) {
+  size_t NumUniqueScalarValues = UniqueValues.size();
+  if (NumUniqueScalarValues == VL.size()) {
     ReuseShuffleIndicies.clear();
   } else {
     LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-    if (UniqueValues.size() <= 1 || !llvm::isPowerOf2_32(UniqueValues.size())) {
+    if (NumUniqueScalarValues <= 1 ||
+        !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
       LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
       newTreeEntry(VL, None /*not vectorized*/, UserTreeIdx);
       return;

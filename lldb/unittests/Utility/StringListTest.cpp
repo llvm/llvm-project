@@ -512,7 +512,7 @@ TEST(StringListTest, ForRangeEmpty) {
     FAIL() << "Shouldn't have hit an element in for range" << e;
 }
 
-TEST(StringListTest, ForRangeSingle) {
+TEST(StringListTest, ForRange) {
   StringList s;
   s.AppendString("a");
   s.AppendString("b");

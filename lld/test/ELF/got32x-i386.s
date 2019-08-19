@@ -43,5 +43,4 @@
 
 # RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1 -pie 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
-# ERR: error: can't create dynamic relocation R_386_GOT32X against symbol: foo in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
-# ERR: error: can't create dynamic relocation R_386_GOT32X against symbol: foo in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
+# ERR-COUNT-2: error: symbol 'foo' cannot be preempted; recompile with -fPIE

@@ -43,6 +43,9 @@ count = 1
 arch = None        # Must be initialized after option parsing
 compiler = None    # Must be initialized after option parsing
 
+# The overriden dwarf verison.
+dwarf_version = 0
+
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
 

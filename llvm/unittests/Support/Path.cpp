@@ -20,8 +20,9 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
@@ -1511,6 +1512,30 @@ TEST_F(FileSystemTest, ReadWriteFileCanReadOrWrite) {
   FileDescriptorCloser Closer(FD);
   verifyRead(FD, "Fizz", true);
   verifyWrite(FD, "Buzz", true);
+}
+
+TEST_F(FileSystemTest, readNativeFileSlice) {
+  char Data[10] = {'0', '1', '2', '3', '4', 0, 0, 0, 0, 0};
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew,
+                     StringRef(Data, 5));
+  FileRemover Cleanup(NonExistantFile);
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
+  ASSERT_THAT_EXPECTED(FD, Succeeded());
+  char Buf[10];
+  const auto &Read = [&](size_t Offset,
+                         size_t ToRead) -> Expected<ArrayRef<char>> {
+    std::memset(Buf, 0x47, sizeof(Buf));
+    if (std::error_code EC = fs::readNativeFileSlice(
+            *FD, makeMutableArrayRef(Buf, ToRead), Offset))
+      return errorCodeToError(EC);
+    return makeArrayRef(Buf, ToRead);
+  };
+  EXPECT_THAT_EXPECTED(Read(0, 5), HasValue(makeArrayRef(Data + 0, 5)));
+  EXPECT_THAT_EXPECTED(Read(0, 3), HasValue(makeArrayRef(Data + 0, 3)));
+  EXPECT_THAT_EXPECTED(Read(2, 3), HasValue(makeArrayRef(Data + 2, 3)));
+  EXPECT_THAT_EXPECTED(Read(0, 6), HasValue(makeArrayRef(Data + 0, 6)));
+  EXPECT_THAT_EXPECTED(Read(2, 6), HasValue(makeArrayRef(Data + 2, 6)));
+  EXPECT_THAT_EXPECTED(Read(5, 5), HasValue(makeArrayRef(Data + 5, 5)));
 }
 
 TEST_F(FileSystemTest, is_local) {

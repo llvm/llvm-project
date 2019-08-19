@@ -10,7 +10,7 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected relocatable expression
   .word -undef
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: No relocation available to represent this relative expression
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: symbol 'undef' can not be undefined in a subtraction expression
   adr x0, #a-undef
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Cannot represent a difference across sections

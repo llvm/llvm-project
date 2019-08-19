@@ -631,16 +631,10 @@ void COFFDumper::printFileHeaders() {
 
   // Print PE header. This header does not exist if this is an object file and
   // not an executable.
-  const pe32_header *PEHeader = nullptr;
-  if (std::error_code EC = Obj->getPE32Header(PEHeader))
-    reportError(EC, Obj->getFileName());
-  if (PEHeader)
+  if (const pe32_header *PEHeader = Obj->getPE32Header())
     printPEHeader<pe32_header>(PEHeader);
 
-  const pe32plus_header *PEPlusHeader = nullptr;
-  if (std::error_code EC = Obj->getPE32PlusHeader(PEPlusHeader))
-    reportError(EC, Obj->getFileName());
-  if (PEPlusHeader)
+  if (const pe32plus_header *PEPlusHeader = Obj->getPE32PlusHeader())
     printPEHeader<pe32plus_header>(PEPlusHeader);
 
   if (const dos_header *DH = Obj->getDOSHeader())
