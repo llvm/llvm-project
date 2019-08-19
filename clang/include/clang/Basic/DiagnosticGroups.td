@@ -512,6 +512,7 @@ def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
 def Varargs : DiagGroup<"varargs">;
+def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
 def Unsequenced : DiagGroup<"unsequenced">;
 // GCC name for -Wunsequenced

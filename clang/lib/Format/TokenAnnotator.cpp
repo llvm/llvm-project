@@ -2870,7 +2870,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       Left.isOneOf(tok::arrow, tok::period, tok::arrowstar, tok::periodstar) ||
       (Right.is(tok::period) && Right.isNot(TT_DesignatedInitializerPeriod)))
     return false;
-  if (!Style.SpaceBeforeAssignmentOperators &&
+  if (!Style.SpaceBeforeAssignmentOperators && Left.isNot(TT_TemplateCloser) &&
       Right.getPrecedence() == prec::Assignment)
     return false;
   if (Style.Language == FormatStyle::LK_Java && Right.is(tok::coloncolon) &&
