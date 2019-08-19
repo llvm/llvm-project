@@ -15,7 +15,7 @@
 
 namespace lldb_private {
 
-class RegularExpression : public llvm::Regex {
+class RegularExpression {
 public:
   /// Default constructor.
   ///

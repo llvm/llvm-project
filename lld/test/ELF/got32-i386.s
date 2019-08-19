@@ -20,4 +20,4 @@ _start:
 # CHECK:  .got 00000004 0000000000402000
 
 # RUN: not ld.lld %t.o -o %t -pie 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: error: can't create dynamic relocation R_386_GOT32 against symbol: foo in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
+# ERR: error: symbol 'foo' cannot be preempted; recompile with -fPIE

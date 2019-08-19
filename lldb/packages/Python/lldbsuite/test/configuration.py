@@ -49,6 +49,9 @@ compiler = None    # Must be initialized after option parsing
 swiftCompiler = None
 swiftLibrary = None
 
+# The overriden dwarf verison.
+dwarf_version = 0
+
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
 
