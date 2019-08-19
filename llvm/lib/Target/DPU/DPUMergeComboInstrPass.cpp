@@ -178,6 +178,20 @@ static const ISD::CondCode sourceConditions[] = {
     ISD::SETOEQ, ISD::SETOGE, ISD::SETOLT, ISD::SETONE, ISD::SETUEQ,
     ISD::SETEQ,  ISD::SETGE,  ISD::SETLT,  ISD::SETNE};
 
+static MachineInstr *
+getLastNonDebugInstrFrom(MachineBasicBlock::reverse_iterator &I,
+                         MachineBasicBlock::reverse_iterator REnd) {
+  // Skip all the debug instructions.
+  while (I != REnd &&
+         (I->isDebugValue() || I->getOpcode() == TargetOpcode::DBG_VALUE)) {
+    ++I;
+  }
+  if (I == REnd) {
+    return NULL;
+  }
+  return &*I;
+}
+
 static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
                                         const DPUInstrInfo &InstrInfo) {
   MachineBasicBlock::reverse_iterator I = MBB->rbegin(), REnd = MBB->rend();
@@ -201,28 +215,24 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
   std::set<ISD::CondCode> sourceConditionsSet = std::set<ISD::CondCode>(
       std::begin(sourceConditions), std::end(sourceConditions));
 
-  // Skip all the debug instructions.
-  while (I != REnd && I->isDebugValue()) {
-    ++I;
-  }
-
-  if (I == REnd) {
+  LastInst = getLastNonDebugInstrFrom(I, REnd);
+  if (LastInst == NULL) {
+    LLVM_DEBUG(dbgs() << "KO: I == REnd\n");
     return false;
   }
-
-  LastInst = &*I;
-
-  if (++I == REnd) {
+  I++;
+  SecondLastInst = getLastNonDebugInstrFrom(I, REnd);
+  if (SecondLastInst == NULL) {
+    LLVM_DEBUG(dbgs() << "KO: I++ == REnd\n");
     return false;
   }
-
-  SecondLastInst = &*I;
 
   LastOpc = LastInst->getOpcode();
   SecondLastOpc = SecondLastInst->getOpcode();
 
   switch (SecondLastOpc) {
   default:
+    LLVM_DEBUG(dbgs() << "KO: Unknown SecondLastOpc\n");
     return false;
   case DPU::MOVEri:
     OpPrototype = OpriLimited;
@@ -600,6 +610,8 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
   if ((OpPrototype == OprriLimited) || (OpPrototype == OprirLimited)) {
     MachineOperand &immOperand = SecondLastInst->getOperand(2);
     if (!immOperand.isImm()) {
+      LLVM_DEBUG(dbgs() << "KO: (OpPrototype == OprriLimited) || (OpPrototype "
+                           "== OprirLimited) && !immOperand.isImm()\n");
       return false;
     }
 
@@ -609,6 +621,9 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
   } else if (OpPrototype == OpriLimited) {
     MachineOperand &immOperand = SecondLastInst->getOperand(1);
     if (!immOperand.isImm()) {
+      LLVM_DEBUG(
+          dbgs()
+          << "KO: (OpPrototype == OpriLimited) && !immOperand.isImm()\n");
       return false;
     }
 
@@ -619,9 +634,12 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
 
   switch (LastOpc) {
   default:
+    LLVM_DEBUG(dbgs() << "KO: Unknown LastOpc\n");
     return false;
   case DPU::JUMPi: {
     if (!ImmCanBeEncodedOn8Bits) {
+      LLVM_DEBUG(
+          dbgs() << "KO: LastOpc == DPU::JUMPi && !ImmCanBeEncodedOn8Bits\n");
       return false;
     }
 
@@ -653,6 +671,7 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
     auto actualConditionOperand = MachineOperand::CreateImm(actualCondition);
     ComboInst.add(actualConditionOperand).add(LastInst->getOperand(0));
 
+    LLVM_DEBUG(dbgs() << "OK\n"; LastInst->dump(); SecondLastInst->dump(););
     LastInst->eraseFromParent();
     SecondLastInst->eraseFromParent();
 
@@ -673,12 +692,18 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
       case Oprr:
         if ((SecondLastInst->getOperand(1).getReg() !=
              LastInst->getOperand(1).getReg())) {
+          LLVM_DEBUG(dbgs() << "KO: LastOpc == DPU::Jcci && "
+                               "(SecondLastInst->getOperand(1).getReg() != "
+                               "LastInst->getOperand(1).getReg())\n");
           return false;
         }
         isSourceCondition = true;
         usableConditions = sourceConditionsSet;
         break;
       case OpriLimited:
+        LLVM_DEBUG(
+            dbgs()
+            << "KO: LastOpc == DPU::Jcci && OpPrototype == OpriLimited\n");
         return false;
       }
     }
@@ -692,6 +717,11 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
     if (!canFindUnaryConditionForCondition(
             LastInst->getOperand(0).getImm(), LastInst->getOperand(2).getImm(),
             actualCondition, availableConditions)) {
+      LLVM_DEBUG(
+          dbgs() << "KO: LastOpc == DPU::Jcci && "
+                    "(!canFindUnaryConditionForCondition(LastInst->getOperand("
+                    "0).getImm(), LastInst->getOperand(2).getImm(), "
+                    "actualCondition, availableConditions))\n");
       return false;
     }
 
@@ -705,14 +735,23 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
 
     if (LastInst->getOperand(1).isKill() && !isSourceCondition) {
       if (!ImmCanBeEncodedOn11Bits) {
+        LLVM_DEBUG(
+            dbgs()
+            << "KO: LastOpc == DPU::Jcci && (LastInst->getOperand(1).isKill() "
+               "&& !isSourceCondition) && (!ImmCanBeEncodedOn11Bits)\n");
         return false;
       }
       // todo: this is not optimal. One register has been allocated but not used
       // now. This can become an issue (unnecessary spilling)
       ComboInst = BuildMI(MBB, SecondLastInst->getDebugLoc(),
-                          InstrInfo.get(OpNullJumpOpc)).addReg(DPU::ZERO);
+                          InstrInfo.get(OpNullJumpOpc))
+                      .addReg(DPU::ZERO);
     } else {
       if (!ImmCanBeEncodedOn8Bits) {
+        LLVM_DEBUG(
+            dbgs()
+            << "KO: LastOpc == DPU::Jcci && !(LastInst->getOperand(1).isKill() "
+               "&& !isSourceCondition) && (!ImmCanBeEncodedOn11Bits)\n");
         return false;
       }
       ComboInst =
@@ -743,12 +782,14 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
     ComboInst.add(LastInst->getOperand(0))
         .add(LastInst->getOperand(LastInst->getNumOperands() - 1));
 
+    LLVM_DEBUG(dbgs() << "OK\n"; LastInst->dump(); SecondLastInst->dump(););
     LastInst->eraseFromParent();
     SecondLastInst->eraseFromParent();
 
     return true;
   }
   case DPU::Jcc:
+    LLVM_DEBUG(dbgs() << "KO: LastOpc == DPU::Jcc\n");
     return false;
   }
 }
@@ -764,6 +805,7 @@ bool DPUMergeComboInstrPass::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MFI : MF) {
     MachineBasicBlock *MBB = &MFI;
 
+    LLVM_DEBUG(MBB->dump());
     changeMade |= mergeComboInstructionsInMBB(MBB, InstrInfo);
   }
 
