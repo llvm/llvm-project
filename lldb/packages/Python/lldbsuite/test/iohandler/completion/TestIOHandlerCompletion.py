@@ -39,13 +39,16 @@ class IOHandlerCompletionTest(TestBase):
             (lldbtest_config.lldbExec, self.lldbOption, "", exe))
 
         self.expect_string(prompt)
-        self.child.send("\t\t\t")
+        # Start tab completion, go to the next page and then display all with 'a'.
+        self.child.send("\t\ta")
         self.expect_string("register")
 
+        # Try tab completing regi to register.
         self.child.send("regi\t")
         self.expect_string(prompt + "register")
         self.child.send("\n")
 
+        # Start tab completion and abort showing more commands with 'n'.
         self.child.send("\t")
         self.expect_string("More (Y/n/a)")
         self.child.send("n")
