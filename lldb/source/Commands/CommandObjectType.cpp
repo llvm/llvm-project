@@ -436,10 +436,9 @@ protected:
                 Status error;
 
                 for (const std::string &type_name : options->m_target_types) {
-                  ConstString const_type_name(type_name);
-                  if (const_type_name) {
+                  if (!type_name.empty()) {
                     if (!CommandObjectTypeSynthAdd::AddSynth(
-                            const_type_name, synth_provider,
+                            ConstString(type_name), synth_provider,
                             options->m_regex
                                 ? CommandObjectTypeSynthAdd::eRegexSynth
                                 : CommandObjectTypeSynthAdd::eRegularSynth,
