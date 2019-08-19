@@ -438,7 +438,7 @@ namespace PR17394 {
     long zzzzzzzzzz;
   };
   class B : private A {};
-  B zzzzzzzzzy<>; // expected-error {{expected ';' after top level declarator}}{}
+  B zzzzzzzzzy<>; // expected-error {{template specialization requires 'template<>'}} expected-error {{no variable template matches specialization}}
 }
 
 namespace correct_fields_in_member_funcs {

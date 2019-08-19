@@ -2316,12 +2316,17 @@ private:
   /// Doesn't consume tokens.
   TPResult
   isCXXDeclarationSpecifier(TPResult BracedCastResult = TPResult::False,
-                            bool *HasMissingTypename = nullptr);
+                            bool *InvalidAsDeclSpec = nullptr);
 
   /// Given that isCXXDeclarationSpecifier returns \c TPResult::True or
   /// \c TPResult::Ambiguous, determine whether the decl-specifier would be
   /// a type-specifier other than a cv-qualifier.
   bool isCXXDeclarationSpecifierAType();
+
+  /// Determine whether the current token sequence might be
+  ///   '<' template-argument-list '>'
+  /// rather than a less-than expression.
+  TPResult isTemplateArgumentList(unsigned TokensToSkip);
 
   /// Determine whether an identifier has been tentatively declared as a
   /// non-type. Such tentative declarations should not be found to name a type
@@ -3015,7 +3020,6 @@ private:
                                UnqualifiedId &TemplateName,
                                bool AllowTypeAnnotation = true);
   void AnnotateTemplateIdTokenAsType(bool IsClassName = false);
-  bool IsTemplateArgumentList(unsigned Skip = 0);
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs);
   ParsedTemplateArgument ParseTemplateTemplateArgument();
   ParsedTemplateArgument ParseTemplateArgument();

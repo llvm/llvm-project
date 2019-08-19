@@ -1990,6 +1990,7 @@ public:
 
   TemplateName getOverloadedTemplateName(UnresolvedSetIterator Begin,
                                          UnresolvedSetIterator End) const;
+  TemplateName getAssumedTemplateName(DeclarationName Name) const;
 
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,

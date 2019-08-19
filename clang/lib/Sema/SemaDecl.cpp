@@ -917,6 +917,16 @@ Corrected:
       }
     }
 
+    if (getLangOpts().CPlusPlus2a && !SS.isSet() && NextToken.is(tok::less)) {
+      // In C++20 onwards, this could be an ADL-only call to a function
+      // template, and we're required to assume that this is a template name.
+      //
+      // FIXME: Find a way to still do typo correction in this case.
+      TemplateName Template =
+          Context.getAssumedTemplateName(NameInfo.getName());
+      return NameClassification::UndeclaredTemplate(Template);
+    }
+
     // In C, we first see whether there is a tag type by the same name, in
     // which case it's likely that the user just forgot to write "enum",
     // "struct", or "union".
@@ -1045,52 +1055,62 @@ Corrected:
 
   if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
       (IsFilteredTemplateName ||
-       hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
-                                     /*AllowDependent=*/false))) {
+       hasAnyAcceptableTemplateNames(
+           Result, /*AllowFunctionTemplates=*/true,
+           /*AllowDependent=*/false,
+           /*AllowNonTemplateFunctions*/ !SS.isSet() &&
+               getLangOpts().CPlusPlus2a))) {
     // C++ [temp.names]p3:
     //   After name lookup (3.4) finds that a name is a template-name or that
     //   an operator-function-id or a literal- operator-id refers to a set of
     //   overloaded functions any member of which is a function template if
     //   this is followed by a <, the < is always taken as the delimiter of a
     //   template-argument-list and never as the less-than operator.
+    // C++2a [temp.names]p2:
+    //   A name is also considered to refer to a template if it is an
+    //   unqualified-id followed by a < and name lookup finds either one
+    //   or more functions or finds nothing.
     if (!IsFilteredTemplateName)
       FilterAcceptableTemplateNames(Result);
 
-    if (!Result.empty()) {
-      bool IsFunctionTemplate;
-      bool IsVarTemplate;
-      TemplateName Template;
-      if (Result.end() - Result.begin() > 1) {
-        IsFunctionTemplate = true;
-        Template = Context.getOverloadedTemplateName(Result.begin(),
-                                                     Result.end());
-      } else {
-        auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
-            *Result.begin(), /*AllowFunctionTemplates=*/true,
-            /*AllowDependent=*/false));
-        IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
-        IsVarTemplate = isa<VarTemplateDecl>(TD);
+    bool IsFunctionTemplate;
+    bool IsVarTemplate;
+    TemplateName Template;
+    if (Result.end() - Result.begin() > 1) {
+      IsFunctionTemplate = true;
+      Template = Context.getOverloadedTemplateName(Result.begin(),
+                                                   Result.end());
+    } else if (!Result.empty()) {
+      auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
+          *Result.begin(), /*AllowFunctionTemplates=*/true,
+          /*AllowDependent=*/false));
+      IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
+      IsVarTemplate = isa<VarTemplateDecl>(TD);
 
-        if (SS.isSet() && !SS.isInvalid())
-          Template =
-              Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                               /*TemplateKeyword=*/false, TD);
-        else
-          Template = TemplateName(TD);
-      }
-
-      if (IsFunctionTemplate) {
-        // Function templates always go through overload resolution, at which
-        // point we'll perform the various checks (e.g., accessibility) we need
-        // to based on which function we selected.
-        Result.suppressDiagnostics();
-
-        return NameClassification::FunctionTemplate(Template);
-      }
-
-      return IsVarTemplate ? NameClassification::VarTemplate(Template)
-                           : NameClassification::TypeTemplate(Template);
+      if (SS.isSet() && !SS.isInvalid())
+        Template =
+            Context.getQualifiedTemplateName(SS.getScopeRep(),
+                                             /*TemplateKeyword=*/false, TD);
+      else
+        Template = TemplateName(TD);
+    } else {
+      // All results were non-template functions. This is a function template
+      // name.
+      IsFunctionTemplate = true;
+      Template = Context.getAssumedTemplateName(NameInfo.getName());
     }
+
+    if (IsFunctionTemplate) {
+      // Function templates always go through overload resolution, at which
+      // point we'll perform the various checks (e.g., accessibility) we need
+      // to based on which function we selected.
+      Result.suppressDiagnostics();
+
+      return NameClassification::FunctionTemplate(Template);
+    }
+
+    return IsVarTemplate ? NameClassification::VarTemplate(Template)
+                         : NameClassification::TypeTemplate(Template);
   }
 
   NamedDecl *FirstDecl = (*Result.begin())->getUnderlyingDecl();

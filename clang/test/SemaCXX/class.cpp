@@ -138,7 +138,7 @@ struct S
 // Don't crash on this bogus code.
 namespace pr6629 {
   template<class T1, class T2> struct foo :
-    bogus<foo<T1,T2> > // expected-error {{unknown template name 'bogus'}}
+    bogus<foo<T1,T2> > // expected-error {{no template named 'bogus'}}
   { };
 
   template<> struct foo<unknown,unknown> { // expected-error {{undeclared identifier 'unknown'}}

@@ -31,6 +31,7 @@ class NamedDecl;
 class NestedNameSpecifier;
 enum OverloadedOperatorKind : int;
 class OverloadedTemplateStorage;
+class AssumedTemplateStorage;
 class PartialDiagnostic;
 struct PrintingPolicy;
 class QualifiedTemplateName;
@@ -46,6 +47,7 @@ class UncommonTemplateNameStorage {
 protected:
   enum Kind {
     Overloaded,
+    Assumed, // defined in DeclarationName.h
     SubstTemplateTemplateParm,
     SubstTemplateTemplateParmPack
   };
@@ -75,6 +77,12 @@ public:
   OverloadedTemplateStorage *getAsOverloadedStorage()  {
     return Bits.Kind == Overloaded
              ? reinterpret_cast<OverloadedTemplateStorage *>(this)
+             : nullptr;
+  }
+
+  AssumedTemplateStorage *getAsAssumedTemplateName()  {
+    return Bits.Kind == Assumed
+             ? reinterpret_cast<AssumedTemplateStorage *>(this)
              : nullptr;
   }
 
@@ -194,6 +202,10 @@ public:
     /// A set of overloaded template declarations.
     OverloadedTemplate,
 
+    /// An unqualified-id that has been assumed to name a function template
+    /// that will be found by ADL.
+    AssumedTemplate,
+
     /// A qualified template name, where the qualification is kept
     /// to describe the source code as written.
     QualifiedTemplate,
@@ -215,6 +227,7 @@ public:
   TemplateName() = default;
   explicit TemplateName(TemplateDecl *Template);
   explicit TemplateName(OverloadedTemplateStorage *Storage);
+  explicit TemplateName(AssumedTemplateStorage *Storage);
   explicit TemplateName(SubstTemplateTemplateParmStorage *Storage);
   explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage);
   explicit TemplateName(QualifiedTemplateName *Qual);
@@ -236,13 +249,17 @@ public:
   TemplateDecl *getAsTemplateDecl() const;
 
   /// Retrieve the underlying, overloaded function template
-  // declarations that this template name refers to, if known.
+  /// declarations that this template name refers to, if known.
   ///
   /// \returns The set of overloaded function templates that this template
   /// name refers to, if known. If the template name does not refer to a
   /// specific set of function templates because it is a dependent name or
   /// refers to a single template, returns NULL.
   OverloadedTemplateStorage *getAsOverloadedTemplate() const;
+
+  /// Retrieve information on a name that has been assumed to be a
+  /// template-name in order to permit a call via ADL.
+  AssumedTemplateStorage *getAsAssumedTemplateName() const;
 
   /// Retrieve the substituted template template parameter, if
   /// known.

@@ -28,12 +28,12 @@ namespace PR16134 {
 namespace PR16225 {
   template <typename T> void f();
   template <typename C> void g(C*) {
-    struct LocalStruct : UnknownBase<Mumble, C> { };  // expected-error {{unknown template name 'UnknownBase'}} \
-                                                      // expected-error {{use of undeclared identifier 'Mumble'}}
+    struct LocalStruct : UnknownBase<Mumble, C> { };  // expected-error {{use of undeclared identifier 'Mumble'}}
     f<LocalStruct>();
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses local type 'LocalStruct'}}
 #endif
+    struct LocalStruct2 : UnknownBase<C> { };  // expected-error {{no template named 'UnknownBase'}}
   }
   struct S;
   void h() {

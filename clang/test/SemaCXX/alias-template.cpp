@@ -112,11 +112,8 @@ namespace StdExample {
   template<typename T> using handler_t = void (*)(T);
   extern handler_t<int> ignore;
   extern void (*ignore)(int);
-  // FIXME: we recover as if cell is an undeclared variable. the diagnostics are terrible!
-  template<typename T> using cell = pair<T*, cell<T>*>; // expected-error {{use of undeclared identifier 'cell'}} \
-                                                           expected-error {{'T' does not refer to a value}} \
-                                                           expected-note {{declared here}} \
-                                                           expected-error {{expected ';' after alias declaration}}
+  // FIXME: we recover as if cell is an undeclared variable template
+  template<typename T> using cell = pair<T*, cell<T>*>; // expected-error {{use of undeclared identifier 'cell'}} expected-error {{expected expression}}
 }
 
 namespace Access {
