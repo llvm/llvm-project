@@ -558,7 +558,7 @@ class DebugCommunication(object):
                        disableSTDIO=False, shellExpandArguments=False,
                        trace=False, initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None, sourcePath=None,
-                       debuggerRoot=None):
+                       debuggerRoot=None, launchCommands=None):
         args_dict = {
             'program': program
         }
@@ -591,6 +591,8 @@ class DebugCommunication(object):
             args_dict['sourcePath'] = sourcePath
         if debuggerRoot:
             args_dict['debuggerRoot'] = debuggerRoot
+        if launchCommands:
+            args_dict['launchCommands'] = launchCommands
         command_dict = {
             'command': 'launch',
             'type': 'request',

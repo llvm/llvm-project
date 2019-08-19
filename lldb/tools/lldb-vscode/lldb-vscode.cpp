@@ -1182,6 +1182,7 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_vsc.stop_commands = GetStrings(arguments, "stopCommands");
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
+  auto launchCommands = GetStrings(arguments, "launchCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const auto debuggerRoot = GetString(arguments, "debuggerRoot");
 
@@ -1254,11 +1255,19 @@ void request_launch(const llvm::json::Object &request) {
 
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
+  if (launchCommands.empty()) {
+    // Disable async events so the launch will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
+    g_vsc.target.Launch(g_vsc.launch_info, error);
+    g_vsc.debugger.SetAsync(true);
+  } else {
+    g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
+    // The custom commands might have created a new target so we should use the
+    // selected target after these commands are run.
+    g_vsc.target = g_vsc.debugger.GetSelectedTarget();
+  }
 
-  // Disable async events so the launch will be successful when we return from
-  // the launch call and the launch will happen synchronously
-  g_vsc.debugger.SetAsync(false);
-  g_vsc.target.Launch(g_vsc.launch_info, error);
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
@@ -1268,7 +1277,7 @@ void request_launch(const llvm::json::Object &request) {
   SendProcessEvent(Launch);
   g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
   // Reenable async events and start the event thread to catch async events.
-  g_vsc.debugger.SetAsync(true);
+  // g_vsc.debugger.SetAsync(true);
 }
 
 // "NextRequest": {
