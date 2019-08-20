@@ -139,6 +139,11 @@ static cl::opt<std::string>
             cl::desc("Restrict search to the context of the given variable."),
             cl::value_desc("variable"), cl::sub(SymbolsSubcommand));
 
+static cl::opt<std::string> CompilerContext(
+    "compiler-context",
+    cl::desc("Specify a compiler context as \"kind:name,...\"."),
+    cl::value_desc("context"), cl::sub(SymbolsSubcommand));
+
 static cl::list<FunctionNameType> FunctionNameFlags(
     "function-flags", cl::desc("Function search flags:"),
     cl::values(clEnumValN(eFunctionNameTypeAuto, "auto",
@@ -219,6 +224,44 @@ int evaluateMemoryMapCommands(Debugger &Dbg);
 } // namespace irmemorymap
 
 } // namespace opts
+
+std::vector<CompilerContext> parseCompilerContext() {
+  std::vector<CompilerContext> result;
+  if (opts::symbols::CompilerContext.empty())
+    return result;
+
+  StringRef str{opts::symbols::CompilerContext};
+  SmallVector<StringRef, 8> entries_str;
+  str.split(entries_str, ',', /*maxSplit*/-1, /*keepEmpty=*/false);
+  for (auto entry_str : entries_str) {
+    StringRef key, value;
+    std::tie(key, value) = entry_str.split(':');
+    auto kind =
+        StringSwitch<CompilerContextKind>(key)
+            .Case("TranslationUnit", CompilerContextKind::TranslationUnit)
+            .Case("Module", CompilerContextKind::Module)
+            .Case("Namespace", CompilerContextKind::Namespace)
+            .Case("Class", CompilerContextKind::Class)
+            .Case("Structure", CompilerContextKind::Structure)
+            .Case("Union", CompilerContextKind::Union)
+            .Case("Function", CompilerContextKind::Function)
+            .Case("Variable", CompilerContextKind::Variable)
+            .Case("Enumeration", CompilerContextKind::Enumeration)
+            .Case("Typedef", CompilerContextKind::Typedef)
+            .Default(CompilerContextKind::Invalid);
+    if (value.empty()) {
+      WithColor::error() << "compiler context entry has no \"name\"\n";
+      exit(1);
+    }
+    result.push_back({kind, ConstString{value}});
+  }
+  outs() << "Search context: {\n";
+  for (auto entry: result)
+    entry.Dump();
+  outs() << "}\n";
+
+  return result;
+}
 
 template <typename... Args>
 static Error make_string_error(const char *Format, Args &&... args) {
@@ -464,8 +507,11 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
 
   DenseSet<SymbolFile *> SearchedFiles;
   TypeMap Map;
-  Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
-                   SearchedFiles, Map);
+  if (!Name.empty())
+    Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
+                      SearchedFiles, Map);
+  else
+    Symfile.FindTypes(parseCompilerContext(), true, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;
@@ -679,6 +725,9 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
     if (Regex || !File.empty() || Line != 0)
       return make_string_error("Cannot search for types using regular "
                                "expressions, file names or line numbers.");
+    if (!Name.empty() && !CompilerContext.empty())
+      return make_string_error("Name is ignored if compiler context present.");
+
     return findTypes;
 
   case FindType::Variable:
