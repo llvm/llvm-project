@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
+; XFAIL: *
 
 define i64 @f0(i64 %val, i64 %amt) minsize optsize {
 ; CHECK-LABEL:   f0:

@@ -475,8 +475,6 @@ public:
   }
 
   bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-    if (DAG.getMachineFunction().getFunction().hasMinSize())
-      return false;
     return true;
   }
 
