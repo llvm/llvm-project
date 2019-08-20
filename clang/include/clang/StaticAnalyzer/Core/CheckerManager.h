@@ -105,6 +105,7 @@ public:
   CheckName() = default;
 
   StringRef getName() const { return Name; }
+  operator StringRef() const { return Name; }
 };
 
 enum class ObjCMessageVisitKind {
