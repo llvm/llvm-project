@@ -23,15 +23,10 @@
 # include <__external_threading>
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
 
-typedef ::timespec __libcpp_timespec_t;
-
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # include <pthread.h>
 # include <sched.h>
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 #if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
     defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL) || \
@@ -47,7 +42,15 @@ _LIBCPP_PUSH_MACROS
 #define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 #endif
 
+typedef ::timespec __libcpp_timespec_t;
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 // Mutex
@@ -109,7 +112,7 @@ typedef void* __libcpp_thread_t;
 typedef long __libcpp_tls_key;
 
 #define _LIBCPP_TLS_DESTRUCTOR_CC __stdcall
-#endif
+#endif // defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
 // Mutex
 _LIBCPP_THREAD_ABI_VISIBILITY
@@ -475,10 +478,10 @@ get_id() _NOEXCEPT
 
 }  // this_thread
 
+#endif // !_LIBCPP_HAS_NO_THREADS
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
-
-#endif // !_LIBCPP_HAS_NO_THREADS
 
 #endif // _LIBCPP_THREADING_SUPPORT

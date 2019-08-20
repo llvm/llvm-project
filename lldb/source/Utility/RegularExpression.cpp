@@ -28,10 +28,7 @@ bool RegularExpression::Execute(
   return m_regex.match(str, matches);
 }
 
-bool RegularExpression::IsValid() const {
-  std::string discarded;
-  return m_regex.isValid(discarded);
-}
+bool RegularExpression::IsValid() const { return m_regex.isValid(); }
 
 llvm::StringRef RegularExpression::GetText() const { return m_regex_text; }
 
