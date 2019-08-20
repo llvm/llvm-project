@@ -204,12 +204,11 @@ public:
   /// m_addr_size member variable and should be set correctly prior to
   /// extracting any address values.
   ///
-  /// \param[in,out] offset_ptr
-  ///     A pointer to an offset within the data that will be advanced
-  ///     by the appropriate number of bytes if the value is extracted
-  ///     correctly. If the offset is out of bounds or there are not
-  ///     enough bytes to extract this value, the offset will be left
-  ///     unmodified.
+  /// \param[in] offset
+  ///     The offset where to encode the address.
+  ///
+  /// \param[in] addr
+  ///     The address to encode.
   ///
   /// \return
   ///     The next valid offset within data if the put operation
@@ -220,19 +219,18 @@ public:
   ///
   /// Encodes a C string into the existing data including the terminating
   ///
-  /// \param[in,out] offset_ptr
-  ///     A pointer to an offset within the data that will be advanced
-  ///     by the appropriate number of bytes if the value is extracted
-  ///     correctly. If the offset is out of bounds or there are not
-  ///     enough bytes to extract this value, the offset will be left
-  ///     unmodified.
+  /// \param[in] offset
+  ///     The offset where to encode the string.
+  ///
+  /// \param[in] cstr
+  ///     The string to encode.
   ///
   /// \return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     NULL will be returned.
-  uint32_t PutCString(uint32_t offset_ptr, const char *cstr);
+  uint32_t PutCString(uint32_t offset, const char *cstr);
 
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
 

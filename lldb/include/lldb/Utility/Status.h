@@ -47,8 +47,8 @@ public:
   /// into ValueType.
   typedef uint32_t ValueType;
 
-  /// Default constructor.
-  ///
+  Status();
+
   /// Initialize the error object with a generic success value.
   ///
   /// \param[in] err
@@ -56,23 +56,14 @@ public:
   ///
   /// \param[in] type
   ///     The type for \a err.
-  Status();
-
   explicit Status(ValueType err,
                   lldb::ErrorType type = lldb::eErrorTypeGeneric);
 
-  /* implicit */ Status(std::error_code EC);
+  Status(std::error_code EC);
 
   explicit Status(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  /// Assignment operator.
-  ///
-  /// \param[in] err
-  ///     An error code.
-  ///
-  /// \return
-  ///     A const reference to this object.
   const Status &operator=(const Status &rhs);
 
   ~Status();
