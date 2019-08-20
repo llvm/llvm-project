@@ -90,9 +90,9 @@ static bool supportsBPF(uint64_t Type) {
 static uint64_t resolveBPF(RelocationRef R, uint64_t S, uint64_t A) {
   switch (R.getType()) {
   case ELF::R_BPF_64_32:
-    return S & 0xFFFFFFFF;
+    return (S + A) & 0xFFFFFFFF;
   case ELF::R_BPF_64_64:
-    return S;
+    return S + A;
   default:
     llvm_unreachable("Invalid relocation type");
   }
