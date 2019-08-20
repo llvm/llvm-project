@@ -82,7 +82,6 @@
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/VerifyDecl.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
@@ -107,6 +106,11 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
+static void VerifyDecl(clang::Decl *decl) {
+  assert(decl && "VerifyDecl called with nullptr?");
+  decl->getAccess();
+}
+
 static inline bool
 ClangASTContextSupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeUnknown || // Clang is the default type system
