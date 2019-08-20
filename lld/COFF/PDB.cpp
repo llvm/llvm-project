@@ -1693,6 +1693,7 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> outputSections,
 }
 
 void PDBLinker::commit(codeview::GUID *guid) {
+  ExitOnError exitOnErr((config->pdbPath + ": ").str());
   // Write to a file.
   exitOnErr(builder.commit(config->pdbPath, guid));
 }
