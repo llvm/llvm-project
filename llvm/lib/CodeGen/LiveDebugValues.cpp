@@ -691,9 +691,17 @@ void LiveDebugValues::insertTransferDebugPair(
            "No register supplied when handling a restore of a debug value");
     MachineFunction *MF = MI.getMF();
     DIBuilder DIB(*const_cast<Function &>(MF->getFunction()).getParent());
+
+    const DIExpression *NewExpr;
+    if (auto Fragment = DebugInstr->getDebugExpression()->getFragmentInfo())
+      NewExpr = *DIExpression::createFragmentExpression(DIB.createExpression(),
+        Fragment->OffsetInBits, Fragment->SizeInBits);
+    else
+      NewExpr = DIB.createExpression();
+
     NewDebugInstr =
         BuildMI(*MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false,
-                NewReg, DebugInstr->getDebugVariable(), DIB.createExpression());
+                NewReg, DebugInstr->getDebugVariable(), NewExpr);
     VarLoc VL(*NewDebugInstr, LS);
     ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register restore: ";
@@ -848,9 +856,14 @@ void LiveDebugValues::transferSpillOrRestoreInst(MachineInstr &MI,
                       << "\n");
   }
   // Check if the register or spill location is the location of a debug value.
+  // FIXME: Don't create a spill transfer if there is a complex expression,
+  // because we currently cannot recover the original expression on restore.
   for (unsigned ID : OpenRanges.getVarLocs()) {
+    const MachineInstr *DebugInstr = &VarLocIDs[ID].MI;
+
     if (TKind == TransferKind::TransferSpill &&
-        VarLocIDs[ID].isDescribedByReg() == Reg) {
+        VarLocIDs[ID].isDescribedByReg() == Reg &&
+        !DebugInstr->getDebugExpression()->isComplex()) {
       LLVM_DEBUG(dbgs() << "Spilling Register " << printReg(Reg, TRI) << '('
                         << VarLocIDs[ID].Var.getVar()->getName() << ")\n");
     } else if (TKind == TransferKind::TransferRestore &&
