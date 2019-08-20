@@ -1,4 +1,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
+; RUN: llc %s -pass-remarks-missed=gisel* -mtriple=aarch64-none-linux-gnu -global-isel -o - 2>&1 | FileCheck %s
+
+; CHECK-NOT: remark
 
 ; Check that the eon instruction is generated instead of eor,movn
 define i64 @test1(i64 %a, i64 %b, i64 %c) {

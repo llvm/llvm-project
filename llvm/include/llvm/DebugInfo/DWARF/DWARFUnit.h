@@ -56,7 +56,7 @@ class DWARFUnitHeader {
 
   // For type units only.
   uint64_t TypeHash = 0;
-  uint32_t TypeOffset = 0;
+  uint64_t TypeOffset = 0;
 
   // For v5 split or skeleton compile units only.
   Optional<uint64_t> DWOId;
@@ -91,7 +91,7 @@ public:
   }
   const DWARFUnitIndex::Entry *getIndexEntry() const { return IndexEntry; }
   uint64_t getTypeHash() const { return TypeHash; }
-  uint32_t getTypeOffset() const { return TypeOffset; }
+  uint64_t getTypeOffset() const { return TypeOffset; }
   uint8_t getUnitType() const { return UnitType; }
   bool isTypeUnit() const {
     return UnitType == dwarf::DW_UT_type || UnitType == dwarf::DW_UT_split_type;

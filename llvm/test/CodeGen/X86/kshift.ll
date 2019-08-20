@@ -561,7 +561,6 @@ define i64 @kshiftr_v64i1_63(<64 x i8> %x, <64 x i8> %y) {
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    movzwl %ax, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

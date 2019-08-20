@@ -1628,7 +1628,7 @@ struct AAIsDeadImpl : public AAIsDead {
         /// the callee is nounwind and noreturn. Otherwise, we keep the invoke
         /// and only place an unreachable in the normal successor.
         if (Invoke2CallAllowed) {
-          if (Function *Callee = II->getCalledFunction()) {
+          if (II->getCalledFunction()) {
             const IRPosition &IPos = IRPosition::callsite_function(*II);
             const auto &AANoUnw = A.getAAFor<AANoUnwind>(*this, IPos);
             if (AANoUnw.isAssumedNoUnwind()) {

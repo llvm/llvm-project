@@ -144,7 +144,8 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
         if (Sec.isVirtualSection()) {
           Sec.Offset = 0;
         } else {
-          uint64_t PaddingSize = OffsetToAlignment(SegFileSize, 1 << Sec.Align);
+          uint64_t PaddingSize =
+              OffsetToAlignment(SegFileSize, 1ull << Sec.Align);
           Sec.Offset = SegOffset + SegFileSize + PaddingSize;
           Sec.Size = Sec.Content.size();
           SegFileSize += PaddingSize + Sec.Size;

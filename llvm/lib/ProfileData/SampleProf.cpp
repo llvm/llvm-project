@@ -100,8 +100,8 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << NumSamples;
   if (hasCalls()) {
     OS << ", calls:";
-    for (const auto &I : getCallTargets())
-      OS << " " << I.first() << ":" << I.second;
+    for (const auto &I : getSortedCallTargets())
+      OS << " " << I.first << ":" << I.second;
   }
   OS << "\n";
 }

@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X64
 ; RUN: llc < %s -mtriple=i686-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X86
+; RUN: llc < %s -mtriple=i686-w64-mingw32-none-elf | FileCheck %s -check-prefix=CHECK-X86-ELF
 
 @var = external local_unnamed_addr global i32, align 4
 @dsolocalvar = external dso_local local_unnamed_addr global i32, align 4
@@ -16,6 +17,9 @@ define dso_local i32 @getVar() {
 ; CHECK-X86:    movl .refptr._var, %eax
 ; CHECK-X86:    movl (%eax), %eax
 ; CHECK-X86:    retl
+; CHECK-X86-ELF-LABEL: getVar:
+; CHECK-X86-ELF:    movl var, %eax
+; CHECK-X86-ELF:    retl
 entry:
   %0 = load i32, i32* @var, align 4
   ret i32 %0
@@ -66,6 +70,9 @@ define dso_local i32 @getExtVar() {
 ; CHECK-X86:    movl __imp__extvar, %eax
 ; CHECK-X86:    movl (%eax), %eax
 ; CHECK-X86:    retl
+; CHECK-X86-ELF-LABEL: getExtVar:
+; CHECK-X86-ELF:    movl extvar, %eax
+; CHECK-X86-ELF:    retl
 entry:
   %0 = load i32, i32* @extvar, align 4
   ret i32 %0

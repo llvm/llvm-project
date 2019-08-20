@@ -136,9 +136,6 @@ LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File);
 LLVM_ATTRIBUTE_NORETURN void
 report_error(Error E, StringRef FileName, StringRef ArchiveName,
              StringRef ArchitectureName = StringRef());
-LLVM_ATTRIBUTE_NORETURN void
-report_error(Error E, StringRef ArchiveName, const object::Archive::Child &C,
-             StringRef ArchitectureName = StringRef());
 
 template <typename T, typename... Ts>
 T unwrapOrError(Expected<T> EO, Ts &&... Args) {
@@ -146,6 +143,9 @@ T unwrapOrError(Expected<T> EO, Ts &&... Args) {
     return std::move(*EO);
   report_error(EO.takeError(), std::forward<Ts>(Args)...);
 }
+
+std::string getFileNameForError(const object::Archive::Child &C,
+                                unsigned Index);
 
 } // end namespace llvm
 

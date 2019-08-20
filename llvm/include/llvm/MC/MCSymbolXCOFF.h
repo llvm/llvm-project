@@ -8,6 +8,7 @@
 #ifndef LLVM_MC_MCSYMBOLXCOFF_H
 #define LLVM_MC_MCSYMBOLXCOFF_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 
@@ -19,6 +20,21 @@ public:
       : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
 
   static bool classof(const MCSymbol *S) { return S->isXCOFF(); }
+
+  void setStorageClass(XCOFF::StorageClass SC) {
+    assert((!StorageClass.hasValue() || StorageClass.getValue() == SC) &&
+           "Redefining StorageClass of XCOFF MCSymbol.");
+    StorageClass = SC;
+  };
+
+  XCOFF::StorageClass getStorageClass() const {
+    assert(StorageClass.hasValue() &&
+           "StorageClass not set on XCOFF MCSymbol.");
+    return StorageClass.getValue();
+  }
+
+private:
+  Optional<XCOFF::StorageClass> StorageClass;
 };
 
 } // end namespace llvm

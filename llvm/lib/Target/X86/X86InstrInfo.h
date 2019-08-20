@@ -527,6 +527,10 @@ public:
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
 
+  static bool hasLockPrefix(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & X86II::LOCK;
+  }
+
   Optional<ParamLoadedValue>
   describeLoadedValue(const MachineInstr &MI) const override;
 

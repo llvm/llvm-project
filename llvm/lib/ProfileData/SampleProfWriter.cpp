@@ -100,8 +100,8 @@ std::error_code SampleProfileWriterText::write(const FunctionSamples &S) {
 
     OS << Sample.getSamples();
 
-    for (const auto &J : Sample.getCallTargets())
-      OS << " " << J.first() << ":" << J.second;
+    for (const auto &J : Sample.getSortedCallTargets())
+      OS << " " << J.first << ":" << J.second;
     OS << "\n";
   }
 
@@ -294,8 +294,8 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
     encodeULEB128(Loc.Discriminator, OS);
     encodeULEB128(Sample.getSamples(), OS);
     encodeULEB128(Sample.getCallTargets().size(), OS);
-    for (const auto &J : Sample.getCallTargets()) {
-      StringRef Callee = J.first();
+    for (const auto &J : Sample.getSortedCallTargets()) {
+      StringRef Callee = J.first;
       uint64_t CalleeSamples = J.second;
       if (std::error_code EC = writeNameIdx(Callee))
         return EC;

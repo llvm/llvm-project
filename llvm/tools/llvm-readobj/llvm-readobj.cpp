@@ -373,6 +373,8 @@ namespace opts {
       HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace opts
 
+static StringRef ToolName;
+
 namespace llvm {
 
 LLVM_ATTRIBUTE_NORETURN static void error(Twine Msg) {
@@ -380,7 +382,7 @@ LLVM_ATTRIBUTE_NORETURN static void error(Twine Msg) {
   // proper place.
   fouts().flush();
   errs() << "\n";
-  WithColor::error(errs()) << Msg << "\n";
+  WithColor::error(errs(), ToolName) << Msg << "\n";
   exit(1);
 }
 
@@ -401,11 +403,11 @@ void reportWarning(Error Err, StringRef Input) {
   // Flush the standard output to print the warning at a
   // proper place.
   fouts().flush();
-  handleAllErrors(createFileError(Input, std::move(Err)),
-                  [&](const ErrorInfoBase &EI) {
-                    errs() << "\n";
-                    WithColor::warning(errs()) << EI.message() << "\n";
-                  });
+  handleAllErrors(
+      createFileError(Input, std::move(Err)), [&](const ErrorInfoBase &EI) {
+        errs() << "\n";
+        WithColor::warning(errs(), ToolName) << EI.message() << "\n";
+      });
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(std::error_code EC, StringRef Input) {
@@ -703,6 +705,7 @@ static void registerReadelfAliases() {
 
 int main(int argc, const char *argv[]) {
   InitLLVM X(argc, argv);
+  ToolName = argv[0];
 
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
