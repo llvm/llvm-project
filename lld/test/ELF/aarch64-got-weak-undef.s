@@ -6,7 +6,7 @@
 
 // RELOC: no relocations
 
-// CHECK: 0x00220000 00000000 00000000
+// CHECK: 0x002201a0 00000000 00000000
 
         .globl  _start
 _start:

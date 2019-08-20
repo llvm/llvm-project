@@ -288,6 +288,11 @@ int test_param21(int a);
 /// \param x2 Ccc.
 int test_param22(int x1, int x2, int x3);
 
+// expected-warning@+1 {{empty paragraph passed to '\param' command}}
+/// \param a
+/// \retval 0 Blah blah.
+int test_param23(int a);
+
 //===---
 // Test that we treat typedefs to some non-function types as functions for the
 // purposes of documentation comment parsing.

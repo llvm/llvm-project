@@ -40,11 +40,15 @@ def LocalAS      : AddressSpace<"clang::LangAS::opencl_local">;
 def GenericAS    : AddressSpace<"clang::LangAS::opencl_generic">;
 
 
-// Qualified Type. Allow to retrieve one ASTContext QualType.
-class QualType<string _Name> {
+// Qualified Type.  These map to ASTContext::QualType.
+class QualType<string _Name, bit _IsAbstract=0> {
   // Name of the field or function in a clang::ASTContext
   // E.g. Name="IntTy" for the int type, and "getIntPtrType()" for an intptr_t
   string Name = _Name;
+  // Some QualTypes in this file represent an abstract type for which there is
+  // no corresponding AST QualType, e.g. a GenType or an `image2d_t` type
+  // without access qualifiers.
+  bit IsAbstract = _IsAbstract;
 }
 
 // Helper class to store type access qualifiers (volatile, const, ...).
@@ -52,25 +56,35 @@ class Qualifier<string _QualName> {
   string QualName = _QualName;
 }
 
+// List of integers.
+class IntList<string _Name, list<int> _List> {
+  string Name = _Name;
+  list<int> List = _List;
+}
+
 //===----------------------------------------------------------------------===//
 //                      OpenCL C classes for types
 //===----------------------------------------------------------------------===//
-// OpenCL types (int, float, ...)
+// OpenCL C basic data types (int, float, image2d_t, ...).
+// Its Child classes can represent concrete types (e.g.: VectorType) or
+// custom types (e.g.: GenType).
+// Instances of these child classes should be used in Builtin function
+// arguments.  See the definition of the "read_imagef" function as example.
 class Type<string _Name, QualType _QTName> {
-  // Name of the Type
+  // Name of the Type.
   string Name = _Name;
-  // QualType associated with this type
+  // QualType associated with this type.
   QualType QTName = _QTName;
-  // Size of the vector (if applicable)
-  int VecWidth = 0;
-  // Is pointer
+  // Size of the vector (if applicable).
+  int VecWidth = 1;
+  // Is a pointer.
   bit IsPointer = 0;
   // List of qualifiers associated with the type (volatile, ...)
   list<Qualifier> QualList = [];
-  // Address space
-  string AddrSpace = "clang::LangAS::Default";
   // Access qualifier. Must be one of ("RO", "WO", "RW").
   string AccessQualifier = "";
+  // Address space.
+  string AddrSpace = "clang::LangAS::Default";
 }
 
 // OpenCL vector types (e.g. int2, int3, int16, float8, ...)
@@ -78,7 +92,7 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
   int VecWidth = _VecWidth;
 }
 
-// OpenCL pointer types (e.g. int*, float*, ...)
+// OpenCL pointer types (e.g. int*, float*, ...).
 class PointerType<Type _Ty, AddressSpace _AS = GlobalAS> :
                                       Type<_Ty.Name, _Ty.QTName> {
   bit IsPointer = 1;
@@ -89,6 +103,50 @@ class PointerType<Type _Ty, AddressSpace _AS = GlobalAS> :
 class ImageType<Type _Ty, QualType _QTName, string _AccessQualifier> :
                                               Type<_Ty.Name, _QTName> {
   let AccessQualifier = _AccessQualifier;
+}
+
+// List of Types.
+class TypeList<string _Name, list<Type> _Type> {
+  string Name = _Name;
+  list<Type> List = _Type;
+}
+
+// A GenericType is an abstract type that defines a set of types as a
+// combination of Types and vector sizes.
+//
+// E.g.: If TypeList = <int, float> and VectorList = <1, 2, 4>, then it
+//       represents <int, int2, int4, float, float2, float4>.
+// _Ty          : Name of the GenType.
+// _TypeList    : List of basic data Types.
+// _VectorList  : Sizes of the vector for each type of the _TypeList, 1 being a
+//                scalar.
+//
+// Some rules apply when using multiple GenericType arguments in a declaration:
+//   1. The number of vector sizes must be equal or 1 for all gentypes in a
+//      declaration.
+//   2. The number of Types must be equal or 1 for all gentypes in a
+//      declaration.
+//   3. Generic types are combined by iterating over all generic types at once.
+//      For example, for the following GenericTypes
+//        GenT1 = GenericType<half, [1, 2]> and
+//        GenT2 = GenericType<float, int, [1, 2]>
+//      A declaration f(GenT1, GenT2) results in the combinations
+//        f(half, float), f(half2, float2), f(half, int), f(half2, int2) .
+//   4. "sgentype" from the OpenCL specification is supported by specifying
+//      a single vector size.
+//      For example, for the following GenericTypes
+//        GenT = GenericType<half, int, [1, 2]> and
+//        SGenT = GenericType<half, int, [1]>
+//      A declaration f(GenT, SGenT) results in the combinations
+//        f(half, half), f(half2, half), f(int, int), f(int2, int) .
+class GenericType<string _Ty, TypeList _TypeList, IntList _VectorList> :
+                                            Type<_Ty, QualType<"null", 1>> {
+  // Possible element types of the generic type.
+  TypeList TypeList = _TypeList;
+  // Possible vector sizes of the types in the TypeList.
+  IntList VectorList = _VectorList;
+  // The VecWidth field is ignored for GenericTypes. Use VectorList instead.
+  let VecWidth = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,54 +166,10 @@ class Builtin<string _Name, list<Type> _Signature> {
 }
 
 //===----------------------------------------------------------------------===//
-//                           Multiclass definitions
-//===----------------------------------------------------------------------===//
-// multiclass BifN: Creates Builtin class instances for OpenCL builtin
-//                  functions with N arguments.
-// _Name      : Name of the function
-// _Signature : Signature of the function (list of the Type used by the
-//              function, the first one being the return type).
-// _IsVector  : List of bit indicating if the type in the _Signature at the
-//              same index is to be a vector in the multiple overloads. The
-//              list must have at least one non-zero value.
-multiclass Bif0<string _Name, list<Type> _Signature, list<bit> _IsVector> {
-  def : Builtin<_Name, _Signature>;
-  foreach v = [2, 3, 4, 8, 16] in {
-    def : Builtin<_Name,
-                  [!if(_IsVector[0], VectorType<_Signature[0], v>, _Signature[0])]>;
-  }
-}
-multiclass Bif1<string _Name, list<Type> _Signature, list<bit> _IsVector> {
-  def : Builtin<_Name, _Signature>;
-  foreach v = [2, 3, 4, 8, 16] in {
-    def : Builtin<_Name,
-                  [!if(_IsVector[0], VectorType<_Signature[0], v>, _Signature[0]),
-                  !if(_IsVector[1], VectorType<_Signature[1], v>, _Signature[1])]>;
-  }
-}
-multiclass Bif2<string _Name, list<Type> _Signature, list<bit> _IsVector> {
-  def : Builtin<_Name, _Signature>;
-  foreach v = [2, 3, 4, 8, 16] in {
-    def : Builtin<_Name,
-                  [!if(_IsVector[0], VectorType<_Signature[0], v>, _Signature[0]),
-                  !if(_IsVector[1], VectorType<_Signature[1], v>, _Signature[1]),
-                  !if(_IsVector[2], VectorType<_Signature[2], v>, _Signature[2])]>;
-  }
-}
-multiclass Bif3<string _Name, list<Type> _Signature, list<bit> _IsVector> {
-  def : Builtin<_Name, _Signature>;
-  foreach v = [2, 3, 4, 8, 16] in {
-    def : Builtin<_Name,
-                  [!if(_IsVector[0], VectorType<_Signature[0], v>, _Signature[0]),
-                  !if(_IsVector[1], VectorType<_Signature[1], v>, _Signature[1]),
-                  !if(_IsVector[2], VectorType<_Signature[2], v>, _Signature[2]),
-                  !if(_IsVector[3], VectorType<_Signature[3], v>, _Signature[3])]>;
-  }
-}
-//===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL C types
 //===----------------------------------------------------------------------===//
-// OpenCL v1.2 s6.1.1: Built-in Scalar Data Types
+
+// OpenCL v1.0/1.2/2.0 s6.1.1: Built-in Scalar Data Types.
 def Bool      : Type<"bool",      QualType<"BoolTy">>;
 def Char      : Type<"char",      QualType<"CharTy">>;
 def UChar     : Type<"uchar",     QualType<"UnsignedCharTy">>;
@@ -174,30 +188,18 @@ def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
 def UIntPtr   : Type<"uintPtr_t", QualType<"getUIntPtrType()">>;
 def Void      : Type<"void_t",    QualType<"VoidTy">>;
 
-// OpenCL v1.2 s6.1.2: Built-in Vector Data Types
-foreach v = [2, 3, 4, 8, 16] in {
-  def char#v#_t    : VectorType<Char, v>;
-  def uchar#v#_t   : VectorType<UChar, v>;
-  def short#v#_t   : VectorType<Short, v>;
-  def ushort#v#_t  : VectorType<UShort, v>;
-  def "int"#v#_t   : VectorType<Int, v>;
-  def uint#v#_t    : VectorType<UInt, v>;
-  def long#v#_t    : VectorType<Long, v>;
-  def ulong#v#_t   : VectorType<ULong, v>;
-  def float#v#_t   : VectorType<Float, v>;
-  def double#v#_t  : VectorType<Double, v>;
-  def half#v#_t    : VectorType<Half, v>;
-}
+// OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
+// Built-in vector data types are created by TableGen's OpenCLBuiltinEmitter.
 
 // OpenCL v1.2 s6.1.3: Other Built-in Data Types
 // These definitions with a "null" name are "abstract". They should not
 // be used in definitions of Builtin functions.
-def image2d_t         : Type<"image2d_t", QualType<"null">>;
-def image3d_t         : Type<"image3d_t", QualType<"null">>;
-def image2d_array_t   : Type<"image2d_array_t", QualType<"null">>;
-def image1d_t         : Type<"image1d_t", QualType<"null">>;
-def image1d_buffer_t  : Type<"image1d_buffer_t", QualType<"null">>;
-def image1d_array_t   : Type<"image1d_array_t", QualType<"null">>;
+def image2d_t         : Type<"image2d_t", QualType<"null", 1>>;
+def image3d_t         : Type<"image3d_t", QualType<"null", 1>>;
+def image2d_array_t   : Type<"image2d_array_t", QualType<"null", 1>>;
+def image1d_t         : Type<"image1d_t", QualType<"null", 1>>;
+def image1d_buffer_t  : Type<"image1d_buffer_t", QualType<"null", 1>>;
+def image1d_array_t   : Type<"image1d_array_t", QualType<"null", 1>>;
 // Unlike the few functions above, the following definitions can be used
 // in definitions of Builtin functions (they have a QualType with a name).
 foreach v = ["RO", "WO", "RW"] in {
@@ -223,6 +225,49 @@ foreach v = ["RO", "WO", "RW"] in {
 
 def Sampler           : Type<"Sampler", QualType<"OCLSamplerTy">>;
 def Event             : Type<"Event", QualType<"OCLEventTy">>;
+
+//===----------------------------------------------------------------------===//
+//                 Definitions of OpenCL gentype variants
+//===----------------------------------------------------------------------===//
+// The OpenCL specification often uses "gentype" in builtin function
+// declarations to indicate that a builtin function is available with various
+// argument and return types.  The types represented by "gentype" vary between
+// different parts of the specification.  The following definitions capture
+// the different type lists for gentypes in different parts of the
+// specification.
+
+// Vector width lists.
+def VecAndScalar: IntList<"VecAndScalar", [1, 2, 3, 4, 8, 16]>;
+def VecNoScalar : IntList<"VecNoScalar", [2, 3, 4, 8, 16]>;
+def Vec1        : IntList<"Vec1", [1]>;
+
+// Type lists.
+def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
+
+def TLAllInts : TypeList<"TLAllInts", [Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
+
+// GenType definitions for multiple base types (e.g. all floating point types,
+// or all integer types).
+// All integer
+def AIGenType1             : GenericType<"AIGenType1", TLAllInts, Vec1>;
+def AIGenTypeN             : GenericType<"AIGenTypeN", TLAllInts, VecAndScalar>;
+def AIGenTypeNNoScalar     : GenericType<"AIGenTypeNNoScalar", TLAllInts, VecNoScalar>;
+// Float
+def FGenTypeN              : GenericType<"FGenTypeN", TLFloat, VecAndScalar>;
+
+// GenType definitions for every single base type (e.g. fp32 only).
+// Names are like: GenTypeFloatVecAndScalar.
+foreach Type = [Char, UChar, Short, UShort,
+                Int, UInt, Long, ULong,
+                Float, Double, Half] in {
+  foreach VecSizes = [VecAndScalar, VecNoScalar] in {
+    def "GenType" # Type # VecSizes :
+              GenericType<"GenType" # Type # VecSizes,
+                          TypeList<"GL" # Type.Name, [Type]>,
+                          VecSizes>;
+  }
+}
+
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL builtin functions
@@ -261,27 +306,29 @@ foreach name = ["get_global_size", "get_global_id", "get_local_size",
 foreach name = ["acos", "acosh", "acospi",
                 "asin", "asinh", "asinpi",
                 "atan", "atanh", "atanpi"] in {
-  foreach type = [Float, Double, Half] in {
-    defm : Bif1<name, [type, type], [1, 1]>;
-  }
+  def : Builtin<name, [FGenTypeN, FGenTypeN]>;
 }
 
 foreach name = ["atan2", "atan2pi"] in {
-  foreach type = [Float, Double, Half] in {
-    defm : Bif2<name, [type, type, type], [1, 1, 1]>;
-  }
+  def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
 }
 
 foreach name = ["fmax", "fmin"] in {
-  foreach type = [Float, Double, Half] in {
-    defm : Bif2<name, [type, type, type], [1, 1, 1]>;
-    defm : Bif2<name, [type, type, type], [1, 1, 0]>;
-  }
+  def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+  def : Builtin<name, [GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, Float]>;
+  def : Builtin<name, [GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, Double]>;
+  def : Builtin<name, [GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, Half]>;
+}
+
+// OpenCL v1.1 s6.11.3, v1.2 s6.12.3, v2.0 s6.13.3 - Integer Functions
+foreach name = ["max", "min"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN]>;
+  def : Builtin<name, [AIGenTypeNNoScalar, AIGenTypeNNoScalar, AIGenType1]>;
 }
 
 // OpenCL v1.2 s6.12.14: Built-in Image Read Functions
 def read_imagef : Builtin<"read_imagef",
-                          [float4_t, image2d_RO_t, VectorType<Int, 2>]>;
+                          [VectorType<Float, 4>, image2d_RO_t, VectorType<Int, 2>]>;
 def write_imagef : Builtin<"write_imagef",
                            [Void,
                             image2d_WO_t,

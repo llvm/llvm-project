@@ -215,7 +215,8 @@ public:
   /// a PathDiagnosticBuilder able to construct bug reports for different
   /// consumers. Returns None if no valid report is found.
   static Optional<PathDiagnosticBuilder>
-  findValidReport(ArrayRef<BugReport *> &bugReports, GRBugReporter &Reporter);
+  findValidReport(ArrayRef<BugReport *> &bugReports,
+                  PathSensitiveBugReporter &Reporter);
 
   PathDiagnosticBuilder(
       BugReporterContext BRC, std::unique_ptr<ExplodedGraph> BugPath,
@@ -2213,13 +2214,17 @@ PathDiagnosticLocation BugReport::getLocation(const SourceManager &SM) const {
 // Methods for BugReporter and subclasses.
 //===----------------------------------------------------------------------===//
 
-const ExplodedGraph &GRBugReporter::getGraph() const { return Eng.getGraph(); }
+const ExplodedGraph &PathSensitiveBugReporter::getGraph() const {
+  return Eng.getGraph();
+}
 
-ProgramStateManager&
-GRBugReporter::getStateManager() { return Eng.getStateManager(); }
+ProgramStateManager &PathSensitiveBugReporter::getStateManager() {
+  return Eng.getStateManager();
+}
 
-ProgramStateManager&
-GRBugReporter::getStateManager() const { return Eng.getStateManager(); }
+ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
+  return Eng.getStateManager();
+}
 
 BugReporter::~BugReporter() {
   FlushReports();
@@ -2592,7 +2597,7 @@ generateVisitorsDiagnostics(BugReport *R, const ExplodedNode *ErrorNode,
 
 Optional<PathDiagnosticBuilder>
 PathDiagnosticBuilder::findValidReport(ArrayRef<BugReport *> &bugReports,
-                                       GRBugReporter &Reporter) {
+                                       PathSensitiveBugReporter &Reporter) {
 
   BugPathGetter BugGraph(&Reporter.getGraph(), bugReports);
 
@@ -2642,7 +2647,7 @@ PathDiagnosticBuilder::findValidReport(ArrayRef<BugReport *> &bugReports,
 }
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
-GRBugReporter::generatePathDiagnostics(
+PathSensitiveBugReporter::generatePathDiagnostics(
     ArrayRef<PathDiagnosticConsumer *> consumers,
     ArrayRef<BugReport *> &bugReports) {
   assert(!bugReports.empty());
@@ -2877,11 +2882,6 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
            E = report->getNotes().rend(); I != E; ++I)
         Pieces.push_front(*I);
     }
-
-    // Get the meta data.
-    const BugReport::ExtraTextList &Meta = report->getExtraText();
-    for (const auto &i : Meta)
-      PD->addMeta(i);
 
     updateExecutedLinesWithDiagnosticPieces(*PD);
     Consumer->HandlePathDiagnostic(std::move(PD));

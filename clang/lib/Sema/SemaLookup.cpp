@@ -673,76 +673,148 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
     D->dump();
 }
 
-/// When trying to resolve a function name, if the isOpenCLBuiltin function
-/// defined in "OpenCLBuiltins.inc" returns a non-null <Index, Len>, then the
-/// identifier is referencing an OpenCL builtin function. Thus, all its
-/// prototypes are added to the LookUpResult.
-///
-/// \param S The Sema instance
-/// \param LR  The LookupResult instance
-/// \param II  The identifier being resolved
-/// \param Index  The list of prototypes starts at Index in OpenCLBuiltins[]
-/// \param Len  The list of prototypes has Len elements
-static void InsertOCLBuiltinDeclarations(Sema &S, LookupResult &LR,
-                                         IdentifierInfo *II, unsigned Index,
-                                         unsigned Len) {
+/// Get the QualType instances of the return type and arguments for an OpenCL
+/// builtin function signature.
+/// \param Context (in) The Context instance.
+/// \param OpenCLBuiltin (in) The signature currently handled.
+/// \param GenTypeMaxCnt (out) Maximum number of types contained in a generic
+///        type used as return type or as argument.
+///        Only meaningful for generic types, otherwise equals 1.
+/// \param RetTypes (out) List of the possible return types.
+/// \param ArgTypes (out) List of the possible argument types.  For each
+///        argument, ArgTypes contains QualTypes for the Cartesian product
+///        of (vector sizes) x (types) .
+static void GetQualTypesForOpenCLBuiltin(
+    ASTContext &Context, const OpenCLBuiltinStruct &OpenCLBuiltin,
+    unsigned &GenTypeMaxCnt, std::vector<QualType> &RetTypes,
+    SmallVector<std::vector<QualType>, 5> &ArgTypes) {
+  // Get the QualType instances of the return types.
+  unsigned Sig = SignatureTable[OpenCLBuiltin.SigTableIndex];
+  OCL2Qual(Context, TypeTable[Sig], RetTypes);
+  GenTypeMaxCnt = RetTypes.size();
 
-  for (unsigned i = 0; i < Len; ++i) {
-    const OpenCLBuiltinDecl &Decl = OpenCLBuiltins[Index - 1 + i];
+  // Get the QualType instances of the arguments.
+  // First type is the return type, skip it.
+  for (unsigned Index = 1; Index < OpenCLBuiltin.NumTypes; Index++) {
+    std::vector<QualType> Ty;
+    OCL2Qual(Context,
+        TypeTable[SignatureTable[OpenCLBuiltin.SigTableIndex + Index]], Ty);
+    ArgTypes.push_back(Ty);
+    GenTypeMaxCnt = (Ty.size() > GenTypeMaxCnt) ? Ty.size() : GenTypeMaxCnt;
+  }
+}
+
+/// Create a list of the candidate function overloads for an OpenCL builtin
+/// function.
+/// \param Context (in) The ASTContext instance.
+/// \param GenTypeMaxCnt (in) Maximum number of types contained in a generic
+///        type used as return type or as argument.
+///        Only meaningful for generic types, otherwise equals 1.
+/// \param FunctionList (out) List of FunctionTypes.
+/// \param RetTypes (in) List of the possible return types.
+/// \param ArgTypes (in) List of the possible types for the arguments.
+static void
+GetOpenCLBuiltinFctOverloads(ASTContext &Context, unsigned GenTypeMaxCnt,
+                             std::vector<QualType> &FunctionList,
+                             std::vector<QualType> &RetTypes,
+                             SmallVector<std::vector<QualType>, 5> &ArgTypes) {
+  FunctionProtoType::ExtProtoInfo PI;
+  PI.Variadic = false;
+
+  // Create FunctionTypes for each (gen)type.
+  for (unsigned IGenType = 0; IGenType < GenTypeMaxCnt; IGenType++) {
+    SmallVector<QualType, 5> ArgList;
+
+    for (unsigned A = 0; A < ArgTypes.size(); A++) {
+      // Builtins such as "max" have an "sgentype" argument that represents
+      // the corresponding scalar type of a gentype.  The number of gentypes
+      // must be a multiple of the number of sgentypes.
+      assert(GenTypeMaxCnt % ArgTypes[A].size() == 0 &&
+             "argument type count not compatible with gentype type count");
+      unsigned Idx = IGenType % ArgTypes[A].size();
+      ArgList.push_back(ArgTypes[A][Idx]);
+    }
+
+    FunctionList.push_back(Context.getFunctionType(
+        RetTypes[(RetTypes.size() != 1) ? IGenType : 0], ArgList, PI));
+  }
+}
+
+/// When trying to resolve a function name, if isOpenCLBuiltin() returns a
+/// non-null <Index, Len> pair, then the name is referencing an OpenCL
+/// builtin function.  Add all candidate signatures to the LookUpResult.
+///
+/// \param S (in) The Sema instance.
+/// \param LR (inout) The LookupResult instance.
+/// \param II (in) The identifier being resolved.
+/// \param FctIndex (in) Starting index in the BuiltinTable.
+/// \param Len (in) The signature list has Len elements.
+static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
+                                                  IdentifierInfo *II,
+                                                  const unsigned FctIndex,
+                                                  const unsigned Len) {
+  // The builtin function declaration uses generic types (gentype).
+  bool HasGenType = false;
+
+  // Maximum number of types contained in a generic type used as return type or
+  // as argument.  Only meaningful for generic types, otherwise equals 1.
+  unsigned GenTypeMaxCnt;
+
+  for (unsigned SignatureIndex = 0; SignatureIndex < Len; SignatureIndex++) {
+    const OpenCLBuiltinStruct &OpenCLBuiltin =
+        BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
-    // Ignore this BIF if the version is incorrect.
-    if (Context.getLangOpts().OpenCLVersion < Decl.Version)
-      continue;
+    std::vector<QualType> RetTypes;
+    SmallVector<std::vector<QualType>, 5> ArgTypes;
 
-    FunctionProtoType::ExtProtoInfo PI;
-    PI.Variadic = false;
-
-    // Defined in "OpenCLBuiltins.inc"
-    QualType RT = OCL2Qual(Context, OpenCLSignature[Decl.ArgTableIndex]);
-
-    SmallVector<QualType, 5> ArgTypes;
-    for (unsigned I = 1; I < Decl.NumArgs; I++) {
-      QualType Ty = OCL2Qual(Context, OpenCLSignature[Decl.ArgTableIndex + I]);
-      ArgTypes.push_back(Ty);
+    // Obtain QualType lists for the function signature.
+    GetQualTypesForOpenCLBuiltin(Context, OpenCLBuiltin, GenTypeMaxCnt,
+                                 RetTypes, ArgTypes);
+    if (GenTypeMaxCnt > 1) {
+      HasGenType = true;
     }
 
-    QualType R = Context.getFunctionType(RT, ArgTypes, PI);
+    // Create function overload for each type combination.
+    std::vector<QualType> FunctionList;
+    GetOpenCLBuiltinFctOverloads(Context, GenTypeMaxCnt, FunctionList, RetTypes,
+                                 ArgTypes);
+
     SourceLocation Loc = LR.getNameLoc();
-
-    // TODO: This part is taken from Sema::LazilyCreateBuiltin,
-    // maybe refactor it.
     DeclContext *Parent = Context.getTranslationUnitDecl();
-    FunctionDecl *New = FunctionDecl::Create(Context, Parent, Loc, Loc, II, R,
-                                             /*TInfo=*/nullptr, SC_Extern,
-                                             false, R->isFunctionProtoType());
-    New->setImplicit();
+    FunctionDecl *NewOpenCLBuiltin;
 
-    // Create Decl objects for each parameter, adding them to the
-    // FunctionDecl.
-    if (const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(R)) {
-      SmallVector<ParmVarDecl *, 16> Params;
-      for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
-        ParmVarDecl *Parm =
-            ParmVarDecl::Create(Context, New, SourceLocation(),
-                                SourceLocation(), nullptr, FT->getParamType(i),
-                                /*TInfo=*/nullptr, SC_None, nullptr);
-        Parm->setScopeInfo(0, i);
-        Params.push_back(Parm);
+    for (unsigned Index = 0; Index < GenTypeMaxCnt; Index++) {
+      NewOpenCLBuiltin = FunctionDecl::Create(
+          Context, Parent, Loc, Loc, II, FunctionList[Index],
+          /*TInfo=*/nullptr, SC_Extern, false,
+          FunctionList[Index]->isFunctionProtoType());
+      NewOpenCLBuiltin->setImplicit();
+
+      // Create Decl objects for each parameter, adding them to the
+      // FunctionDecl.
+      if (const FunctionProtoType *FP =
+              dyn_cast<FunctionProtoType>(FunctionList[Index])) {
+        SmallVector<ParmVarDecl *, 16> ParmList;
+        for (unsigned IParm = 0, e = FP->getNumParams(); IParm != e; ++IParm) {
+          ParmVarDecl *Parm = ParmVarDecl::Create(
+              Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
+              nullptr, FP->getParamType(IParm),
+              /*TInfo=*/nullptr, SC_None, nullptr);
+          Parm->setScopeInfo(0, IParm);
+          ParmList.push_back(Parm);
+        }
+        NewOpenCLBuiltin->setParams(ParmList);
       }
-      New->setParams(Params);
+      if (!S.getLangOpts().OpenCLCPlusPlus) {
+        NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
+      }
+      LR.addDecl(NewOpenCLBuiltin);
     }
-
-    New->addAttr(OverloadableAttr::CreateImplicit(Context));
-
-    if (strlen(Decl.Extension))
-      S.setOpenCLExtensionForDecl(New, Decl.Extension);
-
-    LR.addDecl(New);
   }
 
   // If we added overloads, need to resolve the lookup result.
-  if (Len > 1)
+  if (Len > 1 || HasGenType)
     LR.resolveKind();
 }
 
@@ -772,7 +844,8 @@ static bool LookupBuiltin(Sema &S, LookupResult &R) {
       if (S.getLangOpts().OpenCL && S.getLangOpts().DeclareOpenCLBuiltins) {
         auto Index = isOpenCLBuiltin(II->getName());
         if (Index.first) {
-          InsertOCLBuiltinDeclarations(S, R, II, Index.first, Index.second);
+          InsertOCLBuiltinDeclarationsFromTable(S, R, II, Index.first - 1,
+                                                Index.second);
           return true;
         }
       }
