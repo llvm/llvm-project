@@ -38,28 +38,28 @@ TEST(RefactoringCallbacksTest, ReplacesStmtsWithString) {
   std::string Code = "void f() { int i = 1; }";
   std::string Expected = "void f() { ; }";
   ReplaceStmtWithText Callback("id", ";");
-  expectRewritten(Code, Expected, id("id", declStmt()), Callback);
+  expectRewritten(Code, Expected, declStmt().bind("id"), Callback);
 }
 
 TEST(RefactoringCallbacksTest, ReplacesStmtsInCalledMacros) {
   std::string Code = "#define A void f() { int i = 1; }\nA";
   std::string Expected = "#define A void f() { ; }\nA";
   ReplaceStmtWithText Callback("id", ";");
-  expectRewritten(Code, Expected, id("id", declStmt()), Callback);
+  expectRewritten(Code, Expected, declStmt().bind("id"), Callback);
 }
 
 TEST(RefactoringCallbacksTest, IgnoresStmtsInUncalledMacros) {
   std::string Code = "#define A void f() { int i = 1; }";
   std::string Expected = "#define A void f() { int i = 1; }";
   ReplaceStmtWithText Callback("id", ";");
-  expectRewritten(Code, Expected, id("id", declStmt()), Callback);
+  expectRewritten(Code, Expected, declStmt().bind("id"), Callback);
 }
 
 TEST(RefactoringCallbacksTest, ReplacesInteger) {
   std::string Code = "void f() { int i = 1; }";
   std::string Expected = "void f() { int i = 2; }";
   ReplaceStmtWithText Callback("id", "2");
-  expectRewritten(Code, Expected, id("id", expr(integerLiteral())), Callback);
+  expectRewritten(Code, Expected, expr(integerLiteral()).bind("id"), Callback);
 }
 
 TEST(RefactoringCallbacksTest, ReplacesStmtWithStmt) {
@@ -68,9 +68,9 @@ TEST(RefactoringCallbacksTest, ReplacesStmtWithStmt) {
   ReplaceStmtWithStmt Callback("always-false", "should-be");
   expectRewritten(
       Code, Expected,
-      id("always-false",
-         conditionalOperator(hasCondition(cxxBoolLiteral(equals(false))),
-                             hasFalseExpression(id("should-be", expr())))),
+      conditionalOperator(hasCondition(cxxBoolLiteral(equals(false))),
+                          hasFalseExpression(expr().bind("should-be")))
+          .bind("always-false"),
       Callback);
 }
 
@@ -78,20 +78,20 @@ TEST(RefactoringCallbacksTest, ReplacesIfStmt) {
   std::string Code = "bool a; void f() { if (a) f(); else a = true; }";
   std::string Expected = "bool a; void f() { f(); }";
   ReplaceIfStmtWithItsBody Callback("id", true);
-  expectRewritten(
-      Code, Expected,
-      id("id", ifStmt(hasCondition(implicitCastExpr(hasSourceExpression(
-                   declRefExpr(to(varDecl(hasName("a"))))))))),
-      Callback);
+  expectRewritten(Code, Expected,
+                  ifStmt(hasCondition(implicitCastExpr(hasSourceExpression(
+                             declRefExpr(to(varDecl(hasName("a"))))))))
+                      .bind("id"),
+                  Callback);
 }
 
 TEST(RefactoringCallbacksTest, RemovesEntireIfOnEmptyElse) {
   std::string Code = "void f() { if (false) int i = 0; }";
   std::string Expected = "void f() {  }";
   ReplaceIfStmtWithItsBody Callback("id", false);
-  expectRewritten(Code, Expected,
-                  id("id", ifStmt(hasCondition(cxxBoolLiteral(equals(false))))),
-                  Callback);
+  expectRewritten(
+      Code, Expected,
+      ifStmt(hasCondition(cxxBoolLiteral(equals(false)))).bind("id"), Callback);
 }
 
 TEST(RefactoringCallbacksTest, TemplateJustText) {
@@ -99,7 +99,7 @@ TEST(RefactoringCallbacksTest, TemplateJustText) {
   std::string Expected = "void f() { FOO }";
   auto Callback = ReplaceNodeWithTemplate::create("id", "FOO");
   EXPECT_FALSE(Callback.takeError());
-  expectRewritten(Code, Expected, id("id", declStmt()), **Callback);
+  expectRewritten(Code, Expected, declStmt().bind("id"), **Callback);
 }
 
 TEST(RefactoringCallbacksTest, TemplateSimpleSubst) {
@@ -108,7 +108,7 @@ TEST(RefactoringCallbacksTest, TemplateSimpleSubst) {
   auto Callback = ReplaceNodeWithTemplate::create("decl", "long x = ${init}");
   EXPECT_FALSE(Callback.takeError());
   expectRewritten(Code, Expected,
-                  id("decl", varDecl(hasInitializer(id("init", expr())))),
+                  varDecl(hasInitializer(expr().bind("init"))).bind("decl"),
                   **Callback);
 }
 
@@ -119,7 +119,7 @@ TEST(RefactoringCallbacksTest, TemplateLiteral) {
                                                   "string x = \"$$-${init}\"");
   EXPECT_FALSE(Callback.takeError());
   expectRewritten(Code, Expected,
-                  id("decl", varDecl(hasInitializer(id("init", expr())))),
+                  varDecl(hasInitializer(expr().bind("init"))).bind("decl"),
                   **Callback);
 }
 

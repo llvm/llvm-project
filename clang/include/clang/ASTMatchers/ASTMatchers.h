@@ -19,15 +19,15 @@
 //
 //  For more complicated match expressions we're often interested in accessing
 //  multiple parts of the matched AST nodes once a match is found. In that case,
-//  use the id(...) matcher around the match expressions that match the nodes
-//  you want to access.
+//  call `.bind("name")` on match expressions that match the nodes you want to
+//  access.
 //
 //  For example, when we're interested in child classes of a certain class, we
 //  would write:
-//    cxxRecordDecl(hasName("MyClass"), has(id("child", recordDecl())))
+//    cxxRecordDecl(hasName("MyClass"), has(recordDecl().bind("child")))
 //  When the match is found via the MatchFinder, a user provided callback will
 //  be called with a BoundNodes instance that contains a mapping from the
-//  strings that we provided for the id(...) calls to the nodes that were
+//  strings that we provided for the `.bind()` calls to the nodes that were
 //  matched.
 //  In the given example, each time our matcher finds a match we get a callback
 //  where "child" is bound to the RecordDecl node of the matching child
@@ -130,15 +130,6 @@ private:
 
   internal::BoundNodesMap MyBoundNodes;
 };
-
-/// If the provided matcher matches a node, binds the node to \c ID.
-///
-/// FIXME: Do we want to support this now that we have bind()?
-template <typename T>
-internal::Matcher<T> id(StringRef ID,
-                        const internal::BindableMatcher<T> &InnerMatcher) {
-  return InnerMatcher.bind(ID);
-}
 
 /// Types of matchers for the top-level classes in the AST class
 /// hierarchy.

@@ -51,11 +51,6 @@ class QualType<string _Name, bit _IsAbstract=0> {
   bit IsAbstract = _IsAbstract;
 }
 
-// Helper class to store type access qualifiers (volatile, const, ...).
-class Qualifier<string _QualName> {
-  string QualName = _QualName;
-}
-
 // List of integers.
 class IntList<string _Name, list<int> _List> {
   string Name = _Name;
@@ -79,24 +74,59 @@ class Type<string _Name, QualType _QTName> {
   int VecWidth = 1;
   // Is a pointer.
   bit IsPointer = 0;
-  // List of qualifiers associated with the type (volatile, ...)
-  list<Qualifier> QualList = [];
+  // "const" qualifier.
+  bit IsConst = 0;
+  // "volatile" qualifier.
+  bit IsVolatile = 0;
   // Access qualifier. Must be one of ("RO", "WO", "RW").
   string AccessQualifier = "";
   // Address space.
-  string AddrSpace = "clang::LangAS::Default";
+  string AddrSpace = DefaultAS.Name;
 }
 
-// OpenCL vector types (e.g. int2, int3, int16, float8, ...)
+// OpenCL vector types (e.g. int2, int3, int16, float8, ...).
 class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
-  int VecWidth = _VecWidth;
+  let VecWidth = _VecWidth;
+  // Inherited fields
+  let IsPointer = _Ty.IsPointer;
+  let IsConst = _Ty.IsConst;
+  let IsVolatile = _Ty.IsVolatile;
+  let AccessQualifier = _Ty.AccessQualifier;
+  let AddrSpace = _Ty.AddrSpace;
 }
 
 // OpenCL pointer types (e.g. int*, float*, ...).
-class PointerType<Type _Ty, AddressSpace _AS = GlobalAS> :
+class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
                                       Type<_Ty.Name, _Ty.QTName> {
-  bit IsPointer = 1;
-  string AddrSpace = _AS.Name;
+  let AddrSpace = _AS.Name;
+  // Inherited fields
+  let VecWidth = _Ty.VecWidth;
+  let IsPointer = 1;
+  let IsConst = _Ty.IsConst;
+  let IsVolatile = _Ty.IsVolatile;
+  let AccessQualifier = _Ty.AccessQualifier;
+}
+
+// OpenCL const types (e.g. const int).
+class ConstType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
+  let IsConst = 1;
+  // Inherited fields
+  let VecWidth = _Ty.VecWidth;
+  let IsPointer = _Ty.IsPointer;
+  let IsVolatile = _Ty.IsVolatile;
+  let AccessQualifier = _Ty.AccessQualifier;
+  let AddrSpace = _Ty.AddrSpace;
+}
+
+// OpenCL volatile types (e.g. volatile int).
+class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
+  let IsVolatile = 1;
+  // Inherited fields
+  let VecWidth = _Ty.VecWidth;
+  let IsPointer = _Ty.IsPointer;
+  let IsConst = _Ty.IsConst;
+  let AccessQualifier = _Ty.AccessQualifier;
+  let AddrSpace = _Ty.AddrSpace;
 }
 
 // OpenCL image types (e.g. image2d_t, ...)
@@ -242,12 +272,16 @@ def VecNoScalar : IntList<"VecNoScalar", [2, 3, 4, 8, 16]>;
 def Vec1        : IntList<"Vec1", [1]>;
 
 // Type lists.
+def TLAll   : TypeList<"TLAll", [Char, UChar, Short, UShort, Int, UInt, Long, ULong, Float, Double, Half]>;
 def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
 
 def TLAllInts : TypeList<"TLAllInts", [Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
 
 // GenType definitions for multiple base types (e.g. all floating point types,
 // or all integer types).
+// All types
+def AGenTypeN              : GenericType<"AGenTypeN", TLAll, VecAndScalar>;
+def AGenTypeNNoScalar      : GenericType<"AGenTypeNNoScalar", TLAll, VecNoScalar>;
 // All integer
 def AIGenType1             : GenericType<"AIGenType1", TLAllInts, Vec1>;
 def AIGenTypeN             : GenericType<"AIGenTypeN", TLAllInts, VecAndScalar>;
@@ -291,6 +325,44 @@ foreach RType = [Float, Double, Half, Char, UChar, Short,
         }
       }
     }
+  }
+}
+
+//--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.10, v1.2 s6.12.10, v2.0 s6.13.10: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
+// OpenCL Extension v2.0 s5.1.7 and s6.1.7: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
+// --- Table 18 ---
+foreach name = ["async_work_group_copy"] in {
+  def : Builtin<name, [Event, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Event]>;
+  def : Builtin<name, [Event, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Event]>;
+}
+foreach name = ["async_work_group_strided_copy"] in {
+  def : Builtin<name, [Event, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Size, Event]>;
+  def : Builtin<name, [Event, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Size, Event]>;
+}
+foreach name = ["wait_group_events"] in {
+  def : Builtin<name, [Void, Int, PointerType<Event, GenericAS>]>;
+}
+foreach name = ["prefetch"] in {
+  def : Builtin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;
+}
+
+//--------------------------------------------------------------------
+// OpenCL v2.0 s6.13.11 - Atomics Functions.
+// Functions that use memory_order and cl_mem_fence_flags enums are not
+// declared here as the TableGen backend does not handle enums.
+
+// OpenCL v1.0 s9.5, s9.6, s9.7 - Atomic Functions for 32-bit integers.
+// --- Table 9.1 ---
+foreach Type = [Int, UInt] in {
+  foreach name = ["atom_add", "atom_sub", "atom_xchg"] in {
+    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type]>;
+  }
+  foreach name = ["atom_inc", "atom_dec"] in {
+    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>]>;
+  }
+  foreach name = ["atom_cmpxchg"] in {
+    def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
   }
 }
 

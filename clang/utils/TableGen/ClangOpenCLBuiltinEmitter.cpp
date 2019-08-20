@@ -236,10 +236,18 @@ void BuiltinNameEmitter::EmitDeclarations() {
 
 // Represents a return type or argument type.
 struct OpenCLTypeStruct {
-  // A type (e.g. float, int, ...)
+  // A type (e.g. float, int, ...).
   const OpenCLTypeID ID;
   // Vector size (if applicable; 0 for scalars and generic types).
   const unsigned VectorWidth;
+  // 0 if the type is not a pointer.
+  const bool IsPointer;
+  // 0 if the type is not const.
+  const bool IsConst;
+  // 0 if the type is not volatile.
+  const bool IsVolatile;
+  // Address space of the pointer (if applicable).
+  const LangAS AS;
 };
 
 // One overload of an OpenCL builtin function.
@@ -341,7 +349,11 @@ void BuiltinNameEmitter::EmitTypeTable() {
   for (const auto &T : TypeMap) {
     OS << "  // " << T.second << "\n";
     OS << "  {OCLT_" << T.first->getValueAsString("Name") << ", "
-       << T.first->getValueAsInt("VecWidth") << "},\n";
+       << T.first->getValueAsInt("VecWidth") << ", "
+       << T.first->getValueAsBit("IsPointer") << ", "
+       << T.first->getValueAsBit("IsConst") << ", "
+       << T.first->getValueAsBit("IsVolatile") << ", "
+       << T.first->getValueAsString("AddrSpace") << "},\n";
   }
   OS << "};\n\n";
 }
@@ -523,6 +535,28 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   if (Ty.VectorWidth > 1) {
     for (unsigned Index = 0; Index < QT.size(); Index++) {
       QT[Index] = Context.getExtVectorType(QT[Index], Ty.VectorWidth);
+    }
+  }
+
+  if (Ty.IsVolatile != 0) {
+    for (unsigned Index = 0; Index < QT.size(); Index++) {
+      QT[Index] = Context.getVolatileType(QT[Index]);
+    }
+  }
+
+  if (Ty.IsConst != 0) {
+    for (unsigned Index = 0; Index < QT.size(); Index++) {
+      QT[Index] = Context.getConstType(QT[Index]);
+    }
+  }
+
+  // Transform the type to a pointer as the last step, if necessary.
+  // Builtin functions only have pointers on [const|volatile], no
+  // [const|volatile] pointers, so this is ok to do it as a last step.
+  if (Ty.IsPointer != 0) {
+    for (unsigned Index = 0; Index < QT.size(); Index++) {
+      QT[Index] = Context.getAddrSpaceQualType(QT[Index], Ty.AS);
+      QT[Index] = Context.getPointerType(QT[Index]);
     }
   }
 )";

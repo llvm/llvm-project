@@ -1576,7 +1576,8 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
                            Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
+void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
+                                     bool CheckForDelayedContext) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
   assert(Callee && "Callee may not be null.");
@@ -1584,9 +1585,13 @@ void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
 
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
-  if (!isOpenMPDeviceDelayedContext(*this) ||
+  if ((CheckForDelayedContext && !isOpenMPDeviceDelayedContext(*this)) ||
+      (!Caller && !CheckForDelayedContext) ||
       (Caller && isKnownEmitted(*this, Caller)))
-    markKnownEmitted(*this, Caller, Callee, Loc, isKnownEmitted);
+    markKnownEmitted(*this, Caller, Callee, Loc,
+                     [CheckForDelayedContext](Sema &S, FunctionDecl *FD) {
+                       return CheckForDelayedContext && isKnownEmitted(S, FD);
+                     });
   else if (Caller)
     DeviceCallGraph[Caller].insert({Callee, Loc});
 }
@@ -15365,7 +15370,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
       // directive, all variables that are captured by the lambda
       // expression must also appear in a to clause.
       SemaRef.Diag(VD->getLocation(),
-                   diag::omp_lambda_capture_in_declare_target_not_to);
+                   diag::err_omp_lambda_capture_in_declare_target_not_to);
       SemaRef.Diag(SL, diag::note_var_explicitly_captured_here)
           << VD << 0 << SR;
       return;
@@ -15406,15 +15411,17 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   }
   if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
     D = FTD->getTemplatedDecl();
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD);
-    if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
-      assert(IdLoc.isValid() && "Source location is expected");
+    if (IdLoc.isValid() && Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
       Diag(IdLoc, diag::err_omp_function_in_link_clause);
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }
+    // Mark the function as must be emitted for the device.
+    if (LangOpts.OpenMPIsDevice && Res.hasValue() && IdLoc.isValid())
+      checkOpenMPDeviceFunction(IdLoc, FD, /*CheckForDelayedContext=*/false);
   }
   if (auto *VD = dyn_cast<ValueDecl>(D)) {
     // Problem if any with var declared with incomplete type will be reported

@@ -2227,7 +2227,9 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
 }
 
 BugReporter::~BugReporter() {
-  FlushReports();
+  // Make sure reports are flushed.
+  assert(StrBugTypes.empty() &&
+         "Destroying BugReporter before diagnostics are emitted!");
 
   // Free the bug reports we are tracking.
   for (const auto I : EQClassesVector)
@@ -2235,9 +2237,6 @@ BugReporter::~BugReporter() {
 }
 
 void BugReporter::FlushReports() {
-  if (BugTypes.isEmpty())
-    return;
-
   // We need to flush reports in deterministic order to ensure the order
   // of the reports is consistent between runs.
   for (const auto EQ : EQClassesVector)
@@ -2248,9 +2247,6 @@ void BugReporter::FlushReports() {
   // FIXME: There are leaks from checkers that assume that the BugTypes they
   // create will be destroyed by the BugReporter.
   llvm::DeleteContainerSeconds(StrBugTypes);
-
-  // Remove all references to the BugType objects.
-  BugTypes = F.getEmptySet();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2668,10 +2664,6 @@ PathSensitiveBugReporter::generatePathDiagnostics(
   return Out;
 }
 
-void BugReporter::Register(const BugType *BT) {
-  BugTypes = F.add(BugTypes, BT);
-}
-
 void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   if (const ExplodedNode *E = R->getErrorNode()) {
     // An error node must either be a sink or have a tag, otherwise
@@ -2702,8 +2694,6 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  const BugType& BT = R->getBugType();
-  Register(&BT);
   void *InsertPos;
   BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
 
