@@ -28,5 +28,7 @@ test:
 # Verify that we don't overwrite any of the extended opcode bits on a DQ form
 # instruction.
 # CHECK-LABEL: test
-# CHECK:         lxv 3, -32768(3)
-# CHECK:         stxv 3, -32768(3)
+# CHECK:         addis 3, 2, 1
+# CHECK-NEXT:    lxv 3, -32752(3)
+# CHECK-NEXT:    addis 3, 2, 1
+# CHECK-NEXT:    stxv 3, -32752(3)

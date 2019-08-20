@@ -1,21 +1,23 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-toc-relax-shared.s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
+# RUN: ld.lld -shared -soname=t.so %t.o -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-toc-relax.s -o %t2.o
 # RUN: llvm-readobj -r %t1.o | FileCheck --check-prefixes=RELOCS-LE,RELOCS %s
 # RUN: ld.lld %t1.o %t2.o %t.so -o %t
+# RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=COMMON,EXE %s
 
 # RUN: ld.lld -shared %t1.o %t2.o %t.so -o %t2.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t2.so | FileCheck --check-prefixes=COMMON,SHARED %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-toc-relax-shared.s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
+# RUN: ld.lld -shared -soname=t.so %t.o -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-toc-relax.s -o %t2.o
 # RUN: llvm-readobj -r %t1.o | FileCheck --check-prefixes=RELOCS-BE,RELOCS %s
 # RUN: ld.lld %t1.o %t2.o %t.so -o %t
+# RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=COMMON,EXE %s
 
 # RUN: ld.lld -shared %t1.o %t2.o %t.so -o %t2.so
@@ -50,22 +52,22 @@
 # RELOCS-NEXT:      0x18 R_PPC64_ADDR64 default 0x0
 # RELOCS-NEXT:    }
 
-# NM-DAG: 0000000010030000 D default
-# NM-DAG: 0000000010030000 d hidden
-# NM-DAG: 0000000010040000 d hidden2
+# NM-DAG: 00000000100303a0 D default
+# NM-DAG: 00000000100303a0 d hidden
+# NM-DAG: 00000000100403a0 d hidden2
 
 # 'hidden' is non-preemptable. It is relaxed.
-# address(hidden) - (.got+0x8000) = 0x10030000 - (0x100200c0+0x8000) = 32576
-# COMMON: nop
-# COMMON: addi 3, 2, 32576
+# address(hidden) - (.got+0x8000) = 0x100303a0 - (0x10020380+0x8000) = (1<<16) - 32736
+# COMMON: addis 3, 2, 1
+# COMMON: addi 3, 3, -32736
 # COMMON: lwa 3, 0(3)
   addis 3, 2, .Lhidden@toc@ha
   ld    3, .Lhidden@toc@l(3)
   lwa   3, 0(3)
 
-# address(hidden2) - (.got+0x8000) = 0x10040000 - (0x100200c0+0x8000) = (1<<16)+32576
-# COMMON: addis 3, 2, 1
-# COMMON: addi 3, 3, 32576
+# address(hidden2) - (.got+0x8000) = 0x100403a0 - (0x10020380+0x8000) = (2<<16) - 32736
+# COMMON: addis 3, 2, 2
+# COMMON: addi 3, 3, -32736
 # COMMON: lwa 3, 0(3)
   addis 3, 2, .Lhidden2@toc@ha
   ld    3, .Lhidden2@toc@l(3)
@@ -82,9 +84,9 @@
   lwa   4, 0(4)
 
 # 'default' has default visibility. It is non-preemptable when producing an executable.
-# address(default) - (.got+0x8000) = 0x10030000 - (0x100200c0+0x8000) = 32576
-# EXE: nop
-# EXE: addi 5, 2, 32576
+# address(default) - (.got+0x8000) = 0x100303a0 - (0x10020380+0x8000) = (1<<16) - 32736
+# EXE: addis 5, 2, 1
+# EXE: addi 5, 5, -32736
 # EXE: lwa 5, 0(5)
 
 # SHARED: nop

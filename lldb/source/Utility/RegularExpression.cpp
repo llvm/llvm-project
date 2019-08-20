@@ -12,22 +12,19 @@
 
 using namespace lldb_private;
 
-RegularExpression::RegularExpression(llvm::StringRef str) { Compile(str); }
+RegularExpression::RegularExpression(llvm::StringRef str)
+    : m_regex_text(str),
+      // m_regex does not reference str anymore after it is constructed.
+      m_regex(llvm::Regex(str)) {}
 
 RegularExpression::RegularExpression(const RegularExpression &rhs)
-    : RegularExpression() {
-  Compile(rhs.GetText());
-}
-
-bool RegularExpression::Compile(llvm::StringRef str) {
-  m_regex_text = str;
-  m_regex = llvm::Regex(str);
-  return IsValid();
-}
+    : RegularExpression(rhs.GetText()) {}
 
 bool RegularExpression::Execute(
     llvm::StringRef str,
     llvm::SmallVectorImpl<llvm::StringRef> *matches) const {
+  if (!IsValid())
+    return false;
   return m_regex.match(str, matches);
 }
 
