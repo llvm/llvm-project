@@ -16,7 +16,7 @@
 template<class T>
 struct correct_size_int
 {
-    typedef typename std::conditional<sizeof(T) <= sizeof(int), int, T>::type type;
+    typedef typename std::conditional<sizeof(T) < sizeof(int), int, T>::type type;
 };
 
 template <class Source, class Result>
@@ -39,6 +39,9 @@ void test_big()
     assert(std::abs(negative_big_value) == big_value); // make sure it doesnt get casted to a smaller type
 }
 
+// The following is helpful to keep in mind:
+// 1byte == char <= short <= int <= long <= long long
+
 int main(int, char**)
 {
     // On some systems char is unsigned.
@@ -47,14 +50,18 @@ int main(int, char**)
         std::is_signed<char>::value, char, signed char
     >::type SignedChar;
 
-    test_abs<short int, typename correct_size_int<short int>::type>();
-    test_abs<SignedChar, typename correct_size_int<SignedChar>::type>();
-    test_abs<signed char, typename correct_size_int<signed char>::type>();
+    // All types less than or equal to and not greater than int are promoted to int.
+    test_abs<short int, int>();
+    test_abs<SignedChar, int>();
+    test_abs<signed char, int>();
 
-    test_abs<int, typename correct_size_int<int>::type>();
-    test_abs<long int, typename correct_size_int<long int>::type>();
-    test_abs<long long int, typename correct_size_int<long long int>::type>();
+    // These three calls have specific overloads:
+    test_abs<int, int>();
+    test_abs<long int, long int>();
+    test_abs<long long int, long long int>();
 
+    // Here there is no guarantee that int is larger than int8_t so we
+    // use a helper type trait to conditional test against int.
     test_abs<std::int8_t, typename correct_size_int<std::int8_t>::type>();
     test_abs<std::int16_t, typename correct_size_int<std::int16_t>::type>();
     test_abs<std::int32_t, typename correct_size_int<std::int32_t>::type>();
