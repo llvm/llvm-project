@@ -79,19 +79,13 @@ declare i8* @baz(...) nounwind uwtable
 ; TEST 5
 
 ; Returning global pointer. Should not be noalias.
-; FIXME: Until we have "on-demand" attribute generation we do not determine the
-;        alignment for the return value here.
-;        define nonnull align 8 dereferenceable(8) i8** @getter()
-; CHECK: define nonnull dereferenceable(8) i8** @getter()
+; CHECK: define nonnull align 8 dereferenceable(8) i8** @getter()
 define i8** @getter() {
   ret i8** @G
 }
 
-; FIXME: Until we have "on-demand" attribute generation we do not determine the
-;        alignment for the return value here.
 ; Returning global pointer. Should not be noalias.
-;        define nonnull align 8 dereferenceable(8) i8** @calle1()
-; CHECK: define nonnull dereferenceable(8) i8** @calle1()
+; CHECK: define nonnull align 8 dereferenceable(8) i8** @calle1()
 define i8** @calle1(){
   %1 = call i8** @getter()
   ret i8** %1

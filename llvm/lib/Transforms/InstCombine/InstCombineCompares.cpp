@@ -4026,74 +4026,78 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
   return nullptr;
 }
 
-/// Handle icmp (cast x to y), (cast/cst). We only handle extending casts so
-/// far.
-Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
-  const CastInst *LHSCI = cast<CastInst>(ICmp.getOperand(0));
-  Value *LHSCIOp        = LHSCI->getOperand(0);
-  Type *SrcTy     = LHSCIOp->getType();
-  Type *DestTy    = LHSCI->getType();
+/// Handle icmp (cast x), (cast or constant).
+Instruction *InstCombiner::foldICmpWithCastOp(ICmpInst &ICmp) {
+  auto *CastOp0 = dyn_cast<CastInst>(ICmp.getOperand(0));
+  if (!CastOp0)
+    return nullptr;
+  if (!isa<Constant>(ICmp.getOperand(1)) && !isa<CastInst>(ICmp.getOperand(1)))
+    return nullptr;
+
+  Value *Op0Src = CastOp0->getOperand(0);
+  Type *SrcTy = CastOp0->getSrcTy();
+  Type *DestTy = CastOp0->getDestTy();
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
-  const auto& CompatibleSizes = [&](Type* SrcTy, Type* DestTy) -> bool {
+  auto CompatibleSizes = [&](Type *SrcTy, Type *DestTy) {
     if (isa<VectorType>(SrcTy)) {
       SrcTy = cast<VectorType>(SrcTy)->getElementType();
       DestTy = cast<VectorType>(DestTy)->getElementType();
     }
     return DL.getPointerTypeSizeInBits(SrcTy) == DestTy->getIntegerBitWidth();
   };
-  if (LHSCI->getOpcode() == Instruction::PtrToInt &&
+  if (CastOp0->getOpcode() == Instruction::PtrToInt &&
       CompatibleSizes(SrcTy, DestTy)) {
-    Value *RHSOp = nullptr;
-    if (auto *RHSC = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
-      Value *RHSCIOp = RHSC->getOperand(0);
-      if (RHSCIOp->getType()->getPointerAddressSpace() ==
-          LHSCIOp->getType()->getPointerAddressSpace()) {
-        RHSOp = RHSC->getOperand(0);
+    Value *NewOp1 = nullptr;
+    if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
+      Value *PtrSrc = PtrToIntOp1->getOperand(0);
+      if (PtrSrc->getType()->getPointerAddressSpace() ==
+          Op0Src->getType()->getPointerAddressSpace()) {
+        NewOp1 = PtrToIntOp1->getOperand(0);
         // If the pointer types don't match, insert a bitcast.
-        if (LHSCIOp->getType() != RHSOp->getType())
-          RHSOp = Builder.CreateBitCast(RHSOp, LHSCIOp->getType());
+        if (Op0Src->getType() != NewOp1->getType())
+          NewOp1 = Builder.CreateBitCast(NewOp1, Op0Src->getType());
       }
     } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
-      RHSOp = ConstantExpr::getIntToPtr(RHSC, SrcTy);
+      NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
 
-    if (RHSOp)
-      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSOp);
+    if (NewOp1)
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
   // The code below only handles extension cast instructions, so far.
   // Enforce this.
-  if (LHSCI->getOpcode() != Instruction::ZExt &&
-      LHSCI->getOpcode() != Instruction::SExt)
+  if (CastOp0->getOpcode() != Instruction::ZExt &&
+      CastOp0->getOpcode() != Instruction::SExt)
     return nullptr;
 
-  bool isSignedExt = LHSCI->getOpcode() == Instruction::SExt;
+  bool isSignedExt = CastOp0->getOpcode() == Instruction::SExt;
   bool isSignedCmp = ICmp.isSigned();
 
-  if (auto *CI = dyn_cast<CastInst>(ICmp.getOperand(1))) {
+  if (auto *CastOp1 = dyn_cast<CastInst>(ICmp.getOperand(1))) {
     // Not an extension from the same type?
-    Value *RHSCIOp = CI->getOperand(0);
-    if (RHSCIOp->getType() != LHSCIOp->getType())
+    Value *Op1Src = CastOp1->getOperand(0);
+    if (Op1Src->getType() != Op0Src->getType())
       return nullptr;
 
     // If the signedness of the two casts doesn't agree (i.e. one is a sext
     // and the other is a zext), then we can't handle this.
-    if (CI->getOpcode() != LHSCI->getOpcode())
+    if (CastOp1->getOpcode() != CastOp0->getOpcode())
       return nullptr;
 
     // Deal with equality cases early.
     if (ICmp.isEquality())
-      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSCIOp);
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, Op1Src);
 
     // A signed comparison of sign extended values simplifies into a
     // signed comparison.
     if (isSignedCmp && isSignedExt)
-      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSCIOp);
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, Op1Src);
 
     // The other three cases all fold into an unsigned comparison.
-    return new ICmpInst(ICmp.getUnsignedPredicate(), LHSCIOp, RHSCIOp);
+    return new ICmpInst(ICmp.getUnsignedPredicate(), Op0Src, Op1Src);
   }
 
   // If we aren't dealing with a constant on the RHS, exit early.
@@ -4104,47 +4108,41 @@ Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
   // Compute the constant that would happen if we truncated to SrcTy then
   // re-extended to DestTy.
   Constant *Res1 = ConstantExpr::getTrunc(C, SrcTy);
-  Constant *Res2 = ConstantExpr::getCast(LHSCI->getOpcode(), Res1, DestTy);
+  Constant *Res2 = ConstantExpr::getCast(CastOp0->getOpcode(), Res1, DestTy);
 
   // If the re-extended constant didn't change...
   if (Res2 == C) {
     // Deal with equality cases early.
     if (ICmp.isEquality())
-      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, Res1);
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, Res1);
 
     // A signed comparison of sign extended values simplifies into a
     // signed comparison.
     if (isSignedExt && isSignedCmp)
-      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, Res1);
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, Res1);
 
     // The other three cases all fold into an unsigned comparison.
-    return new ICmpInst(ICmp.getUnsignedPredicate(), LHSCIOp, Res1);
+    return new ICmpInst(ICmp.getUnsignedPredicate(), Op0Src, Res1);
   }
 
   // The re-extended constant changed, partly changed (in the case of a vector),
   // or could not be determined to be equal (in the case of a constant
   // expression), so the constant cannot be represented in the shorter type.
-  // Consequently, we cannot emit a simple comparison.
   // All the cases that fold to true or false will have already been handled
   // by SimplifyICmpInst, so only deal with the tricky case.
-
   if (isSignedCmp || !isSignedExt || !isa<ConstantInt>(C))
     return nullptr;
 
-  // Evaluate the comparison for LT (we invert for GT below). LE and GE cases
-  // should have been folded away previously and not enter in here.
-
-  // We're performing an unsigned comp with a sign extended value.
-  // This is true if the input is >= 0. [aka >s -1]
-  Constant *NegOne = Constant::getAllOnesValue(SrcTy);
-  Value *Result = Builder.CreateICmpSGT(LHSCIOp, NegOne, ICmp.getName());
-
-  // Finally, return the value computed.
+  // Is source op positive?
+  // icmp ult (sext X), C --> icmp sgt X, -1
   if (ICmp.getPredicate() == ICmpInst::ICMP_ULT)
-    return replaceInstUsesWith(ICmp, Result);
+    return new ICmpInst(CmpInst::ICMP_SGT, Op0Src,
+                        Constant::getAllOnesValue(SrcTy));
 
+  // Is source op negative?
+  // icmp ugt (sext X), C --> icmp slt X, 0
   assert(ICmp.getPredicate() == ICmpInst::ICMP_UGT && "ICmp should be folded!");
-  return BinaryOperator::CreateNot(Result);
+  return new ICmpInst(CmpInst::ICMP_SLT, Op0Src, Constant::getNullValue(SrcTy));
 }
 
 static bool isNeutralValue(Instruction::BinaryOps BinaryOp, Value *RHS) {
@@ -5212,17 +5210,8 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBitCast(I, Builder))
     return Res;
 
-  if (isa<CastInst>(Op0)) {
-    // Handle the special case of: icmp (cast bool to X), <cst>
-    // This comes up when you have code like
-    //   int X = A < B;
-    //   if (X) ...
-    // For generality, we handle any zero-extension of any operand comparison
-    // with a constant or another cast from the same type.
-    if (isa<Constant>(Op1) || isa<CastInst>(Op1))
-      if (Instruction *R = foldICmpWithCastAndCast(I))
-        return R;
-  }
+  if (Instruction *R = foldICmpWithCastOp(I))
+    return R;
 
   if (Instruction *Res = foldICmpBinOp(I))
     return Res;

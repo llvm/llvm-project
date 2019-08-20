@@ -90,6 +90,9 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- clang-cl now defaults to ``/Zc:twoPhase`` if targeting MSVC2017 update 3 or
+  later (``_MSC_VER`` >= 1911). This matches MSVC's behavior. Explicitly pass
+  ``/Zc:twoPhase-`` to restore the old behavior.
 - ...
 
 C Language Changes in Clang

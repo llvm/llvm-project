@@ -1457,6 +1457,16 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
     }
   }
 
+  // max(max(A, B), min(A, B)) --> max(A, B)
+  // min(min(A, B), max(A, B)) --> min(A, B)
+  // TODO: This could be done in instsimplify.
+  if (SPF1 == SPF2 &&
+      ((SPF1 == SPF_UMIN && match(C, m_c_UMax(m_Specific(A), m_Specific(B)))) ||
+       (SPF1 == SPF_SMIN && match(C, m_c_SMax(m_Specific(A), m_Specific(B)))) ||
+       (SPF1 == SPF_UMAX && match(C, m_c_UMin(m_Specific(A), m_Specific(B)))) ||
+       (SPF1 == SPF_SMAX && match(C, m_c_SMin(m_Specific(A), m_Specific(B))))))
+    return replaceInstUsesWith(Outer, Inner);
+
   // ABS(ABS(X)) -> ABS(X)
   // NABS(NABS(X)) -> NABS(X)
   // TODO: This could be done in instsimplify.

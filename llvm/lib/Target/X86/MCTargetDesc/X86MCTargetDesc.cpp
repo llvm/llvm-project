@@ -70,6 +70,10 @@ unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
   return DWARFFlavour::X86_32_Generic;
 }
 
+bool X86_MC::hasLockPrefix(const MCInst &MI) {
+  return MI.getFlags() & X86::IP_HAS_LOCK;
+}
+
 void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
   // FIXME: TableGen these.
   for (unsigned Reg = X86::NoRegister + 1; Reg < X86::NUM_TARGET_REGS; ++Reg) {

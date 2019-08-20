@@ -2213,12 +2213,15 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
 }
 
 static void printArchiveChild(StringRef Filename, const Archive::Child &C,
-                              bool verbose, bool print_offset,
+                              size_t ChildIndex, bool verbose,
+                              bool print_offset,
                               StringRef ArchitectureName = StringRef()) {
   if (print_offset)
     outs() << C.getChildOffset() << "\t";
   sys::fs::perms Mode =
-      unwrapOrError(C.getAccessMode(), Filename, C, ArchitectureName);
+      unwrapOrError(C.getAccessMode(), Filename,
+                    getFileNameForError(C, ChildIndex),
+                    ArchitectureName);
   if (verbose) {
     // FIXME: this first dash, "-", is for (Mode & S_IFMT) == S_IFREG.
     // But there is nothing in sys::fs::perms for S_IFMT or S_IFREG.
@@ -2238,9 +2241,12 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
 
   outs() << format(
       "%3d/%-3d %5" PRId64 " ",
-      unwrapOrError(C.getUID(), Filename, C, ArchitectureName),
-      unwrapOrError(C.getGID(), Filename, C, ArchitectureName),
-      unwrapOrError(C.getRawSize(), Filename, C, ArchitectureName));
+      unwrapOrError(C.getUID(), Filename, getFileNameForError(C, ChildIndex),
+                    ArchitectureName),
+      unwrapOrError(C.getGID(), Filename, getFileNameForError(C, ChildIndex),
+                    ArchitectureName),
+      unwrapOrError(C.getRawSize(), Filename,
+                    getFileNameForError(C, ChildIndex), ArchitectureName));
 
   StringRef RawLastModified = C.getRawLastModified();
   if (verbose) {
@@ -2263,14 +2269,18 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
     Expected<StringRef> NameOrErr = C.getName();
     if (!NameOrErr) {
       consumeError(NameOrErr.takeError());
-      outs() << unwrapOrError(C.getRawName(), Filename, C, ArchitectureName)
+      outs() << unwrapOrError(C.getRawName(), Filename,
+                              getFileNameForError(C, ChildIndex),
+                              ArchitectureName)
              << "\n";
     } else {
       StringRef Name = NameOrErr.get();
       outs() << Name << "\n";
     }
   } else {
-    outs() << unwrapOrError(C.getRawName(), Filename, C, ArchitectureName)
+    outs() << unwrapOrError(C.getRawName(), Filename,
+                            getFileNameForError(C, ChildIndex),
+                            ArchitectureName)
            << "\n";
   }
 }
@@ -2279,8 +2289,10 @@ static void printArchiveHeaders(StringRef Filename, Archive *A, bool verbose,
                                 bool print_offset,
                                 StringRef ArchitectureName = StringRef()) {
   Error Err = Error::success();
+  size_t I = 0;
   for (const auto &C : A->children(Err, false))
-    printArchiveChild(Filename, C, verbose, print_offset, ArchitectureName);
+    printArchiveChild(Filename, C, I++, verbose, print_offset,
+                      ArchitectureName);
 
   if (Err)
     report_error(std::move(Err), StringRef(), Filename, ArchitectureName);
@@ -2328,11 +2340,13 @@ void parseInputMachO(StringRef Filename) {
       printArchiveHeaders(Filename, A, !NonVerbose, ArchiveMemberOffsets);
 
     Error Err = Error::success();
+    unsigned I = -1;
     for (auto &C : A->children(Err)) {
+      ++I;
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-          report_error(std::move(E), Filename, C);
+          report_error(std::move(E), Filename, getFileNameForError(C, I));
         continue;
       }
       if (MachOObjectFile *O = dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
@@ -2407,11 +2421,15 @@ void parseInputMachO(MachOUniversalBinary *UB) {
               printArchiveHeaders(Filename, A.get(), !NonVerbose,
                                   ArchiveMemberOffsets, ArchitectureName);
             Error Err = Error::success();
+            unsigned I = -1;
             for (auto &C : A->children(Err)) {
+              ++I;
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
-                if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                  report_error(std::move(E), Filename, C, ArchitectureName);
+                if (Error E =
+                        isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                  report_error(std::move(E), Filename, getFileNameForError(C, I),
+                               ArchitectureName);
                 continue;
               }
               if (MachOObjectFile *O =
@@ -2463,12 +2481,14 @@ void parseInputMachO(MachOUniversalBinary *UB) {
             printArchiveHeaders(Filename, A.get(), !NonVerbose,
                                 ArchiveMemberOffsets);
           Error Err = Error::success();
+          unsigned I = -1;
           for (auto &C : A->children(Err)) {
+            ++I;
             Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
             if (!ChildOrErr) {
               if (Error E =
                       isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                report_error(std::move(E), Filename, C);
+                report_error(std::move(E), Filename, getFileNameForError(C, I));
               continue;
             }
             if (MachOObjectFile *O =
@@ -2514,11 +2534,14 @@ void parseInputMachO(MachOUniversalBinary *UB) {
         printArchiveHeaders(Filename, A.get(), !NonVerbose,
                             ArchiveMemberOffsets, ArchitectureName);
       Error Err = Error::success();
+      unsigned I = -1;
       for (auto &C : A->children(Err)) {
+        ++I;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-            report_error(std::move(E), Filename, C, ArchitectureName);
+            report_error(std::move(E), Filename, getFileNameForError(C, I),
+                         ArchitectureName);
           continue;
         }
         if (MachOObjectFile *O =

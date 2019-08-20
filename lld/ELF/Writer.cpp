@@ -2202,21 +2202,66 @@ void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
   part.phdrs.push_back(entry);
 }
 
-// The first section of each PT_LOAD, the first section in PT_GNU_RELRO and the
-// first section after PT_GNU_RELRO have to be page aligned so that the dynamic
-// linker can set the permissions.
+// Place the first section of each PT_LOAD to a different page (of maxPageSize).
+// This is achieved by assigning an alignment expression to addrExpr of each
+// such section.
 template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
-  auto pageAlign = [](OutputSection *cmd) {
-    if (cmd && !cmd->addrExpr)
-      cmd->addrExpr = [=] {
-        return alignTo(script->getDot(), config->maxPageSize);
-      };
+  const PhdrEntry *prev;
+  auto pageAlign = [&](const PhdrEntry *p) {
+    OutputSection *cmd = p->firstSec;
+    if (cmd && !cmd->addrExpr) {
+      // Prefer advancing to align(dot, maxPageSize) + dot%maxPageSize to avoid
+      // padding in the file contents.
+      //
+      // When -z separate-code is used we must not have any overlap in pages
+      // between an executable segment and a non-executable segment. We align to
+      // the next maximum page size boundary on transitions between executable
+      // and non-executable segments.
+      //
+      // TODO Enable this technique on all targets.
+      bool enable = config->emachine == EM_386 ||
+                    config->emachine == EM_AARCH64 ||
+                    config->emachine == EM_PPC || config->emachine == EM_PPC64;
+
+      if (!enable || (config->zSeparateCode && prev &&
+                      (prev->p_flags & PF_X) != (p->p_flags & PF_X)))
+        cmd->addrExpr = [] {
+          return alignTo(script->getDot(), config->maxPageSize);
+        };
+      // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
+      // it must be the RW. Align to p_align(PT_TLS) to make sure
+      // p_vaddr(PT_LOAD)%p_align(PT_LOAD) = 0. Otherwise, if
+      // sh_addralign(.tdata) < sh_addralign(.tbss), we will set p_align(PT_TLS)
+      // to sh_addralign(.tbss), while p_vaddr(PT_TLS)=p_vaddr(PT_LOAD) may not
+      // be congruent to 0 modulo p_align(PT_TLS).
+      //
+      // Technically this is not required, but as of 2019, some dynamic loaders
+      // don't handle p_vaddr%p_align != 0 correctly, e.g. glibc (i386 and
+      // x86-64) doesn't make runtime address congruent to p_vaddr modulo
+      // p_align for dynamic TLS blocks (PR/24606), FreeBSD rtld has the same
+      // bug, musl (TLS Variant 1 architectures) before 1.1.23 handled TLS
+      // blocks correctly. We need to keep the workaround for a while.
+      else if (Out::tlsPhdr && Out::tlsPhdr->firstSec == p->firstSec)
+        cmd->addrExpr = [] {
+          return alignTo(script->getDot(), config->maxPageSize) +
+                 alignTo(script->getDot() % config->maxPageSize,
+                         Out::tlsPhdr->p_align);
+        };
+      else
+        cmd->addrExpr = [] {
+          return alignTo(script->getDot(), config->maxPageSize) +
+                 script->getDot() % config->maxPageSize;
+        };
+    }
   };
 
   for (Partition &part : partitions) {
+    prev = nullptr;
     for (const PhdrEntry *p : part.phdrs)
-      if (p->p_type == PT_LOAD && p->firstSec)
-        pageAlign(p->firstSec);
+      if (p->p_type == PT_LOAD && p->firstSec) {
+        pageAlign(p);
+        prev = p;
+      }
   }
 }
 
@@ -2342,10 +2387,11 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
       p->p_align = std::max<uint64_t>(p->p_align, config->maxPageSize);
     } else if (p->p_type == PT_GNU_RELRO) {
       p->p_align = 1;
-      // The glibc dynamic loader rounds the size down, so we need to round up
+      // musl/glibc ld.so rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      p->p_memsz = alignTo(p->p_memsz, config->commonPageSize);
+      p->p_memsz = alignTo(p->p_offset + p->p_memsz, config->commonPageSize) -
+                   p->p_offset;
     }
   }
 }

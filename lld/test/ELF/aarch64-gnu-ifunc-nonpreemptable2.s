@@ -8,18 +8,18 @@
 ## ifunc is a non-preemptable STT_GNU_IFUNC. Check we create a canonical PLT
 ## and redirect .rodata and .data references to it.
 
-# SEC: .text    PROGBITS 0000000000210000
-# SEC: .got.plt PROGBITS 0000000000220008
-# SEC: 0000000000210010 0 FUNC GLOBAL DEFAULT 4 ifunc
+# SEC: .text    PROGBITS 0000000000210178
+# SEC: .got.plt PROGBITS 0000000000220198
+# SEC: 0000000000210180 0 FUNC GLOBAL DEFAULT 4 ifunc
 
 ## .rodata[0] and .data[0] store the address of the canonical PLT.
 # HEX:      section '.rodata':
-# HEX-NEXT: 0x00200170 10002100 00000000
+# HEX-NEXT: 0x00200170 80012100 00000000
 # HEX:      section '.data':
-# HEX-NEXT: 0x00220000 10002100 00000000
+# HEX-NEXT: 0x00220190 80012100 00000000
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x220008 R_AARCH64_IRELATIVE - 0x210000
+# RELOC-NEXT:   0x220198 R_AARCH64_IRELATIVE - 0x210178
 # RELOC-NEXT: }
 
 .globl ifunc

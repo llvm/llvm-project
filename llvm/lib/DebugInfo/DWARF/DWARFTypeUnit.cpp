@@ -38,7 +38,7 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
      << " addr_size = " << format("0x%02x", getAddressByteSize())
      << " name = '" << Name << "'"
      << " type_signature = " << format("0x%016" PRIx64, getTypeHash())
-     << " type_offset = " << format("0x%04x", getTypeOffset())
+     << " type_offset = " << format("0x%04" PRIx64, getTypeOffset())
      << " (next unit at " << format("0x%08" PRIx64, getNextUnitOffset())
      << ")\n";
 

@@ -442,21 +442,12 @@ bool ParseCoordinate(llvm::StringRef coord_s, RSCoordinate &coord) {
   // elements fails the contents of &coord are undefined and `false` is
   // returned, `true` otherwise
 
-  RegularExpression regex;
   llvm::SmallVector<llvm::StringRef, 4> matches;
 
-  bool matched = false;
-  if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+),([0-9]+)$")) &&
-      regex.Execute(coord_s, &matches))
-    matched = true;
-  else if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+)$")) &&
-           regex.Execute(coord_s, &matches))
-    matched = true;
-  else if (regex.Compile(llvm::StringRef("^([0-9]+)$")) &&
-           regex.Execute(coord_s, &matches))
-    matched = true;
-
-  if (!matched)
+  if (!RegularExpression("^([0-9]+),([0-9]+),([0-9]+)$")
+           .Execute(coord_s, &matches) &&
+      !RegularExpression("^([0-9]+),([0-9]+)$").Execute(coord_s, &matches) &&
+      !RegularExpression("^([0-9]+)$").Execute(coord_s, &matches))
     return false;
 
   auto get_index = [&](size_t idx, uint32_t &i) -> bool {

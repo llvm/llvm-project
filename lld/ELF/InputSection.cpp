@@ -608,27 +608,39 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   if (&s == ElfSym::tlsModuleBase)
     return 0;
 
+  // There are 2 TLS layouts. Among targets we support, x86 uses TLS Variant 2
+  // while most others use Variant 1. At run time TP will be aligned to p_align.
+
+  // Variant 1. TP will be followed by an optional gap (which is the size of 2
+  // pointers on ARM/AArch64, 0 on other targets), followed by alignment
+  // padding, then the static TLS blocks. The alignment padding is added so that
+  // (TP + gap + padding) is congruent to p_vaddr modulo p_align.
+  //
+  // Variant 2. Static TLS blocks, followed by alignment padding are placed
+  // before TP. The alignment padding is added so that (TP - padding -
+  // p_memsz) is congruent to p_vaddr modulo p_align.
+  elf::PhdrEntry *tls = Out::tlsPhdr;
   switch (config->emachine) {
+    // Variant 1.
   case EM_ARM:
   case EM_AARCH64:
-    // Variant 1. The thread pointer points to a TCB with a fixed 2-word size,
-    // followed by a variable amount of alignment padding, followed by the TLS
-    // segment.
-    return s.getVA(0) + alignTo(config->wordsize * 2, Out::tlsPhdr->p_align);
-  case EM_386:
-  case EM_X86_64:
-    // Variant 2. The TLS segment is located just before the thread pointer.
-    return s.getVA(0) - alignTo(Out::tlsPhdr->p_memsz, Out::tlsPhdr->p_align);
+    return s.getVA(0) + config->wordsize * 2 +
+           ((tls->p_vaddr - config->wordsize * 2) & (tls->p_align - 1));
   case EM_MIPS:
   case EM_PPC:
   case EM_PPC64:
-    // The thread pointer points to a fixed offset from the start of the
-    // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
-    // offset to reach 0x1000 of TCB/thread-library data and 0xf000 of the
-    // program's TLS segment.
-    return s.getVA(0) - 0x7000;
+    // Adjusted Variant 1. TP is placed with a displacement of 0x7000, which is
+    // to allow a signed 16-bit offset to reach 0x1000 of TCB/thread-library
+    // data and 0xf000 of the program's TLS segment.
+    return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_RISCV:
-    return s.getVA(0);
+    return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
+
+    // Variant 2.
+  case EM_386:
+  case EM_X86_64:
+    return s.getVA(0) - tls->p_memsz -
+           ((-tls->p_vaddr - tls->p_memsz) & (tls->p_align - 1));
   default:
     llvm_unreachable("unhandled Config->EMachine");
   }

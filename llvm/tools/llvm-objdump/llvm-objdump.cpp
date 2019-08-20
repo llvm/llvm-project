@@ -364,6 +364,17 @@ SectionFilter ToolSectionFilter(object::ObjectFile const &O) {
   return SectionFilter([](object::SectionRef S) { return shouldKeep(S); }, O);
 }
 
+std::string getFileNameForError(const object::Archive::Child &C,
+                                unsigned Index) {
+  Expected<StringRef> NameOrErr = C.getName();
+  if (NameOrErr)
+    return NameOrErr.get();
+  // If we have an error getting the name then we print the index of the archive
+  // member. Since we are already in an error state, we just ignore this error.
+  consumeError(NameOrErr.takeError());
+  return "<file index: " + std::to_string(Index) + ">";
+}
+
 void error(std::error_code EC) {
   if (!EC)
     return;
@@ -427,20 +438,6 @@ LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
   OS.flush();
   errs() << ": " << Buf;
   exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
-                                          const object::Archive::Child &C,
-                                          StringRef ArchitectureName) {
-  Expected<StringRef> NameOrErr = C.getName();
-  // TODO: if we have a error getting the name then it would be nice to print
-  // the index of which archive member this is and or its offset in the
-  // archive instead of "???" as the name.
-  if (!NameOrErr) {
-    consumeError(NameOrErr.takeError());
-    report_error(std::move(E), ArchiveName, "???", ArchitectureName);
-  } else
-    report_error(std::move(E), ArchiveName, NameOrErr.get(), ArchitectureName);
 }
 
 static void warnOnNoMatchForSections() {
@@ -2160,11 +2157,13 @@ static void dumpObject(const COFFImportFile *I, const Archive *A,
 /// Dump each object file in \a a;
 static void dumpArchive(const Archive *A) {
   Error Err = Error::success();
+  unsigned I = -1;
   for (auto &C : A->children(Err)) {
+    ++I;
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-        report_error(std::move(E), A->getFileName(), C);
+        report_error(std::move(E), A->getFileName(), getFileNameForError(C, I));
       continue;
     }
     if (ObjectFile *O = dyn_cast<ObjectFile>(&*ChildOrErr.get()))

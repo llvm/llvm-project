@@ -131,12 +131,15 @@ bool operator!=(basic_iterator<T>, basic_iterator<T>);
 }
 
 namespace std {
-template<class T> struct remove_reference       { typedef T type; };
-template<class T> struct remove_reference<T &>  { typedef T type; };
-template<class T> struct remove_reference<T &&> { typedef T type; };
+template<typename T> struct remove_reference       { typedef T type; };
+template<typename T> struct remove_reference<T &>  { typedef T type; };
+template<typename T> struct remove_reference<T &&> { typedef T type; };
 
-template<class T>
+template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
+
+template <typename C>
+auto data(const C &c) -> decltype(c.data());
 
 template <typename T>
 struct vector {
@@ -180,6 +183,11 @@ template<typename T>
 struct stack {
   T &top();
 };
+
+struct any {};
+
+template<typename T>
+T any_cast(const any& operand);
 }
 
 void modelIterators() {
@@ -189,6 +197,22 @@ void modelIterators() {
 
 std::vector<int>::iterator modelIteratorReturn() {
   return std::vector<int>().begin(); // expected-warning {{returning address of local temporary object}}
+}
+
+const int *modelFreeFunctions() {
+  return std::data(std::vector<int>()); // expected-warning {{returning address of local temporary object}}
+}
+
+int &modelAnyCast() {
+  return std::any_cast<int&>(std::any{}); // expected-warning {{returning reference to local temporary object}}
+}
+
+int modelAnyCast2() {
+  return std::any_cast<int>(std::any{}); // ok
+}
+
+int modelAnyCast3() {
+  return std::any_cast<int&>(std::any{}); // ok
 }
 
 const char *danglingRawPtrFromLocal() {

@@ -270,7 +270,7 @@ void writeNListEntry(const SymbolEntry &SE, bool IsLittleEndian, char *&Out,
   Out += sizeof(NListType);
 }
 
-void MachOWriter::writeSymbolTable() {
+void MachOWriter::writeStringTable() {
   if (!O.SymTabCommandIndex)
     return;
   const MachO::symtab_command &SymTabCommand =
@@ -281,7 +281,7 @@ void MachOWriter::writeSymbolTable() {
   LayoutBuilder.getStringTableBuilder().write(StrTable);
 }
 
-void MachOWriter::writeStringTable() {
+void MachOWriter::writeSymbolTable() {
   if (!O.SymTabCommandIndex)
     return;
   const MachO::symtab_command &SymTabCommand =

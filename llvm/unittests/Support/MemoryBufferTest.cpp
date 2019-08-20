@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
@@ -18,6 +19,25 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+#define ASSERT_NO_ERROR(x)                                                     \
+  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  } else {                                                                     \
+  }
+
+#define ASSERT_ERROR(x)                                                        \
+  if (!x) {                                                                    \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return a failure error code.\n";                  \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  }
 
 namespace {
 
@@ -63,6 +83,37 @@ TEST_F(MemoryBufferTest, get) {
   MB2.reset();
   MB3.reset();
   EXPECT_EQ("this is some data", data);
+}
+
+TEST_F(MemoryBufferTest, getOpenFile) {
+  int FD;
+  SmallString<64> TestPath;
+  ASSERT_EQ(sys::fs::createTemporaryFile("MemoryBufferTest_getOpenFile", "temp",
+                                         FD, TestPath),
+            std::error_code());
+
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, /*shouldClose*/ true);
+  OF << "12345678";
+  OF.close();
+
+  {
+    Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
+    ASSERT_THAT_EXPECTED(File, Succeeded());
+    auto OnExit =
+        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    ErrorOr<OwningBuffer> MB = MemoryBuffer::getOpenFile(*File, TestPath, 6);
+    ASSERT_NO_ERROR(MB.getError());
+    EXPECT_EQ("123456", MB.get()->getBuffer());
+  }
+  {
+    Expected<sys::fs::file_t> File = sys::fs::openNativeFileForWrite(
+        TestPath, sys::fs::CD_OpenExisting, sys::fs::OF_None);
+    ASSERT_THAT_EXPECTED(File, Succeeded());
+    auto OnExit =
+        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    ASSERT_ERROR(MemoryBuffer::getOpenFile(*File, TestPath, 6).getError());
+  }
 }
 
 TEST_F(MemoryBufferTest, NullTerminator4K) {

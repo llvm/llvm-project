@@ -589,32 +589,30 @@ struct Attributor {
   /// the one reasoning about the "captured" state for the argument or the one
   /// reasoning on the memory access behavior of the function as a whole.
   template <typename AAType>
-  const AAType *getAAFor(const AbstractAttribute &QueryingAA,
+  const AAType &getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
 
-    // Let's try an equivalent position if available, see
-    // SubsumingPositionIterator for more information.
-    for (const IRPosition &EquivIRP : SubsumingPositionIterator(IRP)) {
-      // Lookup the abstract attribute of type AAType. If found, return it after
-      // registering a dependence of QueryingAA on the one returned attribute.
-      const auto &KindToAbstractAttributeMap =
-          AAMap.lookup(const_cast<IRPosition &>(EquivIRP));
-      if (AAType *AA = static_cast<AAType *>(
-              KindToAbstractAttributeMap.lookup(&AAType::ID))) {
-        // Do not return an attribute with an invalid state. This minimizes
-        // checks at the calls sites and allows the fallback below to kick in.
-        if (AA->getState().isValidState()) {
-          QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
-          return AA;
-        }
-      }
+    // Lookup the abstract attribute of type AAType. If found, return it after
+    // registering a dependence of QueryingAA on the one returned attribute.
+    const auto &KindToAbstractAttributeMap =
+        AAMap.lookup(const_cast<IRPosition &>(IRP));
+    if (AAType *AA = static_cast<AAType *>(
+            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
+      // Do not registr a dependence on an attribute with an invalid state.
+      if (AA->getState().isValidState())
+        QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
+      return *AA;
     }
 
-    // No matching attribute found
-    return nullptr;
+    // No matching attribute found, create one.
+    auto &AA = AAType::createForPosition(IRP, *this);
+    registerAA(AA);
+    if (AA.getState().isValidState())
+      QueryMap[&AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
+    return AA;
   }
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
@@ -890,10 +888,13 @@ struct IntegerState : public AbstractState {
   /// Inequality for IntegerState.
   bool operator!=(const IntegerState &R) const { return !(*this == R); }
 
-  /// "Clamp" this state with \p R. The result is the maximum of the known
-  /// information but the minimum of the assumed.
+  /// "Clamp" this state with \p R. The result is the minimum of the assumed
+  /// information but not less than what was known before.
+  ///
+  /// TODO: Consider replacing the operator with a call or using it only when
+  ///       we can also take the maximum of the known information, thus when
+  ///       \p R is not dependent on additional assumed state.
   IntegerState operator^=(const IntegerState &R) {
-    takeKnownMaximum(R.Known);
     takeAssumedMinimum(R.Assumed);
     return *this;
   }
@@ -1142,6 +1143,10 @@ struct AAReturnedValues
   virtual size_t getNumReturnValues() const = 0;
   virtual const SmallPtrSetImpl<CallBase *> &getUnresolvedCalls() const = 0;
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAReturnedValues &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1157,6 +1162,9 @@ struct AANoUnwind
   /// Returns true if nounwind is known.
   bool isKnownNoUnwind() const { return getKnown(); }
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoUnwind &createForPosition(const IRPosition &IRP, Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1171,6 +1179,9 @@ struct AANoSync
 
   /// Returns true if "nosync" is known.
   bool isKnownNoSync() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -1188,6 +1199,9 @@ struct AANonNull
   /// Return true if we know that underlying value is nonnull.
   bool isKnownNonNull() const { return getKnown(); }
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANonNull &createForPosition(const IRPosition &IRP, Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1203,6 +1217,9 @@ struct AANoRecurse
 
   /// Return true if "norecurse" is known.
   bool isKnownNoRecurse() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoRecurse &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -1220,6 +1237,9 @@ struct AAWillReturn
   /// Return true if "willreturn" is known.
   bool isKnownWillReturn() const { return getKnown(); }
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAWillReturn &createForPosition(const IRPosition &IRP, Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1235,6 +1255,9 @@ struct AANoAlias
 
   /// Return true if we know that underlying value is noalias.
   bool isKnownNoAlias() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoAlias &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -1252,6 +1275,9 @@ struct AANoFree
   /// Return true if "nofree" is known.
   bool isKnownNoFree() const { return getKnown(); }
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoFree &createForPosition(const IRPosition &IRP, Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1267,6 +1293,9 @@ struct AANoReturn
 
   /// Return true if the underlying object is known to never return.
   bool isKnownNoReturn() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoReturn &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -1293,7 +1322,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   /// of instructions is live.
   template <typename T> bool isLiveInstSet(T begin, T end) const {
     for (const auto &I : llvm::make_range(begin, end)) {
-      assert(I->getFunction() == getIRPosition().getAnchorScope() &&
+      assert(I->getFunction() == getIRPosition().getAssociatedFunction() &&
              "Instruction must be in the same anchor scope function.");
 
       if (!isAssumedDead(I))
@@ -1309,6 +1338,9 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   IRPosition &getIRPosition() { return *this; }
   const IRPosition &getIRPosition() const { return *this; }
   ///}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAIsDead &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -1336,6 +1368,10 @@ struct AADereferenceable
   /// Return known dereferenceable bytes.
   virtual uint32_t getKnownDereferenceableBytes() const = 0;
 
+  /// Create an abstract attribute view for the position \p IRP.
+  static AADereferenceable &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -1351,6 +1387,9 @@ struct AAAlign
 
   /// Return known alignemnt.
   unsigned getKnownAlign() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAlign &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;

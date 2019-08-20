@@ -26,31 +26,31 @@ _start:
   ld 1, .L1@toc@l(2)
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_LO_DS:
-# CHECK: 1001000c:       ld 1, -32768(2)
+# CHECK: ld 1, -32768(2)
 
 .section .R_PPC64_TOC16_LO,"ax",@progbits
   addi  1, 2, .L1@toc@l
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_LO:
-# CHECK: 10010010:       addi 1, 2, -32768
+# CHECK: addi 1, 2, -32768
 
 .section .R_PPC64_TOC16_HI,"ax",@progbits
   addis 1, 2, .L1@toc@h
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_HI:
-# CHECK: 10010014:       addis 1, 2, -1
+# CHECK: addis 1, 2, -1
 
 .section .R_PPC64_TOC16_HA,"ax",@progbits
   addis 1, 2, .L1@toc@ha
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_HA:
-# CHECK: 10010018:       addis 1, 2, 0
+# CHECK: addis 1, 2, 0
 
 .section .R_PPC64_ADDR16_LO,"ax",@progbits
   li 1, .Lfoo@l
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_ADDR16_LO:
-# CHECK: li 1, 0
+# CHECK: li 1, 464
 
 .section .R_PPC64_ADDR16_HI,"ax",@progbits
   li 1, .Lfoo@h
@@ -91,11 +91,11 @@ _start:
 .section .R_PPC64_TOC,"a",@progbits
   .quad .TOC.@tocbase
 
-# SEC: .got PROGBITS 0000000010020000
+# SEC: .got PROGBITS 0000000010020208
 
-## tocbase = .got+0x8000 = 0x10028000
+## tocbase = .got+0x8000 = 0x10028208
 # DATALE-LABEL: section '.R_PPC64_TOC':
-# DATALE: 00800210 00000000
+# DATALE: 08820210 00000000
 
 # DATABE-LABEL: section '.R_PPC64_TOC':
-# DATABE: 00000000 10028000
+# DATABE: 00000000 10028208

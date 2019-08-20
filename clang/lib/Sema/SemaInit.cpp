@@ -6616,6 +6616,30 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   return false;
 }
 
+static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
+  if (!FD->getIdentifier() || FD->getNumParams() != 1)
+    return false;
+  const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
+  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
+    return false;
+  if (!isRecordWithAttr<PointerAttr>(QualType(RD->getTypeForDecl(), 0)) &&
+      !isRecordWithAttr<OwnerAttr>(QualType(RD->getTypeForDecl(), 0)))
+    return false;
+  if (FD->getReturnType()->isPointerType() ||
+      isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
+        .Cases("end", "rend", "cend", "crend", true)
+        .Case("data", true)
+        .Default(false);
+  } else if (FD->getReturnType()->isReferenceType()) {
+    return llvm::StringSwitch<bool>(FD->getName())
+        .Cases("get", "any_cast", true)
+        .Default(false);
+  }
+  return false;
+}
+
 static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
                                     LocalVisitor Visit) {
   auto VisitPointerArg = [&](const Decl *D, Expr *Arg) {
@@ -6638,6 +6662,11 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
     if (Callee && Callee->isCXXInstanceMember() &&
         shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
       VisitPointerArg(Callee, OCE->getArg(0));
+    return;
+  } else if (auto *CE = dyn_cast<CallExpr>(Call)) {
+    FunctionDecl *Callee = CE->getDirectCallee();
+    if (Callee && shouldTrackFirstArgument(Callee))
+      VisitPointerArg(Callee, CE->getArg(0));
     return;
   }
 

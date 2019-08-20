@@ -16,6 +16,16 @@ typedef unsigned int uint;
 typedef __SIZE_TYPE__ size_t;
 #endif
 
+kernel void test_pointers(volatile global void *global_p, global const int4 *a) {
+  int i;
+  unsigned int ui;
+
+  prefetch(a, 2);
+
+  atom_add((volatile __global int *)global_p, i);
+  atom_cmpxchg((volatile __global unsigned int *)global_p, ui, ui);
+}
+
 kernel void basic_conversion() {
   double d;
   float f;
