@@ -62,6 +62,8 @@
 #include <sys/event.h>
 #include <sys/filio.h>
 #include <sys/ipc.h>
+#include <sys/ipmi.h>
+#include <sys/kcov.h>
 #include <sys/mman.h>
 #include <sys/module.h>
 #include <sys/mount.h>
@@ -123,9 +125,6 @@
 #include <dev/isa/isvio.h>
 #include <dev/isa/wtreg.h>
 #include <dev/iscsi/iscsi_ioctl.h>
-#if 0
-#include <dev/nvmm/nvmm_ioctl.h>
-#endif
 #include <dev/ofw/openfirmio.h>
 #include <dev/pci/amrio.h>
 #include <dev/pci/mlyreg.h>
@@ -168,6 +167,7 @@
 #include <dev/raidframe/raidframeio.h>
 #include <dev/sbus/mbppio.h>
 #include <dev/scsipi/ses.h>
+#include <dev/spi/spi_io.h>
 #include <dev/spkrio.h>
 #include <dev/sun/disklabel.h>
 #include <dev/sun/fbio.h>
@@ -221,6 +221,10 @@
 #include <regex.h>
 #include <fstab.h>
 #include <stringlist.h>
+
+#if defined(__x86_64__)
+#include <nvmm.h>
+#endif
 // clang-format on
 
 // Include these after system headers to avoid name clashes and ambiguities.
@@ -686,6 +690,26 @@ unsigned struct_usb_config_desc_sz = sizeof(usb_config_desc);
 unsigned struct_usb_ctl_report_desc_sz = sizeof(usb_ctl_report_desc);
 unsigned struct_usb_ctl_report_sz = sizeof(usb_ctl_report);
 unsigned struct_usb_ctl_request_sz = sizeof(usb_ctl_request);
+#if defined(__x86_64__)
+unsigned struct_nvmm_ioc_capability_sz = sizeof(nvmm_ioc_capability);
+unsigned struct_nvmm_ioc_machine_create_sz = sizeof(nvmm_ioc_machine_create);
+unsigned struct_nvmm_ioc_machine_destroy_sz = sizeof(nvmm_ioc_machine_destroy);
+unsigned struct_nvmm_ioc_machine_configure_sz =
+    sizeof(nvmm_ioc_machine_configure);
+unsigned struct_nvmm_ioc_vcpu_create_sz = sizeof(nvmm_ioc_vcpu_create);
+unsigned struct_nvmm_ioc_vcpu_destroy_sz = sizeof(nvmm_ioc_vcpu_destroy);
+unsigned struct_nvmm_ioc_vcpu_setstate_sz = sizeof(nvmm_ioc_vcpu_destroy);
+unsigned struct_nvmm_ioc_vcpu_getstate_sz = sizeof(nvmm_ioc_vcpu_getstate);
+unsigned struct_nvmm_ioc_vcpu_inject_sz = sizeof(nvmm_ioc_vcpu_inject);
+unsigned struct_nvmm_ioc_vcpu_run_sz = sizeof(nvmm_ioc_vcpu_run);
+unsigned struct_nvmm_ioc_gpa_map_sz = sizeof(nvmm_ioc_gpa_map);
+unsigned struct_nvmm_ioc_gpa_unmap_sz = sizeof(nvmm_ioc_gpa_unmap);
+unsigned struct_nvmm_ioc_hva_map_sz = sizeof(nvmm_ioc_hva_map);
+unsigned struct_nvmm_ioc_hva_unmap_sz = sizeof(nvmm_ioc_hva_unmap);
+unsigned struct_nvmm_ioc_ctl_sz = sizeof(nvmm_ioc_ctl);
+#endif
+unsigned struct_spi_ioctl_configure_sz = sizeof(spi_ioctl_configure);
+unsigned struct_spi_ioctl_transfer_sz = sizeof(spi_ioctl_transfer);
 unsigned struct_autofs_daemon_request_sz = sizeof(autofs_daemon_request);
 unsigned struct_autofs_daemon_done_sz = sizeof(autofs_daemon_done);
 unsigned struct_sctp_connectx_addrs_sz = sizeof(sctp_connectx_addrs);
@@ -728,6 +752,9 @@ unsigned struct_vnd_user_sz = sizeof(vnd_user);
 unsigned struct_vt_stat_sz = sizeof(vt_stat);
 unsigned struct_wdog_conf_sz = sizeof(wdog_conf);
 unsigned struct_wdog_mode_sz = sizeof(wdog_mode);
+unsigned struct_ipmi_recv_sz = sizeof(ipmi_recv);
+unsigned struct_ipmi_req_sz = sizeof(ipmi_req);
+unsigned struct_ipmi_cmdspec_sz = sizeof(ipmi_cmdspec);
 unsigned struct_wfq_conf_sz = sizeof(wfq_conf);
 unsigned struct_wfq_getqid_sz = sizeof(wfq_getqid);
 unsigned struct_wfq_getstats_sz = sizeof(wfq_getstats);
@@ -813,6 +840,7 @@ unsigned struct_iscsi_wait_event_parameters_sz =
 unsigned struct_isp_stats_sz = sizeof(isp_stats_t);
 unsigned struct_lsenable_sz = sizeof(struct lsenable);
 unsigned struct_lsdisable_sz = sizeof(struct lsdisable);
+unsigned struct_audio_format_query_sz = sizeof(audio_format_query);
 unsigned struct_mixer_ctrl_sz = sizeof(struct mixer_ctrl);
 unsigned struct_mixer_devinfo_sz = sizeof(struct mixer_devinfo);
 unsigned struct_mpu_command_rec_sz = sizeof(mpu_command_rec);
@@ -1423,7 +1451,7 @@ unsigned IOCTL_SPKRTONE = SPKRTONE;
 unsigned IOCTL_SPKRTUNE = SPKRTUNE;
 unsigned IOCTL_SPKRGETVOL = SPKRGETVOL;
 unsigned IOCTL_SPKRSETVOL = SPKRSETVOL;
-#if 0 /* interfaces are WIP */
+#if defined(__x86_64__)
 unsigned IOCTL_NVMM_IOC_CAPABILITY = NVMM_IOC_CAPABILITY;
 unsigned IOCTL_NVMM_IOC_MACHINE_CREATE = NVMM_IOC_MACHINE_CREATE;
 unsigned IOCTL_NVMM_IOC_MACHINE_DESTROY = NVMM_IOC_MACHINE_DESTROY;
@@ -1438,7 +1466,10 @@ unsigned IOCTL_NVMM_IOC_GPA_MAP = NVMM_IOC_GPA_MAP;
 unsigned IOCTL_NVMM_IOC_GPA_UNMAP = NVMM_IOC_GPA_UNMAP;
 unsigned IOCTL_NVMM_IOC_HVA_MAP = NVMM_IOC_HVA_MAP;
 unsigned IOCTL_NVMM_IOC_HVA_UNMAP = NVMM_IOC_HVA_UNMAP;
+unsigned IOCTL_NVMM_IOC_CTL = NVMM_IOC_CTL;
 #endif
+unsigned IOCTL_SPI_IOCTL_CONFIGURE = SPI_IOCTL_CONFIGURE;
+unsigned IOCTL_SPI_IOCTL_TRANSFER = SPI_IOCTL_TRANSFER;
 unsigned IOCTL_AUTOFSREQUEST = AUTOFSREQUEST;
 unsigned IOCTL_AUTOFSDONE = AUTOFSDONE;
 unsigned IOCTL_BIOCGBLEN = BIOCGBLEN;
@@ -1656,6 +1687,9 @@ unsigned IOCTL_AUDIO_GETPROPS = AUDIO_GETPROPS;
 unsigned IOCTL_AUDIO_GETBUFINFO = AUDIO_GETBUFINFO;
 unsigned IOCTL_AUDIO_SETCHAN = AUDIO_SETCHAN;
 unsigned IOCTL_AUDIO_GETCHAN = AUDIO_GETCHAN;
+unsigned IOCTL_AUDIO_QUERYFORMAT = AUDIO_QUERYFORMAT;
+unsigned IOCTL_AUDIO_GETFORMAT = AUDIO_GETFORMAT;
+unsigned IOCTL_AUDIO_SETFORMAT = AUDIO_SETFORMAT;
 unsigned IOCTL_AUDIO_MIXER_READ = AUDIO_MIXER_READ;
 unsigned IOCTL_AUDIO_MIXER_WRITE = AUDIO_MIXER_WRITE;
 unsigned IOCTL_AUDIO_MIXER_DEVINFO = AUDIO_MIXER_DEVINFO;
@@ -1741,6 +1775,7 @@ unsigned IOCTL_DIOCTUR = DIOCTUR;
 unsigned IOCTL_DIOCMWEDGES = DIOCMWEDGES;
 unsigned IOCTL_DIOCGSECTORSIZE = DIOCGSECTORSIZE;
 unsigned IOCTL_DIOCGMEDIASIZE = DIOCGMEDIASIZE;
+unsigned IOCTL_DIOCRMWEDGES = DIOCRMWEDGES;
 unsigned IOCTL_DRVDETACHDEV = DRVDETACHDEV;
 unsigned IOCTL_DRVRESCANBUS = DRVRESCANBUS;
 unsigned IOCTL_DRVCTLCOMMAND = DRVCTLCOMMAND;
@@ -1945,6 +1980,8 @@ unsigned IOCTL_SIOCSLINKSTR = SIOCSLINKSTR;
 unsigned IOCTL_SIOCGETHERCAP = SIOCGETHERCAP;
 unsigned IOCTL_SIOCGIFINDEX = SIOCGIFINDEX;
 unsigned IOCTL_SIOCSETHERCAP = SIOCSETHERCAP;
+unsigned IOCTL_SIOCSIFDESCR = SIOCSIFDESCR;
+unsigned IOCTL_SIOCGIFDESCR = SIOCGIFDESCR;
 unsigned IOCTL_SIOCGUMBINFO = SIOCGUMBINFO;
 unsigned IOCTL_SIOCSUMBPARAM = SIOCSUMBPARAM;
 unsigned IOCTL_SIOCGUMBPARAM = SIOCGUMBPARAM;
@@ -2069,6 +2106,19 @@ unsigned IOCTL_WDOGIOC_WHICH = WDOGIOC_WHICH;
 unsigned IOCTL_WDOGIOC_TICKLE = WDOGIOC_TICKLE;
 unsigned IOCTL_WDOGIOC_GTICKLER = WDOGIOC_GTICKLER;
 unsigned IOCTL_WDOGIOC_GWDOGS = WDOGIOC_GWDOGS;
+unsigned IOCTL_KCOV_IOC_SETBUFSIZE = KCOV_IOC_SETBUFSIZE;
+unsigned IOCTL_KCOV_IOC_ENABLE = KCOV_IOC_ENABLE;
+unsigned IOCTL_KCOV_IOC_DISABLE = KCOV_IOC_DISABLE;
+unsigned IOCTL_IPMICTL_RECEIVE_MSG_TRUNC = IPMICTL_RECEIVE_MSG_TRUNC;
+unsigned IOCTL_IPMICTL_RECEIVE_MSG = IPMICTL_RECEIVE_MSG;
+unsigned IOCTL_IPMICTL_SEND_COMMAND = IPMICTL_SEND_COMMAND;
+unsigned IOCTL_IPMICTL_REGISTER_FOR_CMD = IPMICTL_REGISTER_FOR_CMD;
+unsigned IOCTL_IPMICTL_UNREGISTER_FOR_CMD = IPMICTL_UNREGISTER_FOR_CMD;
+unsigned IOCTL_IPMICTL_SET_GETS_EVENTS_CMD = IPMICTL_SET_GETS_EVENTS_CMD;
+unsigned IOCTL_IPMICTL_SET_MY_ADDRESS_CMD = IPMICTL_SET_MY_ADDRESS_CMD;
+unsigned IOCTL_IPMICTL_GET_MY_ADDRESS_CMD = IPMICTL_GET_MY_ADDRESS_CMD;
+unsigned IOCTL_IPMICTL_SET_MY_LUN_CMD = IPMICTL_SET_MY_LUN_CMD;
+unsigned IOCTL_IPMICTL_GET_MY_LUN_CMD = IPMICTL_GET_MY_LUN_CMD;
 unsigned IOCTL_SNDCTL_DSP_RESET = SNDCTL_DSP_RESET;
 unsigned IOCTL_SNDCTL_DSP_SYNC = SNDCTL_DSP_SYNC;
 unsigned IOCTL_SNDCTL_DSP_SPEED = SNDCTL_DSP_SPEED;
