@@ -8,7 +8,6 @@ add_lldb_library(lldbUtilityHelpers
 
   LINK_COMPONENTS
     Support
+    ObjectYAML
   )
-
-add_dependencies(lldbUtilityHelpers yaml2obj)
-add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")
+include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)

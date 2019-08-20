@@ -15,8 +15,3 @@ add_lldb_unittest(LLDBCoreTests
   LINK_COMPONENTS
     Support
   )
-
-set(test_inputs
-  mangled-function-names.yaml
-  )
-add_unittest_inputs(LLDBCoreTests "${test_inputs}")
