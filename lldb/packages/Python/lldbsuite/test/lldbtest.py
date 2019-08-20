@@ -113,11 +113,11 @@ BREAKPOINT_STATE_CORRECT = "Breakpoint state is correct"
 
 BREAKPOINT_PENDING_CREATED = "Pending breakpoint created successfully"
 
-BREAKPOINT_HIT_ONCE = "Breakpoint resolved with hit cout = 1"
+BREAKPOINT_HIT_ONCE = "Breakpoint resolved with hit count = 1"
 
-BREAKPOINT_HIT_TWICE = "Breakpoint resolved with hit cout = 2"
+BREAKPOINT_HIT_TWICE = "Breakpoint resolved with hit count = 2"
 
-BREAKPOINT_HIT_THRICE = "Breakpoint resolved with hit cout = 3"
+BREAKPOINT_HIT_THRICE = "Breakpoint resolved with hit count = 3"
 
 MISSING_EXPECTED_REGISTERS = "At least one expected register is unavailable."
 
@@ -139,6 +139,8 @@ STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS = "%s, %s" % (
 STOPPED_DUE_TO_BREAKPOINT_CONDITION = "Stopped due to breakpoint condition"
 
 STOPPED_DUE_TO_BREAKPOINT_IGNORE_COUNT = "Stopped due to breakpoint and ignore count"
+
+STOPPED_DUE_TO_BREAKPOINT_JITTED_CONDITION = "Stopped due to breakpoint jitted condition"
 
 STOPPED_DUE_TO_SIGNAL = "Process state is stopped due to signal"
 

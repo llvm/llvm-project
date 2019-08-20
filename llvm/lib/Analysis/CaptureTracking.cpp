@@ -33,6 +33,22 @@ CaptureTracker::~CaptureTracker() {}
 
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
 
+bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
+  // An inbounds GEP can either be a valid pointer (pointing into
+  // or to the end of an allocation), or be null in the default
+  // address space. So for an inbounds GEP there is no way to let
+  // the pointer escape using clever GEP hacking because doing so
+  // would make the pointer point outside of the allocated object
+  // and thus make the GEP result a poison value. Similarly, other
+  // dereferenceable pointers cannot be manipulated without producing
+  // poison.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
+    if (GEP->isInBounds())
+      return true;
+  bool CanBeNull;
+  return O->getPointerDereferenceableBytes(DL, CanBeNull);
+}
+
 namespace {
   struct SimpleCaptureTracker : public CaptureTracker {
     explicit SimpleCaptureTracker(bool ReturnCaptures)
@@ -342,21 +358,10 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
             break;
         if (!I->getFunction()->nullPointerIsDefined()) {
           auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
-          // An inbounds GEP can either be a valid pointer (pointing into
-          // or to the end of an allocation), or be null in the default
-          // address space. So for an inbounds GEPs there is no way to let
-          // the pointer escape using clever GEP hacking because doing so
-          // would make the pointer point outside of the allocated object
-          // and thus make the GEP result a poison value.
-          if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
-            if (GEP->isInBounds())
-              break;
-          // Comparing a dereferenceable_or_null argument against null
-          // cannot lead to pointer escapes, because if it is not null it
-          // must be a valid (in-bounds) pointer.
-          bool CanBeNull;
-          if (O->getPointerDereferenceableBytes(I->getModule()->getDataLayout(),
-                                                CanBeNull))
+          // Comparing a dereferenceable_or_null pointer against null cannot
+          // lead to pointer escapes, because if it is not null it must be a
+          // valid (in-bounds) pointer.
+          if (Tracker->isDereferenceableOrNull(O, I->getModule()->getDataLayout()))
             break;
         }
       }

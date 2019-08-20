@@ -6,21 +6,6 @@ cmpxchg16b (%rax)
 lock cmpxchg8b  (%rax)
 lock cmpxchg16b (%rax)
 
-cmpxchgb  %bl, %cl
-cmpxchgw  %bx, %cx
-cmpxchgl  %ebx, %ecx
-cmpxchgq  %rbx, %rcx
-
-cmpxchgb  %bl, (%rsi)
-cmpxchgw  %bx, (%rsi)
-cmpxchgl  %ebx, (%rsi)
-cmpxchgq  %rbx, (%rsi)
-
-lock cmpxchgb  %bl, (%rsi)
-lock cmpxchgw  %bx, (%rsi)
-lock cmpxchgl  %ebx, (%rsi)
-lock cmpxchgq  %rbx, (%rsi)
-
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -34,18 +19,6 @@ lock cmpxchgq  %rbx, (%rsi)
 # CHECK-NEXT:  2      4     2.00    *      *            cmpxchg16b	(%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchg8b	(%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchg16b	(%rax)
-# CHECK-NEXT:  1      1     0.50                        cmpxchgb	%bl, %cl
-# CHECK-NEXT:  1      1     0.50                        cmpxchgw	%bx, %cx
-# CHECK-NEXT:  1      1     0.50                        cmpxchgl	%ebx, %ecx
-# CHECK-NEXT:  1      1     0.50                        cmpxchgq	%rbx, %rcx
-# CHECK-NEXT:  2      4     2.00    *      *            cmpxchgb	%bl, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            cmpxchgw	%bx, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            cmpxchgl	%ebx, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            cmpxchgq	%rbx, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchgb	%bl, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchgw	%bx, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchgl	%ebx, (%rsi)
-# CHECK-NEXT:  2      4     2.00    *      *            lock		cmpxchgq	%rbx, (%rsi)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SLMDivider
@@ -59,7 +32,7 @@ lock cmpxchgq  %rbx, (%rsi)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -      -      -     8.00   8.00   24.00
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00   8.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -67,15 +40,3 @@ lock cmpxchgq  %rbx, (%rsi)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   cmpxchg16b	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchg8b	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchg16b	(%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cmpxchgb	%bl, %cl
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cmpxchgw	%bx, %cx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cmpxchgl	%ebx, %ecx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cmpxchgq	%rbx, %rcx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   cmpxchgb	%bl, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   cmpxchgw	%bx, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   cmpxchgl	%ebx, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   cmpxchgq	%rbx, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchgb	%bl, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchgw	%bx, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchgl	%ebx, (%rsi)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		cmpxchgq	%rbx, (%rsi)

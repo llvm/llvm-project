@@ -90,6 +90,16 @@ struct SymbolEntry {
   uint8_t n_sect;
   uint16_t n_desc;
   uint64_t n_value;
+
+  bool isExternalSymbol() const {
+    return n_type & ((MachO::N_EXT | MachO::N_PEXT));
+  }
+
+  bool isLocalSymbol() const { return !isExternalSymbol(); }
+
+  bool isUndefinedSymbol() const {
+    return (n_type & MachO::N_TYPE) == MachO::N_UNDF;
+  }
 };
 
 /// The location of the symbol table inside the binary is described by LC_SYMTAB
@@ -98,6 +108,10 @@ struct SymbolTable {
   std::vector<std::unique_ptr<SymbolEntry>> Symbols;
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
+};
+
+struct IndirectSymbolTable {
+  std::vector<uint32_t> Symbols;
 };
 
 /// The location of the string table inside the binary is described by LC_SYMTAB
@@ -206,6 +220,10 @@ struct ExportInfo {
   ArrayRef<uint8_t> Trie;
 };
 
+struct LinkData {
+  ArrayRef<uint8_t> Data;
+};
+
 struct Object {
   MachHeader Header;
   std::vector<LoadCommand> LoadCommands;
@@ -218,11 +236,20 @@ struct Object {
   WeakBindInfo WeakBinds;
   LazyBindInfo LazyBinds;
   ExportInfo Exports;
+  IndirectSymbolTable IndirectSymTable;
+  LinkData DataInCode;
+  LinkData FunctionStarts;
 
   /// The index of LC_SYMTAB load command if present.
   Optional<size_t> SymTabCommandIndex;
   /// The index of LC_DYLD_INFO or LC_DYLD_INFO_ONLY load command if present.
   Optional<size_t> DyLdInfoCommandIndex;
+  /// The index LC_DYSYMTAB load comamnd if present.
+  Optional<size_t> DySymTabCommandIndex;
+  /// The index LC_DATA_IN_CODE load comamnd if present.
+  Optional<size_t> DataInCodeCommandIndex;
+  /// The index LC_FUNCTION_STARTS load comamnd if present.
+  Optional<size_t> FunctionStartsCommandIndex;
 };
 
 } // end namespace macho

@@ -107,6 +107,12 @@ public:
   /// \param[in] ignore
   ///    How many breakpoint hits we should ignore before stopping.
   ///
+  /// \param[in] one_shot
+  ///    Should this breakpoint delete itself after being hit once.
+  ///
+  /// \param[in] auto_continue
+  ///    Should this breakpoint auto-continue after running its commands.
+  ///
   BreakpointOptions(const char *condition, bool enabled = true,
                     int32_t ignore = 0, bool one_shot = false,
                     bool auto_continue = false);
@@ -319,7 +325,10 @@ public:
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
-  /// Returns true if the breakpoint option has a callback set.
+  /// Check if the breakpoint option has a callback set.
+  ///
+  /// \return
+  ///    If the breakpoint option has a callback, \b true otherwise \b false.
   bool HasCallback() const;
 
   /// This is the default empty callback.
@@ -367,22 +376,32 @@ protected:
   void SetThreadSpec(std::unique_ptr<ThreadSpec> &thread_spec_up);
 
 private:
-  // For BreakpointOptions only
-  BreakpointHitCallback m_callback;  // This is the callback function pointer
-  lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
+  /// For BreakpointOptions only
+  
+  /// This is the callback function pointer
+  BreakpointHitCallback m_callback;
+  /// This is the client data for the callback
+  lldb::BatonSP m_callback_baton_sp;
   bool m_baton_is_command_baton;
   bool m_callback_is_synchronous;
   bool m_enabled;
+  /// If set, the breakpoint delete itself after being hit once.
   bool m_one_shot;
-  uint32_t m_ignore_count; // Number of times to ignore this breakpoint
-  std::unique_ptr<ThreadSpec>
-      m_thread_spec_up;         // Thread for which this breakpoint will take
-  std::string m_condition_text; // The condition to test.
-  size_t m_condition_text_hash; // Its hash, so that locations know when the
-                                // condition is updated.
-  bool m_auto_continue;         // If set, auto-continue from breakpoint.
-  Flags m_set_flags;            // Which options are set at this level.  Drawn
-                                // from BreakpointOptions::SetOptionsFlags.
+  /// Number of times to ignore this breakpoint.
+  uint32_t m_ignore_count;
+  /// Thread for which this breakpoint will stop.
+  std::unique_ptr<ThreadSpec> m_thread_spec_up;
+  /// The condition to test.
+  std::string m_condition_text;
+  /// Its hash, so that locations know when the condition is updated.
+  size_t m_condition_text_hash;
+  /// If set, inject breakpoint condition into process.
+  bool m_inject_condition;
+  /// If set, auto-continue from breakpoint.
+  bool m_auto_continue;
+  /// Which options are set at this level.
+  /// Drawn from BreakpointOptions::SetOptionsFlags.
+  Flags m_set_flags;
 };
 
 } // namespace lldb_private

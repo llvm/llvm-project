@@ -88,7 +88,6 @@ public:
   using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
   using visitor_iterator = VisitorList::iterator;
   using visitor_range = llvm::iterator_range<visitor_iterator>;
-  using ExtraTextList = SmallVector<StringRef, 2>;
   using NoteList = SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4>;
 
 protected:
@@ -106,7 +105,6 @@ protected:
   const ExplodedNode *ErrorNode = nullptr;
   SmallVector<SourceRange, 4> Ranges;
   const SourceRange ErrorNodeRange;
-  ExtraTextList ExtraText;
   NoteList Notes;
 
   /// A (stack of) a set of symbols that are registered with this
@@ -288,17 +286,6 @@ public:
     return Notes;
   }
 
-  /// This allows for addition of meta data to the diagnostic.
-  ///
-  /// Currently, only the HTMLDiagnosticClient knows how to display it.
-  void addExtraText(StringRef S) {
-    ExtraText.push_back(S);
-  }
-
-  virtual const ExtraTextList &getExtraText() {
-    return ExtraText;
-  }
-
   /// Return the "definitive" location of the reported bug.
   ///
   ///  While a bug can span an entire path, usually there is a specific
@@ -418,7 +405,7 @@ public:
 /// The base class is used for generating path-insensitive
 class BugReporter {
 public:
-  enum Kind { BaseBRKind, GRBugReporterKind };
+  enum Kind { BasicBRKind, PathSensitiveBRKind };
 
 private:
   using BugTypesTy = llvm::ImmutableSet<BugType *>;
@@ -450,7 +437,7 @@ protected:
 
 public:
   BugReporter(BugReporterData& d)
-      : BugTypes(F.getEmptySet()), kind(BaseBRKind), D(d) {}
+      : BugTypes(F.getEmptySet()), kind(BasicBRKind), D(d) {}
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
@@ -517,14 +504,14 @@ private:
 };
 
 /// GRBugReporter is used for generating path-sensitive reports.
-class GRBugReporter : public BugReporter {
+class PathSensitiveBugReporter : public BugReporter {
   ExprEngine& Eng;
 
 public:
-  GRBugReporter(BugReporterData& d, ExprEngine& eng)
-      : BugReporter(d, GRBugReporterKind), Eng(eng) {}
+  PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
+      : BugReporter(d, PathSensitiveBRKind), Eng(eng) {}
 
-  ~GRBugReporter() override = default;
+  ~PathSensitiveBugReporter() override = default;
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
@@ -547,7 +534,7 @@ public:
 
   /// classof - Used by isa<>, cast<>, and dyn_cast<>.
   static bool classof(const BugReporter* R) {
-    return R->getKind() == GRBugReporterKind;
+    return R->getKind() == PathSensitiveBRKind;
   }
 };
 
@@ -564,18 +551,19 @@ public:
 };
 
 class BugReporterContext {
-  GRBugReporter &BR;
+  PathSensitiveBugReporter &BR;
   NodeMapClosure NMC;
 
   virtual void anchor();
 
 public:
-  BugReporterContext(GRBugReporter &br, InterExplodedGraphMap &Backmap)
+  BugReporterContext(PathSensitiveBugReporter &br,
+                     InterExplodedGraphMap &Backmap)
       : BR(br), NMC(Backmap) {}
 
   virtual ~BugReporterContext() = default;
 
-  GRBugReporter& getBugReporter() { return BR; }
+  PathSensitiveBugReporter& getBugReporter() { return BR; }
 
   const ExplodedGraph &getGraph() const { return BR.getGraph(); }
 

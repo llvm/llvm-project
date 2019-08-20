@@ -70,7 +70,7 @@ void DurationConversionCastCheck::check(
     llvm::StringRef NewFuncName = getDurationInverseForScale(*Scale).first;
 
     diag(MatchedCast->getBeginLoc(), "duration should be converted directly to "
-                                     "a floating-piont number rather than "
+                                     "a floating-point number rather than "
                                      "through a type cast")
         << FixItHint::CreateReplacement(
                MatchedCast->getSourceRange(),

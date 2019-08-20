@@ -236,15 +236,19 @@ cmpsq
 
 cmpxchgb %cl, %bl
 cmpxchgb %cl, (%rbx)
+lock cmpxchgb %cl, (%rbx)
 
 cmpxchgw %cx, %bx
 cmpxchgw %cx, (%rbx)
+lock cmpxchgw %cx, (%rbx)
 
 cmpxchgl %ecx, %ebx
 cmpxchgl %ecx, (%rbx)
+lock cmpxchgl %ecx, (%rbx)
 
 cmpxchgq %rcx, %rbx
 cmpxchgq %rcx, (%rbx)
+lock cmpxchgq %rcx, (%rbx)
 
 cpuid
 
@@ -1108,12 +1112,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  5      8     1.00                  U     cmpsq	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  4      5     1.33                        cmpxchgb	%cl, %bl
 # CHECK-NEXT:  6      8     2.00    *      *            cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT:  6      8     2.00    *      *            lock		cmpxchgb	%cl, (%rbx)
 # CHECK-NEXT:  4      5     1.33                        cmpxchgw	%cx, %bx
 # CHECK-NEXT:  6      8     2.00    *      *            cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT:  6      8     2.00    *      *            lock		cmpxchgw	%cx, (%rbx)
 # CHECK-NEXT:  4      5     1.33                        cmpxchgl	%ecx, %ebx
 # CHECK-NEXT:  6      8     2.00    *      *            cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT:  6      8     2.00    *      *            lock		cmpxchgl	%ecx, (%rbx)
 # CHECK-NEXT:  4      5     1.33                        cmpxchgq	%rcx, %rbx
 # CHECK-NEXT:  6      8     2.00    *      *            cmpxchgq	%rcx, (%rbx)
+# CHECK-NEXT:  6      8     2.00    *      *            lock		cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  1      100   0.33                  U     cpuid
 # CHECK-NEXT:  1      1     0.33                        decb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            decb	(%rax)
@@ -1691,7 +1699,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT: 160.00  -     596.50 238.00 230.00 596.50 324.50 324.50
+# CHECK-NEXT: 160.00  -     597.83 239.33 234.00 605.83 328.50 328.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1904,12 +1912,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     1.00   1.00    -     1.00   1.00   1.00   cmpsq	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  -      -     1.50   1.00    -     1.50    -      -     cmpxchgb	%cl, %bl
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   lock		cmpxchgb	%cl, (%rbx)
 # CHECK-NEXT:  -      -     1.50   1.00    -     1.50    -      -     cmpxchgw	%cx, %bx
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   lock		cmpxchgw	%cx, (%rbx)
 # CHECK-NEXT:  -      -     1.50   1.00    -     1.50    -      -     cmpxchgl	%ecx, %ebx
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   lock		cmpxchgl	%ecx, (%rbx)
 # CHECK-NEXT:  -      -     1.50   1.00    -     1.50    -      -     cmpxchgq	%rcx, %rbx
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   cmpxchgq	%rcx, (%rbx)
+# CHECK-NEXT:  -      -     0.33   0.33   1.00   2.33   1.00   1.00   lock		cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     cpuid
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     decb	%dil
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   0.33   1.00   1.00   decb	(%rax)

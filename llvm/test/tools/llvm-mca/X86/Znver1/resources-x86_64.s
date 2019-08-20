@@ -236,15 +236,19 @@ cmpsq
 
 cmpxchgb %cl, %bl
 cmpxchgb %cl, (%rbx)
+lock cmpxchgb %cl, (%rbx)
 
 cmpxchgw %cx, %bx
 cmpxchgw %cx, (%rbx)
+lock cmpxchgw %cx, (%rbx)
 
 cmpxchgl %ecx, %ebx
 cmpxchgl %ecx, (%rbx)
+lock cmpxchgl %ecx, (%rbx)
 
 cmpxchgq %rcx, %rbx
 cmpxchgq %rcx, (%rbx)
+lock cmpxchgq %rcx, (%rbx)
 
 cpuid
 
@@ -1108,12 +1112,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   0.25                  U     cmpsq	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  1      1     0.25                        cmpxchgb	%cl, %bl
 # CHECK-NEXT:  5      8     0.50    *      *            cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT:  5      8     0.50    *      *            lock		cmpxchgb	%cl, (%rbx)
 # CHECK-NEXT:  1      1     0.25                        cmpxchgw	%cx, %bx
 # CHECK-NEXT:  5      8     0.50    *      *            cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT:  5      8     0.50    *      *            lock		cmpxchgw	%cx, (%rbx)
 # CHECK-NEXT:  1      1     0.25                        cmpxchgl	%ecx, %ebx
 # CHECK-NEXT:  5      8     0.50    *      *            cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT:  5      8     0.50    *      *            lock		cmpxchgl	%ecx, (%rbx)
 # CHECK-NEXT:  1      1     0.25                        cmpxchgq	%rcx, %rbx
 # CHECK-NEXT:  5      8     0.50    *      *            cmpxchgq	%rcx, (%rbx)
+# CHECK-NEXT:  5      8     0.50    *      *            lock		cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  1      100   0.25                  U     cpuid
 # CHECK-NEXT:  1      1     0.25                        decb	%dil
 # CHECK-NEXT:  2      5     0.50    *      *            decb	(%rax)
@@ -1695,7 +1703,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 169.50 169.50 159.75 193.75 175.75 159.75 392.00  -      -      -      -     34.00
+# CHECK-NEXT: 171.50 171.50 160.75 194.75 176.75 160.75 392.00  -      -      -      -     34.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1908,12 +1916,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     cmpsq	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgb	%cl, %bl
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     lock		cmpxchgb	%cl, (%rbx)
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgw	%cx, %bx
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     lock		cmpxchgw	%cx, (%rbx)
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgl	%ecx, %ebx
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     lock		cmpxchgl	%ecx, (%rbx)
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgq	%rcx, %rbx
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmpxchgq	%rcx, (%rbx)
+# CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     lock		cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     cpuid
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     decb	%dil
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     decb	(%rax)
