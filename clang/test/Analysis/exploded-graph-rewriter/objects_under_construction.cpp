@@ -1,5 +1,6 @@
 // FIXME: Figure out how to use %clang_analyze_cc1 with our lit.local.cfg.
 // RUN: %clang_cc1 -analyze -triple x86_64-unknown-linux-gnu \
+// RUN:                     -analyze-function "test()" \
 // RUN:                     -analyzer-checker=core \
 // RUN:                     -analyzer-dump-egraph=%t.dot %s
 // RUN: %exploded_graph_rewriter %t.dot | FileCheck %s
