@@ -147,17 +147,6 @@ getTokenRange(SourceLocation TokLoc, const SourceManager &SM,
           CreatePosition(TokLoc.getLocWithOffset(TokenLength))};
 }
 
-bool shouldIndexFile(const SourceManager &SM, FileID FID,
-                     const SymbolCollector::Options &Opts,
-                     llvm::DenseMap<FileID, bool> *FilesToIndexCache) {
-  if (!Opts.FileFilter)
-    return true;
-  auto I = FilesToIndexCache->try_emplace(FID);
-  if (I.second)
-    I.first->second = Opts.FileFilter(SM, FID);
-  return I.first->second;
-}
-
 // Return the symbol location of the token at \p TokLoc.
 llvm::Optional<SymbolLocation>
 getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
@@ -410,7 +399,7 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
   // FIXME: use the result to filter out symbols.
-  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  shouldIndexFile(SM.getFileID(Loc));
   if (auto DeclLoc =
           getTokenLocation(DefLoc, SM, Opts, PP->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
@@ -540,7 +529,7 @@ void SymbolCollector::finish() {
         for (const auto &LocAndRole : It.second) {
           auto FileID = SM.getFileID(LocAndRole.first);
           // FIXME: use the result to filter out references.
-          shouldIndexFile(SM, FileID, Opts, &FilesToIndexCache);
+          shouldIndexFile(FileID);
           if (auto FileURI = GetURI(FileID)) {
             auto Range =
                 getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
@@ -590,7 +579,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   auto Loc = spellingLocIfSpelled(findName(&ND), SM);
   assert(Loc.isValid() && "Invalid source location for NamedDecl");
   // FIXME: use the result to filter out symbols.
-  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  shouldIndexFile(SM.getFileID(Loc));
   if (auto DeclLoc =
           getTokenLocation(Loc, SM, Opts, ASTCtx->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
@@ -650,7 +639,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   const auto &SM = ND.getASTContext().getSourceManager();
   auto Loc = spellingLocIfSpelled(findName(&ND), SM);
   // FIXME: use the result to filter out symbols.
-  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  shouldIndexFile(SM.getFileID(Loc));
   if (auto DefLoc =
           getTokenLocation(Loc, SM, Opts, ASTCtx->getLangOpts(), FileURI))
     S.Definition = *DefLoc;
@@ -740,6 +729,15 @@ bool SymbolCollector::isDontIncludeMeHeader(llvm::StringRef Content) {
       return true;
   }
   return false;
+}
+
+bool SymbolCollector::shouldIndexFile(FileID FID) {
+  if (!Opts.FileFilter)
+    return true;
+  auto I = FilesToIndexCache.try_emplace(FID);
+  if (I.second)
+    I.first->second = Opts.FileFilter(ASTCtx->getSourceManager(), FID);
+  return I.first->second;
 }
 
 } // namespace clangd

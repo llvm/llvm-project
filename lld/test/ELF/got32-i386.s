@@ -14,10 +14,10 @@ _start:
 
 ## 73728 == 0x12000 == ADDR(.got)
 # CHECK:       _start:
-# CHECK-NEXT:   401001: 8b 1d {{.*}}  movl 4202496, %ebx
+# CHECK-NEXT:   4010f5: 8b 1d {{.*}}  movl 4202748, %ebx
 # CHECK: Sections:
 # CHECK:  Name Size     VMA
-# CHECK:  .got 00000004 0000000000402000
+# CHECK:  .got 00000004 00000000004020fc
 
 # RUN: not ld.lld %t.o -o %t -pie 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: symbol 'foo' cannot be preempted; recompile with -fPIE
