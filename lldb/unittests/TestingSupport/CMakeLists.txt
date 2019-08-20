@@ -10,3 +10,4 @@ add_lldb_library(lldbUtilityHelpers
     Support
     ObjectYAML
   )
+include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
