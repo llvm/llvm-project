@@ -145,9 +145,9 @@ private:
   ObjCNoReturn ObjCNoRet;
 
   /// The BugReporter associated with this engine.  It is important that
-  ///  this object be placed at the very end of member variables so that its
-  ///  destructor is called before the rest of the ExprEngine is destroyed.
-  GRBugReporter BR;
+  /// this object be placed at the very end of member variables so that its
+  /// destructor is called before the rest of the ExprEngine is destroyed.
+  PathSensitiveBugReporter BR;
 
   /// The functions which have been analyzed through inlining. This is owned by
   /// AnalysisConsumer. It can be null.

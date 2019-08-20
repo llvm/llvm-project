@@ -405,7 +405,7 @@ public:
 /// The base class is used for generating path-insensitive
 class BugReporter {
 public:
-  enum Kind { BaseBRKind, GRBugReporterKind };
+  enum Kind { BasicBRKind, PathSensitiveBRKind };
 
 private:
   using BugTypesTy = llvm::ImmutableSet<BugType *>;
@@ -437,7 +437,7 @@ protected:
 
 public:
   BugReporter(BugReporterData& d)
-      : BugTypes(F.getEmptySet()), kind(BaseBRKind), D(d) {}
+      : BugTypes(F.getEmptySet()), kind(BasicBRKind), D(d) {}
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
@@ -504,14 +504,14 @@ private:
 };
 
 /// GRBugReporter is used for generating path-sensitive reports.
-class GRBugReporter : public BugReporter {
+class PathSensitiveBugReporter : public BugReporter {
   ExprEngine& Eng;
 
 public:
-  GRBugReporter(BugReporterData& d, ExprEngine& eng)
-      : BugReporter(d, GRBugReporterKind), Eng(eng) {}
+  PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
+      : BugReporter(d, PathSensitiveBRKind), Eng(eng) {}
 
-  ~GRBugReporter() override = default;
+  ~PathSensitiveBugReporter() override = default;
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
@@ -534,7 +534,7 @@ public:
 
   /// classof - Used by isa<>, cast<>, and dyn_cast<>.
   static bool classof(const BugReporter* R) {
-    return R->getKind() == GRBugReporterKind;
+    return R->getKind() == PathSensitiveBRKind;
   }
 };
 
@@ -551,18 +551,19 @@ public:
 };
 
 class BugReporterContext {
-  GRBugReporter &BR;
+  PathSensitiveBugReporter &BR;
   NodeMapClosure NMC;
 
   virtual void anchor();
 
 public:
-  BugReporterContext(GRBugReporter &br, InterExplodedGraphMap &Backmap)
+  BugReporterContext(PathSensitiveBugReporter &br,
+                     InterExplodedGraphMap &Backmap)
       : BR(br), NMC(Backmap) {}
 
   virtual ~BugReporterContext() = default;
 
-  GRBugReporter& getBugReporter() { return BR; }
+  PathSensitiveBugReporter& getBugReporter() { return BR; }
 
   const ExplodedGraph &getGraph() const { return BR.getGraph(); }
 
