@@ -17,8 +17,6 @@ namespace lldb_private {
 
 class RegularExpression {
 public:
-  /// Default constructor.
-  ///
   /// The default constructor that initializes the object state such that it
   /// contains no compiled regular expression.
   RegularExpression() = default;
@@ -43,46 +41,41 @@ public:
   RegularExpression &operator=(RegularExpression &&rhs) = default;
   RegularExpression &operator=(const RegularExpression &rhs) = default;
 
-  /// Executes a regular expression.
-  ///
   /// Execute a regular expression match using the compiled regular expression
-  /// that is already in this object against the match string \a s. If any
-  /// parens are used for regular expression matches \a match_count should
-  /// indicate the number of regmatch_t values that are present in \a
-  /// match_ptr.
+  /// that is already in this object against the given \a string. If any parens
+  /// are used for regular expression matches.
   ///
   /// \param[in] string
   ///     The string to match against the compile regular expression.
   ///
-  /// \param[in] match
-  ///     A pointer to a RegularExpression::Match structure that was
-  ///     properly initialized with the desired number of maximum
-  ///     matches, or nullptr if no parenthesized matching is needed.
+  /// \param[out] matches
+  ///     A pointer to a SmallVector to hold the matches.
   ///
-  /// \return \b true if \a string matches the compiled regular expression, \b
-  ///     false otherwise incl. the case regular exression failed to compile.
+  /// \return
+  ///     true if \a string matches the compiled regular expression, false
+  ///     otherwise incl. the case regular exression failed to compile.
   bool Execute(llvm::StringRef string,
                llvm::SmallVectorImpl<llvm::StringRef> *matches = nullptr) const;
 
   /// Access the regular expression text.
-  ///
-  /// Returns the text that was used to compile the current regular
-  /// expression.
   ///
   /// \return
   ///     The NULL terminated C string that was used to compile the
   ///     current regular expression
   llvm::StringRef GetText() const;
 
-  /// Test if valid.
-  ///
   /// Test if this object contains a valid regular expression.
   ///
-  /// \return \b true if the regular expression compiled and is ready for
-  ///     execution, \b false otherwise.
+  /// \return
+  ///     true if the regular expression compiled and is ready for execution,
+  ///     false otherwise.
   bool IsValid() const;
 
   /// Return an error if the regular expression failed to compile.
+  ///
+  /// \return
+  ///     A string error if the regular expression failed to compile, success
+  ///     otherwise.
   llvm::Error GetError() const;
 
 private:
