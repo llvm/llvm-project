@@ -10,21 +10,26 @@
 #define liblldb_ClangModulesDeclVendor_h
 
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Platform.h"
+
+#include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 
 #include <set>
 #include <vector>
 
 namespace lldb_private {
 
-class ClangModulesDeclVendor : public DeclVendor {
+class ClangModulesDeclVendor : public ClangDeclVendor {
 public:
   // Constructors and Destructors
   ClangModulesDeclVendor();
 
   ~ClangModulesDeclVendor() override;
+
+  static bool classof(const DeclVendor *vendor) {
+    return vendor->GetKind() == eClangModuleDeclVendor;
+  }
 
   static ClangModulesDeclVendor *Create(Target &target);
 
