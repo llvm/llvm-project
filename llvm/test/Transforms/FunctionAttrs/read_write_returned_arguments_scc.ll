@@ -1,5 +1,4 @@
 ; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-disable=false -S < %s | FileCheck %s
-; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-disable=false -attributor-verify=true -S < %s | FileCheck %s
 ;
 ; This is an evolved example to stress test SCC parameter attribute propagation.
 ; The SCC in this test is made up of the following six function, three of which
@@ -162,4 +161,5 @@ entry:
 ; CHECK-NOT: attributes #
 ; CHECK: attributes #{{.*}} = { nofree nosync nounwind }
 ; CHECK: attributes #{{.*}} = { nofree norecurse nosync nounwind }
+; CHECK: attributes #{{.*}} = { nosync }
 ; CHECK-NOT: attributes #

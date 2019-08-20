@@ -534,7 +534,7 @@ protected:
             const size_t regex_start_index = regex_var_list.GetSize();
             llvm::StringRef name_str = entry.ref;
             RegularExpression regex(name_str);
-            if (regex.Compile(name_str)) {
+            if (regex.IsValid()) {
               size_t num_matches = 0;
               const size_t num_new_regex_vars =
                   variable_list->AppendVariablesIfUnique(regex, regex_var_list,

@@ -218,17 +218,48 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
   return recursePhi(Same);
 }
 
-void MemorySSAUpdater::insertUse(MemoryUse *MU) {
+void MemorySSAUpdater::insertUse(MemoryUse *MU, bool RenameUses) {
   InsertedPHIs.clear();
   MU->setDefiningAccess(getPreviousDef(MU));
-  // Unlike for defs, there is no extra work to do.  Because uses do not create
-  // new may-defs, there are only two cases:
-  //
+  // In cases without unreachable blocks, because uses do not create new
+  // may-defs, there are only two cases:
   // 1. There was a def already below us, and therefore, we should not have
   // created a phi node because it was already needed for the def.
   //
   // 2. There is no def below us, and therefore, there is no extra renaming work
   // to do.
+
+  // In cases with unreachable blocks, where the unnecessary Phis were
+  // optimized out, adding the Use may re-insert those Phis. Hence, when
+  // inserting Uses outside of the MSSA creation process, and new Phis were
+  // added, rename all uses if we are asked.
+
+  if (!RenameUses && !InsertedPHIs.empty()) {
+    auto *Defs = MSSA->getBlockDefs(MU->getBlock());
+    (void)Defs;
+    assert((!Defs || (++Defs->begin() == Defs->end())) &&
+           "Block may have only a Phi or no defs");
+  }
+
+  if (RenameUses && InsertedPHIs.size()) {
+    SmallPtrSet<BasicBlock *, 16> Visited;
+    BasicBlock *StartBlock = MU->getBlock();
+
+    if (auto *Defs = MSSA->getWritableBlockDefs(StartBlock)) {
+      MemoryAccess *FirstDef = &*Defs->begin();
+      // Convert to incoming value if it's a memorydef. A phi *is* already an
+      // incoming value.
+      if (auto *MD = dyn_cast<MemoryDef>(FirstDef))
+        FirstDef = MD->getDefiningAccess();
+
+      MSSA->renamePass(MU->getBlock(), FirstDef, Visited);
+      // We just inserted a phi into this block, so the incoming value will
+      // become the phi anyway, so it does not matter what we pass.
+      for (auto &MP : InsertedPHIs)
+        if (MemoryPhi *Phi = cast_or_null<MemoryPhi>(MP))
+          MSSA->renamePass(Phi->getBlock(), nullptr, Visited);
+    }
+  }
 }
 
 // Set every incoming edge {BB, MP->getBlock()} of MemoryPhi MP to NewDef.
@@ -1071,9 +1102,9 @@ void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
 
   // Now reinsert it into the IR and do whatever fixups needed.
   if (auto *MD = dyn_cast<MemoryDef>(What))
-    insertDef(MD, true);
+    insertDef(MD, /*RenameUses=*/true);
   else
-    insertUse(cast<MemoryUse>(What));
+    insertUse(cast<MemoryUse>(What), /*RenameUses=*/true);
 
   // Clear dangling pointers. We added all MemoryPhi users, but not all
   // of them are removed by fixupDefs().

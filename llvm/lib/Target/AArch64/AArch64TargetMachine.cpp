@@ -448,7 +448,8 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createLICMPass());
   }
 
-  addPass(createAArch64StackTaggingPass());
+  addPass(createAArch64StackTaggingPass(/* MergeInit = */ TM->getOptLevel() !=
+                                        CodeGenOpt::None));
 }
 
 // Pass Pipeline Configuration

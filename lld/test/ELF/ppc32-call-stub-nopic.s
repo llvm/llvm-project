@@ -11,12 +11,12 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RELOC:      .rela.plt {
-# RELOC-NEXT:   0x10030000 R_PPC_JMP_SLOT f 0x0
-# RELOC-NEXT:   0x10030004 R_PPC_JMP_SLOT g 0x0
+# RELOC-NEXT:   0x100302C4 R_PPC_JMP_SLOT f 0x0
+# RELOC-NEXT:   0x100302C8 R_PPC_JMP_SLOT g 0x0
 # RELOC-NEXT: }
 
-# SEC:   .got PROGBITS 10020070
-# RELOC: PPC_GOT 0x10020070
+# SEC:   .got PROGBITS 100202b8
+# RELOC: PPC_GOT 0x100202B8
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: _start:
@@ -27,40 +27,40 @@
 # CHECK-EMPTY:
 
 ## -fno-PIC call stubs of f and g.
-## .plt[0] = 0x10030000 = 65536*4099+0
-## .plt[1] = 0x10030004 = 65536*4099+4
+## .plt[0] = 0x100302c4 = 65536*4099+708
+## .plt[1] = 0x100302c8 = 65536*4099+712
 # CHECK-NEXT:  00000000.plt_call32.f:
 # CHECK-NEXT:    lis 11, 4099
-# CHECK-NEXT:    lwz 11, 0(11)
+# CHECK-NEXT:    lwz 11, 708(11)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-EMPTY:
 # CHECK-NEXT:  00000000.plt_call32.g:
 # CHECK-NEXT:    lis 11, 4099
-# CHECK-NEXT:    lwz 11, 4(11)
+# CHECK-NEXT:    lwz 11, 712(11)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-EMPTY:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
-# HEX: 0x10030000 10010040 10010044
+# HEX: 0x100302c4 10010200 10010204
 
 ## These instructions are referenced by .plt entries.
-# CHECK: 10010040 .glink:
+# CHECK: 10010200 .glink:
 # CHECK-NEXT: b .+8
 # CHECK-NEXT: b .+4
 
 ## PLTresolve
-## Operands of lis & lwz: .got+4 = 0x10020070+4 = 65536*4098+116
-## Operands of addis & addi: -.glink = -0x10010040 = 65536*-4097-48
+## Operands of lis & lwz: .got+4 = 0x10020070+4 = 65536*4098+700
+## Operands of addis & addi: -.glink = -0x10010200 = 65536*-4097-512
 # CHECK-NEXT: lis 12, 4098
 # CHECK-NEXT: addis 11, 11, -4097
-# CHECK-NEXT: lwz 0, 116(12)
-# CHECK-NEXT: addi 11, 11, -64
+# CHECK-NEXT: lwz 0, 700(12)
+# CHECK-NEXT: addi 11, 11, -512
 
 # CHECK-NEXT: mtctr 0
 # CHECK-NEXT: add 0, 11, 11
-# CHECK-NEXT: lwz 12, 120(12)
+# CHECK-NEXT: lwz 12, 704(12)
 # CHECK-NEXT: add 11, 0, 11
 # CHECK-NEXT: bctr
 

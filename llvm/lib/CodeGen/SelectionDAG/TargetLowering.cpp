@@ -5019,9 +5019,10 @@ SDValue TargetLowering::buildSREMEqFold(EVT SETCCVT, SDValue REMNode,
                                         ISD::CondCode Cond,
                                         DAGCombinerInfo &DCI,
                                         const SDLoc &DL) const {
-  SmallVector<SDNode *, 3> Built;
+  SmallVector<SDNode *, 7> Built;
   if (SDValue Folded = prepareSREMEqFold(SETCCVT, REMNode, CompTargetNode, Cond,
                                          DCI, DL, Built)) {
+    assert(Built.size() <= 7 && "Max size prediction failed.");
     for (SDNode *N : Built)
       DCI.AddToWorklist(N);
     return Folded;
@@ -5064,6 +5065,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   if (!CompTarget || !CompTarget->isNullValue())
     return SDValue();
 
+  bool HadIntMinDivisor = false;
   bool HadOneDivisor = false;
   bool AllDivisorsAreOnes = true;
   bool HadEvenDivisor = false;
@@ -5080,12 +5082,10 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     // WARNING: this fold is only valid for positive divisors!
     APInt D = C->getAPIntValue();
-    if (D.isMinSignedValue())
-      return false; // We can't negate INT_MIN.
     if (D.isNegative())
       D.negate(); //  `rem %X, -C` is equivalent to `rem %X, C`
 
-    assert(!D.isNegative() && "The fold is only valid for positive divisors!");
+    HadIntMinDivisor |= D.isMinSignedValue();
 
     // If all divisors are ones, we will prefer to avoid the fold.
     HadOneDivisor |= D.isOneValue();
@@ -5096,9 +5096,13 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     assert((!D.isOneValue() || (K == 0)) && "For divisor '1' we won't rotate.");
     APInt D0 = D.lshr(K);
 
-    // D is even if it has trailing zeros.
-    HadEvenDivisor |= (K != 0);
-    // D is a power-of-two if D0 is one.
+    if (!D.isMinSignedValue()) {
+      // D is even if it has trailing zeros; unless it's INT_MIN, in which case
+      // we don't care about this lane in this fold, we'll special-handle it.
+      HadEvenDivisor |= (K != 0);
+    }
+
+    // D is a power-of-two if D0 is one. This includes INT_MIN.
     // If all divisors are power-of-two, we will prefer to avoid the fold.
     AllDivisorsArePowerOfTwo &= D0.isOneValue();
 
@@ -5115,7 +5119,11 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);
     A.clearLowBits(K);
 
-    NeedToApplyOffset |= A != 0;
+    if (!D.isMinSignedValue()) {
+      // If divisor INT_MIN, then we don't care about this lane in this fold,
+      // we'll special-handle it.
+      NeedToApplyOffset |= A != 0;
+    }
 
     // Q = floor((2 * A) / (2^K))
     APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
@@ -5125,7 +5133,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     assert(APInt::getAllOnesValue(ShSVT.getSizeInBits()).ugt(K) &&
            "We are expecting that K is always less than all-ones for ShSVT");
 
-    // If the divisor is 1 the result can be constant-folded.
+    // If the divisor is 1 the result can be constant-folded. Likewise, we
+    // don't care about INT_MIN lanes, those can be set to undef if appropriate.
     if (D.isOneValue()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
@@ -5155,8 +5164,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   if (AllDivisorsAreOnes)
     return SDValue();
 
-  // If this is a srem by a powers-of-two, avoid the fold since it can be
-  // best implemented as a bit test.
+  // If this is a srem by a powers-of-two (including INT_MIN), avoid the fold
+  // since it can be best implemented as a bit test.
   if (AllDivisorsArePowerOfTwo)
     return SDValue();
 
@@ -5215,8 +5224,52 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   }
 
   // SREM: (setule/setugt (rotr (add (mul N, P), A), K), Q)
-  return DAG.getSetCC(DL, SETCCVT, Op0, QVal,
-                      ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+  SDValue Fold =
+      DAG.getSetCC(DL, SETCCVT, Op0, QVal,
+                   ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+
+  // If we didn't have lanes with INT_MIN divisor, then we're done.
+  if (!HadIntMinDivisor)
+    return Fold;
+
+  // That fold is only valid for positive divisors. Which effectively means,
+  // it is invalid for INT_MIN divisors. So if we have such a lane,
+  // we must fix-up results for said lanes.
+  assert(VT.isVector() && "Can/should only get here for vectors.");
+
+  if (!isOperationLegalOrCustom(ISD::SETEQ, VT) ||
+      !isOperationLegalOrCustom(ISD::AND, VT) ||
+      !isOperationLegalOrCustom(Cond, VT) ||
+      !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return SDValue();
+
+  Created.push_back(Fold.getNode());
+
+  SDValue IntMin = DAG.getConstant(
+      APInt::getSignedMinValue(SVT.getScalarSizeInBits()), DL, VT);
+  SDValue IntMax = DAG.getConstant(
+      APInt::getSignedMaxValue(SVT.getScalarSizeInBits()), DL, VT);
+  SDValue Zero =
+      DAG.getConstant(APInt::getNullValue(SVT.getScalarSizeInBits()), DL, VT);
+
+  // Which lanes had INT_MIN divisors? Divisor is constant, so const-folded.
+  SDValue DivisorIsIntMin = DAG.getSetCC(DL, SETCCVT, D, IntMin, ISD::SETEQ);
+  Created.push_back(DivisorIsIntMin.getNode());
+
+  // (N s% INT_MIN) ==/!= 0  <-->  (N & INT_MAX) ==/!= 0
+  SDValue Masked = DAG.getNode(ISD::AND, DL, VT, N, IntMax);
+  Created.push_back(Masked.getNode());
+  SDValue MaskedIsZero = DAG.getSetCC(DL, SETCCVT, Masked, Zero, Cond);
+  Created.push_back(MaskedIsZero.getNode());
+
+  // To produce final result we need to blend 2 vectors: 'SetCC' and
+  // 'MaskedIsZero'. If the divisor for channel was *NOT* INT_MIN, we pick
+  // from 'Fold', else pick from 'MaskedIsZero'. Since 'DivisorIsIntMin' is
+  // constant-folded, select can get lowered to a shuffle with constant mask.
+  SDValue Blended =
+      DAG.getNode(ISD::VSELECT, DL, VT, DivisorIsIntMin, MaskedIsZero, Fold);
+
+  return Blended;
 }
 
 bool TargetLowering::

@@ -1817,6 +1817,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
+  config->hadExplicitExports = !config->exports.empty();
   if (config->mingw) {
     // In MinGW, all symbols are automatically exported if no symbols
     // are chosen to be exported.

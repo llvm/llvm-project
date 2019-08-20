@@ -38,17 +38,12 @@ public:
 }
 
 COFFDumper::COFFDumper(const object::COFFObjectFile &Obj) : Obj(Obj) {
-  const object::pe32_header *PE32Header = nullptr;
-  Obj.getPE32Header(PE32Header);
-  if (PE32Header) {
+  if (const object::pe32_header *PE32Header = Obj.getPE32Header())
     dumpOptionalHeader(PE32Header);
-  } else {
-    const object::pe32plus_header *PE32PlusHeader = nullptr;
-    Obj.getPE32PlusHeader(PE32PlusHeader);
-    if (PE32PlusHeader) {
-      dumpOptionalHeader(PE32PlusHeader);
-    }
-  }
+  else if (const object::pe32plus_header *PE32PlusHeader =
+               Obj.getPE32PlusHeader())
+    dumpOptionalHeader(PE32PlusHeader);
+
   dumpHeader();
   dumpSections(Obj.getNumberOfSections());
   dumpSymbols(Obj.getNumberOfSymbols());

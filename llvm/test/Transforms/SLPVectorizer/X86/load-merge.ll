@@ -78,6 +78,32 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
   ret <4 x float> %i3
 }
 
+define <4 x float> @PR16739_byref_alt(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+; CHECK-LABEL: @PR16739_byref_alt(
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 2
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[TMP4]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[TMP4]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %gep0 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 0
+  %gep1 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 1
+  %x0 = load float, float* %gep0
+  %x1 = load float, float* %gep1
+  %i0 = insertelement <4 x float> undef, float %x0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %x0, i32 1
+  %i2 = insertelement <4 x float> %i1, float %x1, i32 2
+  %i3 = insertelement <4 x float> %i2, float %x1, i32 3
+  ret <4 x float> %i3
+}
+
 define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byval(
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <4 x float>* [[X:%.*]] to i64*

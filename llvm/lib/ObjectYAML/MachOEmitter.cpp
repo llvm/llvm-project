@@ -262,11 +262,6 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   return Error::success();
 }
 
-static bool isVirtualSection(uint8_t type) {
-  return (type == MachO::S_ZEROFILL || type == MachO::S_GB_ZEROFILL ||
-          type == MachO::S_THREAD_LOCAL_ZEROFILL);
-}
-
 Error MachOWriter::writeSectionData(raw_ostream &OS) {
   bool FoundLinkEditSeg = false;
   for (auto &LC : Obj.LoadCommands) {
@@ -311,11 +306,17 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
         }
 
         // Skip if it's a virtual section.
-        if (isVirtualSection(Sec.flags & MachO::SECTION_TYPE))
+        if (MachO::isVirtualSection(Sec.flags & MachO::SECTION_TYPE))
           continue;
 
-        // Fill section data with 0xDEADBEEF
-        Fill(OS, Sec.size, 0xDEADBEEFu);
+        if (Sec.content) {
+          yaml::BinaryRef Content = *Sec.content;
+          Content.writeAsBinary(OS);
+          ZeroFillBytes(OS, Sec.size - Content.binary_size());
+        } else {
+          // Fill section data with 0xDEADBEEF.
+          Fill(OS, Sec.size, 0xDEADBEEFu);
+        }
       }
       uint64_t segSize = is64Bit ? LC.Data.segment_command_64_data.filesize
                                  : LC.Data.segment_command_data.filesize;

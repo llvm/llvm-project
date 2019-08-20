@@ -489,6 +489,7 @@ public:
       if (pop(Name, Block))
         return true;
     } else if (Name == "end_function") {
+      ensureLocals(getStreamer());
       CurrentState = EndFunction;
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
@@ -758,6 +759,19 @@ public:
     return true; // We didn't process this directive.
   }
 
+  // Called either when the first instruction is parsed of the function ends.
+  void ensureLocals(MCStreamer &Out) {
+    if (CurrentState == FunctionStart) {
+      // We haven't seen a .local directive yet. The streamer requires locals to
+      // be encoded as a prelude to the instructions, so emit an empty list of
+      // locals here.
+      auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
+          *Out.getTargetStreamer());
+      TOut.emitLocal(SmallVector<wasm::ValType, 0>());
+      CurrentState = FunctionLocals;
+    }
+  }
+
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -768,15 +782,7 @@ public:
         MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
     switch (MatchResult) {
     case Match_Success: {
-      if (CurrentState == FunctionStart) {
-        // This is the first instruction in a function, but we haven't seen
-        // a .local directive yet. The streamer requires locals to be encoded
-        // as a prelude to the instructions, so emit an empty list of locals
-        // here.
-        auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
-            *Out.getTargetStreamer());
-        TOut.emitLocal(SmallVector<wasm::ValType, 0>());
-      }
+      ensureLocals(Out);
       // Fix unknown p2align operands.
       auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
       if (Align != -1U) {

@@ -29,7 +29,6 @@ namespace llvm {
     if (EO)
       return *EO;
     reportError(EO.takeError(), Input);
-    llvm_unreachable("reportError shouldn't return in this case");
   }
 } // namespace llvm
 

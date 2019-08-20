@@ -97,10 +97,11 @@ public:
     return UnitType == dwarf::DW_UT_type || UnitType == dwarf::DW_UT_split_type;
   }
   uint8_t getSize() const { return Size; }
+  uint8_t getUnitLengthFieldByteSize() const {
+    return dwarf::getUnitLengthFieldByteSize(FormParams.Format);
+  }
   uint64_t getNextUnitOffset() const {
-    return Offset + Length +
-           (FormParams.Format == llvm::dwarf::DwarfFormat::DWARF64 ? 4 : 0) +
-           FormParams.getDwarfOffsetByteSize();
+    return Offset + Length + getUnitLengthFieldByteSize();
   }
 };
 
@@ -501,7 +502,8 @@ public:
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {
-    return Header.getLength() + 4 - getHeaderSize();
+    return Header.getLength() + Header.getUnitLengthFieldByteSize() -
+           getHeaderSize();
   }
 
   /// extractDIEsIfNeeded - Parses a compile unit and indexes its DIEs if it

@@ -7104,7 +7104,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
     for (auto &I : reverse(BB)) {
       if (makeBitReverse(I, *DL, *TLI)) {
         MadeBitReverse = MadeChange = true;
-        ModifiedDT = true;
         break;
       }
     }

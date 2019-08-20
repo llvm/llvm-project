@@ -1520,7 +1520,8 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
     // internally, so we use ".CRT$XCA00001" for them.
     SmallString<24> Name;
     raw_svector_ostream OS(Name);
-    OS << ".CRT$XC" << (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
+    OS << ".CRT$X" << (IsCtor ? "C" : "T") <<
+        (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
         Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
         SectionKind::getReadOnly());

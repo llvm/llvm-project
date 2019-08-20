@@ -1457,11 +1457,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
 
-    uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
-    uint64_t K = SymBOffset - FixupOffset;
     assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    C -= K;
+    C += FixupOffset - Layout.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -1479,38 +1477,35 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     }
   }
 
-  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
-  uint64_t OriginalC = C;
-  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
-  if (!RelocateWithSymbol && SymA && !SymA->isUndefined())
-    C += Layout.getSymbolOffset(*SymA);
-
-  uint64_t Addend = 0;
-  if (hasRelocationAddend()) {
-    Addend = C;
-    C = 0;
-  }
-
-  FixedValue = C;
-
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
   if (!checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
     return;
 
+  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
+  uint64_t Addend = 0;
+
+  FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
+                   ? C + Layout.getSymbolOffset(*SymA)
+                   : C;
+  if (hasRelocationAddend()) {
+    Addend = FixedValue;
+    FixedValue = 0;
+  }
+
   if (!RelocateWithSymbol) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
       SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA,
-                           OriginalC);
+    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA, C);
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
 
-  const auto *RenamedSymA = SymA;
+  const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
     if (const MCSymbolELF *R = Renames.lookup(SymA))
       RenamedSymA = R;
@@ -1520,8 +1515,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     else
       RenamedSymA->setUsedInReloc();
   }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA,
-                         OriginalC);
+  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA, C);
   Relocations[&FixupSection].push_back(Rec);
 }
 
