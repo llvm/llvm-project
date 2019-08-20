@@ -19,10 +19,11 @@
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ObjectYAML/MinidumpYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -54,7 +55,8 @@ public:
   llvm::Error SetUpFromYaml(llvm::StringRef yaml) {
     std::string data;
     llvm::raw_string_ostream os(data);
-    if (llvm::Error E = llvm::MinidumpYAML::writeAsBinary(yaml, os))
+    llvm::yaml::Input YIn(yaml);
+    if (llvm::Error E = llvm::yaml::convertYAML(YIn, os))
       return E;
 
     os.flush();
@@ -73,16 +75,15 @@ public:
 TEST_F(MinidumpParserTest, InvalidMinidump) {
   std::string duplicate_streams;
   llvm::raw_string_ostream os(duplicate_streams);
-  ASSERT_THAT_ERROR(llvm::MinidumpYAML::writeAsBinary(R"(
+  llvm::yaml::Input YIn(R"(
 --- !minidump
 Streams:
   - Type:            LinuxAuxv
     Content:         DEADBEEFBAADF00D
   - Type:            LinuxAuxv
     Content:         DEADBEEFBAADF00D
-  )",
-                                                      os),
-                    llvm::Succeeded());
+  )");
+  ASSERT_THAT_ERROR(llvm::yaml::convertYAML(YIn, os), llvm::Succeeded());
   os.flush();
   auto data_buffer_sp = std::make_shared<DataBufferHeap>(
       duplicate_streams.data(), duplicate_streams.size());
