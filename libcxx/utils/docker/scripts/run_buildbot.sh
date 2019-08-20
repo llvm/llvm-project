@@ -20,7 +20,7 @@ apt-get install sudo -y
 # FIXME(EricWF): Remove this hack. It's only in place to temporarily fix linking libclang_rt from the
 # debian packages.
 # WARNING: If you're not a buildbot, DO NOT RUN!
-apt-get install lld-10
+apt-get install lld-10 -y
 rm /usr/bin/ld
 ln -s /usr/bin/lld-10 /usr/bin/ld
 
