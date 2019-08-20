@@ -88,7 +88,6 @@ public:
   using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
   using visitor_iterator = VisitorList::iterator;
   using visitor_range = llvm::iterator_range<visitor_iterator>;
-  using ExtraTextList = SmallVector<StringRef, 2>;
   using NoteList = SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4>;
 
 protected:
@@ -106,7 +105,6 @@ protected:
   const ExplodedNode *ErrorNode = nullptr;
   SmallVector<SourceRange, 4> Ranges;
   const SourceRange ErrorNodeRange;
-  ExtraTextList ExtraText;
   NoteList Notes;
 
   /// A (stack of) a set of symbols that are registered with this
@@ -286,17 +284,6 @@ public:
 
   virtual const NoteList &getNotes() {
     return Notes;
-  }
-
-  /// This allows for addition of meta data to the diagnostic.
-  ///
-  /// Currently, only the HTMLDiagnosticClient knows how to display it.
-  void addExtraText(StringRef S) {
-    ExtraText.push_back(S);
-  }
-
-  virtual const ExtraTextList &getExtraText() {
-    return ExtraText;
   }
 
   /// Return the "definitive" location of the reported bug.

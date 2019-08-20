@@ -2878,11 +2878,6 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
         Pieces.push_front(*I);
     }
 
-    // Get the meta data.
-    const BugReport::ExtraTextList &Meta = report->getExtraText();
-    for (const auto &i : Meta)
-      PD->addMeta(i);
-
     updateExecutedLinesWithDiagnosticPieces(*PD);
     Consumer->HandlePathDiagnostic(std::move(PD));
   }
