@@ -35,11 +35,11 @@ public:
 
   /// Utility class for counting the bytes that were written to a stream in a
   /// certain time span.
+  ///
   /// \example
   ///   ByteDelta delta(*this);
   ///   WriteDataToStream("foo");
   ///   return *delta;
-  /// \endcode
   class ByteDelta {
     Stream *m_stream;
     /// Bytes we have written so far when ByteDelta was created.

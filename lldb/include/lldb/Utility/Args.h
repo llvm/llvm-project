@@ -168,8 +168,8 @@ public:
 
   /// Appends a new argument to the end of the list argument list.
   ///
-  /// \param[in] arg_cstr
-  ///     The new argument as a NULL terminated C string.
+  /// \param[in] arg_str
+  ///     The new argument.
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
@@ -179,30 +179,27 @@ public:
 
   void AppendArguments(const char **argv);
 
-  /// Insert the argument value at index \a idx to \a arg_cstr.
+  /// Insert the argument value at index \a idx to \a arg_str.
   ///
   /// \param[in] idx
   ///     The index of where to insert the argument.
   ///
-  /// \param[in] arg_cstr
-  ///     The new argument as a NULL terminated C string.
+  /// \param[in] arg_str
+  ///     The new argument.
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
-  ///
-  /// \return
-  ///     The NULL terminated C string of the copy of \a arg_cstr.
   void InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
                              char quote_char = '\0');
 
-  /// Replaces the argument value at index \a idx to \a arg_cstr if \a idx is
+  /// Replaces the argument value at index \a idx to \a arg_str if \a idx is
   /// a valid argument index.
   ///
   /// \param[in] idx
   ///     The index of the argument that will have its value replaced.
   ///
-  /// \param[in] arg_cstr
-  ///     The new argument as a NULL terminated C string.
+  /// \param[in] arg_str
+  ///     The new argument.
   ///
   /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
@@ -238,12 +235,12 @@ public:
   /// \see Args::GetArgumentAtIndex (size_t) const
   void Shift();
 
-  /// Inserts a class owned copy of \a arg_cstr at the beginning of the
+  /// Inserts a class owned copy of \a arg_str at the beginning of the
   /// argument vector.
   ///
-  /// A copy \a arg_cstr will be made.
+  /// A copy \a arg_str will be made.
   ///
-  /// \param[in] arg_cstr
+  /// \param[in] arg_str
   ///     The argument to push on the front of the argument stack.
   ///
   /// \param[in] quote_char
