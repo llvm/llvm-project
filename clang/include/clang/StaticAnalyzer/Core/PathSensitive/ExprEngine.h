@@ -530,7 +530,7 @@ public:
   void VisitCXXDestructor(QualType ObjectType, const MemRegion *Dest,
                           const Stmt *S, bool IsBaseDtor,
                           ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                          const EvalCallOptions &Options);
+                          EvalCallOptions &Options);
 
   void VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                 ExplodedNode *Pred,
