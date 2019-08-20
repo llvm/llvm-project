@@ -50,7 +50,7 @@ public:
 
   void SetCurrentValue(const char *value) {
     if (value && value[0])
-      m_regex.Compile(llvm::StringRef(value));
+      m_regex = RegularExpression(llvm::StringRef(value));
     else
       m_regex = RegularExpression();
   }

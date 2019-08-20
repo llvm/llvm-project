@@ -23,7 +23,18 @@ public:
   /// contains no compiled regular expression.
   RegularExpression() = default;
 
+  /// Constructor for a regular expression.
+  ///
+  /// Compile a regular expression using the supplied regular expression text.
+  /// The compiled regular expression lives in this object so that it can be
+  /// readily used for regular expression matches. Execute() can be called
+  /// after the regular expression is compiled.
+  ///
+  /// \param[in] string
+  ///     An llvm::StringRef that represents the regular expression to compile.
+  //      String is not referenced anymore after the object is constructed.
   explicit RegularExpression(llvm::StringRef string);
+
   ~RegularExpression() = default;
 
   RegularExpression(const RegularExpression &rhs);
@@ -31,22 +42,6 @@ public:
 
   RegularExpression &operator=(RegularExpression &&rhs) = default;
   RegularExpression &operator=(const RegularExpression &rhs) = default;
-
-  /// Compile a regular expression.
-  ///
-  /// Compile a regular expression using the supplied regular expression text.
-  /// The compiled regular expression lives in this object so that it can be
-  /// readily used for regular expression matches. Execute() can be called
-  /// after the regular expression is compiled. Any previously compiled
-  /// regular expression contained in this object will be freed.
-  ///
-  /// \param[in] re
-  ///     A NULL terminated C string that represents the regular
-  ///     expression to compile.
-  ///
-  /// \return \b true if the regular expression compiles successfully, \b false
-  ///     otherwise.
-  bool Compile(llvm::StringRef string);
 
   /// Executes a regular expression.
   ///
@@ -65,7 +60,7 @@ public:
   ///     matches, or nullptr if no parenthesized matching is needed.
   ///
   /// \return \b true if \a string matches the compiled regular expression, \b
-  ///     false otherwise.
+  ///     false otherwise incl. the case regular exression failed to compile.
   bool Execute(llvm::StringRef string,
                llvm::SmallVectorImpl<llvm::StringRef> *matches = nullptr) const;
 

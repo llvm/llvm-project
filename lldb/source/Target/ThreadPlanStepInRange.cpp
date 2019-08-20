@@ -313,10 +313,10 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
 void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
   auto name_ref = llvm::StringRef::withNullAsEmpty(name);
-  if (!m_avoid_regexp_up)
+  if (m_avoid_regexp_up)
+    *m_avoid_regexp_up = RegularExpression(name_ref);
+  else
     m_avoid_regexp_up.reset(new RegularExpression(name_ref));
-
-  m_avoid_regexp_up->Compile(name_ref);
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
