@@ -119,6 +119,14 @@ dl_iterate_phdr (int (*callback) (struct dl_phdr_info *,
     size_t text_size = TEXT_SIZE;
     size_t eh_base_size = EH_FRM_HDR_SIZE;
 
+    if (text_size == 0) {
+        write_err("%s:%d %s: Warning: text_size is 0.\n", __FILE__, __LINE__, __func__);
+    }
+
+    if (eh_base_size == 0) {
+        write_err("%s:%d %s: Warning: eh_base_size is 0.\n",  __FILE__, __LINE__, __func__);
+    }
+
     memset(pinfo, 0, sizeof(*pinfo));
 
     pinfo->dlpi_addr = (ElfW(Addr))&IMAGE_BASE;
