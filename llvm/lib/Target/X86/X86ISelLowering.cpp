@@ -5505,6 +5505,7 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
     if (VT.getSizeInBits() == (SubVT.getSizeInBits() * 2) &&
         Idx == (VT.getVectorNumElements() / 2) &&
         Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(1).getValueType() == SubVT &&
         isNullConstant(Src.getOperand(2))) {
       Ops.push_back(Src.getOperand(1));
       Ops.push_back(Sub);
@@ -43840,6 +43841,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
       OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2 &&
       isNullConstant(Vec.getOperand(2)) && !Vec.getOperand(0).isUndef() &&
+      Vec.getOperand(1).getValueSizeInBits() == SubVecVT.getSizeInBits() &&
       Vec.hasOneUse()) {
     Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
                       Vec.getOperand(1), Vec.getOperand(2));
