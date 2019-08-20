@@ -408,11 +408,6 @@ public:
   enum Kind { BasicBRKind, PathSensitiveBRKind };
 
 private:
-  using BugTypesTy = llvm::ImmutableSet<BugType *>;
-
-  BugTypesTy::Factory F;
-  BugTypesTy BugTypes;
-
   const Kind kind;
   BugReporterData& D;
 
@@ -433,11 +428,10 @@ private:
 
 protected:
   BugReporter(BugReporterData& d, Kind k)
-      : BugTypes(F.getEmptySet()), kind(k), D(d) {}
+      : kind(k), D(d) {}
 
 public:
-  BugReporter(BugReporterData& d)
-      : BugTypes(F.getEmptySet()), kind(BasicBRKind), D(d) {}
+  BugReporter(BugReporterData &d) : kind(BasicBRKind), D(d) {}
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
@@ -452,11 +446,6 @@ public:
   ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() {
     return D.getPathDiagnosticConsumers();
   }
-
-  /// Iterator over the set of BugTypes tracked by the BugReporter.
-  using iterator = BugTypesTy::iterator;
-  iterator begin() { return BugTypes.begin(); }
-  iterator end() { return BugTypes.end(); }
 
   /// Iterator over the set of BugReports tracked by the BugReporter.
   using EQClasses_iterator = llvm::FoldingSet<BugReportEquivClass>::iterator;
@@ -474,8 +463,6 @@ public:
                           ArrayRef<BugReport *> &bugReports) {
     return {};
   }
-
-  void Register(const BugType *BT);
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///
@@ -510,8 +497,6 @@ class PathSensitiveBugReporter : public BugReporter {
 public:
   PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
       : BugReporter(d, PathSensitiveBRKind), Eng(eng) {}
-
-  ~PathSensitiveBugReporter() override = default;
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.

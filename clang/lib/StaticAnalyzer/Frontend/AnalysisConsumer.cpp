@@ -609,6 +609,7 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   // After all decls handled, run checkers on the entire TranslationUnit.
   checkerMgr->runCheckersOnEndOfTranslationUnit(TU, *Mgr, BR);
 
+  BR.FlushReports();
   RecVisitorBR = nullptr;
 }
 
@@ -766,6 +767,9 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
     if (SyntaxCheckTimer)
       SyntaxCheckTimer->stopTimer();
   }
+
+  BR.FlushReports();
+
   if ((Mode & AM_Path) && checkerMgr->hasPathSensitiveCheckers()) {
     RunPathSensitiveChecks(D, IMode, VisitedCallees);
     if (IMode != ExprEngine::Inline_Minimal)
