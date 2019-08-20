@@ -41,8 +41,14 @@ void test_big()
 
 int main(int, char**)
 {
+    // On some systems char is unsigned.
+    // If that is the case, we should just test signed char twice.
+    typedef typename std::conditional<
+        std::is_signed<char>::value, char, signed char
+    >::type SignedChar;
+
     test_abs<short int, typename correct_size_int<short int>::type>();
-    test_abs<char, typename correct_size_int<char>::type>();
+    test_abs<SignedChar, typename correct_size_int<SignedChar>::type>();
     test_abs<signed char, typename correct_size_int<signed char>::type>();
 
     test_abs<int, typename correct_size_int<int>::type>();
