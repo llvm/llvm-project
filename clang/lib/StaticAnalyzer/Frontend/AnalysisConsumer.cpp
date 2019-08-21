@@ -311,9 +311,9 @@ public:
     checkerMgr = createCheckerManager(
         *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
-    Mgr = std::make_unique<AnalysisManager>(
-        *Ctx, PP.getDiagnostics(), PathConsumers, CreateStoreMgr,
-        CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
+    Mgr = std::make_unique<AnalysisManager>(*Ctx, PathConsumers, CreateStoreMgr,
+                                            CreateConstraintMgr,
+                                            checkerMgr.get(), *Opts, Injector);
   }
 
   /// Store the top level decls in the set to be processed later on.

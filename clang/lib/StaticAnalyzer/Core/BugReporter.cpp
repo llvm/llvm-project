@@ -2049,8 +2049,6 @@ void BuiltinBug::anchor() {}
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
 
-void BugReport::NodeResolver::anchor() {}
-
 void BugReport::addVisitor(std::unique_ptr<BugReporterVisitor> visitor) {
   if (!visitor)
     return;
@@ -2218,10 +2216,6 @@ const ExplodedGraph &PathSensitiveBugReporter::getGraph() const {
   return Eng.getGraph();
 }
 
-ProgramStateManager &PathSensitiveBugReporter::getStateManager() {
-  return Eng.getStateManager();
-}
-
 ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
@@ -2256,11 +2250,9 @@ void BugReporter::FlushReports() {
 namespace {
 
 /// A wrapper around an ExplodedGraph that contains a single path from the root
-/// to the error node, and a map that maps the nodes in this path to the ones in
-/// the original ExplodedGraph.
+/// to the error node.
 class BugPathInfo {
 public:
-  InterExplodedGraphMap MapToOriginNodes;
   std::unique_ptr<ExplodedGraph> BugPath;
   BugReport *Report;
   const ExplodedNode *ErrorNode;
@@ -2270,9 +2262,6 @@ public:
 /// conveniently retrieve bug paths from a single error node to the root.
 class BugPathGetter {
   std::unique_ptr<ExplodedGraph> TrimmedGraph;
-
-  /// Map from the trimmed graph to the original.
-  InterExplodedGraphMap InverseMap;
 
   using PriorityMapTy = llvm::DenseMap<const ExplodedNode *, unsigned>;
 
@@ -2336,7 +2325,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   // The trimmed graph is created in the body of the constructor to ensure
   // that the DenseMaps have been initialized already.
   InterExplodedGraphMap ForwardMap;
-  TrimmedGraph = OriginalGraph->trim(Nodes, &ForwardMap, &InverseMap);
+  TrimmedGraph = OriginalGraph->trim(Nodes, &ForwardMap);
 
   // Find the (first) error node in the trimmed graph.  We just need to consult
   // the node map which maps from nodes in the original graph to nodes
@@ -2399,7 +2388,6 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
   // Create a new graph with a single path. This is the graph that will be
   // returned to the caller.
   auto GNew = std::make_unique<ExplodedGraph>();
-  CurrentBugPath.MapToOriginNodes.clear();
 
   // Now walk from the error node up the BFS path, always taking the
   // predeccessor with the lowest number.
@@ -2409,11 +2397,6 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
     // and location.
     ExplodedNode *NewN = GNew->createUncachedNode(
         OrigN->getLocation(), OrigN->getState(), OrigN->isSink());
-
-    // Store the mapping to the original node.
-    InterExplodedGraphMap::const_iterator IMitr = InverseMap.find(OrigN);
-    assert(IMitr != InverseMap.end() && "No mapping to original node.");
-    CurrentBugPath.MapToOriginNodes[NewN] = IMitr->second;
 
     // Link up the new node with the previous node.
     if (Succ)
@@ -2613,7 +2596,7 @@ PathDiagnosticBuilder::findValidReport(ArrayRef<BugReport *> &bugReports,
     R->addVisitor(std::make_unique<ConditionBRVisitor>());
     R->addVisitor(std::make_unique<TagVisitor>());
 
-    BugReporterContext BRC(Reporter, BugPath->MapToOriginNodes);
+    BugReporterContext BRC(Reporter);
 
     // Run all visitors on a given graph, once.
     std::unique_ptr<VisitorsDiagnosticsTy> visitorNotes =

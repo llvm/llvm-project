@@ -74,16 +74,6 @@ using DiagnosticForConsumerMapTy =
 /// individual bug reports.
 class BugReport : public llvm::ilist_node<BugReport> {
 public:
-  class NodeResolver {
-    virtual void anchor();
-
-  public:
-    virtual ~NodeResolver() = default;
-
-    virtual const ExplodedNode*
-            getOriginalNode(const ExplodedNode *N) = 0;
-  };
-
   using ranges_iterator = const SourceRange *;
   using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
   using visitor_iterator = VisitorList::iterator;
@@ -391,7 +381,6 @@ class BugReporterData {
 public:
   virtual ~BugReporterData() = default;
 
-  virtual DiagnosticsEngine& getDiagnostic() = 0;
   virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
@@ -404,11 +393,7 @@ public:
 ///
 /// The base class is used for generating path-insensitive
 class BugReporter {
-public:
-  enum Kind { BasicBRKind, PathSensitiveBRKind };
-
 private:
-  const Kind kind;
   BugReporterData& D;
 
   /// Generate and flush the diagnostics for the given bug report.
@@ -426,22 +411,12 @@ private:
   /// A vector of BugReports for tracking the allocated pointers and cleanup.
   std::vector<BugReportEquivClass *> EQClassesVector;
 
-protected:
-  BugReporter(BugReporterData& d, Kind k)
-      : kind(k), D(d) {}
-
 public:
-  BugReporter(BugReporterData &d) : kind(BasicBRKind), D(d) {}
+  BugReporter(BugReporterData &d) : D(d) {}
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
   void FlushReports();
-
-  Kind getKind() const { return kind; }
-
-  DiagnosticsEngine& getDiagnostic() {
-    return D.getDiagnostic();
-  }
 
   ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() {
     return D.getPathDiagnosticConsumers();
@@ -496,7 +471,7 @@ class PathSensitiveBugReporter : public BugReporter {
 
 public:
   PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
-      : BugReporter(d, PathSensitiveBRKind), Eng(eng) {}
+      : BugReporter(d), Eng(eng) {}
 
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
@@ -504,8 +479,6 @@ public:
 
   /// getStateManager - Return the state manager used by the analysis
   ///  engine.
-  ProgramStateManager &getStateManager();
-
   ProgramStateManager &getStateManager() const;
 
   /// \p bugReports A set of bug reports within a *single* equivalence class
@@ -516,48 +489,23 @@ public:
   std::unique_ptr<DiagnosticForConsumerMapTy>
   generatePathDiagnostics(ArrayRef<PathDiagnosticConsumer *> consumers,
                           ArrayRef<BugReport *> &bugReports) override;
-
-  /// classof - Used by isa<>, cast<>, and dyn_cast<>.
-  static bool classof(const BugReporter* R) {
-    return R->getKind() == PathSensitiveBRKind;
-  }
 };
 
-
-class NodeMapClosure : public BugReport::NodeResolver {
-  InterExplodedGraphMap &M;
-
-public:
-  NodeMapClosure(InterExplodedGraphMap &m) : M(m) {}
-
-  const ExplodedNode *getOriginalNode(const ExplodedNode *N) override {
-    return M.lookup(N);
-  }
-};
 
 class BugReporterContext {
   PathSensitiveBugReporter &BR;
-  NodeMapClosure NMC;
 
   virtual void anchor();
 
 public:
-  BugReporterContext(PathSensitiveBugReporter &br,
-                     InterExplodedGraphMap &Backmap)
-      : BR(br), NMC(Backmap) {}
+  BugReporterContext(PathSensitiveBugReporter &br) : BR(br) {}
 
   virtual ~BugReporterContext() = default;
 
   PathSensitiveBugReporter& getBugReporter() { return BR; }
 
-  const ExplodedGraph &getGraph() const { return BR.getGraph(); }
-
   ProgramStateManager& getStateManager() const {
     return BR.getStateManager();
-  }
-
-  SValBuilder &getSValBuilder() const {
-    return getStateManager().getSValBuilder();
   }
 
   ASTContext &getASTContext() const {
@@ -571,8 +519,6 @@ public:
   const AnalyzerOptions &getAnalyzerOptions() const {
     return BR.getAnalyzerOptions();
   }
-
-  NodeMapClosure& getNodeResolver() { return NMC; }
 };
 
 

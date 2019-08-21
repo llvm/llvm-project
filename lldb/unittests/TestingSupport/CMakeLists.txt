@@ -1,4 +1,4 @@
-set(EXCLUDE_FROM_ALL ON)
+set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL ON)
 add_lldb_library(lldbUtilityHelpers
   MockTildeExpressionResolver.cpp
   TestUtilities.cpp
