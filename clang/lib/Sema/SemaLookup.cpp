@@ -5434,6 +5434,8 @@ TypoExpr *Sema::createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
   State.Consumer = std::move(TCC);
   State.DiagHandler = std::move(TDG);
   State.RecoveryHandler = std::move(TRC);
+  if (TE)
+    TypoExprs.push_back(TE);
   return TE;
 }
 

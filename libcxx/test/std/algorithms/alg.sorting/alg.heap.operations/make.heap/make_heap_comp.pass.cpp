@@ -20,7 +20,8 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
+#include "test_iterators.h"
 
 struct indirect_less
 {
@@ -39,6 +40,11 @@ void test(int N)
         ia[i] = i;
     std::shuffle(ia, ia+N, randomness);
     std::make_heap(ia, ia+N, std::greater<int>());
+    assert(std::is_heap(ia, ia+N, std::greater<int>()));
+
+    std::shuffle(ia, ia+N, randomness);
+    std::make_heap(random_access_iterator<int *>(ia), 
+                   random_access_iterator<int *>(ia+N), std::greater<int>());
     assert(std::is_heap(ia, ia+N, std::greater<int>()));
     }
 

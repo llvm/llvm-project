@@ -1,8 +1,37 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-output=text -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.VirtualCall \
+// RUN:                    -analyzer-checker=debug.ExprInspection \
+// RUN:                    -std=c++11 -verify=impure %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-config optin.cplusplus.VirtualCall:PureOnly=true -DPUREONLY=1 -analyzer-output=text -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.PureVirtualCall \
+// RUN:                    -analyzer-checker=debug.ExprInspection \
+// RUN:                    -std=c++11 -verify=pure -std=c++11 %s
+
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.VirtualCall \
+// RUN:                    -analyzer-config \
+// RUN:                        optin.cplusplus.VirtualCall:PureOnly=true \
+// RUN:                    -analyzer-checker=debug.ExprInspection \
+// RUN:                    -std=c++11 -verify=none %s
+
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.PureVirtualCall \
+// RUN:                    -analyzer-checker=optin.cplusplus.VirtualCall \
+// RUN:                    -analyzer-checker=debug.ExprInspection \
+// RUN:                    -std=c++11 -verify=pure,impure -std=c++11 %s
+
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.PureVirtualCall \
+// RUN:                    -analyzer-checker=optin.cplusplus.VirtualCall \
+// RUN:                    -analyzer-config \
+// RUN:                        optin.cplusplus.VirtualCall:PureOnly=true \
+// RUN:                    -analyzer-checker=debug.ExprInspection \
+// RUN:                    -std=c++11 -verify=pure %s
+
+
+// We expect no diagnostics when all checks are disabled.
+// none-no-diagnostics
+
 
 #include "virtualcall.h"
+
+void clang_analyzer_warnIfReached();
 
 class A {
 public:
@@ -13,54 +42,32 @@ public:
   virtual int foo() = 0;
   virtual void bar() = 0;
   void f() {
-    foo();
-	// expected-warning-re@-1 {{{{^}}Call to pure virtual function during construction}}
-	// expected-note-re@-2 {{{{^}}Call to pure virtual function during construction}}
+    foo(); // pure-warning{{Call to pure virtual method 'A::foo' during construction has undefined behavior}}
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 
-class B : public A {
+A::A() {
+  f();
+}
+
+class B {
 public:
-  B() { // expected-note {{Calling default constructor for 'A'}}
-    foo(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'B' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+  B() {
+    foo(); // impure-warning {{Call to virtual method 'B::foo' during construction bypasses virtual dispatch}}
   }
   ~B();
 
   virtual int foo();
   virtual void bar() {
-    foo(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during destruction}}
-  	// expected-note-re@-3 {{{{^}}Call to virtual function during destruction}}
-#endif
-  } 
+    foo(); // impure-warning {{Call to virtual method 'B::foo' during destruction bypasses virtual dispatch}}
+  }
 };
-
-A::A() { 
-  f(); 
-// expected-note-re@-1 {{{{^}}This constructor of an object of type 'A' has not returned when the virtual method was called}}
-// expected-note-re@-2 {{{{^}}Calling 'A::f'}}
-}
 
 B::~B() {
   this->B::foo(); // no-warning
   this->B::bar();
-#if !PUREONLY
- 	 // expected-note-re@-2 {{{{^}}This destructor of an object of type '~B' has not returned when the virtual method was called}}
- 	 // expected-note-re@-3 {{{{^}}Calling 'B::bar'}}
-#endif
-  this->foo(); 
-#if !PUREONLY
- 	 // expected-warning-re@-2 {{{{^}}Call to virtual function during destruction}}
- 	 // expected-note-re@-3 {{{{^}}This destructor of an object of type '~B' has not returned when the virtual method was called}}
- 	 // expected-note-re@-4 {{{{^}}Call to virtual function during destruction}}
-#endif
-	
+  this->foo(); // impure-warning {{Call to virtual method 'B::foo' during destruction bypasses virtual dispatch}}
 }
 
 class C : public B {
@@ -73,12 +80,7 @@ public:
 };
 
 C::C() {
-  f(foo()); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'C' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+  f(foo()); // impure-warning {{Call to virtual method 'C::foo' during construction bypasses virtual dispatch}}
 }
 
 class D : public B {
@@ -97,9 +99,6 @@ public:
     foo(); // no-warning
   }
   ~E() { bar(); }
-#if !PUREONLY
- 	 // expected-note-re@-2 2{{{{^}}Calling '~B'}}
-#endif
   int foo() override;
 };
 
@@ -135,52 +134,23 @@ public:
     G g;
     g.foo();
     g.bar(); // no warning
-    f();     
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'H' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+    f(); // impure-warning {{Call to virtual method 'H::f' during construction bypasses virtual dispatch}}
     H &h = *this;
-    h.f(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-  	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'H' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+    h.f(); // impure-warning {{Call to virtual method 'H::f' during construction bypasses virtual dispatch}}
   }
 };
 
 class X {
 public:
   X() {
-    g(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'X' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+    g(); // impure-warning {{Call to virtual method 'X::g' during construction bypasses virtual dispatch}}
   }
   X(int i) {
     if (i > 0) {
-#if !PUREONLY
-	// expected-note-re@-2 {{{{^}}'i' is > 0}}
-	// expected-note-re@-3 {{{{^}}Taking true branch}}
-	// expected-note-re@-4 {{{{^}}'i' is <= 0}}
-	// expected-note-re@-5 {{{{^}}Taking false branch}}
-#endif
       X x(i - 1);
-#if !PUREONLY
-	// expected-note-re@-2 {{{{^}}Calling constructor for 'X'}}
-#endif
       x.g(); // no warning
     }
-    g(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-	// expected-note-re@-3 {{{{^}}This constructor of an object of type 'X' has not returned when the virtual method was called}}
-  	// expected-note-re@-4 {{{{^}}Call to virtual function during construction}}
-#endif
+    g(); // impure-warning {{Call to virtual method 'X::g' during construction bypasses virtual dispatch}}
   }
   virtual void g();
 };
@@ -197,19 +167,11 @@ public:
     N n;
     n.virtualMethod(); // no warning
     n.callFooOfM(this);
-#if !PUREONLY
-  	// expected-note-re@-2 {{{{^}}This constructor of an object of type 'M' has not returned when the virtual method was called}}
-	// expected-note-re@-3 {{{{^}}Calling 'N::callFooOfM'}}
-#endif
   }
   virtual void foo();
 };
 void N::callFooOfM(M *m) {
-  m->foo(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-  	// expected-note-re@-3 {{{{^}}Call to virtual function during construction}}
-#endif
+  m->foo(); // impure-warning {{Call to virtual method 'M::foo' during construction bypasses virtual dispatch}}
 }
 
 class Y {
@@ -217,65 +179,27 @@ public:
   virtual void foobar();
   void fooY() {
     F f1;
-    foobar(); 
-#if !PUREONLY
-  	// expected-warning-re@-2 {{{{^}}Call to virtual function during construction}}
-  	// expected-note-re@-3 {{{{^}}Call to virtual function during construction}}
-#endif
+    foobar(); // impure-warning {{Call to virtual method 'Y::foobar' during construction bypasses virtual dispatch}}
   }
   Y() { fooY(); }
-#if !PUREONLY
-  	// expected-note-re@-2 {{{{^}}This constructor of an object of type 'Y' has not returned when the virtual method was called}}
-  	// expected-note-re@-3 {{{{^}}Calling 'Y::fooY'}}
-#endif
 };
 
 int main() {
   B b;
-#if PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling default constructor for 'B'}}
-#else 
-	//expected-note-re@-4 2{{{{^}}Calling default constructor for 'B'}}
-#endif
   C c;
-#if !PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling default constructor for 'C'}}
-#endif
   D d;
   E e;
   F f;
   G g;
   H h;
   H h1(1);
-#if !PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling constructor for 'H'}}
-	//expected-note-re@-3 {{{{^}}Calling constructor for 'H'}}
-#endif
   X x; 
-#if !PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling default constructor for 'X'}}
-#endif
   X x1(1);
-#if !PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling constructor for 'X'}}
-#endif
   M m;
-#if !PUREONLY
-	//expected-note-re@-2 {{{{^}}Calling default constructor for 'M'}}
-#endif
   Y *y = new Y;
-#if !PUREONLY
-  //expected-note-re@-2 {{{{^}}Calling default constructor for 'Y'}}
-#endif
   delete y;
   header::Z z;
-#if !PUREONLY
-	// expected-note-re@-2 {{{{^}}Calling default constructor for 'Z'}}
-#endif
 }
-#if !PUREONLY
-	//expected-note-re@-2 2{{{{^}}Calling '~E'}}
-#endif
 
 namespace PR34451 {
 struct a {

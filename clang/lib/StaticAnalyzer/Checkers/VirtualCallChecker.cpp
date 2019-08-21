@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a checker that checks virtual function calls during
+//  This file defines a checker that checks virtual method calls during
 //  construction or destruction of C++ objects.
 //
 //===----------------------------------------------------------------------===//
@@ -40,11 +40,9 @@ template <> struct FoldingSetTrait<ObjectState> {
 namespace {
 class VirtualCallChecker
     : public Checker<check::BeginFunction, check::EndFunction, check::PreCall> {
-  mutable std::unique_ptr<BugType> BT;
-
 public:
-  // The flag to determine if pure virtual functions should be issued only.
-  DefaultBool IsPureOnly;
+  // These are going to be null if the respective check is disabled.
+  mutable std::unique_ptr<BugType> BT_Pure, BT_Impure;
 
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
@@ -53,85 +51,13 @@ public:
 private:
   void registerCtorDtorCallInState(bool IsBeginFunction,
                                    CheckerContext &C) const;
-  void reportBug(StringRef Msg, bool PureError, const MemRegion *Reg,
-                 CheckerContext &C) const;
-
-  class VirtualBugVisitor : public BugReporterVisitor {
-  private:
-    const MemRegion *ObjectRegion;
-    bool Found;
-
-  public:
-    VirtualBugVisitor(const MemRegion *R) : ObjectRegion(R), Found(false) {}
-
-    void Profile(llvm::FoldingSetNodeID &ID) const override {
-      static int X = 0;
-      ID.AddPointer(&X);
-      ID.AddPointer(ObjectRegion);
-    }
-
-    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                     BugReporterContext &BRC,
-                                     BugReport &BR) override;
-  };
 };
 } // end namespace
 
 // GDM (generic data map) to the memregion of this for the ctor and dtor.
 REGISTER_MAP_WITH_PROGRAMSTATE(CtorDtorMap, const MemRegion *, ObjectState)
 
-PathDiagnosticPieceRef VirtualCallChecker::VirtualBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &) {
-  // We need the last ctor/dtor which call the virtual function.
-  // The visitor walks the ExplodedGraph backwards.
-  if (Found)
-    return nullptr;
-
-  ProgramStateRef State = N->getState();
-  const LocationContext *LCtx = N->getLocationContext();
-  const CXXConstructorDecl *CD =
-      dyn_cast_or_null<CXXConstructorDecl>(LCtx->getDecl());
-  const CXXDestructorDecl *DD =
-      dyn_cast_or_null<CXXDestructorDecl>(LCtx->getDecl());
-
-  if (!CD && !DD)
-    return nullptr;
-
-  ProgramStateManager &PSM = State->getStateManager();
-  auto &SVB = PSM.getSValBuilder();
-  const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
-  if (!MD)
-    return nullptr;
-  auto ThiSVal =
-      State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
-  const MemRegion *Reg = ThiSVal.castAs<loc::MemRegionVal>().getRegion();
-  if (!Reg)
-    return nullptr;
-  if (Reg != ObjectRegion)
-    return nullptr;
-
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
-  if (!S)
-    return nullptr;
-  Found = true;
-
-  std::string InfoText;
-  if (CD)
-    InfoText = "This constructor of an object of type '" +
-               CD->getNameAsString() +
-               "' has not returned when the virtual method was called";
-  else
-    InfoText = "This destructor of an object of type '" +
-               DD->getNameAsString() +
-               "' has not returned when the virtual method was called";
-
-  // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
-}
-
-// The function to check if a callexpr is a virtual function.
+// The function to check if a callexpr is a virtual method call.
 static bool isVirtualCall(const CallExpr *CE) {
   bool CallIsNonVirtual = false;
 
@@ -176,11 +102,9 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(Call.getDecl());
   if (!MD)
     return;
+
   ProgramStateRef State = C.getState();
   const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-
-  if (IsPureOnly && !MD->isPure())
-    return;
   if (!isVirtualCall(CE))
     return;
 
@@ -188,29 +112,40 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   const ObjectState *ObState = State->get<CtorDtorMap>(Reg);
   if (!ObState)
     return;
-  // Check if a virtual method is called.
-  // The GDM of constructor and destructor should be true.
-  if (*ObState == ObjectState::CtorCalled) {
-    if (IsPureOnly && MD->isPure())
-      reportBug("Call to pure virtual function during construction", true, Reg,
-                C);
-    else if (!MD->isPure())
-      reportBug("Call to virtual function during construction", false, Reg, C);
-    else
-      reportBug("Call to pure virtual function during construction", false, Reg,
-                C);
+
+  bool IsPure = MD->isPure();
+
+  // At this point we're sure that we're calling a virtual method
+  // during construction or destruction, so we'll emit a report.
+  SmallString<128> Msg;
+  llvm::raw_svector_ostream OS(Msg);
+  OS << "Call to ";
+  if (IsPure)
+    OS << "pure ";
+  OS << "virtual method '" << MD->getParent()->getNameAsString()
+     << "::" << MD->getNameAsString() << "' during ";
+  if (*ObState == ObjectState::CtorCalled)
+    OS << "construction ";
+  else
+    OS << "destruction ";
+  if (IsPure)
+    OS << "has undefined behavior";
+  else
+    OS << "bypasses virtual dispatch";
+
+  ExplodedNode *N =
+      IsPure ? C.generateErrorNode() : C.generateNonFatalErrorNode();
+  if (!N)
+    return;
+
+  const std::unique_ptr<BugType> &BT = IsPure ? BT_Pure : BT_Impure;
+  if (!BT) {
+    // The respective check is disabled.
+    return;
   }
 
-  if (*ObState == ObjectState::DtorCalled) {
-    if (IsPureOnly && MD->isPure())
-      reportBug("Call to pure virtual function during destruction", true, Reg,
-                C);
-    else if (!MD->isPure())
-      reportBug("Call to virtual function during destruction", false, Reg, C);
-    else
-      reportBug("Call to pure virtual function during construction", false, Reg,
-                C);
-  }
+  auto Report = std::make_unique<BugReport>(*BT, OS.str(), N);
+  C.emitReport(std::move(Report));
 }
 
 void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
@@ -252,34 +187,35 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
   }
 }
 
-void VirtualCallChecker::reportBug(StringRef Msg, bool IsSink,
-                                   const MemRegion *Reg,
-                                   CheckerContext &C) const {
-  ExplodedNode *N;
-  if (IsSink)
-    N = C.generateErrorNode();
-  else
-    N = C.generateNonFatalErrorNode();
-
-  if (!N)
-    return;
-  if (!BT)
-    BT.reset(new BugType(
-        this, "Call to virtual function during construction or destruction",
-        "C++ Object Lifecycle"));
-
-  auto Reporter = std::make_unique<BugReport>(*BT, Msg, N);
-  Reporter->addVisitor(std::make_unique<VirtualBugVisitor>(Reg));
-  C.emitReport(std::move(Reporter));
+void ento::registerVirtualCallModeling(CheckerManager &Mgr) {
+  Mgr.registerChecker<VirtualCallChecker>();
 }
 
-void ento::registerVirtualCallChecker(CheckerManager &mgr) {
-  VirtualCallChecker *checker = mgr.registerChecker<VirtualCallChecker>();
+void ento::registerPureVirtualCallChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.getChecker<VirtualCallChecker>();
+  Chk->BT_Pure = std::make_unique<BugType>(
+      Mgr.getCurrentCheckName(), "Pure virtual method call",
+      categories::CXXObjectLifecycle);
+}
 
-  checker->IsPureOnly =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(checker, "PureOnly");
+void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.getChecker<VirtualCallChecker>();
+  if (!Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckName(), "PureOnly")) {
+    Chk->BT_Impure = std::make_unique<BugType>(
+        Mgr.getCurrentCheckName(), "Unexpected loss of virtual dispatch",
+        categories::CXXObjectLifecycle);
+  }
+}
+
+bool ento::shouldRegisterVirtualCallModeling(const LangOptions &LO) {
+  return LO.CPlusPlus;
+}
+
+bool ento::shouldRegisterPureVirtualCallChecker(const LangOptions &LO) {
+  return LO.CPlusPlus;
 }
 
 bool ento::shouldRegisterVirtualCallChecker(const LangOptions &LO) {
-  return true;
+  return LO.CPlusPlus;
 }

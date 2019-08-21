@@ -49,8 +49,46 @@ struct ChunkMetadata {
   u32 stack_trace_id;
 };
 
-#if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
-    defined(__arm__)
+#if defined(__aarch64__)
+template <typename AddressSpaceViewTy>
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = 20;
+  using AddressSpaceView = AddressSpaceViewTy;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
+const uptr kAllocatorSpace = 0x600000000000ULL;
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+
+template <typename AddressSpaceViewTy>
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
+};
+
+template <typename AddressSpaceView>
+using Allocator32ASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
+template <typename AddressSpaceView>
+using Allocator64ASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
+
+using Allocator32 = Allocator32ASVT<LocalAddressSpaceView>;
+using Allocator64 = Allocator64ASVT<LocalAddressSpaceView>;
+
+template <typename AddressSpaceView>
+using PrimaryAllocatorASVT =
+    RuntimeSelectAllocator<Allocator32ASVT<AddressSpaceView>,
+                           Allocator64ASVT<AddressSpaceView>>;
+#elif defined(__mips64) || defined(__i386__) || defined(__arm__)
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
@@ -64,7 +102,6 @@ struct AP32 {
 };
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #elif defined(__x86_64__) || defined(__powerpc64__)
 # if defined(__powerpc64__)
 const uptr kAllocatorSpace = 0xa0000000000ULL;
@@ -86,13 +123,13 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #endif
 
 template <typename AddressSpaceView>
 using AllocatorASVT = CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
 using Allocator = AllocatorASVT<LocalAddressSpaceView>;
 using AllocatorCache = Allocator::AllocatorCache;
+using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 
 Allocator::AllocatorCache *GetAllocatorCache();
 

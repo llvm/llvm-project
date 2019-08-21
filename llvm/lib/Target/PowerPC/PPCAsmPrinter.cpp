@@ -1667,8 +1667,10 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
   OutStreamer->SwitchSection(CSect);
 
-  // Create the symbol and emit it.
+  // Create the symbol, set its storage class, and emit it.
   MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(getSymbol(GV));
+  XSym->setStorageClass(
+      TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
   const DataLayout &DL = GV->getParent()->getDataLayout();
   unsigned Align =
       GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);

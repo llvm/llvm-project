@@ -297,6 +297,9 @@ struct IRPosition {
     if (auto *Arg = dyn_cast<Argument>(&V))
       if (!Arg->getParent()->isDeclaration())
         return &Arg->getParent()->getEntryBlock().front();
+    if (auto *F = dyn_cast<Function>(&V))
+      if (!F->isDeclaration())
+        return &(F->getEntryBlock().front());
     return nullptr;
   }
   const Instruction *getCtxI() const {

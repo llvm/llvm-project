@@ -118,39 +118,76 @@ struct AsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const;
 };
 
-#if SANITIZER_CAN_USE_ALLOCATOR64
+#if defined(__aarch64__)
+// AArch64 supports 39, 42 and 48-bit VMA.
+const uptr kAllocatorSpace = ~(uptr)0;
+#if SANITIZER_ANDROID
+const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
+typedef VeryCompactSizeClassMap SizeClassMap64;
+#else
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+typedef DefaultSizeClassMap SizeClassMap64;
+#endif
+
+template <typename AddressSpaceViewTy>
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 0;
+  typedef __asan::SizeClassMap64 SizeClassMap;
+  typedef AsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
+};
+template <typename AddressSpaceView>
+using Allocator64ASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
+using Allocator64 = Allocator64ASVT<LocalAddressSpaceView>;
+
+typedef CompactSizeClassMap SizeClassMap32;
+template <typename AddressSpaceViewTy>
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 16;
+  typedef __asan::SizeClassMap32 SizeClassMap;
+  static const uptr kRegionSizeLog = 20;
+  using AddressSpaceView = AddressSpaceViewTy;
+  typedef AsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+template <typename AddressSpaceView>
+using Allocator32ASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
+using Allocator32 = Allocator32ASVT<LocalAddressSpaceView>;
+using Allocator32or64 = RuntimeSelectAllocator<Allocator32, Allocator64>;
+
+static const uptr kMaxNumberOfSizeClasses =
+    SizeClassMap32::kNumClasses < SizeClassMap64::kNumClasses
+        ? SizeClassMap64::kNumClasses
+        : SizeClassMap32::kNumClasses;
+
+template <typename AddressSpaceView>
+using PrimaryAllocatorASVT =
+    RuntimeSelectAllocator<Allocator32ASVT<AddressSpaceView>,
+                           Allocator64ASVT<AddressSpaceView>>;
+#elif SANITIZER_CAN_USE_ALLOCATOR64
 # if SANITIZER_FUCHSIA
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-typedef DefaultSizeClassMap SizeClassMap;
 # elif defined(__powerpc64__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
-typedef DefaultSizeClassMap SizeClassMap;
-# elif defined(__aarch64__) && SANITIZER_ANDROID
-// Android needs to support 39, 42 and 48 bit VMA.
-const uptr kAllocatorSpace =  ~(uptr)0;
-const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
-typedef VeryCompactSizeClassMap SizeClassMap;
-# elif defined(__aarch64__)
-// AArch64/SANITIZER_CAN_USE_ALLOCATOR64 is only for 42-bit VMA
-// so no need to different values for different VMA.
-const uptr kAllocatorSpace =  0x10000000000ULL;
-const uptr kAllocatorSize  =  0x10000000000ULL;  // 3T.
-typedef DefaultSizeClassMap SizeClassMap;
-#elif defined(__sparc__)
+# elif defined(__sparc__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
-typedef DefaultSizeClassMap SizeClassMap;
 # elif SANITIZER_WINDOWS
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
-typedef DefaultSizeClassMap SizeClassMap;
 # else
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-typedef DefaultSizeClassMap SizeClassMap;
 # endif
+typedef DefaultSizeClassMap SizeClassMap;
+static const uptr kMaxNumberOfSizeClasses = SizeClassMap::kNumClasses;
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -164,9 +201,9 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #else  // Fallback to SizeClassAllocator32.
 typedef CompactSizeClassMap SizeClassMap;
+static const uptr kMaxNumberOfSizeClasses = SizeClassMap::kNumClasses;
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
@@ -180,16 +217,14 @@ struct AP32 {
 };
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView> >;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
-
-static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
 
 template <typename AddressSpaceView>
 using AsanAllocatorASVT =
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
 using AsanAllocator = AsanAllocatorASVT<LocalAddressSpaceView>;
 using AllocatorCache = AsanAllocator::AllocatorCache;
+using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 
 struct AsanThreadLocalMallocStorage {
   uptr quarantine_cache[16];
@@ -225,6 +260,8 @@ void asan_mz_force_unlock();
 
 void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
+
+AsanAllocator &get_allocator();
 
 }  // namespace __asan
 #endif  // ASAN_ALLOCATOR_H

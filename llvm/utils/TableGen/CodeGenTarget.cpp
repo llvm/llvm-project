@@ -763,3 +763,10 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   // Sort the argument attributes for later benefit.
   llvm::sort(ArgumentAttributes);
 }
+
+bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
+  if (ParamIdx >= IS.ParamVTs.size())
+    return false;
+  MVT ParamType = MVT(IS.ParamVTs[ParamIdx]);
+  return ParamType == MVT::iPTR || ParamType == MVT::iPTRAny;
+}

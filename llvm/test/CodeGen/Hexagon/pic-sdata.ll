@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=8 -relocation-model=static < %s | FileCheck --check-prefixes=CHECK,STATIC %s
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=8 -relocation-model=pic < %s | FileCheck --check-prefixes=CHECK,PIC %s
+; RUN: llc -mtriple=hexagon-unknown-elf -hexagon-small-data-threshold=8 -relocation-model=static < %s | FileCheck --check-prefixes=CHECK,STATIC %s
+; RUN: llc -mtriple=hexagon-unknown-elf -hexagon-small-data-threshold=8 -relocation-model=pic < %s | FileCheck --check-prefixes=CHECK,PIC %s
 
 ; If a global has a specified section, it should probably be placed in that
 ; section, but with PIC any accesses to globals in small data should still

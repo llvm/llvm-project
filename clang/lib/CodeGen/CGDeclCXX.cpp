@@ -247,6 +247,8 @@ llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
   CGF.StartFunction(GlobalDecl(&VD, DynamicInitKind::AtExit),
                     CGM.getContext().VoidTy, fn, FI, FunctionArgList());
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   llvm::CallInst *call = CGF.Builder.CreateCall(dtor, addr);
 

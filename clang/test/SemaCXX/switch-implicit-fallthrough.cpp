@@ -329,3 +329,15 @@ int fallthrough_alt_spelling(int n) {
   }
   return n;
 }
+
+int fallthrough_attribute_spelling(int n) {
+  switch (n) {
+  case 0:
+    n++;
+    __attribute__((fallthrough));
+  case 1:
+    n++;
+    break;
+  }
+  return n;
+}

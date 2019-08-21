@@ -628,6 +628,9 @@ void Writer::run() {
 
   writeMapFile(outputSections);
 
+  if (errorCount())
+    return;
+
   ScopedTimer t2(diskCommitTimer);
   if (auto e = buffer->commit())
     fatal("failed to write the output file: " + toString(std::move(e)));

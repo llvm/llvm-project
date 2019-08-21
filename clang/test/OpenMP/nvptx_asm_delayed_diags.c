@@ -9,6 +9,18 @@
 // expected-no-diagnostics
 #endif // DIAGS
 
+void foo(int r) {
+#ifdef IMMEDIATE
+// expected-error@+4 {{invalid input constraint 'mx' in asm}}
+#endif // IMMEDIATE
+  __asm__("PR3908 %[lf] %[xx] %[li] %[r]"
+          : [ r ] "+r"(r)
+          : [ lf ] "mx"(0), [ li ] "mr"(0), [ xx ] "x"((double)(0)));
+}
+#ifdef IMMEDIATE
+#pragma omp declare target to(foo)
+#endif //IMMEDIATE
+
 #ifdef IMMEDIATE
 #pragma omp declare target
 #endif //IMMEDIATE

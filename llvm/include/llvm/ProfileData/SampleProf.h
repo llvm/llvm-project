@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -143,8 +144,18 @@ raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 /// will be a list of one or more functions.
 class SampleRecord {
 public:
-  using CallTargetMap = StringMap<uint64_t>;
+  using CallTarget = std::pair<StringRef, uint64_t>;
+  struct CallTargetComparator {
+    bool operator() (const CallTarget &LHS, const CallTarget &RHS) {
+      if (LHS.second != RHS.second)
+        return LHS.second > RHS.second;
 
+      return LHS.first < RHS.first;
+    }
+  };
+
+  using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
+  using CallTargetMap = StringMap<uint64_t>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -179,6 +190,18 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
+  const SortedCallTargetSet getSortedCallTargets() const {
+    return SortCallTargets(CallTargets);
+  }
+
+  /// Sort call targets in descending order of call frequency.
+  static const SortedCallTargetSet SortCallTargets(const CallTargetMap &Targets) {
+    SortedCallTargetSet SortedTargets;
+    for (const auto &I : Targets) {
+      SortedTargets.emplace(I.first(), I.second);
+    }
+    return SortedTargets;
+  }
 
   /// Merge the samples in \p Other into this record.
   /// Optionally scale sample counts by \p Weight.

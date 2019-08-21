@@ -10,6 +10,7 @@
 //
 // Code related to statistics collected by AddressSanitizer.
 //===----------------------------------------------------------------------===//
+#include "asan_allocator.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_stats.h"
@@ -30,9 +31,9 @@ void AsanStats::Clear() {
 }
 
 static void PrintMallocStatsArray(const char *prefix,
-                                  uptr (&array)[kNumberOfSizeClasses]) {
+                                  uptr *array, uptr size) {
   Printf("%s", prefix);
-  for (uptr i = 0; i < kNumberOfSizeClasses; i++) {
+  for (uptr i = 0; i < size; i++) {
     if (!array[i]) continue;
     Printf("%zu:%zu; ", i, array[i]);
   }
@@ -50,7 +51,8 @@ void AsanStats::Print() {
              (mmaped-munmaped)>>20, mmaped>>20, munmaped>>20,
              mmaps, munmaps);
 
-  PrintMallocStatsArray("  mallocs by size class: ", malloced_by_size);
+  PrintMallocStatsArray("  mallocs by size class: ", malloced_by_size,
+                        get_allocator().KNumClasses());
   Printf("Stats: malloc large: %zu\n", malloc_large);
 }
 

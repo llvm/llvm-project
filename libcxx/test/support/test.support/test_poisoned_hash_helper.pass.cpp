@@ -8,12 +8,12 @@
 
 // UNSUPPORTED: c++98, c++03
 
-// Test that the header `poisoned_hash_helper.hpp` doesn't include any
+// Test that the header `poisoned_hash_helper.h` doesn't include any
 // headers that provide hash<T> specializations. This is required so that the
 // 'test_library_hash_specializations_available()' function returns false
 // by default, unless a STL header providing hash has already been included.
 
-#include "poisoned_hash_helper.hpp"
+#include "poisoned_hash_helper.h"
 
 #include "test_macros.h"
 

@@ -12,6 +12,27 @@ declare i32 @foo_noreturn() noreturn
 
 declare i32 @bar() nosync readnone
 
+; This internal function has no live call sites, so all its BBs are considered dead,
+; and nothing should be deduced for it.
+
+; CHECK: define internal i32 @dead_internal_func(i32 %0)
+define internal i32 @dead_internal_func(i32 %0) {
+  %2 = icmp slt i32 %0, 1
+  br i1 %2, label %3, label %5
+
+; <label>:3:                                      ; preds = %5, %1
+  %4 = phi i32 [ 1, %1 ], [ %8, %5 ]
+  ret i32 %4
+
+; <label>:5:                                      ; preds = %1, %5
+  %6 = phi i32 [ %9, %5 ], [ 1, %1 ]
+  %7 = phi i32 [ %8, %5 ], [ 1, %1 ]
+  %8 = mul nsw i32 %6, %7
+  %9 = add nuw nsw i32 %6, 1
+  %10 = icmp eq i32 %6, %0
+  br i1 %10, label %3, label %5
+}
+
 ; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
 define i32 @volatile_load(i32*) norecurse nounwind uwtable {
   %2 = load volatile i32, i32* %0, align 4
@@ -35,6 +56,8 @@ entry:
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
+  call i32 @dead_internal_func(i32 10)
+  ; CHECK call i32 undef(i32 10)
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %cond.true, label %cond.false
 
@@ -96,6 +119,8 @@ cond.true:                                        ; preds = %entry
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
+  call i32 @dead_internal_func(i32 10)
+  ; CHECK call i32 undef(i32 10)
   %call = call i32 @foo()
   br label %cond.end
 
@@ -103,6 +128,8 @@ cond.false:                                       ; preds = %entry
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
+  call i32 @dead_internal_func(i32 10)
+  ; CHECK call i32 undef(i32 10)
   %call1 = call i32 @bar()
   br label %cond.end
 
@@ -310,4 +337,74 @@ cond.else:                                                ; preds = %cond.elseif
 cond.end:                                               ; preds = %cond.if, %cond.else, %cond.elseif
   %8 = phi i32 [ %1, %cond.elseif ], [ 0, %cond.else ], [ 0, %cond.if ]
   ret i32 %8
+}
+
+; SCC test
+;
+; char a1 __attribute__((aligned(8)));
+; char a2 __attribute__((aligned(16)));
+;
+; char* f1(char* a ){
+;     return a?a:f2(&a1);
+; }
+; char* f2(char* a){
+;     return a?f1(a):f3(&a2);
+; }
+;
+; char* f3(char* a){
+;     return a?&a1: f1(&a2);
+; }
+
+@a1 = common global i8 0, align 8
+@a2 = common global i8 0, align 16
+
+define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal i8* @f1(i8* readnone %0)
+  %2 = icmp eq i8* %0, null
+  br i1 %2, label %3, label %5
+
+; <label>:3:                                      ; preds = %1
+; ATTRIBUTOR: %4 = tail call i8* undef(i8* nonnull align 8 @a1)
+  %4 = tail call i8* @f2(i8* nonnull @a1)
+  br label %5
+
+; <label>:5:                                      ; preds = %1, %3
+  %6 = phi i8* [ %4, %3 ], [ %0, %1 ]
+  ret i8* %6
+}
+
+define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal i8* @f2(i8* readnone %0)
+  %2 = icmp eq i8* %0, null
+  br i1 %2, label %5, label %3
+
+; <label>:3:                                      ; preds = %1
+
+; ATTRIBUTOR: %4 = tail call i8* undef(i8* nonnull align 8 %0)
+  %4 = tail call i8* @f1(i8* nonnull %0)
+  br label %7
+
+; <label>:5:                                      ; preds = %1
+; ATTRIBUTOR: %6 = tail call i8* undef(i8* nonnull align 16 @a2)
+  %6 = tail call i8* @f3(i8* nonnull @a2)
+  br label %7
+
+; <label>:7:                                      ; preds = %5, %3
+  %8 = phi i8* [ %4, %3 ], [ %6, %5 ]
+  ret i8* %8
+}
+
+define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
+; ATTRIBUTOR: define internal i8* @f3(i8* readnone %0)
+  %2 = icmp eq i8* %0, null
+  br i1 %2, label %3, label %5
+
+; <label>:3:                                      ; preds = %1
+; ATTRIBUTOR: %4 = tail call i8* undef(i8* nonnull align 16 @a2)
+  %4 = tail call i8* @f1(i8* nonnull @a2)
+  br label %5
+
+; <label>:5:                                      ; preds = %1, %3
+  %6 = phi i8* [ %4, %3 ], [ @a1, %1 ]
+  ret i8* %6
 }

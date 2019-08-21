@@ -1570,13 +1570,22 @@ struct AAIsDeadImpl : public AAIsDead {
 
   void initialize(Attributor &A) override {
     const Function *F = getAssociatedFunction();
+
+    if (F->hasInternalLinkage())
+      return;
+
     if (!F || !F->hasExactDefinition()) {
       indicatePessimisticFixpoint();
       return;
     }
 
+    exploreFromEntry(A, F);
+  }
+
+  void exploreFromEntry(Attributor &A, const Function *F) {
     ToBeExploredPaths.insert(&(F->getEntryBlock().front()));
     AssumedLiveBlocks.insert(&(F->getEntryBlock()));
+
     for (size_t i = 0; i < ToBeExploredPaths.size(); ++i)
       if (const Instruction *NextNoReturnI =
               findNextNoReturn(A, ToBeExploredPaths[i]))
@@ -1606,7 +1615,12 @@ struct AAIsDeadImpl : public AAIsDead {
            "Attempted to manifest an invalid state!");
 
     ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-    const Function &F = *getAssociatedFunction();
+    Function &F = *getAssociatedFunction();
+
+    if (AssumedLiveBlocks.empty()) {
+      F.replaceAllUsesWith(UndefValue::get(F.getType()));
+      return ChangeStatus::CHANGED;
+    }
 
     // Flag to determine if we can change an invoke to a call assuming the
     // callee is nounwind. This is not possible if the personality of the
@@ -1628,7 +1642,7 @@ struct AAIsDeadImpl : public AAIsDead {
         /// the callee is nounwind and noreturn. Otherwise, we keep the invoke
         /// and only place an unreachable in the normal successor.
         if (Invoke2CallAllowed) {
-          if (Function *Callee = II->getCalledFunction()) {
+          if (II->getCalledFunction()) {
             const IRPosition &IPos = IRPosition::callsite_function(*II);
             const auto &AANoUnw = A.getAAFor<AANoUnwind>(*this, IPos);
             if (AANoUnw.isAssumedNoUnwind()) {
@@ -1725,6 +1739,13 @@ struct AAIsDeadFunction final : public AAIsDeadImpl {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
+    STATS_DECL(DeadInternalFunction, Function,
+               "Number of internal functions classified as dead (no live callsite)");
+    BUILD_STAT_NAME(DeadInternalFunction, Function) +=
+        (getAssociatedFunction()->hasInternalLinkage() &&
+         AssumedLiveBlocks.empty())
+            ? 1
+            : 0;
     STATS_DECL(DeadBlocks, Function,
                "Number of basic blocks classified as dead");
     BUILD_STAT_NAME(DeadBlocks, Function) +=
@@ -1796,10 +1817,25 @@ const Instruction *AAIsDeadImpl::findNextNoReturn(Attributor &A,
 }
 
 ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A) {
+  const Function *F = getAssociatedFunction();
+  ChangeStatus Status = ChangeStatus::UNCHANGED;
+
+  if (F->hasInternalLinkage() && AssumedLiveBlocks.empty()) {
+    auto CallSiteCheck = [&](CallSite) { return false; };
+
+    // All callsites of F are dead.
+    if (A.checkForAllCallSites(CallSiteCheck, *this, true))
+      return ChangeStatus::UNCHANGED;
+
+    // There exists at least one live call site, so we explore the function.
+    Status = ChangeStatus::CHANGED;
+
+    exploreFromEntry(A, F);
+  }
+
   // Temporary collection to iterate over existing noreturn instructions. This
   // will alow easier modification of NoReturnCalls collection
   SmallVector<const Instruction *, 8> NoReturnChanged;
-  ChangeStatus Status = ChangeStatus::UNCHANGED;
 
   for (const Instruction *I : NoReturnCalls)
     NoReturnChanged.push_back(I);
@@ -2249,6 +2285,11 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
   if (!LivenessAA)
     LivenessAA =
         &getAAFor<AAIsDead>(AA, IRPosition::function(*CtxI->getFunction()));
+
+  // Don't check liveness for AAIsDead.
+  if (&AA == LivenessAA)
+    return false;
+
   if (!LivenessAA->isAssumedDead(CtxI))
     return false;
 

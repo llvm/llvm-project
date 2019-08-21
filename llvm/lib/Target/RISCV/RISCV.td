@@ -77,6 +77,7 @@ include "RISCVSystemOperands.td"
 include "RISCVRegisterInfo.td"
 include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
+include "RISCVRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.

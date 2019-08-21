@@ -173,12 +173,9 @@ MemoryAccess *MemorySSAUpdater::recursePhi(MemoryAccess *Phi) {
   TrackingVH<MemoryAccess> Res(Phi);
   SmallVector<TrackingVH<Value>, 8> Uses;
   std::copy(Phi->user_begin(), Phi->user_end(), std::back_inserter(Uses));
-  for (auto &U : Uses) {
-    if (MemoryPhi *UsePhi = dyn_cast<MemoryPhi>(&*U)) {
-      auto OperRange = UsePhi->operands();
-      tryRemoveTrivialPhi(UsePhi, OperRange);
-    }
-  }
+  for (auto &U : Uses)
+    if (MemoryPhi *UsePhi = dyn_cast<MemoryPhi>(&*U))
+      tryRemoveTrivialPhi(UsePhi);
   return Res;
 }
 
@@ -187,6 +184,11 @@ MemoryAccess *MemorySSAUpdater::recursePhi(MemoryAccess *Phi) {
 // argument.
 // IE phi(a, a) or b = phi(a, b) or c = phi(a, a, c)
 // We recursively try to remove them.
+MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi) {
+  assert(Phi && "Can only remove concrete Phi.");
+  auto OperRange = Phi->operands();
+  return tryRemoveTrivialPhi(Phi, OperRange);
+}
 template <class RangeType>
 MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
                                                     RangeType &Operands) {
@@ -341,16 +343,20 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
       IDFs.setDefiningBlocks(DefiningBlocks);
       IDFs.calculate(IDFBlocks);
       SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
-      for (auto *BBIDF : IDFBlocks)
-        if (!MSSA->getMemoryAccess(BBIDF)) {
-          auto *MPhi = MSSA->createMemoryPhi(BBIDF);
+      for (auto *BBIDF : IDFBlocks) {
+        auto *MPhi = MSSA->getMemoryAccess(BBIDF);
+        if (!MPhi) {
+          MPhi = MSSA->createMemoryPhi(BBIDF);
           NewInsertedPHIs.push_back(MPhi);
-          // Add the phis created into the IDF blocks to NonOptPhis, so they are
-          // not optimized out as trivial by the call to getPreviousDefFromEnd
-          // below. Once they are complete, all these Phis are added to the
-          // FixupList, and removed from NonOptPhis inside fixupDefs().
-          NonOptPhis.insert(MPhi);
         }
+        // Add the phis created into the IDF blocks to NonOptPhis, so they are
+        // not optimized out as trivial by the call to getPreviousDefFromEnd
+        // below. Once they are complete, all these Phis are added to the
+        // FixupList, and removed from NonOptPhis inside fixupDefs().
+        // Existing Phis in IDF may need fixing as well, and potentially be
+        // trivial before this insertion, hence add all IDF Phis. See PR43044.
+        NonOptPhis.insert(MPhi);
+      }
 
       for (auto &MPhi : NewInsertedPHIs) {
         auto *BBIDF = MPhi->getBlock();
@@ -486,8 +492,7 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<WeakVH> &Vars) {
 void MemorySSAUpdater::removeEdge(BasicBlock *From, BasicBlock *To) {
   if (MemoryPhi *MPhi = MSSA->getMemoryAccess(To)) {
     MPhi->unorderedDeleteIncomingBlock(From);
-    if (MPhi->getNumIncomingValues() == 1)
-      removeMemoryAccess(MPhi);
+    tryRemoveTrivialPhi(MPhi);
   }
 }
 
@@ -503,8 +508,7 @@ void MemorySSAUpdater::removeDuplicatePhiEdgesBetween(const BasicBlock *From,
       Found = true;
       return false;
     });
-    if (MPhi->getNumIncomingValues() == 1)
-      removeMemoryAccess(MPhi);
+    tryRemoveTrivialPhi(MPhi);
   }
 }
 
@@ -613,8 +617,7 @@ void MemorySSAUpdater::updatePhisWhenInsertingUniqueBackedgeBlock(
 
   // If NewMPhi is a trivial phi, remove it. Its use in the header MPhi will be
   // replaced with the unique value.
-  if (HasUniqueIncomingValue)
-    removeMemoryAccess(NewMPhi);
+  tryRemoveTrivialPhi(MPhi);
 }
 
 void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
@@ -1223,8 +1226,7 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
       return false;
     });
     Phi->addIncoming(NewPhi, New);
-    if (onlySingleValue(NewPhi))
-      removeMemoryAccess(NewPhi);
+    tryRemoveTrivialPhi(NewPhi);
   }
 }
 
@@ -1289,10 +1291,8 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA, bool OptimizePhis) {
     unsigned PhisSize = PhisToOptimize.size();
     while (PhisSize-- > 0)
       if (MemoryPhi *MP =
-              cast_or_null<MemoryPhi>(PhisToOptimize.pop_back_val())) {
-        auto OperRange = MP->operands();
-        tryRemoveTrivialPhi(MP, OperRange);
-      }
+              cast_or_null<MemoryPhi>(PhisToOptimize.pop_back_val()))
+        tryRemoveTrivialPhi(MP);
   }
 }
 
@@ -1306,8 +1306,7 @@ void MemorySSAUpdater::removeBlocks(
       if (!DeadBlocks.count(Succ))
         if (MemoryPhi *MP = MSSA->getMemoryAccess(Succ)) {
           MP->unorderedDeleteIncomingBlock(BB);
-          if (MP->getNumIncomingValues() == 1)
-            removeMemoryAccess(MP);
+          tryRemoveTrivialPhi(MP);
         }
     // Drop all references of all accesses in BB
     if (MemorySSA::AccessList *Acc = MSSA->getWritableBlockAccesses(BB))
@@ -1331,10 +1330,8 @@ void MemorySSAUpdater::removeBlocks(
 
 void MemorySSAUpdater::tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs) {
   for (auto &VH : UpdatedPHIs)
-    if (auto *MPhi = cast_or_null<MemoryPhi>(VH)) {
-      auto OperRange = MPhi->operands();
-      tryRemoveTrivialPhi(MPhi, OperRange);
-    }
+    if (auto *MPhi = cast_or_null<MemoryPhi>(VH))
+      tryRemoveTrivialPhi(MPhi);
 }
 
 void MemorySSAUpdater::changeToUnreachable(const Instruction *I) {

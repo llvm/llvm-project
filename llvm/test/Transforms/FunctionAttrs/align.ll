@@ -139,6 +139,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
 ; Better than IR information
 ; ATTRIBUTOR: define align 32 i32* @test7(i32* returned align 32 %p)
 define align 4 i32* @test7(i32* align 32 %p) #0 {
+  tail call i8* @f1(i8* align 8 dereferenceable(1) @a1)
   ret i32* %p
 }
 

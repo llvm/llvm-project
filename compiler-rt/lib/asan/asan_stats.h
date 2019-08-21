@@ -38,7 +38,7 @@ struct AsanStats {
   uptr munmaps;
   uptr munmaped;
   uptr malloc_large;
-  uptr malloced_by_size[kNumberOfSizeClasses];
+  uptr malloced_by_size[kMaxNumberOfSizeClasses];
 
   // Ctor for global AsanStats (accumulated stats for dead threads).
   explicit AsanStats(LinkerInitialized) { }

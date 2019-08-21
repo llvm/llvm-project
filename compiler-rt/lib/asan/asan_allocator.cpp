@@ -48,8 +48,6 @@ static u32 RZSize2Log(u32 rz_size) {
   return res;
 }
 
-static AsanAllocator &get_allocator();
-
 // The memory chunk allocated from the underlying allocator looks like this:
 // L L L L L L H H U U U U U U R R
 //   L -- left redzone words (0 or more bytes)
@@ -113,7 +111,7 @@ enum {
 struct AsanChunk: ChunkBase {
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
   uptr UsedSize(bool locked_version = false) {
-    if (user_requested_size != SizeClassMap::kMaxSize)
+    if (user_requested_size != get_allocator().KMaxSize())
       return user_requested_size;
     return *reinterpret_cast<uptr *>(
                get_allocator().GetMetaData(AllocBeg(locked_version)));
@@ -430,7 +428,7 @@ struct Allocator {
     bool using_primary_allocator = true;
     // If we are allocating from the secondary allocator, there will be no
     // automatic right redzone, so add the right redzone manually.
-    if (!PrimaryAllocator::CanAllocate(needed_size, alignment)) {
+    if (!get_allocator().CanAllocate(needed_size, alignment)) {
       needed_size += rz_size;
       using_primary_allocator = false;
     }
@@ -499,7 +497,7 @@ struct Allocator {
       CHECK(allocator.FromPrimary(allocated));
     } else {
       CHECK(!allocator.FromPrimary(allocated));
-      m->user_requested_size = SizeClassMap::kMaxSize;
+      m->user_requested_size = get_allocator().KMaxSize();
       uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(allocated));
       meta[0] = size;
       meta[1] = chunk_beg;
@@ -524,10 +522,10 @@ struct Allocator {
     thread_stats.mallocs++;
     thread_stats.malloced += size;
     thread_stats.malloced_redzones += needed_size - size;
-    if (needed_size > SizeClassMap::kMaxSize)
+    if (needed_size > get_allocator().KMaxSize())
       thread_stats.malloc_large++;
     else
-      thread_stats.malloced_by_size[SizeClassMap::ClassID(needed_size)]++;
+      thread_stats.malloced_by_size[get_allocator().ClassID(needed_size)]++;
 
     void *res = reinterpret_cast<void *>(user_beg);
     if (can_fill && fl.max_malloc_fill_size) {
@@ -791,7 +789,7 @@ struct Allocator {
 
 static Allocator instance(LINKER_INITIALIZED);
 
-static AsanAllocator &get_allocator() {
+AsanAllocator &get_allocator() {
   return instance.allocator;
 }
 

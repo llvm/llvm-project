@@ -660,6 +660,8 @@ if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
   message(FATAL_ERROR "Python 2.7 or newer is required")
 endif()
 
+get_filename_component(PYTHON_BASENAME ${PYTHON_EXECUTABLE} NAME)
+
 ######
 # LLVMBuild Integration
 #
