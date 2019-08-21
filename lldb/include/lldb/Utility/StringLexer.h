@@ -1,4 +1,4 @@
-//===--------------------- StringLexer.h ------------------------*- C++ -*-===//
+//===-- StringLexer.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 #include <string>
 #include <utility>
 
-namespace lldb_utility {
+namespace lldb_private {
 
 class StringLexer {
 public:

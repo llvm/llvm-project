@@ -15,12 +15,8 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
-namespace lldb_utility {
-class StringLexer;
-}
-
 namespace lldb_private {
-
+class StringLexer;
 class AppleObjCTypeEncodingParser : public ObjCLanguageRuntime::EncodingToType {
 public:
   AppleObjCTypeEncodingParser(ObjCLanguageRuntime &runtime);
@@ -39,41 +35,35 @@ private:
     ~StructElement() = default;
   };
 
-  clang::QualType BuildType(clang::ASTContext &ast_ctx,
-                            lldb_utility::StringLexer &type,
+  clang::QualType BuildType(clang::ASTContext &ast_ctx, StringLexer &type,
                             bool for_expression,
                             uint32_t *bitfield_bit_size = nullptr);
 
-  clang::QualType BuildStruct(clang::ASTContext &ast_ctx,
-                              lldb_utility::StringLexer &type,
+  clang::QualType BuildStruct(clang::ASTContext &ast_ctx, StringLexer &type,
                               bool for_expression);
 
-  clang::QualType BuildAggregate(clang::ASTContext &ast_ctx,
-                                 lldb_utility::StringLexer &type,
+  clang::QualType BuildAggregate(clang::ASTContext &ast_ctx, StringLexer &type,
                                  bool for_expression, char opener, char closer,
                                  uint32_t kind);
 
-  clang::QualType BuildUnion(clang::ASTContext &ast_ctx,
-                             lldb_utility::StringLexer &type,
+  clang::QualType BuildUnion(clang::ASTContext &ast_ctx, StringLexer &type,
                              bool for_expression);
 
-  clang::QualType BuildArray(clang::ASTContext &ast_ctx,
-                             lldb_utility::StringLexer &type,
+  clang::QualType BuildArray(clang::ASTContext &ast_ctx, StringLexer &type,
                              bool for_expression);
 
-  std::string ReadStructName(lldb_utility::StringLexer &type);
+  std::string ReadStructName(StringLexer &type);
 
-  StructElement ReadStructElement(clang::ASTContext &ast_ctx,
-                                  lldb_utility::StringLexer &type,
+  StructElement ReadStructElement(clang::ASTContext &ast_ctx, StringLexer &type,
                                   bool for_expression);
 
   clang::QualType BuildObjCObjectPointerType(clang::ASTContext &ast_ctx,
-                                             lldb_utility::StringLexer &type,
+                                             StringLexer &type,
                                              bool for_expression);
 
-  uint32_t ReadNumber(lldb_utility::StringLexer &type);
+  uint32_t ReadNumber(StringLexer &type);
 
-  std::string ReadQuotedString(lldb_utility::StringLexer &type);
+  std::string ReadQuotedString(StringLexer &type);
 
   ObjCLanguageRuntime &m_runtime;
 };
