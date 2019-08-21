@@ -1384,11 +1384,12 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
     case DW_ATE_UTF:
       if (type_name) {
-        if (streq(type_name, "char16_t")) {
+        if (streq(type_name, "char16_t"))
           return CompilerType(this, ast->Char16Ty.getAsOpaquePtr());
-        } else if (streq(type_name, "char32_t")) {
+        else if (streq(type_name, "char32_t"))
           return CompilerType(this, ast->Char32Ty.getAsOpaquePtr());
-        }
+        else if (streq(type_name, "char8_t"))
+          return CompilerType(this, ast->Char8Ty.getAsOpaquePtr());
       }
       break;
     }
