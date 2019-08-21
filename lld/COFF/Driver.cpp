@@ -1475,6 +1475,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       getOldNewOptions(args, OPT_thinlto_prefix_replace);
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
   // Handle miscellaneous boolean flags.
   config->allowBind = args.hasFlag(OPT_allowbind, OPT_allowbind_no, true);
   config->allowIsolation =
