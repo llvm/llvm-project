@@ -313,7 +313,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
     sys::RemoveFileOnSignal(Opts.OutputPath);
 
   std::error_code EC;
-  auto Out = llvm::make_unique<raw_fd_ostream>(
+  auto Out = std::make_unique<raw_fd_ostream>(
       Opts.OutputPath, EC, (Binary ? sys::fs::F_None : sys::fs::F_Text));
   if (EC) {
     Diags.Report(diag::err_fe_unable_to_open_output)
@@ -430,7 +430,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
       MCTargetOptions Options;
       MAB.reset(TheTarget->createMCAsmBackend(*STI, *MRI, Options));
     }
-    auto FOut = llvm::make_unique<formatted_raw_ostream>(*Out);
+    auto FOut = std::make_unique<formatted_raw_ostream>(*Out);
     Str.reset(TheTarget->createAsmStreamer(
         Ctx, std::move(FOut), /*asmverbose*/ true,
         /*useDwarfDirectory*/ true, IP, std::move(MCE), std::move(MAB),
@@ -441,7 +441,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     assert(Opts.OutputType == AssemblerInvocation::FT_Obj &&
            "Invalid file type!");
     if (!FDOS->supportsSeeking()) {
-      BOS = make_unique<buffer_ostream>(*FDOS);
+      BOS = std::make_unique<buffer_ostream>(*FDOS);
       Out = BOS.get();
     }
 
@@ -859,9 +859,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
-      llvm::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
 
-  auto Composite = make_unique<llvm::Module>("linked", Context);
+  auto Composite = std::make_unique<llvm::Module>("linked", Context);
   Linker L(*Composite);
   unsigned ApplicableFlags = Linker::Flags::None;
 
