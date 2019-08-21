@@ -1950,7 +1950,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           LVNode, R, EnableNullFPSuppression, report, V);
 
-      report.markInteresting(V);
+      report.markInteresting(V, TKind);
       report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(R));
 
       // If the contents are symbolic, find out when they became null.
@@ -2011,9 +2011,9 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
-      report.markInteresting(RegionRVal);
+      report.markInteresting(RegionRVal, TKind);
       report.addVisitor(llvm::make_unique<TrackConstraintBRVisitor>(
-            loc::MemRegionVal(RegionRVal), /*assumption=*/false));
+          loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
   }
   return true;

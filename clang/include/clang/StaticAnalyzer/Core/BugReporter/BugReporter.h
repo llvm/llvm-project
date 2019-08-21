@@ -102,14 +102,15 @@ protected:
   /// diagnostics to include when constructing the final path diagnostic.
   /// The stack is largely used by BugReporter when generating PathDiagnostics
   /// for multiple PathDiagnosticConsumers.
-  llvm::DenseSet<SymbolRef> InterestingSymbols;
+  llvm::DenseMap<SymbolRef, bugreporter::TrackingKind> InterestingSymbols;
 
   /// A (stack of) set of regions that are registered with this report as being
   /// "interesting", and thus used to help decide which diagnostics
   /// to include when constructing the final path diagnostic.
   /// The stack is largely used by BugReporter when generating PathDiagnostics
   /// for multiple PathDiagnosticConsumers.
-  llvm::DenseSet<const MemRegion *> InterestingRegions;
+  llvm::DenseMap<const MemRegion *, bugreporter::TrackingKind>
+      InterestingRegions;
 
   /// A set of location contexts that correspoind to call sites which should be
   /// considered "interesting".
@@ -209,15 +210,38 @@ public:
   /// Disable all path pruning when generating a PathDiagnostic.
   void disablePathPruning() { DoNotPrunePath = true; }
 
-  void markInteresting(SymbolRef sym);
-  void markInteresting(const MemRegion *R);
-  void markInteresting(SVal V);
+  /// Marks a symbol as interesting. Different kinds of interestingness will
+  /// be processed differently by visitors (e.g. if the tracking kind is
+  /// condition, will append "will be used as a condition" to the message).
+  void markInteresting(SymbolRef sym, bugreporter::TrackingKind TKind =
+                                          bugreporter::TrackingKind::Thorough);
+
+  /// Marks a region as interesting. Different kinds of interestingness will
+  /// be processed differently by visitors (e.g. if the tracking kind is
+  /// condition, will append "will be used as a condition" to the message).
+  void markInteresting(
+      const MemRegion *R,
+      bugreporter::TrackingKind TKind = bugreporter::TrackingKind::Thorough);
+
+  /// Marks a symbolic value as interesting. Different kinds of interestingness
+  /// will be processed differently by visitors (e.g. if the tracking kind is
+  /// condition, will append "will be used as a condition" to the message).
+  void markInteresting(SVal V, bugreporter::TrackingKind TKind =
+                                   bugreporter::TrackingKind::Thorough);
   void markInteresting(const LocationContext *LC);
 
   bool isInteresting(SymbolRef sym) const;
   bool isInteresting(const MemRegion *R) const;
   bool isInteresting(SVal V) const;
   bool isInteresting(const LocationContext *LC) const;
+
+  Optional<bugreporter::TrackingKind>
+  getInterestingnessKind(SymbolRef sym) const;
+
+  Optional<bugreporter::TrackingKind>
+  getInterestingnessKind(const MemRegion *R) const;
+
+  Optional<bugreporter::TrackingKind> getInterestingnessKind(SVal V) const;
 
   /// Returns whether or not this report should be considered valid.
   ///
