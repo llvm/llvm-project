@@ -216,6 +216,24 @@ class CommandLineCompletionTestCase(TestBase):
             'settings replace target.run-args')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_show_term(self):
+        self.complete_from_to(
+            'settings show term-',
+            'settings show term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_list_term(self):
+        self.complete_from_to(
+            'settings list term-',
+            'settings list term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_remove_term(self):
+        self.complete_from_to(
+            'settings remove term-',
+            'settings remove term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_s(self):
         """Test that 'settings s' completes to ['set', 'show']."""
         self.complete_from_to(

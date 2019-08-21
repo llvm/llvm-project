@@ -37,6 +37,6 @@ public:
 private:
   DISALLOW_COPY_AND_ASSIGN(ClangDeclVendor);
 };
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif

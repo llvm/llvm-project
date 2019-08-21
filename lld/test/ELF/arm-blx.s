@@ -9,8 +9,7 @@
 // RUN:          .callee3 : { *(.callee_high) } \
 // RUN:          .callee4 : { *(.callee_arm_high) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %tfar -o %t2
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 
 // Test BLX instruction is chosen for ARM BL/BLX instruction and Thumb callee
 // Using two callees to ensure at least one has 2-byte alignment.
@@ -73,47 +72,47 @@ callee_high2:
 callee_arm_high:
   bx lr
 
-// CHECK-THUMB: Disassembly of section .callee1:
-// CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: callee_low:
-// CHECK-THUMB-NEXT:    b4:       70 47   bx      lr
-// CHECK-THUMB: callee_low2:
-// CHECK-THUMB-NEXT:    b6:       70 47   bx      lr
+// CHECK: Disassembly of section .callee1:
+// CHECK-EMPTY:
+// CHECK-NEXT: callee_low:
+// CHECK-NEXT:    b4:       70 47   bx      lr
+// CHECK: callee_low2:
+// CHECK-NEXT:    b6:       70 47   bx      lr
 
-// CHECK-ARM: Disassembly of section .callee2:
-// CHECK-ARM-EMPTY:
-// CHECK-ARM-NEXT: callee_arm_low:
-// CHECK-ARM-NEXT:    100:        1e ff 2f e1     bx      lr
+// CHECK: Disassembly of section .callee2:
+// CHECK-EMPTY:
+// CHECK-NEXT: callee_arm_low:
+// CHECK-NEXT:    100:        1e ff 2f e1     bx      lr
 
-// CHECK-ARM: Disassembly of section .caller:
-// CHECK-ARM-EMPTY:
-// CHECK-ARM-NEXT: _start:
-// CHECK-ARM-NEXT:   10000:       2b c0 ff fa     blx     #-65364 <callee_low>
-// CHECK-ARM-NEXT:   10004:       2a c0 ff fa     blx     #-65368 <callee_low>
-// CHECK-ARM-NEXT:   10008:       29 c0 ff fb     blx     #-65370 <callee_low2>
-// CHECK-ARM-NEXT:   1000c:       28 c0 ff fb     blx     #-65374 <callee_low2>
-// CHECK-ARM-NEXT:   10010:       3a 00 00 fa     blx     #232 <callee_high>
-// CHECK-ARM-NEXT:   10014:       39 00 00 fa     blx     #228 <callee_high>
-// CHECK-ARM-NEXT:   10018:       38 00 00 fb     blx     #226 <callee_high2>
-// CHECK-ARM-NEXT:   1001c:       37 00 00 fb     blx     #222 <callee_high2>
+// CHECK: Disassembly of section .caller:
+// CHECK-EMPTY:
+// CHECK-NEXT: _start:
+// CHECK-NEXT:   10000:       2b c0 ff fa     blx     #-65364 <callee_low>
+// CHECK-NEXT:   10004:       2a c0 ff fa     blx     #-65368 <callee_low>
+// CHECK-NEXT:   10008:       29 c0 ff fb     blx     #-65370 <callee_low2>
+// CHECK-NEXT:   1000c:       28 c0 ff fb     blx     #-65374 <callee_low2>
+// CHECK-NEXT:   10010:       3a 00 00 fa     blx     #232 <callee_high>
+// CHECK-NEXT:   10014:       39 00 00 fa     blx     #228 <callee_high>
+// CHECK-NEXT:   10018:       38 00 00 fb     blx     #226 <callee_high2>
+// CHECK-NEXT:   1001c:       37 00 00 fb     blx     #222 <callee_high2>
 // 10020 + 1FFFFFC + 8 = 0x2010024 = blx_far
-// CHECK-ARM-NEXT:   10020:       ff ff 7f fa     blx     #33554428
+// CHECK-NEXT:   10020:       ff ff 7f fa     blx     #33554428
 // 10024 + 1FFFFFC + 8 = 0x2010028 = blx_far2
-// CHECK-ARM-NEXT:   10024:       ff ff 7f fa     blx     #33554428
-// CHECK-ARM-NEXT:   10028:       34 c0 ff eb     bl      #-65328 <callee_arm_low>
-// CHECK-ARM-NEXT:   1002c:       33 c0 ff eb     bl      #-65332 <callee_arm_low>
-// CHECK-ARM-NEXT:   10030:       72 00 00 eb     bl      #456 <callee_arm_high>
-// CHECK-ARM-NEXT:   10034:       71 00 00 eb     bl      #452 <callee_arm_high>
-// CHECK-ARM-NEXT:   10038:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   10024:       ff ff 7f fa     blx     #33554428
+// CHECK-NEXT:   10028:       34 c0 ff eb     bl      #-65328 <callee_arm_low>
+// CHECK-NEXT:   1002c:       33 c0 ff eb     bl      #-65332 <callee_arm_low>
+// CHECK-NEXT:   10030:       72 00 00 eb     bl      #456 <callee_arm_high>
+// CHECK-NEXT:   10034:       71 00 00 eb     bl      #452 <callee_arm_high>
+// CHECK-NEXT:   10038:       1e ff 2f e1     bx      lr
 
-// CHECK-THUMB: Disassembly of section .callee3:
-// CHECK-THUMB-EMPTY:
-// CHECK-THUMB: callee_high:
-// CHECK-THUMB-NEXT:    10100:       70 47   bx      lr
-// CHECK-THUMB: callee_high2:
-// CHECK-THUMB-NEXT:    10102:       70 47   bx      lr
+// CHECK: Disassembly of section .callee3:
+// CHECK-EMPTY:
+// CHECK: callee_high:
+// CHECK-NEXT:    10100:       70 47   bx      lr
+// CHECK: callee_high2:
+// CHECK-NEXT:    10102:       70 47   bx      lr
 
-// CHECK-ARM: Disassembly of section .callee4:
-// CHECK-ARM-EMPTY:
-// CHECK-NEXT-ARM: callee_arm_high:
-// CHECK-NEXT-ARM:   10200:     1e ff 2f e1     bx      lr
+// CHECK: Disassembly of section .callee4:
+// CHECK-EMPTY:
+// CHECK-NEXT: callee_arm_high:
+// CHECK-NEXT:   10200:     1e ff 2f e1     bx      lr

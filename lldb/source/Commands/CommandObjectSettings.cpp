@@ -613,6 +613,8 @@ public:
 
   ~CommandObjectSettingsRemove() override = default;
 
+  bool WantsCompletion() override { return true; }
+
   int HandleArgumentCompletion(
       CompletionRequest &request,
       OptionElementVector &opt_element_vector) override {
@@ -636,8 +638,8 @@ protected:
 
     const size_t argc = cmd_args.GetArgumentCount();
     if (argc == 0) {
-      result.AppendError("'settings set' takes an array or dictionary item, or "
-                         "an array followed by one or more indexes, or a "
+      result.AppendError("'settings remove' takes an array or dictionary item, "
+                         "or an array followed by one or more indexes, or a "
                          "dictionary followed by one or more key names to "
                          "remove");
       result.SetStatus(eReturnStatusFailed);
@@ -647,7 +649,7 @@ protected:
     const char *var_name = cmd_args.GetArgumentAtIndex(0);
     if ((var_name == nullptr) || (var_name[0] == '\0')) {
       result.AppendError(
-          "'settings set' command requires a valid variable name");
+          "'settings remove' command requires a valid variable name");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
