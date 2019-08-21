@@ -1,5 +1,5 @@
-#ifndef POINTER_COMPARISON_TEST_HELPER_HPP
-#define POINTER_COMPARISON_TEST_HELPER_HPP
+#ifndef POINTER_COMPARISON_TEST_HELPER_H
+#define POINTER_COMPARISON_TEST_HELPER_H
 
 #include <vector>
 #include <memory>
@@ -36,4 +36,4 @@ void do_pointer_comparison_test() {
     }
 }
 
-#endif // POINTER_COMPARISON_TEST_HELPER_HPP
+#endif // POINTER_COMPARISON_TEST_HELPER_H

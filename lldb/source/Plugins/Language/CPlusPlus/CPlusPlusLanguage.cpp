@@ -854,6 +854,14 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   // FIXME because of a bug in the FormattersContainer we need to add a summary
   // for both X* and const X* (<rdar://problem/12717717>)
   AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::Char8StringSummaryProvider,
+      "char8_t * summary provider", ConstString("char8_t *"), string_flags);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::Char8StringSummaryProvider,
+                "char8_t [] summary provider",
+                ConstString("char8_t \\[[0-9]+\\]"), string_array_flags, true);
+
+  AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16StringSummaryProvider,
       "char16_t * summary provider", ConstString("char16_t *"), string_flags);
   AddCXXSummary(cpp_category_sp,
@@ -890,6 +898,9 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetHideItemNames(true)
       .SetShowMembersOneLiner(false);
 
+  AddCXXSummary(cpp_category_sp, lldb_private::formatters::Char8SummaryProvider,
+                "char8_t summary provider", ConstString("char8_t"),
+                widechar_flags);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16SummaryProvider,
       "char16_t summary provider", ConstString("char16_t"), widechar_flags);

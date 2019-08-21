@@ -16,7 +16,7 @@
 #include <type_traits>
 #include <cassert>
 
-#include "check_bitmask_types.hpp"
+#include "check_bitmask_types.h"
 #include "test_macros.h"
 
 

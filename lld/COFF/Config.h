@@ -190,6 +190,9 @@ struct Configuration {
   // Used for /thinlto-object-suffix-replace:
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
 
+  // Used for /lto-obj-path:
+  llvm::StringRef ltoObjPath;
+
   uint64_t align = 4096;
   uint64_t imageBase = -1;
   uint64_t fileAlign = 512;
