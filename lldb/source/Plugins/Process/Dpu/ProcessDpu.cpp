@@ -79,19 +79,27 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
                             MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  // TODO set rankPath and profile from args
+  llvm::StringRef profile = launch_info.GetArguments().GetArgumentAtIndex(1);
+  LLDB_LOG(log, "Profile: {0}", profile.str());
   DpuRank *rank = new DpuRank();
-  // std::unique_ptr<DpuRank> rank = llvm::make_unique<DpuRank>();
-  bool success = rank->Open();
+  bool success = rank->Open(profile);
   if (!success)
-    return Status("Cannot get a DPU rank").ToError();
-  rank->Reset();
+    return Status("Cannot get a DPU rank ").ToError();
 
-  // assert(launch_info.GetArchitecture() == k_dpu_arch);
+  success = rank->Reset();
+  if (!success)
+    return Status("Cannot reset DPU rank").ToError();
+
+  assert(launch_info.GetArchitecture() == k_dpu_arch);
   Dpu *dpu = rank->GetDpu(0);
 
-  dpu->LoadElf(launch_info.GetExecutableFile());
-  dpu->Boot();
+  success = dpu->LoadElf(launch_info.GetExecutableFile());
+  if (!success)
+    return Status("Cannot load Elf in DPU rank").ToError();
+
+  success = dpu->Boot();
+  if (!success)
+    return Status("Cannot boot DPU rank").ToError();
 
   ::pid_t pid = 666 << 5; // TODO unique Rank ID
   LLDB_LOG(log, "Attaching Dpu Rank {0}", pid);
@@ -148,10 +156,11 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   }
   SetCurrentThreadID(pid);
 
-  m_dpu->StopThreads();
-
-  // Let our process instance know the thread has stopped.
-  SetState(StateType::eStateStopped, false);
+  if (!m_dpu->StopThreads())
+    SetState(StateType::eStateCrashed, true);
+  else
+    // Let our process instance know the thread has stopped.
+    SetState(StateType::eStateStopped, false);
 }
 
 void ProcessDpu::InterfaceTimerCallback() {
@@ -254,7 +263,8 @@ Status ProcessDpu::Signal(int signo) {
 }
 
 Status ProcessDpu::Interrupt() {
-  m_dpu->StopThreads();
+  if (!m_dpu->StopThreads())
+    return Status("Cannot interrupt DPU");
   SetState(StateType::eStateStopped, true);
   return Status();
 }

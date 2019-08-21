@@ -36,9 +36,8 @@ class Dpu;
 
 class DpuRank {
 public:
-  DpuRank(dpu_type_t backend_type = FUNCTIONAL_SIMULATOR,
-          const char *profile = "talkalot=false");
-  bool Open();
+  DpuRank();
+  bool Open(llvm::StringRef profile);
   bool IsValid();
   bool Reset();
   Dpu *GetDpu(size_t index);
@@ -50,7 +49,7 @@ public:
 private:
   dpu_type_t m_type;
   const char *m_profile;
-  dpu_rank_t *m_rank;;
+  dpu_rank_t *m_rank;
   dpu_description_t m_desc;
   int nr_threads;
   int nr_dpus;

@@ -44,14 +44,18 @@ const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
 // DPU rank handling
 // -----------------------------------------------------------------------------
 
-DpuRank::DpuRank(dpu_type_t backend_type, const char *profile)
-    : m_type(backend_type), m_profile(profile), nr_threads(0), nr_dpus(0),
-      m_lock() {
-  m_rank = NULL;
-}
+DpuRank::DpuRank() : nr_threads(0), nr_dpus(0), m_lock() { m_rank = NULL; }
 
-bool DpuRank::Open() {
+bool DpuRank::Open(llvm::StringRef profile) {
   std::lock_guard<std::mutex> guard(m_lock);
+
+  auto args_split = profile.split('/');
+  m_profile = strdup(args_split.second.str().c_str());
+  if (args_split.first.equals("fpga")) {
+    m_type = HW;
+  } else {
+    m_type = FUNCTIONAL_SIMULATOR;
+  }
 
   int ret = dpu_get_rank_of_type(m_type, m_profile, &m_rank);
   if (ret != DPU_API_SUCCESS)
@@ -171,7 +175,8 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
     return StateType::eStateRunning;
   }
 
-  StopThreadsUnlock();
+  if (!StopThreadsUnlock())
+    return StateType::eStateCrashed;
   SetExitStatus(exit_status, &m_context);
 
   return result_state;
