@@ -91,6 +91,10 @@ class CommandLineCompletionTestCase(TestBase):
                                'arm64'])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_plugin_load(self):
+        self.complete_from_to('plugin load ', [])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_quoted_command(self):
         self.complete_from_to('"set',
                               ['"settings" '])
