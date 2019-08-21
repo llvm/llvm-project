@@ -31,10 +31,10 @@ class CxxChar8_tTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.expect(
-            "frame variable a", substrs=["(char8_t) ::a = 0x61 u8'a'"])
+            "frame variable a", substrs=["(char8_t)", "0x61 u8'a'"])
 
         self.expect(
-            "frame variable ab", substrs=['(const char8_t *) ::ab', 'u8"你好"'])
+            "frame variable ab", substrs=['(const char8_t *)' , 'u8"你好"'])
 
         self.expect(
-            "frame variable abc", substrs=['(char8_t [9]) ::abc = u8"你好"'])
+            "frame variable abc", substrs=['(char8_t [9])', 'u8"你好"'])
