@@ -233,7 +233,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
                                        llvm::StringRef mangled_name,
                                        TypeMap &clang_types) const {
-  std::vector<CompilerContext> decl_context;
+  llvm::SmallVector<CompilerContext, 4> decl_context;
   die.GetDeclContext(decl_context);
   if (!decl_context.size())
     return;
@@ -259,7 +259,7 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
       return;
     for (NodePointer child : *node)
       if (child->getKind() == Node::Kind::Identifier && child->hasText()) {
-        decl_context.back().type = CompilerContextKind::Typedef;
+        decl_context.back().kind = CompilerContextKind::Typedef;
         decl_context.back().name = ConstString(child->getText());
         return;
       }
@@ -269,13 +269,13 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
   sym_file.UpdateExternalModuleListIfNeeded();
 
-  CompilerContextKind kinds[] = {decl_context.back().type,
+  CompilerContextKind kinds[] = {decl_context.back().kind,
                                  CompilerContextKind::Union,
-                                 CompilerContextKind::Enumeration};
+                                 CompilerContextKind::Enum};
 
   // The Swift projection of all Clang type is a struct; search every kind.
   for (CompilerContextKind kind : kinds) {
-    decl_context.back().type = kind;
+    decl_context.back().kind = kind;
     // Search any modules referenced by DWARF.
     for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
