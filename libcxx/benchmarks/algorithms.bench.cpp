@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "CartesianBenchmarks.hpp"
-#include "GenerateInput.hpp"
+#include "CartesianBenchmarks.h"
+#include "GenerateInput.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 

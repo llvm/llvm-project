@@ -1,5 +1,5 @@
 #include "benchmark/benchmark.h"
-#include "GenerateInput.hpp"
+#include "GenerateInput.h"
 #include "test_iterators.h"
 #include "filesystem_include.h"
 

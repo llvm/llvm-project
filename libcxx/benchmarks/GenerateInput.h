@@ -1,5 +1,5 @@
-#ifndef BENCHMARK_GENERATE_INPUT_HPP
-#define BENCHMARK_GENERATE_INPUT_HPP
+#ifndef BENCHMARK_GENERATE_INPUT_H
+#define BENCHMARK_GENERATE_INPUT_H
 
 #include <algorithm>
 #include <random>
@@ -141,4 +141,4 @@ inline std::vector<const char*> getRandomCStringInputs(size_t N) {
 }
 
 
-#endif // BENCHMARK_GENERATE_INPUT_HPP
+#endif // BENCHMARK_GENERATE_INPUT_H

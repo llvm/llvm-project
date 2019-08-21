@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BENCHMARK_CONTAINER_BENCHMARKS_HPP
-#define BENCHMARK_CONTAINER_BENCHMARKS_HPP
+#ifndef BENCHMARK_CONTAINER_BENCHMARKS_H
+#define BENCHMARK_CONTAINER_BENCHMARKS_H
 
 #include <cassert>
 
-#include "Utilities.hpp"
+#include "Utilities.h"
 #include "benchmark/benchmark.h"
 
 namespace ContainerBenchmarks {
@@ -137,4 +137,4 @@ static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
 
 } // end namespace ContainerBenchmarks
 
-#endif // BENCHMARK_CONTAINER_BENCHMARKS_HPP
+#endif // BENCHMARK_CONTAINER_BENCHMARKS_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BENCHMARK_UTILITIES_HPP
-#define BENCHMARK_UTILITIES_HPP
+#ifndef BENCHMARK_UTILITIES_H
+#define BENCHMARK_UTILITIES_H
 
 #include <cassert>
 #include <type_traits>
@@ -30,4 +30,4 @@ template <class Container, std::enable_if_t<!UtilitiesInternal::HasData<Containe
 void DoNotOptimizeData(Container &c) { benchmark::DoNotOptimize(&c); }
 
 
-#endif // BENCHMARK_UTILITIES_HPP
+#endif // BENCHMARK_UTILITIES_H
