@@ -407,6 +407,91 @@ void f() {
 }
 } // end of namespace condition_written_in_nested_stackframe_before_assignment
 
+namespace condition_lambda_capture_by_reference_last_write {
+int getInt();
+
+[[noreturn]] void halt();
+
+void f(int flag) {
+  int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
+
+  auto lambda = [&flag]() {
+    flag = getInt(); // tracking-note-re{{{{^}}Value assigned to 'flag', which participates in a condition later{{$}}}}
+  };
+
+  lambda(); // tracking-note-re{{{{^}}Calling 'operator()'{{$}}}}
+            // tracking-note-re@-1{{{{^}}Returning from 'operator()'{{$}}}}
+
+  if (flag) // expected-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
+            // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+            // debug-note-re@-2{{{{^}}Tracking condition 'flag'{{$}}}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace condition_lambda_capture_by_reference_last_write
+
+namespace condition_lambda_capture_by_value_assumption {
+int getInt();
+
+[[noreturn]] void halt();
+
+void bar(int &flag) {
+  flag = getInt(); // tracking-note-re{{{{^}}Value assigned to 'flag', which participates in a condition later{{$}}}}
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
+
+  auto lambda = [flag]() {
+    if (!flag) // tracking-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
+               // tracking-note-re@-1{{{{^}}Taking false branch{{$}}}}
+      halt();
+  };
+
+  bar(flag); // tracking-note-re{{{{^}}Calling 'bar'{{$}}}}
+             // tracking-note-re@-1{{{{^}}Returning from 'bar'{{$}}}}
+  lambda();  // tracking-note-re{{{{^}}Calling 'operator()'{{$}}}}
+             // tracking-note-re@-1{{{{^}}Returning from 'operator()'{{$}}}}
+
+  if (flag) // expected-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
+            // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+            // debug-note-re@-2{{{{^}}Tracking condition 'flag'{{$}}}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace condition_lambda_capture_by_value_assumption
+
+namespace condition_lambda_capture_by_reference_assumption {
+int getInt();
+
+[[noreturn]] void halt();
+
+void bar(int &flag) {
+  flag = getInt(); // tracking-note-re{{{{^}}Value assigned to 'flag', which participates in a condition later{{$}}}}
+}
+
+void f(int flag) {
+  int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
+
+  auto lambda = [&flag]() {
+    if (!flag) // tracking-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
+               // tracking-note-re@-1{{{{^}}Taking false branch{{$}}}}
+      halt();
+  };
+
+  bar(flag); // tracking-note-re{{{{^}}Calling 'bar'{{$}}}}
+             // tracking-note-re@-1{{{{^}}Returning from 'bar'{{$}}}}
+  lambda();  // tracking-note-re{{{{^}}Calling 'operator()'{{$}}}}
+             // tracking-note-re@-1{{{{^}}Returning from 'operator()'{{$}}}}
+
+  if (flag) // expected-note-re{{{{^}}'flag' is not equal to 0{{$}}}}
+            // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+            // debug-note-re@-2{{{{^}}Tracking condition 'flag'}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace condition_lambda_capture_by_reference_assumption
+
 namespace collapse_point_not_in_condition {
 
 [[noreturn]] void halt();
@@ -470,6 +555,35 @@ void f6(int x) {
 }
 
 } // end of namespace dont_crash_on_nonlogical_binary_operator
+
+namespace collapse_point_not_in_condition_as_field {
+
+[[noreturn]] void halt();
+struct IntWrapper {
+  int b;
+  IntWrapper();
+
+  void check() {
+    if (!b) // tracking-note-re{{{{^}}Assuming field 'b' is not equal to 0{{$}}}}
+            // tracking-note-re@-1{{{{^}}Taking false branch{{$}}}}
+      halt();
+    return;
+  }
+};
+
+void f(IntWrapper i) {
+  int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
+
+  i.check(); // tracking-note-re{{{{^}}Calling 'IntWrapper::check'{{$}}}}
+             // tracking-note-re@-1{{{{^}}Returning from 'IntWrapper::check'{{$}}}}
+  if (i.b)   // expected-note-re{{{{^}}Field 'b' is not equal to 0{{$}}}}
+             // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+             // debug-note-re@-2{{{{^}}Tracking condition 'i.b'{{$}}}}
+    *x = 5;  // expected-warning{{Dereference of null pointer}}
+             // expected-note@-1{{Dereference of null pointer}}
+}
+
+} // end of namespace collapse_point_not_in_condition_as_field
 
 namespace dont_track_assertlike_conditions {
 
