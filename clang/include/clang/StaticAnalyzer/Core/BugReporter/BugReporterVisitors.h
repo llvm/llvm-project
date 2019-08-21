@@ -135,12 +135,6 @@ class FindLastStoreBRVisitor final : public BugReporterVisitor {
   const StackFrameContext *OriginSFC;
 
 public:
-  /// Creates a visitor for every VarDecl inside a Stmt and registers it with
-  /// the BugReport.
-  static void registerStatementVarDecls(BugReport &BR, const Stmt *S,
-                                        bool EnableNullFPSuppression,
-                                        TrackingKind TKind);
-
   /// \param V We're searching for the store where \c R received this value.
   /// \param R The region we're tracking.
   /// \param EnableNullFPSuppression Whether we should employ false positive
