@@ -83,9 +83,6 @@ public:
 
   size_t GetHexBytesAvail(void *dst, size_t dst_len);
 
-  uint64_t GetHexWithFixedSize(uint32_t byte_size, bool little_endian,
-                               uint64_t fail_value);
-
   size_t GetHexByteString(std::string &str);
 
   size_t GetHexByteStringFixedLength(std::string &str, uint32_t nibble_length);
