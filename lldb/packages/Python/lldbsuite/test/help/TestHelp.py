@@ -240,6 +240,22 @@ class HelpCommandTestCase(TestBase):
                     substrs=["'alongaliasna' is an abbreviation for 'help'"])
 
     @no_debug_info_test
+    def test_hidden_help(self):
+        self.expect("help -h",
+                    substrs=["_regexp-bt"])
+
+    @no_debug_info_test
+    def test_help_ambiguous(self):
+        self.expect("help g",
+                    substrs=["Help requested with ambiguous command name, possible completions:",
+                             "gdb-remote", "gui"])
+
+    @no_debug_info_test
+    def test_help_unknown_flag(self):
+        self.expect("help -z", error=True,
+                    substrs=["unknown or ambiguous option"])
+
+    @no_debug_info_test
     def test_help_format_output(self):
         """Test that help output reaches TerminalWidth."""
         self.runCmd(

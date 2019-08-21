@@ -146,7 +146,7 @@ class SampleRecord {
 public:
   using CallTarget = std::pair<StringRef, uint64_t>;
   struct CallTargetComparator {
-    bool operator() (const CallTarget &LHS, const CallTarget &RHS) {
+    bool operator()(const CallTarget &LHS, const CallTarget &RHS) const {
       if (LHS.second != RHS.second)
         return LHS.second > RHS.second;
 

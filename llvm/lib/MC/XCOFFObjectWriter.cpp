@@ -343,9 +343,7 @@ void XCOFFObjectWriter::writeSectionHeaderTable() {
 }
 
 void XCOFFObjectWriter::writeSymbolTable() {
-  assert((ProgramCodeCsects.size() == 1 &&
-          ProgramCodeCsects.back().Syms.size() == 0) &&
-         ".text csects not handled yet.");
+  assert(ProgramCodeCsects.size() == 0 && ".text csects not handled yet.");
 
   // The BSS Section is special in that the csects must contain a single symbol,
   // and the contained symbol cannot be represented in the symbol table as a

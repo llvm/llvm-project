@@ -615,6 +615,39 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_ZEXT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    if (SizeOp0 % NarrowTy.getSizeInBits() != 0)
+      return UnableToLegalize;
+
+    // Generate a merge where the bottom bits are taken from the source, and
+    // zero everything else.
+    Register ZeroReg = MIRBuilder.buildConstant(NarrowTy, 0).getReg(0);
+    unsigned NumParts = SizeOp0 / NarrowTy.getSizeInBits();
+    SmallVector<Register, 4> Srcs = {MI.getOperand(1).getReg()};
+    for (unsigned Part = 1; Part < NumParts; ++Part)
+      Srcs.push_back(ZeroReg);
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), Srcs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_TRUNC: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    uint64_t SizeOp1 = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    if (NarrowTy.getSizeInBits() * 2 != SizeOp1) {
+      LLVM_DEBUG(dbgs() << "Can't narrow trunc to type " << NarrowTy << "\n");
+      return UnableToLegalize;
+    }
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1).getReg());
+    MIRBuilder.buildCopy(MI.getOperand(0).getReg(), Unmerge.getReg(0));
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   case TargetOpcode::G_ADD: {
     // FIXME: add support for when SizeOp0 isn't an exact multiple of
