@@ -33,9 +33,38 @@
 using namespace lldb;
 using namespace lldb_private;
 
+bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
+                                  llvm::ArrayRef<CompilerContext> pattern) {
+  auto ctx = context_chain.begin();
+  auto ctx_end = context_chain.end();
+  for (const CompilerContext &pat : pattern) {
+    // Early exit if the pattern is too long.
+    if (ctx == ctx_end)
+      return false;
+    if (*ctx != pat) {
+      // Skip any number of module matches.
+      if (pat.kind == CompilerContextKind::AnyModule) {
+        // Greedily match 0..n modules.
+        ctx = std::find_if(ctx, ctx_end, [](const CompilerContext &ctx) {
+          return ctx.kind != CompilerContextKind::Module;
+        });
+        continue;
+      }
+      // See if there is a kind mismatch; they should have 1 bit in common.
+      if (((uint16_t)ctx->kind & (uint16_t)pat.kind) == 0)
+        return false;
+      // The name is ignored for AnyModule, but not for AnyType.
+      if (pat.kind != CompilerContextKind::AnyModule && ctx->name != pat.name)
+        return false;
+    }
+    ++ctx;
+  }
+  return true;
+}
+
 void CompilerContext::Dump() const {
-  switch (type) {
-  case CompilerContextKind::Invalid:
+  switch (kind) {
+  default:
     printf("Invalid");
     break;
   case CompilerContextKind::TranslationUnit:
@@ -50,7 +79,7 @@ void CompilerContext::Dump() const {
   case CompilerContextKind::Class:
     printf("Class");
     break;
-  case CompilerContextKind::Structure:
+  case CompilerContextKind::Struct:
     printf("Structure");
     break;
   case CompilerContextKind::Union:
@@ -62,11 +91,17 @@ void CompilerContext::Dump() const {
   case CompilerContextKind::Variable:
     printf("Variable");
     break;
-  case CompilerContextKind::Enumeration:
+  case CompilerContextKind::Enum:
     printf("Enumeration");
     break;
   case CompilerContextKind::Typedef:
     printf("Typedef");
+    break;
+  case CompilerContextKind::AnyModule:
+    printf("AnyModule");
+    break;
+  case CompilerContextKind::AnyType:
+    printf("AnyType");
     break;
   }
   printf("(\"%s\")\n", name.GetCString());

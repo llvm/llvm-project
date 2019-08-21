@@ -149,7 +149,7 @@ uint32_t SymbolFile::FindTypes(
   return 0;
 }
 
-size_t SymbolFile::FindTypes(const std::vector<CompilerContext> &context,
+size_t SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
                              bool append, TypeMap &types) {
   if (!append)
     types.Clear();

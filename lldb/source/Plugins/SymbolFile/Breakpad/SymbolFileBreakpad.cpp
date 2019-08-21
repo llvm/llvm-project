@@ -318,9 +318,8 @@ uint32_t SymbolFileBreakpad::FindTypes(
   return types.GetSize();
 }
 
-size_t
-SymbolFileBreakpad::FindTypes(const std::vector<CompilerContext> &context,
-                              bool append, TypeMap &types) {
+size_t SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                     bool append, TypeMap &types) {
   if (!append)
     types.Clear();
   return types.GetSize();

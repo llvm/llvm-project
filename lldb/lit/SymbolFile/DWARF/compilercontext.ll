@@ -1,8 +1,22 @@
 ; Test finding types by CompilerContext.
 ; RUN: llc %s -filetype=obj -o %t.o
-; RUN: lldb-test symbols %t.o -find=type -compiler-context="Module:CModule,Module:SubModule,Structure:FromSubmodule" | FileCheck %s
+; RUN: lldb-test symbols %t.o -find=type \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,Struct:FromSubmoduleX" \
+; RUN:   | FileCheck %s --check-prefix=NORESULTS
+; RUN: lldb-test symbols %t.o -find=type \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,Struct:FromSubmodule" \
+; RUN:   | FileCheck %s
+; RUN: lldb-test symbols %t.o -find=type \
+; RUN:   -compiler-context="Module:CModule,AnyModule:*,Struct:FromSubmodule" \
+; RUN:   | FileCheck %s
+; RUN: lldb-test symbols %t.o -find=type \
+; RUN:   -compiler-context="AnyModule:*,Struct:FromSubmodule" \
+; RUN:   | FileCheck %s
+; RUN: lldb-test symbols %t.o -find=type \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,AnyType:FromSubmodule" \
+; RUN:   | FileCheck %s
 ;
-;
+; NORESULTS: Found 0 types
 ; CHECK: Found 1 types:
 ; CHECK: struct FromSubmodule {
 ; CHECK-NEXT:     unsigned int x;
