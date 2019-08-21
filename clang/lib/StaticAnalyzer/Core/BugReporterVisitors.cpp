@@ -298,6 +298,7 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   MemRegionManager &MmrMgr;
   const SourceManager &SM;
   const PrintingPolicy &PP;
+  bugreporter::TrackingKind TKind;
 
   /// Recursion limit for dereferencing fields when looking for the
   /// region of interest.
@@ -318,10 +319,10 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   using RegionVector = SmallVector<const MemRegion *, 5>;
 
 public:
-  NoStoreFuncVisitor(const SubRegion *R)
+  NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
       : RegionOfInterest(R), MmrMgr(*R->getMemRegionManager()),
         SM(MmrMgr.getContext().getSourceManager()),
-        PP(MmrMgr.getContext().getPrintingPolicy()) {}
+        PP(MmrMgr.getContext().getPrintingPolicy()), TKind(TKind) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -612,6 +613,9 @@ void NoStoreFuncVisitor::findModifyingFrames(const ExplodedNode *N) {
   } while (N);
 }
 
+static llvm::StringLiteral WillBeUsedForACondition =
+    ", which participates in a condition later";
+
 PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     BugReport &R, const CallEvent &Call, const ExplodedNode *N,
     const RegionVector &FieldChain, const MemRegion *MatchedRegion,
@@ -658,6 +662,8 @@ PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     return nullptr;
 
   os << "'";
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
@@ -1068,6 +1074,9 @@ public:
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
+    if (TKind == bugreporter::TrackingKind::Condition)
+      Out << WillBeUsedForACondition;
+
     auto EventPiece = std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
 
     // If we determined that the note is meaningless, make it prunable, and
@@ -1449,6 +1458,9 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
 
   if (os.str().empty())
     showBRDefaultDiagnostics(os, R, V);
+
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
 
   // Construct a new PathDiagnosticPiece.
   ProgramPoint P = StoreSite->getLocation();
@@ -1933,7 +1945,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
       report.addVisitor(
-          llvm::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
+          llvm::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R), TKind));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           LVNode, R, EnableNullFPSuppression, report, V);
