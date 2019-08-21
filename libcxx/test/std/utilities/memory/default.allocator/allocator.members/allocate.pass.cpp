@@ -16,7 +16,7 @@
 #include <cstddef>       // for std::max_align_t
 
 #include "test_macros.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 
 #ifdef TEST_HAS_NO_ALIGNED_ALLOCATION

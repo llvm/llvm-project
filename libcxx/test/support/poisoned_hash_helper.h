@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef SUPPORT_POISONED_HASH_HELPER_HPP
-#define SUPPORT_POISONED_HASH_HELPER_HPP
+#ifndef SUPPORT_POISONED_HASH_HELPER_H
+#define SUPPORT_POISONED_HASH_HELPER_H
 
 #include <type_traits>
 #include <cassert>
@@ -239,4 +239,4 @@ void test_library_hash_specializations_available(Types) {
   Types::template applyTrait<TestLibraryTrait >();
 }
 
-#endif // SUPPORT_POISONED_HASH_HELPER_HPP
+#endif // SUPPORT_POISONED_HASH_HELPER_H

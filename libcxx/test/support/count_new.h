@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef COUNT_NEW_HPP
-#define COUNT_NEW_HPP
+#ifndef COUNT_NEW_H
+#define COUNT_NEW_H
 
 # include <cstdlib>
 # include <cassert>
@@ -482,4 +482,4 @@ private:
     RequireAllocationGuard& operator=(RequireAllocationGuard const&);
 };
 
-#endif /* COUNT_NEW_HPP */
+#endif /* COUNT_NEW_H */

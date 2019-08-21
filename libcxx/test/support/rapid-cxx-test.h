@@ -1,5 +1,5 @@
-#ifndef RAPID_CXX_TEST_HPP
-#define RAPID_CXX_TEST_HPP
+#ifndef RAPID_CXX_TEST_H
+#define RAPID_CXX_TEST_H
 
 # include <cstddef>
 # include <cstdlib>
@@ -863,4 +863,4 @@ namespace rapid_cxx_test
 #   pragma GCC diagnostic pop
 # endif
 
-#endif /* RAPID_CXX_TEST_HPP */
+#endif /* RAPID_CXX_TEST_H */

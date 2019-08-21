@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef SUPPORT_NASTY_MACROS_HPP
-#define SUPPORT_NASTY_MACROS_HPP
+#ifndef SUPPORT_NASTY_MACROS_H
+#define SUPPORT_NASTY_MACROS_H
 
 #define NASTY_MACRO This should not be expanded!!!
 #define _A NASTY_MACRO
@@ -65,4 +65,4 @@
 #define __acquire NASTY_MACRO
 #define __release NASTY_MACRO
 
-#endif // SUPPORT_NASTY_MACROS_HPP
+#endif // SUPPORT_NASTY_MACROS_H

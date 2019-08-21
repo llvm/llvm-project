@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
-#include "poisoned_hash_helper.hpp"
+#include "poisoned_hash_helper.h"
 #include "deleter_types.h"
 #include "min_allocator.h"
 

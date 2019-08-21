@@ -1,5 +1,5 @@
-#ifndef TEST_SUPPORT_FORMAT_STRING_HPP
-#define TEST_SUPPORT_FORMAT_STRING_HPP
+#ifndef TEST_SUPPORT_FORMAT_STRING_H
+#define TEST_SUPPORT_FORMAT_STRING_H
 
 #include <cstdio>
 #include <string>

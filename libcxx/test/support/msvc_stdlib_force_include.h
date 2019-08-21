@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
-#define SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
+#ifndef SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H
+#define SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H
 
 // This header is force-included when running the libc++ tests against the
 // MSVC standard library.
@@ -89,4 +89,4 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
 #define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 
-#endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
+#endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H

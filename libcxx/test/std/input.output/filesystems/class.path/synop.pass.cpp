@@ -16,7 +16,7 @@
 // typedef basic_string<value_type> string_type;
 // static constexpr value_type preferred_separator = ...;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 

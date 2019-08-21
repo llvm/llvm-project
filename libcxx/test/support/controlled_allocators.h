@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_CONTROLLED_ALLOCATORS_HPP
-#define SUPPORT_CONTROLLED_ALLOCATORS_HPP
+#ifndef SUPPORT_CONTROLLED_ALLOCATORS_H
+#define SUPPORT_CONTROLLED_ALLOCATORS_H
 
 #include <memory>
 #include <type_traits>
@@ -498,4 +498,4 @@ inline bool operator!=(NullAllocator<T> const& x,
 }
 
 
-#endif /* SUPPORT_CONTROLLED_ALLOCATORS_HPP */
+#endif /* SUPPORT_CONTROLLED_ALLOCATORS_H */

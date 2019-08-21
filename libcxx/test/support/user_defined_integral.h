@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef SUPPORT_USER_DEFINED_INTEGRAL_HPP
-#define SUPPORT_USER_DEFINED_INTEGRAL_HPP
+#ifndef SUPPORT_USER_DEFINED_INTEGRAL_H
+#define SUPPORT_USER_DEFINED_INTEGRAL_H
 
 template <class T>
 struct UserDefinedIntegral
@@ -48,4 +48,4 @@ void operator<=(UserDefinedIntegral<T>, UserDefinedIntegral<U>);
 template <class T, class U>
 void operator>=(UserDefinedIntegral<T>, UserDefinedIntegral<U>);
 
-#endif // SUPPORT_USER_DEFINED_INTEGRAL_HPP
+#endif // SUPPORT_USER_DEFINED_INTEGRAL_H

@@ -20,7 +20,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "archetypes.hpp"
+#include "archetypes.h"
 
 #include "test_macros.h"
 

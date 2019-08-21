@@ -1,7 +1,7 @@
-#ifndef FILESYSTEM_TEST_HELPER_HPP
-#define FILESYSTEM_TEST_HELPER_HPP
+#ifndef FILESYSTEM_TEST_HELPER_H
+#define FILESYSTEM_TEST_HELPER_H
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 
 #include <unistd.h> // for ftruncate
 
@@ -15,8 +15,8 @@
 #include <regex>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.hpp"
-#include "format_string.hpp"
+#include "rapid-cxx-test.h"
+#include "format_string.h"
 
 // static test helpers
 

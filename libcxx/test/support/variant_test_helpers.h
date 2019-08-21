@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef SUPPORT_VARIANT_TEST_HELPERS_HPP
-#define SUPPORT_VARIANT_TEST_HELPERS_HPP
+#ifndef SUPPORT_VARIANT_TEST_HELPERS_H
+#define SUPPORT_VARIANT_TEST_HELPERS_H
 
 #include <type_traits>
 #include <utility>
@@ -86,4 +86,4 @@ void makeEmpty(Variant& v) {
 #endif // TEST_HAS_NO_EXCEPTIONS
 
 
-#endif // SUPPORT_VARIANT_TEST_HELPERS_HPP
+#endif // SUPPORT_VARIANT_TEST_HELPERS_H

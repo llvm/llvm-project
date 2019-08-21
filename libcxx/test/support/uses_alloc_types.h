@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef USES_ALLOC_TYPES_HPP
-#define USES_ALLOC_TYPES_HPP
+#ifndef USES_ALLOC_TYPES_H
+#define USES_ALLOC_TYPES_H
 
 # include <memory>
 # include <cassert>
@@ -142,7 +142,7 @@ using EnableIfB = typename std::enable_if<Value, bool>::type;
 // polymorphic allocators. However we don't want to include
 // <experimental/memory_resource> in this header. Therefore in order
 // to inject this behavior later we use a trait.
-// See test_memory_resource.hpp for more info.
+// See test_memory_resource.h for more info.
 template <class Alloc>
 struct TransformErasedTypeAlloc {
   using type = Alloc;
@@ -387,4 +387,4 @@ public:
     {}
 };
 
-#endif /* USES_ALLOC_TYPES_HPP */
+#endif /* USES_ALLOC_TYPES_H */

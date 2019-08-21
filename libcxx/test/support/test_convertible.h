@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_TEST_CONVERTIBLE_HPP
-#define SUPPORT_TEST_CONVERTIBLE_HPP
+#ifndef SUPPORT_TEST_CONVERTIBLE_H
+#define SUPPORT_TEST_CONVERTIBLE_H
 
 // "test_convertible<Tp, Args...>()" is a metafunction used to check if 'Tp'
 // is implicitly convertible from 'Args...' for any number of arguments,
@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 11
-#error test_convertible.hpp requires C++11 or newer
+#error test_convertible.h requires C++11 or newer
 #endif
 
 namespace detail {
@@ -38,4 +38,4 @@ template <class Tp, class ...Args>
 constexpr bool test_convertible()
 { return detail::test_convertible_imp<Tp, Args...>(0); }
 
-#endif // SUPPORT_TEST_CONVERTIBLE_HPP
+#endif // SUPPORT_TEST_CONVERTIBLE_H

@@ -1,5 +1,5 @@
-#ifndef TEST_SUPPORT_ARCHETYPES_HPP
-#define TEST_SUPPORT_ARCHETYPES_HPP
+#ifndef TEST_SUPPORT_ARCHETYPES_H
+#define TEST_SUPPORT_ARCHETYPES_H
 
 #include <type_traits>
 #include <cassert>
@@ -390,4 +390,4 @@ constexpr bool operator!=(Tp const& L, Tp const& R) noexcept {
 
 #endif // TEST_STD_VER >= 11
 
-#endif // TEST_SUPPORT_ARCHETYPES_HPP
+#endif // TEST_SUPPORT_ARCHETYPES_H

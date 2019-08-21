@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_TEST_MEMORY_RESOURCE_HPP
-#define SUPPORT_TEST_MEMORY_RESOURCE_HPP
+#ifndef SUPPORT_TEST_MEMORY_RESOURCE_H
+#define SUPPORT_TEST_MEMORY_RESOURCE_H
 
 #include <experimental/memory_resource>
 #include <experimental/utility>
@@ -19,8 +19,8 @@
 #include <cstdint>
 #include <cassert>
 #include "test_macros.h"
-#include "controlled_allocators.hpp"
-#include "uses_alloc_types.hpp"
+#include "controlled_allocators.h"
+#include "uses_alloc_types.h"
 
 // FIXME: This is a hack to allow uses_allocator_types.hpp to work with
 // erased_type. However we can't define that behavior directly in the header
@@ -167,4 +167,4 @@ using TestResource1 = TestResourceImp<BufferProvider<>, 1>;
 using TestResource2 = TestResourceImp<BufferProvider<>, 2>;
 
 
-#endif /* SUPPORT_TEST_MEMORY_RESOURCE_HPP */
+#endif /* SUPPORT_TEST_MEMORY_RESOURCE_H */

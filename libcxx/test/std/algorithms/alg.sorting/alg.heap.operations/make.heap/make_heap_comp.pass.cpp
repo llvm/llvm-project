@@ -20,7 +20,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 #include "test_iterators.h"
 
 struct indirect_less
