@@ -9,7 +9,6 @@
 #ifndef liblldb_Type_h_
 #define liblldb_Type_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
