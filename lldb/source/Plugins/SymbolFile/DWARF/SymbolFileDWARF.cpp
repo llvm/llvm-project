@@ -2522,37 +2522,45 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
   m_index->GetTypes(name, die_offsets);
   const size_t num_die_matches = die_offsets.size();
 
-  if (num_die_matches) {
-    size_t num_matches = 0;
-    for (size_t i = 0; i < num_die_matches; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE die = GetDIE(die_ref);
+  size_t num_matches = 0;
+  for (size_t i = 0; i < num_die_matches; ++i) {
+    const DIERef &die_ref = die_offsets[i];
+    DWARFDIE die = GetDIE(die_ref);
 
-      if (die) {
-        // LLDB never searches for Swift type definitions by context.
-        if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
-          continue;
+    if (die) {
+      // LLDB never searches for Swift type definitions by context.
+      if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
+        continue;
 
-        std::vector<CompilerContext> die_context;
-        die.GetDeclContext(die_context);
-        if (die_context != context)
-          continue;
+      std::vector<CompilerContext> die_context;
+      die.GetDeclContext(die_context);
+      if (die_context != context)
+        continue;
 
-        Type *matching_type = ResolveType(die, true, true);
-        if (matching_type) {
-          // We found a type pointer, now find the shared pointer form our type
-          // list
-          types.InsertUnique(matching_type->shared_from_this());
-          ++num_matches;
-        }
-      } else {
-        m_index->ReportInvalidDIEOffset(die_ref.die_offset,
-                                        name.GetStringRef());
+      Type *matching_type = ResolveType(die, true, true);
+      if (matching_type) {
+        // We found a type pointer, now find the shared pointer form our type
+        // list
+        types.InsertUnique(matching_type->shared_from_this());
+        ++num_matches;
       }
+    } else {
+      m_index->ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
     }
-    return num_matches;
   }
-  return 0;
+
+  // Next search through the reachable Clang modules. This only applies for
+  // DWARF objects compiled with -gmodules that haven't been processed by
+  // dsymutil.
+  UpdateExternalModuleListIfNeeded();
+
+  for (const auto &pair : m_external_type_modules)
+    if (ModuleSP external_module_sp = pair.second) {
+      SymbolVendor *sym_vendor = external_module_sp->GetSymbolVendor();
+      if (sym_vendor)
+        num_matches += sym_vendor->FindTypes(context, true, types);
+    }
+  return num_matches;
 }
 
 CompilerDeclContext
