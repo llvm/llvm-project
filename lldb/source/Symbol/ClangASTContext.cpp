@@ -106,10 +106,12 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
+#ifdef LLDB_CONFIGURATION_DEBUG
 static void VerifyDecl(clang::Decl *decl) {
   assert(decl && "VerifyDecl called with nullptr?");
   decl->getAccess();
 }
+#endif
 
 static inline bool
 ClangASTContextSupportsLanguage(lldb::LanguageType language) {
