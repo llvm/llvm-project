@@ -9,7 +9,7 @@
 #include "lldb/Utility/StringLexer.h"
 #include "gtest/gtest.h"
 
-using namespace lldb_utility;
+using namespace lldb_private;
 
 TEST(StringLexerTest, GetUnlexed) {
   StringLexer l("foo");

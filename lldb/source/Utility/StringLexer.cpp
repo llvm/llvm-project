@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <assert.h>
 
-using namespace lldb_utility;
+using namespace lldb_private;
 
 StringLexer::StringLexer(std::string s) : m_data(s), m_position(0) {}
 

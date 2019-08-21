@@ -73,7 +73,6 @@ class SymbolContextScope;
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_utility;
 
 static user_id_t g_value_obj_uid = 0;
 
@@ -3301,32 +3300,32 @@ lldb::ValueObjectSP ValueObjectManager::GetSP() {
   lldb::ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
     return lldb::ValueObjectSP();
-  
+
   const uint32_t current_stop_id = process_sp->GetLastNaturalStopID();
   if (current_stop_id == m_stop_id)
     return m_user_valobj_sp;
-  
+
   m_stop_id = current_stop_id;
-  
+
   if (!m_root_valobj_sp) {
     m_user_valobj_sp.reset();
     return m_root_valobj_sp;
   }
-  
+
   m_user_valobj_sp = m_root_valobj_sp;
-  
+
   if (m_use_dynamic != lldb::eNoDynamicValues) {
     lldb::ValueObjectSP dynamic_sp = m_user_valobj_sp->GetDynamicValue(m_use_dynamic);
     if (dynamic_sp)
       m_user_valobj_sp = dynamic_sp;
   }
-  
+
   if (m_use_synthetic) {
     lldb::ValueObjectSP synthetic_sp = m_user_valobj_sp->GetSyntheticValue(m_use_synthetic);
     if (synthetic_sp)
       m_user_valobj_sp = synthetic_sp;
   }
-  
+
   return m_user_valobj_sp;
 }
 
