@@ -13,7 +13,7 @@
 // RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
 // macro is defined before including <inttypes.h>.
 #ifndef __STDC_FORMAT_MACROS
-  #define __STDC_FORMAT_MACROS 1
+#define __STDC_FORMAT_MACROS 1
 #endif
 
 #include <assert.h>
@@ -173,7 +173,7 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
 
   // Ensure that signal handlers are installed as late as possible, as the class
   // is not thread-safe until init() is finished, and thus a SIGSEGV may cause a
-  // race to members if recieved during init().
+  // race to members if received during init().
   if (Opts.InstallSignalHandlers)
     installSignalHandlers();
 }
@@ -385,7 +385,7 @@ void printErrorType(Error E, uintptr_t AccessPtr, AllocationMetadata *Meta,
   case Error::UNKNOWN:
     ErrorString = "GWP-ASan couldn't automatically determine the source of "
                   "the memory error. It was likely caused by a wild memory "
-                  "access into the GWP-ASan pool. The error occured";
+                  "access into the GWP-ASan pool. The error occurred";
     break;
   case Error::USE_AFTER_FREE:
     ErrorString = "Use after free";

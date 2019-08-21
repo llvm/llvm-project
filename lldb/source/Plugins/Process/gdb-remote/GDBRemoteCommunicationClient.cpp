@@ -351,7 +351,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   if (SendPacketAndWaitForResponse(packet.GetString(), response,
                                    /*send_async=*/false) ==
       PacketResult::Success) {
-    const char *response_cstr = response.GetStringRef().c_str();
+    const char *response_cstr = response.GetStringRef().data();
 
     // Hang on to the qSupported packet, so that platforms can do custom
     // configuration of the transport before attaching/launching the process.
@@ -465,7 +465,7 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response, false) ==
         PacketResult::Success) {
-      const char *response_cstr = response.GetStringRef().c_str();
+      const char *response_cstr = response.GetStringRef().data();
       if (::strstr(response_cstr, ";c"))
         m_supports_vCont_c = eLazyBoolYes;
 
@@ -2174,8 +2174,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
         if (!DecodeProcessInfoResponse(response, process_info))
           break;
         process_infos.Append(process_info);
-        response.GetStringRef().clear();
-        response.SetFilePos(0);
+        response = StringExtractorGDBRemote();
       } while (SendPacketAndWaitForResponse("qsProcessInfo", response, false) ==
                PacketResult::Success);
     } else {
@@ -3897,7 +3896,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
                   "GDBRemoteCommunicationClient::%s(): "
                   "QSupportedAsyncJSONPackets returned invalid "
                   "result: %s",
-                  __FUNCTION__, response.GetStringRef().c_str());
+                  __FUNCTION__, response.GetStringRef().data());
         m_supported_async_json_packets_sp.reset();
       }
     } else {
@@ -3975,14 +3974,14 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
       SendPacketAndWaitForResponse(stream.GetString(), response, send_async);
   if (result == PacketResult::Success) {
     // We failed if the config result comes back other than OK.
-    if (strcmp(response.GetStringRef().c_str(), "OK") == 0) {
+    if (strcmp(response.GetStringRef().data(), "OK") == 0) {
       // Okay!
       error.Clear();
     } else {
       error.SetErrorStringWithFormat("configuring StructuredData feature "
                                      "%s failed with error %s",
                                      type_name.AsCString(),
-                                     response.GetStringRef().c_str());
+                                     response.GetStringRef().data());
     }
   } else {
     // Can we get more data here on the failure?

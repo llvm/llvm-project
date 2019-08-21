@@ -456,7 +456,7 @@ bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
         if (object_desc[object_end] == '\n')
             m_stream->Printf("%s", object_desc);
         else
-            m_stream->Printf("%s\n", object_desc);        
+            m_stream->Printf("%s\n", object_desc);
         return true;
       } else if (!value_printed && !summary_printed)
         return true;
@@ -751,34 +751,30 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
 void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
                                                bool summary_printed) {
-  // this flag controls whether we tried to display a description for this
-  // object and failed if that happens, we want to display the children, if any
+  // This flag controls whether we tried to display a description for this
+  // object and failed if that happens, we want to display the children if any.
   bool is_failed_description =
       !PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
 
-  auto curr_ptr_depth = m_ptr_depth;
-  bool print_children =
+  DumpValueObjectOptions::PointerDepth curr_ptr_depth = m_ptr_depth;
+  const bool print_children =
       ShouldPrintChildren(is_failed_description, curr_ptr_depth);
-  bool print_oneline =
+  const bool print_oneline =
       (curr_ptr_depth.CanAllowExpansion() || m_options.m_show_types ||
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
        (m_options.m_pointer_as_array) || m_options.m_show_location)
           ? false
           : DataVisualization::ShouldPrintAsOneLiner(*m_valobj);
-  bool is_instance_ptr = IsInstancePointer();
-  uint64_t instance_ptr_value = LLDB_INVALID_ADDRESS;
-
-  if (print_children && is_instance_ptr) {
-    instance_ptr_value = m_valobj->GetValueAsUnsigned(0);
+  if (print_children && IsInstancePointer()) {
+    uint64_t instance_ptr_value = m_valobj->GetValueAsUnsigned(0);
     if (m_printed_instance_pointers->count(instance_ptr_value)) {
-      // we already printed this instance-is-pointer thing, so don't expand it
+      // We already printed this instance-is-pointer thing, so don't expand it.
       m_stream->PutCString(" {...}\n");
-
-      // we're done here - get out fast
       return;
-    } else
-      m_printed_instance_pointers->emplace(
-          instance_ptr_value); // remember this guy for future reference
+    } else {
+      // Remember this guy for future reference.
+      m_printed_instance_pointers->emplace(instance_ptr_value);
+    }
   }
 
   if (print_children) {
