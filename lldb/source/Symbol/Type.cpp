@@ -30,9 +30,6 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclObjC.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
