@@ -613,6 +613,8 @@ public:
 
   ~CommandObjectSettingsRemove() override = default;
 
+  bool WantsCompletion() override { return true; }
+
   int HandleArgumentCompletion(
       CompletionRequest &request,
       OptionElementVector &opt_element_vector) override {
