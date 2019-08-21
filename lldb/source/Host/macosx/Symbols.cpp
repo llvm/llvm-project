@@ -570,12 +570,10 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
 
       StreamString command;
       if (!uuid_str.empty())
-        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
-                       "bursar.apple.com,uuidsymmap.apple.com %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
                        g_dsym_for_uuid_exe_path, uuid_str.c_str());
       else if (file_path[0] != '\0')
-        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
-                       "bursar.apple.com,uuidsymmap.apple.com %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
                        g_dsym_for_uuid_exe_path, file_path);
 
       if (!command.GetString().empty()) {
