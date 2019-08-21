@@ -144,7 +144,7 @@ public:
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                      TypeMap &types) override;
 
-  size_t FindTypes(const std::vector<CompilerContext> &context, bool append,
+  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern, bool append,
                    TypeMap &types) override;
 
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override;

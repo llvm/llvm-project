@@ -1510,9 +1510,8 @@ void SymbolFilePDB::FindTypesByName(
   }
 }
 
-size_t SymbolFilePDB::FindTypes(
-    const std::vector<lldb_private::CompilerContext> &contexts, bool append,
-    lldb_private::TypeMap &types) {
+size_t SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                bool append, lldb_private::TypeMap &types) {
   return 0;
 }
 

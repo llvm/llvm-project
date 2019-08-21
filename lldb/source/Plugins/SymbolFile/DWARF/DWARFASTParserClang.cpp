@@ -145,7 +145,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   // If this type comes from a Clang module, look in the DWARF section
   // of the pcm file in the module cache. Clang generates DWO skeleton
   // units as breadcrumbs to find them.
-  std::vector<CompilerContext> decl_context;
+  llvm::SmallVector<CompilerContext, 4> decl_context;
   die.GetDeclContext(decl_context);
   TypeMap dwo_types;
 

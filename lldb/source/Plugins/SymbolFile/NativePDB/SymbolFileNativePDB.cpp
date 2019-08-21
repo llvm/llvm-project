@@ -1237,9 +1237,8 @@ uint32_t SymbolFileNativePDB::FindTypes(
   return match_count;
 }
 
-size_t
-SymbolFileNativePDB::FindTypes(const std::vector<CompilerContext> &context,
-                               bool append, TypeMap &types) {
+size_t SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                      bool append, TypeMap &types) {
   return 0;
 }
 
