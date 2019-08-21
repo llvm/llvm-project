@@ -1599,9 +1599,8 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
     //
     // FIXME: An unnamed class within a class is also wrongly recognized as an
     // anonymous struct.
-    if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl_ctx)) {
+    if (isa<CXXRecordDecl>(decl_ctx))
       decl->setAnonymousStructOrUnion(true);
-    }
   }
 
   if (decl) {
