@@ -3198,7 +3198,7 @@ public:
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     std::vector<CompilerContext> decl_context;
     ConstString name_cs(name);
-    decl_context.push_back({CompilerContextKind::Structure, name_cs});
+    decl_context.push_back({CompilerContextKind::Struct, name_cs});
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();
     if (!clang_importer)
       return;
