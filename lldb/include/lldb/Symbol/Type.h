@@ -21,21 +21,27 @@
 #include <set>
 
 namespace lldb_private {
-// CompilerContext allows an array of these items to be passed to perform
-// detailed lookups in SymbolVendor and SymbolFile functions.
+
+/// CompilerContext allows an array of these items to be passed to perform
+/// detailed lookups in SymbolVendor and SymbolFile functions.
 struct CompilerContext {
-  CompilerContext(CompilerContextKind t, ConstString n)
-      : type(t), name(n) {}
+  CompilerContext(CompilerContextKind t, ConstString n) : kind(t), name(n) {}
 
   bool operator==(const CompilerContext &rhs) const {
-    return type == rhs.type && name == rhs.name;
+    return kind == rhs.kind && name == rhs.name;
   }
+  bool operator!=(const CompilerContext &rhs) const { return !(*this == rhs); }
 
   void Dump() const;
 
-  CompilerContextKind type;
+  CompilerContextKind kind;
   ConstString name;
 };
+
+/// Match \p context_chain against \p pattern, which may contain "Any"
+/// kinds. The \p context_chain should *not* contain any "Any" kinds.
+bool contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
+                    llvm::ArrayRef<CompilerContext> pattern);
 
 class SymbolFileType : public std::enable_shared_from_this<SymbolFileType>,
                        public UserID {

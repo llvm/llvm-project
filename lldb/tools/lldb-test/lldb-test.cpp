@@ -242,12 +242,14 @@ std::vector<CompilerContext> parseCompilerContext() {
             .Case("Module", CompilerContextKind::Module)
             .Case("Namespace", CompilerContextKind::Namespace)
             .Case("Class", CompilerContextKind::Class)
-            .Case("Structure", CompilerContextKind::Structure)
+            .Case("Struct", CompilerContextKind::Struct)
             .Case("Union", CompilerContextKind::Union)
             .Case("Function", CompilerContextKind::Function)
             .Case("Variable", CompilerContextKind::Variable)
-            .Case("Enumeration", CompilerContextKind::Enumeration)
+            .Case("Enum", CompilerContextKind::Enum)
             .Case("Typedef", CompilerContextKind::Typedef)
+            .Case("AnyModule", CompilerContextKind::AnyModule)
+            .Case("AnyType", CompilerContextKind::AnyType)
             .Default(CompilerContextKind::Invalid);
     if (value.empty()) {
       WithColor::error() << "compiler context entry has no \"name\"\n";
@@ -511,7 +513,7 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
     Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
                       SearchedFiles, Map);
   else
-    Symfile.FindTypes(parseCompilerContext(), true, Map);
+    Symfile.FindTypes({parseCompilerContext()}, true, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;
