@@ -142,26 +142,27 @@ insert-before or insert-after.");
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-    } else {
+      return;
+    }
       arg =
           request.GetParsedLine().GetArgumentAtIndex(request.GetCursorIndex());
 
-      if (arg) {
-        if (arg[0] == '-') {
-          // Complete option name
-        } else {
-          // Complete setting value
-          const char *setting_var_name =
-              request.GetParsedLine().GetArgumentAtIndex(setting_var_idx);
-          Status error;
-          lldb::OptionValueSP value_sp(GetDebugger().GetPropertyValue(
-              &m_exe_ctx, setting_var_name, false, error));
-          if (value_sp) {
-            value_sp->AutoComplete(m_interpreter, request);
-          }
-        }
-      }
-    }
+      if (!arg)
+        return;
+
+      // Complete option name
+      if (arg[0] != '-')
+        return;
+
+      // Complete setting value
+      const char *setting_var_name =
+          request.GetParsedLine().GetArgumentAtIndex(setting_var_idx);
+      Status error;
+      lldb::OptionValueSP value_sp(GetDebugger().GetPropertyValue(
+          &m_exe_ctx, setting_var_name, false, error));
+      if (!value_sp)
+        return;
+      value_sp->AutoComplete(m_interpreter, request);
   }
 
 protected:

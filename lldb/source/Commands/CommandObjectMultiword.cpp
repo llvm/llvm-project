@@ -201,20 +201,22 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
         }
       }
     }
-  } else {
-    StringList new_matches;
-    CommandObject *sub_command_object = GetSubcommandObject(arg0, &new_matches);
-    if (sub_command_object == nullptr) {
-      request.AddCompletions(new_matches);
-    } else {
-      // Remove the one match that we got from calling GetSubcommandObject.
-      new_matches.DeleteStringAtIndex(0);
-      request.AddCompletions(new_matches);
-      request.GetParsedLine().Shift();
-      request.SetCursorIndex(request.GetCursorIndex() - 1);
-      return sub_command_object->HandleCompletion(request);
-    }
+    return;
   }
+
+  StringList new_matches;
+  CommandObject *sub_command_object = GetSubcommandObject(arg0, &new_matches);
+  if (sub_command_object == nullptr) {
+    request.AddCompletions(new_matches);
+    return;
+  }
+
+  // Remove the one match that we got from calling GetSubcommandObject.
+  new_matches.DeleteStringAtIndex(0);
+  request.AddCompletions(new_matches);
+  request.GetParsedLine().Shift();
+  request.SetCursorIndex(request.GetCursorIndex() - 1);
+  sub_command_object->HandleCompletion(request);
 }
 
 const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
