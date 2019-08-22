@@ -201,10 +201,10 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   return result.Succeeded();
 }
 
-int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
+void CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // Return the completions of the commands in the help system:
   if (request.GetCursorIndex() == 0) {
-    return m_interpreter.HandleCompletionMatches(request);
+    m_interpreter.HandleCompletionMatches(request);
   } else {
     CommandObject *cmd_obj =
         m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
@@ -216,9 +216,9 @@ int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
     if (cmd_obj) {
       request.GetParsedLine().Shift();
       request.SetCursorIndex(request.GetCursorIndex() - 1);
-      return cmd_obj->HandleCompletion(request);
+      cmd_obj->HandleCompletion(request);
     } else {
-      return m_interpreter.HandleCompletionMatches(request);
+      m_interpreter.HandleCompletionMatches(request);
     }
   }
 }

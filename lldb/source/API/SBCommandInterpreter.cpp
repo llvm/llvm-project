@@ -353,8 +353,6 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
                      current_line, cursor, last_char, match_start_point,
                      max_return_elements, matches, descriptions);
 
-  int num_completions = 0;
-
   // Sanity check the arguments that are passed in: cursor & last_char have to
   // be within the current_line.
   if (current_line == nullptr || cursor == nullptr || last_char == nullptr)
@@ -368,22 +366,50 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
       last_char - current_line > static_cast<ptrdiff_t>(current_line_size))
     return 0;
 
+  if (!IsValid())
+    return 0;
 
-  if (IsValid()) {
-    lldb_private::StringList lldb_matches, lldb_descriptions;
-    CompletionResult result;
-    CompletionRequest request(current_line, cursor - current_line, result);
-    num_completions = m_opaque_ptr->HandleCompletion(request);
-    result.GetMatches(lldb_matches);
-    result.GetDescriptions(lldb_descriptions);
+  lldb_private::StringList lldb_matches, lldb_descriptions;
+  CompletionResult result;
+  CompletionRequest request(current_line, cursor - current_line, result);
+  m_opaque_ptr->HandleCompletion(request);
+  result.GetMatches(lldb_matches);
+  result.GetDescriptions(lldb_descriptions);
 
-    SBStringList temp_matches_list(&lldb_matches);
-    matches.AppendList(temp_matches_list);
-    SBStringList temp_descriptions_list(&lldb_descriptions);
-    descriptions.AppendList(temp_descriptions_list);
+  // Make the result array indexed from 1 again by adding the 'common prefix'
+  // of all completions as element 0. This is done to emulate the old API.
+  if (request.GetParsedLine().GetArgumentCount() == 0) {
+    // If we got an empty string, insert nothing.
+    lldb_matches.InsertStringAtIndex(0, "");
+    lldb_descriptions.InsertStringAtIndex(0, "");
+  } else {
+    // Now figure out if there is a common substring, and if so put that in
+    // element 0, otherwise put an empty string in element 0.
+    std::string command_partial_str = request.GetCursorArgumentPrefix().str();
+
+    std::string common_prefix = lldb_matches.LongestCommonPrefix();
+    const size_t partial_name_len = command_partial_str.size();
+    common_prefix.erase(0, partial_name_len);
+
+    // If we matched a unique single command, add a space... Only do this if
+    // the completer told us this was a complete word, however...
+    if (lldb_matches.GetSize() == 1) {
+      char quote_char = request.GetParsedArg().quote;
+      common_prefix =
+          Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
+      if (request.GetParsedArg().IsQuoted())
+        common_prefix.push_back(quote_char);
+      common_prefix.push_back(' ');
+    }
+    lldb_matches.InsertStringAtIndex(0, common_prefix.c_str());
+    lldb_descriptions.InsertStringAtIndex(0, "");
   }
 
-  return num_completions;
+  SBStringList temp_matches_list(&lldb_matches);
+  matches.AppendList(temp_matches_list);
+  SBStringList temp_descriptions_list(&lldb_descriptions);
+  descriptions.AppendList(temp_descriptions_list);
+  return result.GetNumberOfResults();
 }
 
 int SBCommandInterpreter::HandleCompletionWithDescriptions(

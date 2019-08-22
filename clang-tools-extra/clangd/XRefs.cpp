@@ -187,6 +187,11 @@ public:
         // experssion is impossible to write down.
         if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(E))
           return CtorExpr->getParenOrBraceRange().isInvalid();
+        // Ignore implicit conversion-operator AST node.
+        if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+          if (isa<CXXConversionDecl>(ME->getMemberDecl()))
+            return ME->getMemberLoc().isInvalid();
+        }
         return isa<ImplicitCastExpr>(E);
       };
 

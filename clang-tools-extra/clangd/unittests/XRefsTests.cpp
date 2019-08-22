@@ -2069,6 +2069,18 @@ TEST(FindReferences, ExplicitSymbols) {
       using ::[[fo^o]];
       }
       )cpp",
+
+      R"cpp(
+      struct X {
+        operator bool();
+      };
+
+      int test() {
+        X [[a]];
+        [[a]].operator bool();
+        if ([[a^]]) {} // ignore implicit conversion-operator AST node
+      }
+    )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);

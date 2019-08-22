@@ -16,6 +16,7 @@
 #include "BranchCloneCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DynamicStaticInitializersCheck.h"
 #include "ExceptionEscapeCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
@@ -73,6 +74,8 @@ public:
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
+        "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
     CheckFactories.registerCheck<FoldInitTypeCheck>(
