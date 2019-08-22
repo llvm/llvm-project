@@ -454,6 +454,14 @@ public:
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
+  /// Find types by name.
+  ///
+  /// This behaves like the other FindTypes method but allows to
+  /// specify a DeclContext and a language for the type being searched
+  /// for.
+  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                   LanguageSet languages, bool append, TypeMap &types);
+
   lldb::TypeSP FindFirstType(const SymbolContext &sc,
                              ConstString type_name, bool exact_match);
 

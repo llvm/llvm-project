@@ -2495,7 +2495,8 @@ uint32_t SymbolFileDWARF::FindTypes(
 }
 
 size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                  bool append, TypeMap &types) {
+                                  LanguageSet languages, bool append,
+                                  TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     types.Clear();
@@ -2518,6 +2519,9 @@ size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
     DWARFDIE die = GetDIE(die_ref);
 
     if (die) {
+      if (!languages[die.GetCU()->GetLanguageType()])
+        continue;
+
       llvm::SmallVector<CompilerContext, 4> die_context;
       die.GetDeclContext(die_context);
       if (!contextMatches(die_context, pattern))
