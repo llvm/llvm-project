@@ -805,7 +805,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindNullPtr,
 };
 
-/// Options that can be set for a formatter to alter its behavior Not
+/// Options that can be set for a formatter to alter its behavior. Not
 /// all of these are applicable to all formatter types.
 FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionCascade = (1u << 0),
