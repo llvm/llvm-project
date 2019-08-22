@@ -1,5 +1,5 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-disable=false -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Test cases designed for the nosync function attribute.

@@ -236,11 +236,11 @@ struct SymbolSorter {
   bool operator()(const SymbolRef &A, const SymbolRef &B) {
     Expected<SymbolRef::Type> ATypeOrErr = A.getType();
     if (!ATypeOrErr)
-      report_error(ATypeOrErr.takeError(), A.getObject()->getFileName());
+      reportError(ATypeOrErr.takeError(), A.getObject()->getFileName());
     SymbolRef::Type AType = *ATypeOrErr;
     Expected<SymbolRef::Type> BTypeOrErr = B.getType();
     if (!BTypeOrErr)
-      report_error(BTypeOrErr.takeError(), B.getObject()->getFileName());
+      reportError(BTypeOrErr.takeError(), B.getObject()->getFileName());
     SymbolRef::Type BType = *BTypeOrErr;
     uint64_t AAddr = (AType != SymbolRef::ST_Function) ? 0 : A.getValue();
     uint64_t BAddr = (BType != SymbolRef::ST_Function) ? 0 : B.getValue();
@@ -533,8 +533,8 @@ Error getMachORelocationValueString(const MachOObjectFile *Obj,
       // NOTE: Scattered relocations don't exist on x86_64.
       unsigned RType = Obj->getAnyRelocationType(RENext);
       if (RType != MachO::X86_64_RELOC_UNSIGNED)
-        report_error(Obj->getFileName(), "Expected X86_64_RELOC_UNSIGNED after "
-                                         "X86_64_RELOC_SUBTRACTOR.");
+        reportError(Obj->getFileName(), "Expected X86_64_RELOC_UNSIGNED after "
+                                        "X86_64_RELOC_SUBTRACTOR.");
 
       // The X86_64_RELOC_UNSIGNED contains the minuend symbol;
       // X86_64_RELOC_SUBTRACTOR contains the subtrahend.
@@ -582,8 +582,8 @@ Error getMachORelocationValueString(const MachOObjectFile *Obj,
       unsigned RType = Obj->getAnyRelocationType(RENext);
 
       if (RType != MachO::GENERIC_RELOC_PAIR)
-        report_error(Obj->getFileName(), "Expected GENERIC_RELOC_PAIR after "
-                                         "GENERIC_RELOC_SECTDIFF.");
+        reportError(Obj->getFileName(), "Expected GENERIC_RELOC_PAIR after "
+                                        "GENERIC_RELOC_SECTDIFF.");
 
       printRelocationTargetName(Obj, RE, Fmt);
       Fmt << "-";
@@ -603,8 +603,8 @@ Error getMachORelocationValueString(const MachOObjectFile *Obj,
         // GENERIC_RELOC_PAIR.
         unsigned RType = Obj->getAnyRelocationType(RENext);
         if (RType != MachO::GENERIC_RELOC_PAIR)
-          report_error(Obj->getFileName(), "Expected GENERIC_RELOC_PAIR after "
-                                           "GENERIC_RELOC_LOCAL_SECTDIFF.");
+          reportError(Obj->getFileName(), "Expected GENERIC_RELOC_PAIR after "
+                                          "GENERIC_RELOC_LOCAL_SECTDIFF.");
 
         printRelocationTargetName(Obj, RE, Fmt);
         Fmt << "-";
@@ -643,8 +643,8 @@ Error getMachORelocationValueString(const MachOObjectFile *Obj,
         // ARM_RELOC_PAIR.
         unsigned RType = Obj->getAnyRelocationType(RENext);
         if (RType != MachO::ARM_RELOC_PAIR)
-          report_error(Obj->getFileName(), "Expected ARM_RELOC_PAIR after "
-                                           "ARM_RELOC_HALF");
+          reportError(Obj->getFileName(), "Expected ARM_RELOC_PAIR after "
+                                          "ARM_RELOC_HALF");
 
         // NOTE: The half of the target virtual address is stashed in the
         // address field of the secondary relocation, but we can't reverse
@@ -1945,7 +1945,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // the error message.
   if (Disassemble || IndirectSymbols || !FilterSections.empty() || UnwindInfo)
     if (Error Err = MachOOF->checkSymbolTable())
-      report_error(std::move(Err), ArchiveName, FileName, ArchitectureName);
+      reportError(std::move(Err), ArchiveName, FileName, ArchitectureName);
 
   if (DisassembleAll) {
     for (const SectionRef &Section : MachOOF->sections()) {
@@ -2295,7 +2295,7 @@ static void printArchiveHeaders(StringRef Filename, Archive *A, bool verbose,
                       ArchitectureName);
 
   if (Err)
-    report_error(std::move(Err), StringRef(), Filename, ArchitectureName);
+    reportError(std::move(Err), StringRef(), Filename, ArchitectureName);
 }
 
 static bool ValidateArchFlags() {
@@ -2327,7 +2327,7 @@ void parseInputMachO(StringRef Filename) {
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
   if (!BinaryOrErr) {
     if (Error E = isNotObjectErrorInvalidFileType(BinaryOrErr.takeError()))
-      report_error(std::move(E), Filename);
+      reportError(std::move(E), Filename);
     else
       outs() << Filename << ": is not an object file\n";
     return;
@@ -2346,7 +2346,7 @@ void parseInputMachO(StringRef Filename) {
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-          report_error(std::move(E), Filename, getFileNameForError(C, I));
+          reportError(std::move(E), Filename, getFileNameForError(C, I));
         continue;
       }
       if (MachOObjectFile *O = dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
@@ -2356,7 +2356,7 @@ void parseInputMachO(StringRef Filename) {
       }
     }
     if (Err)
-      report_error(std::move(Err), Filename);
+      reportError(std::move(Err), Filename);
     return;
   }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
@@ -2408,7 +2408,7 @@ void parseInputMachO(MachOUniversalBinary *UB) {
               ProcessMachO(Filename, MachOOF, "", ArchitectureName);
           } else if (Error E = isNotObjectErrorInvalidFileType(
                          ObjOrErr.takeError())) {
-            report_error(std::move(E), Filename, StringRef(), ArchitectureName);
+            reportError(std::move(E), Filename, StringRef(), ArchitectureName);
             continue;
           } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                          I->getAsArchive()) {
@@ -2428,8 +2428,8 @@ void parseInputMachO(MachOUniversalBinary *UB) {
               if (!ChildOrErr) {
                 if (Error E =
                         isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                  report_error(std::move(E), Filename, getFileNameForError(C, I),
-                               ArchitectureName);
+                  reportError(std::move(E), Filename, getFileNameForError(C, I),
+                              ArchitectureName);
                 continue;
               }
               if (MachOObjectFile *O =
@@ -2437,12 +2437,13 @@ void parseInputMachO(MachOUniversalBinary *UB) {
                 ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
             }
             if (Err)
-              report_error(std::move(Err), Filename);
+              reportError(std::move(Err), Filename);
           } else {
             consumeError(AOrErr.takeError());
-            error("Mach-O universal file: " + Filename + " for " +
-                  "architecture " + StringRef(I->getArchFlagName()) +
-                  " is not a Mach-O file or an archive file");
+            reportError(Filename,
+                        "Mach-O universal file for architecture " +
+                            StringRef(I->getArchFlagName()) +
+                            " is not a Mach-O file or an archive file");
           }
         }
       }
@@ -2472,7 +2473,7 @@ void parseInputMachO(MachOUniversalBinary *UB) {
             ProcessMachO(Filename, MachOOF);
         } else if (Error E =
                        isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
-          report_error(std::move(E), Filename);
+          reportError(std::move(E), Filename);
         } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                        I->getAsArchive()) {
           std::unique_ptr<Archive> &A = *AOrErr;
@@ -2488,7 +2489,7 @@ void parseInputMachO(MachOUniversalBinary *UB) {
             if (!ChildOrErr) {
               if (Error E =
                       isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                report_error(std::move(E), Filename, getFileNameForError(C, I));
+                reportError(std::move(E), Filename, getFileNameForError(C, I));
               continue;
             }
             if (MachOObjectFile *O =
@@ -2496,12 +2497,12 @@ void parseInputMachO(MachOUniversalBinary *UB) {
               ProcessMachO(Filename, O, O->getFileName());
           }
           if (Err)
-            report_error(std::move(Err), Filename);
+            reportError(std::move(Err), Filename);
         } else {
           consumeError(AOrErr.takeError());
-          error("Mach-O universal file: " + Filename + " for architecture " +
-                StringRef(I->getArchFlagName()) +
-                " is not a Mach-O file or an archive file");
+          reportError(Filename, "Mach-O universal file for architecture " +
+                                    StringRef(I->getArchFlagName()) +
+                                    " is not a Mach-O file or an archive file");
         }
         return;
       }
@@ -2523,7 +2524,7 @@ void parseInputMachO(MachOUniversalBinary *UB) {
         ProcessMachO(Filename, MachOOF, "", ArchitectureName);
     } else if (Error E =
                    isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
-      report_error(std::move(E), StringRef(), Filename, ArchitectureName);
+      reportError(std::move(E), StringRef(), Filename, ArchitectureName);
     } else if (Expected<std::unique_ptr<Archive>> AOrErr = I->getAsArchive()) {
       std::unique_ptr<Archive> &A = *AOrErr;
       outs() << "Archive : " << Filename;
@@ -2540,8 +2541,8 @@ void parseInputMachO(MachOUniversalBinary *UB) {
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-            report_error(std::move(E), Filename, getFileNameForError(C, I),
-                         ArchitectureName);
+            reportError(std::move(E), Filename, getFileNameForError(C, I),
+                        ArchitectureName);
           continue;
         }
         if (MachOObjectFile *O =
@@ -2552,12 +2553,12 @@ void parseInputMachO(MachOUniversalBinary *UB) {
         }
       }
       if (Err)
-        report_error(std::move(Err), Filename);
+        reportError(std::move(Err), Filename);
     } else {
       consumeError(AOrErr.takeError());
-      error("Mach-O universal file: " + Filename + " for architecture " +
-            StringRef(I->getArchFlagName()) +
-            " is not a Mach-O file or an archive file");
+      reportError(Filename, "Mach-O universal file for architecture " +
+                                StringRef(I->getArchFlagName()) +
+                                " is not a Mach-O file or an archive file");
     }
   }
 }
@@ -7344,7 +7345,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
           MemoryBuffer::getFileOrSTDIN(DSYMFile);
       if (std::error_code EC = BufOrErr.getError()) {
-        report_error(errorCodeToError(EC), DSYMFile);
+        reportError(errorCodeToError(EC), DSYMFile);
         return;
       }
 
@@ -7354,7 +7355,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       Expected<std::unique_ptr<Binary>> BinaryOrErr =
       createBinary(DSYMBuf.get()->getMemBufferRef());
       if (!BinaryOrErr) {
-        report_error(BinaryOrErr.takeError(), DSYMFile);
+        reportError(BinaryOrErr.takeError(), DSYMFile);
         return;
       }
 
@@ -7390,7 +7391,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         Expected<std::unique_ptr<MachOObjectFile>> MachDSYM =
             UB->getObjectForArch(ArchFlag);
         if (!MachDSYM) {
-          report_error(MachDSYM.takeError(), DSYMFile);
+          reportError(MachDSYM.takeError(), DSYMFile);
           return;
         }
     
@@ -10294,7 +10295,7 @@ void printMachOExportsTrie(const object::MachOObjectFile *Obj) {
     outs() << "\n";
   }
   if (Err)
-    report_error(std::move(Err), Obj->getFileName());
+    reportError(std::move(Err), Obj->getFileName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -10315,7 +10316,7 @@ void printMachORebaseTable(object::MachOObjectFile *Obj) {
                      Address, Entry.typeName().str().c_str());
   }
   if (Err)
-    report_error(std::move(Err), Obj->getFileName());
+    reportError(std::move(Err), Obj->getFileName());
 }
 
 static StringRef ordinalName(const object::MachOObjectFile *Obj, int Ordinal) {
@@ -10367,7 +10368,7 @@ void printMachOBindTable(object::MachOObjectFile *Obj) {
            << Entry.symbolName() << Attr << "\n";
   }
   if (Err)
-    report_error(std::move(Err), Obj->getFileName());
+    reportError(std::move(Err), Obj->getFileName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -10392,7 +10393,7 @@ void printMachOLazyBindTable(object::MachOObjectFile *Obj) {
            << Entry.symbolName() << "\n";
   }
   if (Err)
-    report_error(std::move(Err), Obj->getFileName());
+    reportError(std::move(Err), Obj->getFileName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -10424,7 +10425,7 @@ void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
            << "\n";
   }
   if (Err)
-    report_error(std::move(Err), Obj->getFileName());
+    reportError(std::move(Err), Obj->getFileName());
 }
 
 // get_dyld_bind_info_symbolname() is used for disassembly and passed an
@@ -10443,7 +10444,7 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
         (*info->bindtable)[Address] = name;
     }
     if (Err)
-      report_error(std::move(Err), info->O->getFileName());
+      reportError(std::move(Err), info->O->getFileName());
   }
   auto name = info->bindtable->lookup(ReferenceValue);
   return !name.empty() ? name.data() : nullptr;

@@ -5215,8 +5215,9 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     else
       LC = RTLIB::getFPTOUINT(Op.getOperand(0).getValueType(),
                               Op.getValueType());
+    MakeLibCallOptions CallOptions;
     return makeLibCall(DAG, LC, Op.getValueType(), Op.getOperand(0),
-                       /*isSigned*/ false, SDLoc(Op)).first;
+                       CallOptions, SDLoc(Op)).first;
   }
 
   return Op;
@@ -5279,8 +5280,9 @@ SDValue ARMTargetLowering::LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const {
     else
       LC = RTLIB::getUINTTOFP(Op.getOperand(0).getValueType(),
                               Op.getValueType());
+    MakeLibCallOptions CallOptions;
     return makeLibCall(DAG, LC, Op.getValueType(), Op.getOperand(0),
-                       /*isSigned*/ false, SDLoc(Op)).first;
+                       CallOptions, SDLoc(Op)).first;
   }
 
   return Op;
@@ -15605,6 +15607,7 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   // without FP16. So we must do a function call.
   SDLoc Loc(Op);
   RTLIB::Libcall LC;
+  MakeLibCallOptions CallOptions;
   if (SrcSz == 16) {
     // Instruction from 16 -> 32
     if (Subtarget->hasFP16())
@@ -15615,7 +15618,7 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       assert(LC != RTLIB::UNKNOWN_LIBCALL &&
              "Unexpected type for custom-lowering FP_EXTEND");
       SrcVal =
-        makeLibCall(DAG, LC, MVT::f32, SrcVal, /*isSigned*/ false, Loc).first;
+        makeLibCall(DAG, LC, MVT::f32, SrcVal, CallOptions, Loc).first;
     }
   }
 
@@ -15628,7 +15631,7 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   LC = RTLIB::getFPEXT(MVT::f32, MVT::f64);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Unexpected type for custom-lowering FP_EXTEND");
-  return makeLibCall(DAG, LC, MVT::f64, SrcVal, /*isSigned*/ false, Loc).first;
+  return makeLibCall(DAG, LC, MVT::f64, SrcVal, CallOptions, Loc).first;
 }
 
 SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -15654,7 +15657,8 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   RTLIB::Libcall LC = RTLIB::getFPROUND(SrcVT, DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Unexpected type for custom-lowering FP_ROUND");
-  return makeLibCall(DAG, LC, DstVT, SrcVal, /*isSigned*/ false, Loc).first;
+  MakeLibCallOptions CallOptions;
+  return makeLibCall(DAG, LC, DstVT, SrcVal, CallOptions, Loc).first;
 }
 
 void ARMTargetLowering::lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,

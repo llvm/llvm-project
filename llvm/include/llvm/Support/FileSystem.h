@@ -991,29 +991,27 @@ file_t getStdoutHandle();
 /// Returns kInvalidFile when the stream is closed.
 file_t getStderrHandle();
 
-/// Reads \p Buf.size() bytes from \p FileHandle into \p Buf. The number of
-/// bytes actually read is returned in \p BytesRead. On Unix, this is equivalent
-/// to `*BytesRead = ::read(FD, Buf.data(), Buf.size())`, with error reporting.
-/// BytesRead will contain zero when reaching EOF.
+/// Reads \p Buf.size() bytes from \p FileHandle into \p Buf. Returns the number
+/// of bytes actually read. On Unix, this is equivalent to `return ::read(FD,
+/// Buf.data(), Buf.size())`, with error reporting. Returns 0 when reaching EOF.
 ///
 /// @param FileHandle File to read from.
 /// @param Buf Buffer to read into.
-/// @param BytesRead Output parameter of the number of bytes read.
-/// @returns The error, if any, or errc::success.
-std::error_code readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf,
-                               size_t *BytesRead);
+/// @returns The number of bytes read, or error.
+Expected<size_t> readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf);
 
 /// Reads \p Buf.size() bytes from \p FileHandle at offset \p Offset into \p
 /// Buf. If 'pread' is available, this will use that, otherwise it will use
-/// 'lseek'. Bytes requested beyond the end of the file will be zero
-/// initialized.
+/// 'lseek'. Returns the number of bytes actually read. Returns 0 when reaching
+/// EOF.
 ///
 /// @param FileHandle File to read from.
 /// @param Buf Buffer to read into.
 /// @param Offset Offset into the file at which the read should occur.
-/// @returns The error, if any, or errc::success.
-std::error_code readNativeFileSlice(file_t FileHandle,
-                                    MutableArrayRef<char> Buf, size_t Offset);
+/// @returns The number of bytes read, or error.
+Expected<size_t> readNativeFileSlice(file_t FileHandle,
+                                     MutableArrayRef<char> Buf,
+                                     uint64_t Offset);
 
 /// @brief Opens the file with the given name in a write-only or read-write
 /// mode, returning its open file descriptor. If the file does not exist, it

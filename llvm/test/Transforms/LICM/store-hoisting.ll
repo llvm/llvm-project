@@ -1,6 +1,7 @@
-; RUN: opt -S -basicaa -licm %s | FileCheck -check-prefixes=CHECK,AST %s
+; RUN: opt -S -basicaa -licm -enable-mssa-loop-dependency=false %s | FileCheck -check-prefixes=CHECK,AST %s
 ; RUN: opt -S -basicaa -licm -enable-mssa-loop-dependency=true %s | FileCheck  -check-prefixes=CHECK,MSSA %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck -check-prefixes=CHECK,AST %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck -check-prefixes=CHECK,MSSA %s
 
 define void @test(i32* %loc) {
 ; CHECK-LABEL: @test

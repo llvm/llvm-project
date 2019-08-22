@@ -1,8 +1,10 @@
-; RUN: opt -S -basicaa -licm -licm-n2-threshold=0 %s | FileCheck %s
-; RUN: opt -licm -basicaa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -S -basicaa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=false %s | FileCheck %s
 ; RUN: opt -S -basicaa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=true -verify-memoryssa %s | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -licm -basicaa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+
+; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
 
 declare i32 @foo() readonly argmemonly nounwind
 declare i32 @foo2() readonly nounwind

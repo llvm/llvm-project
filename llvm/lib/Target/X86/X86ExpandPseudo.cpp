@@ -194,7 +194,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNmi64: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
-    MachineOperand &StackAdjust = MBBI->getOperand(isMem ? 5 : 1);
+    MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
+                                                         : 1);
     assert(StackAdjust.isImm() && "Expecting immediate value.");
 
     // Adjust stack pointer.
@@ -259,7 +260,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                         ? X86::TAILJMPm
                         : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
-      for (unsigned i = 0; i != 5; ++i)
+      for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
     } else if (Opcode == X86::TCRETURNri64) {
       JumpTarget.setIsKill();

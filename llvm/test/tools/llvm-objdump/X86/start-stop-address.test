@@ -69,4 +69,4 @@
 
 // RUN: not llvm-objdump %t.out --start-address=0x40 --stop-address=0x3f 2>&1 | FileCheck %s --check-prefix ERRMSG
 // RUN: not llvm-objdump %t.out --start-address=0x40 --stop-address=0x40 2>&1 | FileCheck %s --check-prefix ERRMSG
-// ERRMSG: start address should be less than stop address.
+// ERRMSG: start address should be less than stop address

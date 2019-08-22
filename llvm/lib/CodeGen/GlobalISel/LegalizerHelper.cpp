@@ -3144,6 +3144,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    int NumDst = MI.getNumOperands() - 1;
+    moreElementsVectorSrc(MI, MoreTy, NumDst);
+
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+    for (int I = 0; I != NumDst; ++I)
+      MIB.addDef(MI.getOperand(I).getReg());
+
+    int NewNumDst = MoreTy.getSizeInBits() / DstTy.getSizeInBits();
+    for (int I = NumDst; I != NewNumDst; ++I)
+      MIB.addDef(MRI.createGenericVirtualRegister(DstTy));
+
+    MIB.addUse(MI.getOperand(NumDst).getReg());
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_PHI:
     return moreElementsVectorPhi(MI, TypeIdx, MoreTy);
   default:

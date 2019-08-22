@@ -1,6 +1,6 @@
 ; RUN: opt -S -functionattrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
 ; RUN: opt -S -passes=function-attrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
-; RUN: opt -attributor --attributor-disable=false -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations=32 -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

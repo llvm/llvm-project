@@ -286,7 +286,7 @@ public:
   uint8_t getDwarfOffsetByteSize() const {
     return Header.getDwarfOffsetByteSize();
   }
-  uint32_t getLength() const { return Header.getLength(); }
+  uint64_t getLength() const { return Header.getLength(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
   bool isTypeUnit() const { return Header.isTypeUnit(); }
   uint64_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }

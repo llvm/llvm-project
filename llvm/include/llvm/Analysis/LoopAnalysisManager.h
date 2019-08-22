@@ -86,8 +86,9 @@ typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
 template <> class LoopAnalysisManagerFunctionProxy::Result {
 public:
   explicit Result(LoopAnalysisManager &InnerAM, LoopInfo &LI)
-      : InnerAM(&InnerAM), LI(&LI) {}
-  Result(Result &&Arg) : InnerAM(std::move(Arg.InnerAM)), LI(Arg.LI) {
+      : InnerAM(&InnerAM), LI(&LI), MSSAUsed(false) {}
+  Result(Result &&Arg)
+      : InnerAM(std::move(Arg.InnerAM)), LI(Arg.LI), MSSAUsed(Arg.MSSAUsed) {
     // We have to null out the analysis manager in the moved-from state
     // because we are taking ownership of the responsibilty to clear the
     // analysis state.
@@ -96,6 +97,7 @@ public:
   Result &operator=(Result &&RHS) {
     InnerAM = RHS.InnerAM;
     LI = RHS.LI;
+    MSSAUsed = RHS.MSSAUsed;
     // We have to null out the analysis manager in the moved-from state
     // because we are taking ownership of the responsibilty to clear the
     // analysis state.
@@ -111,6 +113,9 @@ public:
     // didn't even see an invalidate call when we got invalidated.
     InnerAM->clear();
   }
+
+  /// Mark MemorySSA as used so we can invalidate self if MSSA is invalidated.
+  void markMSSAUsed() { MSSAUsed = true; }
 
   /// Accessor for the analysis manager.
   LoopAnalysisManager &getManager() { return *InnerAM; }
@@ -130,6 +135,7 @@ public:
 private:
   LoopAnalysisManager *InnerAM;
   LoopInfo *LI;
+  bool MSSAUsed;
 };
 
 /// Provide a specialized run method for the \c LoopAnalysisManagerFunctionProxy

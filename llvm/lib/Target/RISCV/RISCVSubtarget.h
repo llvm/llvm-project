@@ -42,6 +42,7 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   bool HasRV64 = false;
   bool IsRV32E = false;
   bool EnableLinkerRelax = false;
+  bool EnableRVCHintInstrs = false;
   unsigned XLen = 32;
   MVT XLenVT = MVT::i32;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
@@ -87,6 +88,7 @@ public:
   bool is64Bit() const { return HasRV64; }
   bool isRV32E() const { return IsRV32E; }
   bool enableLinkerRelax() const { return EnableLinkerRelax; }
+  bool enableRVCHintInstrs() const { return EnableRVCHintInstrs; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }

@@ -234,13 +234,14 @@ printSEHTable(const COFFObjectFile *Obj, uint32_t TableVA, int Count) {
   if (Count == 0)
     return;
 
-  uint32_t ImageBase = Obj->getPE32Header()->ImageBase;
   uintptr_t IntPtr = 0;
-  error(Obj->getVaPtr(TableVA, IntPtr));
+  if (std::error_code EC = Obj->getVaPtr(TableVA, IntPtr))
+    reportError(errorCodeToError(EC), Obj->getFileName());
+
   const support::ulittle32_t *P = (const support::ulittle32_t *)IntPtr;
   outs() << "SEH Table:";
   for (int I = 0; I < Count; ++I)
-    outs() << format(" 0x%x", P[I] + ImageBase);
+    outs() << format(" 0x%x", P[I] + Obj->getPE32Header()->ImageBase);
   outs() << "\n\n";
 }
 
@@ -274,11 +275,16 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
     return;
 
   const data_directory *DataDir;
-  error(Obj->getDataDirectory(COFF::TLS_TABLE, DataDir));
-  uintptr_t IntPtr = 0;
+  if (std::error_code EC = Obj->getDataDirectory(COFF::TLS_TABLE, DataDir))
+    reportError(errorCodeToError(EC), Obj->getFileName());
+
   if (DataDir->RelativeVirtualAddress == 0)
     return;
-  error(Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr));
+
+  uintptr_t IntPtr = 0;
+  if (std::error_code EC =
+          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
+    reportError(errorCodeToError(EC), Obj->getFileName());
 
   if (PE32Header) {
     auto *TLSDir = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
@@ -301,11 +307,18 @@ static void printLoadConfiguration(const COFFObjectFile *Obj) {
     return;
 
   const data_directory *DataDir;
-  error(Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE, DataDir));
+
+  if (std::error_code EC =
+          Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE, DataDir))
+    reportError(errorCodeToError(EC), Obj->getFileName());
+
   uintptr_t IntPtr = 0;
   if (DataDir->RelativeVirtualAddress == 0)
     return;
-  error(Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr));
+
+  if (std::error_code EC =
+          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
+    reportError(errorCodeToError(EC), Obj->getFileName());
 
   auto *LoadConf = reinterpret_cast<const coff_load_configuration32 *>(IntPtr);
   outs() << "Load configuration:"
@@ -447,7 +460,9 @@ static bool getPDataSection(const COFFObjectFile *Obj,
     llvm::sort(Rels, isRelocAddressLess);
 
     ArrayRef<uint8_t> Contents;
-    error(Obj->getSectionContents(Pdata, Contents));
+    if (Error E = Obj->getSectionContents(Pdata, Contents))
+      reportError(std::move(E), Obj->getFileName());
+
     if (Contents.empty())
       continue;
 
@@ -563,10 +578,12 @@ static void printRuntimeFunctionRels(const COFFObjectFile *Obj,
 
   ArrayRef<uint8_t> XContents;
   uint64_t UnwindInfoOffset = 0;
-  error(getSectionContents(
-          Obj, Rels, SectionOffset +
-                         /*offsetof(RuntimeFunction, UnwindInfoOffset)*/ 8,
-          XContents, UnwindInfoOffset));
+  if (Error E = getSectionContents(
+          Obj, Rels,
+          SectionOffset +
+              /*offsetof(RuntimeFunction, UnwindInfoOffset)*/ 8,
+          XContents, UnwindInfoOffset))
+    reportError(std::move(E), Obj->getFileName());
   if (XContents.empty())
     return;
 
@@ -642,9 +659,12 @@ void printCOFFSymbolTable(const object::COFFImportFile *i) {
 void printCOFFSymbolTable(const COFFObjectFile *coff) {
   for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
     Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
+    if (!Symbol)
+      reportError(Symbol.takeError(), coff->getFileName());
+
     StringRef Name;
-    error(Symbol.takeError());
-    error(coff->getSymbolName(*Symbol, Name));
+    if (std::error_code EC = coff->getSymbolName(*Symbol, Name))
+      reportError(errorCodeToError(EC), coff->getFileName());
 
     outs() << "[" << format("%2d", SI) << "]"
            << "(sec " << format("%2d", int(Symbol->getSectionNumber())) << ")"
@@ -674,7 +694,9 @@ void printCOFFSymbolTable(const COFFObjectFile *coff) {
     for (unsigned AI = 0, AE = Symbol->getNumberOfAuxSymbols(); AI < AE; ++AI, ++SI) {
       if (Symbol->isSectionDefinition()) {
         const coff_aux_section_definition *asd;
-        error(coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd));
+        if (std::error_code EC =
+                coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
+          reportError(errorCodeToError(EC), coff->getFileName());
 
         int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
 
@@ -689,7 +711,8 @@ void printCOFFSymbolTable(const COFFObjectFile *coff) {
                          , unsigned(asd->Selection));
       } else if (Symbol->isFileRecord()) {
         const char *FileName;
-        error(coff->getAuxSymbol<char>(SI + 1, FileName));
+        if (std::error_code EC = coff->getAuxSymbol<char>(SI + 1, FileName))
+          reportError(errorCodeToError(EC), coff->getFileName());
 
         StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
                                      coff->getSymbolTableEntrySize());
@@ -699,7 +722,9 @@ void printCOFFSymbolTable(const COFFObjectFile *coff) {
         break;
       } else if (Symbol->isWeakExternal()) {
         const coff_aux_weak_external *awe;
-        error(coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe));
+        if (std::error_code EC =
+                coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
+          reportError(errorCodeToError(EC), coff->getFileName());
 
         outs() << "AUX " << format("indx %d srch %d\n",
                                    static_cast<uint32_t>(awe->TagIndex),

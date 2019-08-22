@@ -1,4 +1,4 @@
-; RUN: opt -S -attributor -attributor-disable=false < %s | FileCheck %s
+; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations=8 < %s | FileCheck %s
 
 ; TEST 1 - negative.
 

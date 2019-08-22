@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/Object/Minidump.h"
-#include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -19,7 +19,8 @@ static Expected<std::unique_ptr<object::MinidumpFile>>
 toBinary(SmallVectorImpl<char> &Storage, StringRef Yaml) {
   Storage.clear();
   raw_svector_ostream OS(Storage);
-  if (Error E = MinidumpYAML::writeAsBinary(Yaml, OS))
+  yaml::Input YIn(Yaml);
+  if (Error E = yaml::convertYAML(YIn, OS))
     return std::move(E);
 
   return object::MinidumpFile::create(MemoryBufferRef(OS.str(), "Binary"));

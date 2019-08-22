@@ -320,7 +320,7 @@ public:
       return llvm::makeArrayRef(g_process_attach_options);
     }
 
-    bool HandleOptionArgumentCompletion(
+    void HandleOptionArgumentCompletion(
         CompletionRequest &request, OptionElementVector &opt_element_vector,
         int opt_element_index, CommandInterpreter &interpreter) override {
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
@@ -330,7 +330,7 @@ public:
 
       // Are we in the name?
       if (GetDefinitions()[opt_defs_index].short_option != 'n')
-        return false;
+        return;
 
       // Look to see if there is a -P argument provided, and if so use that
       // plugin, otherwise use the default plugin.
@@ -340,7 +340,7 @@ public:
 
       PlatformSP platform_sp(interpreter.GetPlatform(true));
       if (!platform_sp)
-        return false;
+        return;
       ProcessInstanceInfoList process_infos;
       ProcessInstanceInfoMatch match_info;
       if (partial_name) {
@@ -351,14 +351,12 @@ public:
           platform_sp->FindProcesses(match_info, process_infos);
           const size_t num_matches = process_infos.GetSize();
           if (num_matches == 0)
-            return false;
+            return;
           for (size_t i = 0; i < num_matches; ++i) {
             request.AddCompletion(
                 llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
                                 process_infos.GetProcessNameLengthAtIndex(i)));
           }
-
-      return false;
     }
 
     // Instance variables to hold the values for command options.

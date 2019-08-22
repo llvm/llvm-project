@@ -612,6 +612,13 @@ void SIFoldOperands::foldOperand(
       return;
 
     UseMI->setDesc(TII->get(MovOp));
+    MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
+    MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
+    while (ImpOpI != ImpOpE) {
+      MachineInstr::mop_iterator Tmp = ImpOpI;
+      ImpOpI++;
+      UseMI->RemoveOperand(UseMI->getOperandNo(Tmp));
+    }
     CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&

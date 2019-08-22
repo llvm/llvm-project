@@ -1808,7 +1808,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->isCopy() && "Invalid definition");
   // Copy instruction are supposed to be: Def = Src.
   // If someone breaks this assumption, bad things will happen everywhere.
-  assert(Def->getNumOperands() == 2 && "Invalid number of operands");
+  // There may be implicit uses preventing the copy to be moved across
+  // some target specific register definitions
+  assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
+         "Invalid number of operands");
+  assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
 
   if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
     // If we look for a different subreg, it means we want a subreg of src.

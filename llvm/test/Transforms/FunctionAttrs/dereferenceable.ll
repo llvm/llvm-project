@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
 
 
 ; TEST 1

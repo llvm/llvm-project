@@ -206,6 +206,7 @@ For developers of applications which use LLVM as a library.
    FuzzingLLVM
    ScudoHardenedAllocator
    OptBisect
+   GwpAsan
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -257,6 +258,9 @@ For developers of applications which use LLVM as a library.
 
 :doc:`OptBisect`
   A command line option for debugging optimization-induced failures.
+
+:doc:`GwpAsan`
+  A sampled heap memory error detection toolkit designed for production use.
 
 .. _index-subsystem-docs:
 
