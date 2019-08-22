@@ -206,11 +206,13 @@ const lldb::ProcessSP &Target::GetProcessSP() const { return m_process_sp; }
 lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
                              const char *repl_options, bool can_create) {
   if (language == eLanguageTypeUnknown) {
-    LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
+    std::set<LanguageType> repl_languages;
 
-    if (auto single_lang = repl_languages.GetSingularLanguage()) {
-      language = *single_lang;
-    } else if (repl_languages.Empty()) {
+    Language::GetLanguagesSupportingREPLs(repl_languages);
+
+    if (repl_languages.size() == 1) {
+      language = *repl_languages.begin();
+    } else if (repl_languages.size() == 0) {
       err.SetErrorStringWithFormat(
           "LLDB isn't configured with REPL support for any languages.");
       return REPLSP();
@@ -2127,18 +2129,23 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
       || language == eLanguageTypeUnknown) {
-    LanguageSet languages_for_expressions =
-        Language::GetLanguagesSupportingTypeSystemsForExpressions();
+    std::set<lldb::LanguageType> languages_for_types;
+    std::set<lldb::LanguageType> languages_for_expressions;
 
-    if (languages_for_expressions[eLanguageTypeC]) {
+    Language::GetLanguagesSupportingTypeSystems(languages_for_types,
+                                                languages_for_expressions);
+
+    if (languages_for_expressions.count(eLanguageTypeC)) {
       language = eLanguageTypeC; // LLDB's default.  Override by setting the
                                  // target language.
     } else {
-      if (languages_for_expressions.Empty())
+      if (languages_for_expressions.empty()) {
         return llvm::make_error<llvm::StringError>(
             "No expression support for any languages",
             llvm::inconvertibleErrorCode());
-      language = (LanguageType)languages_for_expressions.bitvector.find_first();
+      } else {
+        language = *languages_for_expressions.begin();
+      }
     }
   }
 
@@ -2152,19 +2159,21 @@ std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
 
   std::vector<TypeSystem *> scratch_type_systems;
 
-  LanguageSet languages_for_expressions =
-      Language::GetLanguagesSupportingTypeSystemsForExpressions();
+  std::set<lldb::LanguageType> languages_for_types;
+  std::set<lldb::LanguageType> languages_for_expressions;
 
-  for (auto bit : languages_for_expressions.bitvector.set_bits()) {
-    auto language = (LanguageType)bit;
+  Language::GetLanguagesSupportingTypeSystems(languages_for_types,
+                                              languages_for_expressions);
+
+  for (auto lang : languages_for_expressions) {
     auto type_system_or_err =
-        GetScratchTypeSystemForLanguage(language, create_on_demand);
+        GetScratchTypeSystemForLanguage(lang, create_on_demand);
     if (!type_system_or_err)
       LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
                      type_system_or_err.takeError(),
                      "Language '{}' has expression support but no scratch type "
                      "system available",
-                     Language::GetNameForLanguageType(language));
+                     Language::GetNameForLanguageType(lang));
     else
       scratch_type_systems.emplace_back(&type_system_or_err.get());
   }

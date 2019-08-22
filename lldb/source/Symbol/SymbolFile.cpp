@@ -150,8 +150,7 @@ uint32_t SymbolFile::FindTypes(
 }
 
 size_t SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                             LanguageSet languages, bool append,
-                             TypeMap &types) {
+                             bool append, TypeMap &types) {
   if (!append)
     types.Clear();
   return 0;

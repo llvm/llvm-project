@@ -267,9 +267,12 @@ public:
 
   static std::set<lldb::LanguageType> GetSupportedLanguages();
 
-  static LanguageSet GetLanguagesSupportingTypeSystems();
-  static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
-  static LanguageSet GetLanguagesSupportingREPLs();
+  static void GetLanguagesSupportingTypeSystems(
+      std::set<lldb::LanguageType> &languages,
+      std::set<lldb::LanguageType> &languages_for_expressions);
+
+  static void
+  GetLanguagesSupportingREPLs(std::set<lldb::LanguageType> &languages);
 
 protected:
   // Classes that inherit from Language can see and modify these

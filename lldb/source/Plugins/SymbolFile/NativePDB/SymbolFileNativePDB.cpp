@@ -1270,10 +1270,7 @@ uint32_t SymbolFileNativePDB::FindTypes(
 }
 
 size_t SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                      LanguageSet languages, bool append,
-                                      TypeMap &types) {
-  if (!append)
-    types.Clear();
+                                      bool append, TypeMap &types) {
   return 0;
 }
 

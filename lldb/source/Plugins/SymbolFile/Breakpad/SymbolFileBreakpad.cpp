@@ -319,8 +319,7 @@ uint32_t SymbolFileBreakpad::FindTypes(
 }
 
 size_t SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                     LanguageSet languages, bool append,
-                                     TypeMap &types) {
+                                     bool append, TypeMap &types) {
   if (!append)
     types.Clear();
   return types.GetSize();

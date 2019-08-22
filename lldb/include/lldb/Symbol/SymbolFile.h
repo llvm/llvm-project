@@ -17,7 +17,6 @@
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
-#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -190,11 +189,7 @@ public:
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
-
-  /// Find types specified by a CompilerContextPattern.
-  /// \param languages    Only return results in these languages.
-  virtual size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages, bool append,
+  virtual size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern, bool append,
                            TypeMap &types);
 
   virtual void

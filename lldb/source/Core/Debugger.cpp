@@ -1623,11 +1623,13 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   FileSpec repl_executable;
 
   if (language == eLanguageTypeUnknown) {
-    LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
+    std::set<LanguageType> repl_languages;
 
-    if (auto single_lang = repl_languages.GetSingularLanguage()) {
-      language = *single_lang;
-    } else if (repl_languages.Empty()) {
+    Language::GetLanguagesSupportingREPLs(repl_languages);
+
+    if (repl_languages.size() == 1) {
+      language = *repl_languages.begin();
+    } else if (repl_languages.empty()) {
       err.SetErrorStringWithFormat(
           "LLDB isn't configured with REPL support for any languages.");
       return err;

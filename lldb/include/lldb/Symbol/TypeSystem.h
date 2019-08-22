@@ -15,7 +15,6 @@
 #include <string>
 
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 
@@ -31,24 +30,7 @@ class PDBASTParser;
 
 namespace lldb_private {
 
-/// A SmallBitVector that represents a set of source languages (\p
-/// lldb::LanguageType).  Each lldb::LanguageType is represented by
-/// the bit with the position of its enumerator. The largest
-/// LanguageType is < 64, so this is space-efficient and on 64-bit
-/// architectures a LanguageSet can be completely stack-allocated.
-struct LanguageSet {
-  llvm::SmallBitVector bitvector;
-  LanguageSet() = default;
-
-  /// If the set contains a single language only, return it.
-  llvm::Optional<lldb::LanguageType> GetSingularLanguage();
-  void Insert(lldb::LanguageType language);
-  bool Empty() const;
-  size_t Size() const;
-  bool operator[](unsigned i) const;
-};
-
-/// Interface for representing the Type Systems in different languages.
+// Interface for representing the Type Systems in different languages.
 class TypeSystem : public PluginInterface {
 public:
   // Intrusive type system that allows us to use llvm casting.

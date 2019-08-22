@@ -185,8 +185,7 @@ public:
             lldb_private::TypeMap &types) override;
 
   size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                   lldb_private::LanguageSet languages, bool append,
-                   lldb_private::TypeMap &types) override;
+                   bool append, lldb_private::TypeMap &types) override;
 
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   lldb::TypeClass type_mask,
