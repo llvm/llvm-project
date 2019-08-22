@@ -355,7 +355,7 @@ public:
       for (size_t i = 0; i < num_matches; ++i) {
         request.AddCompletion(
             llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
-                            process_infos.GetProcessNameLengthAtIndex(i))));
+                            process_infos.GetProcessNameLengthAtIndex(i)));
       }
     }
 
