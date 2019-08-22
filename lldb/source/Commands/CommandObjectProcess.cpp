@@ -348,15 +348,15 @@ public:
             partial_name, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::StartsWith);
       }
-          platform_sp->FindProcesses(match_info, process_infos);
-          const size_t num_matches = process_infos.GetSize();
-          if (num_matches == 0)
-            return;
-          for (size_t i = 0; i < num_matches; ++i) {
-            request.AddCompletion(
-                llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
-                                process_infos.GetProcessNameLengthAtIndex(i)));
-          }
+      platform_sp->FindProcesses(match_info, process_infos);
+      const size_t num_matches = process_infos.GetSize();
+      if (num_matches == 0)
+        return;
+      for (size_t i = 0; i < num_matches; ++i) {
+        request.AddCompletion(
+            llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
+                            process_infos.GetProcessNameLengthAtIndex(i))));
+      }
     }
 
     // Instance variables to hold the values for command options.
