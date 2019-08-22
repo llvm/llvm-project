@@ -1585,7 +1585,10 @@ void SymbolFilePDB::FindTypesByName(
 }
 
 size_t SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                bool append, lldb_private::TypeMap &types) {
+                                LanguageSet languages, bool append,
+                                lldb_private::TypeMap &types) {
+  if (!append)
+    types.Clear();
   return 0;
 }
 
