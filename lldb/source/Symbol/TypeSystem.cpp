@@ -28,9 +28,10 @@ using namespace lldb;
 
 /// A 64-bit SmallBitVector is only small up to 64-7 bits, and the
 /// setBitsInMask interface wants to write full bytes.
-static const size_t num_small_bitvector_bits = 64 - 8;
-static_assert(eNumLanguageTypes < num_small_bitvector_bits,
+static const size_t g_num_small_bitvector_bits = 64 - 8;
+static_assert(eNumLanguageTypes < g_num_small_bitvector_bits,
               "Languages bit vector is no longer small on 64 bit systems");
+LanguageSet::LanguageSet() : bitvector(eNumLanguageTypes, 0) {}
 
 llvm::Optional<LanguageType> LanguageSet::GetSingularLanguage() {
   if (bitvector.count() == 1)
