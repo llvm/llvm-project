@@ -211,8 +211,10 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final : public BugReporterVisitor {
   // FIXME: constexpr initialization isn't supported by MSVC2013.
-  static const char *const GenericTrueMessage;
-  static const char *const GenericFalseMessage;
+  constexpr static llvm::StringLiteral GenericTrueMessage =
+      "Assuming the condition is true";
+  constexpr static llvm::StringLiteral GenericFalseMessage =
+      "Assuming the condition is false";
 
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {

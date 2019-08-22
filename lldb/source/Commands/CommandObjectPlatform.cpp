@@ -1440,36 +1440,37 @@ public:
 
       // We are only completing the name option for now...
 
-      if (GetDefinitions()[opt_defs_index].short_option == 'n') {
-        // Are we in the name?
+      // Are we in the name?
+      if (GetDefinitions()[opt_defs_index].short_option != 'n')
+        return false;
 
-        // Look to see if there is a -P argument provided, and if so use that
-        // plugin, otherwise use the default plugin.
+      // Look to see if there is a -P argument provided, and if so use that
+      // plugin, otherwise use the default plugin.
 
-        const char *partial_name = nullptr;
-        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
+      const char *partial_name = nullptr;
+      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-        PlatformSP platform_sp(interpreter.GetPlatform(true));
-        if (platform_sp) {
-          ProcessInstanceInfoList process_infos;
-          ProcessInstanceInfoMatch match_info;
-          if (partial_name) {
-            match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, FileSpec::Style::native);
-            match_info.SetNameMatchType(NameMatch::StartsWith);
-          }
-          platform_sp->FindProcesses(match_info, process_infos);
-          const uint32_t num_matches = process_infos.GetSize();
-          if (num_matches > 0) {
-            for (uint32_t i = 0; i < num_matches; ++i) {
-              request.AddCompletion(llvm::StringRef(
-                  process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i)));
-            }
-          }
-        }
+      PlatformSP platform_sp(interpreter.GetPlatform(true));
+      if (!platform_sp)
+        return false;
+
+      ProcessInstanceInfoList process_infos;
+      ProcessInstanceInfoMatch match_info;
+      if (partial_name) {
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            partial_name, FileSpec::Style::native);
+        match_info.SetNameMatchType(NameMatch::StartsWith);
       }
+      platform_sp->FindProcesses(match_info, process_infos);
+      const uint32_t num_matches = process_infos.GetSize();
+      if (num_matches == 0)
+        return false;
 
+      for (uint32_t i = 0; i < num_matches; ++i) {
+        request.AddCompletion(
+            llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
+                            process_infos.GetProcessNameLengthAtIndex(i)));
+      }
       return false;
     }
 

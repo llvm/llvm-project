@@ -15670,7 +15670,8 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
       if (HasConst)
         DeclRefType.addConst();
     }
-    ByRef = S.isOpenMPCapturedByRef(Var, RSI->OpenMPLevel);
+    ByRef = S.isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+                                    RSI->OpenMPCaptureLevel);
   }
 
   if (ByRef)

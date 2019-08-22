@@ -180,21 +180,60 @@ static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
     RLCV->getStore() == RightNode->getState()->getStore();
 }
 
-static Optional<const llvm::APSInt *>
-getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
+static Optional<SVal> getSValForVar(const Expr *CondVarExpr,
+                                    const ExplodedNode *N) {
   ProgramStateRef State = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 
-  // The declaration of the value may rely on a pointer so take its l-value.
-  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(CondVarExpr)) {
-    if (const auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-      SVal DeclSVal = State->getSVal(State->getLValue(VD, LCtx));
-      if (auto DeclCI = DeclSVal.getAs<nonloc::ConcreteInt>())
-        return &DeclCI->getValue();
-    }
-  }
+  assert(CondVarExpr);
+  CondVarExpr = CondVarExpr->IgnoreImpCasts();
 
-  return {};
+  // The declaration of the value may rely on a pointer so take its l-value.
+  // FIXME: As seen in VisitCommonDeclRefExpr, sometimes DeclRefExpr may
+  // evaluate to a FieldRegion when it refers to a declaration of a lambda
+  // capture variable. We most likely need to duplicate that logic here.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CondVarExpr))
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      return State->getSVal(State->getLValue(VD, LCtx));
+
+  if (const auto *ME = dyn_cast<MemberExpr>(CondVarExpr))
+    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (auto FieldL = State->getSVal(ME, LCtx).getAs<Loc>())
+        return State->getRawSVal(*FieldL, FD->getType());
+
+  return None;
+}
+
+static Optional<const llvm::APSInt *>
+getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
+
+  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+    if (auto CI = V->getAs<nonloc::ConcreteInt>())
+      return &CI->getValue();
+  return None;
+}
+
+static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
+                                        const ExplodedNode *N,
+                                        const BugReport *B) {
+  // Even if this condition is marked as interesting, it isn't *that*
+  // interesting if it didn't happen in a nested stackframe, the user could just
+  // follow the arrows.
+  if (!B->getErrorNode()->getStackFrame()->isParentOf(N->getStackFrame()))
+    return false;
+
+  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+    if (Optional<bugreporter::TrackingKind> K = B->getInterestingnessKind(*V))
+      return *K == bugreporter::TrackingKind::Condition;
+
+  return false;
+}
+
+static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
+                              const BugReport *B) {
+  if (Optional<SVal> V = getSValForVar(E, N))
+    return B->getInterestingnessKind(*V).hasValue();
+  return false;
 }
 
 /// \return name of the macro inside the location \p Loc.
@@ -298,6 +337,7 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   MemRegionManager &MmrMgr;
   const SourceManager &SM;
   const PrintingPolicy &PP;
+  bugreporter::TrackingKind TKind;
 
   /// Recursion limit for dereferencing fields when looking for the
   /// region of interest.
@@ -318,10 +358,10 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   using RegionVector = SmallVector<const MemRegion *, 5>;
 
 public:
-  NoStoreFuncVisitor(const SubRegion *R)
+  NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
       : RegionOfInterest(R), MmrMgr(*R->getMemRegionManager()),
         SM(MmrMgr.getContext().getSourceManager()),
-        PP(MmrMgr.getContext().getPrintingPolicy()) {}
+        PP(MmrMgr.getContext().getPrintingPolicy()), TKind(TKind) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -612,6 +652,9 @@ void NoStoreFuncVisitor::findModifyingFrames(const ExplodedNode *N) {
   } while (N);
 }
 
+static llvm::StringLiteral WillBeUsedForACondition =
+    ", which participates in a condition later";
+
 PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     BugReport &R, const CallEvent &Call, const ExplodedNode *N,
     const RegionVector &FieldChain, const MemRegion *MatchedRegion,
@@ -658,6 +701,8 @@ PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     return nullptr;
 
   os << "'";
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
@@ -1068,6 +1113,9 @@ public:
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
+    if (TKind == bugreporter::TrackingKind::Condition)
+      Out << WillBeUsedForACondition;
+
     auto EventPiece = std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
 
     // If we determined that the note is meaningless, make it prunable, and
@@ -1450,6 +1498,9 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
   if (os.str().empty())
     showBRDefaultDiagnostics(os, R, V);
 
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
+
   // Construct a new PathDiagnosticPiece.
   ProgramPoint P = StoreSite->getLocation();
   PathDiagnosticLocation L;
@@ -1749,6 +1800,11 @@ PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
     return nullptr;
 
   if (ControlDeps.isControlDependent(OriginB, NB)) {
+    // We don't really want to explain for range loops. Evidence suggests that
+    // the only thing that leads to is the addition of calls to operator!=.
+    if (isa<CXXForRangeStmt>(NB->getTerminator()))
+      return nullptr;
+
     if (const Expr *Condition = NB->getLastCondition()) {
       // Keeping track of the already tracked conditions on a visitor level
       // isn't sufficient, because a new visitor is created for each tracked
@@ -1933,17 +1989,18 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
       report.addVisitor(
-          std::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
+          std::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R), TKind));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           LVNode, R, EnableNullFPSuppression, report, V);
 
-      report.markInteresting(V);
+      report.markInteresting(V, TKind);
       report.addVisitor(std::make_unique<UndefOrNullArgVisitor>(R));
 
-      // If the contents are symbolic, find out when they became null.
-      if (V.getAsLocSymbol(/*IncludeBaseRegions*/ true))
-        report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
+      // If the contents are symbolic and null, find out when they became null.
+      if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
+        if (LVState->isNull(V).isConstrainedTrue())
+          report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
               V.castAs<DefinedSVal>(), false));
 
       // Add visitor, which will suppress inline defensive checks.
@@ -1999,7 +2056,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
-      report.markInteresting(RegionRVal);
+      report.markInteresting(RegionRVal, TKind);
       report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
             loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
@@ -2419,6 +2476,10 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   const LocationContext *LCtx = N->getLocationContext();
   const SourceManager &SM = BRC.getSourceManager();
 
+  if (isVarAnInterestingCondition(BExpr->getLHS(), N, &R) ||
+      isVarAnInterestingCondition(BExpr->getRHS(), N, &R))
+    Out << WillBeUsedForACondition;
+
   // Convert 'field ...' to 'Field ...' if it is a MemberExpr.
   std::string Message = Out.str();
   Message[0] = toupper(Message[0]);
@@ -2463,17 +2524,14 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitConditionVariable(
 
   const LocationContext *LCtx = N->getLocationContext();
   PathDiagnosticLocation Loc(CondVarExpr, BRC.getSourceManager(), LCtx);
+
+  if (isVarAnInterestingCondition(CondVarExpr, N, &report))
+    Out << WillBeUsedForACondition;
+
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
 
-  if (const auto *DR = dyn_cast<DeclRefExpr>(CondVarExpr)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      const ProgramState *state = N->getState().get();
-      if (const MemRegion *R = state->getLValue(VD, LCtx).getAsRegion()) {
-        if (report.isInteresting(R))
-          event->setPrunable(false);
-      }
-    }
-  }
+  if (isInterestingExpr(CondVarExpr, N, &report))
+    event->setPrunable(false);
 
   return event;
 }
@@ -2495,6 +2553,9 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   const LocationContext *LCtx = N->getLocationContext();
 
+  if (isVarAnInterestingCondition(DRE, N, &report))
+    Out << WillBeUsedForACondition;
+
   // If we know the value create a pop-up note to the 'DRE'.
   if (!IsAssuming) {
     PathDiagnosticLocation Loc(DRE, BRC.getSourceManager(), LCtx);
@@ -2503,16 +2564,10 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
-  const ProgramState *state = N->getState().get();
-  if (const MemRegion *R = state->getLValue(VD, LCtx).getAsRegion()) {
-    if (report.isInteresting(R))
-      event->setPrunable(false);
-    else {
-      SVal V = state->getSVal(R);
-      if (report.isInteresting(V))
-        event->setPrunable(false);
-    }
-  }
+
+  if (isInterestingExpr(DRE, N, &report))
+    event->setPrunable(false);
+
   return std::move(event);
 }
 
@@ -2540,10 +2595,17 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   if (!Loc.isValid() || !Loc.asLocation().isValid())
     return nullptr;
 
+  if (isVarAnInterestingCondition(ME, N, &report))
+    Out << WillBeUsedForACondition;
+
+  // If we know the value create a pop-up note.
   if (!IsAssuming)
     return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Out.str());
 
-  return std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
+  auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
+  if (isInterestingExpr(ME, N, &report))
+    event->setPrunable(false);
+  return event;
 }
 
 bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
@@ -2583,10 +2645,8 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   return true;
 }
 
-const char *const ConditionBRVisitor::GenericTrueMessage =
-    "Assuming the condition is true";
-const char *const ConditionBRVisitor::GenericFalseMessage =
-    "Assuming the condition is false";
+constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
+constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

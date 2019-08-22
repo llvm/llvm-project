@@ -1428,8 +1428,8 @@ public:
   void RecordParsingTemplateParameterDepth(unsigned Depth);
 
   void PushCapturedRegionScope(Scope *RegionScope, CapturedDecl *CD,
-                               RecordDecl *RD,
-                               CapturedRegionKind K);
+                               RecordDecl *RD, CapturedRegionKind K,
+                               unsigned OpenMPCaptureLevel = 0);
 
   /// Custom deleter to allow FunctionScopeInfos to be kept alive for a short
   /// time after they've been popped.
@@ -4039,7 +4039,8 @@ public:
   typedef std::pair<StringRef, QualType> CapturedParamNameType;
   void ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
                                 CapturedRegionKind Kind,
-                                ArrayRef<CapturedParamNameType> Params);
+                                ArrayRef<CapturedParamNameType> Params,
+                                unsigned OpenMPCaptureLevel = 0);
   StmtResult ActOnCapturedRegionEnd(Stmt *S);
   void ActOnCapturedRegionError();
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
@@ -9094,7 +9095,9 @@ public:
   /// reference.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.
-  bool isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const;
+  /// \param OpenMPCaptureLevel Capture level within an OpenMP construct.
+  bool isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
+                             unsigned OpenMPCaptureLevel) const;
 
   /// Check if the specified variable is used in one of the private
   /// clauses (private, firstprivate, lastprivate, reduction etc.) in OpenMP

@@ -172,12 +172,9 @@ IOHandlerConfirm::~IOHandlerConfirm() = default;
 
 void IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
                                          CompletionRequest &request) {
-  if (request.GetRawCursorPos() == 0) {
-    if (m_default_response)
-      request.AddCompletion("y");
-    else
-      request.AddCompletion("n");
-  }
+  if (request.GetRawCursorPos() != 0)
+    return;
+  request.AddCompletion(m_default_response ? "y" : "n");
 }
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,

@@ -522,6 +522,13 @@ public:
     assert(!isStackEmpty() && "No directive at specified level.");
     return getStackElemAtLevel(Level).Directive;
   }
+  /// Returns the capture region at the specified level.
+  OpenMPDirectiveKind getCaptureRegion(unsigned Level,
+                                       unsigned OpenMPCaptureLevel) const {
+    SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+    getOpenMPCaptureRegions(CaptureRegions, getDirective(Level));
+    return CaptureRegions[OpenMPCaptureLevel];
+  }
   /// Returns parent directive.
   OpenMPDirectiveKind getParentDirective() const {
     const SharingMapTy *Parent = getSecondOnStackOrNull();
@@ -1340,7 +1347,8 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
         }
         const_iterator End = end();
         if (!SemaRef.isOpenMPCapturedByRef(
-                D, std::distance(ParentIterTarget, End))) {
+                D, std::distance(ParentIterTarget, End),
+                /*OpenMPCaptureLevel=*/0)) {
           DVar.RefExpr =
               buildDeclRefExpr(SemaRef, VD, D->getType().getNonReferenceType(),
                                IterTarget->ConstructLoc);
@@ -1611,7 +1619,8 @@ void Sema::checkOpenMPDeviceExpr(const Expr *E) {
         << Context.getTargetInfo().getTriple().str() << E->getSourceRange();
 }
 
-bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
+bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
+                                 unsigned OpenMPCaptureLevel) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 
   ASTContext &Ctx = getASTContext();
@@ -1621,6 +1630,7 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   D = cast<ValueDecl>(D->getCanonicalDecl());
   QualType Ty = D->getType();
 
+  bool IsVariableUsedInMapClause = false;
   if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective, Level)) {
     // This table summarizes how a given variable should be passed to the device
     // given its type and the clauses where it appears. This table is based on
@@ -1682,7 +1692,6 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
     // Locate map clauses and see if the variable being captured is referred to
     // in any of those clauses. Here we only care about variables, not fields,
     // because fields are part of aggregates.
-    bool IsVariableUsedInMapClause = false;
     bool IsVariableAssociatedWithSection = false;
 
     DSAStack->checkMappableExprComponentListsForDeclAtLevel(
@@ -1740,10 +1749,13 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
 
   if (IsByRef && Ty.getNonReferenceType()->isScalarType()) {
     IsByRef =
-        !DSAStack->hasExplicitDSA(
-            D,
-            [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
-            Level, /*NotLastprivate=*/true) &&
+        ((IsVariableUsedInMapClause &&
+          DSAStack->getCaptureRegion(Level, OpenMPCaptureLevel) ==
+              OMPD_target) ||
+         !DSAStack->hasExplicitDSA(
+             D,
+             [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
+             Level, /*NotLastprivate=*/true)) &&
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
@@ -2965,7 +2977,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
@@ -2976,7 +2988,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget);
+                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
     Sema::CapturedParamNameType ParamsTeamsOrParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
@@ -2985,7 +2997,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeamsOrParallel);
+                             ParamsTeamsOrParallel, /*OpenMPCaptureLevel=*/2);
     break;
   }
   case OMPD_target:
@@ -3009,14 +3021,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, AlwaysInlineAttr::Keyword_forceinline));
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             std::make_pair(StringRef(), QualType()));
+                             std::make_pair(StringRef(), QualType()),
+                             /*OpenMPCaptureLevel=*/1);
     break;
   }
   case OMPD_simd:
@@ -3148,7 +3161,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
@@ -3159,7 +3172,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget);
+                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
 
     Sema::CapturedParamNameType ParamsTeams[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3168,7 +3181,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeams);
+                             ParamsTeams, /*OpenMPCaptureLevel=*/2);
 
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3180,7 +3193,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel);
+                             ParamsParallel, /*OpenMPCaptureLevel=*/3);
     break;
   }
 
@@ -3197,7 +3210,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeams);
+                             ParamsTeams, /*OpenMPCaptureLevel=*/0);
 
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3209,7 +3222,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel);
+                             ParamsParallel, /*OpenMPCaptureLevel=*/1);
     break;
   }
   case OMPD_target_update:
@@ -11257,7 +11270,13 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
     // A list item cannot appear in both a map clause and a data-sharing
     // attribute clause on the same construct
-    if (isOpenMPTargetExecutionDirective(CurrDir)) {
+    //
+    // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+    // A list item cannot appear in both a map clause and a data-sharing
+    // attribute clause on the same construct unless the construct is a
+    // combined construct.
+    if ((LangOpts.OpenMP <= 45 && isOpenMPTargetExecutionDirective(CurrDir)) ||
+        CurrDir == OMPD_target) {
       OpenMPClauseKind ConflictKind;
       if (DSAStack->checkMappableExprComponentListsForDecl(
               VD, /*CurrentRegionOnly=*/true,
@@ -11492,7 +11511,14 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (isOpenMPTargetExecutionDirective(CurrDir)) {
+      //
+      // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct unless the construct is a
+      // combined construct.
+      if ((LangOpts.OpenMP <= 45 &&
+           isOpenMPTargetExecutionDirective(CurrDir)) ||
+          CurrDir == OMPD_target) {
         OpenMPClauseKind ConflictKind;
         if (DSAStack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
@@ -14606,7 +14632,14 @@ static void checkMappableExpressionList(
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (VD && isOpenMPTargetExecutionDirective(DKind)) {
+      //
+      // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct unless the construct is a
+      // combined construct.
+      if (VD && ((SemaRef.LangOpts.OpenMP <= 45 &&
+                  isOpenMPTargetExecutionDirective(DKind)) ||
+                 DKind == OMPD_target)) {
         DSAStackTy::DSAVarData DVar = DSAS->getTopDSA(VD, /*FromParent=*/false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)

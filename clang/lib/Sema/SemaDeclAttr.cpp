@@ -4613,9 +4613,11 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       }
       return;
     }
-    D->addAttr(::new (S.Context)
-                   OwnerAttr(AL.getRange(), S.Context, DerefTypeLoc,
-                             AL.getAttributeSpellingListIndex()));
+    for (Decl *Redecl : D->redecls()) {
+      Redecl->addAttr(::new (S.Context)
+                          OwnerAttr(AL.getRange(), S.Context, DerefTypeLoc,
+                                    AL.getAttributeSpellingListIndex()));
+    }
   } else {
     if (checkAttrMutualExclusion<OwnerAttr>(S, D, AL))
       return;
@@ -4630,9 +4632,11 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       }
       return;
     }
-    D->addAttr(::new (S.Context)
-                   PointerAttr(AL.getRange(), S.Context, DerefTypeLoc,
-                               AL.getAttributeSpellingListIndex()));
+    for (Decl *Redecl : D->redecls()) {
+      Redecl->addAttr(::new (S.Context)
+                          PointerAttr(AL.getRange(), S.Context, DerefTypeLoc,
+                                      AL.getAttributeSpellingListIndex()));
+    }
   }
 }
 
