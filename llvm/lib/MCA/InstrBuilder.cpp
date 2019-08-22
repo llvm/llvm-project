@@ -544,7 +544,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   LLVM_DEBUG(dbgs() << "\t\tSchedClassID=" << SchedClassID << '\n');
 
   // Create a new empty descriptor.
-  std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
+  std::unique_ptr<InstrDesc> ID = std::make_unique<InstrDesc>();
   ID->NumMicroOps = SCDesc.NumMicroOps;
   ID->SchedClassID = SchedClassID;
 
@@ -613,7 +613,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
-  std::unique_ptr<Instruction> NewIS = llvm::make_unique<Instruction>(D);
+  std::unique_ptr<Instruction> NewIS = std::make_unique<Instruction>(D);
 
   // Check if this is a dependency breaking instruction.
   APInt Mask;

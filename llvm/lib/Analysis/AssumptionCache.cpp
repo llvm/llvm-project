@@ -252,7 +252,7 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
   // Ok, build a new cache by scanning the function, insert it and the value
   // handle into our map, and return the newly populated cache.
   auto IP = AssumptionCaches.insert(std::make_pair(
-      FunctionCallbackVH(&F, this), llvm::make_unique<AssumptionCache>(F)));
+      FunctionCallbackVH(&F, this), std::make_unique<AssumptionCache>(F)));
   assert(IP.second && "Scanning function already in the map?");
   return *IP.first->second;
 }

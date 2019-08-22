@@ -34,43 +34,43 @@ using ::testing::SizeIs;
 template <class RecordType> std::unique_ptr<Record> MakeRecord();
 
 template <> std::unique_ptr<Record> MakeRecord<NewBufferRecord>() {
-  return make_unique<NewBufferRecord>(1);
+  return std::make_unique<NewBufferRecord>(1);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<NewCPUIDRecord>() {
-  return make_unique<NewCPUIDRecord>(1, 2);
+  return std::make_unique<NewCPUIDRecord>(1, 2);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<TSCWrapRecord>() {
-  return make_unique<TSCWrapRecord>(1);
+  return std::make_unique<TSCWrapRecord>(1);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<WallclockRecord>() {
-  return make_unique<WallclockRecord>(1, 2);
+  return std::make_unique<WallclockRecord>(1, 2);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<CustomEventRecord>() {
-  return make_unique<CustomEventRecord>(4, 1, 2, "data");
+  return std::make_unique<CustomEventRecord>(4, 1, 2, "data");
 }
 
 template <> std::unique_ptr<Record> MakeRecord<CallArgRecord>() {
-  return make_unique<CallArgRecord>(1);
+  return std::make_unique<CallArgRecord>(1);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<PIDRecord>() {
-  return make_unique<PIDRecord>(1);
+  return std::make_unique<PIDRecord>(1);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<FunctionRecord>() {
-  return make_unique<FunctionRecord>(RecordTypes::ENTER, 1, 2);
+  return std::make_unique<FunctionRecord>(RecordTypes::ENTER, 1, 2);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<CustomEventRecordV5>() {
-  return make_unique<CustomEventRecordV5>(4, 1, "data");
+  return std::make_unique<CustomEventRecordV5>(4, 1, "data");
 }
 
 template <> std::unique_ptr<Record> MakeRecord<TypedEventRecord>() {
-  return make_unique<TypedEventRecord>(4, 1, 2, "data");
+  return std::make_unique<TypedEventRecord>(4, 1, 2, "data");
 }
 
 template <class T> class RoundTripTest : public ::testing::Test {
@@ -82,7 +82,7 @@ public:
     H.NonstopTSC = true;
     H.CycleFrequency = 3e9;
 
-    Writer = make_unique<FDRTraceWriter>(OS, H);
+    Writer = std::make_unique<FDRTraceWriter>(OS, H);
     Rec = MakeRecord<T>();
   }
 
@@ -105,7 +105,7 @@ public:
     H.NonstopTSC = true;
     H.CycleFrequency = 3e9;
 
-    Writer = make_unique<FDRTraceWriter>(OS, H);
+    Writer = std::make_unique<FDRTraceWriter>(OS, H);
     Rec = MakeRecord<T>();
   }
 

@@ -152,8 +152,8 @@ remarks::createYAMLParserFromMeta(StringRef Buf,
 
   std::unique_ptr<YAMLRemarkParser> Result =
       StrTab
-          ? llvm::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(*StrTab))
-          : llvm::make_unique<YAMLRemarkParser>(Buf);
+          ? std::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(*StrTab))
+          : std::make_unique<YAMLRemarkParser>(Buf);
   if (SeparateBuf)
     Result->SeparateBuf = std::move(SeparateBuf);
   return std::move(Result);
@@ -194,7 +194,7 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
   if (!Root)
     return error("document root is not of mapping type.", *YAMLRoot);
 
-  std::unique_ptr<Remark> Result = llvm::make_unique<Remark>();
+  std::unique_ptr<Remark> Result = std::make_unique<Remark>();
   Remark &TheRemark = *Result;
 
   // First, the type. It needs special handling since is not part of the

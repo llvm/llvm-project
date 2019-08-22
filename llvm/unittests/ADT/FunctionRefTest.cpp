@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/MakeUniqueTest.cpp - make_unique unit tests ------===//
+//===- llvm/unittest/ADT/MakeUniqueTest.cpp - std::make_unique unit tests ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

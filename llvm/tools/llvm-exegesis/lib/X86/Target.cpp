@@ -453,12 +453,12 @@ private:
 
   std::unique_ptr<SnippetGenerator>
   createLatencySnippetGenerator(const LLVMState &State) const override {
-    return llvm::make_unique<X86LatencySnippetGenerator>(State);
+    return std::make_unique<X86LatencySnippetGenerator>(State);
   }
 
   std::unique_ptr<SnippetGenerator>
   createUopsSnippetGenerator(const LLVMState &State) const override {
-    return llvm::make_unique<X86UopsSnippetGenerator>(State);
+    return std::make_unique<X86UopsSnippetGenerator>(State);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

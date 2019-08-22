@@ -1299,7 +1299,7 @@ private:
                           const EdgeInfo &UserTreeIdx,
                           ArrayRef<unsigned> ReuseShuffleIndices = None,
                           ArrayRef<unsigned> ReorderIndices = None) {
-    VectorizableTree.push_back(llvm::make_unique<TreeEntry>(VectorizableTree));
+    VectorizableTree.push_back(std::make_unique<TreeEntry>(VectorizableTree));
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
     Last->Scalars.insert(Last->Scalars.begin(), VL.begin(), VL.end());
@@ -2142,7 +2142,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   auto &BSRef = BlocksSchedules[BB];
   if (!BSRef)
-    BSRef = llvm::make_unique<BlockScheduling>(BB);
+    BSRef = std::make_unique<BlockScheduling>(BB);
 
   BlockScheduling &BS = *BSRef.get();
 
@@ -4364,7 +4364,7 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
 BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
   // Allocate a new ScheduleData for the instruction.
   if (ChunkPos >= ChunkSize) {
-    ScheduleDataChunks.push_back(llvm::make_unique<ScheduleData[]>(ChunkSize));
+    ScheduleDataChunks.push_back(std::make_unique<ScheduleData[]>(ChunkSize));
     ChunkPos = 0;
   }
   return &(ScheduleDataChunks.back()[ChunkPos++]);

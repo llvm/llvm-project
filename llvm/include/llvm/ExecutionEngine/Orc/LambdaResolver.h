@@ -63,7 +63,7 @@ std::shared_ptr<LambdaResolver<DylibLookupFtorT, ExternalLookupFtorT>>
 createLambdaResolver(DylibLookupFtorT DylibLookupFtor,
                      ExternalLookupFtorT ExternalLookupFtor) {
   using LR = LambdaResolver<DylibLookupFtorT, ExternalLookupFtorT>;
-  return make_unique<LR>(std::move(DylibLookupFtor),
+  return std::make_unique<LR>(std::move(DylibLookupFtor),
                          std::move(ExternalLookupFtor));
 }
 
@@ -73,7 +73,7 @@ createLambdaResolver(ORCv1DeprecationAcknowledgement,
                      DylibLookupFtorT DylibLookupFtor,
                      ExternalLookupFtorT ExternalLookupFtor) {
   using LR = LambdaResolver<DylibLookupFtorT, ExternalLookupFtorT>;
-  return make_unique<LR>(AcknowledgeORCv1Deprecation,
+  return std::make_unique<LR>(AcknowledgeORCv1Deprecation,
                          std::move(DylibLookupFtor),
                          std::move(ExternalLookupFtor));
 }

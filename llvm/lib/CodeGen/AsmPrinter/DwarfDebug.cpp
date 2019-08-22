@@ -279,7 +279,7 @@ void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
   assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
          "Wrong inlined-at");
 
-  ValueLoc = llvm::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
+  ValueLoc = std::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
   if (auto *E = DbgValue->getDebugExpression())
     if (E->getNumElements())
       FrameIndexExprs.push_back({0, E});
@@ -864,7 +864,7 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
   CompilationDir = DIUnit->getDirectory();
 
-  auto OwnedUnit = llvm::make_unique<DwarfCompileUnit>(
+  auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
       InfoHolder.getUnits().size(), DIUnit, Asm, this, &InfoHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
   InfoHolder.addUnit(std::move(OwnedUnit));
@@ -1289,7 +1289,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
       continue;
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
-    auto RegVar = llvm::make_unique<DbgVariable>(
+    auto RegVar = std::make_unique<DbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
     RegVar->initializeMMI(VI.Expr, VI.Slot);
     if (DbgVariable *DbgVar = MFVars.lookup(Var))
@@ -1500,13 +1500,13 @@ DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
     ConcreteEntities.push_back(
-        llvm::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
+        std::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
                                        Location));
     InfoHolder.addScopeVariable(&Scope,
         cast<DbgVariable>(ConcreteEntities.back().get()));
   } else if (isa<const DILabel>(Node)) {
     ConcreteEntities.push_back(
-        llvm::make_unique<DbgLabel>(cast<const DILabel>(Node),
+        std::make_unique<DbgLabel>(cast<const DILabel>(Node),
                                     Location, Sym));
     InfoHolder.addScopeLabel(&Scope,
         cast<DbgLabel>(ConcreteEntities.back().get()));
@@ -2824,7 +2824,7 @@ void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
 
 DwarfCompileUnit &DwarfDebug::constructSkeletonCU(const DwarfCompileUnit &CU) {
 
-  auto OwnedUnit = llvm::make_unique<DwarfCompileUnit>(
+  auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
       CU.getUniqueID(), CU.getCUNode(), Asm, this, &SkeletonHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
   NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
@@ -2924,7 +2924,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
-  auto OwnedUnit = llvm::make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
+  auto OwnedUnit = std::make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
                                                     getDwoLineTable(CU));
   DwarfTypeUnit &NewTU = *OwnedUnit;
   DIE &UnitDie = NewTU.getUnitDie();

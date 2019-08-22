@@ -72,7 +72,7 @@ GCFunctionInfo &GCModuleInfo::getFunctionInfo(const Function &F) {
     return *I->second;
 
   GCStrategy *S = getGCStrategy(F.getGC());
-  Functions.push_back(llvm::make_unique<GCFunctionInfo>(F, *S));
+  Functions.push_back(std::make_unique<GCFunctionInfo>(F, *S));
   GCFunctionInfo *GFI = Functions.back().get();
   FInfoMap[&F] = GFI;
   return *GFI;

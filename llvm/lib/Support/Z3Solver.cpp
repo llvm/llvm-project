@@ -886,7 +886,7 @@ public:
 
 llvm::SMTSolverRef llvm::CreateZ3Solver() {
 #if LLVM_WITH_Z3
-  return llvm::make_unique<Z3Solver>();
+  return std::make_unique<Z3Solver>();
 #else
   llvm::report_fatal_error("LLVM was not compiled with Z3 support, rebuild "
                            "with -DLLVM_ENABLE_Z3_SOLVER=ON",

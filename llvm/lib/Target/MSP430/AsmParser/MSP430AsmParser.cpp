@@ -191,33 +191,33 @@ public:
   }
 
   static std::unique_ptr<MSP430Operand> CreateToken(StringRef Str, SMLoc S) {
-    return make_unique<MSP430Operand>(Str, S);
+    return std::make_unique<MSP430Operand>(Str, S);
   }
 
   static std::unique_ptr<MSP430Operand> CreateReg(unsigned RegNum, SMLoc S,
                                                   SMLoc E) {
-    return make_unique<MSP430Operand>(k_Reg, RegNum, S, E);
+    return std::make_unique<MSP430Operand>(k_Reg, RegNum, S, E);
   }
 
   static std::unique_ptr<MSP430Operand> CreateImm(const MCExpr *Val, SMLoc S,
                                                   SMLoc E) {
-    return make_unique<MSP430Operand>(Val, S, E);
+    return std::make_unique<MSP430Operand>(Val, S, E);
   }
 
   static std::unique_ptr<MSP430Operand> CreateMem(unsigned RegNum,
                                                   const MCExpr *Val,
                                                   SMLoc S, SMLoc E) {
-    return make_unique<MSP430Operand>(RegNum, Val, S, E);
+    return std::make_unique<MSP430Operand>(RegNum, Val, S, E);
   }
 
   static std::unique_ptr<MSP430Operand> CreateIndReg(unsigned RegNum, SMLoc S,
                                                   SMLoc E) {
-    return make_unique<MSP430Operand>(k_IndReg, RegNum, S, E);
+    return std::make_unique<MSP430Operand>(k_IndReg, RegNum, S, E);
   }
 
   static std::unique_ptr<MSP430Operand> CreatePostIndReg(unsigned RegNum, SMLoc S,
                                                   SMLoc E) {
-    return make_unique<MSP430Operand>(k_PostIndReg, RegNum, S, E);
+    return std::make_unique<MSP430Operand>(k_PostIndReg, RegNum, S, E);
   }
 
   SMLoc getStartLoc() const { return Start; }

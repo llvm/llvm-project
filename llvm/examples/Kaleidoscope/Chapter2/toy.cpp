@@ -197,7 +197,7 @@ static std::unique_ptr<ExprAST> ParseExpression();
 
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
-  auto Result = llvm::make_unique<NumberExprAST>(NumVal);
+  auto Result = std::make_unique<NumberExprAST>(NumVal);
   getNextToken(); // consume the number
   return std::move(Result);
 }
@@ -224,7 +224,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken(); // eat identifier.
 
   if (CurTok != '(') // Simple variable ref.
-    return llvm::make_unique<VariableExprAST>(IdName);
+    return std::make_unique<VariableExprAST>(IdName);
 
   // Call.
   getNextToken(); // eat (
@@ -248,7 +248,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   // Eat the ')'.
   getNextToken();
 
-  return llvm::make_unique<CallExprAST>(IdName, std::move(Args));
+  return std::make_unique<CallExprAST>(IdName, std::move(Args));
 }
 
 /// primary
@@ -300,7 +300,7 @@ static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
     }
 
     // Merge LHS/RHS.
-    LHS = llvm::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
+    LHS = std::make_unique<BinaryExprAST>(BinOp, std::move(LHS),
                                            std::move(RHS));
   }
 }
@@ -337,7 +337,7 @@ static std::unique_ptr<PrototypeAST> ParsePrototype() {
   // success.
   getNextToken(); // eat ')'.
 
-  return llvm::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
+  return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
 }
 
 /// definition ::= 'def' prototype expression
@@ -348,7 +348,7 @@ static std::unique_ptr<FunctionAST> ParseDefinition() {
     return nullptr;
 
   if (auto E = ParseExpression())
-    return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+    return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   return nullptr;
 }
 
@@ -356,9 +356,9 @@ static std::unique_ptr<FunctionAST> ParseDefinition() {
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
   if (auto E = ParseExpression()) {
     // Make an anonymous proto.
-    auto Proto = llvm::make_unique<PrototypeAST>("__anon_expr",
+    auto Proto = std::make_unique<PrototypeAST>("__anon_expr",
                                                  std::vector<std::string>());
-    return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+    return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;
 }

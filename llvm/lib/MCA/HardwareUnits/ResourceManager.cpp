@@ -104,7 +104,7 @@ void ResourceState::dump() const {
 static std::unique_ptr<ResourceStrategy>
 getStrategyFor(const ResourceState &RS) {
   if (RS.isAResourceGroup() || RS.getNumUnits() > 1)
-    return llvm::make_unique<DefaultResourceStrategy>(RS.getReadyMask());
+    return std::make_unique<DefaultResourceStrategy>(RS.getReadyMask());
   return std::unique_ptr<ResourceStrategy>(nullptr);
 }
 
@@ -128,7 +128,7 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     Resources[Index] =
-        llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
 

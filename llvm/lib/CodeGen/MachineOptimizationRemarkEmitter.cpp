@@ -76,7 +76,7 @@ bool MachineOptimizationRemarkEmitterPass::runOnMachineFunction(
   else
     MBFI = nullptr;
 
-  ORE = llvm::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
+  ORE = std::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
   return false;
 }
 

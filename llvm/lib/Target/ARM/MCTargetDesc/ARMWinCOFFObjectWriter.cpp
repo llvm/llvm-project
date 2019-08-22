@@ -92,7 +92,7 @@ namespace llvm {
 
 std::unique_ptr<MCObjectTargetWriter>
 createARMWinCOFFObjectWriter(bool Is64Bit) {
-  return llvm::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
+  return std::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
 }
 
 } // end namespace llvm

@@ -1904,7 +1904,7 @@ int main(int argc, char *argv[]) {
 
   // Make the module, which holds all the code.
   std::unique_ptr<llvm::Module> Owner =
-      llvm::make_unique<llvm::Module>("my cool jit", Context);
+      std::make_unique<llvm::Module>("my cool jit", Context);
   llvm::Module *module = Owner.get();
 
   std::unique_ptr<llvm::RTDyldMemoryManager> MemMgr(new llvm::SectionMemoryManager());

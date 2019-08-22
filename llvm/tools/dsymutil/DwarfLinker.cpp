@@ -239,7 +239,7 @@ bool DwarfLinker::createStreamer(const Triple &TheTriple,
   if (Options.NoOutput)
     return true;
 
-  Streamer = llvm::make_unique<DwarfStreamer>(OutFile, Options);
+  Streamer = std::make_unique<DwarfStreamer>(OutFile, Options);
   return Streamer->init(TheTriple);
 }
 
@@ -998,7 +998,7 @@ void DwarfLinker::AssignAbbrev(DIEAbbrev &Abbrev) {
   } else {
     // Add to abbreviation list.
     Abbreviations.push_back(
-        llvm::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
+        std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr.getAttribute(), Attr.getForm());
     AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
@@ -2324,7 +2324,7 @@ Error DwarfLinker::loadClangModule(
       }
 
       // Add this module.
-      Unit = llvm::make_unique<CompileUnit>(*CU, UnitID++, !Options.NoODR,
+      Unit = std::make_unique<CompileUnit>(*CU, UnitID++, !Options.NoODR,
                                             ModuleName);
       Unit->setHasInterestingContent();
       analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(),
@@ -2711,7 +2711,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
                                    LinkContext.Ranges, OffsetsStringPool,
                                    UniquingStringPool, ODRContexts,
                                    ModulesEndOffset, UnitID, Quiet)) {
-        LinkContext.CompileUnits.push_back(llvm::make_unique<CompileUnit>(
+        LinkContext.CompileUnits.push_back(std::make_unique<CompileUnit>(
             *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
       }
     }

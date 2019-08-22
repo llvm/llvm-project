@@ -2133,7 +2133,7 @@ MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                BitcodeReaderValueList &ValueList,
                                bool IsImporting,
                                std::function<Type *(unsigned)> getTypeByID)
-    : Pimpl(llvm::make_unique<MetadataLoaderImpl>(
+    : Pimpl(std::make_unique<MetadataLoaderImpl>(
           Stream, TheModule, ValueList, std::move(getTypeByID), IsImporting)) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {

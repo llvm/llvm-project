@@ -1515,7 +1515,7 @@ void AsmMatcherInfo::buildInfo() {
       if (!V.empty() && V != Variant.Name)
         continue;
 
-      auto II = llvm::make_unique<MatchableInfo>(*CGI);
+      auto II = std::make_unique<MatchableInfo>(*CGI);
 
       II->initialize(*this, SingletonRegisters, Variant, HasMnemonicFirst);
 
@@ -1532,7 +1532,7 @@ void AsmMatcherInfo::buildInfo() {
     std::vector<Record*> AllInstAliases =
       Records.getAllDerivedDefinitions("InstAlias");
     for (unsigned i = 0, e = AllInstAliases.size(); i != e; ++i) {
-      auto Alias = llvm::make_unique<CodeGenInstAlias>(AllInstAliases[i],
+      auto Alias = std::make_unique<CodeGenInstAlias>(AllInstAliases[i],
                                                        Target);
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
@@ -1546,7 +1546,7 @@ void AsmMatcherInfo::buildInfo() {
       if (!V.empty() && V != Variant.Name)
         continue;
 
-      auto II = llvm::make_unique<MatchableInfo>(std::move(Alias));
+      auto II = std::make_unique<MatchableInfo>(std::move(Alias));
 
       II->initialize(*this, SingletonRegisters, Variant, HasMnemonicFirst);
 
@@ -1615,7 +1615,7 @@ void AsmMatcherInfo::buildInfo() {
           II->TheDef->getValueAsString("TwoOperandAliasConstraint");
       if (Constraint != "") {
         // Start by making a copy of the original matchable.
-        auto AliasII = llvm::make_unique<MatchableInfo>(*II);
+        auto AliasII = std::make_unique<MatchableInfo>(*II);
 
         // Adjust it to be a two-operand alias.
         AliasII->formTwoOperandAlias(Constraint);

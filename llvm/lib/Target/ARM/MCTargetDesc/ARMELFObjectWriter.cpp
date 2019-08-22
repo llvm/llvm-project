@@ -263,5 +263,5 @@ void ARMELFObjectWriter::addTargetSectionFlags(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createARMELFObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<ARMELFObjectWriter>(OSABI);
+  return std::make_unique<ARMELFObjectWriter>(OSABI);
 }

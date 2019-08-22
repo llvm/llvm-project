@@ -677,7 +677,7 @@ void MCStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
   MCSymbol *StartProc = EmitCFILabel();
 
   WinFrameInfos.emplace_back(
-      llvm::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
+      std::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
 }
@@ -711,7 +711,7 @@ void MCStreamer::EmitWinCFIStartChained(SMLoc Loc) {
 
   MCSymbol *StartProc = EmitCFILabel();
 
-  WinFrameInfos.emplace_back(llvm::make_unique<WinEH::FrameInfo>(
+  WinFrameInfos.emplace_back(std::make_unique<WinEH::FrameInfo>(
       CurFrame->Function, StartProc, CurFrame));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();

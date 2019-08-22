@@ -493,7 +493,7 @@ public:
                                  ExecutionSession &ES,
                                  JITTargetAddress ErrorHandlerAddress)
         : JITCompileCallbackManager(
-              llvm::make_unique<RemoteTrampolinePool>(Client), ES,
+              std::make_unique<RemoteTrampolinePool>(Client), ES,
               ErrorHandlerAddress) {}
   };
 
@@ -553,7 +553,7 @@ public:
     auto Id = IndirectStubOwnerIds.getNext();
     if (auto Err = callB<stubs::CreateIndirectStubsOwner>(Id))
       return std::move(Err);
-    return llvm::make_unique<RemoteIndirectStubsManager>(*this, Id);
+    return std::make_unique<RemoteIndirectStubsManager>(*this, Id);
   }
 
   Expected<RemoteCompileCallbackManager &>

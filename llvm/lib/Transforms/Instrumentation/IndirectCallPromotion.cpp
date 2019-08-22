@@ -403,7 +403,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
           AM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
       ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     } else {
-      OwnedORE = llvm::make_unique<OptimizationRemarkEmitter>(&F);
+      OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
       ORE = OwnedORE.get();
     }
 

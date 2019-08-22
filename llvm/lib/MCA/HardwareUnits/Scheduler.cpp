@@ -21,7 +21,7 @@ namespace mca {
 
 void Scheduler::initializeStrategy(std::unique_ptr<SchedulerStrategy> S) {
   // Ensure we have a valid (non-null) strategy object.
-  Strategy = S ? std::move(S) : llvm::make_unique<DefaultSchedulerStrategy>();
+  Strategy = S ? std::move(S) : std::make_unique<DefaultSchedulerStrategy>();
 }
 
 // Anchor the vtable of SchedulerStrategy and DefaultSchedulerStrategy.

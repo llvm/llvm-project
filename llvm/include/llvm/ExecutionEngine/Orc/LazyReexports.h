@@ -71,7 +71,7 @@ public:
   template <typename NotifyResolvedImpl>
   static std::unique_ptr<NotifyResolvedFunction>
   createNotifyResolvedFunction(NotifyResolvedImpl NotifyResolved) {
-    return llvm::make_unique<NotifyResolvedFunctionImpl<NotifyResolvedImpl>>(
+    return std::make_unique<NotifyResolvedFunctionImpl<NotifyResolvedImpl>>(
         std::move(NotifyResolved));
   }
 
@@ -186,7 +186,7 @@ lazyReexports(LazyCallThroughManager &LCTManager,
               IndirectStubsManager &ISManager, JITDylib &SourceJD,
               SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc = nullptr,
               VModuleKey K = VModuleKey()) {
-  return llvm::make_unique<LazyReexportsMaterializationUnit>(
+  return std::make_unique<LazyReexportsMaterializationUnit>(
       LCTManager, ISManager, SourceJD, std::move(CallableAliases), SrcJDLoc,
       std::move(K));
 }

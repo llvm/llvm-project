@@ -329,5 +329,5 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createX86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine) {
-  return llvm::make_unique<X86ELFObjectWriter>(IsELF64, OSABI, EMachine);
+  return std::make_unique<X86ELFObjectWriter>(IsELF64, OSABI, EMachine);
 }

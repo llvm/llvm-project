@@ -90,5 +90,5 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &) {
 std::unique_ptr<MCObjectWriter>
 llvm::createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                               raw_pwrite_stream &OS) {
-  return llvm::make_unique<XCOFFObjectWriter>(std::move(MOTW), OS);
+  return std::make_unique<XCOFFObjectWriter>(std::move(MOTW), OS);
 }

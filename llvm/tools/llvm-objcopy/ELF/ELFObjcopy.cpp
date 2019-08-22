@@ -136,16 +136,16 @@ static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
-    return llvm::make_unique<ELFWriter<ELF32LE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF32LE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF64LE:
-    return llvm::make_unique<ELFWriter<ELF64LE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF64LE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF32BE:
-    return llvm::make_unique<ELFWriter<ELF32BE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF32BE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF64BE:
-    return llvm::make_unique<ELFWriter<ELF64BE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF64BE>>(Obj, Buf,
                                                  !Config.StripSections);
   }
   llvm_unreachable("Invalid output format");
@@ -156,9 +156,9 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return llvm::make_unique<BinaryWriter>(Obj, Buf);
+    return std::make_unique<BinaryWriter>(Obj, Buf);
   case FileFormat::IHex:
-    return llvm::make_unique<IHexWriter>(Obj, Buf);
+    return std::make_unique<IHexWriter>(Obj, Buf);
   default:
     return createELFWriter(Config, Obj, Buf, OutputElfType);
   }

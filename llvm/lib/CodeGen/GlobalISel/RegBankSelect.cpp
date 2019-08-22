@@ -92,7 +92,7 @@ void RegBankSelect::init(MachineFunction &MF) {
     MBPI = nullptr;
   }
   MIRBuilder.setMF(MF);
-  MORE = llvm::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
+  MORE = std::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
 }
 
 void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {

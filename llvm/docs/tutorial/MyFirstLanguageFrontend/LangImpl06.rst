@@ -220,7 +220,7 @@ user-defined operator, we need to parse it:
       if (Kind && ArgNames.size() != Kind)
         return LogErrorP("Invalid number of operands for operator");
 
-      return llvm::make_unique<PrototypeAST>(FnName, std::move(ArgNames), Kind != 0,
+      return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames), Kind != 0,
                                              BinaryPrecedence);
     }
 
@@ -348,7 +348,7 @@ simple: we'll add a new function to do it:
       int Opc = CurTok;
       getNextToken();
       if (auto Operand = ParseUnary())
-        return llvm::make_unique<UnaryExprAST>(Opc, std::move(Operand));
+        return std::make_unique<UnaryExprAST>(Opc, std::move(Operand));
       return nullptr;
     }
 

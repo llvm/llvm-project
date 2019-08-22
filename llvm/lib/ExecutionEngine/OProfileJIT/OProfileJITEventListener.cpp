@@ -177,7 +177,7 @@ void OProfileJITEventListener::notifyFreeingObject(ObjectKey Key) {
 
 namespace llvm {
 JITEventListener *JITEventListener::createOProfileJITEventListener() {
-  return new OProfileJITEventListener(llvm::make_unique<OProfileWrapper>());
+  return new OProfileJITEventListener(std::make_unique<OProfileWrapper>());
 }
 
 } // namespace llvm

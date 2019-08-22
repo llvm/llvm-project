@@ -25,7 +25,7 @@ ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {
 
   auto &ValueLookup = NodesMap[F.getName()];
   if (!ValueLookup) {
-    ValueLookup = llvm::make_unique<InlineGraphNode>();
+    ValueLookup = std::make_unique<InlineGraphNode>();
     ValueLookup->Imported = F.getMetadata("thinlto_src_module") != nullptr;
   }
   return *ValueLookup;

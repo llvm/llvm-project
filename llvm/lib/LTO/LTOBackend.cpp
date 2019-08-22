@@ -57,7 +57,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   ShouldDiscardValueNames = false;
 
   std::error_code EC;
-  ResolutionFile = llvm::make_unique<raw_fd_ostream>(
+  ResolutionFile = std::make_unique<raw_fd_ostream>(
       OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
     return errorCodeToError(EC);
@@ -329,7 +329,7 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
   if (!DwoFile.empty()) {
     std::error_code EC;
-    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
+    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
       report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
   }

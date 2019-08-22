@@ -873,7 +873,7 @@ public:
     assert(BufferRsrc);
     auto PSV = BufferPSVs.try_emplace(
       BufferRsrc,
-      llvm::make_unique<AMDGPUBufferPseudoSourceValue>(TII));
+      std::make_unique<AMDGPUBufferPseudoSourceValue>(TII));
     return PSV.first->second.get();
   }
 
@@ -882,14 +882,14 @@ public:
     assert(ImgRsrc);
     auto PSV = ImagePSVs.try_emplace(
       ImgRsrc,
-      llvm::make_unique<AMDGPUImagePseudoSourceValue>(TII));
+      std::make_unique<AMDGPUImagePseudoSourceValue>(TII));
     return PSV.first->second.get();
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *getGWSPSV(const SIInstrInfo &TII) {
     if (!GWSResourcePSV) {
       GWSResourcePSV =
-          llvm::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TII);
+          std::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TII);
     }
 
     return GWSResourcePSV.get();

@@ -71,7 +71,7 @@ DataMemberLayoutItem::DataMemberLayoutItem(
       DataMember(std::move(Member)) {
   auto Type = DataMember->getType();
   if (auto UDT = unique_dyn_cast<PDBSymbolTypeUDT>(Type)) {
-    UdtLayout = llvm::make_unique<ClassLayout>(std::move(UDT));
+    UdtLayout = std::make_unique<ClassLayout>(std::move(UDT));
     UsedBytes = UdtLayout->usedBytes();
   }
 }
@@ -205,7 +205,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
   for (auto &Base : Bases) {
     uint32_t Offset = Base->getOffset();
     // Non-virtual bases never get elided.
-    auto BL = llvm::make_unique<BaseClassLayout>(*this, Offset, false,
+    auto BL = std::make_unique<BaseClassLayout>(*this, Offset, false,
                                                  std::move(Base));
 
     AllBases.push_back(BL.get());
@@ -216,7 +216,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
   assert(VTables.size() <= 1);
   if (!VTables.empty()) {
     auto VTLayout =
-        llvm::make_unique<VTableLayoutItem>(*this, std::move(VTables[0]));
+        std::make_unique<VTableLayoutItem>(*this, std::move(VTables[0]));
 
     VTable = VTLayout.get();
 
@@ -224,7 +224,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
   }
 
   for (auto &Data : Members) {
-    auto DM = llvm::make_unique<DataMemberLayoutItem>(*this, std::move(Data));
+    auto DM = std::make_unique<DataMemberLayoutItem>(*this, std::move(Data));
 
     addChildToLayout(std::move(DM));
   }
@@ -236,7 +236,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
     int VBPO = VB->getVirtualBasePointerOffset();
     if (!hasVBPtrAtOffset(VBPO)) {
       if (auto VBP = VB->getRawSymbol().getVirtualBaseTableType()) {
-        auto VBPL = llvm::make_unique<VBPtrLayoutItem>(*this, std::move(VBP),
+        auto VBPL = std::make_unique<VBPtrLayoutItem>(*this, std::move(VBP),
                                                        VBPO, VBP->getLength());
         VBPtr = VBPL.get();
         addChildToLayout(std::move(VBPL));
@@ -250,7 +250,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
     uint32_t Offset = UsedBytes.find_last() + 1;
     bool Elide = (Parent != nullptr);
     auto BL =
-        llvm::make_unique<BaseClassLayout>(*this, Offset, Elide, std::move(VB));
+        std::make_unique<BaseClassLayout>(*this, Offset, Elide, std::move(VB));
     AllBases.push_back(BL.get());
 
     // Only lay this virtual base out directly inside of *this* class if this

@@ -115,7 +115,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
     getLibcallSignature(Subtarget, Name, Returns, Params);
   }
   auto Signature =
-      make_unique<wasm::WasmSignature>(std::move(Returns), std::move(Params));
+      std::make_unique<wasm::WasmSignature>(std::move(Returns), std::move(Params));
   WasmSym->setSignature(Signature.get());
   Printer.addSignature(std::move(Signature));
 
@@ -238,7 +238,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           }
 
           auto *WasmSym = cast<MCSymbolWasm>(Sym);
-          auto Signature = make_unique<wasm::WasmSignature>(std::move(Returns),
+          auto Signature = std::make_unique<wasm::WasmSignature>(std::move(Returns),
                                                             std::move(Params));
           WasmSym->setSignature(Signature.get());
           Printer.addSignature(std::move(Signature));

@@ -52,7 +52,7 @@ MappedBlockStream::MappedBlockStream(uint32_t BlockSize,
 std::unique_ptr<MappedBlockStream> MappedBlockStream::createStream(
     uint32_t BlockSize, const MSFStreamLayout &Layout, BinaryStreamRef MsfData,
     BumpPtrAllocator &Allocator) {
-  return llvm::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
+  return std::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
       BlockSize, Layout, MsfData, Allocator);
 }
 
@@ -63,7 +63,7 @@ std::unique_ptr<MappedBlockStream> MappedBlockStream::createIndexedStream(
   MSFStreamLayout SL;
   SL.Blocks = Layout.StreamMap[StreamIndex];
   SL.Length = Layout.StreamSizes[StreamIndex];
-  return llvm::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
+  return std::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
       Layout.SB->BlockSize, SL, MsfData, Allocator);
 }
 
@@ -318,7 +318,7 @@ WritableMappedBlockStream::createStream(uint32_t BlockSize,
                                         const MSFStreamLayout &Layout,
                                         WritableBinaryStreamRef MsfData,
                                         BumpPtrAllocator &Allocator) {
-  return llvm::make_unique<MappedBlockStreamImpl<WritableMappedBlockStream>>(
+  return std::make_unique<MappedBlockStreamImpl<WritableMappedBlockStream>>(
       BlockSize, Layout, MsfData, Allocator);
 }
 

@@ -76,9 +76,9 @@ std::unique_ptr<CoveragePrinter>
 CoveragePrinter::create(const CoverageViewOptions &Opts) {
   switch (Opts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    return llvm::make_unique<CoveragePrinterText>(Opts);
+    return std::make_unique<CoveragePrinterText>(Opts);
   case CoverageViewOptions::OutputFormat::HTML:
-    return llvm::make_unique<CoveragePrinterHTML>(Opts);
+    return std::make_unique<CoveragePrinterHTML>(Opts);
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error
     // before we get here.
@@ -141,10 +141,10 @@ SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            CoverageData &&CoverageInfo) {
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    return llvm::make_unique<SourceCoverageViewText>(
+    return std::make_unique<SourceCoverageViewText>(
         SourceName, File, Options, std::move(CoverageInfo));
   case CoverageViewOptions::OutputFormat::HTML:
-    return llvm::make_unique<SourceCoverageViewHTML>(
+    return std::make_unique<SourceCoverageViewHTML>(
         SourceName, File, Options, std::move(CoverageInfo));
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error

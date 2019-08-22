@@ -84,7 +84,7 @@ createSymbolResolver(GetResponsibilitySetFn &&GetResponsibilitySet,
           typename std::remove_reference<GetResponsibilitySetFn>::type>::type,
       typename std::remove_cv<
           typename std::remove_reference<LookupFn>::type>::type>;
-  return llvm::make_unique<LambdaSymbolResolverImpl>(
+  return std::make_unique<LambdaSymbolResolverImpl>(
       std::forward<GetResponsibilitySetFn>(GetResponsibilitySet),
       std::forward<LookupFn>(Lookup));
 }

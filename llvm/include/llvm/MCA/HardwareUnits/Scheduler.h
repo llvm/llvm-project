@@ -159,7 +159,7 @@ public:
 
   Scheduler(const MCSchedModel &Model, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : Scheduler(make_unique<ResourceManager>(Model), Lsu,
+      : Scheduler(std::make_unique<ResourceManager>(Model), Lsu,
                   std::move(SelectStrategy)) {}
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,

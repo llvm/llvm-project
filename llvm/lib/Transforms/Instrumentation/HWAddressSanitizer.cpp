@@ -287,7 +287,7 @@ public:
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
   bool doInitialization(Module &M) override {
-    HWASan = llvm::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover);
+    HWASan = std::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover);
     return true;
   }
 

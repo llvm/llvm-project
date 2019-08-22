@@ -1800,7 +1800,7 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateToken(StringRef Str, bool IsSuffix, SMLoc S, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_Token, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_Token, Ctx);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
     Op->Tok.IsSuffix = IsSuffix;
@@ -1815,7 +1815,7 @@ public:
             AArch64_AM::ShiftExtendType ExtTy = AArch64_AM::LSL,
             unsigned ShiftAmount = 0,
             unsigned HasExplicitAmount = false) {
-    auto Op = make_unique<AArch64Operand>(k_Register, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_Register, Ctx);
     Op->Reg.RegNum = RegNum;
     Op->Reg.Kind = Kind;
     Op->Reg.ElementWidth = 0;
@@ -1847,7 +1847,7 @@ public:
   CreateVectorList(unsigned RegNum, unsigned Count, unsigned NumElements,
                    unsigned ElementWidth, RegKind RegisterKind, SMLoc S, SMLoc E,
                    MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_VectorList, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_VectorList, Ctx);
     Op->VectorList.RegNum = RegNum;
     Op->VectorList.Count = Count;
     Op->VectorList.NumElements = NumElements;
@@ -1860,7 +1860,7 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateVectorIndex(unsigned Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_VectorIndex, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_VectorIndex, Ctx);
     Op->VectorIndex.Val = Idx;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1869,7 +1869,7 @@ public:
 
   static std::unique_ptr<AArch64Operand> CreateImm(const MCExpr *Val, SMLoc S,
                                                    SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_Immediate, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_Immediate, Ctx);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1880,7 +1880,7 @@ public:
                                                           unsigned ShiftAmount,
                                                           SMLoc S, SMLoc E,
                                                           MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_ShiftedImm, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_ShiftedImm, Ctx);
     Op->ShiftedImm .Val = Val;
     Op->ShiftedImm.ShiftAmount = ShiftAmount;
     Op->StartLoc = S;
@@ -1890,7 +1890,7 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateCondCode(AArch64CC::CondCode Code, SMLoc S, SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_CondCode, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_CondCode, Ctx);
     Op->CondCode.Code = Code;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1899,7 +1899,7 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateFPImm(APFloat Val, bool IsExact, SMLoc S, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_FPImm, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_FPImm, Ctx);
     Op->FPImm.Val = Val.bitcastToAPInt().getSExtValue();
     Op->FPImm.IsExact = IsExact;
     Op->StartLoc = S;
@@ -1911,7 +1911,7 @@ public:
                                                        StringRef Str,
                                                        SMLoc S,
                                                        MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_Barrier, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_Barrier, Ctx);
     Op->Barrier.Val = Val;
     Op->Barrier.Data = Str.data();
     Op->Barrier.Length = Str.size();
@@ -1925,7 +1925,7 @@ public:
                                                       uint32_t MSRReg,
                                                       uint32_t PStateField,
                                                       MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_SysReg, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_SysReg, Ctx);
     Op->SysReg.Data = Str.data();
     Op->SysReg.Length = Str.size();
     Op->SysReg.MRSReg = MRSReg;
@@ -1938,7 +1938,7 @@ public:
 
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
                                                      SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_SysCR, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_SysCR, Ctx);
     Op->SysCRImm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1949,7 +1949,7 @@ public:
                                                         StringRef Str,
                                                         SMLoc S,
                                                         MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_Prefetch, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_Prefetch, Ctx);
     Op->Prefetch.Val = Val;
     Op->Barrier.Data = Str.data();
     Op->Barrier.Length = Str.size();
@@ -1962,7 +1962,7 @@ public:
                                                        StringRef Str,
                                                        SMLoc S,
                                                        MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_PSBHint, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_PSBHint, Ctx);
     Op->PSBHint.Val = Val;
     Op->PSBHint.Data = Str.data();
     Op->PSBHint.Length = Str.size();
@@ -1975,7 +1975,7 @@ public:
                                                        StringRef Str,
                                                        SMLoc S,
                                                        MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_BTIHint, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_BTIHint, Ctx);
     Op->BTIHint.Val = Val << 1 | 32;
     Op->BTIHint.Data = Str.data();
     Op->BTIHint.Length = Str.size();
@@ -1987,7 +1987,7 @@ public:
   static std::unique_ptr<AArch64Operand>
   CreateShiftExtend(AArch64_AM::ShiftExtendType ShOp, unsigned Val,
                     bool HasExplicitAmount, SMLoc S, SMLoc E, MCContext &Ctx) {
-    auto Op = make_unique<AArch64Operand>(k_ShiftExtend, Ctx);
+    auto Op = std::make_unique<AArch64Operand>(k_ShiftExtend, Ctx);
     Op->ShiftExtend.Type = ShOp;
     Op->ShiftExtend.Amount = Val;
     Op->ShiftExtend.HasExplicitAmount = HasExplicitAmount;

@@ -3428,7 +3428,7 @@ iterator_range<rebase_iterator>
 MachOObjectFile::rebaseTable(Error &Err, MachOObjectFile *O,
                              ArrayRef<uint8_t> Opcodes, bool is64) {
   if (O->BindRebaseSectionTable == nullptr)
-    O->BindRebaseSectionTable = llvm::make_unique<BindRebaseSegInfo>(O);
+    O->BindRebaseSectionTable = std::make_unique<BindRebaseSegInfo>(O);
   MachORebaseEntry Start(&Err, O, Opcodes, is64);
   Start.moveToFirst();
 
@@ -4099,7 +4099,7 @@ MachOObjectFile::bindTable(Error &Err, MachOObjectFile *O,
                            ArrayRef<uint8_t> Opcodes, bool is64,
                            MachOBindEntry::Kind BKind) {
   if (O->BindRebaseSectionTable == nullptr)
-    O->BindRebaseSectionTable = llvm::make_unique<BindRebaseSegInfo>(O);
+    O->BindRebaseSectionTable = std::make_unique<BindRebaseSegInfo>(O);
   MachOBindEntry Start(&Err, O, Opcodes, is64, BKind);
   Start.moveToFirst();
 

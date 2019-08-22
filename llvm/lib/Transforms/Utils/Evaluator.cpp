@@ -469,7 +469,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         return false;  // Cannot handle array allocs.
       }
       Type *Ty = AI->getAllocatedType();
-      AllocaTmps.push_back(llvm::make_unique<GlobalVariable>(
+      AllocaTmps.push_back(std::make_unique<GlobalVariable>(
           Ty, false, GlobalValue::InternalLinkage, UndefValue::get(Ty),
           AI->getName(), /*TLMode=*/GlobalValue::NotThreadLocal,
           AI->getType()->getPointerAddressSpace()));

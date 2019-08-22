@@ -98,7 +98,7 @@ SparcTargetMachine::SparcTargetMachine(
                         getEffectiveSparcCodeModel(
                             CM, getEffectiveRelocModel(RM), is64bit, JIT),
                         OL),
-      TLOF(make_unique<SparcELFTargetObjectFile>()),
+      TLOF(std::make_unique<SparcELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this, is64bit), is64Bit(is64bit) {
   initAsmInfo();
 }
@@ -133,7 +133,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
+    I = std::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
                                           this->is64Bit);
   }
   return I.get();

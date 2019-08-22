@@ -764,7 +764,7 @@ private:
 // Create a ResponseHandler from a given user handler.
 template <typename ChannelT, typename FuncRetT, typename HandlerT>
 std::unique_ptr<ResponseHandler<ChannelT>> createResponseHandler(HandlerT H) {
-  return llvm::make_unique<ResponseHandlerImpl<ChannelT, FuncRetT, HandlerT>>(
+  return std::make_unique<ResponseHandlerImpl<ChannelT, FuncRetT, HandlerT>>(
       std::move(H));
 }
 

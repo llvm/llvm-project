@@ -346,7 +346,7 @@ private:
 ///
 inline std::unique_ptr<AbsoluteSymbolsMaterializationUnit>
 absoluteSymbols(SymbolMap Symbols, VModuleKey K = VModuleKey()) {
-  return llvm::make_unique<AbsoluteSymbolsMaterializationUnit>(
+  return std::make_unique<AbsoluteSymbolsMaterializationUnit>(
       std::move(Symbols), std::move(K));
 }
 
@@ -390,7 +390,7 @@ private:
 /// \endcode
 inline std::unique_ptr<ReExportsMaterializationUnit>
 symbolAliases(SymbolAliasMap Aliases, VModuleKey K = VModuleKey()) {
-  return llvm::make_unique<ReExportsMaterializationUnit>(
+  return std::make_unique<ReExportsMaterializationUnit>(
       nullptr, true, std::move(Aliases), std::move(K));
 }
 
@@ -402,7 +402,7 @@ symbolAliases(SymbolAliasMap Aliases, VModuleKey K = VModuleKey()) {
 inline std::unique_ptr<ReExportsMaterializationUnit>
 reexports(JITDylib &SourceJD, SymbolAliasMap Aliases,
           bool MatchNonExported = false, VModuleKey K = VModuleKey()) {
-  return llvm::make_unique<ReExportsMaterializationUnit>(
+  return std::make_unique<ReExportsMaterializationUnit>(
       &SourceJD, MatchNonExported, std::move(Aliases), std::move(K));
 }
 

@@ -136,7 +136,7 @@ public:
     if (!BufOrError)
       exitWithErrorCode(BufOrError.getError(), InputFile);
 
-    auto Remapper = llvm::make_unique<SymbolRemapper>();
+    auto Remapper = std::make_unique<SymbolRemapper>();
     Remapper->File = std::move(BufOrError.get());
 
     for (line_iterator LineIt(*Remapper->File, /*SkipBlanks=*/true, '#');
@@ -328,7 +328,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
   for (unsigned I = 0; I < NumThreads; ++I)
-    Contexts.emplace_back(llvm::make_unique<WriterContext>(
+    Contexts.emplace_back(std::make_unique<WriterContext>(
         OutputSparse, ErrorLock, WriterErrorCodes));
 
   if (NumThreads == 1) {
