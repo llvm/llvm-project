@@ -229,8 +229,9 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
     search_file_spec.GetDirectory().Clear();
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
-  const bool force_check_inlines =
-      context.module_sp->GetSymbolFile()->ForceInlineSourceFileCheck();
+  bool force_check_inlines = false;
+  if (auto *sym_file = context.module_sp->GetSymbolFile())
+    force_check_inlines = sym_file->ForceInlineSourceFileCheck();
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
