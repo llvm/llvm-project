@@ -2669,7 +2669,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   const GlobalValue *FinalGV = dyn_cast<GlobalValue>(GV->getOperand(0));
   const MCSymbol *FinalSym = AP.getSymbol(FinalGV);
   *ME = AP.getObjFileLowering().getIndirectSymViaGOTPCRel(
-      FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
+      FinalGV, FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
 
   // Update GOT equivalent usage information
   --NumUses;
