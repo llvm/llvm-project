@@ -234,7 +234,7 @@ public:
   }
 
   /// A shorthand version of getNoteTag that doesn't require you to accept
-  /// the BugReporterContext arguments when you don't need it.
+  /// the 'BugReporterContext' argument when you don't need it.
   ///
   /// @param Cb Callback only with 'BugReport &' parameter.
   /// @param IsPrunable Whether the note is prunable. It allows BugReporter
@@ -245,6 +245,19 @@ public:
     return getNoteTag(
         [Cb](BugReporterContext &, BugReport &BR) { return Cb(BR); },
         IsPrunable);
+  }
+
+  /// A shorthand version of getNoteTag that doesn't require you to accept
+  /// the arguments when you don't need it.
+  ///
+  /// @param Cb Callback without parameters.
+  /// @param IsPrunable Whether the note is prunable. It allows BugReporter
+  ///        to omit the note from the report if it would make the displayed
+  ///        bug path significantly shorter.
+  const NoteTag *getNoteTag(std::function<std::string()> &&Cb,
+                            bool IsPrunable = false) {
+    return getNoteTag([Cb](BugReporterContext &, BugReport &) { return Cb(); },
+                      IsPrunable);
   }
 
   /// A shorthand version of getNoteTag that accepts a plain note.

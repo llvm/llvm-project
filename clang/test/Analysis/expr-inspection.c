@@ -38,6 +38,7 @@ void foo(int x) {
 // CHECK-NEXT:     { "symbol": "reg_$0<int x>", "range": "{ [-2147483648, 13] }" }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "dynamic_types": null,
+// CHECK-NEXT:   "dynamic_casts": null,
 // CHECK-NEXT:   "constructing_objects": null,
 // CHECK-NEXT:   "checker_messages": null
 // CHECK-NEXT: }
