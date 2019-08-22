@@ -3,7 +3,7 @@
 package llvm
 
 /*
-#cgo CXXFLAGS: -std=c++11
+#cgo CXXFLAGS: -std=c++14
 #cgo CPPFLAGS: @LLVM_CFLAGS@
 #cgo LDFLAGS: @LLVM_LDFLAGS@
 */

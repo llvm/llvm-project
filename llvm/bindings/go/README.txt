@@ -48,7 +48,7 @@ Alternatively, you can build LLVM yourself, but you must then set the
 CGO_CPPFLAGS, CGO_CXXFLAGS and CGO_LDFLAGS environment variables:
 
     $ export CGO_CPPFLAGS="`/path/to/llvm-build/bin/llvm-config --cppflags`"
-    $ export CGO_CXXFLAGS=-std=c++11
+    $ export CGO_CXXFLAGS=-std=c++14
     $ export CGO_LDFLAGS="`/path/to/llvm-build/bin/llvm-config --ldflags --libs --system-libs all`"
     $ go build -tags byollvm
 

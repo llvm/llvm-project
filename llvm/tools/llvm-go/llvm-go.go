@@ -103,7 +103,7 @@ func llvmFlags() compilerFlags {
 	}
 	return compilerFlags{
 		cpp: llvmConfig("--cppflags"),
-		cxx: "-std=c++11" + " " + stdLibOption,
+		cxx: "-std=c++14" + " " + stdLibOption,
 		ld:  ldflags,
 	}
 }
