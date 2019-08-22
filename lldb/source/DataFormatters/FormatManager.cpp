@@ -47,7 +47,6 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatFloat, 'f', "float"},
     {eFormatOctal, 'o', "octal"},
     {eFormatOSType, 'O', "OSType"},
-    {eFormatUnicode8, 'u', "unicode8"},
     {eFormatUnicode16, 'U', "unicode16"},
     {eFormatUnicode32, '\0', "unicode32"},
     {eFormatUnsigned, 'u', "unsigned decimal"},
@@ -70,7 +69,9 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatAddressInfo, 'A', "address"},
     {eFormatHexFloat, '\0', "hex float"},
     {eFormatInstruction, 'i', "instruction"},
-    {eFormatVoid, 'v', "void"}};
+    {eFormatVoid, 'v', "void"},
+    {eFormatUnicode8, 'u', "unicode8"},
+};
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
                   kNumFormats,
