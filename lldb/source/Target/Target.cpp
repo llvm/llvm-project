@@ -2176,7 +2176,6 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
             "No expression support for any languages",
             llvm::inconvertibleErrorCode());
       language = (LanguageType)languages_for_expressions.bitvector.find_first();
-<<<<<<< HEAD
     }
   }
 
@@ -2262,8 +2261,6 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
             "The REPL and expressions are unavailable.\n");
         error_stream_sp->Flush();
       }
-=======
->>>>>>> 92900e57a93b33d320642356942208e13566ce7c
     }
   }
   return type_system_or_err;
