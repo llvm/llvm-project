@@ -126,9 +126,9 @@ insert-before or insert-after.");
     bool m_force;
   };
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
 
     const size_t argc = request.GetParsedLine().GetArgumentCount();
     const char *arg = nullptr;
@@ -164,7 +164,6 @@ insert-before or insert-after.");
         }
       }
     }
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -271,13 +270,12 @@ public:
 
   ~CommandObjectSettingsShow() override = default;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -527,13 +525,12 @@ public:
 
   ~CommandObjectSettingsList() override = default;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -615,14 +612,13 @@ public:
 
   bool WantsCompletion() override { return true; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -728,16 +724,14 @@ public:
   // !WantsRawCommandString.
   bool WantsCompletion() override { return true; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -826,16 +820,14 @@ public:
   // !WantsRawCommandString.
   bool WantsCompletion() override { return true; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -929,16 +921,14 @@ public:
   // !WantsRawCommandString.
   bool WantsCompletion() override { return true; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -1021,16 +1011,14 @@ public:
   // !WantsRawCommandString.
   bool WantsCompletion() override { return true; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -1100,16 +1088,14 @@ public:
 
   ~CommandObjectSettingsClear() override = default;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-
-    return request.GetNumberOfMatches();
   }
 
 protected:

@@ -16,25 +16,45 @@
 #include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
+enum class CompletionMode {
+  Normal,
+  // The full line has been rewritten by the completion.
+  RewriteLine,
+};
+
 class CompletionResult {
+public:
   /// A single completion and all associated data.
-  struct Completion {
-    Completion(llvm::StringRef completion, llvm::StringRef description)
-        : m_completion(completion.str()), m_descripton(description.str()) {}
+  class Completion {
 
     std::string m_completion;
     std::string m_descripton;
+    CompletionMode m_mode;
+
+  public:
+    Completion(llvm::StringRef completion, llvm::StringRef description,
+               CompletionMode mode)
+        : m_completion(completion.str()), m_descripton(description.str()),
+          m_mode(mode) {}
+    const std::string &GetCompletion() const { return m_completion; }
+    const std::string &GetDescription() const { return m_descripton; }
+    CompletionMode GetMode() const { return m_mode; }
 
     /// Generates a string that uniquely identifies this completion result.
     std::string GetUniqueKey() const;
   };
+
+private:
   std::vector<Completion> m_results;
 
   /// List of added completions so far. Used to filter out duplicates.
   llvm::StringSet<> m_added_values;
 
 public:
-  void AddResult(llvm::StringRef completion, llvm::StringRef description);
+  void AddResult(llvm::StringRef completion, llvm::StringRef description,
+                 CompletionMode mode);
+
+  llvm::ArrayRef<Completion> GetResults() const { return m_results; }
 
   /// Adds all collected completion matches to the given list.
   /// The list will be cleared before the results are added. The number of
@@ -87,15 +107,15 @@ public:
 
   const Args &GetPartialParsedLine() const { return m_partial_parsed_line; }
 
+  const Args::ArgEntry &GetParsedArg() {
+    return GetParsedLine()[GetCursorIndex()];
+  }
+
   void SetCursorIndex(int i) { m_cursor_index = i; }
   int GetCursorIndex() const { return m_cursor_index; }
 
   void SetCursorCharPosition(int pos) { m_cursor_char_position = pos; }
   int GetCursorCharPosition() const { return m_cursor_char_position; }
-
-  bool GetWordComplete() { return m_word_complete; }
-
-  void SetWordComplete(bool v) { m_word_complete = v; }
 
   /// Adds a possible completion string. If the completion was already
   /// suggested before, it will not be added to the list of results. A copy of
@@ -106,8 +126,9 @@ public:
   /// \param match An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   void AddCompletion(llvm::StringRef completion,
-                     llvm::StringRef description = "") {
-    m_result.AddResult(completion, description);
+                     llvm::StringRef description = "",
+                     CompletionMode mode = CompletionMode::Normal) {
+    m_result.AddResult(completion, description, mode);
   }
 
   /// Adds multiple possible completion strings.
@@ -136,10 +157,6 @@ public:
                     descriptions.GetStringAtIndex(i));
   }
 
-  std::size_t GetNumberOfMatches() const {
-    return m_result.GetNumberOfResults();
-  }
-
   llvm::StringRef GetCursorArgument() const {
     return GetParsedLine().GetArgumentAtIndex(GetCursorIndex());
   }
@@ -161,9 +178,6 @@ private:
   int m_cursor_index;
   /// The cursor position in the argument indexed by m_cursor_index.
   int m_cursor_char_position;
-  /// \btrue if this is a complete option value (a space will be inserted
-  /// after the completion.)  \bfalse otherwise.
-  bool m_word_complete = false;
 
   /// The result this request is supposed to fill out.
   /// We keep this object private to ensure that no backend can in any way

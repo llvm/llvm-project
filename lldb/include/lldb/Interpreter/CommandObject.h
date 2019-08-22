@@ -232,10 +232,7 @@ public:
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
-  ///
-  /// \return
-  ///     \btrue if we were in an option, \bfalse otherwise.
-  virtual int HandleCompletion(CompletionRequest &request);
+  virtual void HandleCompletion(CompletionRequest &request);
 
   /// The input array contains a parsed version of the line.  The insertion
   /// point is given by cursor_index (the index in input of the word containing
@@ -250,14 +247,9 @@ public:
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
-  ///
-  /// \return
-  ///     The number of completions.
-  virtual int
+  virtual void
   HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) {
-    return 0;
-  }
+                           OptionElementVector &opt_element_vector) {}
 
   bool HelpTextContainsWord(llvm::StringRef search_word,
                             bool search_short_help = true,

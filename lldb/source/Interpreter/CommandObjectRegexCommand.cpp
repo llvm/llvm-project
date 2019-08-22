@@ -84,13 +84,9 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
   return false;
 }
 
-int CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
+void CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
-    return request.GetNumberOfMatches();
-  } else {
-    request.SetWordComplete(false);
   }
-  return 0;
 }

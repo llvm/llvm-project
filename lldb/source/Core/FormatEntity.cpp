@@ -2352,33 +2352,31 @@ static void AddMatches(const FormatEntity::Entry::Definition *def,
   }
 }
 
-size_t FormatEntity::AutoComplete(CompletionRequest &request) {
+void FormatEntity::AutoComplete(CompletionRequest &request) {
   llvm::StringRef str = request.GetCursorArgumentPrefix();
-
-  request.SetWordComplete(false);
 
   const size_t dollar_pos = str.rfind('$');
   if (dollar_pos == llvm::StringRef::npos)
-    return 0;
+    return;
 
   // Hitting TAB after $ at the end of the string add a "{"
   if (dollar_pos == str.size() - 1) {
     std::string match = str.str();
     match.append("{");
     request.AddCompletion(match);
-    return 1;
+    return;
   }
 
   if (str[dollar_pos + 1] != '{')
-    return 0;
+    return;
 
   const size_t close_pos = str.find('}', dollar_pos + 2);
   if (close_pos != llvm::StringRef::npos)
-    return 0;
+    return;
 
   const size_t format_pos = str.find('%', dollar_pos + 2);
   if (format_pos != llvm::StringRef::npos)
-    return 0;
+    return;
 
   llvm::StringRef partial_variable(str.substr(dollar_pos + 2));
   if (partial_variable.empty()) {
@@ -2386,7 +2384,7 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
     StringList new_matches;
     AddMatches(&g_root, str, llvm::StringRef(), new_matches);
     request.AddCompletions(new_matches);
-    return request.GetNumberOfMatches();
+    return;
   }
 
   // We have a partially specified variable, find it
@@ -2394,7 +2392,7 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
   const FormatEntity::Entry::Definition *entry_def =
       FindEntry(partial_variable, &g_root, remainder);
   if (!entry_def)
-    return 0;
+    return;
 
   const size_t n = entry_def->num_children;
 
@@ -2406,7 +2404,6 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
     } else {
       // "${thread.id" <TAB>
       request.AddCompletion(MakeMatch(str, "}"));
-      request.SetWordComplete(true);
     }
   } else if (remainder.equals(".")) {
     // "${thread." <TAB>
@@ -2420,5 +2417,4 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
     AddMatches(entry_def, str, remainder, new_matches);
     request.AddCompletions(new_matches);
   }
-  return request.GetNumberOfMatches();
 }
