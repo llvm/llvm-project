@@ -407,6 +407,39 @@ void f() {
 }
 } // end of namespace condition_written_in_nested_stackframe_before_assignment
 
+namespace dont_explain_foreach_loops {
+
+struct Iterator {
+  int *pos;
+  bool operator!=(Iterator other) const {
+    return pos && other.pos && pos != other.pos;
+  }
+  int operator*();
+  Iterator operator++();
+};
+
+struct Container {
+  Iterator begin();
+  Iterator end();
+};
+
+void f(Container Cont) {
+  int flag = 0;
+  int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
+  for (int i : Cont)
+    if (i) // expected-note-re   {{{{^}}Assuming 'i' is not equal to 0{{$}}}}
+           // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+           // debug-note-re@-2{{{{^}}Tracking condition 'i'{{$}}}}
+      flag = i;
+
+  if (flag) // expected-note-re{{{{^}}'flag' is not equal to 0{{$}}}}
+            // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
+            // debug-note-re@-2{{{{^}}Tracking condition 'flag'{{$}}}}
+    *x = 5; // expected-warning{{Dereference of null pointer}}
+            // expected-note@-1{{Dereference of null pointer}}
+}
+} // end of namespace dont_explain_foreach_loops
+
 namespace condition_lambda_capture_by_reference_last_write {
 int getInt();
 

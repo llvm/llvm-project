@@ -1800,6 +1800,11 @@ PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
     return nullptr;
 
   if (ControlDeps.isControlDependent(OriginB, NB)) {
+    // We don't really want to explain for range loops. Evidence suggests that
+    // the only thing that leads to is the addition of calls to operator!=.
+    if (isa<CXXForRangeStmt>(NB->getTerminator()))
+      return nullptr;
+
     if (const Expr *Condition = NB->getLastCondition()) {
       // Keeping track of the already tracked conditions on a visitor level
       // isn't sufficient, because a new visitor is created for each tracked
