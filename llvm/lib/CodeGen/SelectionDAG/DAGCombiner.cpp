@@ -20084,16 +20084,9 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags) {
       // Newton iterations: Est = Est + Est (1 - Arg * Est)
       for (int i = 0; i < Iterations; ++i) {
         SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, Est, Flags);
-        AddToWorklist(NewEst.getNode());
-
         NewEst = DAG.getNode(ISD::FSUB, DL, VT, FPOne, NewEst, Flags);
-        AddToWorklist(NewEst.getNode());
-
         NewEst = DAG.getNode(ISD::FMUL, DL, VT, Est, NewEst, Flags);
-        AddToWorklist(NewEst.getNode());
-
         Est = DAG.getNode(ISD::FADD, DL, VT, Est, NewEst, Flags);
-        AddToWorklist(Est.getNode());
       }
     }
     return Est;
@@ -20118,31 +20111,19 @@ SDValue DAGCombiner::buildSqrtNROneConst(SDValue Arg, SDValue Est,
   // We now need 0.5 * Arg which we can write as (1.5 * Arg - Arg) so that
   // this entire sequence requires only one FP constant.
   SDValue HalfArg = DAG.getNode(ISD::FMUL, DL, VT, ThreeHalves, Arg, Flags);
-  AddToWorklist(HalfArg.getNode());
-
   HalfArg = DAG.getNode(ISD::FSUB, DL, VT, HalfArg, Arg, Flags);
-  AddToWorklist(HalfArg.getNode());
 
   // Newton iterations: Est = Est * (1.5 - HalfArg * Est * Est)
   for (unsigned i = 0; i < Iterations; ++i) {
     SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Est, Est, Flags);
-    AddToWorklist(NewEst.getNode());
-
     NewEst = DAG.getNode(ISD::FMUL, DL, VT, HalfArg, NewEst, Flags);
-    AddToWorklist(NewEst.getNode());
-
     NewEst = DAG.getNode(ISD::FSUB, DL, VT, ThreeHalves, NewEst, Flags);
-    AddToWorklist(NewEst.getNode());
-
     Est = DAG.getNode(ISD::FMUL, DL, VT, Est, NewEst, Flags);
-    AddToWorklist(Est.getNode());
   }
 
   // If non-reciprocal square root is requested, multiply the result by Arg.
-  if (!Reciprocal) {
+  if (!Reciprocal)
     Est = DAG.getNode(ISD::FMUL, DL, VT, Est, Arg, Flags);
-    AddToWorklist(Est.getNode());
-  }
 
   return Est;
 }
@@ -20168,13 +20149,8 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
   // E = (E * -0.5) * ((A * E) * E + -3.0)
   for (unsigned i = 0; i < Iterations; ++i) {
     SDValue AE = DAG.getNode(ISD::FMUL, DL, VT, Arg, Est, Flags);
-    AddToWorklist(AE.getNode());
-
     SDValue AEE = DAG.getNode(ISD::FMUL, DL, VT, AE, Est, Flags);
-    AddToWorklist(AEE.getNode());
-
     SDValue RHS = DAG.getNode(ISD::FADD, DL, VT, AEE, MinusThree, Flags);
-    AddToWorklist(RHS.getNode());
 
     // When calculating a square root at the last iteration build:
     // S = ((A * E) * -0.5) * ((A * E) * E + -3.0)
@@ -20187,10 +20163,8 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
       // SQRT: LHS = (A * E) * -0.5
       LHS = DAG.getNode(ISD::FMUL, DL, VT, AE, MinusHalf, Flags);
     }
-    AddToWorklist(LHS.getNode());
 
     Est = DAG.getNode(ISD::FMUL, DL, VT, LHS, RHS, Flags);
-    AddToWorklist(Est.getNode());
   }
 
   return Est;
@@ -20247,16 +20221,11 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
           SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
           SDValue IsDenorm = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
           Est = DAG.getNode(SelOpcode, DL, VT, IsDenorm, FPZero, Est);
-          AddToWorklist(Fabs.getNode());
-          AddToWorklist(IsDenorm.getNode());
-          AddToWorklist(Est.getNode());
         } else {
           // X == 0.0 ? 0.0 : Est
           SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
           SDValue IsZero = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
           Est = DAG.getNode(SelOpcode, DL, VT, IsZero, FPZero, Est);
-          AddToWorklist(IsZero.getNode());
-          AddToWorklist(Est.getNode());
         }
       }
     }

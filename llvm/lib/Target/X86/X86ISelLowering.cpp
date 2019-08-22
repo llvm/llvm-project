@@ -8915,7 +8915,7 @@ static SDValue getHopForBuildVector(const BuildVectorSDNode *BV,
   // If we don't need the upper xmm, then perform as a xmm hop.
   unsigned HalfNumElts = NumElts / 2;
   if (VT.is256BitVector() && DemandedElts.lshr(HalfNumElts) == 0) {
-    MVT HalfVT = MVT::getVectorVT(VT.getScalarType(), HalfNumElts);
+    MVT HalfVT = VT.getHalfNumVectorElementsVT();
     V0 = extractSubVector(V0, 0, DAG, SDLoc(BV), 128);
     V1 = extractSubVector(V1, 0, DAG, SDLoc(BV), 128);
     SDValue Half = DAG.getNode(HOpcode, SDLoc(BV), HalfVT, V0, V1);
@@ -9846,8 +9846,7 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 
   // If we have more than 2 non-zeros, build each half separately.
   if (NumNonZero > 2) {
-    MVT HalfVT = MVT::getVectorVT(ResVT.getVectorElementType(),
-                                  ResVT.getVectorNumElements()/2);
+    MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
     ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
                              Ops.slice(0, NumOperands/2));
@@ -9936,8 +9935,7 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
   }
 
   if (NumOperands > 2) {
-    MVT HalfVT = MVT::getVectorVT(ResVT.getVectorElementType(),
-                                  ResVT.getVectorNumElements()/2);
+    MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
     ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
                              Ops.slice(0, NumOperands/2));
@@ -15020,9 +15018,8 @@ static SDValue getShuffleHalfVectors(const SDLoc &DL, SDValue V1, SDValue V2,
   assert(V1.getValueType().isSimple() && "Expecting only simple types");
 
   MVT VT = V1.getSimpleValueType();
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned HalfNumElts = NumElts / 2;
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
+  MVT HalfVT = VT.getHalfNumVectorElementsVT();
+  unsigned HalfNumElts = HalfVT.getVectorNumElements();
 
   auto getHalfVector = [&](int HalfIdx) {
     if (HalfIdx < 0)
@@ -15061,9 +15058,8 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Upper half is undef and lower half is whole upper subvector.
   // e.g. vector_shuffle <4, 5, 6, 7, u, u, u, u> or <2, 3, u, u>
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned HalfNumElts = NumElts / 2;
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
+  MVT HalfVT = VT.getHalfNumVectorElementsVT();
+  unsigned HalfNumElts = HalfVT.getVectorNumElements();
   if (!UndefLower &&
       isSequentialOrUndefInRange(Mask, 0, HalfNumElts, HalfNumElts)) {
     SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
@@ -18864,10 +18860,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   //   Use vpunpckhdq for 4 upper elements  v4i32 -> v2i64.
   //   Concat upper and lower parts.
   //
-
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                VT.getVectorNumElements() / 2);
-
+  MVT HalfVT = VT.getHalfNumVectorElementsVT();
   SDValue OpLo = DAG.getNode(ExtendInVecOpc, dl, HalfVT, In);
 
   // Short-circuit if we can determine that each 128-bit half is the same value.
@@ -21321,8 +21314,8 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
   // pre-AVX2 256-bit extensions need to be split into 128-bit instructions.
   if (Subtarget.hasAVX()) {
     assert(VT.is256BitVector() && "256-bit vector expected");
-    int HalfNumElts = NumElts / 2;
-    MVT HalfVT = MVT::getVectorVT(SVT, HalfNumElts);
+    MVT HalfVT = VT.getHalfNumVectorElementsVT();
+    int HalfNumElts = HalfVT.getVectorNumElements();
 
     unsigned NumSrcElts = InVT.getVectorNumElements();
     SmallVector<int, 16> HiMask(NumSrcElts, SM_SentinelUndef);
@@ -21422,10 +21415,7 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   // for v4i32 the high shuffle mask will be {2, 3, -1, -1}
   // use vpmovsx instruction to extend v4i32 -> v2i64; v8i16 -> v4i32
   // concat the vectors to original VT
-
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                VT.getVectorNumElements() / 2);
-
+  MVT HalfVT = VT.getHalfNumVectorElementsVT();
   SDValue OpLo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, HalfVT, In);
 
   unsigned NumElems = InVT.getVectorNumElements();

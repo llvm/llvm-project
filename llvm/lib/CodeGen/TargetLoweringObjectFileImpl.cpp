@@ -1108,8 +1108,8 @@ MCSymbol *TargetLoweringObjectFileMachO::getCFIPersonalitySymbol(
 }
 
 const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
-    const MCSymbol *Sym, const MCValue &MV, int64_t Offset,
-    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   // Although MachO 32-bit targets do not explicitly have a GOTPCREL relocation
   // as 64-bit do, we replace the GOT equivalent by accessing the final symbol
   // through a non_lazy_ptr stub instead. One advantage is that it allows the
@@ -1166,12 +1166,10 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);
 
   MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(Stub);
-  if (!StubSym.getPointer()) {
-    bool IsIndirectLocal = Sym->isDefined() && !Sym->isExternal();
-    // With the assumption that IsIndirectLocal == GV->hasLocalLinkage().
+
+  if (!StubSym.getPointer())
     StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
-                                                 !IsIndirectLocal);
-  }
+                                                 !GV->hasLocalLinkage());
 
   const MCExpr *BSymExpr =
     MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);

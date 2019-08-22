@@ -377,6 +377,15 @@ namespace llvm {
               SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny);
     }
 
+    /// Return a VT for a vector type with the same element type but
+    /// half the number of elements.
+    MVT getHalfNumVectorElementsVT() const {
+      MVT EltVT = getVectorElementType();
+      auto EltCnt = getVectorElementCount();
+      assert(!(EltCnt.Min & 1) && "Splitting vector, but not in half!");
+      return getVectorVT(EltVT, EltCnt / 2);
+    }
+
     /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
       unsigned NElts = getVectorNumElements();

@@ -1568,6 +1568,11 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    4 },
   };
 
+  static const TypeConversionCostTblEntry SSE2ConversionTblWide[] = {
+    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v4i32, 2*10 },
+    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i32, 2*10 },
+  };
+
   static const TypeConversionCostTblEntry SSE2ConversionTbl[] = {
     // These are somewhat magic numbers justified by looking at the output of
     // Intel's IACA, running some kernels and making sure when we take
@@ -1632,6 +1637,13 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   std::pair<int, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);
   std::pair<int, MVT> LTDest = TLI->getTypeLegalizationCost(DL, Dst);
+
+  if (ST->hasSSE2() && !ST->hasAVX() &&
+      ExperimentalVectorWideningLegalization) {
+    if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTblWide, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return LTSrc.first * Entry->Cost;
+  }
 
   if (ST->hasSSE2() && !ST->hasAVX()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
@@ -1701,6 +1713,12 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   if (ST->hasSSE41()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
+                                                   SimpleDstTy, SimpleSrcTy))
+      return Entry->Cost;
+  }
+
+  if (ST->hasSSE2() && ExperimentalVectorWideningLegalization) {
+    if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTblWide, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
       return Entry->Cost;
   }

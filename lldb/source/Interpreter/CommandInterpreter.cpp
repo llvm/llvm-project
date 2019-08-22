@@ -1754,19 +1754,17 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   return result.Succeeded();
 }
 
-int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
-  int num_command_matches = 0;
+void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   bool look_for_subcommand = false;
 
   // For any of the command completions a unique match will be a complete word.
-  request.SetWordComplete(true);
 
   if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
     StringList new_matches, descriptions;
-    num_command_matches = GetCommandNamesMatchingPartialString(
-        "", include_aliases, new_matches, descriptions);
+    GetCommandNamesMatchingPartialString("", include_aliases, new_matches,
+                                         descriptions);
     request.AddCompletions(new_matches, descriptions);
   } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
@@ -1776,15 +1774,12 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
         GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0),
                          &new_matches, &new_descriptions);
 
-    if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
+    if (new_matches.GetSize() && cmd_obj && cmd_obj->IsMultiwordObject() &&
         new_matches.GetStringAtIndex(0) != nullptr &&
         strcmp(request.GetParsedLine().GetArgumentAtIndex(0),
                new_matches.GetStringAtIndex(0)) == 0) {
-      if (request.GetParsedLine().GetArgumentCount() == 1) {
-        request.SetWordComplete(true);
-      } else {
+      if (request.GetParsedLine().GetArgumentCount() != 1) {
         look_for_subcommand = true;
-        num_command_matches = 0;
         new_matches.DeleteStringAtIndex(0);
         new_descriptions.DeleteStringAtIndex(0);
         request.GetParsedLine().AppendArgument(llvm::StringRef());
@@ -1793,7 +1788,6 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
       }
     }
     request.AddCompletions(new_matches, new_descriptions);
-    num_command_matches = request.GetNumberOfMatches();
   }
 
   if (request.GetCursorIndex() > 0 || look_for_subcommand) {
@@ -1802,77 +1796,32 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
     // matching initial command:
     CommandObject *command_object =
         GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0));
-    if (command_object == nullptr) {
-      return 0;
-    } else {
+    if (command_object) {
       request.GetParsedLine().Shift();
       request.SetCursorIndex(request.GetCursorIndex() - 1);
-      num_command_matches = command_object->HandleCompletion(request);
+      command_object->HandleCompletion(request);
     }
   }
-
-  return num_command_matches;
 }
 
-int CommandInterpreter::HandleCompletion(CompletionRequest &orig_request) {
-  // Start a new subrequest we can modify.
-  CompletionResult result;
-  CompletionRequest request(orig_request.GetRawLine(),
-                            orig_request.GetRawCursorPos(), result);
+void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
+
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
-  const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
-  StringList matches, descriptions;
+  llvm::StringRef first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
 
-  if (first_arg) {
-    if (first_arg[0] == m_comment_char)
-      return 0;
-    else if (first_arg[0] == CommandHistory::g_repeat_char) {
-      if (auto hist_str = m_command_history.FindString(first_arg)) {
-        matches.InsertStringAtIndex(0, *hist_str);
-        descriptions.InsertStringAtIndex(0, "Previous command history event");
-        return -2;
-      } else
-        return 0;
+  if (!first_arg.empty()) {
+    if (first_arg.front() == m_comment_char)
+      return;
+    if (first_arg.front() == CommandHistory::g_repeat_char) {
+      if (auto hist_str = m_command_history.FindString(first_arg))
+        request.AddCompletion(*hist_str, "Previous command history event",
+                              CompletionMode::RewriteLine);
+      return;
     }
   }
 
-  int num_command_matches = HandleCompletionMatches(request);
-  result.GetMatches(matches);
-  result.GetDescriptions(descriptions);
-
-  if (num_command_matches <= 0)
-    return num_command_matches;
-
-  if (request.GetParsedLine().GetArgumentCount() == 0) {
-    // If we got an empty string, insert nothing.
-    matches.InsertStringAtIndex(0, "");
-    descriptions.InsertStringAtIndex(0, "");
-  } else {
-    // Now figure out if there is a common substring, and if so put that in
-    // element 0, otherwise put an empty string in element 0.
-    std::string command_partial_str = request.GetCursorArgumentPrefix().str();
-
-    std::string common_prefix = matches.LongestCommonPrefix();
-    const size_t partial_name_len = command_partial_str.size();
-    common_prefix.erase(0, partial_name_len);
-
-    // If we matched a unique single command, add a space... Only do this if
-    // the completer told us this was a complete word, however...
-    if (num_command_matches == 1 && request.GetWordComplete()) {
-      char quote_char = request.GetParsedLine()[request.GetCursorIndex()].quote;
-      common_prefix =
-          Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
-      if (quote_char != '\0')
-        common_prefix.push_back(quote_char);
-      common_prefix.push_back(' ');
-    }
-    matches.InsertStringAtIndex(0, common_prefix.c_str());
-    descriptions.InsertStringAtIndex(0, "");
-  }
-  // Add completion to original request.
-  orig_request.AddCompletions(matches, descriptions);
-  return num_command_matches;
+  HandleCompletionMatches(request);
 }
 
 CommandInterpreter::~CommandInterpreter() {}

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Implementations for preprocessor tracking.
+/// Implementations for preprocessor tracking.
 ///
 /// See the header for details.
 ///

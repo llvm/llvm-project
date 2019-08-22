@@ -500,20 +500,16 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions have register
-  // inputs modeled as normal uses instead of implicit uses.  As such, truncate
-  // off all but the first operand (the callee).  FIXME: Change isel.
+  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions used to have
+  // register inputs modeled as normal uses instead of implicit uses.  As such,
+  // they we used to truncate off all but the first operand (the callee). This
+  // issue seems to have been fixed at some point. This assert verifies that.
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
   case X86::CALL64r:
-  case X86::CALL64pcrel32: {
-    unsigned Opcode = OutMI.getOpcode();
-    MCOperand Saved = OutMI.getOperand(0);
-    OutMI = MCInst();
-    OutMI.setOpcode(Opcode);
-    OutMI.addOperand(Saved);
+  case X86::CALL64pcrel32:
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     break;
-  }
 
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
@@ -552,21 +548,15 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       goto SetTailJmpOpcode;
 
     SetTailJmpOpcode:
-      MCOperand Saved = OutMI.getOperand(0);
-      OutMI = MCInst();
+      assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
       OutMI.setOpcode(Opcode);
-      OutMI.addOperand(Saved);
       break;
     }
 
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC: {
-    MCOperand Saved = OutMI.getOperand(0);
-    MCOperand Saved2 = OutMI.getOperand(1);
-    OutMI = MCInst();
+    assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
     OutMI.setOpcode(X86::JCC_1);
-    OutMI.addOperand(Saved);
-    OutMI.addOperand(Saved2);
     break;
   }
 

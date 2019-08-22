@@ -1217,57 +1217,34 @@ file_t getStdinHandle() { return ::GetStdHandle(STD_INPUT_HANDLE); }
 file_t getStdoutHandle() { return ::GetStdHandle(STD_OUTPUT_HANDLE); }
 file_t getStderrHandle() { return ::GetStdHandle(STD_ERROR_HANDLE); }
 
-std::error_code readNativeFileImpl(file_t FileHandle, char *BufPtr, size_t BytesToRead,
-                                   size_t *BytesRead, OVERLAPPED *Overlap) {
+Expected<size_t> readNativeFileImpl(file_t FileHandle,
+                                    MutableArrayRef<char> Buf,
+                                    OVERLAPPED *Overlap) {
   // ReadFile can only read 2GB at a time. The caller should check the number of
   // bytes and read in a loop until termination.
-  DWORD BytesToRead32 =
-      std::min(size_t(std::numeric_limits<DWORD>::max()), BytesToRead);
-  DWORD BytesRead32 = 0;
-  bool Success =
-      ::ReadFile(FileHandle, BufPtr, BytesToRead32, &BytesRead32, Overlap);
-  *BytesRead = BytesRead32;
-  if (!Success) {
-    DWORD Err = ::GetLastError();
-    // EOF is not an error.
-    if (Err == ERROR_BROKEN_PIPE || Err == ERROR_HANDLE_EOF)
-      return std::error_code();
-    return mapWindowsError(Err);
-  }
-  return std::error_code();
+  DWORD BytesToRead =
+      std::min(size_t(std::numeric_limits<DWORD>::max()), Buf.size());
+  DWORD BytesRead = 0;
+  if (::ReadFile(FileHandle, Buf.data(), BytesToRead, &BytesRead, Overlap))
+    return BytesRead;
+  DWORD Err = ::GetLastError();
+  // EOF is not an error.
+  if (Err == ERROR_BROKEN_PIPE || Err == ERROR_HANDLE_EOF)
+    return BytesRead;
+  return errorCodeToError(mapWindowsError(Err));
 }
 
-std::error_code readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf,
-                               size_t *BytesRead) {
-  return readNativeFileImpl(FileHandle, Buf.data(), Buf.size(), BytesRead,
-                            /*Overlap=*/nullptr);
+Expected<size_t> readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf) {
+  return readNativeFileImpl(FileHandle, Buf, /*Overlap=*/nullptr);
 }
 
-std::error_code readNativeFileSlice(file_t FileHandle,
-                                    MutableArrayRef<char> Buf, size_t Offset) {
-  char *BufPtr = Buf.data();
-  size_t BytesLeft = Buf.size();
-
-  while (BytesLeft) {
-    uint64_t CurOff = Buf.size() - BytesLeft + Offset;
-    OVERLAPPED Overlapped = {};
-    Overlapped.Offset = uint32_t(CurOff);
-    Overlapped.OffsetHigh = uint32_t(uint64_t(CurOff) >> 32);
-
-    size_t BytesRead = 0;
-    if (auto EC = readNativeFileImpl(FileHandle, BufPtr, BytesLeft, &BytesRead,
-                                     &Overlapped))
-      return EC;
-
-    // Once we reach EOF, zero the remaining bytes in the buffer.
-    if (BytesRead == 0) {
-      memset(BufPtr, 0, BytesLeft);
-      break;
-    }
-    BytesLeft -= BytesRead;
-    BufPtr += BytesRead;
-  }
-  return std::error_code();
+Expected<size_t> readNativeFileSlice(file_t FileHandle,
+                                     MutableArrayRef<char> Buf,
+                                     uint64_t Offset) {
+  OVERLAPPED Overlapped = {};
+  Overlapped.Offset = uint32_t(Offset);
+  Overlapped.OffsetHigh = uint32_t(Offset >> 32);
+  return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
 std::error_code closeFile(file_t &F) {

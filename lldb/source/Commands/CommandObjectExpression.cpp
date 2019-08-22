@@ -166,9 +166,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   }
 
   default:
-    error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                   short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;
@@ -294,7 +292,7 @@ CommandObjectExpression::~CommandObjectExpression() = default;
 
 Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
-int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
+void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(m_varobj_options.use_objc);
   options.SetLanguage(m_command_options.language);
@@ -311,7 +309,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   // This didn't work, so let's get out before we start doing things that
   // expect a valid frame pointer.
   if (m_interpreter.GetExecutionContext().GetFramePtr() == nullptr)
-    return 0;
+    return;
 
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
 
@@ -321,7 +319,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     target = GetDummyTarget();
 
   if (!target)
-    return 0;
+    return;
 
   unsigned cursor_pos = request.GetRawCursorPos();
   llvm::StringRef code = request.GetRawLine();
@@ -341,7 +339,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   // exit.
   // FIXME: We should complete the options here.
   if (cursor_pos < raw_start)
-    return 0;
+    return;
 
   // Make the cursor_pos again relative to the start of the code string.
   assert(cursor_pos >= raw_start);
@@ -354,10 +352,9 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
       options, nullptr, error));
   if (error.Fail())
-    return 0;
+    return;
 
   expr->Complete(exe_ctx, request, cursor_pos);
-  return request.GetNumberOfMatches();
 }
 
 static lldb_private::Status

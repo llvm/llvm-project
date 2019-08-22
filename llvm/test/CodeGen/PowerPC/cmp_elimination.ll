@@ -718,14 +718,13 @@ if.end:
 define void @func28(i32 signext %a) {
 ; CHECK-LABEL: @func28
 ; CHECK: cmplwi	 [[REG1:[0-9]+]], [[REG2:[0-9]+]]
-; CHECK: .[[LABEL2:[A-Z0-9_]+]]:
-; CHECK: cmpwi   [[REG1]], [[REG2]]
-; CHECK: ble     0, .[[LABEL1:[A-Z0-9_]+]]
+; CHECK: .[[LABEL1:[A-Z0-9_]+]]:
 ; CHECK-NOT: cmp
-; CHECK: bne     0, .[[LABEL2]]
+; CHECK: bne	 0, .[[LABEL2:[A-Z0-9_]+]]
 ; CHECK: bl dummy1
-; CHECK: b .[[LABEL2]]
-; CHECK: .[[LABEL1]]:
+; CHECK: .[[LABEL2]]:
+; CHECK: cmpwi	 [[REG1]], [[REG2]]
+; CHECK: bgt	 0, .[[LABEL1]]
 ; CHECK: blr
 entry:
   br label %do.body

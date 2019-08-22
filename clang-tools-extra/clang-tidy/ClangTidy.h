@@ -33,14 +33,14 @@ public:
       ClangTidyContext &Context,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
 
-  /// \brief Returns an ASTConsumer that runs the specified clang-tidy checks.
+  /// Returns an ASTConsumer that runs the specified clang-tidy checks.
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler, StringRef File);
 
-  /// \brief Get the list of enabled checks.
+  /// Get the list of enabled checks.
   std::vector<std::string> getCheckNames();
 
-  /// \brief Get the union of options from all checks.
+  /// Get the union of options from all checks.
   ClangTidyOptions::OptionMap getCheckOptions();
 
 private:
@@ -49,12 +49,12 @@ private:
   std::unique_ptr<ClangTidyCheckFactories> CheckFactories;
 };
 
-/// \brief Fills the list of check names that are enabled when the provided
+/// Fills the list of check names that are enabled when the provided
 /// filters are applied.
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
                                        bool AllowEnablingAnalyzerAlphaCheckers);
 
-/// \brief Returns the effective check-specific options.
+/// Returns the effective check-specific options.
 ///
 /// The method configures ClangTidy with the specified \p Options and collects
 /// effective options from all created checks. The returned set of options
@@ -64,7 +64,7 @@ ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers);
 
-/// \brief Run a set of clang-tidy checks on a set of files.
+/// Run a set of clang-tidy checks on a set of files.
 ///
 /// \param EnableCheckProfile If provided, it enables check profile collection
 /// in MatchFinder, and will contain the result of the profile.
@@ -82,7 +82,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 // FIXME: This interface will need to be significantly extended to be useful.
 // FIXME: Implement confidence levels for displaying/fixing errors.
 //
-/// \brief Displays the found \p Errors to the users. If \p Fix is true, \p
+/// Displays the found \p Errors to the users. If \p Fix is true, \p
 /// Errors containing fixes are automatically applied and reformatted. If no
 /// clang-format configuration file is found, the given \P FormatStyle is used.
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
@@ -90,7 +90,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
-/// \brief Serializes replacements into YAML and writes them to the specified
+/// Serializes replacements into YAML and writes them to the specified
 /// output stream.
 void exportReplacements(StringRef MainFilePath,
                         const std::vector<ClangTidyError> &Errors,

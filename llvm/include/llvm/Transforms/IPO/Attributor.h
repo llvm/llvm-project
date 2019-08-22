@@ -1349,27 +1349,110 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   static const char ID;
 };
 
+/// State for dereferenceable attribute
+struct DerefState : AbstractState {
+
+  /// State representing for dereferenceable bytes.
+  IntegerState DerefBytesState;
+
+  /// State representing that whether the value is globaly dereferenceable.
+  BooleanState GlobalState;
+
+  /// See AbstractState::isValidState()
+  bool isValidState() const override { return DerefBytesState.isValidState(); }
+
+  /// See AbstractState::isAtFixpoint()
+  bool isAtFixpoint() const override {
+    return !isValidState() ||
+           (DerefBytesState.isAtFixpoint() && GlobalState.isAtFixpoint());
+  }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...)
+  ChangeStatus indicateOptimisticFixpoint() override {
+    DerefBytesState.indicateOptimisticFixpoint();
+    GlobalState.indicateOptimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractState::indicatePessimisticFixpoint(...)
+  ChangeStatus indicatePessimisticFixpoint() override {
+    DerefBytesState.indicatePessimisticFixpoint();
+    GlobalState.indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  /// Update known dereferenceable bytes.
+  void takeKnownDerefBytesMaximum(uint64_t Bytes) {
+    DerefBytesState.takeKnownMaximum(Bytes);
+  }
+
+  /// Update assumed dereferenceable bytes.
+  void takeAssumedDerefBytesMinimum(uint64_t Bytes) {
+    DerefBytesState.takeAssumedMinimum(Bytes);
+  }
+
+  /// Equality for DerefState.
+  bool operator==(const DerefState &R) {
+    return this->DerefBytesState == R.DerefBytesState &&
+           this->GlobalState == R.GlobalState;
+  }
+
+  /// Inequality for IntegerState.
+  bool operator!=(const DerefState &R) { return !(*this == R); }
+
+  /// See IntegerState::operator^=
+  DerefState operator^=(const DerefState &R) {
+    DerefBytesState ^= R.DerefBytesState;
+    GlobalState ^= R.GlobalState;
+    return *this;
+  }
+
+  /// See IntegerState::operator&=
+  DerefState operator&=(const DerefState &R) {
+    DerefBytesState &= R.DerefBytesState;
+    GlobalState &= R.GlobalState;
+    return *this;
+  }
+
+  /// See IntegerState::operator|=
+  DerefState operator|=(const DerefState &R) {
+    DerefBytesState |= R.DerefBytesState;
+    GlobalState |= R.GlobalState;
+    return *this;
+  }
+
+protected:
+  const AANonNull *NonNullAA = nullptr;
+};
+
 /// An abstract interface for all dereferenceable attribute.
 struct AADereferenceable
-    : public IRAttribute<Attribute::Dereferenceable, AbstractAttribute> {
+    : public IRAttribute<Attribute::Dereferenceable,
+                         StateWrapper<DerefState, AbstractAttribute>> {
   AADereferenceable(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
-  virtual bool isAssumedNonNull() const = 0;
+  bool isAssumedNonNull() const {
+    return NonNullAA && NonNullAA->isAssumedNonNull();
+  }
 
   /// Return true if we assume that underlying value is
   /// dereferenceable(_or_null) globally.
-  virtual bool isAssumedGlobal() const = 0;
+  bool isAssumedGlobal() const { return GlobalState.getAssumed(); }
 
   /// Return true if we know that underlying value is
   /// dereferenceable(_or_null) globally.
-  virtual bool isKnownGlobal() const = 0;
+  bool isKnownGlobal() const { return GlobalState.getKnown(); }
 
   /// Return assumed dereferenceable bytes.
-  virtual uint32_t getAssumedDereferenceableBytes() const = 0;
+  uint32_t getAssumedDereferenceableBytes() const {
+    return DerefBytesState.getAssumed();
+  }
 
   /// Return known dereferenceable bytes.
-  virtual uint32_t getKnownDereferenceableBytes() const = 0;
+  uint32_t getKnownDereferenceableBytes() const {
+    return DerefBytesState.getKnown();
+  }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AADereferenceable &createForPosition(const IRPosition &IRP,

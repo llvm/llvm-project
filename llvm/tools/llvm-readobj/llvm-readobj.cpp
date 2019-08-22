@@ -410,11 +410,6 @@ void reportWarning(Error Err, StringRef Input) {
       });
 }
 
-LLVM_ATTRIBUTE_NORETURN void reportError(std::error_code EC, StringRef Input) {
-  assert(EC != readobj_error::success);
-  reportError(errorCodeToError(EC), Input);
-}
-
 } // namespace llvm
 
 static bool isMipsArch(unsigned Arch) {
@@ -474,7 +469,7 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
 
   std::unique_ptr<ObjDumper> Dumper;
   if (std::error_code EC = createDumper(Obj, Writer, Dumper))
-    reportError(EC, FileStr);
+    reportError(errorCodeToError(EC), FileStr);
 
   if (opts::Output == opts::LLVM || opts::InputFilenames.size() > 1 || A) {
     Writer.startLine() << "\n";
@@ -605,7 +600,8 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
     else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
       dumpCOFFImportFile(Imp, Writer);
     else
-      reportError(readobj_error::unrecognized_file_format, Arc->getFileName());
+      reportError(errorCodeToError(readobj_error::unrecognized_file_format),
+                  Arc->getFileName());
   }
   if (Err)
     reportError(std::move(Err), Arc->getFileName());
@@ -654,7 +650,8 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
     dumpWindowsResourceFile(WinRes, Writer);
   else
-    reportError(readobj_error::unrecognized_file_format, File);
+    reportError(errorCodeToError(readobj_error::unrecognized_file_format),
+                File);
 
   CVTypes.Binaries.push_back(std::move(*BinaryOrErr));
 }

@@ -108,11 +108,8 @@ if (COMPILER_RT_HAS_GWP_ASAN)
         ${GWP_ASAN_HEADERS})
     set_target_properties(
         stack_trace_compressor_fuzzer PROPERTIES FOLDER "Fuzzers")
-
-    # TODO(phosek): Remove -nostdlib++ and remove the "no c++ standard library
-    # for compiler-rt" dependency here.
-    target_compile_options(stack_trace_compressor_fuzzer
-        PRIVATE -nostdlib++ -fsanitize=fuzzer-no-link)
+    target_compile_options(
+        stack_trace_compressor_fuzzer PRIVATE -fsanitize=fuzzer-no-link)
     set_target_properties(
         stack_trace_compressor_fuzzer PROPERTIES LINK_FLAGS -fsanitize=fuzzer)
     add_dependencies(stack_trace_compressor_fuzzer fuzzer)

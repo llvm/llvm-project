@@ -324,7 +324,6 @@ private:
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
-  bool EnableHiddenFeatures = false;
 
   std::function<bool(const Tweak &)> TweakFilter;
 

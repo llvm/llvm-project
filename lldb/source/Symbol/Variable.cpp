@@ -583,7 +583,6 @@ static void PrivateAutoComplete(
       case eTypeClassTypedef:
       case eTypeClassVector: {
         request.AddCompletion(prefix_path.str());
-        request.SetWordComplete(true);
       } break;
 
       case eTypeClassClass:
@@ -603,7 +602,6 @@ static void PrivateAutoComplete(
           request.AddCompletion((prefix_path + "->").str());
         else {
           request.AddCompletion(prefix_path.str());
-          request.SetWordComplete(true);
         }
       } break;
       }
@@ -749,12 +747,10 @@ static void PrivateAutoComplete(
   }
 }
 
-size_t Variable::AutoComplete(const ExecutionContext &exe_ctx,
-                              CompletionRequest &request) {
+void Variable::AutoComplete(const ExecutionContext &exe_ctx,
+                            CompletionRequest &request) {
   CompilerType compiler_type;
 
   PrivateAutoComplete(exe_ctx.GetFramePtr(), request.GetCursorArgumentPrefix(),
                       "", compiler_type, request);
-
-  return request.GetNumberOfMatches();
 }

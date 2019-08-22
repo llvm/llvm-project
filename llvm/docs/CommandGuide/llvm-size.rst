@@ -12,4 +12,4 @@ DESCRIPTION
 -----------
 
 :program:`llvm-size` is a tool that prints size information for object files.
-The goal is to make it a drop-in replacement for GNU’s :program:`size`.
+The goal is to make it a drop-in replacement for GNU's :program:`size`.

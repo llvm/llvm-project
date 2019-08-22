@@ -18,7 +18,7 @@
 namespace llvm {
 namespace mca {
 
-void WriteState::writeStartEvent(unsigned IID, unsigned RegID,
+void WriteState::writeStartEvent(unsigned IID, MCPhysReg RegID,
                                  unsigned Cycles) {
   CRD.IID = IID;
   CRD.RegID = RegID;
@@ -27,7 +27,7 @@ void WriteState::writeStartEvent(unsigned IID, unsigned RegID,
   DependentWrite = nullptr;
 }
 
-void ReadState::writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
+void ReadState::writeStartEvent(unsigned IID, MCPhysReg RegID, unsigned Cycles) {
   assert(DependentWrites);
   assert(CyclesLeft == UNKNOWN_CYCLES);
 

@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
-/// \brief Checks the usage of patterns known to produce incorrect rounding.
+/// Checks the usage of patterns known to produce incorrect rounding.
 /// Programmers often use
 ///   (int)(double_expression + 0.5)
 /// to round the double expression to an integer. The problem with this

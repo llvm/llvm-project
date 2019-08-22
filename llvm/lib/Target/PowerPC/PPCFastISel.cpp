@@ -2464,7 +2464,7 @@ namespace llvm {
                                 const TargetLibraryInfo *LibInfo) {
     // Only available on 64-bit ELF for now.
     const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
-    if (Subtarget.isPPC64() && Subtarget.isSVR4ABI())
+    if (Subtarget.is64BitELFABI())
       return new PPCFastISel(FuncInfo, LibInfo);
     return nullptr;
   }

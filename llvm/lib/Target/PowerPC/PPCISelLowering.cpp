@@ -431,28 +431,26 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // VASTART needs to be custom lowered to use the VarArgsFrameIndex
   setOperationAction(ISD::VASTART           , MVT::Other, Custom);
 
-  if (Subtarget.isSVR4ABI()) {
-    if (isPPC64) {
-      // VAARG always uses double-word chunks, so promote anything smaller.
-      setOperationAction(ISD::VAARG, MVT::i1, Promote);
-      AddPromotedToType (ISD::VAARG, MVT::i1, MVT::i64);
-      setOperationAction(ISD::VAARG, MVT::i8, Promote);
-      AddPromotedToType (ISD::VAARG, MVT::i8, MVT::i64);
-      setOperationAction(ISD::VAARG, MVT::i16, Promote);
-      AddPromotedToType (ISD::VAARG, MVT::i16, MVT::i64);
-      setOperationAction(ISD::VAARG, MVT::i32, Promote);
-      AddPromotedToType (ISD::VAARG, MVT::i32, MVT::i64);
-      setOperationAction(ISD::VAARG, MVT::Other, Expand);
-    } else {
-      // VAARG is custom lowered with the 32-bit SVR4 ABI.
-      setOperationAction(ISD::VAARG, MVT::Other, Custom);
-      setOperationAction(ISD::VAARG, MVT::i64, Custom);
-    }
+  if (Subtarget.is64BitELFABI()) {
+    // VAARG always uses double-word chunks, so promote anything smaller.
+    setOperationAction(ISD::VAARG, MVT::i1, Promote);
+    AddPromotedToType(ISD::VAARG, MVT::i1, MVT::i64);
+    setOperationAction(ISD::VAARG, MVT::i8, Promote);
+    AddPromotedToType(ISD::VAARG, MVT::i8, MVT::i64);
+    setOperationAction(ISD::VAARG, MVT::i16, Promote);
+    AddPromotedToType(ISD::VAARG, MVT::i16, MVT::i64);
+    setOperationAction(ISD::VAARG, MVT::i32, Promote);
+    AddPromotedToType(ISD::VAARG, MVT::i32, MVT::i64);
+    setOperationAction(ISD::VAARG, MVT::Other, Expand);
+  } else if (Subtarget.is32BitELFABI()) {
+    // VAARG is custom lowered with the 32-bit SVR4 ABI.
+    setOperationAction(ISD::VAARG, MVT::Other, Custom);
+    setOperationAction(ISD::VAARG, MVT::i64, Custom);
   } else
     setOperationAction(ISD::VAARG, MVT::Other, Expand);
 
-  if (Subtarget.isSVR4ABI() && !isPPC64)
-    // VACOPY is custom lowered with the 32-bit SVR4 ABI.
+  // VACOPY is custom lowered with the 32-bit SVR4 ABI.
+  if (Subtarget.is32BitELFABI())
     setOperationAction(ISD::VACOPY            , MVT::Other, Custom);
   else
     setOperationAction(ISD::VACOPY            , MVT::Other, Expand);
@@ -2694,7 +2692,7 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
 
   // 64-bit SVR4 ABI code is always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
+  if (Subtarget.is64BitELFABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0);
     return getTOCEntry(DAG, SDLoc(CP), GA);
@@ -2770,7 +2768,7 @@ SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
 
   // 64-bit SVR4 ABI code is always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
+  if (Subtarget.is64BitELFABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetJumpTable(JT->getIndex(), PtrVT);
     return getTOCEntry(DAG, SDLoc(JT), GA);
@@ -2799,13 +2797,17 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
 
   // 64-bit SVR4 ABI code is always position-independent.
   // The actual BlockAddress is stored in the TOC.
-  if (Subtarget.isSVR4ABI() &&
-      (Subtarget.isPPC64() || isPositionIndependent())) {
-    if (Subtarget.isPPC64())
-      setUsesTOCBasePtr(DAG);
+  if (Subtarget.is64BitELFABI()) {
+    setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset());
     return getTOCEntry(DAG, SDLoc(BASDN), GA);
   }
+
+  // 32-bit position-independent ELF stores the BlockAddress in the .got.
+  if (Subtarget.is32BitELFABI() && isPositionIndependent())
+    return getTOCEntry(
+        DAG, SDLoc(BASDN),
+        DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset()));
 
   unsigned MOHiFlag, MOLoFlag;
   bool IsPIC = isPositionIndependent();
@@ -2921,7 +2923,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
 
   // 64-bit SVR4 ABI & AIX ABI code is always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if ((Subtarget.isSVR4ABI() && Subtarget.isPPC64()) || Subtarget.isAIXABI()) {
+  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, PtrVT, GSDN->getOffset());
     return getTOCEntry(DAG, DL, GA);
@@ -3383,17 +3385,17 @@ SDValue PPCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
-  if (Subtarget.isSVR4ABI()) {
-    if (Subtarget.isPPC64())
-      return LowerFormalArguments_64SVR4(Chain, CallConv, isVarArg, Ins,
-                                         dl, DAG, InVals);
-    else
-      return LowerFormalArguments_32SVR4(Chain, CallConv, isVarArg, Ins,
-                                         dl, DAG, InVals);
-  } else {
-    return LowerFormalArguments_Darwin(Chain, CallConv, isVarArg, Ins,
-                                       dl, DAG, InVals);
-  }
+  if (Subtarget.is64BitELFABI())
+    return LowerFormalArguments_64SVR4(Chain, CallConv, isVarArg, Ins, dl, DAG,
+                                       InVals);
+  else if (Subtarget.is32BitELFABI())
+    return LowerFormalArguments_32SVR4(Chain, CallConv, isVarArg, Ins, dl, DAG,
+                                       InVals);
+
+  // FIXME: We are using this for both AIX and Darwin. We should add appropriate
+  // AIX testing, and rename it appropriately.
+  return LowerFormalArguments_Darwin(Chain, CallConv, isVarArg, Ins, dl, DAG,
+                                     InVals);
 }
 
 SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
@@ -4522,7 +4524,7 @@ callsShareTOCBase(const Function *Caller, SDValue Callee,
 static bool
 needStackSlotPassParameters(const PPCSubtarget &Subtarget,
                             const SmallVectorImpl<ISD::OutputArg> &Outs) {
-  assert(Subtarget.isSVR4ABI() && Subtarget.isPPC64());
+  assert(Subtarget.is64BitELFABI());
 
   const unsigned PtrByteSize = 8;
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
@@ -4932,7 +4934,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
             ImmutableCallSite CS, const PPCSubtarget &Subtarget) {
   bool isPPC64 = Subtarget.isPPC64();
   bool isSVR4ABI = Subtarget.isSVR4ABI();
-  bool isELFv2ABI = Subtarget.isELFv2ABI();
+  bool is64BitELFv1ABI = isPPC64 && isSVR4ABI && !Subtarget.isELFv2ABI();
   bool isAIXABI = Subtarget.isAIXABI();
 
   EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
@@ -5003,7 +5005,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
     // to do the call, we can't use PPCISD::CALL.
     SDValue MTCTROps[] = {Chain, Callee, InFlag};
 
-    if (isSVR4ABI && isPPC64 && !isELFv2ABI) {
+    if (is64BitELFv1ABI) {
       // Function pointers in the 64-bit SVR4 ABI do not point to the function
       // entry point, but to the function descriptor (the function entry point
       // address is part of the function descriptor though).
@@ -5091,7 +5093,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
     CallOpc = PPCISD::BCTRL;
     Callee.setNode(nullptr);
     // Add use of X11 (holding environment pointer)
-    if (isSVR4ABI && isPPC64 && !isELFv2ABI && !hasNest)
+    if (is64BitELFv1ABI && !hasNest)
       Ops.push_back(DAG.getRegister(PPC::X11, PtrVT));
     // Add CTR register as callee so a bctr can be emitted later.
     if (isTailCall)
@@ -10511,7 +10513,7 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register LabelReg = MRI.createVirtualRegister(PtrRC);
   Register BufReg = MI.getOperand(1).getReg();
 
-  if (Subtarget.isPPC64() && Subtarget.isSVR4ABI()) {
+  if (Subtarget.is64BitELFABI()) {
     setUsesTOCBasePtr(*MBB->getParent());
     MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::STD))
               .addReg(PPC::X2)
@@ -10688,7 +10690,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   if (MI.getOpcode() == TargetOpcode::STACKMAP ||
       MI.getOpcode() == TargetOpcode::PATCHPOINT) {
-    if (Subtarget.isPPC64() && Subtarget.isSVR4ABI() &&
+    if (Subtarget.is64BitELFABI() &&
         MI.getOpcode() == TargetOpcode::PATCHPOINT) {
       // Call lowering should have added an r2 operand to indicate a dependence
       // on the TOC base pointer value. It can't however, because there is no
@@ -14424,7 +14426,7 @@ unsigned PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
 
 bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
   // 32-bit SVR4 ABI access everything as got-indirect.
-  if (Subtarget.isSVR4ABI() && !Subtarget.isPPC64())
+  if (Subtarget.is32BitELFABI())
     return true;
 
   // AIX accesses everything indirectly through the TOC, which is similar to
@@ -15243,7 +15245,7 @@ SDValue PPCTargetLowering::combineMUL(SDNode *N, DAGCombinerInfo &DCI) const {
 
 bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   // Only duplicate to increase tail-calls for the 64bit SysV ABIs.
-  if (!Subtarget.isSVR4ABI() || !Subtarget.isPPC64())
+  if (!Subtarget.is64BitELFABI())
     return false;
 
   // If not a tail call then no need to proceed.

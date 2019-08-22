@@ -5152,8 +5152,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
   case PPCISD::PPC32_PICGOT:
     // Generate a PIC-safe GOT reference.
-    assert(!PPCSubTarget->isPPC64() && PPCSubTarget->isSVR4ABI() &&
-      "PPCISD::PPC32_PICGOT is only supported for 32-bit SVR4");
+    assert(PPCSubTarget->is32BitELFABI() &&
+           "PPCISD::PPC32_PICGOT is only supported for 32-bit SVR4");
     CurDAG->SelectNodeTo(N, PPC::PPC32PICGOT,
                          PPCLowering->getPointerTy(CurDAG->getDataLayout()),
                          MVT::i32);

@@ -99,8 +99,8 @@ public:
       GetVariableCallback callback, void *baton, VariableList &variable_list,
       ValueObjectList &valobj_list);
 
-  static size_t AutoComplete(const ExecutionContext &exe_ctx,
-                             CompletionRequest &request);
+  static void AutoComplete(const ExecutionContext &exe_ctx,
+                           CompletionRequest &request);
 
   CompilerDeclContext GetDeclContext();
 

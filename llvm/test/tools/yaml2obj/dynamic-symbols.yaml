@@ -14,6 +14,10 @@ Sections:
     Type: SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_WRITE ]
 DynamicSymbols:
+  - Name: dynlocal
+    Type: STT_OBJECT
+    Section: .data
+    Binding: STB_LOCAL
   - Name: dynglobal
     Type: STT_OBJECT
     Section: .data
@@ -22,10 +26,6 @@ DynamicSymbols:
     Type: STT_OBJECT
     Section: .data
     Binding: STB_WEAK
-  - Name: dynlocal
-    Type: STT_OBJECT
-    Section: .data
-    Binding: STB_LOCAL
 
 # SECTION: Name: .dynsym
 # SECTION-NEXT: Type: SHT_DYNSYM
@@ -36,6 +36,6 @@ DynamicSymbols:
 # SECTION-NEXT: Flags
 # SECTION-NEXT: SHF_ALLOC
 
+# SYMBOL-DAG: d dynlocal
 # SYMBOL-DAG: D dynglobal
 # SYMBOL-DAG: V dynweak
-# SYMBOL-DAG: d dynlocal

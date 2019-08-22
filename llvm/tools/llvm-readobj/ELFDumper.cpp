@@ -203,7 +203,7 @@ private:
     if (DRI.Addr < Obj->base() ||
         reinterpret_cast<const uint8_t *>(DRI.Addr) + DRI.Size >
             Obj->base() + Obj->getBufSize())
-      reportError(llvm::object::object_error::parse_failed,
+      reportError(errorCodeToError(llvm::object::object_error::parse_failed),
                   ObjF->getFileName());
     return DRI;
   }

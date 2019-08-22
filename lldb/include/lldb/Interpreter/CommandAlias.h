@@ -36,11 +36,11 @@ public:
 
   bool WantsCompletion() override;
 
-  int HandleCompletion(CompletionRequest &request) override;
+  void HandleCompletion(CompletionRequest &request) override;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override;
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override;
 
   Options *GetOptions() override;
 

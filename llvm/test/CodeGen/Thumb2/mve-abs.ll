@@ -40,43 +40,39 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @abs_v2i64(<2 x i64> %s1) {
 ; CHECK-LABEL: abs_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    rsbs.w lr, r12, #0
-; CHECK-NEXT:    sbc.w r5, r0, r3
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov r2, lr
-; CHECK-NEXT:    lsrl r2, r5, #32
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it mi
-; CHECK-NEXT:    movmi r5, #1
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r2, r3
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    rsbs r4, r1, #0
-; CHECK-NEXT:    mov r6, r4
-; CHECK-NEXT:    sbc.w r7, r0, r3
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    lsrl r6, r7, #32
-; CHECK-NEXT:    it mi
-; CHECK-NEXT:    movmi r0, #1
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmov r4, s0
+; CHECK-NEXT:    rsbs.w r3, r12, #0
+; CHECK-NEXT:    sbc.w lr, r2, r0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ite eq
-; CHECK-NEXT:    moveq r6, r3
-; CHECK-NEXT:    movne r1, r4
-; CHECK-NEXT:    vmov.32 q0[0], r1
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    vmov.32 q0[1], r6
+; CHECK-NEXT:    it mi
+; CHECK-NEXT:    movmi r1, #1
+; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq lr, r12
-; CHECK-NEXT:    vmov.32 q0[2], lr
-; CHECK-NEXT:    vmov.32 q0[3], r2
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    moveq lr, r0
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    rsbs r5, r4, #0
+; CHECK-NEXT:    sbc.w r6, r2, r0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    it mi
+; CHECK-NEXT:    movmi r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    moveq r6, r0
+; CHECK-NEXT:    moveq r5, r4
+; CHECK-NEXT:    vmov.32 q0[0], r5
+; CHECK-NEXT:    vmov.32 q0[1], r6
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq r3, r12
+; CHECK-NEXT:    vmov.32 q0[2], r3
+; CHECK-NEXT:    vmov.32 q0[3], lr
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %0 = icmp slt <2 x i64> %s1, zeroinitializer
   %1 = sub nsw <2 x i64> zeroinitializer, %s1

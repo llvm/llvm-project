@@ -260,8 +260,7 @@ def GPRC : RegisterClass<"PPC", [i32], 32, (add (sequence "R%u", 2, 12),
   // put it at the end of the list.
   let AltOrders = [(add (sub GPRC, R2), R2)];
   let AltOrderSelect = [{
-    const PPCSubtarget &S = MF.getSubtarget<PPCSubtarget>();
-    return S.isPPC64() && S.isSVR4ABI();
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
   }];
 }
 
@@ -272,8 +271,7 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
   // put it at the end of the list.
   let AltOrders = [(add (sub G8RC, X2), X2)];
   let AltOrderSelect = [{
-    const PPCSubtarget &S = MF.getSubtarget<PPCSubtarget>();
-    return S.isPPC64() && S.isSVR4ABI();
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
   }];
 }
 
@@ -285,8 +283,7 @@ def GPRC_NOR0 : RegisterClass<"PPC", [i32], 32, (add (sub GPRC, R0), ZERO)> {
   // put it at the end of the list.
   let AltOrders = [(add (sub GPRC_NOR0, R2), R2)];
   let AltOrderSelect = [{
-    const PPCSubtarget &S = MF.getSubtarget<PPCSubtarget>();
-    return S.isPPC64() && S.isSVR4ABI();
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
   }];
 }
 
@@ -295,8 +292,7 @@ def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
   // put it at the end of the list.
   let AltOrders = [(add (sub G8RC_NOX0, X2), X2)];
   let AltOrderSelect = [{
-    const PPCSubtarget &S = MF.getSubtarget<PPCSubtarget>();
-    return S.isPPC64() && S.isSVR4ABI();
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
   }];
 }
 

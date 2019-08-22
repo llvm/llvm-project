@@ -201,24 +201,24 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   return result.Succeeded();
 }
 
-int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
+void CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // Return the completions of the commands in the help system:
   if (request.GetCursorIndex() == 0) {
-    return m_interpreter.HandleCompletionMatches(request);
-  } else {
-    CommandObject *cmd_obj =
-        m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
-
-    // The command that they are getting help on might be ambiguous, in which
-    // case we should complete that, otherwise complete with the command the
-    // user is getting help on...
-
-    if (cmd_obj) {
-      request.GetParsedLine().Shift();
-      request.SetCursorIndex(request.GetCursorIndex() - 1);
-      return cmd_obj->HandleCompletion(request);
-    } else {
-      return m_interpreter.HandleCompletionMatches(request);
-    }
+    m_interpreter.HandleCompletionMatches(request);
+    return;
   }
+  CommandObject *cmd_obj =
+      m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
+
+  // The command that they are getting help on might be ambiguous, in which
+  // case we should complete that, otherwise complete with the command the
+  // user is getting help on...
+
+  if (cmd_obj) {
+    request.GetParsedLine().Shift();
+    request.SetCursorIndex(request.GetCursorIndex() - 1);
+    cmd_obj->HandleCompletion(request);
+    return;
+  }
+  m_interpreter.HandleCompletionMatches(request);
 }

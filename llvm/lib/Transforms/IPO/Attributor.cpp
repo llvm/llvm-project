@@ -1890,78 +1890,6 @@ using AAIsDeadCallSite = AAIsDeadFunction;
 
 /// -------------------- Dereferenceable Argument Attribute --------------------
 
-struct DerefState : AbstractState {
-
-  /// State representing for dereferenceable bytes.
-  IntegerState DerefBytesState;
-
-  /// State representing that whether the value is globaly dereferenceable.
-  BooleanState GlobalState;
-
-  /// See AbstractState::isValidState()
-  bool isValidState() const override { return DerefBytesState.isValidState(); }
-
-  /// See AbstractState::isAtFixpoint()
-  bool isAtFixpoint() const override {
-    return !isValidState() ||
-           (DerefBytesState.isAtFixpoint() && GlobalState.isAtFixpoint());
-  }
-
-  /// See AbstractState::indicateOptimisticFixpoint(...)
-  ChangeStatus indicateOptimisticFixpoint() override {
-    DerefBytesState.indicateOptimisticFixpoint();
-    GlobalState.indicateOptimisticFixpoint();
-    return ChangeStatus::UNCHANGED;
-  }
-
-  /// See AbstractState::indicatePessimisticFixpoint(...)
-  ChangeStatus indicatePessimisticFixpoint() override {
-    DerefBytesState.indicatePessimisticFixpoint();
-    GlobalState.indicatePessimisticFixpoint();
-    return ChangeStatus::CHANGED;
-  }
-
-  /// Update known dereferenceable bytes.
-  void takeKnownDerefBytesMaximum(uint64_t Bytes) {
-    DerefBytesState.takeKnownMaximum(Bytes);
-  }
-
-  /// Update assumed dereferenceable bytes.
-  void takeAssumedDerefBytesMinimum(uint64_t Bytes) {
-    DerefBytesState.takeAssumedMinimum(Bytes);
-  }
-
-  /// Equality for DerefState.
-  bool operator==(const DerefState &R) {
-    return this->DerefBytesState == R.DerefBytesState &&
-           this->GlobalState == R.GlobalState;
-  }
-
-  /// Inequality for IntegerState.
-  bool operator!=(const DerefState &R) { return !(*this == R); }
-
-  /// See IntegerState::operator^=
-  DerefState operator^=(const DerefState &R) {
-    DerefBytesState ^= R.DerefBytesState;
-    GlobalState ^= R.GlobalState;
-    return *this;
-  }
-
-  /// See IntegerState::operator&=
-  DerefState operator&=(const DerefState &R) {
-    DerefBytesState &= R.DerefBytesState;
-    GlobalState &= R.GlobalState;
-    return *this;
-  }
-
-  /// See IntegerState::operator|=
-  DerefState operator|=(const DerefState &R) {
-    DerefBytesState |= R.DerefBytesState;
-    GlobalState |= R.GlobalState;
-    return *this;
-  }
-};
-
 template <>
 ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
                                                      const DerefState &R) {
@@ -1972,7 +1900,7 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
   return CS0 | CS1;
 }
 
-struct AADereferenceableImpl : AADereferenceable, DerefState {
+struct AADereferenceableImpl : AADereferenceable {
   AADereferenceableImpl(const IRPosition &IRP) : AADereferenceable(IRP) {}
   using StateType = DerefState;
 
@@ -1991,26 +1919,6 @@ struct AADereferenceableImpl : AADereferenceable, DerefState {
   StateType &getState() override { return *this; }
   const StateType &getState() const override { return *this; }
   /// }
-
-  /// See AADereferenceable::getAssumedDereferenceableBytes().
-  uint32_t getAssumedDereferenceableBytes() const override {
-    return DerefBytesState.getAssumed();
-  }
-
-  /// See AADereferenceable::getKnownDereferenceableBytes().
-  uint32_t getKnownDereferenceableBytes() const override {
-    return DerefBytesState.getKnown();
-  }
-
-  /// See AADereferenceable::isAssumedGlobal().
-  bool isAssumedGlobal() const override { return GlobalState.getAssumed(); }
-
-  /// See AADereferenceable::isKnownGlobal().
-  bool isKnownGlobal() const override { return GlobalState.getKnown(); }
-
-  bool isAssumedNonNull() const override {
-    return NonNullAA && NonNullAA->isAssumedNonNull();
-  }
 
   void getDeducedAttributes(LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
@@ -2033,9 +1941,6 @@ struct AADereferenceableImpl : AADereferenceable, DerefState {
            std::to_string(getKnownDereferenceableBytes()) + "-" +
            std::to_string(getAssumedDereferenceableBytes()) + ">";
   }
-
-private:
-  const AANonNull *NonNullAA = nullptr;
 };
 
 /// Dereferenceable attribute for a floating value.

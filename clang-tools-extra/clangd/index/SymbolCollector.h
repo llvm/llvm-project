@@ -25,7 +25,7 @@
 namespace clang {
 namespace clangd {
 
-/// \brief Collect declarations (symbols) from an AST.
+/// Collect declarations (symbols) from an AST.
 /// It collects most declarations except:
 /// - Implicit declarations
 /// - Anonymous declarations (anonymous enum/class/struct, etc)

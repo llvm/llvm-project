@@ -170,15 +170,11 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
 
 IOHandlerConfirm::~IOHandlerConfirm() = default;
 
-int IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
-                                        CompletionRequest &request) {
-  if (request.GetRawCursorPos() == 0) {
-    if (m_default_response)
-      request.AddCompletion("y");
-    else
-      request.AddCompletion("n");
-  }
-  return request.GetNumberOfMatches();
+void IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
+                                         CompletionRequest &request) {
+  if (request.GetRawCursorPos() != 0)
+    return;
+  request.AddCompletion(m_default_response ? "y" : "n");
 }
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
@@ -216,47 +212,20 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
-int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
-                                         CompletionRequest &request) {
+void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
+                                          CompletionRequest &request) {
   switch (m_completion) {
   case Completion::None:
     break;
-
   case Completion::LLDBCommand:
-    return io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(
-        request);
-  case Completion::Expression: {
-    CompletionResult result;
-    CompletionRequest subrequest(request.GetRawLine(),
-                                 request.GetRawCursorPos(), result);
+    io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(request);
+    break;
+  case Completion::Expression:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, subrequest, nullptr);
-    StringList matches;
-    StringList descriptions;
-    result.GetMatches(matches);
-    result.GetDescriptions(descriptions);
-
-    size_t num_matches = subrequest.GetNumberOfMatches();
-    if (num_matches > 0) {
-      std::string common_prefix = matches.LongestCommonPrefix();
-      const size_t partial_name_len =
-          subrequest.GetCursorArgumentPrefix().size();
-
-      // If we matched a unique single command, add a space... Only do this if
-      // the completer told us this was a complete word, however...
-      if (num_matches == 1 && subrequest.GetWordComplete()) {
-        common_prefix.push_back(' ');
-      }
-      common_prefix.erase(0, partial_name_len);
-      request.AddCompletion(common_prefix);
-    }
-    request.AddCompletions(matches, descriptions);
-    return request.GetNumberOfMatches();
-  } break;
+        CommandCompletions::eVariablePathCompletion, request, nullptr);
+    break;
   }
-
-  return 0;
 }
 
 IOHandlerEditline::IOHandlerEditline(
@@ -445,13 +414,11 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
       *editline_reader, lines, cursor_position);
 }
 
-int IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
-                                            void *baton) {
+void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
+                                             void *baton) {
   IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
   if (editline_reader)
-    return editline_reader->m_delegate.IOHandlerComplete(*editline_reader,
-                                                         request);
-  return 0;
+    editline_reader->m_delegate.IOHandlerComplete(*editline_reader, request);
 }
 #endif
 

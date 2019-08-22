@@ -13,12 +13,12 @@ add %cx, %bx
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
 # CHECK-NEXT: Total Cycles:      7503
-# CHECK-NEXT: Total uOps:        6000
+# CHECK-NEXT: Total uOps:        4500
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.80
+# CHECK-NEXT: uOps Per Cycle:    0.60
 # CHECK-NEXT: IPC:               0.60
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -29,7 +29,7 @@ add %cx, %bx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imulw	%ax, %bx
+# CHECK-NEXT:  1      3     1.00                        imulw	%ax, %bx
 # CHECK-NEXT:  1      1     0.50                        lzcntw	%ax, %bx
 # CHECK-NEXT:  1      1     0.50                        addw	%cx, %bx
 
@@ -64,14 +64,14 @@ add %cx, %bx
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [0,1]     .D==eER   .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [0,1]     D===eER   .    . .   lzcntw	%ax, %bx
 # CHECK-NEXT: [0,2]     .D===eER  .    . .   addw	%cx, %bx
-# CHECK-NEXT: [1,0]     . D===eeeER    . .   imulw	%ax, %bx
-# CHECK-NEXT: [1,1]     .  D=====eER   . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,2]     .  D======eER  . .   addw	%cx, %bx
-# CHECK-NEXT: [2,0]     .   D======eeeER .   imulw	%ax, %bx
-# CHECK-NEXT: [2,1]     .    D========eER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,2]     .    D=========eER   addw	%cx, %bx
+# CHECK-NEXT: [1,0]     .D====eeeER    . .   imulw	%ax, %bx
+# CHECK-NEXT: [1,1]     . D======eER   . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,2]     . D=======eER  . .   addw	%cx, %bx
+# CHECK-NEXT: [2,0]     .  D=======eeeER .   imulw	%ax, %bx
+# CHECK-NEXT: [2,1]     .  D==========eER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,2]     .   D==========eER   addw	%cx, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -80,6 +80,6 @@ add %cx, %bx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     4.0    0.3    0.0       imulw	%ax, %bx
-# CHECK-NEXT: 1.     3     6.0    0.0    0.0       lzcntw	%ax, %bx
-# CHECK-NEXT: 2.     3     7.0    0.0    0.0       addw	%cx, %bx
+# CHECK-NEXT: 0.     3     4.7    0.3    0.0       imulw	%ax, %bx
+# CHECK-NEXT: 1.     3     7.3    0.0    0.0       lzcntw	%ax, %bx
+# CHECK-NEXT: 2.     3     7.7    0.0    0.0       addw	%cx, %bx

@@ -127,7 +127,8 @@ public:
                                     MachineModuleInfo *MMI) const override;
 
   /// Get MachO PC relative GOT entry relocation
-  const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+  const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                          const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;

@@ -21,7 +21,7 @@ namespace clang {
 namespace tidy {
 namespace utils {
 
-/// \brief Produces fixes to insert specified includes to source files, if not
+/// Produces fixes to insert specified includes to source files, if not
 /// yet present.
 ///
 /// ``IncludeInserter`` can be used in clang-tidy checks in the following way:

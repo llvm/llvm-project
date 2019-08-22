@@ -117,8 +117,7 @@ public:
       m_permissions |= lldb::eFilePermissionsWorldExecute;
       break;
     default:
-      error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -158,10 +157,9 @@ public:
 
   ~CommandObjectPlatformSelect() override = default;
 
-  int HandleCompletion(CompletionRequest &request) override {
+  void HandleCompletion(CompletionRequest &request) override {
     CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
                                             nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -633,9 +631,7 @@ protected:
                                          option_arg.str().c_str());
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -719,9 +715,7 @@ protected:
         m_data.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1271,9 +1265,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1427,9 +1419,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1442,7 +1432,7 @@ public:
       return llvm::makeArrayRef(g_platform_process_attach_options);
     }
 
-    bool HandleOptionArgumentCompletion(
+    void HandleOptionArgumentCompletion(
         CompletionRequest &request, OptionElementVector &opt_element_vector,
         int opt_element_index, CommandInterpreter &interpreter) override {
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
@@ -1450,37 +1440,38 @@ public:
 
       // We are only completing the name option for now...
 
-      if (GetDefinitions()[opt_defs_index].short_option == 'n') {
-        // Are we in the name?
+      // Are we in the name?
+      if (GetDefinitions()[opt_defs_index].short_option != 'n')
+        return;
 
-        // Look to see if there is a -P argument provided, and if so use that
-        // plugin, otherwise use the default plugin.
+      // Look to see if there is a -P argument provided, and if so use that
+      // plugin, otherwise use the default plugin.
 
-        const char *partial_name = nullptr;
-        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
+      const char *partial_name = nullptr;
+      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-        PlatformSP platform_sp(interpreter.GetPlatform(true));
-        if (platform_sp) {
-          ProcessInstanceInfoList process_infos;
-          ProcessInstanceInfoMatch match_info;
-          if (partial_name) {
-            match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, FileSpec::Style::native);
-            match_info.SetNameMatchType(NameMatch::StartsWith);
-          }
-          platform_sp->FindProcesses(match_info, process_infos);
-          const uint32_t num_matches = process_infos.GetSize();
-          if (num_matches > 0) {
-            for (uint32_t i = 0; i < num_matches; ++i) {
-              request.AddCompletion(llvm::StringRef(
-                  process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i)));
-            }
-          }
-        }
+      PlatformSP platform_sp(interpreter.GetPlatform(true));
+      if (!platform_sp)
+        return;
+
+      ProcessInstanceInfoList process_infos;
+      ProcessInstanceInfoMatch match_info;
+      if (partial_name) {
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            partial_name, FileSpec::Style::native);
+        match_info.SetNameMatchType(NameMatch::StartsWith);
       }
+      platform_sp->FindProcesses(match_info, process_infos);
+      const uint32_t num_matches = process_infos.GetSize();
+      if (num_matches == 0)
+        return;
 
-      return false;
+      for (uint32_t i = 0; i < num_matches; ++i) {
+        request.AddCompletion(
+            llvm::StringRef(process_infos.GetProcessNameAtIndex(i),
+                            process_infos.GetProcessNameLengthAtIndex(i)));
+      }
+      return;
     }
 
     // Options table: Required for subclasses of Options.
@@ -1588,9 +1579,7 @@ public:
           timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
