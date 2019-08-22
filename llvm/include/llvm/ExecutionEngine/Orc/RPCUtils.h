@@ -502,7 +502,7 @@ public:
   static typename WrappedHandlerReturn<RetT>::Type
   unpackAndRun(HandlerT &Handler, std::tuple<TArgTs...> &Args) {
     return unpackAndRunHelper(Handler, Args,
-                              llvm::index_sequence_for<TArgTs...>());
+                              std::index_sequence_for<TArgTs...>());
   }
 
   // Call the given handler with the given arguments.
@@ -510,7 +510,7 @@ public:
   static Error unpackAndRunAsync(HandlerT &Handler, ResponderT &Responder,
                                  std::tuple<TArgTs...> &Args) {
     return unpackAndRunAsyncHelper(Handler, Responder, Args,
-                                   llvm::index_sequence_for<TArgTs...>());
+                                   std::index_sequence_for<TArgTs...>());
   }
 
   // Call the given handler with the given arguments.
@@ -540,14 +540,13 @@ public:
   // Deserialize arguments from the channel.
   template <typename ChannelT, typename... CArgTs>
   static Error deserializeArgs(ChannelT &C, std::tuple<CArgTs...> &Args) {
-    return deserializeArgsHelper(C, Args,
-                                 llvm::index_sequence_for<CArgTs...>());
+    return deserializeArgsHelper(C, Args, std::index_sequence_for<CArgTs...>());
   }
 
 private:
   template <typename ChannelT, typename... CArgTs, size_t... Indexes>
   static Error deserializeArgsHelper(ChannelT &C, std::tuple<CArgTs...> &Args,
-                                     llvm::index_sequence<Indexes...> _) {
+                                     std::index_sequence<Indexes...> _) {
     return SequenceSerialization<ChannelT, ArgTs...>::deserialize(
         C, std::get<Indexes>(Args)...);
   }
@@ -556,18 +555,16 @@ private:
   static typename WrappedHandlerReturn<
       typename HandlerTraits<HandlerT>::ReturnType>::Type
   unpackAndRunHelper(HandlerT &Handler, ArgTuple &Args,
-                     llvm::index_sequence<Indexes...>) {
+                     std::index_sequence<Indexes...>) {
     return run(Handler, std::move(std::get<Indexes>(Args))...);
   }
-
 
   template <typename HandlerT, typename ResponderT, typename ArgTuple,
             size_t... Indexes>
   static typename WrappedHandlerReturn<
       typename HandlerTraits<HandlerT>::ReturnType>::Type
   unpackAndRunAsyncHelper(HandlerT &Handler, ResponderT &Responder,
-                          ArgTuple &Args,
-                          llvm::index_sequence<Indexes...>) {
+                          ArgTuple &Args, std::index_sequence<Indexes...>) {
     return run(Handler, Responder, std::move(std::get<Indexes>(Args))...);
   }
 };
