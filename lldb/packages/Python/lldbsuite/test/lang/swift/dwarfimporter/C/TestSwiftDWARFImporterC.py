@@ -57,8 +57,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.expect("ta v pureSwiftStruct", substrs=["pure swift"])
         self.expect("ta v swiftStructCMember",
                     substrs=["point", "x = 3", "y = 4",
-                             # FIXME: <rdar://problem/54471165>
-                             # "sub", "x = 1", "y = 2", "z = 3",
+                             "sub", "x = 1", "y = 2", "z = 3",
                              "swift struct c member"])
         self.expect("ta v typedef", substrs=["x = 5", "y = 6"])
         self.expect("ta v union", substrs=["(DoubleLongUnion)", "long_val = 42"])

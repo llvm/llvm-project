@@ -2505,15 +2505,15 @@ uint32_t SymbolFileDWARF::FindTypes(
   return num_die_matches;
 }
 
-size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
+size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
                                   bool append, TypeMap &types) {
   if (!append)
     types.Clear();
 
-  if (context.empty())
+  if (pattern.empty())
     return 0;
 
-  ConstString name = context.back().name;
+  ConstString name = pattern.back().name;
 
   if (!name)
     return 0;
@@ -2532,9 +2532,9 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
       if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
         continue;
 
-      std::vector<CompilerContext> die_context;
+      llvm::SmallVector<CompilerContext, 4> die_context;
       die.GetDeclContext(die_context);
-      if (die_context != context)
+      if (!contextMatches(die_context, pattern))
         continue;
 
       Type *matching_type = ResolveType(die, true, true);
@@ -2558,7 +2558,7 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
     if (ModuleSP external_module_sp = pair.second) {
       SymbolVendor *sym_vendor = external_module_sp->GetSymbolVendor();
       if (sym_vendor)
-        num_matches += sym_vendor->FindTypes(context, true, types);
+        num_matches += sym_vendor->FindTypes(pattern, true, types);
     }
   return num_matches;
 }

@@ -335,7 +335,7 @@ size_t SymbolVendor::FindTypes(
   return 0;
 }
 
-size_t SymbolVendor::FindTypes(const std::vector<CompilerContext> &context,
+size_t SymbolVendor::FindTypes(llvm::ArrayRef<CompilerContext> context,
                                bool append, TypeMap &types) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {

@@ -105,7 +105,7 @@ public:
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
 
-  virtual size_t FindTypes(const std::vector<CompilerContext> &context,
+  virtual size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
                            bool append, TypeMap &types);
 
   virtual CompilerDeclContext
