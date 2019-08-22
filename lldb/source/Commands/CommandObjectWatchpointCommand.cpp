@@ -354,7 +354,7 @@ are no syntax errors may indicate that a function was declared but never called.
         break;
 
       default:
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }

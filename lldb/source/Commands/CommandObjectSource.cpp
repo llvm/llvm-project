@@ -82,9 +82,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
         modules.push_back(std::string(option_arg));
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -683,9 +681,7 @@ class CommandObjectSourceList : public CommandObjectParsed {
         reverse = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

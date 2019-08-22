@@ -104,9 +104,7 @@ insert-before or insert-after.");
         m_global = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized options '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -355,9 +353,7 @@ public:
         m_append = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -456,9 +452,7 @@ public:
         m_filename.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

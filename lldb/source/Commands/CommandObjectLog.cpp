@@ -113,9 +113,7 @@ public:
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
