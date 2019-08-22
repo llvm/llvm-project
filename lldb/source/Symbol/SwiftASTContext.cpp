@@ -104,6 +104,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -3250,7 +3251,7 @@ public:
     // Swift doesn't keep track of submodules.
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
     decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
-    module->GetSymbolVendor()->FindTypes(decl_context, true, clang_types);
+    module->FindTypes(decl_context, true, clang_types);
 
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);
@@ -3282,7 +3283,7 @@ public:
           importer.Import(ClangUtil::GetQualType(compiler_type)));
       if (!clang_type) {
         llvm::consumeError(clang_type.takeError());
-        continue;
+        return true;
       }
 
       // Retrieve the imported type's Decl.
