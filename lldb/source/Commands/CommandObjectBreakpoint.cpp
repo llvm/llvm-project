@@ -141,9 +141,7 @@ public:
     }
     break;
     default:
-      error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -206,9 +204,7 @@ public:
         m_use_dummy = true;
         break;
     default:
-      error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -489,9 +485,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1212,9 +1206,7 @@ public:
         m_internal = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1346,9 +1338,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1500,9 +1490,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1647,9 +1635,7 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
     return error;
   }
@@ -1717,7 +1703,8 @@ public:
               "invalid boolean value '%s' passed for -L option",
               option_arg.str().c_str());
       } break;
-
+      default:
+        llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -2179,9 +2166,7 @@ public:
         break;
       }
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -2297,9 +2282,7 @@ public:
         m_append = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

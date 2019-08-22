@@ -169,9 +169,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   }
 
   default:
-    error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                   short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;
