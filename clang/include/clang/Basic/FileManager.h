@@ -106,6 +106,32 @@ public:
   bool isOpenForTests() const { return File != nullptr; }
 };
 
+/// A reference to a \c FileEntry that includes the name of the file as it was
+/// accessed by the FileManager's client.
+class FileEntryRef {
+public:
+  FileEntryRef(StringRef Name, const FileEntry &Entry)
+      : Name(Name), Entry(Entry) {}
+
+  const StringRef getName() const { return Name; }
+
+  const FileEntry &getFileEntry() const { return Entry; }
+
+  off_t getSize() const { return Entry.getSize(); }
+
+  unsigned getUID() const { return Entry.getUID(); }
+
+  const llvm::sys::fs::UniqueID &getUniqueID() const {
+    return Entry.getUniqueID();
+  }
+
+  time_t getModificationTime() const { return Entry.getModificationTime(); }
+
+private:
+  StringRef Name;
+  const FileEntry &Entry;
+};
+
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
 ///
@@ -143,13 +169,25 @@ class FileManager : public RefCountedBase<FileManager> {
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
   SeenDirEntries;
 
+  /// A reference to the file entry that is associated with a particular
+  /// filename, or a reference to another filename that should be looked up
+  /// instead of the accessed filename.
+  ///
+  /// The reference to another filename is specifically useful for Redirecting
+  /// VFSs that use external names. In that case, the \c FileEntryRef returned
+  /// by the \c FileManager will have the external name, and not the name that
+  /// was used to lookup the file.
+  using SeenFileEntryOrRedirect =
+      llvm::PointerUnion<FileEntry *, const StringRef *>;
+
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
   /// the file.
   ///
   /// \see SeenDirEntries
-  llvm::StringMap<llvm::ErrorOr<FileEntry &>, llvm::BumpPtrAllocator>
-  SeenFileEntries;
+  llvm::StringMap<llvm::ErrorOr<SeenFileEntryOrRedirect>,
+                  llvm::BumpPtrAllocator>
+      SeenFileEntries;
 
   /// The canonical names of directories.
   llvm::DenseMap<const DirectoryEntry *, llvm::StringRef> CanonicalDirNames;
@@ -200,6 +238,9 @@ public:
   /// Removes the FileSystemStatCache object from the manager.
   void clearStatCache();
 
+  /// Returns the number of unique real file entries cached by the file manager.
+  size_t getNumUniqueRealFiles() const { return UniqueRealFiles.size(); }
+
   /// Lookup, cache, and verify the specified directory (real or
   /// virtual).
   ///
@@ -215,6 +256,10 @@ public:
   /// Lookup, cache, and verify the specified file (real or
   /// virtual).
   ///
+  /// This function is deprecated and will be removed at some point in the
+  /// future, new clients should use
+  ///  \c getFileRef.
+  ///
   /// This returns a \c std::error_code if there was an error loading the file.
   /// If there is no error, the FileEntry is guaranteed to be non-NULL.
   ///
@@ -224,6 +269,24 @@ public:
   /// the failure to find this file.
   llvm::ErrorOr<const FileEntry *>
   getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
+
+  /// Lookup, cache, and verify the specified file (real or virtual). Return the
+  /// reference to the file entry together with the exact path that was used to
+  /// access a file by a particular call to getFileRef. If the underlying VFS is
+  /// a redirecting VFS that uses external file names, the returned FileEntryRef
+  /// will use the external name instead of the filename that was passed to this
+  /// method.
+  ///
+  /// This returns a \c std::error_code if there was an error loading the file,
+  /// or a \c FileEntryRef otherwise.
+  ///
+  /// \param OpenFile if true and the file exists, it will be opened.
+  ///
+  /// \param CacheFailure If true and the file does not exist, we'll cache
+  /// the failure to find this file.
+  llvm::ErrorOr<FileEntryRef> getFileRef(StringRef Filename,
+                                         bool OpenFile = false,
+                                         bool CacheFailure = true);
 
   /// Returns the current file system options
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }

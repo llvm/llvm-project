@@ -265,16 +265,21 @@ namespace SrcMgr {
     llvm::PointerIntPair<const ContentCache*, 3, CharacteristicKind>
         ContentAndKind;
 
+    /// The filename that is used to access the file entry represented by the
+    /// content cache.
+    StringRef Filename;
+
   public:
     /// Return a FileInfo object.
     static FileInfo get(SourceLocation IL, const ContentCache *Con,
-                        CharacteristicKind FileCharacter) {
+                        CharacteristicKind FileCharacter, StringRef Filename) {
       FileInfo X;
       X.IncludeLoc = IL.getRawEncoding();
       X.NumCreatedFIDs = 0;
       X.HasLineDirectives = false;
       X.ContentAndKind.setPointer(Con);
       X.ContentAndKind.setInt(FileCharacter);
+      X.Filename = Filename;
       return X;
     }
 
@@ -299,6 +304,10 @@ namespace SrcMgr {
     void setHasLineDirectives() {
       HasLineDirectives = true;
     }
+
+    /// Returns the name of the file that was used when the file was loaded from
+    /// the underlying file system.
+    StringRef getName() const { return Filename; }
   };
 
   /// Each ExpansionInfo encodes the expansion location - where
@@ -821,7 +830,18 @@ public:
     const SrcMgr::ContentCache *IR =
         getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
     assert(IR && "getOrCreateContentCache() cannot return NULL");
-    return createFileID(IR, IncludePos, FileCharacter, LoadedID, LoadedOffset);
+    return createFileID(IR, SourceFile->getName(), IncludePos, FileCharacter,
+                        LoadedID, LoadedOffset);
+  }
+
+  FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
+                      SrcMgr::CharacteristicKind FileCharacter,
+                      int LoadedID = 0, unsigned LoadedOffset = 0) {
+    const SrcMgr::ContentCache *IR = getOrCreateContentCache(
+        &SourceFile.getFileEntry(), isSystem(FileCharacter));
+    assert(IR && "getOrCreateContentCache() cannot return NULL");
+    return createFileID(IR, SourceFile.getName(), IncludePos, FileCharacter,
+                        LoadedID, LoadedOffset);
   }
 
   /// Create a new FileID that represents the specified memory buffer.
@@ -832,9 +852,10 @@ public:
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
+    StringRef Name = Buffer->getBufferIdentifier();
     return createFileID(
         createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
-        IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+        Name, IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
   }
 
   enum UnownedTag { Unowned };
@@ -847,8 +868,9 @@ public:
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
-    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/true),
-                        IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/ true),
+                        Buffer->getBufferIdentifier(), IncludeLoc,
+                        FileCharacter, LoadedID, LoadedOffset);
   }
 
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
@@ -995,6 +1017,19 @@ public:
     if (!Content)
       return nullptr;
     return Content->OrigEntry;
+  }
+
+  /// Returns the FileEntryRef for the provided FileID.
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+    bool Invalid = false;
+    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+    if (Invalid || !Entry.isFile())
+      return None;
+
+    const SrcMgr::ContentCache *Content = Entry.getFile().getContentCache();
+    if (!Content || !Content->OrigEntry)
+      return None;
+    return FileEntryRef(Entry.getFile().getName(), *Content->OrigEntry);
   }
 
   /// Returns the FileEntry record for the provided SLocEntry.
@@ -1785,10 +1820,10 @@ private:
   ///
   /// This works regardless of whether the ContentCache corresponds to a
   /// file or some other input source.
-  FileID createFileID(const SrcMgr::ContentCache* File,
+  FileID createFileID(const SrcMgr::ContentCache *File, StringRef Filename,
                       SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind DirCharacter,
-                      int LoadedID, unsigned LoadedOffset);
+                      SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
+                      unsigned LoadedOffset);
 
   const SrcMgr::ContentCache *
     getOrCreateContentCache(const FileEntry *SourceFile,

@@ -1949,17 +1949,15 @@ public:
 
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///
-  /// Returns null on failure.  \p isAngled indicates whether the file
+  /// Returns None on failure.  \p isAngled indicates whether the file
   /// reference is for system \#include's or not (i.e. using <> instead of "").
-  const FileEntry *LookupFile(SourceLocation FilenameLoc, StringRef Filename,
-                              bool isAngled, const DirectoryLookup *FromDir,
-                              const FileEntry *FromFile,
-                              const DirectoryLookup *&CurDir,
-                              SmallVectorImpl<char> *SearchPath,
-                              SmallVectorImpl<char> *RelativePath,
-                              ModuleMap::KnownHeader *SuggestedModule,
-                              bool *IsMapped, bool *IsFrameworkFound,
-                              bool SkipCache = false);
+  Optional<FileEntryRef>
+  LookupFile(SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
+             const DirectoryLookup *FromDir, const FileEntry *FromFile,
+             const DirectoryLookup *&CurDir, SmallVectorImpl<char> *SearchPath,
+             SmallVectorImpl<char> *RelativePath,
+             ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
+             bool *IsFrameworkFound, bool SkipCache = false);
 
   /// Get the DirectoryLookup structure used to find the current
   /// FileEntry, if CurLexer is non-null and if applicable.
@@ -2201,6 +2199,15 @@ private:
       assert((AK == None || Mod) && "no module for module action");
     }
   };
+
+  Optional<FileEntryRef> LookupHeaderIncludeOrImport(
+      const DirectoryLookup *&CurDir, StringRef Filename,
+      SourceLocation FilenameLoc, CharSourceRange FilenameRange,
+      const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
+      bool &IsMapped, const DirectoryLookup *LookupFrom,
+      const FileEntry *LookupFromFile, SmallString<128> &NormalizedPath,
+      SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
+      ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,

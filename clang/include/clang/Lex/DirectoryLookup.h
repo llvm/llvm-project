@@ -176,27 +176,20 @@ public:
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
-  const FileEntry *LookupFile(StringRef &Filename, HeaderSearch &HS,
-                              SourceLocation IncludeLoc,
-                              SmallVectorImpl<char> *SearchPath,
-                              SmallVectorImpl<char> *RelativePath,
-                              Module *RequestingModule,
-                              ModuleMap::KnownHeader *SuggestedModule,
-                              bool &InUserSpecifiedSystemFramework,
-                              bool &IsFrameworkFound,
-                              bool &HasBeenMapped,
-                              SmallVectorImpl<char> &MappedName) const;
+  Optional<FileEntryRef>
+  LookupFile(StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
+             SmallVectorImpl<char> *SearchPath,
+             SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
+             ModuleMap::KnownHeader *SuggestedModule,
+             bool &InUserSpecifiedSystemFramework, bool &IsFrameworkFound,
+             bool &HasBeenMapped, SmallVectorImpl<char> &MappedName) const;
 
 private:
-  const FileEntry *DoFrameworkLookup(
-      StringRef Filename, HeaderSearch &HS,
-      SmallVectorImpl<char> *SearchPath,
-      SmallVectorImpl<char> *RelativePath,
-      Module *RequestingModule,
+  Optional<FileEntryRef> DoFrameworkLookup(
+      StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
+      SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,
-      bool &InUserSpecifiedSystemFramework,
-      bool &IsFrameworkFound) const;
-
+      bool &InUserSpecifiedSystemFramework, bool &IsFrameworkFound) const;
 };
 
 }  // end namespace clang

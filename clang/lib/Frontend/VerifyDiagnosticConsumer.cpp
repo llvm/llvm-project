@@ -528,15 +528,16 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
 
         // Lookup file via Preprocessor, like a #include.
         const DirectoryLookup *CurDir;
-        const FileEntry *FE =
+        Optional<FileEntryRef> File =
             PP->LookupFile(Pos, Filename, false, nullptr, nullptr, CurDir,
                            nullptr, nullptr, nullptr, nullptr, nullptr);
-        if (!FE) {
+        if (!File) {
           Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
                        diag::err_verify_missing_file) << Filename << KindStr;
           continue;
         }
 
+        const FileEntry *FE = &File->getFileEntry();
         if (SM.translateFile(FE).isInvalid())
           SM.createFileID(FE, Pos, SrcMgr::C_User);
 

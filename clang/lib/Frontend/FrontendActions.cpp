@@ -287,15 +287,15 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
   SmallVector<Module::Header, 16> Headers;
   for (StringRef Name : ModuleHeaders) {
     const DirectoryLookup *CurDir = nullptr;
-    const FileEntry *FE = HS.LookupFile(
-        Name, SourceLocation(), /*Angled*/ false, nullptr, CurDir,
-        None, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    Optional<FileEntryRef> FE = HS.LookupFile(
+        Name, SourceLocation(), /*Angled*/ false, nullptr, CurDir, None,
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (!FE) {
       CI.getDiagnostics().Report(diag::err_module_header_file_not_found)
         << Name;
       continue;
     }
-    Headers.push_back({Name, FE});
+    Headers.push_back({Name, &FE->getFileEntry()});
   }
   HS.getModuleMap().createHeaderModule(CI.getLangOpts().CurrentModule, Headers);
 
