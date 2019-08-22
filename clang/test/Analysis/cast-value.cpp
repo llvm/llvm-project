@@ -152,8 +152,7 @@ void evalReferences(const Shape &S) {
 void evalNonNullParamNonNullReturnReference(const Shape &S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
   // expected-note@-1 {{Assuming dynamic cast from 'Shape' to 'Circle' succeeds}}
-  // expected-note@-2 {{Assuming pointer value is null}}
-  // expected-note@-3 {{'C' initialized here}}
+  // expected-note@-2 {{'C' initialized here}}
 
   (void)(1 / !(bool)C);
   // expected-note@-1 {{'C' is non-null}}
@@ -165,8 +164,7 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
 void evalNonNullParamNonNullReturn(const Shape *S) {
   const auto *C = cast<Circle>(S);
   // expected-note@-1 {{Checked cast from 'Shape' to 'Circle' succeeds}}
-  // expected-note@-2 {{Assuming pointer value is null}}
-  // expected-note@-3 {{'C' initialized here}}
+  // expected-note@-2 {{'C' initialized here}}
 
   (void)(1 / !(bool)C);
   // expected-note@-1 {{'C' is non-null}}
@@ -178,7 +176,6 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
 void evalNonNullParamNullReturn(const Shape *S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
   // expected-note@-1 {{Assuming dynamic cast from 'Shape' to 'Circle' fails}}
-  // expected-note@-2 {{Assuming pointer value is null}}
 
   if (const auto *T = dyn_cast_or_null<Triangle>(S)) {
     // expected-note@-1 {{Assuming dynamic cast from 'Shape' to 'Triangle' succeeds}}
@@ -207,9 +204,8 @@ void evalNullParamNullReturn(const Shape *S) {
 
 void evalZeroParamNonNullReturnPointer(const Shape *S) {
   const auto *C = S->castAs<Circle>();
-  // expected-note@-1 {{Assuming pointer value is null}}
-  // expected-note@-2 {{Checked cast to 'Circle' succeeds}}
-  // expected-note@-3 {{'C' initialized here}}
+  // expected-note@-1 {{Checked cast to 'Circle' succeeds}}
+  // expected-note@-2 {{'C' initialized here}}
 
   (void)(1 / !(bool)C);
   // expected-note@-1 {{'C' is non-null}}
