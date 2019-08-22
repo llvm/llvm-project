@@ -10,6 +10,7 @@
 #define liblldb_PluginManager_h_
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"

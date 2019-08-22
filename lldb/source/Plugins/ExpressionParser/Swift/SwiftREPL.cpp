@@ -267,14 +267,11 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   return repl_sp;
 }
 
-void SwiftREPL::EnumerateSupportedLanguages(
-    std::set<lldb::LanguageType> &languages) {
-  languages.insert(lldb::eLanguageTypeSwift);
-}
-
 void SwiftREPL::Initialize() {
+  LanguageSet swift;
+  swift.Insert(lldb::eLanguageTypeSwift);
   PluginManager::RegisterPlugin(ConstString("swift"), "The Swift REPL",
-                                &CreateInstance, &EnumerateSupportedLanguages);
+                                &CreateInstance, swift);
 }
 
 void SwiftREPL::Terminate() {

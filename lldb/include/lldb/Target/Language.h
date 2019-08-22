@@ -20,6 +20,7 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 

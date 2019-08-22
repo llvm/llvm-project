@@ -49,9 +49,6 @@ protected:
                                                  Debugger &debugger,
                                                  const char *repl_options);
 
-  static void
-  EnumerateSupportedLanguages(std::set<lldb::LanguageType> &languages);
-
   Status DoInitialization() override;
 
   ConstString GetSourceFileBasename() override;

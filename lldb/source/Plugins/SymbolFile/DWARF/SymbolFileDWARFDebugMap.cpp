@@ -1214,14 +1214,15 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
 
 size_t
 SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
-                                   bool append, TypeMap &types) {
+                                   LanguageSet languages, bool append,
+                                   TypeMap &types) {
   if (!append)
     types.Clear();
 
   const uint32_t initial_types_size = types.GetSize();
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    oso_dwarf->FindTypes(context, true, types);
+    oso_dwarf->FindTypes(context, languages, true, types);
     return false;
   });
 

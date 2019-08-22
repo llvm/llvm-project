@@ -2543,7 +2543,8 @@ size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
 
   for (const auto &pair : m_external_type_modules)
     if (ModuleSP external_module_sp = pair.second)
-      num_matches += external_module_sp->FindTypes(pattern, true, types);
+      num_matches +=
+          external_module_sp->FindTypes(pattern, languages, true, types);
   return num_matches;
 }
 

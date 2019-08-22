@@ -1056,14 +1056,13 @@ size_t Module::FindTypes(
   return num_matches;
 }
 
-size_t Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern, bool append,
-                         TypeMap &types) {
+size_t Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                         LanguageSet languages, bool append, TypeMap &types) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   if (SymbolFile *symbols = GetSymbolFile())
-    return symbols->FindTypes(pattern, append, types);
+    return symbols->FindTypes(pattern, languages, append, types);
   return 0;
-
 }
 
 SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {

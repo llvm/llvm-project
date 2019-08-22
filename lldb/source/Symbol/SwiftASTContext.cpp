@@ -2283,9 +2283,11 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
 }
 
 void SwiftASTContext::Initialize() {
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "swift AST context plug-in",
-      CreateTypeSystemInstance, EnumerateSupportedLanguages);
+  LanguageSet swift;
+  swift.Insert(lldb::eLanguageTypeSwift);
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                "swift AST context plug-in",
+                                CreateTypeSystemInstance, swift, swift);
 }
 
 void SwiftASTContext::Terminate() {
@@ -3251,7 +3253,9 @@ public:
     // Swift doesn't keep track of submodules.
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
     decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
-    module->FindTypes(decl_context, true, clang_types);
+    module->FindTypes(decl_context,
+                      ClangASTContext::GetSupportedLanguagesForTypes(), true,
+                      clang_types);
 
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);

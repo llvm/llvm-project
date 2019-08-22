@@ -269,27 +269,21 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
   sym_file.UpdateExternalModuleListIfNeeded();
 
-  CompilerContextKind kinds[] = {decl_context.back().kind,
-                                 CompilerContextKind::Union,
-                                 CompilerContextKind::Enum};
-
   // The Swift projection of all Clang type is a struct; search every kind.
-  for (CompilerContextKind kind : kinds) {
-    decl_context.back().kind = kind;
-    // Search any modules referenced by DWARF.
-    for (const auto &name_module : sym_file.getExternalTypeModules()) {
-      if (!name_module.second)
-        continue;
-      if (name_module.second->GetSymbolFile()->FindTypes(decl_context, true,
-                                                         clang_types))
-        return;
-    }
-
-    // Next search the .dSYM the DIE came from, if applicable.
-    SymbolFileDWARF &sym_file = die.GetCU()->GetSymbolFileDWARF();
-    if (sym_file.FindTypes(decl_context, true, clang_types))
+  decl_context.back().kind = CompilerContextKind::AnyType;
+  LanguageSet clang_languages = ClangASTContext::GetSupportedLanguagesForTypes();
+  // Search any modules referenced by DWARF.
+  for (const auto &name_module : sym_file.getExternalTypeModules()) {
+    if (!name_module.second)
+      continue;
+    if (name_module.second->GetSymbolFile()->FindTypes(
+            decl_context, clang_languages, true, clang_types))
       return;
   }
+
+  // Next search the .dSYM the DIE came from, if applicable.
+  if (sym_file.FindTypes(decl_context, clang_languages, true, clang_types))
+    return;
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
