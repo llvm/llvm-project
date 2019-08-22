@@ -146,7 +146,7 @@ class SampleRecord {
 public:
   using CallTarget = std::pair<StringRef, uint64_t>;
   struct CallTargetComparator {
-    bool operator() (const CallTarget &LHS, const CallTarget &RHS) {
+    bool operator()(const CallTarget &LHS, const CallTarget &RHS) const {
       if (LHS.second != RHS.second)
         return LHS.second > RHS.second;
 
@@ -228,7 +228,7 @@ class FunctionSamples;
 using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // NOTE: Using a StringMap here makes parsed profiles consume around 17% more
 // memory, which is *very* significant for large profiles.
-using FunctionSamplesMap = std::map<std::string, FunctionSamples>;
+using FunctionSamplesMap = std::map<std::string, FunctionSamples, std::less<>>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 
 /// Representation of the samples collected for a function.

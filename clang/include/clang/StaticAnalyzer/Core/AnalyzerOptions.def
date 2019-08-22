@@ -294,7 +294,7 @@ ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
 ANALYZER_OPTION(bool, ShouldTrackConditions, "track-conditions",
                 "Whether to track conditions that are a control dependency of "
                 "an already tracked variable.",
-                false)
+                true)
 
 ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
                 "Whether to place an event at each tracked condition.",

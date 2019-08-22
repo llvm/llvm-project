@@ -3,7 +3,10 @@
 # Generated from the following source with:
 # clang -g -mllvm -stop-before=livedebugvalues -S -O2 test.c -o test.mir
 # Then more functions added to test for extra behaviours with complex
-# expressions.
+# expressions:
+#   'g': test for a crash from PR42773
+#   'h': complex expressions should be restored
+#   'i': spills should be restored across block boundaries
 
 # #define FORCE_SPILL() \
 #   __asm volatile("" : : : \
@@ -16,10 +19,11 @@
 #   return *(p + 1);
 # }
 
-# Pick out DILocalVariable numbers for "p", "q" and "r"
+# Pick out DILocalVariable numbers for "p", "q" and "r" etc
 # CHECK: ![[PVAR:[0-9]+]] = !DILocalVariable(name: "p",
 # CHECK: ![[QVAR:[0-9]+]] = !DILocalVariable(name: "q",
 # CHECK: ![[RVAR:[0-9]+]] = !DILocalVariable(name: "r",
+# CHECK: ![[SVAR:[0-9]+]] = !DILocalVariable(name: "s",
 
 # Ascertain that the spill has been recognized and manifested in a DBG_VALUE.
 # CHECK: MOV64mr $rsp,{{.*-8.*}}killed{{.*}}$rdi :: (store 8 into %stack.0)
@@ -78,6 +82,24 @@
     ret i32 %0, !dbg !228
   }
  
+  define dso_local i32 @i(i32* readonly %p) local_unnamed_addr !dbg !307 {
+  entry:
+    br label %foo
+
+  foo:
+    call void @llvm.dbg.value(metadata i32* %p, metadata !313, metadata !DIExpression()), !dbg !314
+    %tobool = icmp eq i32* %p, null, !dbg !315
+    br i1 %tobool, label %if.end, label %if.then, !dbg !317
+  
+  if.then:                                          ; preds = %entry
+    tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !dbg !318, !srcloc !320
+    br label %if.end, !dbg !321
+  
+  if.end:                                           ; preds = %entry, %if.then
+    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !322
+    %0 = load i32, i32* %add.ptr, align 4, !dbg !323, !tbaa !24
+    ret i32 %0, !dbg !328
+  }
 
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
@@ -144,6 +166,21 @@
   !222 = !DILocation(line: 109, column: 14, scope: !207)
   !223 = !DILocation(line: 109, column: 10, scope: !207)
   !228 = !DILocation(line: 109, column: 3, scope: !207)
+  !301 = !DIBasicType(name: "looong int", size: 64, encoding: DW_ATE_signed)
+  !307 = distinct !DISubprogram(name: "g", scope: !0, file: !1, line: 105, type: !8, scopeLine: 105, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !312)
+  !312 = !{!313}
+  !313 = !DILocalVariable(name: "s", arg: 1, scope: !307, file: !1, line: 105, type: !301)
+  !314 = !DILocation(line: 105, column: 12, scope: !307)
+  !315 = !DILocation(line: 106, column: 7, scope: !316)
+  !316 = distinct !DILexicalBlock(scope: !307, file: !1, line: 106, column: 7)
+  !317 = !DILocation(line: 106, column: 7, scope: !307)
+  !318 = !DILocation(line: 107, column: 5, scope: !319)
+  !319 = distinct !DILexicalBlock(scope: !316, file: !1, line: 106, column: 10)
+  !320 = !{i32 -2147471544}
+  !321 = !DILocation(line: 108, column: 3, scope: !319)
+  !322 = !DILocation(line: 109, column: 14, scope: !307)
+  !323 = !DILocation(line: 109, column: 10, scope: !307)
+  !328 = !DILocation(line: 109, column: 3, scope: !307)
 ...
 ---
 name:            f
@@ -437,5 +474,124 @@ body:             |
     RETQ $eax, debug-location !228
 
 
+
+...
+---
+# Function four: test that spill restores are detected across block
+# boundaries. The spill has been moved to bb.1, children of which are
+# bb 2 and 3, neither of which modifies the stack loc. The exit block (3)
+# should still be tracking the spill, and restore it on stack load.
+
+# FIXME: this test too contains a broken spill location.
+
+# Summary: loc is in $rdi in bb0, spills to stack in bb1, remains in stack
+# in bb2, starts in stack then loaded in bb3.
+
+# CHECK-LABEL: name: i
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
+# CHECK-LABEL: bb.1.foo:
+# CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK-LABEL: bb.2.if.then:
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK-LABEL: bb.3.if.end
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
+name:            i
+alignment:       4
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:       
+  stackSize:       48
+  offsetAdjustment: -48
+  maxAlignment:    8
+  cvBytesOfCalleeSavedRegisters: 48
+  localFrameSize:  0
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r12', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r13', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r15', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rbp', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
+
+    DBG_VALUE $rdi, $noreg, !313, !DIExpression(DW_OP_plus_uconst, 1), debug-location !314
+    JMP_1 %bb.1, debug-location !317
+
+  bb.1.foo:
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
+    liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
+  
+    $rax = COPY $rdi
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    $rdi = MOV64ri 0
+    TEST64rr $rax, renamable $rax, implicit-def $eflags, debug-location !315
+    JCC_1 %bb.3, 4, implicit $eflags, debug-location !317
+  
+  bb.2.if.then:
+    successors: %bb.3(0x80000000)
+    liveins: $rbp, $r15, $r14, $r13, $r12, $rbx
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 48
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 56
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    CFI_INSTRUCTION offset $rbp, -16
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !320, debug-location !318
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 48
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 8
+  
+  bb.3.if.end:
+    liveins: $rbx, $r12, $r13, $r14, $r15, $rbp
+  
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    RETQ $eax, debug-location !328
 
 ...

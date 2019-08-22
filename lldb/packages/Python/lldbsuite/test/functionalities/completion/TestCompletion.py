@@ -91,6 +91,10 @@ class CommandLineCompletionTestCase(TestBase):
                                'arm64'])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_plugin_load(self):
+        self.complete_from_to('plugin load ', [])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_quoted_command(self):
         self.complete_from_to('"set',
                               ['"settings" '])
@@ -210,6 +214,24 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to(
             'settings replace target.ru',
             'settings replace target.run-args')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_show_term(self):
+        self.complete_from_to(
+            'settings show term-',
+            'settings show term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_list_term(self):
+        self.complete_from_to(
+            'settings list term-',
+            'settings list term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_remove_term(self):
+        self.complete_from_to(
+            'settings remove term-',
+            'settings remove term-width')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_s(self):

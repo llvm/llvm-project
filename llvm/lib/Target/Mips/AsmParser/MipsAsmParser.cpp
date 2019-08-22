@@ -3659,8 +3659,8 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       // d) Use R_MIPS_GOT_PAGE/R_MIPS_GOT_OFST relocations instead
       //    of R_MIPS_GOT_DISP in appropriate cases to reduce number
       //    of GOT entries.
-      expandLoadAddress(TmpReg, Mips::NoRegister, OffsetOp, !ABI.ArePtrs64bit(),
-                        IDLoc, Out, STI);
+      loadAndAddSymbolAddress(OffsetOp.getExpr(), TmpReg, Mips::NoRegister,
+                              !ABI.ArePtrs64bit(), IDLoc, Out, STI);
       TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, 0, IDLoc, STI);
     } else {
       const MCExpr *ExprOffset = OffsetOp.getExpr();

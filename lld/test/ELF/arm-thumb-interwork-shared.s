@@ -2,7 +2,6 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t --shared -o %t.so
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t.so | FileCheck %s
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s -check-prefix=PLT
  .syntax unified
  .global sym1
  .global elsewhere
@@ -30,28 +29,27 @@ sym1:
 // CHECK-NEXT:     101c:       fc 44   add     r12, pc
 // CHECK-NEXT:     101e:       60 47   bx      r12
 
-// PLT: Disassembly of section .plt:
-// PLT-EMPTY:
-// PLT-NEXT: $a:
-// PLT-NEXT:     1020:  04 e0 2d e5     str     lr, [sp, #-4]!
-// PLT-NEXT:     1024:  00 e6 8f e2     add     lr, pc, #0, #12
-// PLT-NEXT:     1028:  01 ea 8e e2     add     lr, lr, #4096
-// PLT-NEXT:     102c:  dc ff be e5     ldr     pc, [lr, #4060]!
-// PLT: $d:
-// PLT-NEXT:     1030:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// PLT-NEXT:     1034:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// PLT-NEXT:     1038:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// PLT-NEXT:     103c:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// PLT: $a:
-// PLT-NEXT:     1040:  00 c6 8f e2     add     r12, pc, #0, #12
-// PLT-NEXT:     1044:  01 ca 8c e2     add     r12, r12, #4096
-// PLT-NEXT:     1048:  c4 ff bc e5     ldr     pc, [r12, #4036]!
-// PLT: $d:
-// PLT-NEXT:     104c:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// PLT: $a:
-// PLT-NEXT:     1050:  00 c6 8f e2     add     r12, pc, #0, #12
-// PLT-NEXT:     1054:  01 ca 8c e2     add     r12, r12, #4096
-// PLT-NEXT:     1058:  b8 ff bc e5     ldr     pc, [r12, #4024]!
-// PLT: $d:
-// PLT-NEXT:     105c:  d4 d4 d4 d4     .word   0xd4d4d4d4
-
+// CHECK: Disassembly of section .plt:
+// CHECK-EMPTY:
+// CHECK-NEXT: $a:
+// CHECK-NEXT:     1020:  04 e0 2d e5     str     lr, [sp, #-4]!
+// CHECK-NEXT:     1024:  00 e6 8f e2     add     lr, pc, #0, #12
+// CHECK-NEXT:     1028:  01 ea 8e e2     add     lr, lr, #4096
+// CHECK-NEXT:     102c:  dc ff be e5     ldr     pc, [lr, #4060]!
+// CHECK: $d:
+// CHECK-NEXT:     1030:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     1034:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     1038:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     103c:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK: $a:
+// CHECK-NEXT:     1040:  00 c6 8f e2     add     r12, pc, #0, #12
+// CHECK-NEXT:     1044:  01 ca 8c e2     add     r12, r12, #4096
+// CHECK-NEXT:     1048:  c4 ff bc e5     ldr     pc, [r12, #4036]!
+// CHECK: $d:
+// CHECK-NEXT:     104c:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK: $a:
+// CHECK-NEXT:     1050:  00 c6 8f e2     add     r12, pc, #0, #12
+// CHECK-NEXT:     1054:  01 ca 8c e2     add     r12, r12, #4096
+// CHECK-NEXT:     1058:  b8 ff bc e5     ldr     pc, [r12, #4024]!
+// CHECK: $d:
+// CHECK-NEXT:     105c:  d4 d4 d4 d4     .word   0xd4d4d4d4

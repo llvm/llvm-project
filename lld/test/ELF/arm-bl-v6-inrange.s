@@ -5,8 +5,7 @@
 // RUN:          .caller  0x500000 : { *(.text) } \
 // RUN:          .callee2 0x900004 : { *(.callee_high) } } " > %t.script
 // RUN: ld.lld %t --script %t.script -o %t2
-// RUN: llvm-objdump -d -triple=thumbv6-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
-// RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
+// RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi %t2 | FileCheck %s
 
 // On older Arm Architectures such as v5 and v6 the Thumb BL and BLX relocation
 // uses a slightly different encoding that has a lower range. These relocations
@@ -27,17 +26,17 @@ _start:
   .type thumbfunc, %function
 thumbfunc:
   bx lr
-// CHECK-THUMB: Disassembly of section .callee1:
-// CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: thumbfunc:
-// CHECK-THUMB-NEXT:   100004:       70 47   bx      lr
-// CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: Disassembly of section .caller:
-// CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: _start:
-// CHECK-THUMB-NEXT:   500000:       00 f4 00 f8     bl      #-4194304
-// CHECK-THUMB-NEXT:   500004:       ff f3 fe ef     blx     #4194300
-// CHECK-THUMB-NEXT:   500008:       70 47   bx      lr
+// CHECK: Disassembly of section .callee1:
+// CHECK-EMPTY:
+// CHECK-NEXT: thumbfunc:
+// CHECK-NEXT:   100004:       70 47   bx      lr
+// CHECK-EMPTY:
+// CHECK-NEXT: Disassembly of section .caller:
+// CHECK-EMPTY:
+// CHECK-NEXT: _start:
+// CHECK-NEXT:   500000:       00 f4 00 f8     bl      #-4194304
+// CHECK-NEXT:   500004:       ff f3 fe ef     blx     #4194300
+// CHECK-NEXT:   500008:       70 47   bx      lr
 
   .arm
   .section .callee_high, "ax", %progbits
@@ -45,7 +44,7 @@ thumbfunc:
   .type armfunc, %function
 armfunc:
   bx lr
-// CHECK-ARM: Disassembly of section .callee2:
-// CHECK-ARM-EMPTY:
-// CHECK-ARM-NEXT: armfunc:
-// CHECK-ARM-NEXT:   900004:       1e ff 2f e1     bx      lr
+// CHECK: Disassembly of section .callee2:
+// CHECK-EMPTY:
+// CHECK-NEXT: armfunc:
+// CHECK-NEXT:   900004:       1e ff 2f e1     bx      lr

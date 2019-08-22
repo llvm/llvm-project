@@ -375,43 +375,21 @@ std::string getFileNameForError(const object::Archive::Child &C,
   return "<file index: " + std::to_string(Index) + ">";
 }
 
-void error(std::error_code EC) {
-  if (!EC)
-    return;
-  WithColor::error(errs(), ToolName)
-      << "reading file: " << EC.message() << ".\n";
-  errs().flush();
-  exit(1);
-}
-
-void error(Error E) {
-  if (!E)
-    return;
-  WithColor::error(errs(), ToolName) << toString(std::move(E));
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  WithColor::error(errs(), ToolName) << Message << ".\n";
-  errs().flush();
-  exit(1);
-}
-
-void warn(Twine Message) {
+void reportWarning(Twine Message, StringRef File) {
   // Output order between errs() and outs() matters especially for archive
   // files where the output is per member object.
   outs().flush();
-  WithColor::warning(errs(), ToolName) << Message << "\n";
+  WithColor::warning(errs(), ToolName)
+      << "'" << File << "': " << Message << "\n";
   errs().flush();
 }
 
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message) {
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << Message << ".\n";
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message) {
+  WithColor::error(errs(), ToolName) << "'" << File << "': " << Message << "\n";
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File) {
+LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef File) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -421,9 +399,9 @@ LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
-                                          StringRef FileName,
-                                          StringRef ArchitectureName) {
+LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef ArchiveName,
+                                         StringRef FileName,
+                                         StringRef ArchitectureName) {
   assert(E);
   WithColor::error(errs(), ToolName);
   if (ArchiveName != "")
@@ -440,6 +418,15 @@ LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef ArchiveName,
   exit(1);
 }
 
+static void reportCmdLineWarning(Twine Message) {
+  WithColor::warning(errs(), ToolName) << Message << "\n";
+}
+
+LLVM_ATTRIBUTE_NORETURN static void reportCmdLineError(Twine Message) {
+  WithColor::error(errs(), ToolName) << Message << "\n";
+  exit(1);
+}
+
 static void warnOnNoMatchForSections() {
   SetVector<StringRef> MissingSections;
   for (StringRef S : FilterSections) {
@@ -452,37 +439,29 @@ static void warnOnNoMatchForSections() {
 
   // Warn only if no section in FilterSections is matched.
   for (StringRef S : MissingSections)
-    warn("section '" + S + "' mentioned in a -j/--section option, but not "
-         "found in any input file");
+    reportCmdLineWarning("section '" + S +
+                         "' mentioned in a -j/--section option, but not "
+                         "found in any input file");
 }
 
-static const Target *getTarget(const ObjectFile *Obj = nullptr) {
+static const Target *getTarget(const ObjectFile *Obj) {
   // Figure out the target triple.
   Triple TheTriple("unknown-unknown-unknown");
   if (TripleName.empty()) {
-    if (Obj)
-      TheTriple = Obj->makeTriple();
+    TheTriple = Obj->makeTriple();
   } else {
     TheTriple.setTriple(Triple::normalize(TripleName));
-
-    // Use the triple, but also try to combine with ARM build attributes.
-    if (Obj) {
-      auto Arch = Obj->getArch();
-      if (Arch == Triple::arm || Arch == Triple::armeb)
-        Obj->setARMSubArch(TheTriple);
-    }
+    auto Arch = Obj->getArch();
+    if (Arch == Triple::arm || Arch == Triple::armeb)
+      Obj->setARMSubArch(TheTriple);
   }
 
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
                                                          Error);
-  if (!TheTarget) {
-    if (Obj)
-      report_error(Obj->getFileName(), "can't find target: " + Error);
-    else
-      error("can't find target: " + Error);
-  }
+  if (!TheTarget)
+    reportError(Obj->getFileName(), "can't find target: " + Error);
 
   // Update the triple name and return the found target.
   TripleName = TheTriple.getTriple();
@@ -582,8 +561,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
     auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
     if (!BufferOrError) {
       if (MissingSources.insert(LineInfo.FileName).second)
-        warn("failed to find source " + LineInfo.FileName);
-
+        reportWarning("failed to find source " + LineInfo.FileName,
+                      Obj->getFileName());
       return false;
     }
     Buffer = std::move(*BufferOrError);
@@ -625,7 +604,7 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
           "failed to parse debug information for " + ObjectFilename.str();
       if (!ErrorMessage.empty())
         Warning += ": " + ErrorMessage;
-      warn(Warning);
+      reportWarning(Warning, ObjectFilename);
       WarnedNoDebugInfo = true;
     }
     return;
@@ -644,9 +623,11 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
     auto LineBuffer = LineCache.find(LineInfo.FileName);
     if (LineBuffer != LineCache.end()) {
       if (LineInfo.Line > LineBuffer->second.size()) {
-        warn(formatv(
-            "debug info line number {0} exceeds the number of lines in {1}",
-            LineInfo.Line, LineInfo.FileName));
+        reportWarning(
+            formatv(
+                "debug info line number {0} exceeds the number of lines in {1}",
+                LineInfo.Line, LineInfo.FileName),
+            ObjectFilename);
         return;
       }
       // Vector begins at 0, line numbers are non-zero
@@ -670,13 +651,14 @@ static bool hasMappingSymbols(const ObjectFile *Obj) {
   return isArmElf(Obj) || isAArch64Elf(Obj);
 }
 
-static void printRelocation(const RelocationRef &Rel, uint64_t Address,
-                            bool Is64Bits) {
+static void printRelocation(StringRef FileName, const RelocationRef &Rel,
+                            uint64_t Address, bool Is64Bits) {
   StringRef Fmt = Is64Bits ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
   SmallString<16> Name;
   SmallString<32> Val;
   Rel.getTypeName(Name);
-  error(getRelocationValueString(Rel, Val));
+  if (Error E = getRelocationValueString(Rel, Val))
+    reportError(std::move(E), FileName);
   outs() << format(Fmt.data(), Address) << Name << "\t" << Val << "\n";
 }
 
@@ -760,7 +742,7 @@ public:
     auto PrintReloc = [&]() -> void {
       while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address.Address)) {
         if (RelCur->getOffset() == Address.Address) {
-          printRelocation(*RelCur, Address.Address, false);
+          printRelocation(ObjectFilename, *RelCur, Address.Address, false);
           return;
         }
         ++RelCur;
@@ -1162,11 +1144,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
     for (const auto &ExportEntry : COFFObj->export_directories()) {
       StringRef Name;
-      error(ExportEntry.getSymbolName(Name));
+      if (std::error_code EC = ExportEntry.getSymbolName(Name))
+        reportError(errorCodeToError(EC), Obj->getFileName());
       if (Name.empty())
         continue;
+
       uint32_t RVA;
-      error(ExportEntry.getExportRVA(RVA));
+      if (std::error_code EC = ExportEntry.getExportRVA(RVA))
+        reportError(errorCodeToError(EC), Obj->getFileName());
 
       uint64_t VA = COFFObj->getImageBase() + RVA;
       auto Sec = partition_point(
@@ -1494,7 +1479,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 Offset += AdjustVMA;
             }
 
-            printRelocation(*RelCur, SectionAddr + Offset, Is64Bits);
+            printRelocation(Obj->getFileName(), *RelCur, SectionAddr + Offset,
+                            Is64Bits);
             ++RelCur;
           }
         }
@@ -1506,7 +1492,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   StringSet<> MissingDisasmFuncsSet =
       set_difference(DisasmFuncsSet, FoundDisasmFuncsSet);
   for (StringRef MissingDisasmFunc : MissingDisasmFuncsSet.keys())
-    warn("failed to disassemble missing function " + MissingDisasmFunc);
+    reportWarning("failed to disassemble missing function " + MissingDisasmFunc,
+                  FileName);
 }
 
 static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
@@ -1521,24 +1508,24 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   std::unique_ptr<const MCRegisterInfo> MRI(
       TheTarget->createMCRegInfo(TripleName));
   if (!MRI)
-    report_error(Obj->getFileName(),
-                 "no register info for target " + TripleName);
+    reportError(Obj->getFileName(),
+                "no register info for target " + TripleName);
 
   // Set up disassembler.
   std::unique_ptr<const MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TripleName));
   if (!AsmInfo)
-    report_error(Obj->getFileName(),
-                 "no assembly info for target " + TripleName);
+    reportError(Obj->getFileName(),
+                "no assembly info for target " + TripleName);
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
   if (!STI)
-    report_error(Obj->getFileName(),
-                 "no subtarget info for target " + TripleName);
+    reportError(Obj->getFileName(),
+                "no subtarget info for target " + TripleName);
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
-    report_error(Obj->getFileName(),
-                 "no instruction info for target " + TripleName);
+    reportError(Obj->getFileName(),
+                "no instruction info for target " + TripleName);
   MCObjectFileInfo MOFI;
   MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
   // FIXME: for now initialize MCObjectFileInfo with default values
@@ -1547,8 +1534,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
-    report_error(Obj->getFileName(),
-                 "no disassembler for target " + TripleName);
+    reportError(Obj->getFileName(), "no disassembler for target " + TripleName);
 
   // If we have an ARM object file, we need a second disassembler, because
   // ARM CPUs have two different instruction sets: ARM mode, and Thumb mode.
@@ -1573,8 +1559,8 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
   if (!IP)
-    report_error(Obj->getFileName(),
-                 "no instruction printer for target " + TripleName);
+    reportError(Obj->getFileName(),
+                "no instruction printer for target " + TripleName);
   IP->setPrintImmHex(PrintImmHex);
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
@@ -1582,7 +1568,8 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   for (StringRef Opt : DisassemblerOptions)
     if (!IP->applyTargetSpecificCLOption(Opt))
-      error("Unrecognized disassembler option: " + Opt);
+      reportError(Obj->getFileName(),
+                  "Unrecognized disassembler option: " + Opt);
 
   disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), SecondaryDisAsm.get(),
                     MIA.get(), IP.get(), STI.get(), SecondarySTI.get(), PIP,
@@ -1620,7 +1607,9 @@ void printRelocations(const ObjectFile *Obj) {
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
         Reloc.getTypeName(RelocName);
-        error(getRelocationValueString(Reloc, ValueStr));
+        if (Error E = getRelocationValueString(Reloc, ValueStr))
+          reportError(std::move(E), Obj->getFileName());
+
         outs() << format(Fmt.data(), Address) << " " << RelocName << " "
                << ValueStr << "\n";
       }
@@ -1636,7 +1625,7 @@ void printDynamicRelocations(const ObjectFile *Obj) {
 
   const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
   if (!Elf || Elf->getEType() != ELF::ET_DYN) {
-    error("not a dynamic object");
+    reportError(Obj->getFileName(), "not a dynamic object");
     return;
   }
 
@@ -1652,7 +1641,8 @@ void printDynamicRelocations(const ObjectFile *Obj) {
       SmallString<32> RelocName;
       SmallString<32> ValueStr;
       Reloc.getTypeName(RelocName);
-      error(getRelocationValueString(Reloc, ValueStr));
+      if (Error E = getRelocationValueString(Reloc, ValueStr))
+        reportError(std::move(E), Obj->getFileName());
       outs() << format(Fmt.data(), Address) << " " << RelocName << " "
              << ValueStr << "\n";
     }
@@ -1980,12 +1970,12 @@ static void printPrivateFileHeaders(const ObjectFile *O, bool OnlyFirst) {
       printMachOLoadCommands(O);
     return;
   }
-  report_error(O->getFileName(), "Invalid/Unsupported object file format");
+  reportError(O->getFileName(), "Invalid/Unsupported object file format");
 }
 
 static void printFileHeaders(const ObjectFile *O) {
   if (!O->isELF() && !O->isCOFF())
-    report_error(O->getFileName(), "Invalid/Unsupported object file format");
+    reportError(O->getFileName(), "Invalid/Unsupported object file format");
 
   Triple::ArchType AT = O->getArch();
   outs() << "architecture: " << Triple::getArchTypeName(AT) << "\n";
@@ -2067,15 +2057,18 @@ static void checkForInvalidStartStopAddress(ObjectFile *Obj,
     }
 
   if (StartAddress.getNumOccurrences() == 0)
-    warn("no section has address less than 0x" +
-         Twine::utohexstr(Stop) + " specified by --stop-address");
+    reportWarning("no section has address less than 0x" +
+                      Twine::utohexstr(Stop) + " specified by --stop-address",
+                  Obj->getFileName());
   else if (StopAddress.getNumOccurrences() == 0)
-    warn("no section has address greater than or equal to 0x" +
-         Twine::utohexstr(Start) + " specified by --start-address");
+    reportWarning("no section has address greater than or equal to 0x" +
+                      Twine::utohexstr(Start) + " specified by --start-address",
+                  Obj->getFileName());
   else
-    warn("no section overlaps the range [0x" +
-         Twine::utohexstr(Start) + ",0x" + Twine::utohexstr(Stop) +
-         ") specified by --start-address/--stop-address");
+    reportWarning("no section overlaps the range [0x" +
+                      Twine::utohexstr(Start) + ",0x" + Twine::utohexstr(Stop) +
+                      ") specified by --start-address/--stop-address",
+                  Obj->getFileName());
 }
 
 static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
@@ -2163,7 +2156,7 @@ static void dumpArchive(const Archive *A) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-        report_error(std::move(E), A->getFileName(), getFileNameForError(C, I));
+        reportError(std::move(E), A->getFileName(), getFileNameForError(C, I));
       continue;
     }
     if (ObjectFile *O = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
@@ -2171,11 +2164,11 @@ static void dumpArchive(const Archive *A) {
     else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
       dumpObject(I, A, &C);
     else
-      report_error(errorCodeToError(object_error::invalid_file_type),
-                   A->getFileName());
+      reportError(errorCodeToError(object_error::invalid_file_type),
+                  A->getFileName());
   }
   if (Err)
-    report_error(std::move(Err), A->getFileName());
+    reportError(std::move(Err), A->getFileName());
 }
 
 /// Open file and figure out how to dump it.
@@ -2199,7 +2192,7 @@ static void dumpInput(StringRef file) {
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
     parseInputMachO(UB);
   else
-    report_error(errorCodeToError(object_error::invalid_file_type), file);
+    reportError(errorCodeToError(object_error::invalid_file_type), file);
 }
 } // namespace llvm
 
@@ -2220,7 +2213,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n");
 
   if (StartAddress >= StopAddress)
-    error("start address should be less than stop address");
+    reportCmdLineError("start address should be less than stop address");
 
   ToolName = argv[0];
 

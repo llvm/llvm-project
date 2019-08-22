@@ -75,7 +75,6 @@ INLINE void RandomShuffle(T *a, u32 n, u32 *rand_state) {
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_combined.h"
-#include "sanitizer_runtime_select_allocator.h"
 
 } // namespace __sanitizer
 

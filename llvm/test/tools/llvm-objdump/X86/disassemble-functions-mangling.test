@@ -20,10 +20,10 @@
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
 
 # MANGLED: _Z3foov:
-# MANGLED-MISS: warning: failed to disassemble missing function foo
+# MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function foo
 
 # DEMANGLED: foo():
-# DEMANGLED-MISS: warning: failed to disassemble missing function _Z3foov
+# DEMANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function _Z3foov
 
 # NOMANGLE: i:
 # NOMANGLE: f:

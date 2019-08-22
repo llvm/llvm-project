@@ -64,3 +64,15 @@ class PluginCommandTestCase(TestBase):
             print(retobj.GetOutput())
 
         self.expect(retobj, substrs=['abc def ghi'], exe=False)
+
+    @no_debug_info_test
+    def test_invalid_plugin_invocation(self):
+        self.expect("plugin load a b",
+                    error=True, startstr="error: 'plugin load' requires one argument")
+        self.expect("plugin load",
+                    error=True, startstr="error: 'plugin load' requires one argument")
+
+    @no_debug_info_test
+    def test_invalid_plugin_target(self):
+        self.expect("plugin load ThisIsNotAValidPluginName",
+                    error=True, startstr="error: no such file")

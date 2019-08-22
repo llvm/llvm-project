@@ -189,8 +189,8 @@ public:
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
-  virtual size_t FindTypes(const std::vector<CompilerContext> &context,
-                           bool append, TypeMap &types);
+  virtual size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern, bool append,
+                           TypeMap &types);
 
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,

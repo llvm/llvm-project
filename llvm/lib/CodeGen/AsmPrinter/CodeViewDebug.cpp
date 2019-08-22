@@ -98,7 +98,8 @@ using namespace llvm::codeview;
 namespace {
 class CVMCAdapter : public CodeViewRecordStreamer {
 public:
-  CVMCAdapter(MCStreamer &OS) : OS(&OS) {}
+  CVMCAdapter(MCStreamer &OS, TypeCollection &TypeTable)
+      : OS(&OS), TypeTable(TypeTable) {}
 
   void EmitBytes(StringRef Data) { OS->EmitBytes(Data); }
 
@@ -110,8 +111,24 @@ public:
 
   void AddComment(const Twine &T) { OS->AddComment(T); }
 
+  void AddRawComment(const Twine &T) { OS->emitRawComment(T); }
+
+  bool isVerboseAsm() { return OS->isVerboseAsm(); }
+
+  std::string getTypeName(TypeIndex TI) {
+    std::string TypeName;
+    if (!TI.isNoneType()) {
+      if (TI.isSimple())
+        TypeName = TypeIndex::simpleTypeName(TI);
+      else
+        TypeName = TypeTable.getTypeName(TI);
+    }
+    return TypeName;
+  }
+
 private:
   MCStreamer *OS = nullptr;
+  TypeCollection &TypeTable;
 };
 } // namespace
 
@@ -617,13 +634,6 @@ emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
   OS.EmitBytes(NullTerminatedString);
 }
 
-static StringRef getTypeLeafName(TypeLeafKind TypeKind) {
-  for (const EnumEntry<TypeLeafKind> &EE : getTypeLeafNames())
-    if (EE.Value == TypeKind)
-      return EE.Name;
-  return "";
-}
-
 void CodeViewDebug::emitTypeInformation() {
   if (TypeTable.empty())
     return;
@@ -640,11 +650,11 @@ void CodeViewDebug::emitTypeInformation() {
   }
 
   TypeTableCollection Table(TypeTable.records());
+  TypeVisitorCallbackPipeline Pipeline;
   SmallString<512> CommentBlock;
   raw_svector_ostream CommentOS(CommentBlock);
   std::unique_ptr<ScopedPrinter> SP;
   std::unique_ptr<TypeDumpVisitor> TDV;
-  TypeVisitorCallbackPipeline Pipeline;
 
   if (OS.isVerboseAsm()) {
     // To construct block comment describing the type record for readability.
@@ -655,7 +665,7 @@ void CodeViewDebug::emitTypeInformation() {
   }
 
   // To emit type record using Codeview MCStreamer adapter
-  CVMCAdapter CVMCOS(OS);
+  CVMCAdapter CVMCOS(OS, Table);
   TypeRecordMapping typeMapping(CVMCOS);
   Pipeline.addCallbackToPipeline(typeMapping);
 
@@ -665,16 +675,6 @@ void CodeViewDebug::emitTypeInformation() {
     CVType Record = Table.getType(*B);
 
     CommentBlock.clear();
-
-    auto RecordLen = Record.length();
-    auto RecordKind = Record.kind();
-    if (OS.isVerboseAsm())
-      CVMCOS.AddComment("Record length");
-    CVMCOS.EmitIntValue(RecordLen - 2, 2);
-    if (OS.isVerboseAsm())
-      CVMCOS.AddComment("Record kind: " + getTypeLeafName(RecordKind));
-    CVMCOS.EmitIntValue(RecordKind, sizeof(RecordKind));
-
     Error E = codeview::visitTypeRecord(Record, *B, Pipeline);
 
     if (E) {

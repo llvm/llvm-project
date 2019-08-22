@@ -160,9 +160,6 @@ using Allocator32CompactASVT =
     SizeClassAllocator32<AP32Compact<AddressSpaceView>>;
 using Allocator32Compact = Allocator32CompactASVT<LocalAddressSpaceView>;
 
-using Allocator32or64Compact =
-    RuntimeSelectAllocator<Allocator32Compact, Allocator64Compact>;
-
 template <class SizeClassMap>
 void TestSizeClassMap() {
   typedef SizeClassMap SCMap;
@@ -277,13 +274,6 @@ TEST(SanitizerCommon, SizeClassAllocator64Compact) {
   TestSizeClassAllocator<Allocator64Compact>();
 }
 
-TEST(SanitizerCommon, SizeClassAllocator32or64Compact) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  TestSizeClassAllocator<Allocator32or64Compact>();
-  Allocator32or64Compact::UseAllocator1 = true;
-  TestSizeClassAllocator<Allocator32or64Compact>();
-}
-
 TEST(SanitizerCommon, SizeClassAllocator64Dense) {
   TestSizeClassAllocator<Allocator64Dense>();
 }
@@ -367,12 +357,6 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicMetadataStress) {
 TEST(SanitizerCommon, SizeClassAllocator64CompactMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Compact>();
 }
-TEST(SanitizerCommon, SizeClassAllocator32or64CompactMetadataStress) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  SizeClassAllocatorMetadataStress<Allocator32or64Compact>();
-  Allocator32or64Compact::UseAllocator1 = true;
-  SizeClassAllocatorMetadataStress<Allocator32or64Compact>();
-}
 #endif
 
 #endif
@@ -419,12 +403,6 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicGetBlockBegin) {
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Compact>(1ULL << 33);
-}
-TEST(SanitizerCommon, SizeClassAllocator32or64CompactGetBlockBegin) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  SizeClassAllocatorGetBlockBeginStress<Allocator32or64Compact>(1ULL << 33);
-  Allocator32or64Compact::UseAllocator1 = true;
-  SizeClassAllocatorGetBlockBeginStress<Allocator32or64Compact>(1ULL << 33);
 }
 #endif
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompactGetBlockBegin) {
@@ -716,12 +694,6 @@ TEST(SanitizerCommon, CombinedAllocator64Dynamic) {
 TEST(SanitizerCommon, CombinedAllocator64Compact) {
   TestCombinedAllocator<Allocator64Compact>();
 }
-TEST(SanitizerCommon, CombinedRuntimeSelectAllocator) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  TestCombinedAllocator<Allocator32or64Compact>();
-  Allocator32or64Compact::UseAllocator1 = true;
-  TestCombinedAllocator<Allocator32or64Compact>();
-}
 #endif
 
 TEST(SanitizerCommon, CombinedAllocator64VeryCompact) {
@@ -782,12 +754,6 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicLocalCache) {
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Compact>();
-}
-TEST(SanitizerCommon, SizeClassAllocator32or64CompactLocalCache) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  TestSizeClassAllocatorLocalCache<Allocator32or64Compact>();
-  Allocator32or64Compact::UseAllocator1 = true;
-  TestSizeClassAllocatorLocalCache<Allocator32or64Compact>();
 }
 #endif
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompactLocalCache) {
@@ -1366,12 +1332,6 @@ TEST(SanitizerCommon, SizeClassAllocator64ReleaseFreeMemoryToOS) {
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactReleaseFreeMemoryToOS) {
   TestReleaseFreeMemoryToOS<Allocator64Compact>();
-}
-TEST(SanitizerCommon, SizeClassAllocator32or64CompactReleaseFreeMemoryToOS) {
-  Allocator32or64Compact::UseAllocator1 = false;
-  TestReleaseFreeMemoryToOS<Allocator32or64Compact>();
-  Allocator32or64Compact::UseAllocator1 = true;
-  TestReleaseFreeMemoryToOS<Allocator32or64Compact>();
 }
 
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompactReleaseFreeMemoryToOS) {

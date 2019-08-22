@@ -483,7 +483,7 @@ void FileManager::invalidateCache(const FileEntry *Entry) {
   // invalidation of the whole cache.
   //
   // FIXME: This is broken. We sometimes have the same FileEntry* shared
-  // betweeen multiple SeenFileEntries, so this can leave dangling pointers.
+  // between multiple SeenFileEntries, so this can leave dangling pointers.
   UniqueRealFiles.erase(Entry->getUniqueID());
 }
 

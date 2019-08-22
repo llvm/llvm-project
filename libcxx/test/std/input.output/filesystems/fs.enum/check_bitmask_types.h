@@ -1,5 +1,5 @@
-#ifndef TEST_BITMASK_TYPE_HPP
-#define TEST_BITMASK_TYPE_HPP
+#ifndef TEST_BITMASK_TYPE_H
+#define TEST_BITMASK_TYPE_H
 
 #include <type_traits>
 #include <cassert>

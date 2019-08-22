@@ -103,6 +103,9 @@ case $stable_version in
   8.0)
     release_metabug="41221"
     ;;
+  9.0)
+    release_metabug="42474"
+    ;;
   *)
     echo "error: invalid stable version"
     exit 1

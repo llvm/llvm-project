@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 
 #include "test_macros.h"
-#include "check_bitmask_types.hpp"
+#include "check_bitmask_types.h"
 
 
 constexpr fs::perm_options ME(int val) {

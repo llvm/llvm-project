@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 
 #include "test_macros.h"
-#include "check_bitmask_types.hpp"
+#include "check_bitmask_types.h"
 
 
 constexpr fs::perms ME(int val) { return static_cast<fs::perms>(val); }

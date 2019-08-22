@@ -1740,7 +1740,7 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
     while (j != e && i->r_info == j->r_info &&
            (!config->isRela || i->r_addend == j->r_addend))
       ++j;
-    if (j - i < 3 || i->r_addend != 0)
+    if (j - i < 3 || (config->isRela && i->r_addend != 0))
       ungroupedNonRelatives.insert(ungroupedNonRelatives.end(), i, j);
     else
       nonRelativeGroups.emplace_back(i, j);

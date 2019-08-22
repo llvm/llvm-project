@@ -1377,10 +1377,10 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
   }
 
   MFI.setLocalFrameSize(LFS);
-  unsigned A = MFI.getLocalFrameMaxAlign();
+  Align A = MFI.getLocalFrameMaxAlign();
   assert(A <= 8 && "Unexpected local frame alignment");
-  if (A == 0)
-    MFI.setLocalFrameMaxAlign(8);
+  if (A == 1)
+    MFI.setLocalFrameMaxAlign(llvm::Align(8));
   MFI.setUseLocalStackAllocationBlock(true);
 
   // Set the physical aligned-stack base address register.

@@ -271,9 +271,6 @@ class SizeClassAllocator32 {
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
 
-  static uptr KNumClasses() { return SizeClassMap::kNumClasses; }
-  static uptr KMaxSize() { return SizeClassMap::kMaxSize; }
-
  private:
   static const uptr kRegionSize = 1 << kRegionSizeLog;
   static const uptr kNumPossibleRegions = kSpaceSize / kRegionSize;

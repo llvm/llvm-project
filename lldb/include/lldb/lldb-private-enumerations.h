@@ -198,18 +198,24 @@ enum class LineStatus {
 enum class TypeValidatorResult : bool { Success = true, Failure = false };
 
 // Enumerations that can be used to specify scopes types when looking up types.
-enum class CompilerContextKind {
+enum class CompilerContextKind : uint16_t {
   Invalid = 0,
-  TranslationUnit,
-  Module,
-  Namespace,
-  Class,
-  Structure,
-  Union,
-  Function,
-  Variable,
-  Enumeration,
-  Typedef
+  TranslationUnit = 1,
+  Module = 1 << 1,
+  Namespace = 1 << 2,
+  Class = 1 << 3,
+  Struct = 1 << 4,
+  Union = 1 << 5,
+  Function = 1 << 6,
+  Variable = 1 << 7,
+  Enum = 1 << 8,
+  Typedef = 1 << 9,
+
+  Any = 1 << 15,
+  /// Match 0..n nested modules.
+  AnyModule = Any | Module,
+  /// Match any type.
+  AnyType = Any | Class | Struct | Union | Enum | Typedef
 };
 
 // Enumerations that can be used to specify the kind of metric we're looking at
