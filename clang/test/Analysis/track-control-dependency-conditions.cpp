@@ -6,6 +6,7 @@
 
 // RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-config track-conditions-debug=true \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-DEBUG
 
@@ -22,6 +23,7 @@
 
 // RUN: %clang_analyze_cc1 %s -verify \
 // RUN:   -analyzer-output=text \
+// RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-checker=core
 
 namespace example_1 {
