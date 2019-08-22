@@ -26,6 +26,8 @@
 namespace clang {
 namespace tooling {
 
+#ifndef _WIN32
+
 namespace {
 
 /// Prints out all of the gathered dependencies into a string.
@@ -113,6 +115,8 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
 
   EXPECT_EQ(Files.getNumUniqueRealFiles(), 2u);
 }
+
+#endif
 
 } // end namespace tooling
 } // end namespace clang
