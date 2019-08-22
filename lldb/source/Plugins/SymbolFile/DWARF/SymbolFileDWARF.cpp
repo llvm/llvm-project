@@ -2558,7 +2558,7 @@ size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
     if (ModuleSP external_module_sp = pair.second) {
       SymbolVendor *sym_vendor = external_module_sp->GetSymbolVendor();
       if (sym_vendor)
-        num_matches += sym_vendor->FindTypes(context, true, types);
+        num_matches += sym_vendor->FindTypes(pattern, true, types);
     }
   return num_matches;
 }

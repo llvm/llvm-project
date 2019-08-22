@@ -1198,7 +1198,7 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
 }
 
 size_t
-SymbolFileDWARFDebugMap::FindTypes(const std::vector<CompilerContext> &context,
+SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
                                    bool append, TypeMap &types) {
   if (!append)
     types.Clear();
