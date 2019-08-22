@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue \
+// RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-output=text -verify %s
 
 #include "Inputs/llvm.h"
@@ -43,16 +43,21 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
     return;
   }
 
-  if (dyn_cast_or_null<Triangle>(C)) {
+  if (isa<Triangle>(C)) {
     // expected-note@-1 {{'C' is not a 'Triangle'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
 
-  (void)(1 / !C);
-  // expected-note@-1 {{'C' is non-null}}
-  // expected-note@-2 {{Division by zero}}
-  // expected-warning@-3 {{Division by zero}}
+  if (isa<Circle>(C)) {
+    // expected-note@-1 {{'C' is a 'Circle'}}
+    // expected-note@-2 {{Taking true branch}}
+
+    (void)(1 / !C);
+    // expected-note@-1 {{'C' is non-null}}
+    // expected-note@-2 {{Division by zero}}
+    // expected-warning@-3 {{Division by zero}}
+  }
 }
 
 void evalNonNullParamNonNullReturn(const Shape *S) {
@@ -60,7 +65,13 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   // expected-note@-1 {{'S' is a 'Circle'}}
   // expected-note@-2 {{'C' initialized here}}
 
-  if (!cast<Triangle>(C)) {
+  if (!isa<Triangle>(C)) {
+    // expected-note@-1 {{Assuming 'C' is a 'Triangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (!isa<Triangle>(C)) {
     // expected-note@-1 {{'C' is a 'Triangle'}}
     // expected-note@-2 {{Taking false branch}}
     return;

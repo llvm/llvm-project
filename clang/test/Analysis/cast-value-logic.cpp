@@ -23,8 +23,13 @@ class Circle : public Shape {};
 using namespace llvm;
 using namespace clang;
 
-void test_regions(const Shape *A, const Shape *B) {
+void test_regions_dyn_cast(const Shape *A, const Shape *B) {
   if (dyn_cast<Circle>(A) && !dyn_cast<Circle>(B))
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+}
+
+void test_regions_isa(const Shape *A, const Shape *B) {
+  if (isa<Circle>(A) && !isa<Circle>(B))
     clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
