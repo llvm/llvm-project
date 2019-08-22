@@ -110,7 +110,7 @@ static const NoteTag *getNoteTag(CheckerContext &C,
   Object = Object->IgnoreParenImpCasts();
 
   return C.getNoteTag(
-      [=] {
+      [=]() -> std::string {
         SmallString<128> Msg;
         llvm::raw_svector_ostream Out(Msg);
 
