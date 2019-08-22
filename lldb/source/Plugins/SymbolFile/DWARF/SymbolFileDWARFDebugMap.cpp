@@ -1212,6 +1212,22 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
   return types.GetSize() - initial_types_size;
 }
 
+size_t
+SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
+                                   bool append, TypeMap &types) {
+  if (!append)
+    types.Clear();
+
+  const uint32_t initial_types_size = types.GetSize();
+
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    oso_dwarf->FindTypes(context, true, types);
+    return false;
+  });
+
+  return types.GetSize() - initial_types_size;
+}
+
 //
 // uint32_t
 // SymbolFileDWARFDebugMap::FindTypes (const SymbolContext& sc, const

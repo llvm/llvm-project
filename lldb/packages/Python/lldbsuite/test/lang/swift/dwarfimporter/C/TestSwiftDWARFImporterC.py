@@ -26,7 +26,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         inputs = self.getSourcePath('Inputs')
         lldbutil.mkdir_p(include)
         import shutil
-        for f in ['module.modulemap', 'c-header.h']:
+        for f in ['module.modulemap', 'c-header.h', 'submodule.h']:
             shutil.copyfile(os.path.join(inputs, f), os.path.join(include, f))
 
         super(TestSwiftDWARFImporterC, self).build()
@@ -52,14 +52,17 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
                                 typename='__ObjC.Point', num_children=2)
-        self.expect("fr v point", substrs=["x = 1", "y = 2"])
-        self.expect("fr v point", substrs=["x = 1", "y = 2"])
-        self.expect("fr v enumerator", substrs=[".yellow"])
-        self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
-        self.expect("fr v swiftStructCMember",
-                    substrs=["x = 3", "y = 4", "swift struct c member"])
-        self.expect("fr v typedef", substrs=["x = 5", "y = 6"])
-        self.expect("fr v union", substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("ta v point", substrs=["x = 1", "y = 2"])
+        self.expect("ta v enumerator", substrs=[".yellow"])
+        self.expect("ta v pureSwiftStruct", substrs=["pure swift"])
+        self.expect("ta v swiftStructCMember",
+                    substrs=["point", "x = 3", "y = 4",
+                             "sub", "x = 1", "y = 2", "z = 3",
+                             "swift struct c member"])
+        self.expect("ta v typedef", substrs=["x = 5", "y = 6"])
+        self.expect("ta v union", substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("ta v fromSubmodule",
+                    substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
         process.Clear()
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
@@ -79,7 +82,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
                                 typename="Point", num_children=2)
-        self.expect("fr v point", substrs=["x = 1", "y = 2"])
+        self.expect("ta v point", substrs=["x = 1", "y = 2"])
 
         found = False
         logfile = open(log, "r")

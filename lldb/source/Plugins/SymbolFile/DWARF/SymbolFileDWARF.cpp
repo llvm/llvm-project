@@ -2535,6 +2535,18 @@ size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
       m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
     }
   }
+
+  // Next search through the reachable Clang modules. This only applies for
+  // DWARF objects compiled with -gmodules that haven't been processed by
+  // dsymutil.
+  UpdateExternalModuleListIfNeeded();
+
+  for (const auto &pair : m_external_type_modules)
+    if (ModuleSP external_module_sp = pair.second) {
+      SymbolVendor *sym_vendor = external_module_sp->GetSymbolVendor();
+      if (sym_vendor)
+        num_matches += sym_vendor->FindTypes(pattern, true, types);
+    }
   return num_matches;
 }
 

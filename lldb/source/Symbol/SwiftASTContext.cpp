@@ -3198,17 +3198,40 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     }
     return nullptr;
   }
+  
+  static CompilerContextKind
+  GetCompilerContextKind(llvm::Optional<swift::ClangTypeKind> kind) {
+    if (!kind)
+      return CompilerContextKind::AnyType;
+    switch (*kind) {
+    case swift::ClangTypeKind::Typedef:
+      /*=swift::ClangTypeKind::ObjCClass:*/
+      return (CompilerContextKind)((uint16_t)CompilerContextKind::Any |
+                                   (uint16_t)CompilerContextKind::Typedef |
+                                   (uint16_t)CompilerContextKind::Struct);
+      break;
+    case swift::ClangTypeKind::Tag:
+      return (CompilerContextKind)((uint16_t)CompilerContextKind::Any |
+                                   (uint16_t)CompilerContextKind::Class |
+                                   (uint16_t)CompilerContextKind::Struct |
+                                   (uint16_t)CompilerContextKind::Union |
+                                   (uint16_t)CompilerContextKind::Enum);
+      // case swift::ClangTypeKind::ObjCProtocol:
+      // Not implemented since Objective-C protocols aren't yet
+      // described in DWARF.
+    default:
+      return CompilerContextKind::Invalid;
+    }
+  }
+
 
 public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
       : m_swift_ast_ctx(swift_ast_ctx) {}
 
-  void lookupValue(StringRef name,
-                   llvm::Optional<swift::ClangTypeKind> kind,
+  void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+                   StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
-    std::vector<CompilerContext> decl_context;
-    ConstString name_cs(name);
-    decl_context.push_back({CompilerContextKind::Struct, name_cs});
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();
     if (!clang_importer)
       return;
@@ -3217,45 +3240,42 @@ public:
       return;
 
     // Find the type in the debug info.
-    TypeList clang_types;
-    const bool exact_match = true;
-    const uint32_t max_matches = UINT32_MAX;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    if (!module->FindTypes(name_cs, exact_match, max_matches,
-                           searched_symbol_files, clang_types))
-      return;
+    TypeMap clang_types;
 
-    SymbolFile *sym_file = m_swift_ast_ctx.GetSymbolFile();
-    if (!sym_file)
-      return;
-    auto ast_ctx = sym_file->GetTypeSystemForLanguage(eLanguageTypeObjC);
-    if (!ast_ctx)
-      return llvm::consumeError(ast_ctx.takeError());
-    auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&(*ast_ctx));
-    if (!clang_ctx)
-      return;
+    llvm::SmallVector<CompilerContext, 3> decl_context;
+    // Perform a lookup in a specific module, if requested.
+    if (!inModule.empty())
+      decl_context.push_back(
+          {CompilerContextKind::Module, ConstString(inModule)});
+    // Swift doesn't keep track of submodules.
+    decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
+    decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
+    module->GetSymbolVendor()->FindTypes(decl_context, true, clang_types);
+
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);
-    for (unsigned i = 0; i < clang_types.GetSize(); ++i) {
-      TypeSP clang_type_sp = clang_types.GetTypeAtIndex(i);
+    clang_types.ForEach([&](lldb::TypeSP &clang_type_sp) {
       if (!clang_type_sp)
-        continue;
+        return true;
 
       // Filter out types with a mismatching type kind.
       if (kind && HasTypeKind(clang_type_sp, *kind))
-        continue;
+        return true;
 
       // Realize the full type.
       CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
-      // Import the type into the DWARFImporter's context.
-      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
+
+      // Filter our non-Clang types.
       auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
           compiler_type.GetTypeSystem());
       if (!type_system)
-        continue;
+        return true;
+
+      // Import the type into the DWARFImporter's context.
+      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
       clang::ASTContext *from_ctx = type_system->getASTContext();
       if (!from_ctx)
-        continue;
+        return true;
       clang::ASTImporter importer(to_ctx, file_manager, *from_ctx, file_manager,
                                   false);
       llvm::Expected<clang::QualType> clang_type(
@@ -3277,7 +3297,8 @@ public:
           if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, kind))
             results.push_back(clang_decl);
       }
-    }
+      return true;
+    });
   }
 };
 } // namespace lldb_private
