@@ -497,6 +497,7 @@ Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
 
 Error opts::symbols::findTypes(lldb_private::Module &Module) {
   SymbolVendor &Vendor = *Module.GetSymbolVendor();
+  auto &Symfile = Vendor;
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
   if (!ContextOr)
     return ContextOr.takeError();
