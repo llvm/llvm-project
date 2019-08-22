@@ -46,7 +46,7 @@ static os_activity_stream_set_event_handler_t
     s_os_activity_stream_set_event_handler;
 
 bool LookupSPICalls() {
-  static llvm::once_flag s_once_flag;
+  static std::once_flag s_once_flag;
   static bool s_has_spi;
 
   std::call_once(s_once_flag, [] {
