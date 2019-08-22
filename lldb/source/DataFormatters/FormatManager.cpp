@@ -47,6 +47,7 @@ static FormatInfo g_format_infos[] = {
     {eFormatFloat, 'f', "float"},
     {eFormatOctal, 'o', "octal"},
     {eFormatOSType, 'O', "OSType"},
+    {eFormatUnicode8, 'u', "unicode8"},
     {eFormatUnicode16, 'U', "unicode16"},
     {eFormatUnicode32, '\0', "unicode32"},
     {eFormatUnsigned, 'u', "unsigned decimal"},
