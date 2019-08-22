@@ -1440,13 +1440,9 @@ HostThread Host::StartMonitoringChildProcess(
 
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;
-#ifndef __clang_analyzer__
-    // This works around a bug in the static analyzer where it claims
-    // "dispatch_release" isn't a valid identifier.
     ::dispatch_source_set_cancel_handler(source, ^{
       dispatch_release(source);
     });
-#endif
     ::dispatch_source_set_event_handler(source, ^{
 
       int status = 0;
