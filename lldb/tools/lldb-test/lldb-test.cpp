@@ -26,6 +26,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
@@ -143,6 +144,10 @@ static cl::opt<std::string> CompilerContext(
     "compiler-context",
     cl::desc("Specify a compiler context as \"kind:name,...\"."),
     cl::value_desc("context"), cl::sub(SymbolsSubcommand));
+
+static cl::opt<std::string>
+    Language("language", cl::desc("Specify a language type, like C99."),
+             cl::value_desc("language"), cl::sub(SymbolsSubcommand));
 
 static cl::list<FunctionNameType> FunctionNameFlags(
     "function-flags", cl::desc("Function search flags:"),
@@ -507,13 +512,17 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   CompilerDeclContext *ContextPtr =
       ContextOr->IsValid() ? &*ContextOr : nullptr;
 
+  LanguageSet languages;
+  if (!Language.empty())
+    languages.Insert(Language::GetLanguageTypeFromString(Language));
+  
   DenseSet<SymbolFile *> SearchedFiles;
   TypeMap Map;
   if (!Name.empty())
     Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
                       SearchedFiles, Map);
   else
-    Symfile.FindTypes(parseCompilerContext(), true, Map);
+    Symfile.FindTypes(parseCompilerContext(), languages, true, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;
