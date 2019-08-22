@@ -68,11 +68,11 @@ bool DpuRank::Open(llvm::StringRef profile) {
 
   m_dpus.reserve(nr_dpus);
   for (int id = 0; id < nr_dpus; id++) {
-    dpu_slice_id_t slice_id =
-        (dpu_slice_id_t)(id / m_desc->topology.nr_of_dpus_per_control_interface);
+    dpu_slice_id_t slice_id = (dpu_slice_id_t)(
+        id / m_desc->topology.nr_of_dpus_per_control_interface);
     dpu_id_t dpu_id =
         (dpu_id_t)(id % m_desc->topology.nr_of_dpus_per_control_interface);
-    m_dpus.push_back(llvm::make_unique<Dpu>(this, dpu_get(m_rank, slice_id, dpu_id)));
+    m_dpus.push_back(new Dpu(this, dpu_get(m_rank, slice_id, dpu_id)));
   }
 
   return true;
@@ -85,8 +85,36 @@ bool DpuRank::Reset() {
   return dpu_reset_rank(m_rank) == DPU_API_SUCCESS;
 }
 
+Dpu *DpuRank::GetDpuFromSliceIdAndDpuIdAndStopTheOthers(unsigned int slice_id,
+                                                        unsigned int dpu_id) {
+  Dpu *ret_dpu;
+  for (Dpu *dpu : m_dpus) {
+    if (dpu->GetSliceID() == slice_id && dpu->GetDpuID() == dpu_id) {
+      ret_dpu = dpu;
+    } else {
+      dpu->StopThreads();
+    }
+  }
+  return ret_dpu;
+}
+
+bool DpuRank::ResumeDpus() {
+  for (Dpu *dpu : m_dpus) {
+    bool success = dpu->ResumeThreads();
+    if (!success)
+      return false;
+  }
+  return true;
+}
+
 Dpu *DpuRank::GetDpu(size_t index) {
-  return index < m_dpus.size() ? m_dpus[index].get() : nullptr;
+  return index < m_dpus.size() ? m_dpus[index] : nullptr;
+}
+
+void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
+                           uint64_t slice_target) {
+  dpu_set_structure_value_and_slice_target(m_rank, slice_id, structure_value,
+                                           slice_target);
 }
 
 Dpu::Dpu(DpuRank *rank, dpu_t *dpu) : m_rank(rank), m_dpu(dpu) {
@@ -151,10 +179,10 @@ bool Dpu::StopThreadsUnlock() {
   ret |= dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
   ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
   return ret == DPU_API_SUCCESS;
-
 }
 
-static void SetExitStatus(unsigned int *exit_status, struct _dpu_context_t *context) {
+static void SetExitStatus(unsigned int *exit_status,
+                          struct _dpu_context_t *context) {
   *exit_status = context->registers[lldb_private::r0_dpu];
 }
 
@@ -213,7 +241,8 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
     return StateType::eStateCrashed;
 
   int ret = DPU_API_SUCCESS;
-  ret |= dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
+  ret |=
+      dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
   ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
 
   if (ret != DPU_API_SUCCESS)
@@ -296,16 +325,19 @@ bool *Dpu::ThreadContextCF(int thread_index) {
 }
 
 lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
-                                    lldb::StopReason &stop_reason, bool stepping) {
+                                    lldb::StopReason &stop_reason,
+                                    bool stepping) {
   stop_reason = eStopReasonNone;
   if (m_context.bkp_fault && m_context.bkp_fault_thread_index == thread_index) {
     stop_reason = eStopReasonBreakpoint;
     return eStateStopped;
-  } else if (m_context.dma_fault && m_context.dma_fault_thread_index == thread_index) {
+  } else if (m_context.dma_fault &&
+             m_context.dma_fault_thread_index == thread_index) {
     description = "dma fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
-  } else if (m_context.mem_fault && m_context.mem_fault_thread_index == thread_index) {
+  } else if (m_context.mem_fault &&
+             m_context.mem_fault_thread_index == thread_index) {
     description = "memory fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
@@ -317,4 +349,21 @@ lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
     stop_reason = eStopReasonTrace;
   }
   return eStateStopped;
+}
+
+unsigned int Dpu::GetSliceID() { return dpu_get_slice_id(m_dpu); }
+
+unsigned int Dpu::GetDpuID() { return dpu_get_member_id(m_dpu); }
+
+bool Dpu::SaveSliceContext(uint64_t structure_value, uint64_t slice_target) {
+  bool success = dpu_save_slice_context_for_dpu(m_dpu) == DPU_API_SUCCESS;
+  if (!success)
+    return false;
+
+  m_rank->SetSliceInfo(dpu_get_slice_id(m_dpu), structure_value, slice_target);
+  return true;
+}
+
+bool Dpu::RestoreSliceContext() {
+  return dpu_restore_slice_context_for_dpu(m_dpu) == DPU_API_SUCCESS;
 }

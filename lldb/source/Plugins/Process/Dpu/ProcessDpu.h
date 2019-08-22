@@ -31,6 +31,7 @@ class Scalar;
 
 namespace dpu {
 class Dpu;
+class DpuRank;
 }
 
 namespace process_dpu {
@@ -117,7 +118,8 @@ public:
 
 private:
   ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
-             const ArchSpec &arch, MainLoop &mainloop, dpu::Dpu *dpu);
+             const ArchSpec &arch, MainLoop &mainloop, dpu::DpuRank *rank,
+             dpu::Dpu *dpu);
 
   void InterfaceTimerCallback();
 
@@ -125,6 +127,7 @@ private:
   lldb::IOObjectSP m_timer_fd;
   MainLoop::ReadHandleUP m_timer_handle;
   dpu::Dpu *m_dpu;
+  dpu::DpuRank *m_rank;
 };
 
 } // namespace process_dpu

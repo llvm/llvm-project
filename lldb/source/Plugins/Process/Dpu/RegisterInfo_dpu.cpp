@@ -120,8 +120,7 @@ enum {
 #define DEFINE_GPR(idx, generic)                                               \
   {                                                                            \
     "r" STR(idx), nullptr, 4, ((idx)*4), eEncodingUint, eFormatHex,            \
-        {ehframe_r##idx, dwarf_r##idx, generic, gpr_r##idx,           \
-         gpr_r##idx},                                                          \
+        {ehframe_r##idx, dwarf_r##idx, generic, gpr_r##idx, gpr_r##idx},       \
         nullptr, nullptr, nullptr, 0                                           \
   }
 
@@ -171,8 +170,7 @@ static RegisterInfo g_register_infos_dpu[] = {
      25 * 4,
      lldb::eEncodingUint,
      lldb::eFormatHex,
-     {ehframe_zf, dwarf_zf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      gpr_zf},
+     {ehframe_zf, dwarf_zf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_zf},
      nullptr,
      nullptr,
      nullptr,
@@ -183,8 +181,7 @@ static RegisterInfo g_register_infos_dpu[] = {
      26 * 4,
      lldb::eEncodingUint,
      lldb::eFormatHex,
-     {ehframe_cf, dwarf_cf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      gpr_cf},
+     {ehframe_cf, dwarf_cf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_cf},
      nullptr,
      nullptr,
      nullptr,

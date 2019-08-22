@@ -46,6 +46,14 @@ public:
   int GetNrThreads() { return nr_threads; }
   std::mutex &GetLock() { return m_lock; }
 
+  Dpu *GetDpuFromSliceIdAndDpuIdAndStopTheOthers(unsigned int slice_id,
+                                                 unsigned int dpu_id);
+
+  bool ResumeDpus();
+
+  void SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
+                    uint64_t slice_target);
+
 private:
   dpu_type_t m_type;
   const char *m_profile;
@@ -54,7 +62,7 @@ private:
   int nr_threads;
   int nr_dpus;
   std::mutex m_lock; /* protect rank resources including the comm channel */
-  std::vector<std::unique_ptr<Dpu>> m_dpus;
+  std::vector<Dpu *> m_dpus;
 };
 
 class Dpu {
@@ -87,6 +95,12 @@ public:
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
                                  lldb::StopReason &stop_reason, bool stepping);
+
+  unsigned int GetSliceID();
+  unsigned int GetDpuID();
+
+  bool SaveSliceContext(uint64_t structure_value, uint64_t slice_target);
+  bool RestoreSliceContext();
 
 private:
   DpuRank *m_rank;

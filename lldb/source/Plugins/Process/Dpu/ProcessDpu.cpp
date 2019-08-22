@@ -88,25 +88,25 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   success = rank->Reset();
   if (!success)
-    return Status("Cannot reset DPU rank").ToError();
+    return Status("Cannot reset DPU rank ").ToError();
 
   assert(launch_info.GetArchitecture() == k_dpu_arch);
   Dpu *dpu = rank->GetDpu(0);
 
   success = dpu->LoadElf(launch_info.GetExecutableFile());
   if (!success)
-    return Status("Cannot load Elf in DPU rank").ToError();
+    return Status("Cannot load Elf in DPU rank ").ToError();
 
   success = dpu->Boot();
   if (!success)
-    return Status("Cannot boot DPU rank").ToError();
+    return Status("Cannot boot DPU rank ").ToError();
 
   ::pid_t pid = 666 << 5; // TODO unique Rank ID
-  LLDB_LOG(log, "Attaching Dpu Rank {0}", pid);
+  LLDB_LOG(log, "Dpu Rank {0}", pid);
 
   return std::unique_ptr<ProcessDpu>(
       new ProcessDpu(pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(),
-                     native_delegate, k_dpu_arch, mainloop, dpu));
+                     native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -114,15 +114,38 @@ ProcessDpu::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  LLDB_LOG(log, "pid = {0:x}", pid);
+  LLDB_LOG(log, "attaching to pid = {0:x}", pid);
 
-  //  return llvm::make_error<StringError>("Cannot find DPU rank",
-  //                                       llvm::inconvertibleErrorCode());
+  unsigned int region_id, rank_id, slice_id, dpu_id;
+  region_id = (pid >> 48) & 0xffff;
+  rank_id = (pid >> 32) & 0xffff;
+  slice_id = (pid >> 16) & 0xffff;
+  dpu_id = pid & 0xffff;
 
-  Dpu *dpu = nullptr; // rank->GetDpu(0);
+  char profile[256];
+  sprintf(profile, "fpga/rankPath=/dev/dpu_region%u/dpu_rank%u", region_id,
+          rank_id);
 
-  return std::unique_ptr<ProcessDpu>(
-      new ProcessDpu(pid, -1, native_delegate, k_dpu_arch, mainloop, dpu));
+  DpuRank *rank = new DpuRank();
+  bool success = rank->Open(profile);
+  if (!success)
+    return Status("Cannot get a DPU rank ").ToError();
+
+  Dpu *dpu = rank->GetDpuFromSliceIdAndDpuIdAndStopTheOthers(slice_id, dpu_id);
+  if (dpu == nullptr)
+    return Status("Cannot find the DPU in the rank ").ToError();
+
+  uint64_t structure_value =
+      std::stoll(std::getenv("UPMEM_LLDB_STRUCTURE_VALUE"));
+  uint64_t slice_target = std::stoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"));
+  LLDB_LOG(log, "saving slice context ({0:x}, {1:x})", structure_value,
+           slice_target);
+  success = dpu->SaveSliceContext(structure_value, slice_target);
+  if (!success)
+    return Status("Cannot save the DPU slice context ").ToError();
+
+  return std::unique_ptr<ProcessDpu>(new ProcessDpu(
+      666 << 5, -1, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
 
 // -----------------------------------------------------------------------------
@@ -130,11 +153,14 @@ ProcessDpu::Factory::Attach(
 // -----------------------------------------------------------------------------
 
 ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
-                       const ArchSpec &arch, MainLoop &mainloop, Dpu *dpu)
+                       const ArchSpec &arch, MainLoop &mainloop, DpuRank *rank,
+                       Dpu *dpu)
     : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch),
-      m_dpu(dpu) {
+      m_dpu(dpu), m_rank(rank) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
   // Set the timer for polling the CI
+  LLDB_LOG(log, "Setting timer of polling the CI");
   struct itimerspec polling_spec;
   polling_spec.it_value.tv_sec = 0;
   polling_spec.it_value.tv_nsec = k_ci_polling_interval_ns;
@@ -156,19 +182,24 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   }
   SetCurrentThreadID(pid);
 
-  if (!m_dpu->StopThreads())
+  LLDB_LOG(log, "Stopping threads of dpu");
+  if (!m_dpu->StopThreads()) {
+    LLDB_LOG(log, "Stopping threads failed");
     SetState(StateType::eStateCrashed, true);
-  else
+  } else {
     // Let our process instance know the thread has stopped.
     SetState(StateType::eStateStopped, false);
+  }
 }
 
 void ProcessDpu::InterfaceTimerCallback() {
   unsigned int exit_status;
   StateType current_state = m_dpu->PollStatus(&exit_status);
   if (current_state != StateType::eStateInvalid) {
-    if (current_state == StateType::eStateExited)
+    if (current_state == StateType::eStateExited) {
+      Detach();
       SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
+    }
     SetState(current_state, true);
   }
 }
@@ -242,12 +273,14 @@ Status ProcessDpu::Halt() {
 
 Status ProcessDpu::Detach() {
   Status error;
+  bool success;
+  success = m_rank->ResumeDpus();
+  if (!success)
+    return Status("Cannot resume all dpus of rank");
 
-  if (GetID() == LLDB_INVALID_PROCESS_ID)
-    return error;
-
-  // for (const auto &thread : m_threads) {
-  //}
+  success = m_dpu->RestoreSliceContext();
+  if (!success)
+    return Status("Cannot restore the DPU slice context");
 
   return error;
 }
