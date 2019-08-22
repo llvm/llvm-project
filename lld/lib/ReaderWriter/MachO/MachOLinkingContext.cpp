@@ -802,9 +802,9 @@ void MachOLinkingContext::addSectCreateSection(
                                         std::unique_ptr<MemoryBuffer> content) {
 
   if (!_sectCreateFile) {
-    auto sectCreateFile = llvm::make_unique<mach_o::SectCreateFile>();
+    auto sectCreateFile = std::make_unique<mach_o::SectCreateFile>();
     _sectCreateFile = sectCreateFile.get();
-    getNodes().push_back(llvm::make_unique<FileNode>(std::move(sectCreateFile)));
+    getNodes().push_back(std::make_unique<FileNode>(std::move(sectCreateFile)));
   }
 
   assert(_sectCreateFile && "sectcreate file does not exist.");
@@ -1019,7 +1019,7 @@ void MachOLinkingContext::finalizeInputFiles() {
     return !isLibrary(a) && isLibrary(b);
   });
   size_t numLibs = std::count_if(elements.begin(), elements.end(), isLibrary);
-  elements.push_back(llvm::make_unique<GroupEnd>(numLibs));
+  elements.push_back(std::make_unique<GroupEnd>(numLibs));
 }
 
 llvm::Error MachOLinkingContext::handleLoadedFile(File &file) {

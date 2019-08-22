@@ -95,7 +95,7 @@ public:
 static std::vector<std::unique_ptr<File>>
 makeErrorFile(StringRef path, std::error_code ec) {
   std::vector<std::unique_ptr<File>> result;
-  result.push_back(llvm::make_unique<ErrorFile>(path, ec));
+  result.push_back(std::make_unique<ErrorFile>(path, ec));
   return result;
 }
 
@@ -160,7 +160,7 @@ static void addFile(StringRef path, MachOLinkingContext &ctx,
   std::vector<std::unique_ptr<File>> files =
       loadFile(ctx, path, loadWholeArchive, upwardDylib);
   for (std::unique_ptr<File> &file : files)
-    ctx.getNodes().push_back(llvm::make_unique<FileNode>(std::move(file)));
+    ctx.getNodes().push_back(std::make_unique<FileNode>(std::move(file)));
 }
 
 // Export lists are one symbol per line.  Blank lines are ignored.
@@ -1138,7 +1138,7 @@ static void createFiles(MachOLinkingContext &ctx, bool Implicit) {
     ctx.createInternalFiles(Files);
   for (auto i = Files.rbegin(), e = Files.rend(); i != e; ++i) {
     auto &members = ctx.getNodes();
-    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+    members.insert(members.begin(), std::make_unique<FileNode>(std::move(*i)));
   }
 }
 
@@ -1185,7 +1185,7 @@ bool link(llvm::ArrayRef<const char *> args, bool CanExitEarly,
     merged = mergedFile.get();
     auto &members = ctx.getNodes();
     members.insert(members.begin(),
-                   llvm::make_unique<FileNode>(std::move(mergedFile)));
+                   std::make_unique<FileNode>(std::move(mergedFile)));
   }
   resolveTask.end();
 
