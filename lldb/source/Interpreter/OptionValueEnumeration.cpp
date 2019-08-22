@@ -111,9 +111,8 @@ void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
       if (name.startswith(request.GetCursorArgumentPrefix()))
         request.AddCompletion(name);
     }
-  } else {
-    // only suggest "true" or "false" by default
+    return;
+  }
     for (size_t i = 0; i < num_enumerators; ++i)
       request.AddCompletion(m_enumerations.GetCStringAtIndex(i).GetStringRef());
-  }
 }
