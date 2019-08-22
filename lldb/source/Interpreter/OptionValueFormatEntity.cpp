@@ -116,7 +116,7 @@ lldb::OptionValueSP OptionValueFormatEntity::DeepCopy() const {
   return OptionValueSP(new OptionValueFormatEntity(*this));
 }
 
-size_t OptionValueFormatEntity::AutoComplete(CommandInterpreter &interpreter,
-                                             CompletionRequest &request) {
-  return FormatEntity::AutoComplete(request);
+void OptionValueFormatEntity::AutoComplete(CommandInterpreter &interpreter,
+                                           CompletionRequest &request) {
+  FormatEntity::AutoComplete(request);
 }

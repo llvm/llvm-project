@@ -864,26 +864,59 @@ unsigned char Editline::BufferEndCommand(int ch) {
 
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-static void PrintCompletion(FILE *output_file, size_t start, size_t end,
-                            StringList &completions, StringList &descriptions) {
-  // This is an 'int' because of printf.
-  int max_len = 0;
+static void
+PrintCompletion(FILE *output_file,
+                llvm::ArrayRef<CompletionResult::Completion> results,
+                size_t max_len) {
+  for (const CompletionResult::Completion &c : results) {
+    fprintf(output_file, "\t%-*s", (int)max_len, c.GetCompletion().c_str());
+    if (!c.GetDescription().empty())
+      fprintf(output_file, " -- %s", c.GetDescription().c_str());
+    fprintf(output_file, "\n");
+  }
+}
 
-  for (size_t i = start; i < end; i++) {
-    const char *completion_str = completions.GetStringAtIndex(i);
-    max_len = std::max((int)strlen(completion_str), max_len);
+static void
+DisplayCompletions(::EditLine *editline, FILE *output_file,
+                   llvm::ArrayRef<CompletionResult::Completion> results) {
+  assert(!results.empty());
+
+  fprintf(output_file, "\n" ANSI_CLEAR_BELOW "Available completions:\n");
+  const size_t page_size = 40;
+  bool all = false;
+
+  auto longest =
+      std::max_element(results.begin(), results.end(), [](auto &c1, auto &c2) {
+        return c1.GetCompletion().size() < c2.GetCompletion().size();
+      });
+
+  const size_t max_len = longest->GetCompletion().size();
+
+  if (results.size() < page_size) {
+    PrintCompletion(output_file, results, max_len);
+    return;
   }
 
-  for (size_t i = start; i < end; i++) {
-    const char *completion_str = completions.GetStringAtIndex(i);
-    const char *description_str = descriptions.GetStringAtIndex(i);
+  size_t cur_pos = 0;
+  while (cur_pos < results.size()) {
+    size_t remaining = results.size() - cur_pos;
+    size_t next_size = all ? remaining : std::min(page_size, remaining);
 
-    if (completion_str)
-      fprintf(output_file, "\n\t%-*s", max_len, completion_str);
+    PrintCompletion(output_file, results.slice(cur_pos, next_size), max_len);
 
-    // Print the description if we got one.
-    if (description_str && strlen(description_str))
-      fprintf(output_file, " -- %s", description_str);
+    cur_pos += next_size;
+
+    if (cur_pos >= results.size())
+      break;
+
+    fprintf(output_file, "More (Y/n/a): ");
+    char reply = 'n';
+    int got_char = el_getc(editline, &reply);
+    fprintf(output_file, "\n");
+    if (got_char == -1 || reply == 'n')
+      break;
+    if (reply == 'a')
+      all = true;
   }
 }
 
@@ -892,8 +925,6 @@ unsigned char Editline::TabCommand(int ch) {
     return CC_ERROR;
 
   const LineInfo *line_info = el_line(m_editline);
-  StringList completions, descriptions;
-  int page_size = 40;
 
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
@@ -901,71 +932,51 @@ unsigned char Editline::TabCommand(int ch) {
   CompletionResult result;
   CompletionRequest request(line, cursor_index, result);
 
-  const int num_completions =
-      m_completion_callback(request, m_completion_callback_baton);
+  m_completion_callback(request, m_completion_callback_baton);
 
+  llvm::ArrayRef<CompletionResult::Completion> results = result.GetResults();
+
+  StringList completions;
   result.GetMatches(completions);
-  result.GetDescriptions(descriptions);
 
-  if (num_completions == 0)
+  if (results.size() == 0)
     return CC_ERROR;
-  //    if (num_completions == -1)
-  //    {
-  //        el_insertstr (m_editline, m_completion_key);
-  //        return CC_REDISPLAY;
-  //    }
-  //    else
-  if (num_completions == -2) {
-    // Replace the entire line with the first string...
-    el_deletestr(m_editline, line_info->cursor - line_info->buffer);
-    el_insertstr(m_editline, completions.GetStringAtIndex(0));
+
+  if (results.size() == 1) {
+    CompletionResult::Completion completion = results.front();
+    switch (completion.GetMode()) {
+    case CompletionMode::Normal: {
+      std::string to_add = completion.GetCompletion();
+      to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
+      if (request.GetParsedArg().IsQuoted())
+        to_add.push_back(request.GetParsedArg().quote);
+      to_add.push_back(' ');
+      el_insertstr(m_editline, to_add.c_str());
+      break;
+    }
+    case CompletionMode::RewriteLine: {
+      el_deletestr(m_editline, line_info->cursor - line_info->buffer);
+      el_insertstr(m_editline, completion.GetCompletion().c_str());
+      break;
+    }
+    }
     return CC_REDISPLAY;
   }
 
   // If we get a longer match display that first.
-  const char *completion_str = completions.GetStringAtIndex(0);
-  if (completion_str != nullptr && *completion_str != '\0') {
-    el_insertstr(m_editline, completion_str);
+  std::string longest_prefix = completions.LongestCommonPrefix();
+  if (!longest_prefix.empty())
+    longest_prefix =
+        longest_prefix.substr(request.GetCursorArgumentPrefix().size());
+  if (!longest_prefix.empty()) {
+    el_insertstr(m_editline, longest_prefix.c_str());
     return CC_REDISPLAY;
   }
 
-  if (num_completions > 1) {
-    int num_elements = num_completions + 1;
-    fprintf(m_output_file, "\n" ANSI_CLEAR_BELOW "Available completions:");
-    if (num_completions < page_size) {
-      PrintCompletion(m_output_file, 1, num_elements, completions,
-                      descriptions);
-      fprintf(m_output_file, "\n");
-    } else {
-      int cur_pos = 1;
-      char reply;
-      int got_char;
-      while (cur_pos < num_elements) {
-        int endpoint = cur_pos + page_size;
-        if (endpoint > num_elements)
-          endpoint = num_elements;
+  DisplayCompletions(m_editline, m_output_file, results);
 
-        PrintCompletion(m_output_file, cur_pos, endpoint, completions,
-                        descriptions);
-        cur_pos = endpoint;
-
-        if (cur_pos >= num_elements) {
-          fprintf(m_output_file, "\n");
-          break;
-        }
-
-        fprintf(m_output_file, "\nMore (Y/n/a): ");
-        reply = 'n';
-        got_char = el_getc(m_editline, &reply);
-        if (got_char == -1 || reply == 'n')
-          break;
-        if (reply == 'a')
-          page_size = num_elements - cur_pos;
-      }
-    }
-    DisplayInput();
-    MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
-  }
+  DisplayInput();
+  MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
   return CC_REDISPLAY;
 }
 

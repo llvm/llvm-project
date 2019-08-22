@@ -433,7 +433,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
   }
 }
 
-int REPL::IOHandlerComplete(IOHandler &io_handler, CompletionRequest &request) {
+void REPL::IOHandlerComplete(IOHandler &io_handler,
+                             CompletionRequest &request) {
   // Complete an LLDB command if the first character is a colon...
   if (request.GetRawLine().startswith(":")) {
     Debugger &debugger = m_target.GetDebugger();
@@ -443,19 +444,19 @@ int REPL::IOHandlerComplete(IOHandler &io_handler, CompletionRequest &request) {
     CompletionResult sub_result;
     CompletionRequest sub_request(new_line, request.GetRawCursorPos() - 1,
                                   sub_result);
-    int result = debugger.GetCommandInterpreter().HandleCompletion(sub_request);
+    debugger.GetCommandInterpreter().HandleCompletion(sub_request);
     StringList matches, descriptions;
     sub_result.GetMatches(matches);
     sub_result.GetDescriptions(descriptions);
     request.AddCompletions(matches, descriptions);
-    return result;
+    return;
   }
 
   // Strip spaces from the line and see if we had only spaces
   if (request.GetRawLineUntilCursor().trim().empty()) {
     // Only spaces on this line, so just indent
     request.AddCompletion(m_indent_str);
-    return 1;
+    return;
   }
 
   std::string current_code;
@@ -482,8 +483,12 @@ int REPL::IOHandlerComplete(IOHandler &io_handler, CompletionRequest &request) {
 
   StringList matches;
   int result = CompleteCode(current_code, matches);
-  request.AddCompletions(matches);
-  return result;
+  if (result == -2) {
+    assert(matches.GetSize() == 1);
+    request.AddCompletion(matches.GetStringAtIndex(0), "",
+                          CompletionMode::RewriteLine);
+  } else
+    request.AddCompletions(matches);
 }
 
 bool QuitCommandOverrideCallback(void *baton, const char **argv) {

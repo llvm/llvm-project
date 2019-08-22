@@ -62,9 +62,8 @@ lldb::OptionValueSP OptionValueUUID::DeepCopy() const {
   return OptionValueSP(new OptionValueUUID(*this));
 }
 
-size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
-                                     CompletionRequest &request) {
-  request.SetWordComplete(false);
+void OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
+                                   CompletionRequest &request) {
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
@@ -87,5 +86,4 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
       }
     }
   }
-  return request.GetNumberOfMatches();
 }

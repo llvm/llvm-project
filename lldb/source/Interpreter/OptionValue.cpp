@@ -565,11 +565,8 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
   return dumped_something;
 }
 
-size_t OptionValue::AutoComplete(CommandInterpreter &interpreter,
-                                 CompletionRequest &request) {
-  request.SetWordComplete(false);
-  return request.GetNumberOfMatches();
-}
+void OptionValue::AutoComplete(CommandInterpreter &interpreter,
+                               CompletionRequest &request) {}
 
 Status OptionValue::SetValueFromString(llvm::StringRef value,
                                        VarSetOperationType op) {

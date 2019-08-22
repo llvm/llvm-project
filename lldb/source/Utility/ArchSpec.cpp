@@ -243,7 +243,7 @@ void ArchSpec::ListSupportedArchNames(StringList &list) {
     list.AppendString(g_core_definitions[i].name);
 }
 
-size_t ArchSpec::AutoComplete(CompletionRequest &request) {
+void ArchSpec::AutoComplete(CompletionRequest &request) {
   if (!request.GetCursorArgumentPrefix().empty()) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
       if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
@@ -255,7 +255,6 @@ size_t ArchSpec::AutoComplete(CompletionRequest &request) {
     ListSupportedArchNames(matches);
     request.AddCompletions(matches);
   }
-  return request.GetNumberOfMatches();
 }
 
 #define CPU_ANY (UINT32_MAX)

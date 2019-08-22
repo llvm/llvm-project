@@ -115,18 +115,16 @@ bool CommandAlias::WantsCompletion() {
   return false;
 }
 
-int CommandAlias::HandleCompletion(CompletionRequest &request) {
+void CommandAlias::HandleCompletion(CompletionRequest &request) {
   if (IsValid())
-    return m_underlying_command_sp->HandleCompletion(request);
-  return -1;
+    m_underlying_command_sp->HandleCompletion(request);
 }
 
-int CommandAlias::HandleArgumentCompletion(
+void CommandAlias::HandleArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector) {
   if (IsValid())
-    return m_underlying_command_sp->HandleArgumentCompletion(
-        request, opt_element_vector);
-  return -1;
+    m_underlying_command_sp->HandleArgumentCompletion(request,
+                                                      opt_element_vector);
 }
 
 Options *CommandAlias::GetOptions() {

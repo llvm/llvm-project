@@ -23,7 +23,7 @@ public:
 
   ~CommandObjectHelp() override;
 
-  int HandleCompletion(CompletionRequest &request) override;
+  void HandleCompletion(CompletionRequest &request) override;
 
   static void GenerateAdditionalHelpAvenuesMessage(
       Stream *s, llvm::StringRef command, llvm::StringRef prefix,

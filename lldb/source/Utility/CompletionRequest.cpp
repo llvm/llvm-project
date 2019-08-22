@@ -64,13 +64,16 @@ std::string CompletionResult::Completion::GetUniqueKey() const {
   std::string result;
   result.append(std::to_string(m_completion.size()));
   result.append(m_completion);
+  result.append(std::to_string(static_cast<int>(m_mode)));
+  result.append(":");
   result.append(m_descripton);
   return result;
 }
 
 void CompletionResult::AddResult(llvm::StringRef completion,
-                                 llvm::StringRef description) {
-  Completion r(completion, description);
+                                 llvm::StringRef description,
+                                 CompletionMode mode) {
+  Completion r(completion, description, mode);
 
   // Add the completion if we haven't seen the same value before.
   if (m_added_values.insert(r.GetUniqueKey()).second)
@@ -80,11 +83,11 @@ void CompletionResult::AddResult(llvm::StringRef completion,
 void CompletionResult::GetMatches(StringList &matches) const {
   matches.Clear();
   for (const Completion &completion : m_results)
-    matches.AppendString(completion.m_completion);
+    matches.AppendString(completion.GetCompletion());
 }
 
 void CompletionResult::GetDescriptions(StringList &descriptions) const {
   descriptions.Clear();
   for (const Completion &completion : m_results)
-    descriptions.AppendString(completion.m_descripton);
+    descriptions.AppendString(completion.GetDescription());
 }

@@ -98,7 +98,7 @@ typedef int (*FixIndentationCallbackType)(Editline *editline,
                                           const StringList &lines,
                                           int cursor_position, void *baton);
 
-typedef int (*CompleteCallbackType)(CompletionRequest &request, void *baton);
+typedef void (*CompleteCallbackType)(CompletionRequest &request, void *baton);
 
 /// Status used to decide when and how to start editing another line in
 /// multi-line sessions

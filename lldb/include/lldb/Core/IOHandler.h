@@ -199,8 +199,8 @@ public:
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
-  virtual int IOHandlerComplete(IOHandler &io_handler,
-                                CompletionRequest &request);
+  virtual void IOHandlerComplete(IOHandler &io_handler,
+                                 CompletionRequest &request);
 
   virtual const char *IOHandlerGetFixIndentationCharacters() { return nullptr; }
 
@@ -414,7 +414,7 @@ private:
   static int FixIndentationCallback(Editline *editline, const StringList &lines,
                                     int cursor_position, void *baton);
 
-  static int AutoCompleteCallback(CompletionRequest &request, void *baton);
+  static void AutoCompleteCallback(CompletionRequest &request, void *baton);
 #endif
 
 protected:
@@ -445,8 +445,8 @@ public:
 
   bool GetResponse() const { return m_user_response; }
 
-  int IOHandlerComplete(IOHandler &io_handler,
-                        CompletionRequest &request) override;
+  void IOHandlerComplete(IOHandler &io_handler,
+                         CompletionRequest &request) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;

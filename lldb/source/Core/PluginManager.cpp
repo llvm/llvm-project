@@ -1341,10 +1341,10 @@ PluginManager::GetPlatformCreateCallbackForPluginName(ConstString name) {
   return nullptr;
 }
 
-size_t PluginManager::AutoCompletePlatformName(llvm::StringRef name,
-                                               StringList &matches) {
+void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
+                                             CompletionRequest &request) {
   if (name.empty())
-    return matches.GetSize();
+    return;
 
   std::lock_guard<std::recursive_mutex> guard(GetPlatformInstancesMutex());
   PlatformInstances &instances = GetPlatformInstances();
@@ -1354,9 +1354,8 @@ size_t PluginManager::AutoCompletePlatformName(llvm::StringRef name,
   for (pos = instances.begin(); pos != end; ++pos) {
     llvm::StringRef plugin_name(pos->name.GetCString());
     if (plugin_name.startswith(name_sref))
-      matches.AppendString(plugin_name.data());
+      request.AddCompletion(plugin_name.data());
   }
-  return matches.GetSize();
 }
 
 #pragma mark Process

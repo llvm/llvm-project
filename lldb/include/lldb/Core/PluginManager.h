@@ -10,6 +10,7 @@
 #define liblldb_PluginManager_h_
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -228,8 +229,8 @@ public:
 
   static const char *GetPlatformPluginDescriptionAtIndex(uint32_t idx);
 
-  static size_t AutoCompletePlatformName(llvm::StringRef partial_name,
-                                         StringList &matches);
+  static void AutoCompletePlatformName(llvm::StringRef partial_name,
+                                       CompletionRequest &request);
   // Process
   static bool
   RegisterPlugin(ConstString name, const char *description,

@@ -158,10 +158,9 @@ public:
 
   ~CommandObjectPlatformSelect() override = default;
 
-  int HandleCompletion(CompletionRequest &request) override {
+  void HandleCompletion(CompletionRequest &request) override {
     CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
                                             nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }
