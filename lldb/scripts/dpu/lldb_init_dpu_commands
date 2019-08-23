@@ -1,0 +1,4 @@
+script import os,sys
+script sys.path.append(os.path.join(os.environ["UPMEM_HOME"], "usr/share/upmem/lldb"))
+script import dpu_commands
+command script add -f dpu_commands.dpu_attach dpu_attach
