@@ -685,7 +685,6 @@ private:
   }
 
   bool ShouldCapture() { return m_local_boundary; }
-  void Log(unsigned id);
 
 #ifdef LLDB_REPRO_INSTR_TRACE
   void Log(unsigned id) {
