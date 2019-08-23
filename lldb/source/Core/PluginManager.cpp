@@ -2083,12 +2083,11 @@ PluginManager::GetInstrumentationRuntimeCreateCallbackForPluginName(
 #pragma mark TypeSystem
 
 struct TypeSystemInstance {
-  TypeSystemInstance() : name(), description(), create_callback(nullptr) {}
-
   ConstString name;
   std::string description;
   TypeSystemCreateInstance create_callback;
-  TypeSystemEnumerateSupportedLanguages enumerate_callback;
+  LanguageSet supported_languages_for_types;
+  LanguageSet supported_languages_for_expressions;
 };
 
 typedef std::vector<TypeSystemInstance> TypeSystemInstances;
@@ -2103,11 +2102,11 @@ static TypeSystemInstances &GetTypeSystemInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(ConstString name,
-                                   const char *description,
-                                   TypeSystemCreateInstance create_callback,
-                                   TypeSystemEnumerateSupportedLanguages
-                                       enumerate_supported_languages_callback) {
+bool PluginManager::RegisterPlugin(
+    ConstString name, const char *description,
+    TypeSystemCreateInstance create_callback,
+    LanguageSet supported_languages_for_types,
+    LanguageSet supported_languages_for_expressions) {
   if (create_callback) {
     TypeSystemInstance instance;
     assert((bool)name);
@@ -2115,7 +2114,8 @@ bool PluginManager::RegisterPlugin(ConstString name,
     if (description && description[0])
       instance.description = description;
     instance.create_callback = create_callback;
-    instance.enumerate_callback = enumerate_supported_languages_callback;
+    instance.supported_languages_for_types = supported_languages_for_types;
+    instance.supported_languages_for_expressions = supported_languages_for_expressions;
     std::lock_guard<std::recursive_mutex> guard(GetTypeSystemMutex());
     GetTypeSystemInstances().push_back(instance);
   }
@@ -2163,30 +2163,22 @@ PluginManager::GetTypeSystemCreateCallbackForPluginName(
   return nullptr;
 }
 
-TypeSystemEnumerateSupportedLanguages
-PluginManager::GetTypeSystemEnumerateSupportedLanguagesCallbackAtIndex(
-    uint32_t idx) {
+LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForTypes() {
   std::lock_guard<std::recursive_mutex> guard(GetTypeSystemMutex());
+  LanguageSet all;
   TypeSystemInstances &instances = GetTypeSystemInstances();
-  if (idx < instances.size())
-    return instances[idx].enumerate_callback;
-  return nullptr;
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages_for_types.bitvector;
+  return all;
 }
 
-TypeSystemEnumerateSupportedLanguages
-PluginManager::GetTypeSystemEnumerateSupportedLanguagesCallbackForPluginName(
-    ConstString name) {
-  if (name) {
-    std::lock_guard<std::recursive_mutex> guard(GetTypeSystemMutex());
-    TypeSystemInstances &instances = GetTypeSystemInstances();
-
-    TypeSystemInstances::iterator pos, end = instances.end();
-    for (pos = instances.begin(); pos != end; ++pos) {
-      if (name == pos->name)
-        return pos->enumerate_callback;
-    }
-  }
-  return nullptr;
+LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
+  std::lock_guard<std::recursive_mutex> guard(GetTypeSystemMutex());
+  LanguageSet all;
+  TypeSystemInstances &instances = GetTypeSystemInstances();
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages_for_expressions.bitvector;
+  return all;
 }
 
 #pragma mark REPL
@@ -2197,7 +2189,7 @@ struct REPLInstance {
   ConstString name;
   std::string description;
   REPLCreateInstance create_callback;
-  REPLEnumerateSupportedLanguages enumerate_languages_callback;
+  LanguageSet supported_languages;
 };
 
 typedef std::vector<REPLInstance> REPLInstances;
@@ -2212,10 +2204,9 @@ static REPLInstances &GetREPLInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
-    REPLCreateInstance create_callback,
-    REPLEnumerateSupportedLanguages enumerate_languages_callback) {
+bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+                                   REPLCreateInstance create_callback,
+                                   LanguageSet supported_languages) {
   if (create_callback) {
     REPLInstance instance;
     assert((bool)name);
@@ -2223,7 +2214,7 @@ bool PluginManager::RegisterPlugin(
     if (description && description[0])
       instance.description = description;
     instance.create_callback = create_callback;
-    instance.enumerate_languages_callback = enumerate_languages_callback;
+    instance.supported_languages = supported_languages;
     std::lock_guard<std::recursive_mutex> guard(GetREPLMutex());
     GetREPLInstances().push_back(instance);
   }
@@ -2269,29 +2260,13 @@ PluginManager::GetREPLCreateCallbackForPluginName(ConstString name) {
   return nullptr;
 }
 
-REPLEnumerateSupportedLanguages
-PluginManager::GetREPLEnumerateSupportedLanguagesCallbackAtIndex(uint32_t idx) {
+LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
   std::lock_guard<std::recursive_mutex> guard(GetREPLMutex());
+  LanguageSet all;
   REPLInstances &instances = GetREPLInstances();
-  if (idx < instances.size())
-    return instances[idx].enumerate_languages_callback;
-  return nullptr;
-}
-
-REPLEnumerateSupportedLanguages
-PluginManager::GetREPLSystemEnumerateSupportedLanguagesCallbackForPluginName(
-    ConstString name) {
-  if (name) {
-    std::lock_guard<std::recursive_mutex> guard(GetREPLMutex());
-    REPLInstances &instances = GetREPLInstances();
-
-    REPLInstances::iterator pos, end = instances.end();
-    for (pos = instances.begin(); pos != end; ++pos) {
-      if (name == pos->name)
-        return pos->enumerate_languages_callback;
-    }
-  }
-  return nullptr;
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages.bitvector;
+  return all;
 }
 
 #pragma mark PluginManager

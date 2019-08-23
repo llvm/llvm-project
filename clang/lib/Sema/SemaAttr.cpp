@@ -88,11 +88,13 @@ void Sema::AddMsStructLayoutForRecord(RecordDecl *RD) {
 template <typename Attribute>
 static void addGslOwnerPointerAttributeIfNotExisting(ASTContext &Context,
                                                      CXXRecordDecl *Record) {
-  if (Record->hasAttr<OwnerAttr>() || Record->hasAttr<PointerAttr>())
+  CXXRecordDecl *Canonical = Record->getCanonicalDecl();
+  if (Canonical->hasAttr<OwnerAttr>() || Canonical->hasAttr<PointerAttr>())
     return;
 
-  for (Decl *Redecl : Record->redecls())
-    Redecl->addAttr(Attribute::CreateImplicit(Context, /*DerefType=*/nullptr));
+  Canonical->addAttr(::new (Context) Attribute(SourceRange{}, Context,
+                                               /*DerefType*/ nullptr,
+                                               /*Spelling=*/0));
 }
 
 void Sema::inferGslPointerAttribute(NamedDecl *ND,
@@ -187,7 +189,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 
   // Handle classes that directly appear in std namespace.
   if (Record->isInStdNamespace()) {
-    if (Record->hasAttr<OwnerAttr>() || Record->hasAttr<PointerAttr>())
+    CXXRecordDecl *Canonical = Record->getCanonicalDecl();
+    if (Canonical->hasAttr<OwnerAttr>() || Canonical->hasAttr<PointerAttr>())
       return;
 
     if (StdOwners.count(Record->getName()))

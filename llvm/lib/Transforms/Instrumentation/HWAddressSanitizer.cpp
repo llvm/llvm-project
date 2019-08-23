@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -55,6 +56,8 @@ using namespace llvm;
 static const char *const kHwasanModuleCtorName = "hwasan.module_ctor";
 static const char *const kHwasanNoteName = "hwasan.note";
 static const char *const kHwasanInitName = "__hwasan_init";
+static const char *const kHwasanPersonalityThunkName =
+    "__hwasan_personality_thunk";
 
 static const char *const kHwasanShadowMemoryDynamicAddress =
     "__hwasan_shadow_memory_dynamic_address";
@@ -160,8 +163,12 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     ClInstrumentLandingPads("hwasan-instrument-landing-pads",
-                              cl::desc("instrument landing pads"), cl::Hidden,
-                              cl::init(true));
+                            cl::desc("instrument landing pads"), cl::Hidden,
+                            cl::init(false));
+
+static cl::opt<bool> ClInstrumentPersonalityFunctions(
+    "hwasan-instrument-personality-functions",
+    cl::desc("instrument personality functions"), cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
@@ -224,6 +231,8 @@ public:
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
 
+  void instrumentPersonalityFunctions();
+
 private:
   LLVMContext *C;
   Module &M;
@@ -250,6 +259,7 @@ private:
   };
   ShadowMapping Mapping;
 
+  Type *VoidTy = Type::getVoidTy(M.getContext());
   Type *IntptrTy;
   Type *Int8PtrTy;
   Type *Int8Ty;
@@ -258,6 +268,7 @@ private:
 
   bool CompileKernel;
   bool Recover;
+  bool InstrumentLandingPads;
 
   Function *HwasanCtorFunction;
 
@@ -373,14 +384,27 @@ void HWAddressSanitizer::initializeModule() {
             });
 
     // Older versions of Android do not have the required runtime support for
-    // global instrumentation. On other platforms we currently require using the
-    // latest version of the runtime.
-    bool InstrumentGlobals =
+    // global or personality function instrumentation. On other platforms we
+    // currently require using the latest version of the runtime.
+    bool NewRuntime =
         !TargetTriple.isAndroid() || !TargetTriple.isAndroidVersionLT(30);
-    if (ClGlobals.getNumOccurrences())
-      InstrumentGlobals = ClGlobals;
+
+    bool InstrumentGlobals =
+        ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
     if (InstrumentGlobals)
       instrumentGlobals();
+
+    // If we don't have personality function support, fall back to landing pads.
+    InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
+                                ? ClInstrumentLandingPads
+                                : !NewRuntime;
+
+    bool InstrumentPersonalityFunctions =
+        ClInstrumentPersonalityFunctions.getNumOccurrences()
+            ? ClInstrumentPersonalityFunctions
+            : NewRuntime;
+    if (InstrumentPersonalityFunctions)
+      instrumentPersonalityFunctions();
   }
 
   if (!TargetTriple.isAndroid()) {
@@ -1092,7 +1116,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
         if (auto *Alloca = dyn_cast_or_null<AllocaInst>(DDI->getAddress()))
           AllocaDeclareMap[Alloca].push_back(DDI);
 
-      if (ClInstrumentLandingPads && isa<LandingPadInst>(Inst))
+      if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
 
       Value *MaybeMask = nullptr;
@@ -1110,6 +1134,13 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   if (!LandingPadVec.empty())
     instrumentLandingPads(LandingPadVec);
+
+  if (AllocasToInstrument.empty() && F.hasPersonalityFn() &&
+      F.getPersonalityFn()->getName() == kHwasanPersonalityThunkName) {
+    // __hwasan_personality_thunk is a no-op for functions without an
+    // instrumented stack, so we can drop it.
+    F.setPersonalityFn(nullptr);
+  }
 
   if (AllocasToInstrument.empty() && ToInstrument.empty())
     return false;
@@ -1383,6 +1414,69 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (Tag == 0)
       Tag = 1;
     instrumentGlobal(GV, Tag++);
+  }
+}
+
+void HWAddressSanitizer::instrumentPersonalityFunctions() {
+  // We need to untag stack frames as we unwind past them. That is the job of
+  // the personality function wrapper, which either wraps an existing
+  // personality function or acts as a personality function on its own. Each
+  // function that has a personality function or that can be unwound past has
+  // its personality function changed to a thunk that calls the personality
+  // function wrapper in the runtime.
+  MapVector<Constant *, std::vector<Function *>> PersonalityFns;
+  for (Function &F : M) {
+    if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress))
+      continue;
+
+    if (F.hasPersonalityFn()) {
+      PersonalityFns[F.getPersonalityFn()->stripPointerCasts()].push_back(&F);
+    } else if (!F.hasFnAttribute(Attribute::NoUnwind)) {
+      PersonalityFns[nullptr].push_back(&F);
+    }
+  }
+
+  if (PersonalityFns.empty())
+    return;
+
+  FunctionCallee HwasanPersonalityWrapper = M.getOrInsertFunction(
+      "__hwasan_personality_wrapper", Int32Ty, Int32Ty, Int32Ty, Int64Ty,
+      Int8PtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy);
+  FunctionCallee UnwindGetGR = M.getOrInsertFunction("_Unwind_GetGR", VoidTy);
+  FunctionCallee UnwindGetCFA = M.getOrInsertFunction("_Unwind_GetCFA", VoidTy);
+
+  for (auto &P : PersonalityFns) {
+    std::string ThunkName = kHwasanPersonalityThunkName;
+    if (P.first)
+      ThunkName += ("." + P.first->getName()).str();
+    FunctionType *ThunkFnTy = FunctionType::get(
+        Int32Ty, {Int32Ty, Int32Ty, Int64Ty, Int8PtrTy, Int8PtrTy}, false);
+    bool IsLocal = P.first && (!isa<GlobalValue>(P.first) ||
+                               cast<GlobalValue>(P.first)->hasLocalLinkage());
+    auto *ThunkFn = Function::Create(ThunkFnTy,
+                                     IsLocal ? GlobalValue::InternalLinkage
+                                             : GlobalValue::LinkOnceODRLinkage,
+                                     ThunkName, &M);
+    if (!IsLocal) {
+      ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
+      ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));
+    }
+
+    auto *BB = BasicBlock::Create(*C, "entry", ThunkFn);
+    IRBuilder<> IRB(BB);
+    CallInst *WrapperCall = IRB.CreateCall(
+        HwasanPersonalityWrapper,
+        {ThunkFn->getArg(0), ThunkFn->getArg(1), ThunkFn->getArg(2),
+         ThunkFn->getArg(3), ThunkFn->getArg(4),
+         P.first ? IRB.CreateBitCast(P.first, Int8PtrTy)
+                 : Constant::getNullValue(Int8PtrTy),
+         IRB.CreateBitCast(UnwindGetGR.getCallee(), Int8PtrTy),
+         IRB.CreateBitCast(UnwindGetCFA.getCallee(), Int8PtrTy)});
+    WrapperCall->setTailCall();
+    IRB.CreateRet(WrapperCall);
+
+    for (Function *F : P.second)
+      F->setPersonalityFn(ThunkFn);
   }
 }
 

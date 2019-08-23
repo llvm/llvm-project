@@ -584,6 +584,18 @@ Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
   return nullptr;
 }
 
+void SymbolTable::addLibcall(StringRef name) {
+  Symbol *sym = findUnderscore(name);
+  if (!sym)
+    return;
+
+  if (Lazy *l = dyn_cast<Lazy>(sym)) {
+    MemoryBufferRef mb = l->getMemberBuffer();
+    if (identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode)
+      addUndefined(sym->getName());
+  }
+}
+
 std::vector<Chunk *> SymbolTable::getChunks() {
   std::vector<Chunk *> res;
   for (ObjFile *file : ObjFile::instances) {

@@ -679,7 +679,7 @@ Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
   return nullptr;
 }
 
-const FileEntry *Preprocessor::LookupFile(
+Optional<FileEntryRef> Preprocessor::LookupFile(
     SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
     const DirectoryLookup *FromDir, const FileEntry *FromFile,
     const DirectoryLookup *&CurDir, SmallVectorImpl<char> *SearchPath,
@@ -740,7 +740,7 @@ const FileEntry *Preprocessor::LookupFile(
     // the include path until we find that file or run out of files.
     const DirectoryLookup *TmpCurDir = CurDir;
     const DirectoryLookup *TmpFromDir = nullptr;
-    while (const FileEntry *FE = HeaderInfo.LookupFile(
+    while (Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
                Filename, FilenameLoc, isAngled, TmpFromDir, TmpCurDir,
                Includers, SearchPath, RelativePath, RequestingModule,
                SuggestedModule, /*IsMapped=*/nullptr,
@@ -748,7 +748,7 @@ const FileEntry *Preprocessor::LookupFile(
       // Keep looking as if this file did a #include_next.
       TmpFromDir = TmpCurDir;
       ++TmpFromDir;
-      if (FE == FromFile) {
+      if (&FE->getFileEntry() == FromFile) {
         // Found it.
         FromDir = TmpFromDir;
         CurDir = TmpCurDir;
@@ -758,7 +758,7 @@ const FileEntry *Preprocessor::LookupFile(
   }
 
   // Do a standard file entry lookup.
-  const FileEntry *FE = HeaderInfo.LookupFile(
+  Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, CurDir, Includers, SearchPath,
       RelativePath, RequestingModule, SuggestedModule, IsMapped,
       IsFrameworkFound, SkipCache, BuildSystemModule);
@@ -766,7 +766,7 @@ const FileEntry *Preprocessor::LookupFile(
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
           RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-          Filename, FE);
+          Filename, &FE->getFileEntry());
     return FE;
   }
 
@@ -776,14 +776,13 @@ const FileEntry *Preprocessor::LookupFile(
   // headers on the #include stack and pass them to HeaderInfo.
   if (IsFileLexer()) {
     if ((CurFileEnt = CurPPLexer->getFileEntry())) {
-      if ((FE = HeaderInfo.LookupSubframeworkHeader(Filename, CurFileEnt,
-                                                    SearchPath, RelativePath,
-                                                    RequestingModule,
-                                                    SuggestedModule))) {
+      if (Optional<FileEntryRef> FE = HeaderInfo.LookupSubframeworkHeader(
+              Filename, CurFileEnt, SearchPath, RelativePath, RequestingModule,
+              SuggestedModule)) {
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
           HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
               RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-              Filename, FE);
+              Filename, &FE->getFileEntry());
         return FE;
       }
     }
@@ -792,13 +791,13 @@ const FileEntry *Preprocessor::LookupFile(
   for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
     if (IsFileLexer(ISEntry)) {
       if ((CurFileEnt = ISEntry.ThePPLexer->getFileEntry())) {
-        if ((FE = HeaderInfo.LookupSubframeworkHeader(
+        if (Optional<FileEntryRef> FE = HeaderInfo.LookupSubframeworkHeader(
                 Filename, CurFileEnt, SearchPath, RelativePath,
-                RequestingModule, SuggestedModule))) {
+                RequestingModule, SuggestedModule)) {
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
                 RequestingModule, RequestingModuleIsModuleInterface,
-                FilenameLoc, Filename, FE);
+                FilenameLoc, Filename, &FE->getFileEntry());
           return FE;
         }
       }
@@ -806,7 +805,7 @@ const FileEntry *Preprocessor::LookupFile(
   }
 
   // Otherwise, we really couldn't find the file.
-  return nullptr;
+  return None;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1676,6 +1675,130 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   }
 }
 
+Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
+    const DirectoryLookup *&CurDir, StringRef Filename,
+    SourceLocation FilenameLoc, CharSourceRange FilenameRange,
+    const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
+    bool &IsMapped, const DirectoryLookup *LookupFrom,
+    const FileEntry *LookupFromFile, SmallString<128> &NormalizedPath,
+    SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
+    ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
+  Optional<FileEntryRef> File = LookupFile(
+      FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
+      isAngled, LookupFrom, LookupFromFile, CurDir,
+      Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
+      &SuggestedModule, &IsMapped, &IsFrameworkFound);
+  if (File)
+    return File;
+
+  if (Callbacks) {
+    // Give the clients a chance to recover.
+    SmallString<128> RecoveryPath;
+    if (Callbacks->FileNotFound(Filename, RecoveryPath)) {
+      if (auto DE = FileMgr.getDirectory(RecoveryPath)) {
+        // Add the recovery path to the list of search paths.
+        DirectoryLookup DL(*DE, SrcMgr::C_User, false);
+        HeaderInfo.AddSearchPath(DL, isAngled);
+
+        // Try the lookup again, skipping the cache.
+        Optional<FileEntryRef> File = LookupFile(
+            FilenameLoc,
+            LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
+            LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
+            &SuggestedModule, &IsMapped, /*IsFrameworkFound=*/nullptr,
+            /*SkipCache*/ true);
+        if (File)
+          return File;
+      }
+    }
+  }
+
+  if (SuppressIncludeNotFoundError)
+    return None;
+
+  // If the file could not be located and it was included via angle
+  // brackets, we can attempt a lookup as though it were a quoted path to
+  // provide the user with a possible fixit.
+  if (isAngled) {
+    Optional<FileEntryRef> File = LookupFile(
+        FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
+        false, LookupFrom, LookupFromFile, CurDir,
+        Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
+        &SuggestedModule, &IsMapped,
+        /*IsFrameworkFound=*/nullptr);
+    if (File) {
+      Diag(FilenameTok, diag::err_pp_file_not_found_angled_include_not_fatal)
+          << Filename << IsImportDecl
+          << FixItHint::CreateReplacement(FilenameRange,
+                                          "\"" + Filename.str() + "\"");
+      return File;
+    }
+  }
+
+  // Check for likely typos due to leading or trailing non-isAlphanumeric
+  // characters
+  StringRef OriginalFilename = Filename;
+  if (LangOpts.SpellChecking) {
+    // A heuristic to correct a typo file name by removing leading and
+    // trailing non-isAlphanumeric characters.
+    auto CorrectTypoFilename = [](llvm::StringRef Filename) {
+      Filename = Filename.drop_until(isAlphanumeric);
+      while (!Filename.empty() && !isAlphanumeric(Filename.back())) {
+        Filename = Filename.drop_back();
+      }
+      return Filename;
+    };
+    StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
+    SmallString<128> NormalizedTypoCorrectionPath;
+    if (LangOpts.MSVCCompat) {
+      NormalizedTypoCorrectionPath = TypoCorrectionName.str();
+#ifndef _WIN32
+      llvm::sys::path::native(NormalizedTypoCorrectionPath);
+#endif
+    }
+    Optional<FileEntryRef> File = LookupFile(
+        FilenameLoc,
+        LangOpts.MSVCCompat ? NormalizedTypoCorrectionPath.c_str()
+                            : TypoCorrectionName,
+        isAngled, LookupFrom, LookupFromFile, CurDir,
+        Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
+        &SuggestedModule, &IsMapped,
+        /*IsFrameworkFound=*/nullptr);
+    if (File) {
+      auto Hint =
+          isAngled ? FixItHint::CreateReplacement(
+                         FilenameRange, "<" + TypoCorrectionName.str() + ">")
+                   : FixItHint::CreateReplacement(
+                         FilenameRange, "\"" + TypoCorrectionName.str() + "\"");
+      Diag(FilenameTok, diag::err_pp_file_not_found_typo_not_fatal)
+          << OriginalFilename << TypoCorrectionName << Hint;
+      // We found the file, so set the Filename to the name after typo
+      // correction.
+      Filename = TypoCorrectionName;
+      return File;
+    }
+  }
+
+  // If the file is still not found, just go with the vanilla diagnostic
+  assert(!File.hasValue() && "expected missing file");
+  Diag(FilenameTok, diag::err_pp_file_not_found)
+      << OriginalFilename << FilenameRange;
+  if (IsFrameworkFound) {
+    size_t SlashPos = OriginalFilename.find('/');
+    assert(SlashPos != StringRef::npos &&
+           "Include with framework name should have '/' in the filename");
+    StringRef FrameworkName = OriginalFilename.substr(0, SlashPos);
+    FrameworkCacheEntry &CacheEntry =
+        HeaderInfo.LookupFrameworkCache(FrameworkName);
+    assert(CacheEntry.Directory && "Found framework should be in cache");
+    Diag(FilenameTok, diag::note_pp_framework_without_header)
+        << OriginalFilename.substr(SlashPos + 1) << FrameworkName
+        << CacheEntry.Directory->getName();
+  }
+
+  return None;
+}
+
 /// Handle either a #include-like directive or an import declaration that names
 /// a header file.
 ///
@@ -1754,120 +1877,14 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     llvm::sys::path::native(NormalizedPath);
 #endif
   }
-  const FileEntry *File = LookupFile(
-      FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
-      isAngled, LookupFrom, LookupFromFile, CurDir,
-      Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
-      &SuggestedModule, &IsMapped, &IsFrameworkFound);
 
-  if (!File) {
-    if (Callbacks) {
-      // Give the clients a chance to recover.
-      SmallString<128> RecoveryPath;
-      if (Callbacks->FileNotFound(Filename, RecoveryPath)) {
-        if (auto DE = FileMgr.getDirectory(RecoveryPath)) {
-          // Add the recovery path to the list of search paths.
-          DirectoryLookup DL(*DE, SrcMgr::C_User, false);
-          HeaderInfo.AddSearchPath(DL, isAngled);
-
-          // Try the lookup again, skipping the cache.
-          File = LookupFile(
-              FilenameLoc,
-              LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
-              LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
-              &SuggestedModule, &IsMapped, /*IsFrameworkFound=*/nullptr,
-              /*SkipCache*/ true);
-        }
-      }
-    }
-
-    if (!SuppressIncludeNotFoundError) {
-      // If the file could not be located and it was included via angle
-      // brackets, we can attempt a lookup as though it were a quoted path to
-      // provide the user with a possible fixit.
-      if (isAngled) {
-        File = LookupFile(
-            FilenameLoc,
-            LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, false,
-            LookupFrom, LookupFromFile, CurDir,
-            Callbacks ? &SearchPath : nullptr,
-            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
-            /*IsFrameworkFound=*/nullptr);
-        if (File) {
-          Diag(FilenameTok,
-               diag::err_pp_file_not_found_angled_include_not_fatal)
-              << Filename << IsImportDecl
-              << FixItHint::CreateReplacement(FilenameRange,
-                                              "\"" + Filename.str() + "\"");
-        }
-      }
-
-      // Check for likely typos due to leading or trailing non-isAlphanumeric
-      // characters
-      StringRef OriginalFilename = Filename;
-      if (LangOpts.SpellChecking && !File) {
-        // A heuristic to correct a typo file name by removing leading and
-        // trailing non-isAlphanumeric characters.
-        auto CorrectTypoFilename = [](llvm::StringRef Filename) {
-          Filename = Filename.drop_until(isAlphanumeric);
-          while (!Filename.empty() && !isAlphanumeric(Filename.back())) {
-            Filename = Filename.drop_back();
-          }
-          return Filename;
-        };
-        StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
-        SmallString<128> NormalizedTypoCorrectionPath;
-        if (LangOpts.MSVCCompat) {
-          NormalizedTypoCorrectionPath = TypoCorrectionName.str();
-#ifndef _WIN32
-          llvm::sys::path::native(NormalizedTypoCorrectionPath);
-#endif
-        }
-        File = LookupFile(
-            FilenameLoc,
-            LangOpts.MSVCCompat ? NormalizedTypoCorrectionPath.c_str()
-                                : TypoCorrectionName,
-            isAngled, LookupFrom, LookupFromFile, CurDir,
-            Callbacks ? &SearchPath : nullptr,
-            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
-            /*IsFrameworkFound=*/nullptr);
-        if (File) {
-          auto Hint =
-              isAngled
-                  ? FixItHint::CreateReplacement(
-                        FilenameRange, "<" + TypoCorrectionName.str() + ">")
-                  : FixItHint::CreateReplacement(
-                        FilenameRange, "\"" + TypoCorrectionName.str() + "\"");
-          Diag(FilenameTok, diag::err_pp_file_not_found_typo_not_fatal)
-              << OriginalFilename << TypoCorrectionName << Hint;
-          // We found the file, so set the Filename to the name after typo
-          // correction.
-          Filename = TypoCorrectionName;
-        }
-      }
-
-      // If the file is still not found, just go with the vanilla diagnostic
-      if (!File) {
-        Diag(FilenameTok, diag::err_pp_file_not_found) << OriginalFilename
-                                                       << FilenameRange;
-        if (IsFrameworkFound) {
-          size_t SlashPos = OriginalFilename.find('/');
-          assert(SlashPos != StringRef::npos &&
-                 "Include with framework name should have '/' in the filename");
-          StringRef FrameworkName = OriginalFilename.substr(0, SlashPos);
-          FrameworkCacheEntry &CacheEntry =
-              HeaderInfo.LookupFrameworkCache(FrameworkName);
-          assert(CacheEntry.Directory && "Found framework should be in cache");
-          Diag(FilenameTok, diag::note_pp_framework_without_header)
-              << OriginalFilename.substr(SlashPos + 1) << FrameworkName
-              << CacheEntry.Directory->getName();
-        }
-      }
-    }
-  }
+  Optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
+      CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
+      IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
+      NormalizedPath, RelativePath, SearchPath, SuggestedModule, isAngled);
 
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
-    if (isPCHThroughHeader(File))
+    if (File && isPCHThroughHeader(&File->getFileEntry()))
       SkippingUntilPCHThroughHeader = false;
     return {ImportAction::None};
   }
@@ -1878,7 +1895,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // some directives (e.g. #endif of a header guard) will never be seen.
   // Since this will lead to confusing errors, avoid the inclusion.
   if (File && PreambleConditionalStack.isRecording() &&
-      SourceMgr.translateFile(File) == SourceMgr.getMainFileID()) {
+      SourceMgr.translateFile(&File->getFileEntry()) ==
+          SourceMgr.getMainFileID()) {
     Diag(FilenameTok.getLocation(),
          diag::err_pp_including_mainfile_in_preamble);
     return {ImportAction::None};
@@ -1897,7 +1915,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // include cycle. Don't enter already processed files again as it can lead to
   // reaching the max allowed include depth again.
   if (Action == Enter && HasReachedMaxIncludeDepth && File &&
-      HeaderInfo.getFileInfo(File).NumIncludes)
+      HeaderInfo.getFileInfo(&File->getFileEntry()).NumIncludes)
     Action = IncludeLimitReached;
 
   // Determine whether we should try to import the module for this #include, if
@@ -1973,7 +1991,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SrcMgr::CharacteristicKind FileCharacter =
       SourceMgr.getFileCharacteristic(FilenameTok.getLocation());
   if (File)
-    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(File), FileCharacter);
+    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(&File->getFileEntry()),
+                             FileCharacter);
 
   // If this is a '#import' or an import-declaration, don't re-enter the file.
   //
@@ -1987,8 +2006,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
   if (Action == Enter && File &&
-      !HeaderInfo.ShouldEnterIncludeFile(*this, File, EnterOnce,
-                                         getLangOpts().Modules,
+      !HeaderInfo.ShouldEnterIncludeFile(*this, &File->getFileEntry(),
+                                         EnterOnce, getLangOpts().Modules,
                                          SuggestedModule.getModule())) {
     // Even if we've already preprocessed this header once and know that we
     // don't need to see its contents again, we still need to import it if it's
@@ -2006,11 +2025,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     Callbacks->InclusionDirective(
         HashLoc, IncludeTok,
         LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
-        FilenameRange, File, SearchPath, RelativePath,
-        Action == Import ? SuggestedModule.getModule() : nullptr,
+        FilenameRange, File ? &File->getFileEntry() : nullptr, SearchPath,
+        RelativePath, Action == Import ? SuggestedModule.getModule() : nullptr,
         FileCharacter);
-    if (Action == Skip)
-      Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
+    if (Action == Skip && File)
+      Callbacks->FileSkipped(File->getFileEntry(), FilenameTok, FileCharacter);
   }
 
   if (!File)
@@ -2027,11 +2046,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Issue a diagnostic if the name of the file on disk has a different case
   // than the one we're about to open.
   const bool CheckIncludePathPortability =
-      !IsMapped && File && !File->tryGetRealPathName().empty();
+      !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
     StringRef Name = LangOpts.MSVCCompat ? NormalizedPath.str() : Filename;
-    StringRef RealPathName = File->tryGetRealPathName();
+    StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
     SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
                                           llvm::sys::path::end(Name));
 
@@ -2102,7 +2121,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // position on the file where it will be included and after the expansions.
   if (IncludePos.isMacroID())
     IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
-  FileID FID = SourceMgr.createFileID(File, IncludePos, FileCharacter);
+  FileID FID = SourceMgr.createFileID(*File, IncludePos, FileCharacter);
   assert(FID.isValid() && "Expected valid file ID");
 
   // If all is good, enter the new file!

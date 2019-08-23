@@ -19,78 +19,85 @@
 
 int main(int, char**)
 {
-    typedef std::minstd_rand0 E;
-    auto range = E::max() - E::min();
-
     {
+        typedef std::minstd_rand0 E;
         typedef float F;
         E r;
         F f = std::generate_canonical<F, 0>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef float F;
         E r;
         F f = std::generate_canonical<F, 1>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef float F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits - 1>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef float F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef float F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits + 1>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
 
     {
+        typedef std::minstd_rand0 E;
         typedef double F;
         E r;
         F f = std::generate_canonical<F, 0>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef double F;
         E r;
         F f = std::generate_canonical<F, 1>(r);
-        assert(f == truncate_fp((16807 - E::min()) / (range + F(1))));
+        assert(f == truncate_fp((16807 - E::min()) / (static_cast<F>(E::max() - E::min()) + F(1))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef double F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits - 1>(r);
         assert(f == truncate_fp(
             (16807 - E::min() +
-            (282475249 - E::min()) * (range + F(1))) /
-            ((range + F(1)) * (range + F(1)))));
+            (282475249 - E::min()) * (static_cast<F>(E::max() - E::min()) + F(1))) /
+            ((static_cast<F>(E::max() - E::min()) + F(1)) * (static_cast<F>(E::max() - E::min()) + F(1)))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef double F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits>(r);
         assert(f == truncate_fp(
             (16807 - E::min() +
-            (282475249 - E::min()) * (range + F(1))) /
-            ((range + F(1)) * (range + F(1)))));
+            (282475249 - E::min()) * (static_cast<F>(E::max() - E::min()) + F(1))) /
+            ((static_cast<F>(E::max() - E::min()) + F(1)) * (static_cast<F>(E::max() - E::min()) + F(1)))));
     }
     {
+        typedef std::minstd_rand0 E;
         typedef double F;
         E r;
         F f = std::generate_canonical<F, std::numeric_limits<F>::digits + 1>(r);
         assert(f == truncate_fp(
             (16807 - E::min() +
-            (282475249 - E::min()) * (range + F(1))) /
-            ((range + F(1)) * (range + F(1)))));
+            (282475249 - E::min()) * (static_cast<F>(E::max() - E::min()) + F(1))) /
+            ((static_cast<F>(E::max() - E::min()) + F(1)) * (static_cast<F>(E::max() - E::min()) + F(1)))));
     }
 
   return 0;

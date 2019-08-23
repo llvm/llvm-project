@@ -513,17 +513,17 @@ public:
   /// swifterror attribute.
   bool isSwiftError() const;
 
-  /// Strip off pointer casts, all-zero GEPs, address space casts, and aliases.
+  /// Strip off pointer casts, all-zero GEPs and address space casts.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
   const Value *stripPointerCasts() const;
   Value *stripPointerCasts() {
     return const_cast<Value *>(
-                         static_cast<const Value *>(this)->stripPointerCasts());
+        static_cast<const Value *>(this)->stripPointerCasts());
   }
 
-  /// Strip off pointer casts, all-zero GEPs, address space casts, and aliases
+  /// Strip off pointer casts, all-zero GEPs and address space casts
   /// but ensures the representation of the result stays the same.
   ///
   /// Returns the original uncasted value with the same representation. If this
@@ -534,26 +534,15 @@ public:
                                    ->stripPointerCastsSameRepresentation());
   }
 
-  /// Strip off pointer casts, all-zero GEPs, aliases and invariant group
-  /// info.
+  /// Strip off pointer casts, all-zero GEPs and invariant group info.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
   /// Alias analysis.
   const Value *stripPointerCastsAndInvariantGroups() const;
   Value *stripPointerCastsAndInvariantGroups() {
-    return const_cast<Value *>(
-        static_cast<const Value *>(this)->stripPointerCastsAndInvariantGroups());
-  }
-
-  /// Strip off pointer casts and all-zero GEPs.
-  ///
-  /// Returns the original uncasted value.  If this is called on a non-pointer
-  /// value, it returns 'this'.
-  const Value *stripPointerCastsNoFollowAliases() const;
-  Value *stripPointerCastsNoFollowAliases() {
-    return const_cast<Value *>(
-          static_cast<const Value *>(this)->stripPointerCastsNoFollowAliases());
+    return const_cast<Value *>(static_cast<const Value *>(this)
+                                   ->stripPointerCastsAndInvariantGroups());
   }
 
   /// Strip off pointer casts and all-constant inbounds GEPs.

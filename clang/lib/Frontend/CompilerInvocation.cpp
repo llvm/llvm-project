@@ -1728,22 +1728,28 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     case OPT_emit_pch:
       Opts.ProgramAction = frontend::GeneratePCH; break;
     case OPT_emit_iterface_stubs: {
+      StringRef ArgStr =
+          Args.hasArg(OPT_iterface_stub_version_EQ)
+              ? Args.getLastArgValue(OPT_iterface_stub_version_EQ)
+              : "";
       llvm::Optional<frontend::ActionKind> ProgramAction =
-          llvm::StringSwitch<llvm::Optional<frontend::ActionKind>>(
-              Args.hasArg(OPT_iterface_stub_version_EQ)
-                  ? Args.getLastArgValue(OPT_iterface_stub_version_EQ)
-                  : "")
-              .Case("experimental-yaml-elf-v1",
-                    frontend::GenerateInterfaceYAMLExpV1)
-              .Case("experimental-tapi-elf-v1",
-                    frontend::GenerateInterfaceTBEExpV1)
+          llvm::StringSwitch<llvm::Optional<frontend::ActionKind>>(ArgStr)
+              .Case("experimental-ifs-v1", frontend::GenerateInterfaceIfsExpV1)
               .Default(llvm::None);
-      if (!ProgramAction)
+      if (!ProgramAction) {
+        std::string ErrorMessage =
+            "Invalid interface stub format: " + ArgStr.str() +
+            ((ArgStr == "experimental-yaml-elf-v1" ||
+              ArgStr == "experimental-tapi-elf-v1")
+                 ? " is deprecated."
+                 : ".");
         Diags.Report(diag::err_drv_invalid_value)
-            << "Must specify a valid interface stub format type using "
-            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
-               "experimental-yaml-elf-v1>";
-      Opts.ProgramAction = *ProgramAction;
+            << "Must specify a valid interface stub format type, ie: "
+               "-interface-stub-version=experimental-ifs-v1"
+            << ErrorMessage;
+      } else {
+        Opts.ProgramAction = *ProgramAction;
+      }
       break;
     }
     case OPT_init_only:
@@ -3183,8 +3189,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateModuleInterface:
   case frontend::GenerateHeaderModule:
   case frontend::GeneratePCH:
-  case frontend::GenerateInterfaceYAMLExpV1:
-  case frontend::GenerateInterfaceTBEExpV1:
+  case frontend::GenerateInterfaceIfsExpV1:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
   case frontend::VerifyPCH:

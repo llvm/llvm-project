@@ -133,7 +133,8 @@ public:
             lldb_private::TypeMap &types) override;
 
   size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                   bool append, lldb_private::TypeMap &types) override;
+                   lldb_private::LanguageSet languages, bool append,
+                   lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
                         uint32_t max_matches, lldb_private::TypeMap &types);

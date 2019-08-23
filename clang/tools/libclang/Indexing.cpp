@@ -125,9 +125,7 @@ class SessionSkipBodyData {
   PPRegionSetTy ParsedRegions;
 
 public:
-  ~SessionSkipBodyData() {
-    //llvm::errs() << "RegionData: " << Skipped.size() << " - " << Skipped.getMemorySize() << "\n";
-  }
+  ~SessionSkipBodyData() = default;
 
   void copyTo(PPRegionSetTy &Set) {
     std::lock_guard<std::mutex> MG(Mux);

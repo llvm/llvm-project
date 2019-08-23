@@ -6561,7 +6561,7 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
+    return RD->getCanonicalDecl()->hasAttr<T>();
   return false;
 }
 
@@ -6672,7 +6672,7 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
 
   if (auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
     const auto *Ctor = CCE->getConstructor();
-    const CXXRecordDecl *RD = Ctor->getParent();
+    const CXXRecordDecl *RD = Ctor->getParent()->getCanonicalDecl();
     if (CCE->getNumArgs() > 0 && RD->hasAttr<PointerAttr>())
       VisitPointerArg(Ctor->getParamDecl(0), CCE->getArgs()[0]);
   }

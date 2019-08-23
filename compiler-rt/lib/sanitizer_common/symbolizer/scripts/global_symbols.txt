@@ -78,6 +78,7 @@ ioctl U
 isalpha U
 isatty U
 islower U
+isspace U
 isprint U
 isupper U
 isxdigit U

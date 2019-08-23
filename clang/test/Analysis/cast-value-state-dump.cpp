@@ -16,7 +16,7 @@ class Square : public Shape {};
 using namespace llvm;
 using namespace clang;
 
-void evalNonNullParamNonNullReturnReference(const Shape &S) {
+void evalNonNullParamNonNullReturn(const Shape *S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
   // expected-note@-1 {{Assuming 'S' is a 'Circle'}}
   // expected-note@-2 {{'C' initialized here}}
@@ -31,12 +31,12 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
   clang_analyzer_printState();
 
   // CHECK:      "dynamic_types": [
-  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const class clang::Circle", "sub_classable": true }
+  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape * S>}", "dyn_type": "const class clang::Circle", "sub_classable": true }
   // CHECK-NEXT: ],
   // CHECK-NEXT: "dynamic_casts": [
-  // CHECK:        { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "casts": [
-  // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Circle", "kind": "success" },
-  // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Square", "kind": "fail" }
+  // CHECK:        { "region": "SymRegion{reg_$0<const struct clang::Shape * S>}", "casts": [
+  // CHECK-NEXT:     { "from": "const struct clang::Shape *", "to": "const class clang::Circle *", "kind": "success" },
+  // CHECK-NEXT:     { "from": "const struct clang::Shape *", "to": "const class clang::Square *", "kind": "fail" }
   // CHECK-NEXT:   ]}
 
   (void)(1 / !C);

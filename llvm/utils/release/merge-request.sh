@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/usr/bin/env bash
 #===-- merge-request.sh  ---------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

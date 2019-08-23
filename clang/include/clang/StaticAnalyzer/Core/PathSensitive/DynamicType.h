@@ -54,7 +54,7 @@ ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
 ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
                                           const MemRegion *MR,
                                           QualType CastFromTy,
-                                          QualType CastToTy, QualType ResultTy,
+                                          QualType CastToTy,
                                           bool IsCastSucceeds);
 
 /// Removes the dead type informations from \p State.

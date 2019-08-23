@@ -90,7 +90,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
 
   auto T = prepareTweak(TweakID, S);
   if (!T) {
-    llvm::toString(T.takeError());
+    llvm::consumeError(T.takeError());
     return "unavailable";
   }
   llvm::Expected<Tweak::Effect> Result = (*T)->apply(S);

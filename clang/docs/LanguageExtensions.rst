@@ -389,8 +389,8 @@ Vectors and Extended Vectors
 
 Supports the GCC, OpenCL, AltiVec and NEON vector extensions.
 
-OpenCL vector types are created using ``ext_vector_type`` attribute.  It
-support for ``V.xyzw`` syntax and other tidbits as seen in OpenCL.  An example
+OpenCL vector types are created using the ``ext_vector_type`` attribute.  It
+supports the ``V.xyzw`` syntax and other tidbits as seen in OpenCL.  An example
 is:
 
 .. code-block:: c++
@@ -405,7 +405,7 @@ is:
     return c;
   }
 
-Query for this feature with ``__has_extension(attribute_ext_vector_type)``.
+Query for this feature with ``__has_attribute(ext_vector_type)``.
 
 Giving ``-maltivec`` option to clang enables support for AltiVec vector syntax
 and functions.  For example:

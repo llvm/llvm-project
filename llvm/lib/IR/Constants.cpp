@@ -521,10 +521,8 @@ bool Constant::needsRelocation() const {
           return false;
 
         // Relative pointers do not need to be dynamically relocated.
-        if (auto *LHSGV = dyn_cast<GlobalValue>(
-                LHSOp0->stripPointerCastsNoFollowAliases()))
-          if (auto *RHSGV = dyn_cast<GlobalValue>(
-                  RHSOp0->stripPointerCastsNoFollowAliases()))
+        if (auto *LHSGV = dyn_cast<GlobalValue>(LHSOp0->stripPointerCasts()))
+          if (auto *RHSGV = dyn_cast<GlobalValue>(RHSOp0->stripPointerCasts()))
             if (LHSGV->isDSOLocal() && RHSGV->isDSOLocal())
               return false;
       }
