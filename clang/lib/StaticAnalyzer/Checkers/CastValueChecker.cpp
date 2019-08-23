@@ -382,8 +382,13 @@ bool CastValueChecker::evalCall(const CallEvent &Call,
 
   switch (Kind) {
   case CallKind::Function: {
-    // We need to obtain the record type of the call's parameter to model it.
-    if (!getRecordType(Call.parameters()[0]->getType())->isRecordType())
+    // We only model casts from pointers to pointers or from references
+    // to references. Other casts are most likely specialized and we
+    // cannot model them.
+    QualType ParamT = Call.parameters()[0]->getType();
+    QualType ResultT = Call.getResultType();
+    if (!(ParamT->isPointerType() && ResultT->isPointerType()) &&
+        !(ParamT->isReferenceType() && ResultT->isReferenceType()))
       return false;
 
     DV = Call.getArgSVal(0).getAs<DefinedOrUnknownSVal>();

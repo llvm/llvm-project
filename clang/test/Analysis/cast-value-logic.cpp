@@ -135,4 +135,10 @@ namespace crashes {
 void test_non_reference_null_region_crash(Shape s) {
   cast<Circle>(s); // no-crash
 }
+
+void test_non_reference_temporary_crash() {
+  extern std::unique_ptr<Shape> foo();
+  auto P = foo();
+  auto Q = cast<Circle>(std::move(P)); // no-crash
+}
 } // namespace crashes
