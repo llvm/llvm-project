@@ -9,6 +9,7 @@
 #ifndef liblldb_ClangDeclVendor_h_
 #define liblldb_ClangDeclVendor_h_
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/DeclVendor.h"
 
 #include "clang/AST/ExternalASTMerger.h"
@@ -28,6 +29,13 @@ public:
   /// \return
   ///     An ImporterSource for this ClangDeclVendor.
   virtual clang::ExternalASTMerger::ImporterSource GetImporterSource() = 0;
+
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
+                     std::vector<CompilerDecl> &decls) override;
+
+  virtual uint32_t FindDecls(ConstString name, bool append,
+                             uint32_t max_matches,
+                             std::vector<clang::NamedDecl *> &decls) = 0;
 
   static bool classof(const DeclVendor *vendor) {
     return vendor->GetKind() >= eClangDeclVendor &&

@@ -6036,6 +6036,11 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return {GetSwiftType(type)};
 }
 
+CompilerType SwiftASTContext::GetTypeForDecl(void *opaque_decl) {
+  assert("not yet implemented");
+  return {};
+}
+
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 //----------------------------------------------------------------------

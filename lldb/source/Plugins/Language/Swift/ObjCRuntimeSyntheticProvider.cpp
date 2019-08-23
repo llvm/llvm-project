@@ -74,7 +74,7 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
           DeclVendor *vendor = runtime->GetDeclVendor();
           if (!vendor)
             break;
-          std::vector<clang::NamedDecl *> decls;
+          std::vector<CompilerDecl> decls;
           auto descriptor_sp(m_provider->m_descriptor_sp);
           if (!descriptor_sp)
             break;
@@ -91,7 +91,10 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
           const bool can_create = true;
           if (decls.empty())
             break;
-          CompilerType type = ClangASTContext::GetTypeForDecl(decls[0]);
+          auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem());
+          if (!ctx)
+            break;
+          CompilerType type = ctx->GetTypeForDecl(decls[0].GetOpaqueDecl());
           if (!type.IsValid())
             break;
           child_sp = m_backend.GetSyntheticBase(offset, type, can_create);

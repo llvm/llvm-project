@@ -9,7 +9,6 @@
 #ifndef liblldb_DeclVendor_h_
 #define liblldb_DeclVendor_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/lldb-defines.h"
 
 #include <vector>
@@ -51,7 +50,7 @@ public:
   ///     max_matches.
   virtual uint32_t FindDecls(ConstString name, bool append,
                              uint32_t max_matches,
-                             std::vector<clang::NamedDecl *> &decls) = 0;
+                             std::vector<CompilerDecl> &decls) = 0;
 
   /// Look up the types that the DeclVendor currently knows about matching a
   /// given name.

@@ -5038,11 +5038,22 @@ void ObjectFileMachO::Dump(Stream *s) {
     else
       s->PutCString("ObjectFileMachO32");
 
-    ArchSpec header_arch = GetArchitecture();
-
-    *s << ", file = '" << m_file
-       << "', triple = " << header_arch.GetTriple().getTriple() << "\n";
-
+    *s << ", file = '" << m_file;
+    ModuleSpecList all_specs;
+    ModuleSpec base_spec;
+    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
+                    base_spec, all_specs);
+    for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
+      *s << "', triple";
+      if (e)
+        s->Printf("[%d]", i);
+      *s << " = ";
+      *s << all_specs.GetModuleSpecRefAtIndex(i)
+                .GetArchitecture()
+                .GetTriple()
+                .getTriple();
+    }
+    *s << "\n";
     SectionList *sections = GetSectionList();
     if (sections)
       sections->Dump(s, nullptr, true, UINT32_MAX);
@@ -5102,51 +5113,46 @@ static llvm::StringRef GetOSName(uint32_t cmd) {
   }
 }
 
-#ifndef PLATFORM_MACCATALYST
-#define PLATFORM_MACCATALYST 6
-#endif
-
 namespace {
   struct OSEnv {
     llvm::StringRef os_type;
     llvm::StringRef environment;
     OSEnv(uint32_t cmd) {
       switch (cmd) {
-      case PLATFORM_MACOS:
+      case llvm::MachO::PLATFORM_MACOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::MacOSX);
         return;
-      case PLATFORM_IOS:
+      case llvm::MachO::PLATFORM_IOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
         return;
-      case PLATFORM_TVOS:
+      case llvm::MachO::PLATFORM_TVOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
         return;
-      case PLATFORM_WATCHOS:
+      case llvm::MachO::PLATFORM_WATCHOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
         return;
-// NEED_BRIDGEOS_TRIPLE      case PLATFORM_BRIDGEOS:
+// NEED_BRIDGEOS_TRIPLE      case llvm::MachO::PLATFORM_BRIDGEOS:
 // NEED_BRIDGEOS_TRIPLE        os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
 // NEED_BRIDGEOS_TRIPLE        return;
-#if defined (PLATFORM_IOSSIMULATOR) && defined (PLATFORM_TVOSSIMULATOR) && defined (PLATFORM_WATCHOSSIMULATOR)
-      case PLATFORM_IOSSIMULATOR:
+      case llvm::MachO::PLATFORM_MACCATALYST:
+        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
+        environment =
+            llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
+        return;
+      case llvm::MachO::PLATFORM_IOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
         return;
-      case PLATFORM_TVOSSIMULATOR:
+      case llvm::MachO::PLATFORM_TVOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
         return;
-      case PLATFORM_WATCHOSSIMULATOR:
+      case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
-        return;
-#endif
-      case PLATFORM_MACCATALYST:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
-        environment = "macabi";
         return;
       default: {
         Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
@@ -5166,7 +5172,6 @@ namespace {
   };
 } // namespace
 
-/// Find all ArchSpecs supported by a Mach-O header.
 void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
                                       const lldb_private::DataExtractor &data,
                                       lldb::offset_t lc_offset,
@@ -5301,14 +5306,25 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   }
 }
 
-ArchSpec
-ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
-                                 const lldb_private::DataExtractor &data,
-                                 lldb::offset_t lc_offset) {
+ArchSpec ObjectFileMachO::GetArchitecture(
+    ModuleSP module_sp, const llvm::MachO::mach_header &header,
+    const lldb_private::DataExtractor &data, lldb::offset_t lc_offset) {
   ModuleSpecList all_specs;
   ModuleSpec base_spec;
   GetAllArchSpecs(header, data, MachHeaderSizeFromMagic(header.magic),
                   base_spec, all_specs);
+
+  // If the object file offers multiple alternative load commands,
+  // pick the one that matches the module.
+  if (module_sp) {
+    const ArchSpec &module_arch = module_sp->GetArchitecture();
+    for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
+      ArchSpec mach_arch =
+          all_specs.GetModuleSpecRefAtIndex(i).GetArchitecture();
+      if (module_arch.IsCompatibleMatch(mach_arch))
+        return mach_arch;
+    }
+  }
 
   // Return the first arch we found.
   if (all_specs.GetSize() == 0)
@@ -5954,7 +5970,8 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    return GetArchitecture(m_header, m_data,
+
+    return GetArchitecture(module_sp, m_header, m_data,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
   return {};

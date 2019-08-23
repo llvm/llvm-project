@@ -1515,6 +1515,16 @@ bool ClangASTContext::AreTypesSame(CompilerType type1, CompilerType type2,
   return ast->getASTContext()->hasSameType(type1_qual, type2_qual);
 }
 
+CompilerType ClangASTContext::GetTypeForDecl(void *opaque_decl) {
+  if (!opaque_decl)
+    return CompilerType();
+
+  clang::Decl *decl = static_cast<clang::Decl *>(opaque_decl);
+  if (auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
+    return GetTypeForDecl(named_decl);
+  return CompilerType();
+}
+
 CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
   if (clang::ObjCInterfaceDecl *interface_decl =
           llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl))

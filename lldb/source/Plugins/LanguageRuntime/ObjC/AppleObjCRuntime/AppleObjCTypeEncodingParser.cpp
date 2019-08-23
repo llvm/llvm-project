@@ -239,7 +239,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
 
     const bool append = false;
     const uint32_t max_matches = 1;
-    std::vector<clang::NamedDecl *> decls;
+    std::vector<CompilerDecl> decls;
 
     uint32_t num_types =
         decl_vendor->FindDecls(ConstString(name), append, max_matches, decls);
@@ -253,9 +253,9 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
     if (!num_types)
       return ast_ctx.getObjCIdType();
 #endif
-
-    return ClangUtil::GetQualType(
-        ClangASTContext::GetTypeForDecl(decls[0]).GetPointerType());
+    if (auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem()))
+      return ClangUtil::GetQualType(
+          ctx->GetTypeForDecl(decls[0].GetOpaqueDecl()).GetPointerType());
   } else {
     // We're going to resolve this dynamically anyway, so just smile and wave.
     return ast_ctx.getObjCIdType();

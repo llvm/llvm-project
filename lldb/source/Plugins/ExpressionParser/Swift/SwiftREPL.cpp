@@ -549,7 +549,8 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
       return 0;
     }
 
-    auto *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+    auto *target_swift_ast =
+        llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
     if (target_swift_ast)
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
     swift::registerIDERequestFunctions(

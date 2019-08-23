@@ -945,18 +945,20 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
         if (objc_runtime) {
           auto decl_vendor = objc_runtime->GetDeclVendor();
           if (decl_vendor) {
-            std::vector<clang::NamedDecl *> decls;
+            std::vector<CompilerDecl> decls;
             ConstString name(key);
             decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
             for (auto decl : decls) {
               if (decl) {
-                if (CompilerType candidate =
-                        ClangASTContext::GetTypeForDecl(decl)) {
-                  result = true;
-                  std::unique_ptr<Language::TypeScavenger::Result> result(
-                      new ObjCScavengerResult(candidate));
-                  results.insert(std::move(result));
-                }
+                auto *ctx = llvm::dyn_cast<ClangASTContext>(decl.GetTypeSystem());
+                if (ctx)
+                  if (CompilerType candidate =
+                          ctx->GetTypeForDecl(decl.GetOpaqueDecl())) {
+                    result = true;
+                    std::unique_ptr<Language::TypeScavenger::Result> result(
+                        new ObjCScavengerResult(candidate));
+                    results.insert(std::move(result));
+                  }
               }
             }
           }

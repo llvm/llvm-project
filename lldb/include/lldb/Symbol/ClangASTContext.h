@@ -476,6 +476,8 @@ public:
   CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                            size_t arg_idx) override;
 
+  CompilerType GetTypeForDecl(void *opaque_decl) override;
+
   // CompilerDeclContext override functions
 
   std::vector<CompilerDecl>
