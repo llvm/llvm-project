@@ -2686,11 +2686,6 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   if (bit_size == 0)
     return true;
 
-  size_t this_bit_size = 8 * GetByteSize();
-  
-  if (bit_offset > this_bit_size)
-    return false;
-
   switch (m_type) {
   case Scalar::e_void:
   case Scalar::e_float:
@@ -2706,7 +2701,7 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   case Scalar::e_sint512:
     m_integer = m_integer.ashr(bit_offset)
                     .sextOrTrunc(bit_size)
-                    .sextOrSelf(this_bit_size);
+                    .sextOrSelf(8 * GetByteSize());
     return true;
 
   case Scalar::e_uint:
@@ -2717,7 +2712,7 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   case Scalar::e_uint512:
     m_integer = m_integer.lshr(bit_offset)
                     .zextOrTrunc(bit_size)
-                    .zextOrSelf(this_bit_size);
+                    .zextOrSelf(8 * GetByteSize());
     return true;
   }
   return false;

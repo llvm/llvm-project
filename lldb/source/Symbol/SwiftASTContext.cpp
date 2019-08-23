@@ -3201,7 +3201,7 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     }
     return nullptr;
   }
-  
+
   static CompilerContextKind
   GetCompilerContextKind(llvm::Optional<swift::ClangTypeKind> kind) {
     if (!kind)
@@ -3342,7 +3342,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
               std::make_unique<SwiftDWARFImporterDelegate>(*this);
       }
       clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, clang_importer_options, "", nullptr,
+          *m_ast_context_ap, clang_importer_options, "", m_dependency_tracker.get(),
           m_dwarf_importer_delegate_up.get());
 
       // Handle any errors.
