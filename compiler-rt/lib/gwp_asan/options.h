@@ -25,6 +25,7 @@ namespace options {
 //   2. pointers: "%p"
 //   3. strings:  "%[-]([0-9]*)?(\\.\\*)?s"
 //   4. chars:    "%c"
+// This function must be implemented in a signal-safe manner.
 // =================================== Notes ===================================
 // This function has a slightly different signature than the C standard
 // library's printf(). Notably, it returns 'void' rather than 'int'.
