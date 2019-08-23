@@ -209,8 +209,11 @@ Changes to LLDB
 External Open Source Projects Using LLVM 9
 ==========================================
 
-* A project...
+Mull - Mutation Testing tool for C and C++
+------------------------------------------
 
+`Mull <https://github.com/mull-project/mull>`_ is a LLVM-based tool for
+mutation testing with a strong focus on C and C++ languages.
 
 Additional Information
 ======================
