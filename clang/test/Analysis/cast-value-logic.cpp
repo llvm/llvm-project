@@ -131,3 +131,8 @@ void evalLogic(const Shape *S) {
 }
 } // namespace test_get_as
 
+namespace crashes {
+void test_non_reference_null_region_crash(Shape s) {
+  cast<Circle>(s); // no-crash
+}
+} // namespace crashes

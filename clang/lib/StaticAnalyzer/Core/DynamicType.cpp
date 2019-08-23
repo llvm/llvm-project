@@ -93,6 +93,9 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
                                           QualType CastFromTy,
                                           QualType CastToTy, QualType ResultTy,
                                           bool CastSucceeds) {
+  if (!MR)
+    return State;
+
   if (CastSucceeds)
     State = State->set<DynamicTypeMap>(MR, ResultTy);
 
