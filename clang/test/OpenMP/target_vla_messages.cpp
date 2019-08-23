@@ -47,7 +47,7 @@ void target_template(int arg) {
 #pragma omp target
   {
 #ifdef NO_VLA
-    // expected-error@+2 2 {{variable length arrays are not supported for the current target}}
+    // expected-error@+2 {{variable length arrays are not supported for the current target}}
 #endif
     T vla[arg];
   }

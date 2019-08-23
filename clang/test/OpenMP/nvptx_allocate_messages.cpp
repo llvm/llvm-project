@@ -58,7 +58,7 @@ template <class T> T foo() {
   #pragma omp allocate(v) allocator(omp_cgroup_mem_alloc)
   v = ST<T>::m;
 #if defined(DEVICE) && !defined(REQUIRES)
-// expected-error@+2 2 {{expected an allocator expression inside of the target region; provide an allocator expression or use 'requires' directive with the 'dynamic_allocators' clause}}
+// expected-error@+2 {{expected an allocator expression inside of the target region; provide an allocator expression or use 'requires' directive with the 'dynamic_allocators' clause}}
 #endif // DEVICE && !REQUIRES
 #pragma omp parallel private(v) allocate(v)
   v = 0;

@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -681,15 +680,20 @@ class AAReturnedValuesImpl : public AAReturnedValues, public AbstractState {
 
   /// Mapping of values potentially returned by the associated function to the
   /// return instructions that might return them.
-  DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>> ReturnedValues;
+  DenseMap<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
 
-  SmallPtrSet<CallBase *, 8> UnresolvedCalls;
+  /// Mapping to remember the number of returned values for a call site such
+  /// that we can avoid updates if nothing changed.
+  DenseMap<const CallBase *, unsigned> NumReturnedValuesPerKnownAA;
+
+  /// Set of unresolved calls returned by the associated function.
+  SmallSetVector<CallBase *, 4> UnresolvedCalls;
 
   /// State flags
   ///
   ///{
-  bool IsFixed;
-  bool IsValidState;
+  bool IsFixed = false;
+  bool IsValidState = true;
   ///}
 
 public:
@@ -744,7 +748,7 @@ public:
     return llvm::make_range(ReturnedValues.begin(), ReturnedValues.end());
   }
 
-  const SmallPtrSetImpl<CallBase *> &getUnresolvedCalls() const override {
+  const SmallSetVector<CallBase *, 4> &getUnresolvedCalls() const override {
     return UnresolvedCalls;
   }
 
@@ -760,7 +764,7 @@ public:
 
   /// See AbstractState::checkForAllReturnedValues(...).
   bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
           &Pred) const override;
 
   /// Pretty print the attribute similar to the IR representation.
@@ -775,7 +779,6 @@ public:
   /// See AbstractState::indicateOptimisticFixpoint(...).
   ChangeStatus indicateOptimisticFixpoint() override {
     IsFixed = true;
-    IsValidState &= true;
     return ChangeStatus::UNCHANGED;
   }
 
@@ -852,7 +855,7 @@ AAReturnedValuesImpl::getAssumedUniqueReturnValue(Attributor &A) const {
 }
 
 bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
-    const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+    const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
         &Pred) const {
   if (!isValidState())
     return false;
@@ -861,13 +864,12 @@ bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
   // encountered an overdefined one during an update.
   for (auto &It : ReturnedValues) {
     Value *RV = It.first;
-    const SmallPtrSetImpl<ReturnInst *> &RetInsts = It.second;
 
     CallBase *CB = dyn_cast<CallBase>(RV);
     if (CB && !UnresolvedCalls.count(CB))
       continue;
 
-    if (!Pred(*RV, RetInsts))
+    if (!Pred(*RV, It.second))
       return false;
   }
 
@@ -885,7 +887,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     // The flag to indicate a change.
     bool &Changed;
     // The return instrs we come from.
-    SmallPtrSet<ReturnInst *, 2> RetInsts;
+    SmallSetVector<ReturnInst *, 4> RetInsts;
   };
 
   // Callback for a leaf value returned by the associated function.
@@ -976,6 +978,15 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     if (Unresolved)
       continue;
 
+    // Now track transitively returned values.
+    unsigned &NumRetAA = NumReturnedValuesPerKnownAA[CB];
+    if (NumRetAA == RetValAA.getNumReturnValues()) {
+      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Skip call as it has not "
+                           "changed since it was seen last\n");
+      continue;
+    }
+    NumRetAA = RetValAA.getNumReturnValues();
+
     for (auto &RetValAAIt : RetValAA.returned_values()) {
       Value *RetVal = RetValAAIt.first;
       if (Argument *Arg = dyn_cast<Argument>(RetVal)) {
@@ -1003,7 +1014,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     assert(!It.second.empty() && "Entry does not add anything.");
     auto &ReturnInsts = ReturnedValues[It.first];
     for (ReturnInst *RI : It.second)
-      if (ReturnInsts.insert(RI).second) {
+      if (ReturnInsts.insert(RI)) {
         LLVM_DEBUG(dbgs() << "[AAReturnedValues] Add new returned value "
                           << *It.first << " => " << *RI << "\n");
         Changed = true;
@@ -1974,6 +1985,12 @@ struct AADereferenceableFloating : AADereferenceableImpl {
         T.GlobalState &= DS.GlobalState;
       }
 
+      // For now we do not try to "increase" dereferenceability due to negative
+      // indices as we first have to come up with code to deal with loops and
+      // for overflows of the dereferenceable bytes.
+      if (Offset.getSExtValue() < 0)
+        Offset = 0;
+
       T.takeAssumedDerefBytesMinimum(
           std::max(int64_t(0), DerefBytes - Offset.getSExtValue()));
 
@@ -2263,7 +2280,7 @@ bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
 }
 
 bool Attributor::checkForAllReturnedValuesAndReturnInsts(
-    const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+    const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
         &Pred,
     const AbstractAttribute &QueryingAA) {
 
@@ -2299,7 +2316,7 @@ bool Attributor::checkForAllReturnedValues(
     return false;
 
   return AARetVal.checkForAllReturnedValuesAndReturnInsts(
-      [&](Value &RV, const SmallPtrSetImpl<ReturnInst *> &) {
+      [&](Value &RV, const SmallSetVector<ReturnInst *, 4> &) {
         return Pred(RV);
       });
 }
@@ -2399,15 +2416,15 @@ ChangeStatus Attributor::run() {
         if (AA->update(*this) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
 
+    // Add attributes to the changed set if they have been created in the last
+    // iteration.
+    ChangedAAs.append(AllAbstractAttributes.begin() + NumAAs,
+                      AllAbstractAttributes.end());
+
     // Reset the work list and repopulate with the changed abstract attributes.
     // Note that dependent ones are added above.
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
-
-    // Add attributes to the worklist that have been created in the last
-    // iteration.
-    Worklist.insert(AllAbstractAttributes.begin() + NumAAs,
-                    AllAbstractAttributes.end());
 
   } while (!Worklist.empty() && ++IterationCounter < MaxFixpointIterations);
 

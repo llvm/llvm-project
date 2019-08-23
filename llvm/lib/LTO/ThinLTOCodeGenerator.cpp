@@ -457,10 +457,9 @@ static void resolvePrevailingInIndex(
     ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
-
-  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
-  computePrevailingCopies(Index, PrevailingCopy);
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    const DenseMap<GlobalValue::GUID, const GlobalValueSummary *>
+        &PrevailingCopy) {
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     const auto &Prevailing = PrevailingCopy.find(GUID);
@@ -576,6 +575,8 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
 static void internalizeAndPromoteInIndex(
     const StringMap<FunctionImporter::ExportSetTy> &ExportLists,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    const DenseMap<GlobalValue::GUID, const GlobalValueSummary *>
+        &PrevailingCopy,
     ModuleSummaryIndex &Index) {
   auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
@@ -584,7 +585,15 @@ static void internalizeAndPromoteInIndex(
            GUIDPreservedSymbols.count(GUID);
   };
 
-  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
+  auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
+    const auto &Prevailing = PrevailingCopy.find(GUID);
+    // Not in map means that there was only one copy, which must be prevailing.
+    if (Prevailing == PrevailingCopy.end())
+      return true;
+    return Prevailing->second == S;
+  };
+
+  thinLTOInternalizeAndPromoteInIndex(Index, isExported, isPrevailing);
 }
 
 static void computeDeadSymbolsInIndex(
@@ -629,16 +638,21 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   thinLTOResolvePrevailingInModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, Index);
 
   promoteModule(TheModule, Index);
 }
@@ -785,13 +799,18 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   if (ExportList.empty() && GUIDPreservedSymbols.empty())
     return;
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, Index);
 
   promoteModule(TheModule, Index);
 
@@ -944,14 +963,19 @@ void ThinLTOCodeGenerator::run() {
   // on the index, and nuke this map.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(*Index, PrevailingCopy);
+
   // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).
   // Changes are made in the index, consumed in the ThinLTO backends.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, *Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, *Index);
 
   // Make sure that every module has an entry in the ExportLists, ImportList,
   // GVSummary and ResolvedODR maps to enable threaded access to these maps

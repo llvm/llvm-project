@@ -4834,6 +4834,11 @@ after the function prologue. The language frontend is expected to compute
 this property for each DILocalVariable. The flag should be used
 only in optimized code.
 
+The `ExportSymbols` flag marks a class, struct or union whose members
+may be referenced as if they were defined in the containing class or
+union. This flag is used to decide whether the DW_AT_export_symbols can
+be used for the structure type.
+
 DIObjCProperty
 """"""""""""""
 

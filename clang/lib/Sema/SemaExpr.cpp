@@ -15350,9 +15350,13 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       CheckCompleteParameterTypesForMangler(*this, Func, Loc);
 
     Func->markUsed(Context);
+  }
 
-    if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
+  if (LangOpts.OpenMP) {
+    if (LangOpts.OpenMPIsDevice)
       checkOpenMPDeviceFunction(Loc, Func);
+    else
+      checkOpenMPHostFunction(Loc, Func);
   }
 }
 

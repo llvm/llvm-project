@@ -45,7 +45,7 @@
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
 ; CHECK:      [[A]]:
-; CHECK-NEXT:   Addr idx 2 (w/ length 169): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:   Addr idx 2 (w/ length 15): DW_OP_consts +0, DW_OP_stack_value
 ; CHECK-NEXT:   Addr idx 3 (w/ length 15): DW_OP_reg0 RAX
 ; CHECK-NEXT:   Addr idx 4 (w/ length 18): DW_OP_breg7 RSP-8
 ; CHECK:      [[E]]:
