@@ -9,6 +9,7 @@
 #include "ClangASTSource.h"
 
 #include "ASTDumper.h"
+#include "ClangDeclVendor.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/Module.h"
@@ -971,7 +972,8 @@ void ClangASTSource::FindExternalVisibleDecls(
         uint32_t max_matches = 1;
         std::vector<clang::NamedDecl *> decls;
 
-        if (!decl_vendor->FindDecls(name, append, max_matches, decls))
+        auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+        if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
           break;
 
         if (log) {
@@ -1423,7 +1425,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     uint32_t max_matches = 1;
     std::vector<clang::NamedDecl *> decls;
 
-    if (!decl_vendor->FindDecls(interface_name, append, max_matches, decls))
+    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    if (!clang_decl_vendor->FindDecls(interface_name, append, max_matches,
+                                      decls))
       break;
 
     ObjCInterfaceDecl *runtime_interface_decl =
@@ -1612,7 +1616,8 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     uint32_t max_matches = 1;
     std::vector<clang::NamedDecl *> decls;
 
-    if (!decl_vendor->FindDecls(class_name, append, max_matches, decls))
+    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    if (!clang_decl_vendor->FindDecls(class_name, append, max_matches, decls))
       break;
 
     DeclFromUser<const ObjCInterfaceDecl> interface_decl_from_runtime(

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/DeclVendor.h"
-
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/CompilerDecl.h"
+#include "lldb/Symbol/TypeSystem.h"
 
 #include <vector>
 
@@ -20,10 +20,11 @@ std::vector<CompilerType> DeclVendor::FindTypes(ConstString name,
   // FIXME: This depends on clang, but should be able to support any
   // TypeSystem.
   std::vector<CompilerType> ret;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
   if (FindDecls(name, /*append*/ true, max_matches, decls))
-    for (auto *decl : decls)
-      if (auto type = ClangASTContext::GetTypeForDecl(decl))
+    for (auto decl : decls)
+      if (auto type =
+              decl.GetTypeSystem()->GetTypeForDecl(decl.GetOpaqueDecl()))
         ret.push_back(type);
   return ret;
 }

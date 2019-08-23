@@ -126,6 +126,8 @@ public:
   virtual CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                                    size_t arg_idx);
 
+  virtual CompilerType GetTypeForDecl(void *opaque_decl) = 0;
+
   // CompilerDeclContext functions
 
   virtual std::vector<CompilerDecl>
