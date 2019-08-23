@@ -30,7 +30,7 @@ namespace reorder_fields {
 using namespace clang::ast_matchers;
 using llvm::SmallSetVector;
 
-/// \brief Finds the definition of a record by name.
+/// Finds the definition of a record by name.
 ///
 /// \returns nullptr if the name is ambiguous or not found.
 static const RecordDecl *findDefinition(StringRef RecordName,
@@ -50,7 +50,7 @@ static const RecordDecl *findDefinition(StringRef RecordName,
   return selectFirst<RecordDecl>("recordDecl", Results);
 }
 
-/// \brief Calculates the new order of fields.
+/// Calculates the new order of fields.
 ///
 /// \returns empty vector if the list of fields doesn't match the definition.
 static SmallVector<unsigned, 4>
@@ -79,7 +79,7 @@ getNewFieldsOrder(const RecordDecl *Definition,
 }
 
 // FIXME: error-handling
-/// \brief Replaces one range of source code by another.
+/// Replaces one range of source code by another.
 static void
 addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
                std::map<std::string, tooling::Replacements> &Replacements) {
@@ -92,7 +92,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   consumeError(Replacements[R.getFilePath()].add(R));
 }
 
-/// \brief Find all member fields used in the given init-list initializer expr
+/// Find all member fields used in the given init-list initializer expr
 /// that belong to the same record
 ///
 /// \returns a set of field declarations, empty if none were present
@@ -114,7 +114,7 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
-/// \brief Reorders fields in the definition of a struct/class.
+/// Reorders fields in the definition of a struct/class.
 ///
 /// At the moment reodering of fields with
 /// different accesses (public/protected/private) is not supported.
@@ -150,7 +150,7 @@ static bool reorderFieldsInDefinition(
   return true;
 }
 
-/// \brief Reorders initializers in a C++ struct/class constructor.
+/// Reorders initializers in a C++ struct/class constructor.
 ///
 /// A constructor can have initializers for an arbitrary subset of the class's
 /// fields. Thus, we need to ensure that we reorder just the initializers that
@@ -215,7 +215,7 @@ static void reorderFieldsInConstructor(
                      Replacements);
 }
 
-/// \brief Reorders initializers in the brace initialization of an aggregate.
+/// Reorders initializers in the brace initialization of an aggregate.
 ///
 /// At the moment partial initialization is not supported.
 /// \returns true on success

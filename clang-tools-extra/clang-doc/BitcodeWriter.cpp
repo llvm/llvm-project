@@ -254,7 +254,7 @@ unsigned ClangDocBitcodeWriter::AbbreviationMap::get(RecordId RID) const {
 
 // Validation and Overview Blocks
 
-/// \brief Emits the magic number header to check that its the right format,
+/// Emits the magic number header to check that its the right format,
 /// in this case, 'DOCS'.
 void ClangDocBitcodeWriter::emitHeader() {
   for (char C : BitCodeConstants::Signature)
@@ -266,7 +266,7 @@ void ClangDocBitcodeWriter::emitVersionBlock() {
   emitRecord(VersionNumber, VERSION);
 }
 
-/// \brief Emits a block ID and the block name to the BLOCKINFO block.
+/// Emits a block ID and the block name to the BLOCKINFO block.
 void ClangDocBitcodeWriter::emitBlockID(BlockId BID) {
   const auto &BlockIdName = BlockIdNameMap[BID];
   assert(BlockIdName.data() && BlockIdName.size() && "Unknown BlockId.");
@@ -279,7 +279,7 @@ void ClangDocBitcodeWriter::emitBlockID(BlockId BID) {
                                             BlockIdName.bytes_end()));
 }
 
-/// \brief Emits a record name to the BLOCKINFO block.
+/// Emits a record name to the BLOCKINFO block.
 void ClangDocBitcodeWriter::emitRecordID(RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
   prepRecordData(ID);

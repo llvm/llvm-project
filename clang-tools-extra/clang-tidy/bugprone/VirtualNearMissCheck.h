@@ -16,7 +16,7 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
-/// \brief Checks for near miss of virtual methods.
+/// Checks for near miss of virtual methods.
 ///
 /// For a method in a derived class, this check looks for virtual method with a
 /// very similar name and an identical signature defined in a base class.
