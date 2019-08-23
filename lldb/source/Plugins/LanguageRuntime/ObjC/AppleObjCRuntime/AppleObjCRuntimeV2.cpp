@@ -477,10 +477,15 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
           // try to go for a CompilerType at least
           DeclVendor *vendor = GetDeclVendor();
           if (vendor) {
-            std::vector<clang::NamedDecl *> decls;
-            if (vendor->FindDecls(class_name, false, 1, decls) && decls.size())
-              class_type_or_name.SetCompilerType(
-                  ClangASTContext::GetTypeForDecl(decls[0]));
+            std::vector<CompilerDecl> decls;
+            if (vendor->FindDecls(class_name, false, 1, decls) &&
+                decls.size()) {
+              auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem());
+              if (ctx)
+                if (CompilerType type =
+                        ctx->GetTypeForDecl(decls[0].GetOpaqueDecl()))
+                  class_type_or_name.SetCompilerType(type);
+            }
           }
         }
       }

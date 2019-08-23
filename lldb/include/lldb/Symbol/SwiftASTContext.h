@@ -673,6 +673,8 @@ public:
 
   CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetTypeForDecl(void *opaque_decl) override;
+
   bool IsVectorType(void *type, CompilerType *element_type,
                     uint64_t *size) override;
 

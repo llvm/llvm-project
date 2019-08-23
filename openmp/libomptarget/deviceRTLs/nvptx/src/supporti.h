@@ -202,25 +202,31 @@ INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 // Parallel level
 
 INLINE void IncParallelLevel(bool ActiveParallel) {
-  unsigned tnum = __ACTIVEMASK();
-  int leader = __ffs(tnum) - 1;
-  __SHFL_SYNC(tnum, leader, leader);
-  if (GetLaneId() == leader) {
+  unsigned Active = __ACTIVEMASK();
+  __SYNCWARP(Active);
+  unsigned LaneMaskLt;
+  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
+  unsigned Rank = __popc(Active & LaneMaskLt);
+  if (Rank == 0) {
     parallelLevel[GetWarpId()] +=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
+    __threadfence();
   }
-  __SHFL_SYNC(tnum, leader, leader);
+  __SYNCWARP(Active);
 }
 
 INLINE void DecParallelLevel(bool ActiveParallel) {
-  unsigned tnum = __ACTIVEMASK();
-  int leader = __ffs(tnum) - 1;
-  __SHFL_SYNC(tnum, leader, leader);
-  if (GetLaneId() == leader) {
+  unsigned Active = __ACTIVEMASK();
+  __SYNCWARP(Active);
+  unsigned LaneMaskLt;
+  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
+  unsigned Rank = __popc(Active & LaneMaskLt);
+  if (Rank == 0) {
     parallelLevel[GetWarpId()] -=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
+    __threadfence();
   }
-  __SHFL_SYNC(tnum, leader, leader);
+  __SYNCWARP(Active);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
