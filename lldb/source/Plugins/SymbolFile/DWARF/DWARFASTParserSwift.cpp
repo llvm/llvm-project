@@ -135,6 +135,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     compiler_type = m_ast.GetTypeFromMangledTypename(mangled_name, error);
   }
 
+  ConstString preferred_name;
   if (!compiler_type &&
       swift::Demangle::isObjCSymbol(mangled_name.GetStringRef())) {
     // When we failed to look up the type because no .swiftmodule is
@@ -168,11 +169,13 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       if (!compiler_type) {
         is_clang_type = true;
         compiler_type = clang_ctx->GetBasicType(eBasicTypeObjCID);
+        // Stash away the mangled name for resolving it through
+        // the Objective-C runtime later.
+        preferred_name = mangled_name;
       }
     }
   }
 
-  ConstString preferred_name;
   if (!compiler_type && name) {
     // Handle Archetypes, which are typedefs to RawPointerType.
     if (GetTypedefName(die).startswith("$sBp")) {

@@ -49,7 +49,9 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 target.FindFirstGlobalVariable("obj"),
                                 typename="Swift.Optional<__ObjC.ObjCClass>",
                                 num_children=0)
-        self.expect("fr v obj", substrs=["ObjCClass", "private_ivar", "42"])
+        self.expect("target var obj", substrs=["ObjCClass", "private_ivar", "42"])
         # This is a Clang type, since Clang doesn't generate DWARF for protocols.
-        self.expect("fr v proto", substrs=["(id)", "proto"])
-        self.expect("fr v -O proto", substrs=["<ProtoImpl"])
+        self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
+        # This is a Swift type.
+        self.expect("target var -d run proto", substrs=["(ProtoImpl?)", "proto"])
+        self.expect("target var -O proto", substrs=["<ProtoImpl"])
