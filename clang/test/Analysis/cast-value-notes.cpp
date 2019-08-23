@@ -123,8 +123,7 @@ void evalZeroParamNonNullReturnPointer(const Shape *S) {
 
 void evalZeroParamNonNullReturn(const Shape &S) {
   const auto *C = S.castAs<Circle>();
-  // expected-note@-1 {{'S' is a 'Circle'}}
-  // expected-note@-2 {{'C' initialized here}}
+  // expected-note@-1 {{'C' initialized here}}
 
   (void)(1 / !C);
   // expected-note@-1 {{'C' is non-null}}

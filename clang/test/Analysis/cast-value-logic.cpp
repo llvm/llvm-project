@@ -19,7 +19,11 @@ struct Shape {
   virtual double area();
 };
 class Triangle : public Shape {};
-class Circle : public Shape {};
+class Circle : public Shape {
+public:
+  ~Circle();
+};
+class SuspiciouslySpecificCircle : public Circle {};
 } // namespace clang
 
 using namespace llvm;
@@ -148,5 +152,11 @@ double test_virtual_method_after_call(Shape *S) {
   if (isa<Circle>(S))
     return S->area();
   return S->area() / 2;
+}
+
+void test_delete_crash() {
+  extern Circle *makeCircle();
+  Shape *S = makeCircle();
+  delete cast<SuspiciouslySpecificCircle>(S);
 }
 } // namespace crashes
