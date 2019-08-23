@@ -632,6 +632,9 @@ class CXXRecordDecl : public RecordDecl {
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber = 0;
 
+    /// The device side name mangling number.
+    unsigned DeviceManglingNumber = 0;
+
     /// The mangling number is enforced to ensure ODR naming.
     // FIXME: Save bit from `NumCaptures` to minimize `LambdaDefinitionData`.
     bool ForcedNumbering = false;
@@ -1954,6 +1957,16 @@ public:
     getLambdaData().ManglingNumber = ManglingNumber;
     getLambdaData().ForcedNumbering = Forced;
     getLambdaData().ContextDecl = ContextDecl;
+  }
+
+  /// Set the device side mangling number.
+  void setDeviceLambdaManglingNumber(unsigned Num) {
+    getLambdaData().DeviceManglingNumber = Num;
+  }
+
+  unsigned getDeviceLambdaManglingNumber() const {
+    assert(isLambda() && "Not a lambda closure type!");
+    return getLambdaData().DeviceManglingNumber;
   }
 
   /// Returns the inheritance model used for this record.

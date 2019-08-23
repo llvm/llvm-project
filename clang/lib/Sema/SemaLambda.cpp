@@ -452,6 +452,10 @@ CXXMethodDecl *Sema::startLambdaDefinition(
             getLangOpts().CUDAForceLambdaODR, &Forced)) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Method);
       Class->setLambdaMangling(ManglingNumber, ManglingContextDecl, Forced);
+      if (MCtx->hasDeviceMangleNumberingContext()) {
+        Class->setDeviceLambdaManglingNumber(
+            MCtx->getDeviceManglingNumber(Method));
+      }
     }
   }
 
