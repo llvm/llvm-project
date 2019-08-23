@@ -38,7 +38,7 @@ namespace lldb_private {
 /// architectures a LanguageSet can be completely stack-allocated.
 struct LanguageSet {
   llvm::SmallBitVector bitvector;
-  LanguageSet() = default;
+  LanguageSet();
 
   /// If the set contains a single language only, return it.
   llvm::Optional<lldb::LanguageType> GetSingularLanguage();

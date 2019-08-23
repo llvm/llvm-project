@@ -522,7 +522,7 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
     Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
                       SearchedFiles, Map);
   else
-    Symfile.FindTypes(parseCompilerContext(), languages, true, Map);
+    Module.FindTypes(parseCompilerContext(), languages, true, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;

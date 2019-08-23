@@ -127,7 +127,7 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC LLVMDemangle
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC LLVMDemangle LLVMTextAPI
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -152,6 +152,7 @@ $SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
                         $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
                         $LLVM_BUILD/lib/libLLVMDemangle.a \
                         $LLVM_BUILD/lib/libLLVMMC.a \
+                        $LLVM_BUILD/lib/libLLVMTextAPI.a \
                         $ZLIB_BUILD/libz.a \
                         symbolizer.a \
                         all.bc
