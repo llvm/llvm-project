@@ -21,7 +21,6 @@ install(FILES
         inc/amd_hsa_kernel_code.h
         inc/amd_hsa_queue.h
         inc/amd_hsa_signal.h
-        inc/as.h
         inc/device_amd_hsa.h
         inc/hsa.h
         inc/ockl_hsa.h
