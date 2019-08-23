@@ -742,8 +742,9 @@ struct LessClangTidyError {
     const tooling::DiagnosticMessage &M1 = LHS.Message;
     const tooling::DiagnosticMessage &M2 = RHS.Message;
 
-    return std::tie(M1.FilePath, M1.FileOffset, M1.Message) <
-           std::tie(M2.FilePath, M2.FileOffset, M2.Message);
+    return
+      std::tie(M1.FilePath, M1.FileOffset, LHS.DiagnosticName, M1.Message) <
+      std::tie(M2.FilePath, M2.FileOffset, RHS.DiagnosticName, M2.Message);
   }
 };
 struct EqualClangTidyError {

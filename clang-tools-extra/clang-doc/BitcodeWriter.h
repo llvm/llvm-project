@@ -40,7 +40,7 @@ struct BitCodeConstants {
   static constexpr unsigned IntSize = 16U;
   static constexpr unsigned StringLengthSize = 16U;
   static constexpr unsigned FilenameLengthSize = 16U;
-  static constexpr unsigned LineNumberSize = 16U;
+  static constexpr unsigned LineNumberSize = 32U;
   static constexpr unsigned ReferenceTypeSize = 8U;
   static constexpr unsigned USRLengthSize = 6U;
   static constexpr unsigned USRBitLengthSize = 8U;
