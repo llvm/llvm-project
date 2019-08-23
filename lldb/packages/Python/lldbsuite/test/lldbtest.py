@@ -1299,6 +1299,7 @@ class Base(unittest2.TestCase):
                 driver_output = check_output(
                     [self.getCompiler()] + '-g -c -x c - -o - -###'.split(),
                     stderr=STDOUT)
+                driver_output = driver_output.decode("utf-8")
                 for line in driver_output.split(os.linesep):
                     m = re.search('dwarf-version=([0-9])', line)
                     if m:
