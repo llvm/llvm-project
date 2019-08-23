@@ -408,9 +408,12 @@ Undo the effect of
 .It Fl -relocatable , Fl r
 Create relocatable object file.
 .It Fl -reproduce Ns = Ns Ar path
-Write a tar file containing all input files and a text file describing the link invocation to
+Write a tar file to
 .Ar path,
-so that you can easily re-run the linker with the same options and input files.
+containing all the input files needed to reproduce the link, a text file called
+response.txt containing the command line options and a text file called
+version.txt containing the output of ld.lld --version. The archive when
+unpacked can be used to re-run the linker with the same options and input files.
 .It Fl -retain-symbols-file Ns = Ns Ar file
 Retain only the symbols listed in the file.
 .It Fl -rpath Ns = Ns Ar value , Fl R Ar value
