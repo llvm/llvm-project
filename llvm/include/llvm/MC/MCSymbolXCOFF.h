@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class MCSectionXCOFF;
+
 class MCSymbolXCOFF : public MCSymbol {
 public:
   MCSymbolXCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
@@ -33,8 +35,22 @@ public:
     return StorageClass.getValue();
   }
 
+  void setContainingCsect(const MCSectionXCOFF *C) {
+    assert((!ContainingCsect || ContainingCsect == C) &&
+           "Trying to set a containing csect that doesn't match the one that"
+           "this symbol is already mapped to.");
+    ContainingCsect = C;
+  }
+
+  const MCSectionXCOFF *getContainingCsect() const {
+    assert(ContainingCsect &&
+           "Trying to get containing csect but none was set.");
+    return ContainingCsect;
+  }
+
 private:
   Optional<XCOFF::StorageClass> StorageClass;
+  const MCSectionXCOFF *ContainingCsect = nullptr;
 };
 
 } // end namespace llvm

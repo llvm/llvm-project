@@ -39,6 +39,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
 
+static cl::opt<bool> PrintSlotIndexes(
+    "print-slotindexes",
+    cl::desc("When printing machine IR, annotate instructions and blocks with "
+             "SlotIndexes when available"),
+    cl::init(true), cl::Hidden);
+
 MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
     : BB(B), Number(-1), xParent(&MF) {
   Insts.Parent = this;
@@ -291,7 +297,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     return;
   }
 
-  if (Indexes)
+  if (Indexes && PrintSlotIndexes)
     OS << Indexes->getMBBStartIdx(this) << '\t';
 
   OS << "bb." << getNumber();
@@ -402,7 +408,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   bool IsInBundle = false;
   for (const MachineInstr &MI : instrs()) {
-    if (Indexes) {
+    if (Indexes && PrintSlotIndexes) {
       if (Indexes->hasIndex(MI))
         OS << Indexes->getInstructionIndex(MI);
       OS << '\t';

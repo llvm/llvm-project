@@ -45,6 +45,7 @@ source_set("sources") {
     "hwasan_allocator.h",
     "hwasan_dynamic_shadow.cpp",
     "hwasan_dynamic_shadow.h",
+    "hwasan_exceptions.cpp",
     "hwasan_flags.h",
     "hwasan_interceptors.cpp",
     "hwasan_interceptors_vfork.S",

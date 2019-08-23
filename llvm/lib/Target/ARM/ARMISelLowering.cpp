@@ -5938,14 +5938,15 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
     unsigned ShPartsOpc = ARMISD::LSLL;
     ConstantSDNode *Con = dyn_cast<ConstantSDNode>(ShAmt);
 
-    // If the shift amount is greater than 32 then do the default optimisation
-    if (Con && Con->getZExtValue() > 32)
+    // If the shift amount is greater than 32 or has a greater bitwidth than 64
+    // then do the default optimisation
+    if (ShAmt->getValueType(0).getSizeInBits() > 64 ||
+        (Con && Con->getZExtValue() >= 32))
       return SDValue();
 
-    // Extract the lower 32 bits of the shift amount if it's an i64
-    if (ShAmt->getValueType(0) == MVT::i64)
-      ShAmt = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, ShAmt,
-                          DAG.getConstant(0, dl, MVT::i32));
+    // Extract the lower 32 bits of the shift amount if it's not an i32
+    if (ShAmt->getValueType(0) != MVT::i32)
+      ShAmt = DAG.getZExtOrTrunc(ShAmt, dl, MVT::i32);
 
     if (ShOpc == ISD::SRL) {
       if (!Con)

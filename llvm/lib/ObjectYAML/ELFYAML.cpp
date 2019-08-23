@@ -888,9 +888,25 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Binding", Symbol.Binding, ELFYAML::ELF_STB(0));
   IO.mapOptional("Value", Symbol.Value, Hex64(0));
   IO.mapOptional("Size", Symbol.Size, Hex64(0));
-  MappingNormalization<NormalizedOther, uint8_t> Keys(IO, Symbol.Other);
-  IO.mapOptional("Visibility", Keys->Visibility, ELFYAML::ELF_STV(0));
-  IO.mapOptional("Other", Keys->Other, ELFYAML::ELF_STO(0));
+
+  // Symbol's Other field is a bit special. It is a bit field that represents
+  // st_other and usually holds symbol visibility. When we write a YAML document
+  // we split it into two fields named "Visibility" and "Other". The latter one
+  // usually holds no value, and so is almost never printed, although some
+  // targets (e.g. MIPS) may use it to specify the named bits to set (e.g.
+  // STO_MIPS_OPTIONAL). For producing broken objects we want to allow writing
+  // any value to st_other. To do this we allow one more field called "StOther".
+  // If it is present in a YAML document, we set st_other to that integer,
+  // ignoring the other fields.
+  Optional<llvm::yaml::Hex64> Other;
+  IO.mapOptional("StOther", Other);
+  if (Other) {
+    Symbol.Other = *Other;
+  } else {
+    MappingNormalization<NormalizedOther, uint8_t> Keys(IO, Symbol.Other);
+    IO.mapOptional("Visibility", Keys->Visibility, ELFYAML::ELF_STV(0));
+    IO.mapOptional("Other", Keys->Other, ELFYAML::ELF_STO(0));
+  }
 }
 
 StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,

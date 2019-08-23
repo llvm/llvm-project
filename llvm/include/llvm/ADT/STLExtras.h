@@ -95,18 +95,6 @@ template <class Ty> struct identity {
   }
 };
 
-template <class Ty> struct less_ptr {
-  bool operator()(const Ty* left, const Ty* right) const {
-    return *left < *right;
-  }
-};
-
-template <class Ty> struct greater_ptr {
-  bool operator()(const Ty* left, const Ty* right) const {
-    return *right < *left;
-  }
-};
-
 /// An efficient, type-erasing, non-owning reference to a callable. This is
 /// intended for use as the type of a function parameter that is not used
 /// after the function in question returns.
@@ -1386,20 +1374,6 @@ template<typename First, typename Second>
 struct pair_hash {
   size_t operator()(const std::pair<First, Second> &P) const {
     return std::hash<First>()(P.first) * 31 + std::hash<Second>()(P.second);
-  }
-};
-
-/// A functor like C++14's std::less<void> in its absence.
-struct less {
-  template <typename A, typename B> bool operator()(A &&a, B &&b) const {
-    return std::forward<A>(a) < std::forward<B>(b);
-  }
-};
-
-/// A functor like C++14's std::equal<void> in its absence.
-struct equal {
-  template <typename A, typename B> bool operator()(A &&a, B &&b) const {
-    return std::forward<A>(a) == std::forward<B>(b);
   }
 };
 

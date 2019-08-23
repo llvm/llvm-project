@@ -382,14 +382,12 @@ define arm_aapcs_vfpcc <2 x i64> @foo_int64_float(<2 x double> %src) {
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    vmov.32 q4[1], r1
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov.32 q4[3], r1
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}
@@ -410,14 +408,12 @@ define arm_aapcs_vfpcc <2 x i64> @foo_uint64_float(<2 x double> %src) {
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    vmov.32 q4[1], r1
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov.32 q4[3], r1
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}

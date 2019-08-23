@@ -455,9 +455,8 @@ namespace {
 // Various metrics for how much to strip off of pointers.
 enum PointerStripKind {
   PSK_ZeroIndices,
-  PSK_ZeroIndicesAndAliases,
-  PSK_ZeroIndicesAndAliasesSameRepresentation,
-  PSK_ZeroIndicesAndAliasesAndInvariantGroups,
+  PSK_ZeroIndicesSameRepresentation,
+  PSK_ZeroIndicesAndInvariantGroups,
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
@@ -475,10 +474,9 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
   do {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
-      case PSK_ZeroIndicesAndAliases:
-      case PSK_ZeroIndicesAndAliasesSameRepresentation:
-      case PSK_ZeroIndicesAndAliasesAndInvariantGroups:
       case PSK_ZeroIndices:
+      case PSK_ZeroIndicesSameRepresentation:
+      case PSK_ZeroIndicesAndInvariantGroups:
         if (!GEP->hasAllZeroIndices())
           return V;
         break;
@@ -494,15 +492,11 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       V = cast<Operator>(V)->getOperand(0);
-    } else if (StripKind != PSK_ZeroIndicesAndAliasesSameRepresentation &&
+    } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       // TODO: If we know an address space cast will not change the
       //       representation we could look through it here as well.
       V = cast<Operator>(V)->getOperand(0);
-    } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
-      if (StripKind == PSK_ZeroIndices || GA->isInterposable())
-        return V;
-      V = GA->getAliasee();
     } else {
       if (const auto *Call = dyn_cast<CallBase>(V)) {
         if (const Value *RV = Call->getReturnedArgOperand()) {
@@ -512,7 +506,7 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
         // The result of launder.invariant.group must alias it's argument,
         // but it can't be marked with returned attribute, that's why it needs
         // special case.
-        if (StripKind == PSK_ZeroIndicesAndAliasesAndInvariantGroups &&
+        if (StripKind == PSK_ZeroIndicesAndInvariantGroups &&
             (Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
              Call->getIntrinsicID() == Intrinsic::strip_invariant_group)) {
           V = Call->getArgOperand(0);
@@ -529,16 +523,11 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
 } // end anonymous namespace
 
 const Value *Value::stripPointerCasts() const {
-  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliases>(this);
+  return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
 }
 
 const Value *Value::stripPointerCastsSameRepresentation() const {
-  return stripPointerCastsAndOffsets<
-      PSK_ZeroIndicesAndAliasesSameRepresentation>(this);
-}
-
-const Value *Value::stripPointerCastsNoFollowAliases() const {
-  return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
+  return stripPointerCastsAndOffsets<PSK_ZeroIndicesSameRepresentation>(this);
 }
 
 const Value *Value::stripInBoundsConstantOffsets() const {
@@ -546,8 +535,7 @@ const Value *Value::stripInBoundsConstantOffsets() const {
 }
 
 const Value *Value::stripPointerCastsAndInvariantGroups() const {
-  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliasesAndInvariantGroups>(
-      this);
+  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndInvariantGroups>(this);
 }
 
 const Value *

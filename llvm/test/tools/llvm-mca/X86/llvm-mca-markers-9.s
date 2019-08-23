@@ -15,13 +15,13 @@ testloop:
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
-# CHECK-NEXT: Total Cycles:      205
-# CHECK-NEXT: Total uOps:        400
+# CHECK-NEXT: Total Cycles:      156
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.95
-# CHECK-NEXT: IPC:               1.46
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    1.92
+# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -33,7 +33,7 @@ testloop:
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.50                        leal	42(%rdi), %eax
-# CHECK-NEXT:  2      3     1.00                        imull	%esi, %eax
+# CHECK-NEXT:  1      3     1.00                        imull	%esi, %eax
 # CHECK-NEXT:  1      1     0.50                        leal	42(%rdi), %eax
 
 # CHECK:      Resources:
@@ -54,23 +54,23 @@ testloop:
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 1.00   2.00    -      -      -      -      -      -     1.00    -      -      -      -      -
+# CHECK-NEXT: 1.49   1.51    -      -      -      -      -      -     1.00    -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     leal	42(%rdi), %eax
+# CHECK-NEXT: 0.99   0.01    -      -      -      -      -      -      -      -      -      -      -      -     leal	42(%rdi), %eax
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     1.00    -      -      -      -      -     imull	%esi, %eax
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     leal	42(%rdi), %eax
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     leal	42(%rdi), %eax
 
 # CHECK:      [1] Code Region - inner
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
 # CHECK-NEXT: Total Cycles:      303
-# CHECK-NEXT: Total uOps:        200
+# CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: uOps Per Cycle:    0.33
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 1.0
 
@@ -83,7 +83,7 @@ testloop:
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imull	%esi, %eax
+# CHECK-NEXT:  1      3     1.00                        imull	%esi, %eax
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

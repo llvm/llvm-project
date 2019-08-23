@@ -1671,6 +1671,8 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(getSymbol(GV));
   XSym->setStorageClass(
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
+  XSym->setContainingCsect(CSect);
+
   const DataLayout &DL = GV->getParent()->getDataLayout();
   unsigned Align =
       GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);

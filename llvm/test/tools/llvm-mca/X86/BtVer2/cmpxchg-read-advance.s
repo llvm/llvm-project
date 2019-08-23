@@ -26,10 +26,10 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      17
-# CHECK-NEXT: Total uOps:        8
+# CHECK-NEXT: Total uOps:        7
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.47
+# CHECK-NEXT: uOps Per Cycle:    0.41
 # CHECK-NEXT: IPC:               0.12
 # CHECK-NEXT: Block RThroughput: 4.0
 
@@ -42,7 +42,7 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      6     4.00                        imulq	%rax, %rax
+# CHECK-NEXT:  1      6     4.00                        imulq	%rax, %rax
 # CHECK-NEXT:  6      11    1.50    *      *            cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Resources:
@@ -92,10 +92,10 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      17
-# CHECK-NEXT: Total uOps:        8
+# CHECK-NEXT: Total uOps:        7
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.47
+# CHECK-NEXT: uOps Per Cycle:    0.41
 # CHECK-NEXT: IPC:               0.12
 # CHECK-NEXT: Block RThroughput: 4.0
 
@@ -108,7 +108,7 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      6     4.00                        imulq	%rcx, %rcx
+# CHECK-NEXT:  1      6     4.00                        imulq	%rcx, %rcx
 # CHECK-NEXT:  6      11    1.50    *      *            cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Resources:
@@ -158,10 +158,10 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      23
-# CHECK-NEXT: Total uOps:        8
+# CHECK-NEXT: Total uOps:        7
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.35
+# CHECK-NEXT: uOps Per Cycle:    0.30
 # CHECK-NEXT: IPC:               0.09
 # CHECK-NEXT: Block RThroughput: 17.0
 
@@ -174,7 +174,7 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      6     4.00                        imulq	%rax, %rax
+# CHECK-NEXT:  1      6     4.00                        imulq	%rax, %rax
 # CHECK-NEXT:  6      17    17.00   *      *            lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Resources:
@@ -224,10 +224,10 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      23
-# CHECK-NEXT: Total uOps:        8
+# CHECK-NEXT: Total uOps:        7
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.35
+# CHECK-NEXT: uOps Per Cycle:    0.30
 # CHECK-NEXT: IPC:               0.09
 # CHECK-NEXT: Block RThroughput: 17.0
 
@@ -240,7 +240,7 @@ lock cmpxchgq %rcx, (%rdx)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      6     4.00                        imulq	%rcx, %rcx
+# CHECK-NEXT:  1      6     4.00                        imulq	%rcx, %rcx
 # CHECK-NEXT:  6      17    17.00   *      *            lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Resources:

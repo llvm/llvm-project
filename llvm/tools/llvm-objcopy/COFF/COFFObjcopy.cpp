@@ -103,8 +103,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   Obj.removeSections([&Config](const Section &Sec) {
     // Contrary to --only-keep-debug, --only-section fully removes sections that
     // aren't mentioned.
-    if (!Config.OnlySection.empty() &&
-        !is_contained(Config.OnlySection, Sec.Name))
+    if (!Config.OnlySection.empty() && !Config.OnlySection.matches(Sec.Name))
       return true;
 
     if (Config.StripDebug || Config.StripAll || Config.StripAllGNU ||
@@ -114,7 +113,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
         return true;
     }
 
-    if (is_contained(Config.ToRemove, Sec.Name))
+    if (Config.ToRemove.matches(Sec.Name))
       return true;
 
     return false;
@@ -148,7 +147,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (Config.StripAll || Config.StripAllGNU)
       return true;
 
-    if (is_contained(Config.SymbolsToRemove, Sym.Name)) {
+    if (Config.SymbolsToRemove.matches(Sym.Name)) {
       // Explicitly removing a referenced symbol is an error.
       if (Sym.Referenced)
         reportError(Config.OutputFilename,
@@ -167,7 +166,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC ||
           Sym.Sym.SectionNumber == 0)
         if (Config.StripUnneeded ||
-            is_contained(Config.UnneededSymbolsToRemove, Sym.Name))
+            Config.UnneededSymbolsToRemove.matches(Sym.Name))
           return true;
 
       // GNU objcopy keeps referenced local symbols and external symbols

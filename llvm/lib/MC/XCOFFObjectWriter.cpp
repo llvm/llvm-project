@@ -247,8 +247,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
 
     // Map the symbol into its containing csect.
-    MCSectionXCOFF *ContainingCsect =
-        dyn_cast<MCSectionXCOFF>(XSym->getFragment(false)->getParent());
+    const MCSectionXCOFF *ContainingCsect = XSym->getContainingCsect();
     assert(WrapperMap.find(ContainingCsect) != WrapperMap.end() &&
            "Expected containing csect to exist in map");
 

@@ -661,15 +661,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
     extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
 
-    Register CarryIn = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    MIRBuilder.buildConstant(CarryIn, 0);
-
+    Register CarryIn;
     for (int i = 0; i < NumParts; ++i) {
       Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
       Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
-      MIRBuilder.buildUAdde(DstReg, CarryOut, Src1Regs[i],
-                            Src2Regs[i], CarryIn);
+      if (i == 0)
+        MIRBuilder.buildUAddo(DstReg, CarryOut, Src1Regs[i], Src2Regs[i]);
+      else {
+        MIRBuilder.buildUAdde(DstReg, CarryOut, Src1Regs[i],
+                              Src2Regs[i], CarryIn);
+      }
 
       DstRegs.push_back(DstReg);
       CarryIn = CarryOut;

@@ -8,12 +8,12 @@ add  %ecx, %ebx
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
 # CHECK-NEXT: Total Cycles:      8
-# CHECK-NEXT: Total uOps:        4
+# CHECK-NEXT: Total uOps:        3
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: uOps Per Cycle:    0.38
 # CHECK-NEXT: IPC:               0.38
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,7 +24,7 @@ add  %ecx, %ebx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imulw	%ax, %cx
+# CHECK-NEXT:  1      3     1.00                        imulw	%ax, %cx
 # CHECK-NEXT:  1      1     0.50                        addb	%al, %cl
 # CHECK-NEXT:  1      1     0.50                        addl	%ecx, %ebx
 
@@ -32,7 +32,7 @@ add  %ecx, %ebx
 # CHECK-NEXT: Index     01234567
 
 # CHECK:      [0,0]     DeeeER .   imulw	%ax, %cx
-# CHECK-NEXT: [0,1]     .D==eER.   addb	%al, %cl
+# CHECK-NEXT: [0,1]     D===eER.   addb	%al, %cl
 # CHECK-NEXT: [0,2]     .D===eER   addl	%ecx, %ebx
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -43,5 +43,5 @@ add  %ecx, %ebx
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulw	%ax, %cx
-# CHECK-NEXT: 1.     1     3.0    0.0    0.0       addb	%al, %cl
+# CHECK-NEXT: 1.     1     4.0    0.0    0.0       addb	%al, %cl
 # CHECK-NEXT: 2.     1     4.0    0.0    0.0       addl	%ecx, %ebx

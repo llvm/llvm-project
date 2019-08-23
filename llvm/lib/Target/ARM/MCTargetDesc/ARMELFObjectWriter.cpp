@@ -82,7 +82,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
 
   if (IsPCRel) {
-    switch ((unsigned)Fixup.getKind()) {
+    switch (Fixup.getTargetKind()) {
     default:
       Ctx.reportFatalError(Fixup.getLoc(), "unsupported relocation on symbol");
       return ELF::R_ARM_NONE;
@@ -145,7 +145,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_THM_BF18;
     }
   }
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getTargetKind()) {
   default:
     Ctx.reportFatalError(Fixup.getLoc(), "unsupported relocation on symbol");
     return ELF::R_ARM_NONE;

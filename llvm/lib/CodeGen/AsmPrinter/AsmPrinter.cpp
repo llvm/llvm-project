@@ -1572,8 +1572,7 @@ bool AsmPrinter::doFinalization(Module &M) {
              "expected llvm.used to be an array type");
       if (const auto *A = cast<ConstantArray>(LU->getInitializer())) {
         for (const Value *Op : A->operands()) {
-          const auto *GV =
-              cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
+          const auto *GV = cast<GlobalValue>(Op->stripPointerCasts());
           // Global symbols with internal or private linkage are not visible to
           // the linker, and thus would cause an error when the linker tried to
           // preserve the symbol due to the `/include:` directive.
@@ -2635,7 +2634,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   const GlobalValue *FinalGV = dyn_cast<GlobalValue>(GV->getOperand(0));
   const MCSymbol *FinalSym = AP.getSymbol(FinalGV);
   *ME = AP.getObjFileLowering().getIndirectSymViaGOTPCRel(
-      FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
+      FinalGV, FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
 
   // Update GOT equivalent usage information
   --NumUses;
