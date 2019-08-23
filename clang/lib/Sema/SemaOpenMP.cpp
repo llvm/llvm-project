@@ -15418,7 +15418,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
 static bool checkValueDeclInTarget(SourceLocation SL, SourceRange SR,
                                    Sema &SemaRef, DSAStackTy *Stack,
                                    ValueDecl *VD) {
-  return VD->hasAttr<OMPDeclareTargetDeclAttr>() ||
+  return OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) ||
          checkTypeMappable(SL, SR, SemaRef, Stack, VD->getType(),
                            /*FullCheck=*/false);
 }

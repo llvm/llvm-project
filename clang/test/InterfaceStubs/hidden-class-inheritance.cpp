@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY="" -DCHILD_CLASS_VISIBILITY="" \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-X %s
@@ -11,12 +11,12 @@
 // RUN: FileCheck -check-prefix=CHECK-X-RE %s
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY=HIDDEN -DCHILD_CLASS_VISIBILITY="" \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY=HIDDEN -DCHILD_CLASS_VISIBILITY="" \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP2 %s
@@ -27,12 +27,12 @@
 // RUN: FileCheck -check-prefix=CHECK-HP-RE %s
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY="" -DCHILD_CLASS_VISIBILITY=HIDDEN \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HC %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY="" -DCHILD_CLASS_VISIBILITY=HIDDEN \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HC2 %s
@@ -43,7 +43,7 @@
 // RUN: FileCheck -check-prefix=CHECK-HC-RE %s
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY=HIDDEN -DCHILD_CLASS_VISIBILITY=HIDDEN \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP-HC %s

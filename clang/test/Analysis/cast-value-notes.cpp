@@ -27,9 +27,9 @@ void evalReferences(const Shape &S) {
 }
 
 void evalNonNullParamNonNullReturnReference(const Shape &S) {
+  // Unmodeled cast from reference to pointer.
   const auto *C = dyn_cast_or_null<Circle>(S);
-  // expected-note@-1 {{Assuming 'S' is a 'Circle'}}
-  // expected-note@-2 {{'C' initialized here}}
+  // expected-note@-1 {{'C' initialized here}}
 
   if (!dyn_cast_or_null<Circle>(C)) {
     // expected-note@-1 {{'C' is a 'Circle'}}
@@ -123,8 +123,7 @@ void evalZeroParamNonNullReturnPointer(const Shape *S) {
 
 void evalZeroParamNonNullReturn(const Shape &S) {
   const auto *C = S.castAs<Circle>();
-  // expected-note@-1 {{'S' is a 'Circle'}}
-  // expected-note@-2 {{'C' initialized here}}
+  // expected-note@-1 {{'C' initialized here}}
 
   (void)(1 / !C);
   // expected-note@-1 {{'C' is non-null}}
@@ -132,10 +131,11 @@ void evalZeroParamNonNullReturn(const Shape &S) {
   // expected-warning@-3 {{Division by zero}}
 }
 
-void evalZeroParamNullReturn(const Shape &S) {
-  const auto *C = S.getAs<Circle>();
+void evalZeroParamNullReturn(const Shape *S) {
+  const auto &C = S->getAs<Circle>();
   // expected-note@-1 {{Assuming 'S' is not a 'Circle'}}
-  // expected-note@-2 {{'C' initialized to a null pointer value}}
+  // expected-note@-2 {{Storing null pointer value}}
+  // expected-note@-3 {{'C' initialized here}}
 
   if (!dyn_cast_or_null<Triangle>(S)) {
     // expected-note@-1 {{Assuming 'S' is a 'Triangle'}}
