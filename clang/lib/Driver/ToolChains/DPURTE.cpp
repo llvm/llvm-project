@@ -69,6 +69,9 @@ void DPURTE::addClangTargetOptions(
     CC1Args.push_back("-ffunction-sections");
   }
   CC1Args.push_back("-fdata-sections");
+  if (DriverArgs.hasArg(options::OPT_pg)) {
+    CC1Args.push_back("-DDPU_PROFILING");
+  }
 }
 } // namespace toolchains
 
