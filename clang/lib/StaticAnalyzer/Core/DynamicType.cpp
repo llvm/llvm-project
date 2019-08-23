@@ -91,13 +91,16 @@ ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
 ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
                                           const MemRegion *MR,
                                           QualType CastFromTy,
-                                          QualType CastToTy, QualType ResultTy,
+                                          QualType CastToTy,
                                           bool CastSucceeds) {
   if (!MR)
     return State;
 
-  if (CastSucceeds)
-    State = State->set<DynamicTypeMap>(MR, ResultTy);
+  if (CastSucceeds) {
+    assert((CastToTy->isAnyPointerType() || CastToTy->isReferenceType()) &&
+           "DynamicTypeInfo should always be a pointer.");
+    State = State->set<DynamicTypeMap>(MR, CastToTy);
+  }
 
   DynamicCastInfo::CastResult ResultKind =
       CastSucceeds ? DynamicCastInfo::CastResult::Success

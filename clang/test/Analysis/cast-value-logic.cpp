@@ -15,6 +15,8 @@ struct Shape {
 
   template <typename T>
   const T *getAs() const;
+
+  virtual double area();
 };
 class Triangle : public Shape {};
 class Circle : public Shape {};
@@ -140,5 +142,11 @@ void test_non_reference_temporary_crash() {
   extern std::unique_ptr<Shape> foo();
   auto P = foo();
   auto Q = cast<Circle>(std::move(P)); // no-crash
+}
+
+double test_virtual_method_after_call(Shape *S) {
+  if (isa<Circle>(S))
+    return S->area();
+  return S->area() / 2;
 }
 } // namespace crashes
