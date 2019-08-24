@@ -8191,7 +8191,7 @@ def warn_dangling_member : Warning<
 def warn_dangling_lifetime_pointer_member : Warning<
   "initializing pointer member %0 to point to a temporary object "
   "whose lifetime is shorter than the lifetime of the constructed object">,
-  InGroup<DanglingField>;
+  InGroup<DanglingGsl>;
 def note_lifetime_extending_member_declared_here : Note<
   "%select{%select{reference|'std::initializer_list'}0 member|"
   "member with %select{reference|'std::initializer_list'}0 subobject}1 "
@@ -8213,7 +8213,7 @@ def warn_new_dangling_reference : Warning<
 def warn_dangling_lifetime_pointer : Warning<
   "object backing the pointer "
   "will be destroyed at the end of the full-expression">,
-  InGroup<Dangling>;
+  InGroup<DanglingGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"
@@ -9417,6 +9417,14 @@ def err_omp_unsupported_type : Error <
   "host requires %0 bit size %1 type support, but device '%2' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
+def err_omp_device_type_mismatch : Error<
+  "'device_type(%0)' does not match previously specified 'device_type(%1)' for the same declaration">;
+def err_omp_wrong_device_function_call : Error<
+  "function with 'device_type(%0)' is not available on %select{device|host}1">;
+def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def warn_omp_declare_target_after_first_use : Warning<
+  "declaration marked as declare target after first use, it may lead to incorrect results">,
+  InGroup<OpenMPTarget>;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

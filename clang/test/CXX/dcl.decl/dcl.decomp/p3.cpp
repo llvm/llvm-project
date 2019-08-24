@@ -127,7 +127,7 @@ void referenced_type() {
   using ConstInt3 = decltype(bcr2);
 }
 
-struct C { template<int> int get(); };
+struct C { template<int> int get() const; };
 template<> struct std::tuple_size<C> { static const int value = 1; };
 template<> struct std::tuple_element<0, C> { typedef int type; };
 
@@ -136,6 +136,12 @@ int member_get() {
   using T = int;
   using T = decltype(c);
   return c;
+}
+
+constexpr C c = C();
+template<const C *p> void dependent_binding_PR40674() {
+  const auto &[c] = *p;
+  (void)c;
 }
 
 struct D {

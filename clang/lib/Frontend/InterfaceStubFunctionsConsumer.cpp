@@ -15,6 +15,7 @@
 
 using namespace clang;
 
+namespace {
 class InterfaceStubFunctionsConsumer : public ASTConsumer {
   CompilerInstance &Instance;
   StringRef InFile;
@@ -293,6 +294,7 @@ public:
     writeIfsV1(Instance.getTarget().getTriple(), Symbols, context, Format, *OS);
   }
 };
+} // namespace
 
 std::unique_ptr<ASTConsumer>
 GenerateInterfaceIfsExpV1Action::CreateASTConsumer(CompilerInstance &CI,

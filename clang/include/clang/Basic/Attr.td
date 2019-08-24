@@ -3321,11 +3321,16 @@ def OMPDeclareTargetDecl : InheritableAttr {
   let Args = [
     EnumArgument<"MapType", "MapTypeTy",
                  [ "to", "link" ],
-                 [ "MT_To", "MT_Link" ]>
+                 [ "MT_To", "MT_Link" ]>,
+    EnumArgument<"DevType", "DevTypeTy",
+                 [ "host", "nohost", "any" ],
+                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>
   ];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
       // Use fake syntax because it is for testing and debugging purpose only.
+      if (getDevType() != DT_Any)
+        OS << " device_type(" << ConvertDevTypeTyToStr(getDevType()) << ")";
       if (getMapType() != MT_To)
         OS << ' ' << ConvertMapTypeTyToStr(getMapType());
     }
@@ -3335,6 +3340,14 @@ def OMPDeclareTargetDecl : InheritableAttr {
         return llvm::None;
       if (const auto *Attr = VD->getAttr<OMPDeclareTargetDeclAttr>())
         return Attr->getMapType();
+
+      return llvm::None;
+    }
+    static llvm::Optional<DevTypeTy> getDeviceType(const ValueDecl *VD) {
+      if (!VD->hasAttrs())
+        return llvm::None;
+      if (const auto *Attr = VD->getAttr<OMPDeclareTargetDeclAttr>())
+        return Attr->getDevType();
 
       return llvm::None;
     }
