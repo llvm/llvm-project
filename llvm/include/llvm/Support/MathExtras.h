@@ -704,19 +704,6 @@ inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return alignTo(Numerator, Denominator) / Denominator;
 }
 
-/// \c alignTo for contexts where a constant expression is required.
-/// \sa alignTo
-///
-/// \todo FIXME: remove when \c constexpr becomes really \c constexpr
-template <uint64_t Align>
-struct AlignTo {
-  static_assert(Align != 0u, "Align must be non-zero");
-  template <uint64_t Value>
-  struct from_value {
-    static const uint64_t value = (Value + Align - 1) / Align * Align;
-  };
-};
-
 /// Returns the largest uint64_t less than or equal to \p Value and is
 /// \p Skew mod \p Align. \p Align must be non-zero
 inline uint64_t alignDown(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {

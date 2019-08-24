@@ -157,7 +157,7 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
           << Context.FoundUsingDecl;
       // Emit a fix and a fix description of the check;
       diag(Context.FoundUsingDecl->getLocation(),
-           /*FixDescription=*/"remove the using", DiagnosticIDs::Note)
+           /*Description=*/"remove the using", DiagnosticIDs::Note)
           << FixItHint::CreateRemoval(Context.UsingDeclRange);
     }
   }

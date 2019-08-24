@@ -368,6 +368,7 @@ protected:
   bool CaymanISA;
   bool CFALUBug;
   bool LDSMisalignedBug;
+  bool HasMFMAInlineLiteralBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
   bool ScalarizeGlobal;
@@ -985,6 +986,10 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  bool hasMFMAInlineLiteralBug() const {
+    return HasMFMAInlineLiteralBug;
   }
 
   bool has12DWordStoreHazard() const {

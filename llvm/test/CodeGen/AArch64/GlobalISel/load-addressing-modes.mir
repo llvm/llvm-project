@@ -18,6 +18,11 @@
   define void @more_than_one_use_shl_lsl_fast(i64* %addr) #1 { ret void }
   define void @more_than_one_use_shl_lsl_slow(i64* %addr) { ret void }
   define void @more_than_one_use_shl_minsize(i64* %addr) #0 { ret void }
+  define void @ldrwrox(i64* %addr) { ret void }
+  define void @ldrsrox(i64* %addr) { ret void }
+  define void @ldrhrox(i64* %addr) { ret void }
+  define void @ldbbrox(i64* %addr) { ret void }
+  define void @ldrqrox(i64* %addr) { ret void }
   attributes #0 = { optsize minsize }
   attributes #1 = { "target-features"="+lsl-fast" }
 ...
@@ -72,7 +77,6 @@ body:             |
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 ...
-
 ---
 name:            more_than_one_use
 alignment:       2
@@ -506,3 +510,123 @@ body:             |
     %9:gpr(s64) = G_ADD %8, %7
     $x2 = COPY %9(s64)
     RET_ReallyLR implicit $x2
+...
+---
+name:            ldrwrox
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: ldrwrox
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY]], [[COPY1]], 0, 0 :: (load 4 from %ir.addr)
+    ; CHECK: $w2 = COPY [[LDRWroX]]
+    ; CHECK: RET_ReallyLR implicit $w2
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = COPY $x1
+    %2:gpr(p0) = G_GEP %0, %1
+    %4:gpr(s32) = G_LOAD %2(p0) :: (load 4 from %ir.addr)
+    $w2 = COPY %4(s32)
+    RET_ReallyLR implicit $w2
+...
+---
+name:            ldrsrox
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0, $x1
+    ; CHECK-LABEL: name: ldrsrox
+    ; CHECK: liveins: $d0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load 4 from %ir.addr)
+    ; CHECK: $s2 = COPY [[LDRSroX]]
+    ; CHECK: RET_ReallyLR implicit $h2
+    %0:gpr(p0) = COPY $d0
+    %1:gpr(s64) = COPY $x1
+    %2:gpr(p0) = G_GEP %0, %1
+    %4:fpr(s32) = G_LOAD %2(p0) :: (load 4 from %ir.addr)
+    $s2 = COPY %4(s32)
+    RET_ReallyLR implicit $h2
+...
+---
+name:            ldrhrox
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: ldrhrox
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[LDRHroX:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], [[COPY1]], 0, 0 :: (load 2 from %ir.addr)
+    ; CHECK: $h2 = COPY [[LDRHroX]]
+    ; CHECK: RET_ReallyLR implicit $h2
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = COPY $x1
+    %2:gpr(p0) = G_GEP %0, %1
+    %4:fpr(s16) = G_LOAD %2(p0) :: (load 2 from %ir.addr)
+    $h2 = COPY %4(s16)
+    RET_ReallyLR implicit $h2
+...
+---
+name:            ldbbrox
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: ldbbrox
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[LDRBBroX:%[0-9]+]]:gpr32 = LDRBBroX [[COPY]], [[COPY1]], 0, 0 :: (load 1 from %ir.addr)
+    ; CHECK: $w2 = COPY [[LDRBBroX]]
+    ; CHECK: RET_ReallyLR implicit $w2
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = COPY $x1
+    %2:gpr(p0) = G_GEP %0, %1
+    %4:gpr(s32) = G_LOAD %2(p0) :: (load 1 from %ir.addr)
+    $w2 = COPY %4(s32)
+    RET_ReallyLR implicit $w2
+...
+---
+name:            ldrqrox
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0, $x1
+    ; CHECK-LABEL: name: ldrqrox
+    ; CHECK: liveins: $d0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY]], [[COPY1]], 0, 0 :: (load 16 from %ir.addr)
+    ; CHECK: $q0 = COPY [[LDRQroX]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:gpr(p0) = COPY $d0
+    %1:gpr(s64) = COPY $x1
+    %2:gpr(p0) = G_GEP %0, %1
+    %4:fpr(<2 x s64>) = G_LOAD %2(p0) :: (load 16 from %ir.addr)
+    $q0 = COPY %4(<2 x s64>)
+    RET_ReallyLR implicit $q0

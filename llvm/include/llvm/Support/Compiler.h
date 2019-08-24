@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines several macros, based on the current compiler.  This allows
-// use of compiler-specific features in a way that remains portable.
+// use of compiler-specific features in a way that remains portable. This header
+// can be included from either C or C++.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,7 +17,9 @@
 
 #include "llvm/Config/llvm-config.h"
 
+#ifdef __cplusplus
 #include <new>
+#endif
 #include <stddef.h>
 
 #if defined(_MSC_VER)
@@ -35,12 +38,18 @@
 # define __has_attribute(x) 0
 #endif
 
-#ifndef __has_cpp_attribute
-# define __has_cpp_attribute(x) 0
-#endif
-
 #ifndef __has_builtin
 # define __has_builtin(x) 0
+#endif
+
+// Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
+// C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
+#ifndef LLVM_HAS_CPP_ATTRIBUTE
+#if defined(__cplusplus) && defined(__has_cpp_attribute)
+# define LLVM_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+#else
+# define LLVM_HAS_CPP_ATTRIBUTE(x) 0
+#endif
 #endif
 
 /// \macro LLVM_GNUC_PREREQ
@@ -128,13 +137,9 @@
 #endif
 
 /// LLVM_NODISCARD - Warn if a type or return value is discarded.
-#if __cplusplus > 201402L && __has_cpp_attribute(nodiscard)
+#if __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
 #define LLVM_NODISCARD [[nodiscard]]
-#elif !__cplusplus
-// Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
-// error when __has_cpp_attribute is given a scoped attribute in C mode.
-#define LLVM_NODISCARD
-#elif __has_cpp_attribute(clang::warn_unused_result)
+#elif LLVM_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
 #define LLVM_NODISCARD [[clang::warn_unused_result]]
 #else
 #define LLVM_NODISCARD
@@ -147,7 +152,7 @@
 // The clang-tidy check bugprone-use-after-move recognizes this attribute as a
 // marker that a moved-from object has left the indeterminate state and can be
 // reused.
-#if __has_cpp_attribute(clang::reinitializes)
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::reinitializes)
 #define LLVM_ATTRIBUTE_REINITIALIZES [[clang::reinitializes]]
 #else
 #define LLVM_ATTRIBUTE_REINITIALIZES
@@ -248,15 +253,13 @@
 #endif
 
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
-#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#if __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
-#elif __has_cpp_attribute(gnu::fallthrough)
+#elif LLVM_HAS_CPP_ATTRIBUTE(gnu::fallthrough)
 #define LLVM_FALLTHROUGH [[gnu::fallthrough]]
-#elif !__cplusplus
-// Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
-// error when __has_cpp_attribute is given a scoped attribute in C mode.
-#define LLVM_FALLTHROUGH
-#elif __has_cpp_attribute(clang::fallthrough)
+#elif __has_attribute(fallthrough)
+#define LLVM_FALLTHROUGH __attribute__((fallthrough))
+#elif LLVM_HAS_CPP_ATTRIBUTE(clang::fallthrough)
 #define LLVM_FALLTHROUGH [[clang::fallthrough]]
 #else
 #define LLVM_FALLTHROUGH
@@ -264,7 +267,7 @@
 
 /// LLVM_REQUIRE_CONSTANT_INITIALIZATION - Apply this to globals to ensure that
 /// they are constant initialized.
-#if __has_cpp_attribute(clang::require_constant_initialization)
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::require_constant_initialization)
 #define LLVM_REQUIRE_CONSTANT_INITIALIZATION                                   \
   [[clang::require_constant_initialization]]
 #else
@@ -527,6 +530,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #endif
 
+#ifdef __cplusplus
 namespace llvm {
 
 /// Allocate a buffer of memory with the given size and alignment.
@@ -569,4 +573,5 @@ inline void deallocate_buffer(void *Ptr, size_t Size, size_t Alignment) {
 
 } // End namespace llvm
 
+#endif // __cplusplus
 #endif

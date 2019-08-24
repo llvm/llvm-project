@@ -79,10 +79,10 @@ void testChar(CharEnum input) {
   printf("%hhd", input); // no-warning
   printf("%hhd", CharConstant); // no-warning
 
-  // This is not correct but it is safe. We warn because '%hd' shows intent.
-  printf("%hd", input); // expected-warning{{format specifies type 'short' but the argument has underlying type 'char'}}
-  printf("%hd", CharConstant); // expected-warning{{format specifies type 'short'}}
-  
+  // This is not correct, but it is safe. Only warned in pedantic mode because '%hd' shows intent.
+  printf("%hd", input);
+  printf("%hd", CharConstant);
+
   // This is not correct but it matches the promotion rules (and is safe).
   printf("%d", input); // no-warning
   printf("%d", CharConstant); // no-warning

@@ -76,7 +76,6 @@ private:
   bool earlySelect(MachineInstr &I) const;
 
   bool earlySelectSHL(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  bool earlySelectLoad(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   /// Eliminate same-sized cross-bank copies into stores before selectImpl().
   void contractCrossBankCopyIntoStore(MachineInstr &I,
@@ -208,6 +207,10 @@ private:
   ComplexRendererFns selectAddrModeRegisterOffset(MachineOperand &Root) const;
   ComplexRendererFns selectAddrModeXRO(MachineOperand &Root,
                                        unsigned SizeInBytes) const;
+  template <int Width>
+  ComplexRendererFns selectAddrModeXRO(MachineOperand &Root) const {
+    return selectAddrModeXRO(Root, Width / 8);
+  }
 
   ComplexRendererFns selectShiftedRegister(MachineOperand &Root) const;
 
@@ -1246,57 +1249,6 @@ void AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   I.getOperand(0).setReg(DefDstReg);
 }
 
-bool AArch64InstructionSelector::earlySelectLoad(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
-  // Try to fold in shifts, etc into the addressing mode of a load.
-  assert(I.getOpcode() == TargetOpcode::G_LOAD && "unexpected op");
-
-  // Don't handle atomic loads/stores yet.
-  auto &MemOp = **I.memoperands_begin();
-  if (MemOp.isAtomic()) {
-    LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
-    return false;
-  }
-
-  unsigned MemBytes = MemOp.getSize();
-
-  // Only support 64-bit loads for now.
-  if (MemBytes != 8)
-    return false;
-
-  Register DstReg = I.getOperand(0).getReg();
-  const LLT DstTy = MRI.getType(DstReg);
-  // Don't handle vectors.
-  if (DstTy.isVector())
-    return false;
-
-  unsigned DstSize = DstTy.getSizeInBits();
-  // TODO: 32-bit destinations.
-  if (DstSize != 64)
-    return false;
-
-  // Check if we can do any folding from GEPs/shifts etc. into the load.
-  auto ImmFn = selectAddrModeXRO(I.getOperand(1), MemBytes);
-  if (!ImmFn)
-    return false;
-
-  // We can fold something. Emit the load here.
-  MachineIRBuilder MIB(I);
-
-  // Choose the instruction based off the size of the element being loaded, and
-  // whether or not we're loading into a FPR.
-  const RegisterBank &RB = *RBI.getRegBank(DstReg, MRI, TRI);
-  unsigned Opc =
-      RB.getID() == AArch64::GPRRegBankID ? AArch64::LDRXroX : AArch64::LDRDroX;
-  // Construct the load.
-  auto LoadMI = MIB.buildInstr(Opc, {DstReg}, {});
-  for (auto &RenderFn : *ImmFn)
-    RenderFn(LoadMI);
-  LoadMI.addMemOperand(*I.memoperands_begin());
-  I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*LoadMI, TII, TRI, RBI);
-}
-
 bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -1308,8 +1260,6 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
   switch (I.getOpcode()) {
   case TargetOpcode::G_SHL:
     return earlySelectSHL(I, MRI);
-  case TargetOpcode::G_LOAD:
-    return earlySelectLoad(I, MRI);
   case TargetOpcode::G_CONSTANT: {
     bool IsZero = false;
     if (I.getOperand(1).isCImm())
@@ -4342,12 +4292,16 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
 
   // We can use the LHS of the GEP as the base, and the LHS of the shift as an
   // offset. Signify that we are shifting by setting the shift flag to 1.
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Gep->getOperand(1)); },
-      [=](MachineInstrBuilder &MIB) { MIB.addUse(OffsetReg); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(1); },
-  }};
+  return {{[=](MachineInstrBuilder &MIB) {
+             MIB.addUse(Gep->getOperand(1).getReg());
+           },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(OffsetReg); },
+           [=](MachineInstrBuilder &MIB) {
+             // Need to add both immediates here to make sure that they are both
+             // added to the instruction.
+             MIB.addImm(0);
+             MIB.addImm(1);
+           }}};
 }
 
 /// This is used for computing addresses like this:
@@ -4375,12 +4329,18 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
     return None;
 
   // Base is the GEP's LHS, offset is its RHS.
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Gep->getOperand(1)); },
-      [=](MachineInstrBuilder &MIB) { MIB.add(Gep->getOperand(2)); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-  }};
+  return {{[=](MachineInstrBuilder &MIB) {
+             MIB.addUse(Gep->getOperand(1).getReg());
+           },
+           [=](MachineInstrBuilder &MIB) {
+             MIB.addUse(Gep->getOperand(2).getReg());
+           },
+           [=](MachineInstrBuilder &MIB) {
+             // Need to add both immediates here to make sure that they are both
+             // added to the instruction.
+             MIB.addImm(0);
+             MIB.addImm(0);
+           }}};
 }
 
 /// This is intended to be equivalent to selectAddrModeXRO in

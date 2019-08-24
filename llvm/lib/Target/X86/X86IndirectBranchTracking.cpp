@@ -84,7 +84,7 @@ bool X86IndirectBranchTrackingPass::addENDBR(
   return false;
 }
 
-bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
+static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
   if (!MOp.isGlobal())
     return false;
   auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());

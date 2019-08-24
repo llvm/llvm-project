@@ -171,6 +171,61 @@ define void @test9_traversal(i1 %c, i32* align 4 %B, i32* align 8 %C) {
   ret void
 }
 
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             define align 32 i32* @test10a(i32* align 32 %p)
+; ATTRIBUTOR: define i32* @test10a(i32* align 32 %p)
+define i32* @test10a(i32* align 32 %p) {
+; ATTRIBUTOR: %l = load i32, i32* %p, align 32
+  %l = load i32, i32* %p
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %t, label %f
+t:
+  %r = call i32* @test10a(i32* %p)
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             store i32 1, i32* %r, align 32
+; ATTRIBUTOR: store i32 1, i32* %r
+  store i32 1, i32* %r
+  %g0 = getelementptr i32, i32* %p, i32 8
+  br label %e
+f:
+  %g1 = getelementptr i32, i32* %p, i32 8
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             store i32 -1, i32* %g1, align 32
+; ATTRIBUTOR: store i32 -1, i32* %g1
+  store i32 -1, i32* %g1
+  br label %e
+e:
+  %phi = phi i32* [%g0, %t], [%g1, %f]
+  ret i32* %phi
+}
+
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             define align 32 i32* @test10b(i32* align 32 %p)
+; ATTRIBUTOR: define i32* @test10b(i32* align 32 %p)
+define i32* @test10b(i32* align 32 %p) {
+; ATTRIBUTOR: %l = load i32, i32* %p, align 32
+  %l = load i32, i32* %p
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %t, label %f
+t:
+  %r = call i32* @test10b(i32* %p)
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             store i32 1, i32* %r, align 32
+; ATTRIBUTOR: store i32 1, i32* %r
+  store i32 1, i32* %r
+  %g0 = getelementptr i32, i32* %p, i32 8
+  br label %e
+f:
+  %g1 = getelementptr i32, i32* %p, i32 -8
+; FIXME: This will work with an upcoming patch (D66618 or similar)
+;             store i32 -1, i32* %g1, align 32
+; ATTRIBUTOR: store i32 -1, i32* %g1
+  store i32 -1, i32* %g1
+  br label %e
+e:
+  %phi = phi i32* [%g0, %t], [%g1, %f]
+  ret i32* %phi
+}
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }

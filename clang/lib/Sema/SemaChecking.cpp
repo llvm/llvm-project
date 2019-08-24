@@ -8119,9 +8119,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       // function.
       if (ICE->getType() == S.Context.IntTy ||
           ICE->getType() == S.Context.UnsignedIntTy) {
-        // All further checking is done on the subexpression.
-        if (AT.matchesType(S.Context, ExprTy))
+        // All further checking is done on the subexpression
+        const analyze_printf::ArgType::MatchKind ImplicitMatch =
+            AT.matchesType(S.Context, ExprTy);
+        if (ImplicitMatch == analyze_printf::ArgType::Match)
           return true;
+        if (ImplicitMatch == analyze_printf::ArgType::NoMatchPedantic)
+          Pedantic = true;
       }
     }
   } else if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E)) {

@@ -1285,21 +1285,8 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     Alias->setBinding(Symbol.getBinding());
     Alias->setOther(Symbol.getOther());
 
-    // Record the rename. This serves two purposes: 1) detect multiple symbol
-    // version definitions, 2) consistently suppress the original symbol in the
-    // symbol table. GNU as keeps the original symbol for defined @ and @@, but
-    // suppresses in for other cases (@@@ or undefined). The original symbol is
-    // usually undesired and difficult to remove in an archive. Moreoever, it
-    // can cause linker issues like binutils PR/18703. If the user wants other
-    // aliases to the versioned symbol, they can copy the original symbol to
-    // other symbol names with .set directive.
-    auto R = Renames.try_emplace(&Symbol, Alias);
-    if (!R.second && R.first->second != Alias) {
-      Asm.getContext().reportError(
-          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
-                       Symbol.getName());
+    if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
       continue;
-    }
 
     // FIXME: Get source locations for these errors or diagnose them earlier.
     if (Symbol.isUndefined() && Rest.startswith("@@") &&
@@ -1308,6 +1295,15 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                 " must be defined");
       continue;
     }
+
+    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
+      Asm.getContext().reportError(
+          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
+                       Symbol.getName());
+      continue;
+    }
+
+    Renames.insert(std::make_pair(&Symbol, Alias));
   }
 
   for (const MCSymbol *&Sym : AddrsigSyms) {

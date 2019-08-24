@@ -99,9 +99,15 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
       CFLAGS ${GWP_ASAN_CFLAGS} ${SANITIZER_COMMON_CFLAGS})
 
-  # Build the stack trace compressor fuzzer.
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
-      COMPILER_RT_BUILD_LIBFUZZER)
+  # Build the stack trace compressor fuzzer. Note that clang versions 4.* did
+  # not have -fsanitize=fuzzer, and Clang versions 5.* didn't have
+  # -fsanitize=fuzzer-no-link. In general, the way we build fuzz targets in LLVM
+  # core is to link it against a dummy main when DLLVM_USE_SANITIZE_COVERAGE
+  # isn't specified. Instead, here we only build fuzz targets if clang version
+  # is >= 6.0.
+  if (COMPILER_RT_BUILD_LIBFUZZER AND
+      "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
+      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.0)
     add_executable(stack_trace_compressor_fuzzer
         stack_trace_compressor_fuzzer.cpp
         ${GWP_ASAN_SOURCES}

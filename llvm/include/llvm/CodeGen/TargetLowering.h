@@ -1574,18 +1574,6 @@ public:
     report_fatal_error("Funclet EH is not implemented for this target");
   }
 
-  /// Returns the target's jmp_buf size in bytes (if never set, the default is
-  /// 200)
-  unsigned getJumpBufSize() const {
-    return JumpBufSize;
-  }
-
-  /// Returns the target's jmp_buf alignment in bytes (if never set, the default
-  /// is 0)
-  unsigned getJumpBufAlignment() const {
-    return JumpBufAlignment;
-  }
-
   /// Return the minimum stack alignment of an argument.
   unsigned getMinStackArgumentAlignment() const {
     return MinStackArgumentAlignment;
@@ -2107,17 +2095,6 @@ protected:
   void setTargetDAGCombine(ISD::NodeType NT) {
     assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
     TargetDAGCombineArray[NT >> 3] |= 1 << (NT&7);
-  }
-
-  /// Set the target's required jmp_buf buffer size (in bytes); default is 200
-  void setJumpBufSize(unsigned Size) {
-    JumpBufSize = Size;
-  }
-
-  /// Set the target's required jmp_buf buffer alignment (in bytes); default is
-  /// 0
-  void setJumpBufAlignment(unsigned Align) {
-    JumpBufAlignment = Align;
   }
 
   /// Set the target's minimum function alignment (in log2(bytes))
@@ -2702,12 +2679,6 @@ private:
   /// The target scheduling preference: shortest possible total cycles or lowest
   /// register usage.
   Sched::Preference SchedPreferenceInfo;
-
-  /// The size, in bytes, of the target's jmp_buf buffers
-  unsigned JumpBufSize;
-
-  /// The alignment, in bytes, of the target's jmp_buf buffers
-  unsigned JumpBufAlignment;
 
   /// The minimum alignment that any argument on the stack needs to have.
   unsigned MinStackArgumentAlignment;

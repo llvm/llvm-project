@@ -744,7 +744,7 @@ public:
 // Return the matching FPR64 register for the given FPR32.
 // FIXME: Ideally this function could be removed in favour of using
 // information from TableGen.
-Register convertFPR32ToFPR64(Register Reg) {
+static Register convertFPR32ToFPR64(Register Reg) {
   switch (Reg) {
   default:
     llvm_unreachable("Not a recognised FPR32 register");

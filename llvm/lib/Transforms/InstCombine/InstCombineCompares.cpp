@@ -894,6 +894,30 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       Offset = EmitGEPOffset(GEPLHS);
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
                         Constant::getNullValue(Offset->getType()));
+  } else if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
+             GEPLHS->getType()->isPointerTy() && // TODO: extend to vector geps
+             isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+             !NullPointerIsDefined(I.getFunction(),
+                                   RHS->getType()->getPointerAddressSpace())) {
+    // For most address spaces, an allocation can't be placed at null, but null
+    // itself is treated as a 0 size allocation in the in bounds rules.  Thus,
+    // the only valid inbounds address derived from null, is null itself.
+    // Thus, we have four cases to consider:
+    // 1) Base == nullptr, Offset == 0 -> inbounds, null
+    // 2) Base == nullptr, Offset != 0 -> poison as the result is out of bounds
+    // 3) Base != nullptr, Offset == (-base) -> poison (crossing allocations)
+    // 4) Base != nullptr, Offset != (-base) -> nonnull (and possibly poison)
+    //
+    // (Note if we're indexing a type of size 0, that simply collapses into one
+    //  of the buckets above.)
+    //
+    // In general, we're allowed to make values less poison (i.e. remove
+    //   sources of full UB), so in this case, we just select between the two
+    //   non-poison cases (1 and 4 above).
+    auto *Base = GEPLHS->getPointerOperand();
+    return new ICmpInst(Cond, Base,
+                        ConstantExpr::getBitCast(cast<Constant>(RHS),
+                                                 Base->getType()));
   } else if (GEPOperator *GEPRHS = dyn_cast<GEPOperator>(RHS)) {
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.

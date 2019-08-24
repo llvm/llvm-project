@@ -27,6 +27,7 @@ class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
+  const GCNSubtarget &ST;
   unsigned SGPRSetID;
   unsigned VGPRSetID;
   unsigned AGPRSetID;
@@ -193,10 +194,7 @@ public:
   /// \returns True if operands defined with this operand type can accept
   /// an inline constant. i.e. An integer value in the range (-16, 64) or
   /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
-  bool opCanUseInlineConstant(unsigned OpType) const {
-    return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
-           OpType <= AMDGPU::OPERAND_SRC_LAST;
-  }
+  bool opCanUseInlineConstant(unsigned OpType) const;
 
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass *RC,

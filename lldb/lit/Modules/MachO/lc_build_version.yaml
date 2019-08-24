@@ -2,14 +2,15 @@
 # RUN: lldb-test symbols %t.out | FileCheck %s
 # Test that the deployment target is parsed from the load commands.
 # CHECK: x86_64-apple-macosx10.14.0
+# CHECK: x86_64-apple-ios12.0.0-macabi
 --- !mach-o
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x80000003
   filetype:        0x00000002
-  ncmds:           14
-  sizeofcmds:      744
+  ncmds:           15
+  sizeofcmds:      776
   flags:           0x00200085
   reserved:        0x00000000
 LoadCommands:    
@@ -150,6 +151,15 @@ LoadCommands:
     cmdsize:         16
     dataoff:         4152
     datasize:        0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        6
+    minos:           786432
+    sdk:             786432
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         26738944
 LinkEditData:    
   ExportTrie:      
     TerminalSize:    0

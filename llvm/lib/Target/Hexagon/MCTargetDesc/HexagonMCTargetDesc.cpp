@@ -72,7 +72,6 @@ cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
                    cl::init(false));
 cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
                    cl::init(false));
-} // namespace
 
 cl::opt<Hexagon::ArchEnum>
     EnableHVX("mhvx",
@@ -86,6 +85,7 @@ cl::opt<Hexagon::ArchEnum>
         clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
       // Sentinel for flag not present.
       cl::init(Hexagon::ArchEnum::NoArch), cl::ValueOptional);
+} // namespace
 
 static cl::opt<bool>
   DisableHVX("mno-hvx", cl::Hidden,

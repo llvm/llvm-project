@@ -558,10 +558,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       // For v2i64, these are only valid with P8Vector. This is corrected after
       // the loop.
-      setOperationAction(ISD::SMAX, VT, Legal);
-      setOperationAction(ISD::SMIN, VT, Legal);
-      setOperationAction(ISD::UMAX, VT, Legal);
-      setOperationAction(ISD::UMIN, VT, Legal);
+      if (VT.getSizeInBits() <= 128 && VT.getScalarSizeInBits() <= 64) {
+        setOperationAction(ISD::SMAX, VT, Legal);
+        setOperationAction(ISD::SMIN, VT, Legal);
+        setOperationAction(ISD::UMAX, VT, Legal);
+        setOperationAction(ISD::UMIN, VT, Legal);
+      }
+      else {
+        setOperationAction(ISD::SMAX, VT, Expand);
+        setOperationAction(ISD::SMIN, VT, Expand);
+        setOperationAction(ISD::UMAX, VT, Expand);
+        setOperationAction(ISD::UMIN, VT, Expand);
+      }
 
       if (Subtarget.hasVSX()) {
         setOperationAction(ISD::FMAXNUM, VT, Legal);

@@ -416,38 +416,89 @@ protected:
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
 
+  /// Read the contents of Magic number and Version number.
+  std::error_code readMagicIdent();
+
+  /// Read profile summary.
+  std::error_code readSummary();
+
+  /// Read the whole name table.
+  virtual std::error_code readNameTable();
+
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
   /// Points to the end of the buffer.
   const uint8_t *End = nullptr;
 
+  /// Function name table.
+  std::vector<StringRef> NameTable;
+
+  /// Read a string indirectly via the name table.
+  virtual ErrorOr<StringRef> readStringFromTable();
+
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
   virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
-
-  /// Read profile summary.
-  std::error_code readSummary();
-
-  /// Read the whole name table.
-  virtual std::error_code readNameTable() = 0;
-
-  /// Read a string indirectly via the name table.
-  virtual ErrorOr<StringRef> readStringFromTable() = 0;
 };
 
 class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
 private:
-  /// Function name table.
-  std::vector<StringRef> NameTable;
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
-  virtual std::error_code readNameTable() override;
-  /// Read a string indirectly via the name table.
-  virtual ErrorOr<StringRef> readStringFromTable() override;
 
 public:
-  SampleProfileReaderRawBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : SampleProfileReaderBinary(std::move(B), C, SPF_Binary) {}
+  SampleProfileReaderRawBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+                               SampleProfileFormat Format = SPF_Binary)
+      : SampleProfileReaderBinary(std::move(B), C, Format) {}
+
+  /// \brief Return true if \p Buffer is in the format supported by this class.
+  static bool hasFormat(const MemoryBuffer &Buffer);
+};
+
+/// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
+/// the basic structure of the extensible binary format.
+/// The format is organized in sections except the magic and version number
+/// at the beginning. There is a section table before all the sections, and
+/// each entry in the table describes the entry type, start, size and
+/// attributes. The format in each section is defined by the section itself.
+///
+/// It is easy to add a new section while maintaining the backward
+/// compatibility of the profile. Nothing extra needs to be done. If we want
+/// to extend an existing section, like add cache misses information in
+/// addition to the sample count in the profile body, we can add a new section
+/// with the extension and retire the existing section, and we could choose
+/// to keep the parser of the old section if we want the reader to be able
+/// to read both new and old format profile.
+///
+/// SampleProfileReaderExtBinary/SampleProfileWriterExtBinary define the
+/// commonly used sections of a profile in extensible binary format. It is
+/// possible to define other types of profile inherited from
+/// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
+class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+protected:
+  std::vector<SecHdrTableEntry> SecHdrTable;
+  std::error_code readSecHdrTableEntry();
+  std::error_code readSecHdrTable();
+  virtual std::error_code readHeader() override;
+  virtual std::error_code verifySPMagic(uint64_t Magic) override = 0;
+
+public:
+  SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
+                                   LLVMContext &C, SampleProfileFormat Format)
+      : SampleProfileReaderBinary(std::move(B), C, Format) {}
+
+  /// Read sample profiles in extensible format from the associated file.
+  std::error_code read() override;
+};
+
+class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+private:
+  virtual std::error_code verifySPMagic(uint64_t Magic) override;
+
+public:
+  SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+                               SampleProfileFormat Format = SPF_Ext_Binary)
+      : SampleProfileReaderExtBinaryBase(std::move(B), C, Format) {}
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);

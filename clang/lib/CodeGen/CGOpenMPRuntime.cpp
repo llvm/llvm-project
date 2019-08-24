@@ -3509,7 +3509,7 @@ bool CGOpenMPRuntime::isDynamic(OpenMPScheduleClauseKind ScheduleKind) const {
   return Schedule != OMP_sch_static;
 }
 
-static int addMonoNonMonoModifier(OpenMPSchedType Schedule,
+static int addMonoNonMonoModifier(CodeGenModule &CGM, OpenMPSchedType Schedule,
                                   OpenMPScheduleClauseModifier M1,
                                   OpenMPScheduleClauseModifier M2) {
   int Modifier = 0;
@@ -3543,6 +3543,18 @@ static int addMonoNonMonoModifier(OpenMPSchedType Schedule,
   case OMPC_SCHEDULE_MODIFIER_unknown:
     break;
   }
+  // OpenMP 5.0, 2.9.2 Worksharing-Loop Construct, Desription.
+  // If the static schedule kind is specified or if the ordered clause is
+  // specified, and if the nonmonotonic modifier is not specified, the effect is
+  // as if the monotonic modifier is specified. Otherwise, unless the monotonic
+  // modifier is specified, the effect is as if the nonmonotonic modifier is
+  // specified.
+  if (CGM.getLangOpts().OpenMP >= 50 && Modifier == 0) {
+    if (!(Schedule == OMP_sch_static_chunked || Schedule == OMP_sch_static ||
+          Schedule == OMP_sch_static_balanced_chunked ||
+          Schedule == OMP_ord_static_chunked || Schedule == OMP_ord_static))
+      Modifier = OMP_sch_modifier_nonmonotonic;
+  }
   return Schedule | Modifier;
 }
 
@@ -3567,13 +3579,14 @@ void CGOpenMPRuntime::emitForDispatchInit(
   llvm::Value *Chunk = DispatchValues.Chunk ? DispatchValues.Chunk
                                             : CGF.Builder.getIntN(IVSize, 1);
   llvm::Value *Args[] = {
-      emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
+      emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc),
       CGF.Builder.getInt32(addMonoNonMonoModifier(
-          Schedule, ScheduleKind.M1, ScheduleKind.M2)), // Schedule type
-      DispatchValues.LB,                                // Lower
-      DispatchValues.UB,                                // Upper
-      CGF.Builder.getIntN(IVSize, 1),                   // Stride
-      Chunk                                             // Chunk
+          CGM, Schedule, ScheduleKind.M1, ScheduleKind.M2)), // Schedule type
+      DispatchValues.LB,                                     // Lower
+      DispatchValues.UB,                                     // Upper
+      CGF.Builder.getIntN(IVSize, 1),                        // Stride
+      Chunk                                                  // Chunk
   };
   CGF.EmitRuntimeCall(createDispatchInitFunction(IVSize, IVSigned), Args);
 }
@@ -3615,7 +3628,7 @@ static void emitForStaticInitCall(
   llvm::Value *Args[] = {
       UpdateLocation,
       ThreadId,
-      CGF.Builder.getInt32(addMonoNonMonoModifier(Schedule, M1,
+      CGF.Builder.getInt32(addMonoNonMonoModifier(CGF.CGM, Schedule, M1,
                                                   M2)), // Schedule type
       Values.IL.getPointer(),                           // &isLastIter
       Values.LB.getPointer(),                           // &LB

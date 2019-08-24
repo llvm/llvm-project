@@ -381,10 +381,6 @@ public:
     return N;
   }
 
-  unsigned getJumpBufAlignment() { return getTLI()->getJumpBufAlignment(); }
-
-  unsigned getJumpBufSize() { return getTLI()->getJumpBufSize(); }
-
   bool shouldBuildLookupTables() {
     const TargetLoweringBase *TLI = getTLI();
     return TLI->isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||

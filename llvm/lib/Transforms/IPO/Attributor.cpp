@@ -807,10 +807,34 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   STATS_DECLTRACK(UniqueReturnValue, FunctionReturn,
                   "Number of function with unique return");
 
+  // Callback to replace the uses of CB with the constant C.
+  auto ReplaceCallSiteUsersWith = [](CallBase &CB, Constant &C) {
+    if (CB.getNumUses() == 0)
+      return ChangeStatus::UNCHANGED;
+    CB.replaceAllUsesWith(&C);
+    return ChangeStatus::CHANGED;
+  };
+
   // If the assumed unique return value is an argument, annotate it.
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
     getIRPosition() = IRPosition::argument(*UniqueRVArg);
-    Changed = IRAttribute::manifest(A) | Changed;
+    Changed = IRAttribute::manifest(A);
+  } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
+    // We can replace the returned value with the unique returned constant.
+    Value &AnchorValue = getAnchorValue();
+    if (Function *F = dyn_cast<Function>(&AnchorValue)) {
+      for (const Use &U : F->uses())
+        if (CallBase *CB = dyn_cast<CallBase>(U.getUser()))
+          if (CB->isCallee(&U))
+            Changed = ReplaceCallSiteUsersWith(*CB, *RVC) | Changed;
+    } else {
+      assert(isa<CallBase>(AnchorValue) &&
+             "Expcected a function or call base anchor!");
+      Changed = ReplaceCallSiteUsersWith(cast<CallBase>(AnchorValue), *RVC);
+    }
+    if (Changed == ChangeStatus::CHANGED)
+      STATS_DECLTRACK(UniqueConstantReturnValue, FunctionReturn,
+                      "Number of function returns replaced by constant return");
   }
 
   return Changed;
@@ -1988,16 +2012,27 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       // For now we do not try to "increase" dereferenceability due to negative
       // indices as we first have to come up with code to deal with loops and
       // for overflows of the dereferenceable bytes.
-      if (Offset.getSExtValue() < 0)
+      int64_t OffsetSExt = Offset.getSExtValue();
+      if (OffsetSExt < 0)
         Offset = 0;
 
       T.takeAssumedDerefBytesMinimum(
-          std::max(int64_t(0), DerefBytes - Offset.getSExtValue()));
+          std::max(int64_t(0), DerefBytes - OffsetSExt));
 
-      if (!Stripped && this == &AA) {
-        T.takeKnownDerefBytesMaximum(
-            std::max(int64_t(0), DerefBytes - Offset.getSExtValue()));
-        T.indicatePessimisticFixpoint();
+      if (this == &AA) {
+        if (!Stripped) {
+          // If nothing was stripped IR information is all we got.
+          T.takeKnownDerefBytesMaximum(
+              std::max(int64_t(0), DerefBytes - OffsetSExt));
+          T.indicatePessimisticFixpoint();
+        } else if (OffsetSExt > 0) {
+          // If something was stripped but there is circular reasoning we look
+          // for the offset. If it is positive we basically decrease the
+          // dereferenceable bytes in a circluar loop now, which will simply
+          // drive them down to the known value in a very slow way which we
+          // can accelerate.
+          T.indicatePessimisticFixpoint();
+        }
       }
 
       return T.isValidState();
@@ -2078,6 +2113,10 @@ struct AAAlignImpl : AAAlign {
       takeKnownMaximum(Attr.getValueAsInt());
   }
 
+  // TODO: Provide a helper to determine the implied ABI alignment and check in
+  //       the existing manifest method and a new one for AAAlignImpl that value
+  //       to avoid making the alignment explicit if it did not improve.
+
   /// See AbstractAttribute::getDeducedAttributes
   virtual void
   getDeducedAttributes(LLVMContext &Ctx,
@@ -2097,6 +2136,35 @@ struct AAAlignImpl : AAAlign {
 /// Align attribute for a floating value.
 struct AAAlignFloating : AAAlignImpl {
   AAAlignFloating(const IRPosition &IRP) : AAAlignImpl(IRP) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    // Check for users that allow alignment annotations.
+    Value &AnchorVal = getIRPosition().getAnchorValue();
+    for (const Use &U : AnchorVal.uses()) {
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (SI->getPointerOperand() == &AnchorVal)
+          if (SI->getAlignment() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, Store,
+                            "Number of times alignemnt added to a store");
+            SI->setAlignment(getAssumedAlign());
+            Changed = ChangeStatus::CHANGED;
+          }
+      } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (LI->getPointerOperand() == &AnchorVal)
+          if (LI->getAlignment() < getAssumedAlign()) {
+            LI->setAlignment(getAssumedAlign());
+            STATS_DECLTRACK(AAAlign, Load,
+                            "Number of times alignemnt added to a load");
+            Changed = ChangeStatus::CHANGED;
+          }
+      }
+    }
+
+    return AAAlignImpl::manifest(A) | Changed;
+  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2154,6 +2222,11 @@ struct AAAlignArgument final
 
 struct AAAlignCallSiteArgument final : AAAlignFloating {
   AAAlignCallSiteArgument(const IRPosition &IRP) : AAAlignFloating(IRP) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    return AAAlignImpl::manifest(A);
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(aligned) }
@@ -2629,6 +2702,18 @@ void Attributor::identifyDefaultAbstractAttributes(
       assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
              "New call site/base instruction type needs to be known int the "
              "attributor.");
+      break;
+    case Instruction::Load:
+      // The alignment of a pointer is interesting for loads.
+      checkAndRegisterAA<AAAlignFloating>(
+          IRPosition::value(*cast<LoadInst>(I).getPointerOperand()), *this,
+          Whitelist);
+      break;
+    case Instruction::Store:
+      // The alignment of a pointer is interesting for stores.
+      checkAndRegisterAA<AAAlignFloating>(
+          IRPosition::value(*cast<StoreInst>(I).getPointerOperand()), *this,
+          Whitelist);
       break;
     case Instruction::Call:
     case Instruction::CallBr:

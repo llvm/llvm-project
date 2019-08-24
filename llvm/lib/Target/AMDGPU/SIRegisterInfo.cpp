@@ -61,6 +61,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   AMDGPURegisterInfo(),
+  ST(ST),
   SGPRPressureSets(getNumRegPressureSets()),
   VGPRPressureSets(getNumRegPressureSets()),
   AGPRPressureSets(getNumRegPressureSets()),
@@ -1580,6 +1581,15 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
       llvm_unreachable("Invalid sub-register class size");
     }
   }
+}
+
+bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
+  if (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
+      OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST)
+    return !ST.hasMFMAInlineLiteralBug();
+
+  return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
+         OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool SIRegisterInfo::shouldRewriteCopySrc(

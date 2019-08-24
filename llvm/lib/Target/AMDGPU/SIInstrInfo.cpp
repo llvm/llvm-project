@@ -2866,8 +2866,16 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (OpInfo.RegClass < 0)
     return false;
 
-  if (MO.isImm() && isInlineConstant(MO, OpInfo))
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+
+  if (MO.isImm() && isInlineConstant(MO, OpInfo)) {
+    if (isMAI(MI) && ST.hasMFMAInlineLiteralBug() &&
+        OpNo ==(unsigned)AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                    AMDGPU::OpName::src2))
+      return false;
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
+  }
 
   if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
@@ -2875,8 +2883,6 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (!isVOP3(MI) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
     return true;
 
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   return ST.hasVOP3Literal();
 }
 

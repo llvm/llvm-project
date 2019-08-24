@@ -435,7 +435,8 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
       OpTy > AMDGPU::OPERAND_REG_INLINE_AC_LAST)
     return false;
 
-  if (OpToFold.isImm() && TII->isInlineConstant(OpToFold, OpTy)) {
+  if (OpToFold.isImm() && TII->isInlineConstant(OpToFold, OpTy) &&
+      TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
     UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
     return true;
   }
@@ -480,6 +481,9 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
     if (Imm != SubImm)
       return false; // Can only fold splat constants
   }
+
+  if (!TII->isOperandLegal(*UseMI, UseOpIdx, Op))
+    return false;
 
   FoldList.push_back(FoldCandidate(UseMI, UseOpIdx, Op));
   return true;

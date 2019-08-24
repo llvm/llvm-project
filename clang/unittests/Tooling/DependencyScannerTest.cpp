@@ -16,6 +16,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -25,8 +26,6 @@
 
 namespace clang {
 namespace tooling {
-
-#ifndef _WIN32
 
 namespace {
 
@@ -82,9 +81,14 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
 
   auto VFS = new llvm::vfs::InMemoryFileSystem();
   VFS->setCurrentWorkingDirectory(CWD);
-  VFS->addFile("/root/header.h", 0, llvm::MemoryBuffer::getMemBuffer("\n"));
-  VFS->addHardLink("/root/symlink.h", "/root/header.h");
-  VFS->addFile("/root/test.cpp", 0,
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath = llvm::formatv("{0}root{0}header.h", Sept);
+  std::string SymlinkPath = llvm::formatv("{0}root{0}symlink.h", Sept);
+  std::string TestPath = llvm::formatv("{0}root{0}test.cpp", Sept);
+
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer("\n"));
+  VFS->addHardLink(SymlinkPath, HeaderPath);
+  VFS->addFile(TestPath, 0,
                llvm::MemoryBuffer::getMemBuffer(
                    "#include \"symlink.h\"\n#include \"header.h\"\n"));
 
@@ -94,11 +98,12 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
   std::vector<std::string> Deps;
   TestDependencyScanningAction Action(Deps);
   Tool.run(&Action);
+  using llvm::sys::path::convert_to_slash;
   // The first invocation should return dependencies in order of access.
   ASSERT_EQ(Deps.size(), 3u);
-  EXPECT_EQ(Deps[0], "/root/test.cpp");
-  EXPECT_EQ(Deps[1], "/root/symlink.h");
-  EXPECT_EQ(Deps[2], "/root/header.h");
+  EXPECT_EQ(convert_to_slash(Deps[0]), "/root/test.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[2]), "/root/header.h");
 
   // The file manager should still have two FileEntries, as one file is a
   // hardlink.
@@ -109,14 +114,12 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
   Tool.run(&Action);
   // The second invocation should have the same order of dependencies.
   ASSERT_EQ(Deps.size(), 3u);
-  EXPECT_EQ(Deps[0], "/root/test.cpp");
-  EXPECT_EQ(Deps[1], "/root/symlink.h");
-  EXPECT_EQ(Deps[2], "/root/header.h");
+  EXPECT_EQ(convert_to_slash(Deps[0]), "/root/test.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[2]), "/root/header.h");
 
   EXPECT_EQ(Files.getNumUniqueRealFiles(), 2u);
 }
-
-#endif
 
 } // end namespace tooling
 } // end namespace clang

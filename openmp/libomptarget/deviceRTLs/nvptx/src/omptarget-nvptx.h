@@ -55,11 +55,14 @@
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down_sync((mask), (var), (delta), (width))
 #define __ACTIVEMASK() __activemask()
+#define __SYNCWARP(Mask) __syncwarp(Mask)
 #else
 #define __SHFL_SYNC(mask, var, srcLane) __shfl((var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down((var), (delta), (width))
 #define __ACTIVEMASK() __ballot(1)
+// In Cuda < 9.0 no need to sync threads in warps.
+#define __SYNCWARP(Mask)
 #endif // CUDA_VERSION
 
 #define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
