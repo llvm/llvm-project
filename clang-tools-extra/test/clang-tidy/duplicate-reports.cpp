@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-err09-cpp,cert-err61-cpp %t
+// RUN: %check_clang_tidy %s cert-err09-cpp,cert-err61-cpp %t -- -- -fexceptions
 
 void alwaysThrows() {
   int ex = 42;

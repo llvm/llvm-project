@@ -1294,10 +1294,7 @@ sortISDBySectionOrder(InputSectionDescription *isd,
     }
     orderedSections.push_back({isec, i->second});
   }
-  llvm::sort(orderedSections, [&](std::pair<InputSection *, int> a,
-                                  std::pair<InputSection *, int> b) {
-    return a.second < b.second;
-  });
+  llvm::sort(orderedSections, llvm::less_second());
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point
