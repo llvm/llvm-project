@@ -1078,8 +1078,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
-MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
-                                           MachineBasicBlock *BB) {
+static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
+                                                  MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::ReadCycleWide && "Unexpected instruction");
 
   // To read the 64-bit cycle CSR on a 32-bit target, we read the two halves.

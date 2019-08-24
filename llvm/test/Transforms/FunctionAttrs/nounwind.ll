@@ -92,6 +92,15 @@ define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality
   ret i32 -1
 }
 
+define i32 @catch_thing_user() {
+; ATTRIBUTOR:     define i32 @catch_thing_user
+; ATTRIBUTOR-NEXT: %catch_thing_call = call
+; ATTRIBUTOR-NEXT: ret i32 -1
+  %catch_thing_call = call i32 @catch_thing()
+  ret i32 %catch_thing_call
+}
+
+
 declare i32 @__gxx_personality_v0(...)
 
 declare i8* @__cxa_begin_catch(i8*)

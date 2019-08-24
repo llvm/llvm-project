@@ -60,6 +60,24 @@ global1:
 @ CHECK-NEXT:     Section: .text
 @ CHECK-NEXT:   }
 @ CHECK-NEXT:   Symbol {
+@ CHECK-NEXT:     Name: defined1
+@ CHECK-NEXT:     Value: 0x0
+@ CHECK-NEXT:     Size: 0
+@ CHECK-NEXT:     Binding: Local (0x0)
+@ CHECK-NEXT:     Type: None (0x0)
+@ CHECK-NEXT:     Other: 0
+@ CHECK-NEXT:     Section: .text
+@ CHECK-NEXT:   }
+@ CHECK-NEXT:   Symbol {
+@ CHECK-NEXT:     Name: defined2
+@ CHECK-NEXT:     Value: 0x0
+@ CHECK-NEXT:     Size: 0
+@ CHECK-NEXT:     Binding: Local (0x0)
+@ CHECK-NEXT:     Type: None (0x0)
+@ CHECK-NEXT:     Other: 0
+@ CHECK-NEXT:     Section: .text
+@ CHECK-NEXT:   }
+@ CHECK-NEXT:   Symbol {
 @ CHECK-NEXT:     Name: .text (0)
 @ CHECK-NEXT:     Value: 0x0
 @ CHECK-NEXT:     Size: 0
@@ -88,6 +106,15 @@ global1:
 @ CHECK-NEXT:   }
 @ CHECK-NEXT:   Symbol {
 @ CHECK-NEXT:     Name: g1@@zed
+@ CHECK-NEXT:     Value: 0x14
+@ CHECK-NEXT:     Size: 0
+@ CHECK-NEXT:     Binding: Global (0x1)
+@ CHECK-NEXT:     Type: None (0x0)
+@ CHECK-NEXT:     Other: 0
+@ CHECK-NEXT:     Section: .text
+@ CHECK-NEXT:   }
+@ CHECK-NEXT:   Symbol {
+@ CHECK-NEXT:     Name: global1
 @ CHECK-NEXT:     Value: 0x14
 @ CHECK-NEXT:     Size: 0
 @ CHECK-NEXT:     Binding: Global (0x1)

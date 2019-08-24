@@ -51,8 +51,7 @@ using SymbolMap = DenseMap<SymbolStringPtr, JITEvaluatedSymbol>;
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
 using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
 
-/// A base class for materialization failures that allows the failing
-///        symbols to be obtained for logging.
+/// A map from JITDylibs to sets of symbols.
 using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
 /// A list of (JITDylib*, bool) pairs.
@@ -124,13 +123,13 @@ class FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
 public:
   static char ID;
 
-  FailedToMaterialize(SymbolNameSet Symbols);
+  FailedToMaterialize(std::shared_ptr<SymbolDependenceMap> Symbols);
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
-  const SymbolNameSet &getSymbols() const { return Symbols; }
+  const SymbolDependenceMap &getSymbols() const { return *Symbols; }
 
 private:
-  SymbolNameSet Symbols;
+  std::shared_ptr<SymbolDependenceMap> Symbols;
 };
 
 /// Used to notify clients when symbols can not be found during a lookup.
@@ -205,12 +204,26 @@ public:
   /// symbols must be ones covered by this MaterializationResponsibility
   /// instance. Individual calls to this method may resolve a subset of the
   /// symbols, but all symbols must have been resolved prior to calling emit.
-  void notifyResolved(const SymbolMap &Symbols);
+  ///
+  /// This method will return an error if any symbols being resolved have been
+  /// moved to the error state due to the failure of a dependency. If this
+  /// method returns an error then clients should log it and call
+  /// failMaterialize. If no dependencies have been registered for the
+  /// symbols covered by this MaterializationResponsibiility then this method
+  /// is guaranteed to return Error::success() and can be wrapped with cantFail.
+  Error notifyResolved(const SymbolMap &Symbols);
 
   /// Notifies the target JITDylib (and any pending queries on that JITDylib)
   /// that all symbols covered by this MaterializationResponsibility instance
   /// have been emitted.
-  void notifyEmitted();
+  ///
+  /// This method will return an error if any symbols being resolved have been
+  /// moved to the error state due to the failure of a dependency. If this
+  /// method returns an error then clients should log it and call
+  /// failMaterialize. If no dependencies have been registered for the
+  /// symbols covered by this MaterializationResponsibiility then this method
+  /// is guaranteed to return Error::success() and can be wrapped with cantFail.
+  Error notifyEmitted();
 
   /// Adds new symbols to the JITDylib and this responsibility instance.
   ///        JITDylib entries start out in the materializing state.
@@ -629,11 +642,13 @@ private:
     void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     void removeQuery(const AsynchronousSymbolQuery &Q);
     AsynchronousSymbolQueryList takeQueriesMeeting(SymbolState RequiredState);
+    AsynchronousSymbolQueryList takeAllPendingQueries() {
+      return std::move(PendingQueries);
+    }
     bool hasQueriesPending() const { return !PendingQueries.empty(); }
     const AsynchronousSymbolQueryList &pendingQueries() const {
       return PendingQueries;
     }
-
   private:
     AsynchronousSymbolQueryList PendingQueries;
   };
@@ -700,9 +715,9 @@ private:
                    SymbolNameSet &Unresolved, bool MatchNonExported,
                    MaterializationUnitList &MUs);
 
-  void lodgeQueryImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                      SymbolNameSet &Unresolved, bool MatchNonExported,
-                      MaterializationUnitList &MUs);
+  Error lodgeQueryImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
+                       SymbolNameSet &Unresolved, bool MatchNonExported,
+                       MaterializationUnitList &MUs);
 
   bool lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
                   std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
@@ -721,14 +736,21 @@ private:
 
   SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const;
 
+  // Move a symbol to the failure state.
+  // Detaches the symbol from all dependencies, moves all dependants to the
+  // error state (but does not fail them), deletes the MaterializingInfo for
+  // the symbol (if present) and returns the set of queries that need to be
+  // notified of the failure.
+  AsynchronousSymbolQuerySet failSymbol(const SymbolStringPtr &Name);
+
   void addDependencies(const SymbolStringPtr &Name,
                        const SymbolDependenceMap &Dependants);
 
-  void resolve(const SymbolMap &Resolved);
+  Error resolve(const SymbolMap &Resolved);
 
-  void emit(const SymbolFlagsMap &Emitted);
+  Error emit(const SymbolFlagsMap &Emitted);
 
-  void notifyFailed(const SymbolNameSet &FailedSymbols);
+  void notifyFailed(const SymbolFlagsMap &FailedSymbols);
 
   ExecutionSession &ES;
   std::string JITDylibName;

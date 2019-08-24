@@ -115,7 +115,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   MCSymbol *GVSym = getSymbol(GV);
   const Constant *C = GV->getInitializer();
-  unsigned Align = (unsigned)DL.getPreferredTypeAlignmentShift(C->getType());
+  unsigned Align = Log2_32(DL.getPrefTypeAlignment(C->getType()));
 
   // Mark the start of the global
   getTargetStreamer().emitCCTopData(GVSym->getName());

@@ -1990,6 +1990,24 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   case X86::VPTERNLOGQZ256rmbikz:
   case X86::VPTERNLOGQZrmbikz:
     return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+  case X86::VPDPWSSDZ128r:
+  case X86::VPDPWSSDZ128rk:
+  case X86::VPDPWSSDZ128rkz:
+  case X86::VPDPWSSDZ256r:
+  case X86::VPDPWSSDZ256rk:
+  case X86::VPDPWSSDZ256rkz:
+  case X86::VPDPWSSDZr:
+  case X86::VPDPWSSDZrk:
+  case X86::VPDPWSSDZrkz:
+  case X86::VPDPWSSDSZ128r:
+  case X86::VPDPWSSDSZ128rk:
+  case X86::VPDPWSSDSZ128rkz:
+  case X86::VPDPWSSDSZ256r:
+  case X86::VPDPWSSDSZ256rk:
+  case X86::VPDPWSSDSZ256rkz:
+  case X86::VPDPWSSDSZr:
+  case X86::VPDPWSSDSZrk:
+  case X86::VPDPWSSDSZrkz:
   case X86::VPMADD52HUQZ128r:
   case X86::VPMADD52HUQZ128rk:
   case X86::VPMADD52HUQZ128rkz:

@@ -57,9 +57,9 @@ static cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
   cl::ZeroOrMore, cl::init(false),
   cl::desc("Disable Hexagon packetizer pass"));
 
-cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true),
-  cl::desc("Allow slot1 store and slot0 load"));
+static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
+                                cl::ZeroOrMore, cl::init(true),
+                                cl::desc("Allow slot1 store and slot0 load"));
 
 static cl::opt<bool> PacketizeVolatiles("hexagon-packetize-volatiles",
   cl::ZeroOrMore, cl::Hidden, cl::init(true),

@@ -24,26 +24,30 @@ class DWARFMappedHash {
 public:
   enum AtomType : uint16_t {
     eAtomTypeNULL = 0u,
-    eAtomTypeDIEOffset = 1u, // DIE offset, check form for encoding
-    eAtomTypeCUOffset = 2u,  // DIE offset of the compiler unit header that
-                             // contains the item in question
-    eAtomTypeTag = 3u, // DW_TAG_xxx value, should be encoded as DW_FORM_data1
-                       // (if no tags exceed 255) or DW_FORM_data2
-    eAtomTypeNameFlags = 4u,   // Flags from enum NameFlags
-    eAtomTypeTypeFlags = 5u,   // Flags from enum TypeFlags,
-    eAtomTypeQualNameHash = 6u // A 32 bit hash of the full qualified name
-                               // (since all hash entries are basename only)
-    // For example a type like "std::vector<int>::iterator" would have a name of
-    // "iterator"
-    // and a 32 bit hash for "std::vector<int>::iterator" to allow us to not
-    // have to pull
-    // in debug info for a type when we know the fully qualified name.
+    /// DIE offset, check form for encoding.
+    eAtomTypeDIEOffset = 1u,
+    /// DIE offset of the compiler unit header that contains the item in
+    /// question.
+    eAtomTypeCUOffset = 2u,
+    /// DW_TAG_xxx value, should be encoded as DW_FORM_data1 (if no tags exceed
+    /// 255) or DW_FORM_data2.
+    eAtomTypeTag = 3u,
+    // Flags from enum NameFlags.
+    eAtomTypeNameFlags = 4u,
+    // Flags from enum TypeFlags.
+    eAtomTypeTypeFlags = 5u,
+    /// A 32 bit hash of the full qualified name (since all hash entries are
+    /// basename only) For example a type like "std::vector<int>::iterator"
+    /// would have a name of "iterator" and a 32 bit hash for
+    /// "std::vector<int>::iterator" to allow us to not have to pull in debug
+    /// info for a type when we know the fully qualified name.
+    eAtomTypeQualNameHash = 6u
   };
 
-  // Bit definitions for the eAtomTypeTypeFlags flags
+  /// Bit definitions for the eAtomTypeTypeFlags flags.
   enum TypeFlags {
-    // Always set for C++, only set for ObjC if this is the
-    // @implementation for class
+    /// Always set for C++, only set for ObjC if this is the
+    /// @implementation for class.
     eTypeFlagClassIsImplementation = (1u << 1)
   };
 
@@ -51,10 +55,10 @@ public:
     dw_offset_t die_offset = DW_INVALID_OFFSET;
     dw_tag_t tag = 0;
 
-    /// Any flags for this DIEInfo
+    /// Any flags for this DIEInfo.
     uint32_t type_flags = 0;
 
-    /// A 32 bit hash of the fully qualified name
+    /// A 32 bit hash of the fully qualified name.
     uint32_t qualified_name_hash = 0;
 
     DIEInfo() = default;
@@ -94,7 +98,7 @@ public:
 
     bool HashDataHasFixedByteSize() const;
 
-    // DIE offset base so die offsets in hash_data can be CU relative
+    /// DIE offset base so die offsets in hash_data can be CU relative.
     dw_offset_t die_base_offset;
     AtomArray atoms;
     uint32_t atom_mask;
@@ -113,8 +117,8 @@ public:
               lldb::offset_t *offset_ptr, DIEInfo &hash_data) const;
   };
 
-  // A class for reading and using a saved hash table from a block of data
-  // in memory
+  /// A class for reading and using a saved hash table from a block of data in
+  /// memory.
   class MemoryTable
       : public MappedHash::MemoryTable<uint32_t, DWARFMappedHash::Header,
                                        DIEInfoArray> {

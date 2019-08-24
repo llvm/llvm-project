@@ -894,6 +894,30 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       Offset = EmitGEPOffset(GEPLHS);
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
                         Constant::getNullValue(Offset->getType()));
+  } else if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
+             GEPLHS->getType()->isPointerTy() && // TODO: extend to vector geps
+             isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+             !NullPointerIsDefined(I.getFunction(),
+                                   RHS->getType()->getPointerAddressSpace())) {
+    // For most address spaces, an allocation can't be placed at null, but null
+    // itself is treated as a 0 size allocation in the in bounds rules.  Thus,
+    // the only valid inbounds address derived from null, is null itself.
+    // Thus, we have four cases to consider:
+    // 1) Base == nullptr, Offset == 0 -> inbounds, null
+    // 2) Base == nullptr, Offset != 0 -> poison as the result is out of bounds
+    // 3) Base != nullptr, Offset == (-base) -> poison (crossing allocations)
+    // 4) Base != nullptr, Offset != (-base) -> nonnull (and possibly poison)
+    //
+    // (Note if we're indexing a type of size 0, that simply collapses into one
+    //  of the buckets above.)
+    //
+    // In general, we're allowed to make values less poison (i.e. remove
+    //   sources of full UB), so in this case, we just select between the two
+    //   non-poison cases (1 and 4 above).
+    auto *Base = GEPLHS->getPointerOperand();
+    return new ICmpInst(Cond, Base,
+                        ConstantExpr::getBitCast(cast<Constant>(RHS),
+                                                 Base->getType()));
   } else if (GEPOperator *GEPRHS = dyn_cast<GEPOperator>(RHS)) {
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.
@@ -2538,20 +2562,49 @@ bool InstCombiner::matchThreeWayIntCompare(SelectInst *SI, Value *&LHS,
   // TODO: Generalize this to work with other comparison idioms or ensure
   // they get canonicalized into this form.
 
-  // select i1 (a == b), i32 Equal, i32 (select i1 (a < b), i32 Less, i32
-  // Greater), where Equal, Less and Greater are placeholders for any three
-  // constants.
-  ICmpInst::Predicate PredA, PredB;
-  if (match(SI->getTrueValue(), m_ConstantInt(Equal)) &&
-      match(SI->getCondition(), m_ICmp(PredA, m_Value(LHS), m_Value(RHS))) &&
-      PredA == ICmpInst::ICMP_EQ &&
-      match(SI->getFalseValue(),
-            m_Select(m_ICmp(PredB, m_Specific(LHS), m_Specific(RHS)),
-                     m_ConstantInt(Less), m_ConstantInt(Greater))) &&
-      PredB == ICmpInst::ICMP_SLT) {
-    return true;
+  // select i1 (a == b),
+  //        i32 Equal,
+  //        i32 (select i1 (a < b), i32 Less, i32 Greater)
+  // where Equal, Less and Greater are placeholders for any three constants.
+  ICmpInst::Predicate PredA;
+  if (!match(SI->getCondition(), m_ICmp(PredA, m_Value(LHS), m_Value(RHS))) ||
+      !ICmpInst::isEquality(PredA))
+    return false;
+  Value *EqualVal = SI->getTrueValue();
+  Value *UnequalVal = SI->getFalseValue();
+  // We still can get non-canonical predicate here, so canonicalize.
+  if (PredA == ICmpInst::ICMP_NE)
+    std::swap(EqualVal, UnequalVal);
+  if (!match(EqualVal, m_ConstantInt(Equal)))
+    return false;
+  ICmpInst::Predicate PredB;
+  Value *LHS2, *RHS2;
+  if (!match(UnequalVal, m_Select(m_ICmp(PredB, m_Value(LHS2), m_Value(RHS2)),
+                                  m_ConstantInt(Less), m_ConstantInt(Greater))))
+    return false;
+  // We can get predicate mismatch here, so canonicalize if possible:
+  // First, ensure that 'LHS' match.
+  if (LHS2 != LHS) {
+    // x sgt y <--> y slt x
+    std::swap(LHS2, RHS2);
+    PredB = ICmpInst::getSwappedPredicate(PredB);
   }
-  return false;
+  if (LHS2 != LHS)
+    return false;
+  // We also need to canonicalize 'RHS'.
+  if (PredB == ICmpInst::ICMP_SGT && isa<Constant>(RHS2)) {
+    // x sgt C-1  <-->  x sge C  <-->  not(x slt C)
+    auto FlippedStrictness =
+        getFlippedStrictnessPredicateAndConstant(PredB, cast<Constant>(RHS2));
+    if (!FlippedStrictness)
+      return false;
+    assert(FlippedStrictness->first == ICmpInst::ICMP_SGE && "Sanity check");
+    RHS2 = FlippedStrictness->second;
+    // And kind-of perform the result swap.
+    std::swap(Less, Greater);
+    PredB = ICmpInst::ICMP_SLT;
+  }
+  return PredB == ICmpInst::ICMP_SLT && RHS == RHS2;
 }
 
 Instruction *InstCombiner::foldICmpSelectConstant(ICmpInst &Cmp,
@@ -4888,20 +4941,27 @@ llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
 llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
                                                Constant *C) {
   assert(ICmpInst::isRelational(Pred) && ICmpInst::isIntPredicate(Pred) &&
-         !isCanonicalPredicate(Pred) &&
-         "Only for non-canonical relational integer predicates.");
+         "Only for relational integer predicates.");
 
-  // Check if the constant operand can be safely incremented/decremented without
-  // overflowing/underflowing. For scalars, SimplifyICmpInst should have already
-  // handled the edge cases for us, so we just assert on them.
-  // For vectors, we must handle the edge cases.
   Type *Type = C->getType();
   bool IsSigned = ICmpInst::isSigned(Pred);
-  bool IsLE = (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE);
-  auto *CI = dyn_cast<ConstantInt>(C);
-  if (CI) {
+
+  CmpInst::Predicate UnsignedPred = ICmpInst::getUnsignedPredicate(Pred);
+  bool WillIncrement =
+      UnsignedPred == ICmpInst::ICMP_ULE || UnsignedPred == ICmpInst::ICMP_UGT;
+
+  // Check if the constant operand can be safely incremented/decremented
+  // without overflowing/underflowing.
+  auto ConstantIsOk = [WillIncrement, IsSigned](ConstantInt *C) {
+    return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
+  };
+
+  // For scalars, SimplifyICmpInst should have already handled
+  // the edge cases for us, so we just assert on them.
+  // For vectors, we must handle the edge cases.
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
     // A <= MAX -> TRUE ; A >= MIN -> TRUE
-    assert(IsLE ? !CI->isMaxValue(IsSigned) : !CI->isMinValue(IsSigned));
+    assert(ConstantIsOk(CI));
   } else if (Type->isVectorTy()) {
     // TODO? If the edge cases for vectors were guaranteed to be handled as they
     // are for scalar, we could remove the min/max checks. However, to do that,
@@ -4918,7 +4978,7 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
       // Bail out if we can't determine if this constant is min/max or if we
       // know that this constant is min/max.
       auto *CI = dyn_cast<ConstantInt>(Elt);
-      if (!CI || (IsLE ? CI->isMaxValue(IsSigned) : CI->isMinValue(IsSigned)))
+      if (!CI || !ConstantIsOk(CI))
         return llvm::None;
     }
   } else {
@@ -4929,7 +4989,7 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);
 
   // Increment or decrement the constant.
-  Constant *OneOrNegOne = ConstantInt::get(Type, IsLE ? 1 : -1, true);
+  Constant *OneOrNegOne = ConstantInt::get(Type, WillIncrement ? 1 : -1, true);
   Constant *NewC = ConstantExpr::getAdd(C, OneOrNegOne);
 
   return std::make_pair(NewPred, NewC);

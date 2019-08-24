@@ -1,6 +1,8 @@
 ; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
 
 
+declare void @deref_phi_user(i32* %a);
+
 ; TEST 1
 ; take mininimum of return values
 ;
@@ -50,3 +52,62 @@ define dereferenceable(4) i32* @test4(i32* dereferenceable(8) %0) local_unnamed_
   ret i32* %0
 }
 
+; TEST 5
+; loop in which dereferenceabily "grows"
+define void @deref_phi_growing(i32* dereferenceable(4000) %a) {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %a.addr.0 = phi i32* [ %a, %entry ], [ %incdec.ptr, %for.inc ]
+; CHECK: call void @deref_phi_user(i32* dereferenceable(4000) %a.addr.0)
+  call void @deref_phi_user(i32* %a.addr.0)
+  %tmp = load i32, i32* %a.addr.0, align 4
+  %cmp = icmp slt i32 %i.0, %tmp
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %incdec.ptr = getelementptr inbounds i32, i32* %a.addr.0, i64 -1
+  %inc = add nuw nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  ret void
+}
+
+; TEST 6
+; loop in which dereferenceabily "shrinks"
+define void @deref_phi_shrinking(i32* dereferenceable(4000) %a) {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %a.addr.0 = phi i32* [ %a, %entry ], [ %incdec.ptr, %for.inc ]
+; CHECK: call void @deref_phi_user(i32* %a.addr.0)
+  call void @deref_phi_user(i32* %a.addr.0)
+  %tmp = load i32, i32* %a.addr.0, align 4
+  %cmp = icmp slt i32 %i.0, %tmp
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %incdec.ptr = getelementptr inbounds i32, i32* %a.addr.0, i64 1
+  %inc = add nuw nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  ret void
+}

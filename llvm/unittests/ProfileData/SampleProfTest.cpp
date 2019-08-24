@@ -285,12 +285,20 @@ TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false);
 }
 
+TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false);
+}
+
 TEST_F(SampleProfTest, remap_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text, true);
 }
 
 TEST_F(SampleProfTest, remap_raw_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Binary, true);
+}
+
+TEST_F(SampleProfTest, remap_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true);
 }
 
 TEST_F(SampleProfTest, sample_overflow_saturation) {

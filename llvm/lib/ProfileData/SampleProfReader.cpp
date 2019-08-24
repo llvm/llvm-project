@@ -345,7 +345,7 @@ inline ErrorOr<uint32_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
   return *Idx;
 }
 
-ErrorOr<StringRef> SampleProfileReaderRawBinary::readStringFromTable() {
+ErrorOr<StringRef> SampleProfileReaderBinary::readStringFromTable() {
   auto Idx = readStringIndex(NameTable);
   if (std::error_code EC = Idx.getError())
     return EC;
@@ -467,6 +467,40 @@ std::error_code SampleProfileReaderBinary::read() {
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileReaderExtBinaryBase::read() {
+  const uint8_t *BufStart =
+      reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+
+  for (auto &Entry : SecHdrTable) {
+    // Skip empty section.
+    if (!Entry.Size)
+      continue;
+    Data = BufStart + Entry.Offset;
+    switch (Entry.Type) {
+    case SecProfSummary:
+      if (std::error_code EC = readSummary())
+        return EC;
+      break;
+    case SecNameTable:
+      if (std::error_code EC = readNameTable())
+        return EC;
+      break;
+    case SecLBRProfile:
+      while (Data < BufStart + Entry.Offset + Entry.Size) {
+        if (std::error_code EC = readFuncProfile())
+          return EC;
+      }
+      break;
+    default:
+      continue;
+    }
+    if (Data != BufStart + Entry.Offset + Entry.Size)
+      return sampleprof_error::malformed;
+  }
+
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileReaderCompactBinary::read() {
   std::vector<uint64_t> OffsetsToUse;
   if (UseAllFuncs) {
@@ -501,6 +535,12 @@ std::error_code SampleProfileReaderRawBinary::verifySPMagic(uint64_t Magic) {
   return sampleprof_error::bad_magic;
 }
 
+std::error_code SampleProfileReaderExtBinary::verifySPMagic(uint64_t Magic) {
+  if (Magic == SPMagic(SPF_Ext_Binary))
+    return sampleprof_error::success;
+  return sampleprof_error::bad_magic;
+}
+
 std::error_code
 SampleProfileReaderCompactBinary::verifySPMagic(uint64_t Magic) {
   if (Magic == SPMagic(SPF_Compact_Binary))
@@ -508,7 +548,7 @@ SampleProfileReaderCompactBinary::verifySPMagic(uint64_t Magic) {
   return sampleprof_error::bad_magic;
 }
 
-std::error_code SampleProfileReaderRawBinary::readNameTable() {
+std::error_code SampleProfileReaderBinary::readNameTable() {
   auto Size = readNumber<uint32_t>();
   if (std::error_code EC = Size.getError())
     return EC;
@@ -537,10 +577,60 @@ std::error_code SampleProfileReaderCompactBinary::readNameTable() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderBinary::readHeader() {
-  Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
-  End = Data + Buffer->getBufferSize();
+std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTableEntry() {
+  SecHdrTableEntry Entry;
+  auto Type = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = Type.getError())
+    return EC;
+  Entry.Type = static_cast<SecType>(*Type);
 
+  auto Flag = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = Flag.getError())
+    return EC;
+  Entry.Flag = *Flag;
+
+  auto Offset = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = Offset.getError())
+    return EC;
+  Entry.Offset = *Offset;
+
+  auto Size = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = Size.getError())
+    return EC;
+  Entry.Size = *Size;
+
+  SecHdrTable.push_back(std::move(Entry));
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTable() {
+  auto EntryNum = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = EntryNum.getError())
+    return EC;
+
+  for (uint32_t i = 0; i < (*EntryNum); i++)
+    if (std::error_code EC = readSecHdrTableEntry())
+      return EC;
+
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readHeader() {
+  const uint8_t *BufStart =
+      reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+  Data = BufStart;
+  End = BufStart + Buffer->getBufferSize();
+
+  if (std::error_code EC = readMagicIdent())
+    return EC;
+
+  if (std::error_code EC = readSecHdrTable())
+    return EC;
+
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderBinary::readMagicIdent() {
   // Read and check the magic identifier.
   auto Magic = readNumber<uint64_t>();
   if (std::error_code EC = Magic.getError())
@@ -554,6 +644,16 @@ std::error_code SampleProfileReaderBinary::readHeader() {
     return EC;
   else if (*Version != SPVersion())
     return sampleprof_error::unsupported_version;
+
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderBinary::readHeader() {
+  Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+  End = Data + Buffer->getBufferSize();
+
+  if (std::error_code EC = readMagicIdent())
+    return EC;
 
   if (std::error_code EC = readSummary())
     return EC;
@@ -672,6 +772,13 @@ bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
       reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
   uint64_t Magic = decodeULEB128(Data);
   return Magic == SPMagic();
+}
+
+bool SampleProfileReaderExtBinary::hasFormat(const MemoryBuffer &Buffer) {
+  const uint8_t *Data =
+      reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
+  uint64_t Magic = decodeULEB128(Data);
+  return Magic == SPMagic(SPF_Ext_Binary);
 }
 
 bool SampleProfileReaderCompactBinary::hasFormat(const MemoryBuffer &Buffer) {
@@ -1023,6 +1130,8 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
   std::unique_ptr<SampleProfileReader> Reader;
   if (SampleProfileReaderRawBinary::hasFormat(*B))
     Reader.reset(new SampleProfileReaderRawBinary(std::move(B), C));
+  else if (SampleProfileReaderExtBinary::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderExtBinary(std::move(B), C));
   else if (SampleProfileReaderCompactBinary::hasFormat(*B))
     Reader.reset(new SampleProfileReaderCompactBinary(std::move(B), C));
   else if (SampleProfileReaderGCC::hasFormat(*B))
@@ -1033,8 +1142,9 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
     return sampleprof_error::unrecognized_format;
 
   FunctionSamples::Format = Reader->getFormat();
-  if (std::error_code EC = Reader->readHeader())
+  if (std::error_code EC = Reader->readHeader()) {
     return EC;
+  }
 
   return std::move(Reader);
 }

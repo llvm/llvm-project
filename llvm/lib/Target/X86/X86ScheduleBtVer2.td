@@ -180,9 +180,11 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
 
 // Instructions that have local forwarding disabled have an extra +1cy latency.
 
-// A folded store needs a cycle on the SAGU for the store data,
-// most RMW instructions don't need an extra uop.
-defm : X86WriteRes<WriteRMW, [JSAGU], 1, [1], 0>;
+// A folded store needs a cycle on the SAGU for the store data, most RMW
+// instructions don't need an extra uop.  ALU RMW operations don't seem to
+// benefit from STLF, and their observed latency is 6cy. That is the reason why
+// this write adds two extra cycles (instead of just 1cy for the store).
+defm : X86WriteRes<WriteRMW, [JSAGU], 2, [1], 0>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Arithmetic.
@@ -374,11 +376,17 @@ def : InstRW<[JWriteCMPXCHGVariant,
               ReadAfterLd, ReadAfterLd], (instrs LCMPXCHG8, LCMPXCHG16,
                                                  LCMPXCHG32, LCMPXCHG64,
                                                  CMPXCHG8rm, CMPXCHG16rm,
-                                                 CMPXCHG32rm, CMPXCHG64rm )>;
+                                                 CMPXCHG32rm, CMPXCHG64rm)>;
 
-def : InstRW<[JWriteCMPXCHGVariant], (instrs CMPXCHG8rr, CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr,
-                                             CMPXCHG8B, CMPXCHG16B,
-                                             LCMPXCHG8B, LCMPXCHG16B)>;
+def : InstRW<[JWriteCMPXCHGVariant], (instrs CMPXCHG8rr, CMPXCHG16rr,
+                                             CMPXCHG32rr, CMPXCHG64rr)>;
+
+def : InstRW<[JWriteCMPXCHGVariant,
+              // Ignore reads contributed by the memory operand.
+              ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+              // Add a read-advance to every implicit register read.
+              ReadAfterLd, ReadAfterLd, ReadAfterLd, ReadAfterLd], (instrs LCMPXCHG8B, LCMPXCHG16B,
+                                                                           CMPXCHG8B, CMPXCHG16B)>;
 
 def JWriteLOCK_ALURMW : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 19;

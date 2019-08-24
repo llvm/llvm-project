@@ -77,6 +77,7 @@ using namespace llvm;
 #define DEBUG_TYPE "livedebugvalues"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
+STATISTIC(NumRemoved, "Number of DBG_VALUE instructions removed");
 
 // If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
@@ -942,7 +943,7 @@ bool LiveDebugValues::transferTerminator(MachineBasicBlock *CurMBB,
     VarLocIDs[ID].dump();
   });
   VarLocSet &VLS = OutLocs[CurMBB];
-  Changed = VLS |= OpenRanges.getVarLocs();
+  Changed = VLS != OpenRanges.getVarLocs();
   // New OutLocs set may be different due to spill, restore or register
   // copy instruction processing.
   if (Changed)
@@ -1101,8 +1102,6 @@ bool LiveDebugValues::join(
   // is the entry block which has no predecessor.
   assert((NumVisited || MBB.pred_empty()) &&
          "Should have processed at least one predecessor");
-  if (InLocsT.empty())
-    return false;
 
   VarLocSet &ILS = InLocs[&MBB];
   VarLocSet &Pending = PendingInLocs[&MBB];
@@ -1118,6 +1117,19 @@ bool LiveDebugValues::join(
     ++NumInserted;
     Changed = true;
   }
+
+  // We may have lost locations by learning about a predecessor that either
+  // loses or moves a variable. Find any locations in ILS that are not in the
+  // new in-locations, and delete those.
+  VarLocSet Removed = ILS;
+  Removed.intersectWithComplement(InLocsT);
+  for (auto ID : Removed) {
+    Pending.reset(ID);
+    ILS.reset(ID);
+    ++NumRemoved;
+    Changed = true;
+  }
+
   return Changed;
 }
 

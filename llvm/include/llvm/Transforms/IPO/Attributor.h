@@ -675,7 +675,7 @@ struct Attributor {
   /// matched with their respective return instructions. Returns true if \p Pred
   /// holds on all of them.
   bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
           &Pred,
       const AbstractAttribute &QueryingAA);
 
@@ -1134,17 +1134,17 @@ struct AAReturnedValues
   /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
   /// method, this one will not filter dead return instructions.
   virtual bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallPtrSetImpl<ReturnInst *> &)>
+      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
           &Pred) const = 0;
 
-  using iterator = DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>>::iterator;
+  using iterator = DenseMap<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
   using const_iterator =
-      DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>>::const_iterator;
+      DenseMap<Value *, SmallSetVector<ReturnInst *, 4>>::const_iterator;
   virtual llvm::iterator_range<iterator> returned_values() = 0;
   virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
 
   virtual size_t getNumReturnValues() const = 0;
-  virtual const SmallPtrSetImpl<CallBase *> &getUnresolvedCalls() const = 0;
+  virtual const SmallSetVector<CallBase *, 4> &getUnresolvedCalls() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAReturnedValues &createForPosition(const IRPosition &IRP,

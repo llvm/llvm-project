@@ -84,6 +84,7 @@ enum SampleProfileFormat {
   SPF_Text = 0x1,
   SPF_Compact_Binary = 0x2,
   SPF_GCC = 0x3,
+  SPF_Ext_Binary = 0x4,
   SPF_Binary = 0xff
 };
 
@@ -105,6 +106,27 @@ static inline StringRef getRepInFormat(StringRef Name,
 }
 
 static inline uint64_t SPVersion() { return 103; }
+
+// Section Type used by SampleProfileExtBinaryBaseReader and
+// SampleProfileExtBinaryBaseWriter. Never change the existing
+// value of enum. Only append new ones.
+enum SecType {
+  SecInValid = 0,
+  SecProfSummary = 1,
+  SecNameTable = 2,
+  // marker for the first type of profile.
+  SecFuncProfileFirst = 32,
+  SecLBRProfile = SecFuncProfileFirst
+};
+
+// Entry type of section header table used by SampleProfileExtBinaryBaseReader
+// and SampleProfileExtBinaryBaseWriter.
+struct SecHdrTableEntry {
+  SecType Type;
+  uint64_t Flag;
+  uint64_t Offset;
+  uint64_t Size;
+};
 
 /// Represents the relative location of an instruction.
 ///

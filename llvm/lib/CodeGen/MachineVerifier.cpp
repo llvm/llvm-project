@@ -1437,6 +1437,27 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_DYN_STACKALLOC: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &AllocOp = MI->getOperand(1);
+    const MachineOperand &AlignOp = MI->getOperand(2);
+
+    if (!DstOp.isReg() || !MRI->getType(DstOp.getReg()).isPointer()) {
+      report("dst operand 0 must be a pointer type", MI);
+      break;
+    }
+
+    if (!AllocOp.isReg() || !MRI->getType(AllocOp.getReg()).isScalar()) {
+      report("src operand 1 must be a scalar reg type", MI);
+      break;
+    }
+
+    if (!AlignOp.isImm()) {
+      report("src operand 2 must be an immediate type", MI);
+      break;
+    }
+    break;
+  }
   default:
     break;
   }

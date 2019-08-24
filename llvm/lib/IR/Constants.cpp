@@ -22,6 +22,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -248,6 +249,20 @@ bool Constant::isNaN() const {
       return false;
   }
   return true;
+}
+
+bool Constant::isElementWiseEqual(Value *Y) const {
+  // Are they fully identical?
+  if (this == Y)
+    return true;
+  // They may still be identical element-wise (if they have `undef`s).
+  auto *Cy = dyn_cast<Constant>(Y);
+  if (!Cy)
+    return false;
+  return PatternMatch::match(ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_EQ,
+                                                   const_cast<Constant *>(this),
+                                                   Cy),
+                             PatternMatch::m_One());
 }
 
 bool Constant::containsUndefElement() const {

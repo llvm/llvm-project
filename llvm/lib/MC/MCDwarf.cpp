@@ -544,8 +544,8 @@ Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                            FileNumber);
 }
 
-bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
-                StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
+static bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
+                       StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
   if (RootFile.Name.empty() || RootFile.Name != FileName.data())
     return false;
   return RootFile.Checksum == Checksum;

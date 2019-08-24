@@ -2884,16 +2884,18 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       return true;
     }
 
+    bool IsLocalSym =
+        Res.getSymA()->getSymbol().isInSection() ||
+        Res.getSymA()->getSymbol().isTemporary() ||
+        (Res.getSymA()->getSymbol().isELF() &&
+         cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
+             ELF::STB_LOCAL);
+
     // The case where the result register is $25 is somewhat special. If the
     // symbol in the final relocation is external and not modified with a
     // constant then we must use R_MIPS_CALL16 instead of R_MIPS_GOT16.
     if ((DstReg == Mips::T9 || DstReg == Mips::T9_64) && !UseSrcReg &&
-        Res.getConstant() == 0 &&
-        !(Res.getSymA()->getSymbol().isInSection() ||
-          Res.getSymA()->getSymbol().isTemporary() ||
-          (Res.getSymA()->getSymbol().isELF() &&
-           cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
-               ELF::STB_LOCAL))) {
+        Res.getConstant() == 0 && !IsLocalSym) {
       const MCExpr *CallExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, SymExpr, getContext());
       TOut.emitRRX(Mips::LW, DstReg, GPReg, MCOperand::createExpr(CallExpr),
@@ -2902,8 +2904,8 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     }
 
     // The remaining cases are:
-    //   External GOT: lw $tmp, %got(symbol+offset)($gp)
-    //                >addiu $tmp, $tmp, %lo(offset)
+    //   External GOT: lw $tmp, %got(symbol)($gp)
+    //                >addiu $tmp, $tmp, offset
     //                >addiu $rd, $tmp, $rs
     //   Local GOT:    lw $tmp, %got(symbol+offset)($gp)
     //                 addiu $tmp, $tmp, %lo(symbol+offset)($gp)
@@ -2911,17 +2913,19 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // The addiu's marked with a '>' may be omitted if they are redundant. If
     // this happens then the last instruction must use $rd as the result
     // register.
-    const MipsMCExpr *GotExpr =
-        MipsMCExpr::create(MipsMCExpr::MEK_GOT, SymExpr, getContext());
+    const MipsMCExpr *GotExpr = nullptr;
     const MCExpr *LoExpr = nullptr;
-    if (Res.getSymA()->getSymbol().isInSection() ||
-        Res.getSymA()->getSymbol().isTemporary())
+    if (IsLocalSym) {
+      GotExpr = MipsMCExpr::create(MipsMCExpr::MEK_GOT, SymExpr, getContext());
       LoExpr = MipsMCExpr::create(MipsMCExpr::MEK_LO, SymExpr, getContext());
-    else if (Res.getConstant() != 0) {
+    } else {
       // External symbols fully resolve the symbol with just the %got(symbol)
       // but we must still account for any offset to the symbol for expressions
       // like symbol+8.
-      LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
+      GotExpr =
+          MipsMCExpr::create(MipsMCExpr::MEK_GOT, Res.getSymA(), getContext());
+      if (Res.getConstant() != 0)
+        LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
     }
 
     unsigned TmpReg = DstReg;
@@ -3651,17 +3655,25 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (inPicMode()) {
       // FIXME:
       // a) Fix lw/sw $reg, symbol($reg) instruction expanding.
-      // b) If expression includes offset (sym + number), do not
-      //    encode the offset into a relocation. Take it in account
-      //    in the last load/store instruction.
       // c) Check that immediates of R_MIPS_GOT16/R_MIPS_LO16 relocations
       //    do not exceed 16-bit.
       // d) Use R_MIPS_GOT_PAGE/R_MIPS_GOT_OFST relocations instead
       //    of R_MIPS_GOT_DISP in appropriate cases to reduce number
       //    of GOT entries.
-      loadAndAddSymbolAddress(OffsetOp.getExpr(), TmpReg, Mips::NoRegister,
+      MCValue Res;
+      if (!OffsetOp.getExpr()->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+        Error(IDLoc, "expected relocatable expression");
+        return;
+      }
+      if (Res.getSymB() != nullptr) {
+        Error(IDLoc, "expected relocatable expression with only one symbol");
+        return;
+      }
+
+      loadAndAddSymbolAddress(Res.getSymA(), TmpReg, Mips::NoRegister,
                               !ABI.ArePtrs64bit(), IDLoc, Out, STI);
-      TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, 0, IDLoc, STI);
+      TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, Res.getConstant(), IDLoc,
+                   STI);
     } else {
       const MCExpr *ExprOffset = OffsetOp.getExpr();
       MCOperand LoOperand = MCOperand::createExpr(
