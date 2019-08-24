@@ -20,10 +20,6 @@
 #include "DWARFFormValue.h"
 #include "NameToDIE.h"
 
-class SymbolFileDWARF;
-class DWARFCompileUnit;
-class DWARFDebugInfoEntry;
-
 class DWARFMappedHash {
 public:
   enum AtomType : uint16_t {
@@ -35,14 +31,13 @@ public:
                        // (if no tags exceed 255) or DW_FORM_data2
     eAtomTypeNameFlags = 4u,   // Flags from enum NameFlags
     eAtomTypeTypeFlags = 5u,   // Flags from enum TypeFlags,
-    eAtomTypeQualNameHash = 6u, // A 32 bit hash of the full qualified name
+    eAtomTypeQualNameHash = 6u // A 32 bit hash of the full qualified name
                                // (since all hash entries are basename only)
     // For example a type like "std::vector<int>::iterator" would have a name of
     // "iterator"
     // and a 32 bit hash for "std::vector<int>::iterator" to allow us to not
     // have to pull
     // in debug info for a type when we know the fully qualified name.
-    eAtomTypeString = 7u // A 64 bit string offset into the .debug_str table
   };
 
   // Bit definitions for the eAtomTypeTypeFlags flags
