@@ -434,17 +434,17 @@ void BuiltinNameEmitter::EmitQualTypeFinder() {
 // Step 2: Qualifiers and other type properties such as vector size are
 //         applied.
 static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
-                     std::vector<QualType> &QT) {
+                     llvm::SmallVectorImpl<QualType> &QT) {
   // Number of scalar types in the GenType.
   unsigned GenTypeNumTypes;
   // Pointer to the list of vector sizes for the GenType.
-  llvm::SmallVector<unsigned, 6> *GenVectorSizes;
+  llvm::ArrayRef<unsigned> GenVectorSizes;
 )";
 
   // Generate list of vector sizes for each generic type.
   for (const auto *VectList : Records.getAllDerivedDefinitions("IntList")) {
-    OS << "  llvm::SmallVector<unsigned, 6> List"
-       << VectList->getValueAsString("Name") << "{";
+    OS << "  constexpr unsigned List"
+       << VectList->getValueAsString("Name") << "[] = {";
     for (const auto V : VectList->getValueAsListOfInts("List")) {
       OS << V << ", ";
     }
@@ -458,6 +458,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   // Switch cases for generic types.
   for (const auto *GenType : Records.getAllDerivedDefinitions("GenericType")) {
     OS << "    case OCLT_" << GenType->getValueAsString("Name") << ":\n";
+    OS << "      QT.append({";
 
     // Build the Cartesian product of (vector sizes) x (types).  Only insert
     // the plain scalar types for now; other type information such as vector
@@ -468,10 +469,11 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
          I++) {
       for (const auto *T :
            GenType->getValueAsDef("TypeList")->getValueAsListOfDefs("List")) {
-        OS << "      QT.push_back(Context."
-           << T->getValueAsDef("QTName")->getValueAsString("Name") << ");\n";
+        OS << "Context."
+           << T->getValueAsDef("QTName")->getValueAsString("Name") << ", ";
       }
     }
+    OS << "});\n;";
     // GenTypeNumTypes is the number of types in the GenType
     // (e.g. float/double/half).
     OS << "      GenTypeNumTypes = "
@@ -480,7 +482,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
        << ";\n";
     // GenVectorSizes is the list of vector sizes for this GenType.
     // QT contains GenTypeNumTypes * #GenVectorSizes elements.
-    OS << "      GenVectorSizes = &List"
+    OS << "      GenVectorSizes = List"
        << GenType->getValueAsDef("VectorList")->getValueAsString("Name")
        << ";\n";
     OS << "      break;\n";
@@ -521,9 +523,9 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   OS << R"(
     for (unsigned I = 0; I < QT.size(); I++) {
       // For scalars, size is 1.
-      if ((*GenVectorSizes)[I / GenTypeNumTypes] != 1) {
+      if (GenVectorSizes[I / GenTypeNumTypes] != 1) {
         QT[I] = Context.getExtVectorType(QT[I],
-                          (*GenVectorSizes)[I / GenTypeNumTypes]);
+                          GenVectorSizes[I / GenTypeNumTypes]);
       }
     }
   }

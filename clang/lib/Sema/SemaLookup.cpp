@@ -686,8 +686,8 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
 ///        of (vector sizes) x (types) .
 static void GetQualTypesForOpenCLBuiltin(
     ASTContext &Context, const OpenCLBuiltinStruct &OpenCLBuiltin,
-    unsigned &GenTypeMaxCnt, std::vector<QualType> &RetTypes,
-    SmallVector<std::vector<QualType>, 5> &ArgTypes) {
+    unsigned &GenTypeMaxCnt, SmallVector<QualType, 1> &RetTypes,
+    SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
   // Get the QualType instances of the return types.
   unsigned Sig = SignatureTable[OpenCLBuiltin.SigTableIndex];
   OCL2Qual(Context, TypeTable[Sig], RetTypes);
@@ -696,11 +696,11 @@ static void GetQualTypesForOpenCLBuiltin(
   // Get the QualType instances of the arguments.
   // First type is the return type, skip it.
   for (unsigned Index = 1; Index < OpenCLBuiltin.NumTypes; Index++) {
-    std::vector<QualType> Ty;
+    SmallVector<QualType, 1> Ty;
     OCL2Qual(Context,
         TypeTable[SignatureTable[OpenCLBuiltin.SigTableIndex + Index]], Ty);
-    ArgTypes.push_back(Ty);
     GenTypeMaxCnt = (Ty.size() > GenTypeMaxCnt) ? Ty.size() : GenTypeMaxCnt;
+    ArgTypes.push_back(std::move(Ty));
   }
 }
 
@@ -713,11 +713,10 @@ static void GetQualTypesForOpenCLBuiltin(
 /// \param FunctionList (out) List of FunctionTypes.
 /// \param RetTypes (in) List of the possible return types.
 /// \param ArgTypes (in) List of the possible types for the arguments.
-static void
-GetOpenCLBuiltinFctOverloads(ASTContext &Context, unsigned GenTypeMaxCnt,
-                             std::vector<QualType> &FunctionList,
-                             std::vector<QualType> &RetTypes,
-                             SmallVector<std::vector<QualType>, 5> &ArgTypes) {
+static void GetOpenCLBuiltinFctOverloads(
+    ASTContext &Context, unsigned GenTypeMaxCnt,
+    std::vector<QualType> &FunctionList, SmallVector<QualType, 1> &RetTypes,
+    SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
   FunctionProtoType::ExtProtoInfo PI;
   PI.Variadic = false;
 
@@ -765,8 +764,8 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
         BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
-    std::vector<QualType> RetTypes;
-    SmallVector<std::vector<QualType>, 5> ArgTypes;
+    SmallVector<QualType, 1> RetTypes;
+    SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;
 
     // Obtain QualType lists for the function signature.
     GetQualTypesForOpenCLBuiltin(Context, OpenCLBuiltin, GenTypeMaxCnt,

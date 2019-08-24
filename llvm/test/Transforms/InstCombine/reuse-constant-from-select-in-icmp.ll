@@ -18,8 +18,8 @@
 
 define i32 @p0_ult_65536(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p0_ult_65536(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535, !prof !0
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 65535, i32 [[Y:%.*]], !prof !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ult i32 %x, 65536
@@ -28,8 +28,8 @@ define i32 @p0_ult_65536(i32 %x, i32 %y) {
 }
 define i32 @p1_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p1_ugt(
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i32 [[X:%.*]], 65534
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ult i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 65535, i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ugt i32 %x, 65534
@@ -38,8 +38,8 @@ define i32 @p1_ugt(i32 %x, i32 %y) {
 }
 define i32 @p2_slt_65536(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p2_slt_65536(
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp sgt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 65535, i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp slt i32 %x, 65536
@@ -48,8 +48,8 @@ define i32 @p2_slt_65536(i32 %x, i32 %y) {
 }
 define i32 @p3_sgt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p3_sgt(
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[X:%.*]], 65534
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 [[Y:%.*]], i32 65535
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp slt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 65535, i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp sgt i32 %x, 65534
@@ -63,8 +63,8 @@ define i32 @p3_sgt(i32 %x, i32 %y) {
 
 define <2 x i32> @p4_vec_splat_ult_65536(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p4_vec_splat_ult_65536(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 65536>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 65536>
@@ -73,8 +73,8 @@ define <2 x i32> @p4_vec_splat_ult_65536(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p5_vec_splat_ugt(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p5_vec_splat_ugt(
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65534, i32 65534>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ugt <2 x i32> %x, <i32 65534, i32 65534>
@@ -83,8 +83,8 @@ define <2 x i32> @p5_vec_splat_ugt(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p6_vec_splat_slt_65536(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p6_vec_splat_slt_65536(
-; CHECK-NEXT:    [[T:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 65536, i32 65536>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp slt <2 x i32> %x, <i32 65536, i32 65536>
@@ -93,8 +93,8 @@ define <2 x i32> @p6_vec_splat_slt_65536(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p7_vec_splat_sgt(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p7_vec_splat_sgt(
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 65534, i32 65534>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp sgt <2 x i32> %x, <i32 65534, i32 65534>
@@ -106,8 +106,8 @@ define <2 x i32> @p7_vec_splat_sgt(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @p8_vec_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p8_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 65535>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 undef>
@@ -116,8 +116,8 @@ define <2 x i32> @p8_vec_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p9_vec_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p9_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 65536>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 undef>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 undef>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 65536>
@@ -126,8 +126,8 @@ define <2 x i32> @p9_vec_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p10_vec_nonsplat_undef2(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p10_vec_nonsplat_undef2(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 undef>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 undef>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 undef>
@@ -139,8 +139,8 @@ define <2 x i32> @p10_vec_nonsplat_undef2(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @p11_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p11_vec_nonsplat(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 65536, i32 32768>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 65535, i32 32767>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 32767>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 32767>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t = icmp ult <2 x i32> %x, <i32 65536, i32 32768>
@@ -174,8 +174,8 @@ define i32 @n12_extrause(i32 %x, i32 %y) {
 ; We don't care if the constant in select is true value or false value
 define i32 @p13_commutativity0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p13_commutativity0(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 65535, i32 [[Y:%.*]]
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 [[Y:%.*]], i32 65535
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ult i32 %x, 65536
@@ -186,8 +186,8 @@ define i32 @p13_commutativity0(i32 %x, i32 %y) {
 ; Which means, if both possibilities are constants, we must check both of them.
 define i32 @p14_commutativity1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p14_commutativity1(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 65535, i32 42
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 42, i32 65535
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ult i32 %x, 65536
@@ -196,8 +196,8 @@ define i32 @p14_commutativity1(i32 %x, i32 %y) {
 }
 define i32 @p15_commutativity2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p15_commutativity2(
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[X:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 42, i32 65535
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 65535, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp ult i32 %x, 65536
@@ -263,15 +263,25 @@ define i32 @n21_equality(i32 %x, i32 %y) {
   ret i32 %r
 }
 
-; We don't touch sign checks
-define i32 @n22_sign_check(i32 %x, i32 %y) {
-; CHECK-LABEL: @n22_sign_check(
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 -1, i32 [[Y:%.*]]
+; There is nothing special about sign-bit-tests, we can fold them.
+define i32 @t22_sign_check(i32 %x, i32 %y) {
+; CHECK-LABEL: @t22_sign_check(
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 [[Y:%.*]], i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = icmp slt i32 %x, 0
   %r = select i1 %t, i32 -1, i32 %y
+  ret i32 %r
+}
+define i32 @t22_sign_check2(i32 %x, i32 %y) {
+; CHECK-LABEL: @t22_sign_check2(
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T_INV]], i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t = icmp sgt i32 %x, -1
+  %r = select i1 %t, i32 0, i32 %y
   ret i32 %r
 }
 
@@ -323,4 +333,4 @@ define i32 @n26_all_good1(i32 %x, i32 %y) {
 
 
 
-; CHECK: !0 = !{!"branch_weights", i32 2000, i32 1}
+; CHECK: !0 = !{!"branch_weights", i32 1, i32 2000}

@@ -1261,6 +1261,81 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   return MaybeReplacedHigh;
 }
 
+// If we have
+//  %cmp = icmp [canonical predicate] i32 %x, C0
+//  %r = select i1 %cmp, i32 %y, i32 C1
+// Where C0 != C1 and %x may be different from %y, see if the constant that we
+// will have if we flip the strictness of the predicate (i.e. without changing
+// the result) is identical to the C1 in select. If it matches we can change
+// original comparison to one with swapped predicate, reuse the constant,
+// and swap the hands of select.
+static Instruction *
+tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
+                                         InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred;
+  Value *X;
+  Constant *C0;
+  if (!match(&Cmp, m_OneUse(m_ICmp(
+                       Pred, m_Value(X),
+                       m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))))
+    return nullptr;
+
+  // If comparison predicate is non-relational, we won't be able to do anything.
+  if (ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  // If comparison predicate is non-canonical, then we certainly won't be able
+  // to make it canonical; canonicalizeCmpWithConstant() already tried.
+  if (!isCanonicalPredicate(Pred))
+    return nullptr;
+
+  // If the [input] type of comparison and select type are different, lets abort
+  // for now. We could try to compare constants with trunc/[zs]ext though.
+  if (C0->getType() != Sel.getType())
+    return nullptr;
+
+  // FIXME: are there any magic icmp predicate+constant pairs we must not touch?
+
+  Value *SelVal0, *SelVal1; // We do not care which one is from where.
+  match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
+  // At least one of these values we are selecting between must be a constant
+  // else we'll never succeed.
+  if (!match(SelVal0, m_AnyIntegralConstant()) &&
+      !match(SelVal1, m_AnyIntegralConstant()))
+    return nullptr;
+
+  // Does this constant C match any of the `select` values?
+  auto MatchesSelectValue = [SelVal0, SelVal1](Constant *C) {
+    return C->isElementWiseEqual(SelVal0) || C->isElementWiseEqual(SelVal1);
+  };
+
+  // If C0 *already* matches true/false value of select, we are done.
+  if (MatchesSelectValue(C0))
+    return nullptr;
+
+  // Check the constant we'd have with flipped-strictness predicate.
+  auto FlippedStrictness = getFlippedStrictnessPredicateAndConstant(Pred, C0);
+  if (!FlippedStrictness)
+    return nullptr;
+
+  // If said constant doesn't match either, then there is no hope,
+  if (!MatchesSelectValue(FlippedStrictness->second))
+    return nullptr;
+
+  // It matched! Lets insert the new comparison just before select.
+  InstCombiner::BuilderTy::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(&Sel);
+
+  Pred = ICmpInst::getSwappedPredicate(Pred); // Yes, swapped.
+  Value *NewCmp = Builder.CreateICmp(Pred, X, FlippedStrictness->second,
+                                     Cmp.getName() + ".inv");
+  Sel.setCondition(NewCmp);
+  Sel.swapValues();
+  Sel.swapProfMetadata();
+
+  return &Sel;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
@@ -1275,6 +1350,10 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Instruction *NewAbs = canonicalizeClampLike(SI, *ICI, Builder))
     return NewAbs;
+
+  if (Instruction *NewSel =
+          tryToReuseConstantFromSelectInComparison(SI, *ICI, Builder))
+    return NewSel;
 
   bool Changed = adjustMinMax(SI, *ICI);
 

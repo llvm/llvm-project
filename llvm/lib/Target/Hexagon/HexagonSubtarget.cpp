@@ -119,7 +119,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   FeatureBitset Features = getFeatureBits();
   if (HexagonDisableDuplex)
-    setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
+    setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
   setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
 
   return *this;

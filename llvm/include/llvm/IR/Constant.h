@@ -86,6 +86,12 @@ public:
   /// floating-point constant with all NaN elements.
   bool isNaN() const;
 
+  /// Return true if this constant and a constant 'Y' are element-wise equal.
+  /// This is identical to just comparing the pointers, with the exception that
+  /// for vectors, if only one of the constants has an `undef` element in some
+  /// lane, the constants still match.
+  bool isElementWiseEqual(Value *Y) const;
+
   /// Return true if this is a vector constant that includes any undefined
   /// elements.
   bool containsUndefElement() const;

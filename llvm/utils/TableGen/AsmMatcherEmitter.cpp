@@ -3366,7 +3366,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
   }
   OS << "};\n\n"
-     << "const static FeatureBitset FeatureBitsets[] {\n"
+     << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
      << "  {}, // AMFBS_None\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())

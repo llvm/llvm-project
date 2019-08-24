@@ -28,7 +28,8 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
                           "Intel SVML library")));
 
-StringRef const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
+StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
+    {
 #define TLI_DEFINE_STRING
 #include "llvm/Analysis/TargetLibraryInfo.def"
 };
@@ -65,7 +66,7 @@ static bool hasBcmp(const Triple &TT) {
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringRef> StandardNames) {
+                       ArrayRef<StringLiteral> StandardNames) {
   // Verify that the StandardNames array is in alphabetical order.
   assert(std::is_sorted(StandardNames.begin(), StandardNames.end(),
                         [](StringRef LHS, StringRef RHS) {

@@ -62,7 +62,6 @@ private:
   void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs(Partition &part);
-  void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrEntry);
   void addPhdrForSection(Partition &part, unsigned shType, unsigned pType,
                          unsigned pFlags);
   void assignFileOffsets();
@@ -142,8 +141,7 @@ static bool needsInterpSection() {
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
-template <class ELFT>
-void Writer<ELFT>::removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
+static void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
   llvm::erase_if(phdrs, [&](const PhdrEntry *p) {
     if (p->p_type != PT_LOAD)
       return false;
@@ -1296,10 +1294,7 @@ sortISDBySectionOrder(InputSectionDescription *isd,
     }
     orderedSections.push_back({isec, i->second});
   }
-  llvm::sort(orderedSections, [&](std::pair<InputSection *, int> a,
-                                  std::pair<InputSection *, int> b) {
-    return a.second < b.second;
-  });
+  llvm::sort(orderedSections, llvm::less_second());
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point

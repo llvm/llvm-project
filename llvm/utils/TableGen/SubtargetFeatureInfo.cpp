@@ -103,7 +103,7 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
     assert(!CondStr.empty() && "true predicate should have been filtered");
 
     OS << "  if (" << CondStr << ")\n";
-    OS << "    Features[" << SFI.getEnumBitName() << "] = 1;\n";
+    OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }
   OS << "  return Features;\n";
   OS << "}\n\n";
@@ -148,7 +148,7 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     } while (true);
 
     OS << ")\n";
-    OS << "    Features[" << SFI.getEnumBitName() << "] = 1;\n";
+    OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }
   OS << "  return Features;\n";
   OS << "}\n\n";

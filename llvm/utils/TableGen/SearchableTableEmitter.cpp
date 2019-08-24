@@ -496,7 +496,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   emitIfdef((Twine("GET_") + Table.PreprocessorGuard + "_IMPL").str(), OS);
 
   // The primary data table contains all the fields defined for this map.
-  OS << "const " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
+  OS << "constexpr " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
   for (unsigned i = 0; i < Table.Entries.size(); ++i) {
     Record *Entry = Table.Entries[i];
     OS << "  { ";
