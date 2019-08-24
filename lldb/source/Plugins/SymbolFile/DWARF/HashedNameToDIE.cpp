@@ -113,8 +113,6 @@ const char *DWARFMappedHash::GetAtomTypeName(uint16_t atom) {
     return "type-flags";
   case eAtomTypeQualNameHash:
     return "qualified-name-hash";
-  case eAtomTypeString:
-    return "strp";
   }
   return "<invalid>";
 }
