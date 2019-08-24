@@ -32,6 +32,8 @@ class TestSwiftReturns(TestBase):
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
+    @expectedFailureAll(
+        bugnumber="rdar://problem/39246943")
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
@@ -43,6 +45,8 @@ class TestSwiftReturns(TestBase):
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
+    @expectedFailureAll(
+        bugnumber="rdar://problem/39246943")
     @skipIfOutOfTreeDebugserver
     def test_swift_float_returns(self):
         """Test getting float return values"""

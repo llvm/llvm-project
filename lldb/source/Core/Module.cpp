@@ -1590,7 +1590,7 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
     auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
-      return false;
+      return true;
     }
 
     if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
