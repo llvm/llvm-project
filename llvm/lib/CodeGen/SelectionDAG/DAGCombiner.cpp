@@ -4364,6 +4364,18 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // (umul_lohi N0, 0) -> (0, 0)
+  if (isNullConstant(N->getOperand(1))) {
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return CombineTo(N, Zero, Zero);
+  }
+
+  // (umul_lohi N0, 1) -> (N0, 0)
+  if (isOneConstant(N->getOperand(1))) {
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return CombineTo(N, N->getOperand(0), Zero);
+  }
+
   // If the type is twice as wide is legal, transform the mulhu to a wider
   // multiply plus a shift.
   if (VT.isSimple() && !VT.isVector()) {

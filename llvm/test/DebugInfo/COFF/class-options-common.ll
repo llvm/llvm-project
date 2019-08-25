@@ -662,17 +662,6 @@
 ; ASM-INLINE-COMMENTS: .short	0x3                     # Attrs: Public
 ; ASM-INLINE-COMMENTS: .short	0x0
 ; ASM-INLINE-COMMENTS: .long	0x1087                  # Type: void Foo::(const Foo&)
-; ASM-INLINE-COMMENTS: # MethodOverloadList (0x1088) {
-; ASM-INLINE-COMMENTS: #   TypeLeafKind: LF_METHODLIST (0x1206)
-; ASM-INLINE-COMMENTS: #   Method [
-; ASM-INLINE-COMMENTS: #     AccessSpecifier: Public (0x3)
-; ASM-INLINE-COMMENTS: #     Type: void Foo::() (0x1083)
-; ASM-INLINE-COMMENTS: #   ]
-; ASM-INLINE-COMMENTS: #   Method [
-; ASM-INLINE-COMMENTS: #     AccessSpecifier: Public (0x3)
-; ASM-INLINE-COMMENTS: #     Type: void Foo::(const Foo&) (0x1087)
-; ASM-INLINE-COMMENTS: #   ]
-; ASM-INLINE-COMMENTS: # }
 
 
 ; ModuleID = 'class-options-common.cpp'

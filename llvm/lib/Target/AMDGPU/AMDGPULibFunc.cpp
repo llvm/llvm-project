@@ -55,7 +55,7 @@ enum EManglingParam {
 };
 
 struct ManglingRule {
-   StringRef const Name;
+   StringLiteral const Name;
    unsigned char Lead[2];
    unsigned char Param[5];
 
@@ -133,8 +133,8 @@ unsigned ManglingRule::getNumArgs() const {
 //    E_ANY - use prev lead type, E_CONSTPTR_ANY - make const pointer out of
 //    prev lead type, etc. see ParamIterator::getNextParam() for details.
 
-static const ManglingRule manglingRules[] = {
-{ StringRef(), {0}, {0} },
+static constexpr ManglingRule manglingRules[] = {
+{ "", {0}, {0} },
 { "abs"                             , {1},   {E_ANY}},
 { "abs_diff"                        , {1},   {E_ANY,E_COPY}},
 { "acos"                            , {1},   {E_ANY}},

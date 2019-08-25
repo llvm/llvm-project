@@ -264,14 +264,12 @@ createHexagonObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 }
 
 static void LLVM_ATTRIBUTE_UNUSED clearFeature(MCSubtargetInfo* STI, uint64_t F) {
-  uint64_t FB = STI->getFeatureBits().to_ullong();
-  if (FB & (1ULL << F))
+  if (STI->getFeatureBits()[F])
     STI->ToggleFeature(F);
 }
 
 static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo* STI, uint64_t F) {
-  uint64_t FB = STI->getFeatureBits().to_ullong();
-  return (FB & (1ULL << F)) != 0;
+  return STI->getFeatureBits()[F];
 }
 
 namespace {
@@ -398,7 +396,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
   if (HexagonDisableDuplex) {
     llvm::FeatureBitset Features = X->getFeatureBits();
-    X->setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
+    X->setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
   }
 
   X->setFeatureBits(completeHVXFeatures(X->getFeatureBits()));

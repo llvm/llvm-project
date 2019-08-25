@@ -22,7 +22,7 @@ include "llvm/TableGen/SearchableTable.td"
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2);
 
 // CHECK-LABEL: GET_ATable_IMPL
-// CHECK: const AEntry ATable[] = {
+// CHECK: constexpr AEntry ATable[] = {
 // CHECK:   { "baz"
 // CHECK:   { "foo"
 // CHECK:   { "foobar"

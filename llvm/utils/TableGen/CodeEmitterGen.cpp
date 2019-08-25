@@ -385,8 +385,8 @@ void CodeEmitterGen::run(raw_ostream &o) {
     o << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
   }
   o << "};\n\n"
-     << "const static FeatureBitset FeatureBitsets[] {\n"
-     << "  {}, // CEFBS_None\n";
+    << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
+    << "  {}, // CEFBS_None\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
       continue;
