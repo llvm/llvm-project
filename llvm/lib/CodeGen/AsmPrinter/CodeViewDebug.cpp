@@ -642,27 +642,8 @@ void CodeViewDebug::emitTypeInformation() {
   OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   emitCodeViewMagicVersion();
 
-  SmallString<8> CommentPrefix;
-  if (OS.isVerboseAsm()) {
-    CommentPrefix += '\t';
-    CommentPrefix += Asm->MAI->getCommentString();
-    CommentPrefix += ' ';
-  }
-
   TypeTableCollection Table(TypeTable.records());
   TypeVisitorCallbackPipeline Pipeline;
-  SmallString<512> CommentBlock;
-  raw_svector_ostream CommentOS(CommentBlock);
-  std::unique_ptr<ScopedPrinter> SP;
-  std::unique_ptr<TypeDumpVisitor> TDV;
-
-  if (OS.isVerboseAsm()) {
-    // To construct block comment describing the type record for readability.
-    SP = std::make_unique<ScopedPrinter>(CommentOS);
-    SP->setPrefix(CommentPrefix);
-    TDV = std::make_unique<TypeDumpVisitor>(Table, SP.get(), false);
-    Pipeline.addCallbackToPipeline(*TDV);
-  }
 
   // To emit type record using Codeview MCStreamer adapter
   CVMCAdapter CVMCOS(OS, Table);
@@ -674,7 +655,6 @@ void CodeViewDebug::emitTypeInformation() {
     // This will fail if the record data is invalid.
     CVType Record = Table.getType(*B);
 
-    CommentBlock.clear();
     Error E = codeview::visitTypeRecord(Record, *B, Pipeline);
 
     if (E) {
@@ -682,13 +662,6 @@ void CodeViewDebug::emitTypeInformation() {
       llvm_unreachable("produced malformed type record");
     }
 
-    if (OS.isVerboseAsm()) {
-      // emitRawComment will insert its own tab and comment string before
-      // the first line, so strip off our first one. It also prints its own
-      // newline.
-      OS.emitRawComment(
-          CommentOS.str().drop_front(CommentPrefix.size() - 1).rtrim());
-    }
     B = Table.getNext(*B);
   }
 }

@@ -11934,6 +11934,35 @@ defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul
 defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1>;
 defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1>;
 
+def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
+                             (X86vpmaddwd node:$lhs, node:$rhs), [{
+  return N->hasOneUse();
+}]>;
+
+// Patterns to match VPDPWSSD from existing instructions/intrinsics.
+let Predicates = [HasVNNI] in {
+  def : Pat<(v16i32 (add VR512:$src1,
+                         (X86vpmaddwd_su VR512:$src2, VR512:$src3))),
+            (VPDPWSSDZr VR512:$src1, VR512:$src2, VR512:$src3)>;
+  def : Pat<(v16i32 (add VR512:$src1,
+                         (X86vpmaddwd_su VR512:$src2, (load addr:$src3)))),
+            (VPDPWSSDZm VR512:$src1, VR512:$src2, addr:$src3)>;
+}
+let Predicates = [HasVNNI,HasVLX] in {
+  def : Pat<(v8i32 (add VR256X:$src1,
+                        (X86vpmaddwd_su VR256X:$src2, VR256X:$src3))),
+            (VPDPWSSDZ256r VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+  def : Pat<(v8i32 (add VR256X:$src1,
+                        (X86vpmaddwd_su VR256X:$src2, (load addr:$src3)))),
+            (VPDPWSSDZ256m VR256X:$src1, VR256X:$src2, addr:$src3)>;
+  def : Pat<(v4i32 (add VR128X:$src1,
+                        (X86vpmaddwd_su VR128X:$src2, VR128X:$src3))),
+            (VPDPWSSDZ128r VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+  def : Pat<(v4i32 (add VR128X:$src1,
+                        (X86vpmaddwd_su VR128X:$src2, (load addr:$src3)))),
+            (VPDPWSSDZ128m VR128X:$src1, VR128X:$src2, addr:$src3)>;
+}
+
 //===----------------------------------------------------------------------===//
 // Bit Algorithms
 //===----------------------------------------------------------------------===//

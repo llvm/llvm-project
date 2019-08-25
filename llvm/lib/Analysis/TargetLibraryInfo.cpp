@@ -625,19 +625,14 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
   return GlobalValue::dropLLVMManglingEscape(funcName);
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName,
-                                       LibFunc &F) const {
-  StringRef const *Start = &StandardNames[0];
-  StringRef const *End = &StandardNames[NumLibFuncs];
-
+bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
   funcName = sanitizeFunctionName(funcName);
   if (funcName.empty())
     return false;
 
-  StringRef const *I = std::lower_bound(
-      Start, End, funcName, [](StringRef LHS, StringRef RHS) {
-        return LHS < RHS;
-      });
+  const auto *Start = std::begin(StandardNames);
+  const auto *End = std::end(StandardNames);
+  const auto *I = std::lower_bound(Start, End, funcName);
   if (I != End && *I == funcName) {
     F = (LibFunc)(I - Start);
     return true;
