@@ -153,4 +153,4 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
                       "MCDisassembler::Success", "MCDisassembler::Fail", "");
 }
 
-} // End llvm namespace
+} // end namespace llvm

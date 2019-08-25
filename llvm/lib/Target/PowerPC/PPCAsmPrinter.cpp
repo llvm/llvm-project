@@ -1659,8 +1659,9 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("COMDAT not yet supported by AIX.");
 
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
-  if (!GVKind.isCommon() && !GVKind.isBSSLocal())
-    report_fatal_error("Only common variables are supported on AIX for now.");
+  if (!GVKind.isCommon() && !GVKind.isBSSLocal() && !GVKind.isData())
+    report_fatal_error("Encountered a global variable kind that is "
+                       "not supported yet.");
 
   // Create the containing csect and switch to it.
   MCSectionXCOFF *CSect = cast<MCSectionXCOFF>(
@@ -1668,20 +1669,34 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   OutStreamer->SwitchSection(CSect);
 
   // Create the symbol, set its storage class, and emit it.
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(getSymbol(GV));
-  XSym->setStorageClass(
+  MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
+  GVSym->setStorageClass(
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
-  XSym->setContainingCsect(CSect);
+  GVSym->setContainingCsect(CSect);
 
   const DataLayout &DL = GV->getParent()->getDataLayout();
-  unsigned Align =
-      GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);
-  uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
 
-  if (GVKind.isBSSLocal())
-    OutStreamer->EmitXCOFFLocalCommonSymbol(XSym, Size, Align);
-  else
-    OutStreamer->EmitCommonSymbol(XSym, Size, Align);
+  // Handle common symbols.
+  if (GVKind.isCommon() || GVKind.isBSSLocal()) {
+    unsigned Align =
+      GV->getAlignment() ? GV->getAlignment() : DL.getPreferredAlignment(GV);
+    uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+
+    if (GVKind.isBSSLocal())
+      OutStreamer->EmitXCOFFLocalCommonSymbol(GVSym, Size, Align);
+    else
+      OutStreamer->EmitCommonSymbol(GVSym, Size, Align);
+    return;
+  }
+
+  // Get the alignment in the log2 form.
+  const unsigned AlignLog = getGVAlignmentLog2(GV, DL);
+
+  MCSymbol *EmittedInitSym = GVSym;
+  EmitLinkage(GV, EmittedInitSym);
+  EmitAlignment(AlignLog, GV);
+  OutStreamer->EmitLabel(EmittedInitSym);
+  EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code

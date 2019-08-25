@@ -311,8 +311,15 @@ public:
   getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
                    bool ShouldCloseOpenFile = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(StringRef Filename, bool isVolatile = false);
+  getBufferForFile(StringRef Filename, bool isVolatile = false) {
+    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile);
+  }
 
+private:
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile);
+
+public:
   /// Get the 'stat' information for the given \p Path.
   ///
   /// If the path is relative, it will be resolved against the WorkingDir of the

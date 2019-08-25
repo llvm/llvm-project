@@ -386,9 +386,11 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
       // which are common because they are in the default bfd script.
       // We do not ignore SHT_REL[A] linker-synthesized sections here because
       // want to support scripts that do custom layout for them.
-      if (auto *isec = dyn_cast<InputSection>(sec))
-        if (isec->getRelocatedSection())
-          continue;
+      //
+      // It is safe to assume that Sec is an InputSection because mergeable or
+      // EH input sections have already been handled and eliminated.
+      if (cast<InputSection>(sec)->getRelocatedSection())
+        continue;
 
       std::string filename = getFilename(sec->file);
       if (!cmd->filePat.match(filename) ||
@@ -396,9 +398,6 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
           !pat.sectionPat.match(sec->name))
         continue;
 
-      // It is safe to assume that Sec is an InputSection
-      // because mergeable or EH input sections have already been
-      // handled and eliminated.
       ret.push_back(cast<InputSection>(sec));
       sec->assigned = true;
     }

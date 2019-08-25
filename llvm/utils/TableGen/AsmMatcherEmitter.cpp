@@ -2381,7 +2381,7 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
   OS << "  NumMatchClassKinds\n";
   OS << "};\n\n";
 
-  OS << "}\n\n";
+  OS << "} // end anonymous namespace\n\n";
 }
 
 /// emitMatchClassDiagStrings - Emit a function to get the diagnostic text to be
@@ -2866,7 +2866,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "    }\n";
   OS << "  };\n";
 
-  OS << "} // end anonymous namespace.\n\n";
+  OS << "} // end anonymous namespace\n\n";
 
   OS << "static const OperandMatchEntry OperandMatchTable["
      << Info.OperandMatchInfo.size() << "] = {\n";
@@ -3422,7 +3422,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n";
   OS << "  };\n";
 
-  OS << "} // end anonymous namespace.\n\n";
+  OS << "} // end anonymous namespace\n\n";
 
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {

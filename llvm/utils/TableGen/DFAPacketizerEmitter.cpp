@@ -628,7 +628,7 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   OS << "   // states " << (lastState+1) << ":" << numStates << "\n";
 
   OS << "};\n";
-  OS << "} // namespace\n";
+  OS << "} // end namespace llvm\n";
 
   //
   // Emit DFA Packetizer tables if the target is a VLIW machine.
@@ -640,7 +640,7 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
      << "createDFAPacketizer(const InstrItineraryData *IID) const {\n"
      << "   return new DFAPacketizer(IID, " << TargetName
      << "DFAStateInputTable, " << TargetName << "DFAStateEntryTable);\n}\n\n";
-  OS << "} // End llvm namespace \n";
+  OS << "} // end namespace llvm\n";
 }
 
 //
