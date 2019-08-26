@@ -97,6 +97,7 @@ public:
   Symbol *addImportData(StringRef n, ImportFile *f);
   Symbol *addImportThunk(StringRef name, DefinedImportData *s,
                          uint16_t machine);
+  void addLibcall(StringRef name);
 
   void reportDuplicate(Symbol *existing, InputFile *newFile);
 

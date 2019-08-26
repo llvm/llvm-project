@@ -265,6 +265,8 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 
+  MemoryBufferRef getMemberBuffer();
+
   ArchiveFile *file;
 
 private:
