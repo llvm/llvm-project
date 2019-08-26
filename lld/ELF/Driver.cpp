@@ -314,6 +314,9 @@ static void checkOptions() {
   if (!config->relocatable && !config->defineCommon)
     error("-no-define-common not supported in non relocatable output");
 
+  if (config->strip == StripPolicy::All && config->emitRelocs)
+    error("--strip-all and --emit-relocs may not be used together");
+
   if (config->zText && config->zIfuncNoplt)
     error("-z text and -z ifunc-noplt may not be used together");
 

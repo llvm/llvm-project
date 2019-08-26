@@ -210,6 +210,44 @@ static void declareSymbol(SymbolAssignment *cmd) {
   sym->scriptDefined = true;
 }
 
+using SymbolAssignmentMap =
+    DenseMap<const Defined *, std::pair<SectionBase *, uint64_t>>;
+
+// Collect section/value pairs of linker-script-defined symbols. This is used to
+// check whether symbol values converge.
+static SymbolAssignmentMap
+getSymbolAssignmentValues(const std::vector<BaseCommand *> &sectionCommands) {
+  SymbolAssignmentMap ret;
+  for (BaseCommand *base : sectionCommands) {
+    if (auto *cmd = dyn_cast<SymbolAssignment>(base)) {
+      if (cmd->sym) // sym is nullptr for dot.
+        ret.try_emplace(cmd->sym,
+                        std::make_pair(cmd->sym->section, cmd->sym->value));
+      continue;
+    }
+    for (BaseCommand *sub_base : cast<OutputSection>(base)->sectionCommands)
+      if (auto *cmd = dyn_cast<SymbolAssignment>(sub_base))
+        if (cmd->sym)
+          ret.try_emplace(cmd->sym,
+                          std::make_pair(cmd->sym->section, cmd->sym->value));
+  }
+  return ret;
+}
+
+// Returns the lexicographical smallest (for determinism) Defined whose
+// section/value has changed.
+static const Defined *
+getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
+  const Defined *changed = nullptr;
+  for (auto &it : oldValues) {
+    const Defined *sym = it.first;
+    if (std::make_pair(sym->section, sym->value) != it.second &&
+        (!changed || sym->getName() < changed->getName()))
+      changed = sym;
+  }
+  return changed;
+}
+
 // This method is used to handle INSERT AFTER statement. Here we rebuild
 // the list of script commands to mix sections inserted into.
 void LinkerScript::processInsertCommands() {
@@ -386,9 +424,11 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
       // which are common because they are in the default bfd script.
       // We do not ignore SHT_REL[A] linker-synthesized sections here because
       // want to support scripts that do custom layout for them.
-      if (auto *isec = dyn_cast<InputSection>(sec))
-        if (isec->getRelocatedSection())
-          continue;
+      //
+      // It is safe to assume that Sec is an InputSection because mergeable or
+      // EH input sections have already been handled and eliminated.
+      if (cast<InputSection>(sec)->getRelocatedSection())
+        continue;
 
       std::string filename = getFilename(sec->file);
       if (!cmd->filePat.match(filename) ||
@@ -396,9 +436,6 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
           !pat.sectionPat.match(sec->name))
         continue;
 
-      // It is safe to assume that Sec is an InputSection
-      // because mergeable or EH input sections have already been
-      // handled and eliminated.
       ret.push_back(cast<InputSection>(sec));
       sec->assigned = true;
     }
@@ -1052,7 +1089,9 @@ static uint64_t getInitialDot() {
 // Here we assign addresses as instructed by linker script SECTIONS
 // sub-commands. Doing that allows us to use final VA values, so here
 // we also handle rest commands like symbol assignments and ASSERTs.
-void LinkerScript::assignAddresses() {
+// Returns a symbol that has changed its section or value, or nullptr if no
+// symbol has changed.
+const Defined *LinkerScript::assignAddresses() {
   dot = getInitialDot();
 
   auto deleter = std::make_unique<AddressState>();
@@ -1060,6 +1099,7 @@ void LinkerScript::assignAddresses() {
   errorOnMissingSection = true;
   switchTo(aether);
 
+  SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (BaseCommand *base : sectionCommands) {
     if (auto *cmd = dyn_cast<SymbolAssignment>(base)) {
       cmd->addr = dot;
@@ -1069,7 +1109,9 @@ void LinkerScript::assignAddresses() {
     }
     assignOffsets(cast<OutputSection>(base));
   }
+
   ctx = nullptr;
+  return getChangedSymbolAssignment(oldValues);
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

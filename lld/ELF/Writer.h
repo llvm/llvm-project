@@ -19,6 +19,7 @@ namespace elf {
 class InputFile;
 class OutputSection;
 class InputSectionBase;
+void combineEhSections();
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.

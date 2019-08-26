@@ -62,7 +62,6 @@ private:
   void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs(Partition &part);
-  void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrEntry);
   void addPhdrForSection(Partition &part, unsigned shType, unsigned pType,
                          unsigned pFlags);
   void assignFileOffsets();
@@ -142,8 +141,7 @@ static bool needsInterpSection() {
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
-template <class ELFT>
-void Writer<ELFT>::removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
+static void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
   llvm::erase_if(phdrs, [&](const PhdrEntry *p) {
     if (p->p_type != PT_LOAD)
       return false;
@@ -176,7 +174,7 @@ static void copySectionsIntoPartitions() {
                        newSections.end());
 }
 
-template <class ELFT> static void combineEhSections() {
+void elf::combineEhSections() {
   for (InputSectionBase *&s : inputSections) {
     // Ignore dead sections and the partition end marker (.part.end),
     // whose partition number is out of bounds.
@@ -185,7 +183,7 @@ template <class ELFT> static void combineEhSections() {
 
     Partition &part = s->getPartition();
     if (auto *es = dyn_cast<EhInputSection>(s)) {
-      part.ehFrame->addSection<ELFT>(es);
+      part.ehFrame->addSection(es);
       s = nullptr;
     } else if (s->kind() == SectionBase::Regular && part.armExidx &&
                part.armExidx->addSection(cast<InputSection>(s))) {
@@ -554,7 +552,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
   if (!config->relocatable)
-    combineEhSections<ELFT>();
+    combineEhSections();
 
   // We want to process linker script commands. When SECTIONS command
   // is given we let it create sections.
@@ -579,8 +577,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   checkExecuteOnly();
   if (errorCount())
     return;
-
-  script->assignAddresses();
 
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
@@ -1296,10 +1292,7 @@ sortISDBySectionOrder(InputSectionDescription *isd,
     }
     orderedSections.push_back({isec, i->second});
   }
-  llvm::sort(orderedSections, [&](std::pair<InputSection *, int> a,
-                                  std::pair<InputSection *, int> b) {
-    return a.second < b.second;
-  });
+  llvm::sort(orderedSections, llvm::less_second());
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point
@@ -1567,15 +1560,18 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator tc;
   AArch64Err843419Patcher a64p;
+  script->assignAddresses();
 
-  // For some targets, like x86, this loop iterates only once.
+  int assignPasses = 0;
   for (;;) {
-    bool changed = false;
+    bool changed = target->needsThunks && tc.createThunks(outputSections);
 
-    script->assignAddresses();
-
-    if (target->needsThunks)
-      changed |= tc.createThunks(outputSections);
+    // With Thunk Size much smaller than branch range we expect to
+    // converge quickly; if we get to 10 something has gone wrong.
+    if (changed && tc.pass >= 10) {
+      error("thunk creation not converged");
+      break;
+    }
 
     if (config->fixCortexA53Errata843419) {
       if (changed)
@@ -1592,8 +1588,19 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrDyn->updateAllocSize();
     }
 
-    if (!changed)
-      return;
+    const Defined *changedSym = script->assignAddresses();
+    if (!changed) {
+      // Some symbols may be dependent on section addresses. When we break the
+      // loop, the symbol values are finalized because a previous
+      // assignAddresses() finalized section addresses.
+      if (!changedSym)
+        break;
+      if (++assignPasses == 5) {
+        errorOrWarn("assignment to symbol " + toString(*changedSym) +
+                    " does not converge");
+        break;
+      }
+    }
   }
 }
 
@@ -2269,25 +2276,26 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // same with its virtual address modulo the page size, so that the loader can
 // load executables without any address adjustment.
 static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
-  // File offsets are not significant for .bss sections. By convention, we keep
-  // section offsets monotonically increasing rather than setting to zero.
-  if (os->type == SHT_NOBITS)
-    return off;
+  // The first section in a PT_LOAD has to have congruent offset and address
+  // module the page size.
+  if (os->ptLoad && os->ptLoad->firstSec == os) {
+    uint64_t alignment = std::max<uint64_t>(os->alignment, config->maxPageSize);
+    return alignTo(off, alignment, os->addr);
+  }
+
+  // File offsets are not significant for .bss sections other than the first one
+  // in a PT_LOAD. By convention, we keep section offsets monotonically
+  // increasing rather than setting to zero.
+   if (os->type == SHT_NOBITS)
+     return off;
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
     return alignTo(off, os->alignment);
 
-  // The first section in a PT_LOAD has to have congruent offset and address
-  // module the page size.
-  OutputSection *first = os->ptLoad->firstSec;
-  if (os == first) {
-    uint64_t alignment = std::max<uint64_t>(os->alignment, config->maxPageSize);
-    return alignTo(off, alignment, os->addr);
-  }
-
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
+  OutputSection *first = os->ptLoad->firstSec;
   return first->offset + os->addr - first->addr;
 }
 
