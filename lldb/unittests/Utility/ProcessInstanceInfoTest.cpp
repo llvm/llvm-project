@@ -73,3 +73,21 @@ TEST(ProcessInstanceInfo, DumpTable) {
 )",
       s.GetData());
 }
+
+TEST(ProcessInstanceInfo, DumpTable_invalidUID) {
+  ProcessInstanceInfo info("a.out", ArchSpec("x86_64-pc-linux"), 47);
+
+  DummyUserIDResolver resolver;
+  StreamString s;
+
+  const bool show_args = false;
+  const bool verbose = false;
+  ProcessInstanceInfo::DumpTableHeader(s, show_args, verbose);
+  info.DumpAsTableRow(s, resolver, show_args, verbose);
+  EXPECT_STREQ(
+      R"(PID    PARENT USER       TRIPLE                   NAME
+====== ====== ========== ======================== ============================
+47     0                 x86_64-pc-linux          a.out
+)",
+      s.GetData());
+}

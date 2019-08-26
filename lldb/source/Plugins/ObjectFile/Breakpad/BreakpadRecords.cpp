@@ -16,7 +16,19 @@ using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
 namespace {
-enum class Token { Unknown, Module, Info, CodeID, File, Func, Public, Stack, CFI, Init };
+enum class Token {
+  Unknown,
+  Module,
+  Info,
+  CodeID,
+  File,
+  Func,
+  Public,
+  Stack,
+  CFI,
+  Init,
+  Win,
+};
 }
 
 template<typename T>
@@ -33,6 +45,7 @@ template <> Token stringTo<Token>(llvm::StringRef Str) {
       .Case("STACK", Token::Stack)
       .Case("CFI", Token::CFI)
       .Case("INIT", Token::Init)
+      .Case("WIN", Token::Win)
       .Default(Token::Unknown);
 }
 
@@ -127,6 +140,8 @@ llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {
     switch (Tok) {
     case Token::CFI:
       return Record::StackCFI;
+    case Token::Win:
+      return Record::StackWin;
     default:
       return llvm::None;
     }
@@ -134,13 +149,13 @@ llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {
   case Token::Unknown:
     // Optimistically assume that any unrecognised token means this is a line
     // record, those don't have a special keyword and start directly with a
-    // hex number. CODE_ID should never be at the start of a line, but if it
-    // is, it can be treated the same way as a garbled line record.
+    // hex number.
     return Record::Line;
 
   case Token::CodeID:
   case Token::CFI:
   case Token::Init:
+  case Token::Win:
     // These should never appear at the start of a valid record.
     return llvm::None;
   }
@@ -390,6 +405,81 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
   return OS << " " << R.UnwindRules;
 }
 
+llvm::Optional<StackWinRecord> StackWinRecord::parse(llvm::StringRef Line) {
+  // STACK WIN type rva code_size prologue_size epilogue_size parameter_size
+  //     saved_register_size local_size max_stack_size has_program_string
+  //     program_string_OR_allocates_base_pointer
+
+  if (consume<Token>(Line) != Token::Stack)
+    return llvm::None;
+  if (consume<Token>(Line) != Token::Win)
+    return llvm::None;
+
+  llvm::StringRef Str;
+  uint8_t Type;
+  std::tie(Str, Line) = getToken(Line);
+  // Right now we only support the "FrameData" frame type.
+  if (!to_integer(Str, Type) || FrameType(Type) != FrameType::FrameData)
+    return llvm::None;
+
+  lldb::addr_t RVA;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, RVA, 16))
+    return llvm::None;
+
+  lldb::addr_t CodeSize;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, CodeSize, 16))
+    return llvm::None;
+
+  // Skip fields which we aren't using right now.
+  std::tie(Str, Line) = getToken(Line); // prologue_size
+  std::tie(Str, Line) = getToken(Line); // epilogue_size
+
+  lldb::addr_t ParameterSize;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, ParameterSize, 16))
+    return llvm::None;
+
+  lldb::addr_t SavedRegisterSize;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, SavedRegisterSize, 16))
+    return llvm::None;
+
+  lldb::addr_t LocalSize;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, LocalSize, 16))
+    return llvm::None;
+
+  std::tie(Str, Line) = getToken(Line); // max_stack_size
+
+  uint8_t HasProgramString;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, HasProgramString))
+    return llvm::None;
+  // FrameData records should always have a program string.
+  if (!HasProgramString)
+    return llvm::None;
+
+  return StackWinRecord(RVA, CodeSize, ParameterSize, SavedRegisterSize,
+                        LocalSize, Line.trim());
+}
+
+bool breakpad::operator==(const StackWinRecord &L, const StackWinRecord &R) {
+  return L.RVA == R.RVA && L.CodeSize == R.CodeSize &&
+         L.ParameterSize == R.ParameterSize &&
+         L.SavedRegisterSize == R.SavedRegisterSize &&
+         L.LocalSize == R.LocalSize && L.ProgramString == R.ProgramString;
+}
+
+llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
+                                        const StackWinRecord &R) {
+  return OS << llvm::formatv(
+             "STACK WIN 4 {0:x-} {1:x-} ? ? {2} {3} {4} ? 1 {5}", R.RVA,
+             R.CodeSize, R.ParameterSize, R.SavedRegisterSize, R.LocalSize,
+             R.ProgramString);
+}
+
 llvm::StringRef breakpad::toString(Record::Kind K) {
   switch (K) {
   case Record::Module:
@@ -406,6 +496,8 @@ llvm::StringRef breakpad::toString(Record::Kind K) {
     return "PUBLIC";
   case Record::StackCFI:
     return "STACK CFI";
+  case Record::StackWin:
+    return "STACK WIN";
   }
   llvm_unreachable("Unknown record kind!");
 }

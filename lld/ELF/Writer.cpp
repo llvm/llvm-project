@@ -174,7 +174,7 @@ static void copySectionsIntoPartitions() {
                        newSections.end());
 }
 
-template <class ELFT> static void combineEhSections() {
+void elf::combineEhSections() {
   for (InputSectionBase *&s : inputSections) {
     // Ignore dead sections and the partition end marker (.part.end),
     // whose partition number is out of bounds.
@@ -183,7 +183,7 @@ template <class ELFT> static void combineEhSections() {
 
     Partition &part = s->getPartition();
     if (auto *es = dyn_cast<EhInputSection>(s)) {
-      part.ehFrame->addSection<ELFT>(es);
+      part.ehFrame->addSection(es);
       s = nullptr;
     } else if (s->kind() == SectionBase::Regular && part.armExidx &&
                part.armExidx->addSection(cast<InputSection>(s))) {
@@ -552,7 +552,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
   if (!config->relocatable)
-    combineEhSections<ELFT>();
+    combineEhSections();
 
   // We want to process linker script commands. When SECTIONS command
   // is given we let it create sections.
@@ -577,8 +577,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   checkExecuteOnly();
   if (errorCount())
     return;
-
-  script->assignAddresses();
 
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
@@ -1562,15 +1560,18 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator tc;
   AArch64Err843419Patcher a64p;
+  script->assignAddresses();
 
-  // For some targets, like x86, this loop iterates only once.
+  int assignPasses = 0;
   for (;;) {
-    bool changed = false;
+    bool changed = target->needsThunks && tc.createThunks(outputSections);
 
-    script->assignAddresses();
-
-    if (target->needsThunks)
-      changed |= tc.createThunks(outputSections);
+    // With Thunk Size much smaller than branch range we expect to
+    // converge quickly; if we get to 10 something has gone wrong.
+    if (changed && tc.pass >= 10) {
+      error("thunk creation not converged");
+      break;
+    }
 
     if (config->fixCortexA53Errata843419) {
       if (changed)
@@ -1587,8 +1588,19 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrDyn->updateAllocSize();
     }
 
-    if (!changed)
-      return;
+    const Defined *changedSym = script->assignAddresses();
+    if (!changed) {
+      // Some symbols may be dependent on section addresses. When we break the
+      // loop, the symbol values are finalized because a previous
+      // assignAddresses() finalized section addresses.
+      if (!changedSym)
+        break;
+      if (++assignPasses == 5) {
+        errorOrWarn("assignment to symbol " + toString(*changedSym) +
+                    " does not converge");
+        break;
+      }
+    }
   }
 }
 
