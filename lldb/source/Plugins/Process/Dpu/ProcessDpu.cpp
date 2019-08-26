@@ -207,10 +207,24 @@ void ProcessDpu::InterfaceTimerCallback() {
 
 bool ProcessDpu::SupportHardwareSingleStepping() const { return true; }
 
+bool ProcessDpu::StepThread(uint32_t thread_id) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  unsigned int exit_status;
+  lldb::StateType ret_state_type;
+  LLDB_LOG(log, "stepping thread {0}", thread_id);
+  ret_state_type = m_dpu->StepThread(thread_id, &exit_status);
+  if (ret_state_type == lldb::StateType::eStateExited)
+    SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
+  if (ret_state_type != StateType::eStateStopped) {
+    SetState(ret_state_type, true);
+    return false;
+  }
+  return true;
+}
+
 Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  lldb::StateType action_state = lldb::StateType::eStateInvalid;
-  uint32_t thread_id_if_stepping;
+  llvm::SmallVector<uint32_t, 8> resume_list, stepping_list;
 
   for (const auto &thread : m_threads) {
     lldb::tid_t tid = thread->GetID();
@@ -222,45 +236,39 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
     }
     switch (action->state) {
     case lldb::StateType::eStateRunning:
-      if (action_state != lldb::StateType::eStateRunning &&
-          action_state != lldb::StateType::eStateInvalid)
-        return Status("Uncoherent actions");
-      action_state = action->state;
+      resume_list.push_back(current_thread->GetIndex());
       current_thread->SetSteppingMode(false);
       break;
     case lldb::StateType::eStateStepping:
-      if (action_state != lldb::StateType::eStateInvalid)
-        return Status("Uncoherent actions");
-      action_state = action->state;
-      thread_id_if_stepping = current_thread->GetIndex();
+      stepping_list.push_back(current_thread->GetIndex());
       current_thread->SetSteppingMode(true);
       break;
     default:
       return Status("Unexpected action!");
     }
   }
+  LLDB_LOG(log, "{0} to resume {1} to step", resume_list.size(),
+           stepping_list.size());
 
-  switch (action_state) {
-  case lldb::StateType::eStateRunning:
+  if (stepping_list.empty()) {
+    if (resume_list.empty()) {
+      return Status("No Action to perform");
+    }
     SetState(lldb::StateType::eStateRunning, true);
     LLDB_LOG(log, "resuming threads");
     if (!m_dpu->ResumeThreads())
       return Status("CNI cannot resume");
-    break;
-  case lldb::StateType::eStateStepping: {
-    unsigned int exit_status;
-    lldb::StateType ret_state_type;
+  } else {
     SetState(lldb::StateType::eStateStepping, true);
-    LLDB_LOG(log, "stepping thread {0}", thread_id_if_stepping);
-    ret_state_type = m_dpu->StepThread(thread_id_if_stepping, &exit_status);
-    if (ret_state_type == lldb::StateType::eStateExited)
-      SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
-    SetState(ret_state_type, true);
-  } break;
-  case lldb::StateType::eStateInvalid:
-    return Status("Empty action list");
-  default:
-    return Status("Unknown resume action!");
+    for (auto thread_id : resume_list) {
+      if (!StepThread(thread_id))
+        return Status();
+    }
+    for (auto thread_id : stepping_list) {
+      if (!StepThread(thread_id))
+        return Status();
+    }
+    SetState(StateType::eStateStopped, true);
   }
 
   return Status();

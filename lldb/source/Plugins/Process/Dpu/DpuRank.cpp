@@ -240,6 +240,13 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
   if (!IsContextReadyForResumeOrStep(&m_context))
     return StateType::eStateCrashed;
 
+  // If the thread is not in the scheduling list, do not try to step it.
+  // This behavior is expected as lldb can ask to step one thread and resume all
+  // the other, which result in stepping all the thread contained in the
+  // scheduling list.
+  if (m_context.scheduling[thread_index] == 0xff)
+    return StateType::eStateStopped;
+
   int ret = DPU_API_SUCCESS;
   ret |=
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);

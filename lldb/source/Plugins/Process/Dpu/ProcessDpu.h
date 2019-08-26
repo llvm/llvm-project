@@ -32,7 +32,7 @@ class Scalar;
 namespace dpu {
 class Dpu;
 class DpuRank;
-}
+} // namespace dpu
 
 namespace process_dpu {
 /// @class ProcessDpu
@@ -115,6 +115,8 @@ public:
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
                                  lldb::StopReason &stop_reason, bool stepping);
+
+  bool StepThread(uint32_t thread_id);
 
 private:
   ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
