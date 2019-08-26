@@ -162,8 +162,9 @@ static gcp_map_type &getGCMap(void *&P) {
 /// getGVAlignmentLog2 - Return the alignment to use for the specified global
 /// value in log2 form.  This rounds up to the preferred alignment if possible
 /// and legal.
-static unsigned getGVAlignmentLog2(const GlobalValue *GV, const DataLayout &DL,
-                                   unsigned InBits = 0) {
+unsigned AsmPrinter::getGVAlignmentLog2(const GlobalValue *GV,
+                                        const DataLayout &DL,
+                                        unsigned InBits) {
   unsigned NumBits = 0;
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
     NumBits = DL.getPreferredAlignmentLog(GVar);

@@ -462,6 +462,22 @@ define i8 @is_bit_clear_i8(i8 %x) {
   ret i8 %r
 }
 
+define i8 @overshift(i64 %x) {
+; CHECK-LABEL: overshift:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq $42, %rax
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $rax
+; CHECK-NEXT:    retq
+  %a = lshr i64 %x, 42
+  %t = trunc i64 %a to i8
+  %n = xor i8 %t, -1
+  %r = and i8 %n, 1
+  ret i8 %r
+}
+
 define i32 @setcc_is_bit_clear(i32 %x) {
 ; CHECK-LABEL: setcc_is_bit_clear:
 ; CHECK:       # %bb.0:

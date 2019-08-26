@@ -635,6 +635,11 @@ public:
   /// supported by the target.
   void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
 
+  /// Return the alignment in log2 form for the specified \p GV.
+  static unsigned getGVAlignmentLog2(const GlobalValue *GV,
+                                     const DataLayout &DL,
+                                     unsigned InBits = 0);
+
 private:
   /// Private state for PrintSpecial()
   // Assign a unique ID to this machine instruction.

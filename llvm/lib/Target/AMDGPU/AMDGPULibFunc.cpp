@@ -55,7 +55,7 @@ enum EManglingParam {
 };
 
 struct ManglingRule {
-   StringLiteral const Name;
+   const char *Name;
    unsigned char Lead[2];
    unsigned char Param[5];
 
@@ -69,7 +69,7 @@ struct ManglingRule {
 
 // Information about library functions with unmangled names.
 class UnmangledFuncInfo {
-  StringRef const Name;
+  const char *Name;
   unsigned NumArgs;
 
   // Table for all lib functions with unmangled names.
@@ -82,7 +82,7 @@ class UnmangledFuncInfo {
 
 public:
   using ID = AMDGPULibFunc::EFuncId;
-  UnmangledFuncInfo(StringRef _Name, unsigned _NumArgs)
+  constexpr UnmangledFuncInfo(const char *_Name, unsigned _NumArgs)
       : Name(_Name), NumArgs(_NumArgs) {}
   // Get index to Table by function name.
   static bool lookup(StringRef Name, ID &Id);

@@ -165,6 +165,10 @@ protected:
   /// instead.
   bool UseDataRegionDirectives = false;
 
+  /// True if .align is to be used for alignment. Only power-of-two
+  /// alignment is supported.
+  bool UseDotAlignForAlignment = false;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero bytes
@@ -518,6 +522,10 @@ public:
 
   bool doesSupportDataRegionDirectives() const {
     return UseDataRegionDirectives;
+  }
+
+  bool useDotAlignForAlignment() const {
+    return UseDotAlignForAlignment;
   }
 
   const char *getZeroDirective() const { return ZeroDirective; }
