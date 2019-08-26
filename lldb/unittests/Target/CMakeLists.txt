@@ -3,7 +3,6 @@ add_lldb_unittest(TargetTests
   MemoryRegionInfoTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
-  ProcessInstanceInfoTest.cpp
 
   LINK_LIBS
       lldbCore

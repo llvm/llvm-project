@@ -20,6 +20,7 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::Func, Record::classify("FUNC"));
   EXPECT_EQ(Record::Public, Record::classify("PUBLIC"));
   EXPECT_EQ(Record::StackCFI, Record::classify("STACK CFI"));
+  EXPECT_EQ(Record::StackWin, Record::classify("STACK WIN"));
 
   // Any obviously incorrect lines will be classified as such.
   EXPECT_EQ(llvm::None, Record::classify("STACK"));
@@ -116,6 +117,37 @@ TEST(StackCFIRecord, parse) {
   EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT"));
   EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI"));
   EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
+}
+
+TEST(StackWinRecord, parse) {
+  EXPECT_EQ(
+      StackWinRecord(0x47, 0x8, 3, 4, 5, llvm::StringRef("$eip $esp ^ =")),
+      StackWinRecord::parse("STACK WIN 4 47 8 1 2 3 4 5 6 1 $eip $esp ^ ="));
+
+  EXPECT_EQ(llvm::None, StackWinRecord::parse(
+                            "STACK WIN 0 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(llvm::None,
+            StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0 0 0 1"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse(
+                            "STACK WIN 3 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(llvm::None,
+            StackWinRecord::parse("STACK WIN 3 47 8 1 0 0 0 0 0 0 1"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse(
+                            "STACK WIN 4 47 8 1 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0 0"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK"));
+  EXPECT_EQ(llvm::None, StackWinRecord::parse(""));
   EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
   EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
 }

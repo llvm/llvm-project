@@ -18,6 +18,7 @@ add_lldb_unittest(UtilityTests
   NameMatchesTest.cpp
   PredicateTest.cpp
   ProcessInfoTest.cpp
+  ProcessInstanceInfoTest.cpp
   RangeMapTest.cpp
   RangeTest.cpp
   RegisterValueTest.cpp
