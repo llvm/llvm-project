@@ -225,8 +225,12 @@ def parseOptionsAndInitTestdirs():
     platform_system = platform.system()
     platform_machine = platform.machine()
 
-    parser = dotest_args.create_parser()
-    args = dotest_args.parse_args(parser, sys.argv[1:])
+    try:
+        parser = dotest_args.create_parser()
+        args = dotest_args.parse_args(parser, sys.argv[1:])
+    except:
+        print(' '.join(sys.argv))
+        raise
 
     if args.unset_env_varnames:
         for env_var in args.unset_env_varnames:
