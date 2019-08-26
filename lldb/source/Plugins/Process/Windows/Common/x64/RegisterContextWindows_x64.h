@@ -9,7 +9,7 @@
 #ifndef liblldb_RegisterContextWindows_x64_H_
 #define liblldb_RegisterContextWindows_x64_H_
 
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64)
 
 #include "RegisterContextWindows.h"
 #include "lldb/lldb-forward.h"
@@ -42,6 +42,6 @@ public:
 };
 }
 
-#endif // defined(__x86_64__) || defined(__amd64__) || defined(_M_X64) || defined(_M_AMD64)
+#endif // defined(__x86_64__) || defined(_M_X64)
 
 #endif // #ifndef liblldb_RegisterContextWindows_x64_H_
