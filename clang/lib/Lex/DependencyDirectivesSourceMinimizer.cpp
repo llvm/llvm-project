@@ -186,8 +186,8 @@ static void skipRawString(const char *&First, const char *const End) {
 }
 
 static void skipString(const char *&First, const char *const End) {
-  assert(*First == '\'' || *First == '"');
-  const char Terminator = *First;
+  assert(*First == '\'' || *First == '"' || *First == '<');
+  const char Terminator = *First == '<' ? '>' : *First;
   for (++First; First != End && *First != Terminator; ++First)
     if (*First == '\\')
       if (++First == End)
@@ -363,7 +363,8 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     const char *Last = First;
     do {
       // Iterate over strings correctly to avoid comments and newlines.
-      if (*Last == '"' || *Last == '\'') {
+      if (*Last == '"' || *Last == '\'' ||
+          (*Last == '<' && top() == pp_include)) {
         if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
           skipRawString(Last, End);
         else
