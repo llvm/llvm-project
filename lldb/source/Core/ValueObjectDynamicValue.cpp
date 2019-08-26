@@ -160,16 +160,27 @@ bool ValueObjectDynamicValue::UpdateValue() {
   Value::ValueType value_type;
 
   LanguageRuntime *runtime = nullptr;
-
   lldb::LanguageType known_type = m_parent->GetObjectRuntimeLanguage();
-  if (known_type != lldb::eLanguageTypeUnknown &&
+
+  // An Objective-C object inside a Swift frame.
+  if (known_type == eLanguageTypeObjC)
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+      if (frame->GetLanguage() == lldb::eLanguageTypeSwift) {
+        runtime = process->GetLanguageRuntime(lldb::eLanguageTypeSwift);
+        if (runtime)
+          found_dynamic_type = runtime->GetDynamicTypeAndAddress(
+              *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
+              value_type);
+      }
+  if (!found_dynamic_type &&
+      known_type != lldb::eLanguageTypeUnknown &&
       known_type != lldb::eLanguageTypeC) {
     runtime = process->GetLanguageRuntime(known_type);
     if (runtime)
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
           value_type);
-  } else {
+  } else if (!found_dynamic_type) {
     runtime = process->GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus);
     if (runtime)
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(

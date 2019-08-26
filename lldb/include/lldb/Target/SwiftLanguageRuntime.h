@@ -418,6 +418,12 @@ protected:
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address);
 
+  bool GetDynamicTypeAndAddress_ClangType(ValueObject &in_value,
+                                          lldb::DynamicValueType use_dynamic,
+                                          TypeAndOrName &class_type_or_name,
+                                          Address &address,
+                                          Value::ValueType &value_type);
+
   MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
                                                   StackFrame *frame);
 
