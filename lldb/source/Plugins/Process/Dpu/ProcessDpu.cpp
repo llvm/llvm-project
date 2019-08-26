@@ -136,8 +136,9 @@ ProcessDpu::Factory::Attach(
     return Status("Cannot find the DPU in the rank ").ToError();
 
   uint64_t structure_value =
-      std::stoll(std::getenv("UPMEM_LLDB_STRUCTURE_VALUE"));
-  uint64_t slice_target = std::stoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"));
+      ::strtoll(std::getenv("UPMEM_LLDB_STRUCTURE_VALUE"), NULL, 10);
+  uint64_t slice_target =
+      ::strtoll(std::getenv("UPMEM_LLDB_SLICE_TARGET"), NULL, 10);
   LLDB_LOG(log, "saving slice context ({0:x}, {1:x})", structure_value,
            slice_target);
   success = dpu->SaveSliceContext(structure_value, slice_target);
