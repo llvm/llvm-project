@@ -330,10 +330,7 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target)
-    target = GetDummyTarget();
-
-  if (!target)
-    return;
+    target = &GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
   llvm::StringRef code = request.GetRawLine();
@@ -394,9 +391,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target)
-    target = GetDummyTarget();
+    target = &GetDummyTarget();
 
-  if (target) {
     lldb::ValueObjectSP result_valobj_sp;
     bool keep_in_memory = true;
     StackFrame *frame = exe_ctx.GetFramePtr();
@@ -542,10 +538,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         }
       }
     }
-  } else {
-    error_stream->Printf("error: invalid execution context for expression\n");
-    return false;
-  }
 
   return true;
 }
@@ -676,7 +668,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       // If we weren't passed in a target, let's see if the dummy target can
       // make a REPL:
       if (!target)
-        target = GetDummyTarget();
+        target = &GetDummyTarget();
 
       if (target) {
         // Drop into REPL
@@ -741,11 +733,11 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target *target = GetSelectedOrDummyTarget();
+  Target &target = GetSelectedOrDummyTarget();
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
 
-    if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
+    if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
       // FIXME: Can we figure out what the user actually typed (e.g. some alias
       // for expr???)
@@ -760,12 +752,12 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       history.AppendString(fixed_command);
     }
     // Increment statistics to record this expression evaluation success.
-    target->IncrementStats(StatisticKind::ExpressionSuccessful);
+    target.IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
   // Increment statistics to record this expression evaluation failure.
-  target->IncrementStats(StatisticKind::ExpressionFailure);
+  target.IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }
