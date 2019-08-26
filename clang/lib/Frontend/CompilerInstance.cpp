@@ -856,6 +856,8 @@ bool CompilerInstance::InitializeSourceManager(
   if (InputFile != "-") {
     auto FileOrErr = FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
     if (!FileOrErr) {
+      // FIXME: include the error in the diagnostic.
+      consumeError(FileOrErr.takeError());
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;
     }

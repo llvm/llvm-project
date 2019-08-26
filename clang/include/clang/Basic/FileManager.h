@@ -110,26 +110,27 @@ public:
 /// accessed by the FileManager's client.
 class FileEntryRef {
 public:
+  FileEntryRef() = delete;
   FileEntryRef(StringRef Name, const FileEntry &Entry)
-      : Name(Name), Entry(Entry) {}
+      : Name(Name), Entry(&Entry) {}
 
   const StringRef getName() const { return Name; }
 
-  const FileEntry &getFileEntry() const { return Entry; }
+  const FileEntry &getFileEntry() const { return *Entry; }
 
-  off_t getSize() const { return Entry.getSize(); }
+  off_t getSize() const { return Entry->getSize(); }
 
-  unsigned getUID() const { return Entry.getUID(); }
+  unsigned getUID() const { return Entry->getUID(); }
 
   const llvm::sys::fs::UniqueID &getUniqueID() const {
-    return Entry.getUniqueID();
+    return Entry->getUniqueID();
   }
 
-  time_t getModificationTime() const { return Entry.getModificationTime(); }
+  time_t getModificationTime() const { return Entry->getModificationTime(); }
 
 private:
   StringRef Name;
-  const FileEntry &Entry;
+  const FileEntry *Entry;
 };
 
 /// Implements support for file system lookup, file system caching,
@@ -284,9 +285,17 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
-  llvm::ErrorOr<FileEntryRef> getFileRef(StringRef Filename,
-                                         bool OpenFile = false,
-                                         bool CacheFailure = true);
+  llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
+                                          bool OpenFile = false,
+                                          bool CacheFailure = true);
+
+  /// Get a FileEntryRef if it exists, without doing anything on error.
+  llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
+                                                  bool OpenFile = false,
+                                                  bool CacheFailure = true) {
+    return llvm::expectedToOptional(
+        getFileRef(Filename, OpenFile, CacheFailure));
+  }
 
   /// Returns the current file system options
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
