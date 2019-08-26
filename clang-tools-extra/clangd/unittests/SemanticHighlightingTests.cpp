@@ -18,6 +18,9 @@ namespace clang {
 namespace clangd {
 namespace {
 
+MATCHER_P(LineNumber, L, "") { return arg.Line == L; }
+MATCHER(EmptyHighlightings, "") { return arg.Tokens.empty(); }
+
 std::vector<HighlightingToken>
 makeHighlightingTokens(llvm::ArrayRef<Range> Ranges, HighlightingKind Kind) {
   std::vector<HighlightingToken> Tokens(Ranges.size());
@@ -92,9 +95,10 @@ void checkDiffedHighlights(llvm::StringRef OldCode, llvm::StringRef NewCode) {
         {LineTokens.first, LineTokens.second});
 
   std::vector<LineHighlightings> ActualDiffed =
-      diffHighlightings(NewTokens, OldTokens, NewCode.count('\n'));
+      diffHighlightings(NewTokens, OldTokens);
   EXPECT_THAT(ActualDiffed,
-              testing::UnorderedElementsAreArray(ExpectedLinePairHighlighting));
+              testing::UnorderedElementsAreArray(ExpectedLinePairHighlighting))
+      << OldCode;
 }
 
 TEST(SemanticHighlighting, GetsCorrectTokens) {
@@ -463,9 +467,8 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
     std::atomic<int> Count = {0};
 
     void onDiagnosticsReady(PathRef, std::vector<Diag>) override {}
-    void onHighlightingsReady(PathRef File,
-                              std::vector<HighlightingToken> Highlightings,
-                              int NLines) override {
+    void onHighlightingsReady(
+        PathRef File, std::vector<HighlightingToken> Highlightings) override {
       ++Count;
     }
   };
@@ -574,17 +577,6 @@ TEST(SemanticHighlighting, HighlightingDiffer) {
                     R"(
         $Class[[A]]
         $Variable[[A]]
-        $Class[[A]]
-        $Variable[[A]]
-      )",
-                    R"(
-        $Class[[A]]
-        $Variable[[A]]
-      )"},
-                {
-                    R"(
-        $Class[[A]]
-        $Variable[[A]]
       )",
                     R"(
         $Class[[A]]
@@ -606,6 +598,32 @@ TEST(SemanticHighlighting, HighlightingDiffer) {
 
   for (const auto &Test : TestCases)
     checkDiffedHighlights(Test.OldCode, Test.NewCode);
+}
+
+TEST(SemanticHighlighting, DiffBeyondTheEndOfFile) {
+  llvm::StringRef OldCode =
+      R"(
+        $Class[[A]]
+        $Variable[[A]]
+        $Class[[A]]
+        $Variable[[A]]
+      )";
+  llvm::StringRef NewCode =
+      R"(
+        $Class[[A]] // line 1
+        $Variable[[A]] // line 2
+      )";
+
+  Annotations OldTest(OldCode);
+  Annotations NewTest(NewCode);
+  std::vector<HighlightingToken> OldTokens = getExpectedTokens(OldTest);
+  std::vector<HighlightingToken> NewTokens = getExpectedTokens(NewTest);
+
+  auto ActualDiff = diffHighlightings(NewTokens, OldTokens);
+  EXPECT_THAT(ActualDiff,
+              testing::UnorderedElementsAre(
+                  testing::AllOf(LineNumber(3), EmptyHighlightings()),
+                  testing::AllOf(LineNumber(4), EmptyHighlightings())));
 }
 
 } // namespace

@@ -311,7 +311,7 @@ public:
   // selected target, or if no target is present you want to prime the dummy
   // target with entities that will be copied over to new targets.
   Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target *GetDummyTarget();
+  Target *GetDummyTarget() { return m_dummy_target_sp.get(); }
 
   lldb::BroadcasterManagerSP GetBroadcasterManager() {
     return m_broadcaster_manager_sp;
@@ -400,6 +400,7 @@ protected:
   Broadcaster m_sync_broadcaster;
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
+  lldb::TargetSP m_dummy_target_sp;
 
   // Events for m_sync_broadcaster
   enum {

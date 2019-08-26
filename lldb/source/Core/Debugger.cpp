@@ -721,6 +721,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   assert(default_platform_sp);
   m_platform_list.Append(default_platform_sp, true);
 
+  m_dummy_target_sp = m_target_list.GetDummyTarget(*this);
+  assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
+
   m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
       ConstString("target"),
@@ -1601,10 +1604,6 @@ void Debugger::JoinIOHandlerThread() {
     m_io_handler_thread.Join(&result);
     m_io_handler_thread = LLDB_INVALID_HOST_THREAD;
   }
-}
-
-Target *Debugger::GetDummyTarget() {
-  return m_target_list.GetDummyTarget(*this).get();
 }
 
 Target *Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {

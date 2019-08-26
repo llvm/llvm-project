@@ -10,6 +10,7 @@ add_clang_library(clangTidy
   ClangTidyOptions.cpp
   ClangTidyProfiling.cpp
   ExpandModularHeadersPPCallbacks.cpp
+  GlobList.cpp
 
   DEPENDS
   ClangSACheckers

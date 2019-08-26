@@ -27,6 +27,7 @@ import os
 import re
 import subprocess
 import sys
+from distutils.spawn import find_executable
 
 symbolizers = {}
 demangle = False
@@ -153,6 +154,7 @@ class Addr2LineSymbolizer(Symbolizer):
     addr2line_tool = 'addr2line'
     if binutils_prefix:
       addr2line_tool = binutils_prefix + addr2line_tool
+    logging.debug('addr2line binary is %s' % find_executable(addr2line_tool))
     cmd = [addr2line_tool, '-fi']
     if demangle:
       cmd += ['--demangle']
@@ -174,14 +176,34 @@ class Addr2LineSymbolizer(Symbolizer):
       is_first_frame = True
       while True:
         function_name = self.pipe.stdout.readline().rstrip()
+        logging.debug("read function_name='%s' from addr2line" % function_name)
+        # If llvm-symbolizer is installed as addr2line, older versions of
+        # llvm-symbolizer will print -1 when presented with -1 and not print
+        # a second line. In that case we will block for ever trying to read the
+        # file name. This also happens for non-existent files, in which case GNU
+        # addr2line exits immediate, but llvm-symbolizer does not (see
+        # https://llvm.org/PR42754).
+        if function_name == '-1':
+          logging.debug("got function '-1' -> no more input")
+          break
         file_name = self.pipe.stdout.readline().rstrip()
+        logging.debug("read file_name='%s' from addr2line" % file_name)
         if is_first_frame:
           is_first_frame = False
-        elif function_name in ['', '??']:
-          assert file_name == function_name
+        elif function_name == '??':
+          assert file_name == '??:0', file_name
+          logging.debug("got function '??' -> no more input")
+          break
+        elif not function_name:
+          assert not file_name, file_name
+          logging.debug("got empty function name -> no more input")
           break
         lines.append((function_name, file_name));
-    except Exception:
+    except BrokenPipeError:
+      logging.debug("got broken pipe, addr2line returncode=%d" % self.pipe.poll())
+      lines.append(('??', '??:0'))
+    except Exception as e:
+      logging.debug("got unknown exception communicating with addr2line", exc_info=e)
       lines.append(('??', '??:0'))
     return ['%s in %s %s' % (addr, function, fix_filename(file)) for (function, file) in lines]
 

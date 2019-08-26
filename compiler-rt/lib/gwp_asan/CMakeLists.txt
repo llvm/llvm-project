@@ -107,7 +107,7 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   # is >= 6.0.
   if (COMPILER_RT_BUILD_LIBFUZZER AND
       "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
-      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.0)
+      NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
     add_executable(stack_trace_compressor_fuzzer
         stack_trace_compressor_fuzzer.cpp
         ${GWP_ASAN_SOURCES}

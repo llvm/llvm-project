@@ -21,6 +21,9 @@
 #RUN: ld.lld %t.o -s -o %t1
 #RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix AFTER
 
+# RUN: not ld.lld %t.o --strip-all --emit-relocs -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
+# ERR: error: --strip-all and --emit-relocs may not be used together
+
 # exits with return code 42 on linux
 .globl _start
 _start:

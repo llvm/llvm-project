@@ -17,6 +17,7 @@
 
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyOptions.h"
+#include "GlobList.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -118,47 +119,6 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
     : tooling::Diagnostic(CheckName, DiagLevel, BuildDirectory),
       IsWarningAsError(IsWarningAsError) {}
 
-// Returns true if GlobList starts with the negative indicator ('-'), removes it
-// from the GlobList.
-static bool ConsumeNegativeIndicator(StringRef &GlobList) {
-  GlobList = GlobList.trim(" \r\n");
-  if (GlobList.startswith("-")) {
-    GlobList = GlobList.substr(1);
-    return true;
-  }
-  return false;
-}
-// Converts first glob from the comma-separated list of globs to Regex and
-// removes it and the trailing comma from the GlobList.
-static llvm::Regex ConsumeGlob(StringRef &GlobList) {
-  StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find(','));
-  StringRef Glob = UntrimmedGlob.trim(' ');
-  GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
-  SmallString<128> RegexText("^");
-  StringRef MetaChars("()^$|*+?.[]\\{}");
-  for (char C : Glob) {
-    if (C == '*')
-      RegexText.push_back('.');
-    else if (MetaChars.find(C) != StringRef::npos)
-      RegexText.push_back('\\');
-    RegexText.push_back(C);
-  }
-  RegexText.push_back('$');
-  return llvm::Regex(RegexText);
-}
-
-GlobList::GlobList(StringRef Globs)
-    : Positive(!ConsumeNegativeIndicator(Globs)), Regex(ConsumeGlob(Globs)),
-      NextGlob(Globs.empty() ? nullptr : new GlobList(Globs)) {}
-
-bool GlobList::contains(StringRef S, bool Contains) {
-  if (Regex.match(S))
-    Contains = Positive;
-
-  if (NextGlob)
-    Contains = NextGlob->contains(S, Contains);
-  return Contains;
-}
 
 class ClangTidyContext::CachedGlobList {
 public:

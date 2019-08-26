@@ -92,7 +92,12 @@
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.cpp","version":2},"contentChanges": [{"range":{"start": {"line": 0,"character": 10},"end": {"line": 1,"character": 10}},"rangeLength": 11,"text": ""}]}}
 #      CHECK:  "method": "textDocument/semanticHighlighting",
 # CHECK-NEXT:  "params": {
-# CHECK-NEXT:    "lines": [],
+# CHECK-NEXT:    "lines": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "line": 1,
+# CHECK-NEXT:        "tokens": ""
+# CHECK-NEXT:      }
+# CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
 # CHECK-NEXT:      "uri": "file:///clangd-test/foo.cpp"
 # CHECK-NEXT:    }

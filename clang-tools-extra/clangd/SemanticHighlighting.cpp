@@ -339,9 +339,11 @@ takeLine(ArrayRef<HighlightingToken> AllTokens,
 
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
-                  ArrayRef<HighlightingToken> Old, int NewMaxLine) {
-  assert(std::is_sorted(New.begin(), New.end()) && "New must be a sorted vector");
-  assert(std::is_sorted(Old.begin(), Old.end()) && "Old must be a sorted vector");
+                  ArrayRef<HighlightingToken> Old) {
+  assert(std::is_sorted(New.begin(), New.end()) &&
+         "New must be a sorted vector");
+  assert(std::is_sorted(Old.begin(), Old.end()) &&
+         "Old must be a sorted vector");
 
   // FIXME: There's an edge case when tokens span multiple lines. If the first
   // token on the line started on a line above the current one and the rest of
@@ -371,9 +373,7 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
     return std::min(NextNew, NextOld);
   };
 
-  // If the New file has fewer lines than the Old file we don't want to send
-  // highlightings beyond the end of the file.
-  for (int LineNumber = 0; LineNumber < NewMaxLine;
+  for (int LineNumber = 0; NewLine.end() < NewEnd || OldLine.end() < OldEnd;
        LineNumber = NextLineNumber()) {
     NewLine = takeLine(New, NewLine.end(), LineNumber);
     OldLine = takeLine(Old, OldLine.end(), LineNumber);

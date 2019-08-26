@@ -4080,8 +4080,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // toolchains which have the integrated assembler on by default.
   bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
   if (Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
-                   IsIntegratedAssemblerDefault) ||
-      Args.hasArg(options::OPT_dA))
+                   IsIntegratedAssemblerDefault))
     CmdArgs.push_back("-masm-verbose");
 
   if (!TC.useIntegratedAs())

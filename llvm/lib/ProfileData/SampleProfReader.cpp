@@ -467,6 +467,31 @@ std::error_code SampleProfileReaderBinary::read() {
   return sampleprof_error::success;
 }
 
+std::error_code
+SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
+                                             uint64_t Size, SecType Type) {
+  Data = Start;
+  switch (Type) {
+  case SecProfSummary:
+    if (std::error_code EC = readSummary())
+      return EC;
+    break;
+  case SecNameTable:
+    if (std::error_code EC = readNameTable())
+      return EC;
+    break;
+  case SecLBRProfile:
+    while (Data < Start + Size) {
+      if (std::error_code EC = readFuncProfile())
+        return EC;
+    }
+    break;
+  default:
+    break;
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileReaderExtBinaryBase::read() {
   const uint8_t *BufStart =
       reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
@@ -475,26 +500,10 @@ std::error_code SampleProfileReaderExtBinaryBase::read() {
     // Skip empty section.
     if (!Entry.Size)
       continue;
-    Data = BufStart + Entry.Offset;
-    switch (Entry.Type) {
-    case SecProfSummary:
-      if (std::error_code EC = readSummary())
-        return EC;
-      break;
-    case SecNameTable:
-      if (std::error_code EC = readNameTable())
-        return EC;
-      break;
-    case SecLBRProfile:
-      while (Data < BufStart + Entry.Offset + Entry.Size) {
-        if (std::error_code EC = readFuncProfile())
-          return EC;
-      }
-      break;
-    default:
-      continue;
-    }
-    if (Data != BufStart + Entry.Offset + Entry.Size)
+    const uint8_t *SecStart = BufStart + Entry.Offset;
+    if (std::error_code EC = readOneSection(SecStart, Entry.Size, Entry.Type))
+      return EC;
+    if (Data != SecStart + Entry.Size)
       return sampleprof_error::malformed;
   }
 

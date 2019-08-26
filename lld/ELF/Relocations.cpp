@@ -1692,11 +1692,6 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
   if (pass == 0 && target->getThunkSectionSpacing())
     createInitialThunkSections(outputSections);
 
-  // With Thunk Size much smaller than branch range we expect to
-  // converge quickly; if we get to 10 something has gone wrong.
-  if (pass == 10)
-    fatal("thunk creation not converged");
-
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into InputSectionDescriptions.
   // We separate the creation of ThunkSections from the insertion of the
