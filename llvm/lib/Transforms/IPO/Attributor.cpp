@@ -146,7 +146,9 @@ bool genericValueTraversal(
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
     LivenessAA = &A.getAAFor<AAIsDead>(
-        QueryingAA, IRPosition::function(*IRP.getAnchorScope()));
+        QueryingAA, IRPosition::function(*IRP.getAnchorScope()),
+        /* TrackDependence */ false);
+  bool AnyDead = false;
 
   // TODO: Use Positions here to allow context sensitivity in VisitValueCB
   SmallPtrSet<Value *, 16> Visited;
@@ -199,8 +201,11 @@ bool genericValueTraversal(
              "Expected liveness in the presence of instructions!");
       for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
         const BasicBlock *IncomingBB = PHI->getIncomingBlock(u);
-        if (!LivenessAA->isAssumedDead(IncomingBB->getTerminator()))
-          Worklist.push_back(PHI->getIncomingValue(u));
+        if (LivenessAA->isAssumedDead(IncomingBB->getTerminator())) {
+          AnyDead =true;
+          continue;
+        }
+        Worklist.push_back(PHI->getIncomingValue(u));
       }
       continue;
     }
@@ -209,6 +214,10 @@ bool genericValueTraversal(
     if (!VisitValueCB(*V, State, Iteration > 1))
       return false;
   } while (!Worklist.empty());
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    A.recordDependence(*LivenessAA, QueryingAA);
 
   // All values have been visited.
   return true;
@@ -680,7 +689,7 @@ class AAReturnedValuesImpl : public AAReturnedValues, public AbstractState {
 
   /// Mapping of values potentially returned by the associated function to the
   /// return instructions that might return them.
-  DenseMap<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
+  MapVector<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
 
   /// Mapping to remember the number of returned values for a call site such
   /// that we can avoid updates if nothing changed.
@@ -2282,7 +2291,8 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
 
   if (!LivenessAA)
     LivenessAA =
-        &getAAFor<AAIsDead>(AA, IRPosition::function(*CtxI->getFunction()));
+        &getAAFor<AAIsDead>(AA, IRPosition::function(*CtxI->getFunction()),
+                            /* TrackDependence */ false);
 
   // Don't check liveness for AAIsDead.
   if (&AA == LivenessAA)
@@ -2291,8 +2301,9 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
   if (!LivenessAA->isAssumedDead(CtxI))
     return false;
 
-  // TODO: Do not track dependences automatically but add it here as only a
-  //       "is-assumed-dead" result causes a dependence.
+  // We actually used liveness information so we have to record a dependence.
+  recordDependence(*LivenessAA, AA);
+
   return true;
 }
 
@@ -2323,12 +2334,16 @@ bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
 
     Function *Caller = I->getFunction();
 
-    const auto &LivenessAA =
-        getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*Caller));
+    const auto &LivenessAA = getAAFor<AAIsDead>(
+        QueryingAA, IRPosition::function(*Caller), /* TrackDependence */ false);
 
     // Skip dead calls.
-    if (LivenessAA.isAssumedDead(I))
+    if (LivenessAA.isAssumedDead(I)) {
+      // We actually used liveness information so we have to record a
+      // dependence.
+      recordDependence(LivenessAA, QueryingAA);
       continue;
+    }
 
     CallSite CS(U.getUser());
     if (!CS || !CS.isCallee(&U) || !CS.getCaller()->hasExactDefinition()) {
@@ -2405,20 +2420,28 @@ bool Attributor::checkForAllInstructions(
     return false;
 
   const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
-  const auto &LivenessAA = getAAFor<AAIsDead>(QueryingAA, QueryIRP);
+  const auto &LivenessAA =
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
+  bool AnyDead = false;
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
   for (unsigned Opcode : Opcodes) {
     for (Instruction *I : OpcodeInstMap[Opcode]) {
       // Skip dead instructions.
-      if (LivenessAA.isAssumedDead(I))
+      if (LivenessAA.isAssumedDead(I)) {
+        AnyDead = true;
         continue;
+      }
 
       if (!Pred(*I))
         return false;
     }
   }
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    recordDependence(LivenessAA, QueryingAA);
 
   return true;
 }
@@ -2432,18 +2455,25 @@ bool Attributor::checkForAllReadWriteInstructions(
   if (!AssociatedFunction)
     return false;
 
-  const auto &LivenessAA =
-      getAAFor<AAIsDead>(QueryingAA, QueryingAA.getIRPosition());
+  const auto &LivenessAA = getAAFor<AAIsDead>(
+      QueryingAA, QueryingAA.getIRPosition(), /* TrackDependence */ false);
+  bool AnyDead = false;
 
   for (Instruction *I :
        InfoCache.getReadOrWriteInstsForFunction(*AssociatedFunction)) {
     // Skip dead instructions.
-    if (LivenessAA.isAssumedDead(I))
+    if (LivenessAA.isAssumedDead(I)) {
+      AnyDead = true;
       continue;
+    }
 
     if (!Pred(*I))
       return false;
   }
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    recordDependence(LivenessAA, QueryingAA);
 
   return true;
 }

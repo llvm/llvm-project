@@ -1131,14 +1131,13 @@ define <4 x i32> @mul_v4i64_zero_lower(<4 x i32> %val1, <4 x i64> %val2) {
 ;
 ; SSE41-LABEL: mul_v4i64_zero_lower:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE41-NEXT:    psrlq $32, %xmm1
-; SSE41-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE41-NEXT:    psrlq $32, %xmm2
-; SSE41-NEXT:    pmuludq %xmm3, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,2,3,3]
+; SSE41-NEXT:    pmuludq %xmm2, %xmm3
+; SSE41-NEXT:    psrlq $32, %xmm1
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    pmuludq %xmm1, %xmm0
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mul_v4i64_zero_lower:
