@@ -42,8 +42,8 @@ const char *ProcessInfo::GetName() const {
   return m_executable.GetFilename().GetCString();
 }
 
-size_t ProcessInfo::GetNameLength() const {
-  return m_executable.GetFilename().GetLength();
+llvm::StringRef ProcessInfo::GetNameAsStringRef() const {
+  return m_executable.GetFilename().GetStringRef();
 }
 
 void ProcessInfo::Dump(Stream &s, Platform *platform) const {
