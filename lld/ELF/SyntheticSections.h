@@ -76,7 +76,7 @@ public:
     return SyntheticSection::classof(d) && d->name == ".eh_frame";
   }
 
-  template <class ELFT> void addSection(InputSectionBase *s);
+  void addSection(EhInputSection *sec);
 
   std::vector<EhInputSection *> sections;
   size_t numFdes = 0;
@@ -97,7 +97,9 @@ private:
   uint64_t size = 0;
 
   template <class ELFT, class RelTy>
-  void addSectionAux(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
+  void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
+  template <class ELFT>
+  void addSectionAux(EhInputSection *s);
 
   template <class ELFT, class RelTy>
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
