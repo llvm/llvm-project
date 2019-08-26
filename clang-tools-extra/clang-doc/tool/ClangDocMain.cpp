@@ -326,8 +326,11 @@ int main(int argc, const char **argv) {
     return 1;
 
   llvm::outs() << "Generating assets for docs...\n";
-  if (!G->get()->createResources(CDCtx))
+  Err = G->get()->createResources(CDCtx);
+  if (Err) {
+    llvm::errs() << toString(std::move(Err)) << "\n";
     return 1;
+  }
 
   return 0;
 }

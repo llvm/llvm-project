@@ -829,7 +829,7 @@ public:
 
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
-  bool createResources(ClangDocContext &CDCtx) override;
+  llvm::Error createResources(ClangDocContext &CDCtx) override;
 };
 
 const char *HTMLGenerator::Format = "html";
@@ -883,7 +883,7 @@ static std::string getRefType(InfoType IT) {
   llvm_unreachable("Unknown InfoType");
 }
 
-static bool SerializeIndex(ClangDocContext &CDCtx) {
+static llvm::Error SerializeIndex(ClangDocContext &CDCtx) {
   std::error_code OK;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath;
@@ -891,8 +891,9 @@ static bool SerializeIndex(ClangDocContext &CDCtx) {
   llvm::sys::path::append(FilePath, "index_json.js");
   llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::F_None);
   if (FileErr != OK) {
-    llvm::errs() << "Error creating index file: " << FileErr.message() << "\n";
-    return false;
+    return llvm::make_error<llvm::StringError>(
+        "Error creating index file: " + FileErr.message() + "\n",
+        llvm::inconvertibleErrorCode());
   }
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
@@ -911,7 +912,7 @@ static bool SerializeIndex(ClangDocContext &CDCtx) {
   OS << "var JsonIndex = `\n";
   IndexToJSON(CDCtx.Idx);
   OS << "`;\n";
-  return true;
+  return llvm::Error::success();
 }
 
 // Generates a main HTML node that has the main content of the file that shows
@@ -932,15 +933,16 @@ static std::unique_ptr<TagNode> genIndexFileMainNode() {
   return MainNode;
 }
 
-static bool GenIndex(const ClangDocContext &CDCtx) {
+static llvm::Error GenIndex(const ClangDocContext &CDCtx) {
   std::error_code FileErr, OK;
   llvm::SmallString<128> IndexPath;
   llvm::sys::path::native(CDCtx.OutDirectory, IndexPath);
   llvm::sys::path::append(IndexPath, "index.html");
   llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::F_None);
   if (FileErr != OK) {
-    llvm::errs() << "Error creating main index: " << FileErr.message() << "\n";
-    return false;
+    return llvm::make_error<llvm::StringError>(
+        "Error creating main index: " + FileErr.message() + "\n",
+        llvm::inconvertibleErrorCode());
   }
 
   HTMLFile F;
@@ -958,10 +960,10 @@ static bool GenIndex(const ClangDocContext &CDCtx) {
 
   F.Render(IndexOS);
 
-  return true;
+  return llvm::Error::success();
 }
 
-static bool CopyFile(StringRef FilePath, StringRef OutDirectory) {
+static llvm::Error CopyFile(StringRef FilePath, StringRef OutDirectory) {
   llvm::SmallString<128> PathWrite;
   llvm::sys::path::native(OutDirectory, PathWrite);
   llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
@@ -970,24 +972,33 @@ static bool CopyFile(StringRef FilePath, StringRef OutDirectory) {
   std::error_code OK;
   std::error_code FileErr = llvm::sys::fs::copy_file(PathRead, PathWrite);
   if (FileErr != OK) {
-    llvm::errs() << "Error creating file "
-                 << llvm::sys::path::filename(FilePath) << ": "
-                 << FileErr.message() << "\n";
-    return false;
+    return llvm::make_error<llvm::StringError>(
+        "Error creating file " + llvm::sys::path::filename(FilePath) + ": " +
+            FileErr.message() + "\n",
+        llvm::inconvertibleErrorCode());
   }
-  return true;
+  return llvm::Error::success();
 }
 
-bool HTMLGenerator::createResources(ClangDocContext &CDCtx) {
-  if (!SerializeIndex(CDCtx) || !GenIndex(CDCtx))
-    return false;
-  for (const auto &FilePath : CDCtx.UserStylesheets)
-    if (!CopyFile(FilePath, CDCtx.OutDirectory))
-      return false;
-  for (const auto &FilePath : CDCtx.FilesToCopy)
-    if (!CopyFile(FilePath, CDCtx.OutDirectory))
-      return false;
-  return true;
+llvm::Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
+  auto Err = SerializeIndex(CDCtx);
+  if (Err)
+    return Err;
+  Err = GenIndex(CDCtx);
+  if (Err)
+    return Err;
+
+  for (const auto &FilePath : CDCtx.UserStylesheets) {
+    Err = CopyFile(FilePath, CDCtx.OutDirectory);
+    if (Err)
+      return Err;
+  }
+  for (const auto &FilePath : CDCtx.FilesToCopy) {
+    Err = CopyFile(FilePath, CDCtx.OutDirectory);
+    if (Err)
+      return Err;
+  }
+  return llvm::Error::success();
 }
 
 static GeneratorRegistry::Add<HTMLGenerator> HTML(HTMLGenerator::Format,

@@ -17,7 +17,6 @@
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 
 namespace clang {
@@ -45,27 +44,6 @@ struct ClangTidyError : tooling::Diagnostic {
                  bool IsWarningAsError);
 
   bool IsWarningAsError;
-};
-
-/// Read-only set of strings represented as a list of positive and
-/// negative globs. Positive globs add all matched strings to the set, negative
-/// globs remove them in the order of appearance in the list.
-class GlobList {
-public:
-  /// \p GlobList is a comma-separated list of globs (only '*'
-  /// metacharacter is supported) with optional '-' prefix to denote exclusion.
-  GlobList(StringRef Globs);
-
-  /// Returns \c true if the pattern matches \p S. The result is the last
-  /// matching glob's Positive flag.
-  bool contains(StringRef S) { return contains(S, false); }
-
-private:
-  bool contains(StringRef S, bool Contains);
-
-  bool Positive;
-  llvm::Regex Regex;
-  std::unique_ptr<GlobList> NextGlob;
 };
 
 /// Contains displayed and ignored diagnostic counters for a ClangTidy

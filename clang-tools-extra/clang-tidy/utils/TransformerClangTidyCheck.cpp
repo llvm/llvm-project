@@ -71,14 +71,6 @@ void TransformerClangTidyCheck::check(
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  // Verify the existence and validity of the AST node that roots this rule.
-  const ast_matchers::BoundNodes::IDToNodeMap &NodesMap = Result.Nodes.getMap();
-  auto Root = NodesMap.find(RewriteRule::RootID);
-  assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
-  SourceLocation RootLoc = Result.SourceManager->getExpansionLoc(
-      Root->second.getSourceRange().getBegin());
-  assert(RootLoc.isValid() && "Invalid location for Root node of match.");
-
   assert(Rule && "check() should not fire if Rule is None");
   RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, *Rule);
   Expected<SmallVector<tooling::detail::Transformation, 1>> Transformations =
@@ -99,10 +91,12 @@ void TransformerClangTidyCheck::check(
                  << llvm::toString(Explanation.takeError()) << "\n";
     return;
   }
-  DiagnosticBuilder Diag = diag(RootLoc, *Explanation);
-  for (const auto &T : *Transformations) {
+
+  // Associate the diagnostic with the location of the first change.
+  DiagnosticBuilder Diag =
+      diag((*Transformations)[0].Range.getBegin(), *Explanation);
+  for (const auto &T : *Transformations)
     Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
-  }
 
   for (const auto &I : Case.AddedIncludes) {
     auto &Header = I.first;

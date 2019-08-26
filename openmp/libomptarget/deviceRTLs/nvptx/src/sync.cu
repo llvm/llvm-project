@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP Ordered calls
@@ -143,4 +144,13 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 EXTERN int32_t __kmpc_warp_active_thread_mask() {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
   return __ACTIVEMASK();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Syncwarp
+////////////////////////////////////////////////////////////////////////////////
+
+EXTERN void __kmpc_syncwarp(int32_t Mask) {
+  PRINT0(LD_IO, "call __kmpc_syncwarp\n");
+  __kmpc_impl_syncwarp(Mask);
 }
