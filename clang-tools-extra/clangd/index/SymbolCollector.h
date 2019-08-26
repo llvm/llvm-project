@@ -112,6 +112,11 @@ public:
   RefSlab takeRefs() { return std::move(Refs).build(); }
   RelationSlab takeRelations() { return std::move(Relations).build(); }
 
+  /// Returns true if we are interested in references and declarations from \p
+  /// FID. If this function return false, bodies of functions inside those files
+  /// will be skipped to decrease indexing time.
+  bool shouldIndexFile(FileID FID);
+
   void finish() override;
 
 private:
