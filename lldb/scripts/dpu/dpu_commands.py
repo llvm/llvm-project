@@ -29,10 +29,10 @@ def dpu_attach(debugger, command, result, internal_dict):
 
   program_path = re.search('"(.+)"', str(dpu.GetChildMemberWithName("runtime_context").GetChildMemberWithName("program_path"))).group(1)
 
-  lldb_server_dpu_env = os.environ
+  lldb_server_dpu_env = os.environ.copy()
   lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
   lldb_server_dpu_env["UPMEM_LLDB_SLICE_TARGET"] = str(slice_target)
-  subprocess.Popen(['lldb-server-dpu', 'gdbserver', '--attach', str(pid), ':2066', '&'], env=lldb_server_dpu_env)
+  subprocess.Popen(['lldb-server-dpu', 'gdbserver', '--attach', str(pid), ':2066'], env=lldb_server_dpu_env)
 
   target_dpu = debugger.CreateTargetWithFileAndTargetTriple(program_path, "dpu-upmem-dpurte")
 
