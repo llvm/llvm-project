@@ -143,6 +143,8 @@ ProcessDpu::Factory::Attach(
   if (!success)
     return Status("Cannot save the DPU slice context ").ToError();
 
+  dpu->SetAttachSession();
+
   return std::unique_ptr<ProcessDpu>(new ProcessDpu(
       666 << 5, -1, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
@@ -196,7 +198,9 @@ void ProcessDpu::InterfaceTimerCallback() {
   StateType current_state = m_dpu->PollStatus(&exit_status);
   if (current_state != StateType::eStateInvalid) {
     if (current_state == StateType::eStateExited) {
-      Detach();
+      if (m_dpu->AttachSession()) {
+        Detach();
+      }
       SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
     }
     SetState(current_state, true);

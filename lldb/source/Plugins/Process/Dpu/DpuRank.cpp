@@ -374,3 +374,7 @@ bool Dpu::SaveSliceContext(uint64_t structure_value, uint64_t slice_target) {
 bool Dpu::RestoreSliceContext() {
   return dpu_restore_slice_context_for_dpu(m_dpu) == DPU_API_SUCCESS;
 }
+
+void Dpu::SetAttachSession() { attach_session = true; }
+
+bool Dpu::AttachSession() { return attach_session; }

@@ -102,6 +102,9 @@ public:
   bool SaveSliceContext(uint64_t structure_value, uint64_t slice_target);
   bool RestoreSliceContext();
 
+  void SetAttachSession();
+  bool AttachSession();
+
 private:
   DpuRank *m_rank;
   dpu_t *m_dpu;
@@ -109,6 +112,7 @@ private:
   int nr_of_work_registers_per_thread;
   struct _dpu_context_t m_context;
   bool dpu_is_running = false;
+  bool attach_session = false;
 };
 
 } // namespace dpu
