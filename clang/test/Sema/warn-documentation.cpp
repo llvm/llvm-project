@@ -1050,42 +1050,42 @@ template <typename B>
 void test_attach38<int>::test_attach39(int, B);
 
 // The inline comments expect a string after the command.
-// expected-warning@+1 {{'\a' command does not have an argument}}
+// expected-warning@+1 {{'\a' command does not have a valid word argument}}
 /// \a
 int test_inline_no_argument_a_bad(int);
 
 /// \a A
 int test_inline_no_argument_a_good(int);
 
-// expected-warning@+1 {{'@b' command does not have an argument}}
+// expected-warning@+1 {{'@b' command does not have a valid word argument}}
 /// @b
 int test_inline_no_argument_b_bad(int);
 
 /// @b A
 int test_inline_no_argument_b_good(int);
 
-// expected-warning@+1 {{'\c' command does not have an argument}}
+// expected-warning@+1 {{'\c' command does not have a valid word argument}}
 /// \c
 int test_inline_no_argument_c_bad(int);
 
 /// \c A
 int test_inline_no_argument_c_good(int);
 
-// expected-warning@+1 {{'\e' command does not have an argument}}
+// expected-warning@+1 {{'\e' command does not have a valid word argument}}
 /// \e
 int test_inline_no_argument_e_bad(int);
 
 /// \e A
 int test_inline_no_argument_e_good(int);
 
-// expected-warning@+1 {{'\em' command does not have an argument}}
+// expected-warning@+1 {{'\em' command does not have a valid word argument}}
 /// \em
 int test_inline_no_argument_em_bad(int);
 
 /// \em A
 int test_inline_no_argument_em_good(int);
 
-// expected-warning@+1 {{'\p' command does not have an argument}}
+// expected-warning@+1 {{'\p' command does not have a valid word argument}}
 /// \p
 int test_inline_no_argument_p_bad(int);
 
