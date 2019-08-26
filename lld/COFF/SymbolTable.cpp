@@ -179,7 +179,7 @@ void SymbolTable::loadMinGWAutomaticImports() {
     log("Loading lazy " + l->getName() + " from " + l->file->getName() +
         " for automatic import");
     l->pendingArchiveLoad = true;
-    l->file->addMember(&l->sym);
+    l->file->addMember(l->sym);
   }
 }
 
@@ -363,13 +363,13 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
   if (auto *l = dyn_cast<Lazy>(s)) {
     if (!s->pendingArchiveLoad) {
       s->pendingArchiveLoad = true;
-      l->file->addMember(&l->sym);
+      l->file->addMember(l->sym);
     }
   }
   return s;
 }
 
-void SymbolTable::addLazy(ArchiveFile *f, const Archive::Symbol sym) {
+void SymbolTable::addLazy(ArchiveFile *f, const Archive::Symbol &sym) {
   StringRef name = sym.getName();
   Symbol *s;
   bool wasInserted;
@@ -382,7 +382,7 @@ void SymbolTable::addLazy(ArchiveFile *f, const Archive::Symbol sym) {
   if (!u || u->weakAlias || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
-  f->addMember(&sym);
+  f->addMember(sym);
 }
 
 void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile) {

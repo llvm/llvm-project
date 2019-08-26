@@ -430,6 +430,7 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
 } // namespace coff
 
 std::string toString(coff::Symbol &b);
+std::string toString(const coff::Archive::Symbol &b);
 } // namespace lld
 
 #endif
