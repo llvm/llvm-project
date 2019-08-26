@@ -70,7 +70,12 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- ``-ftime-trace`` and ``ftime-trace-granularity=N``
+  Emits flame chart style compilation time report in chrome://tracing and
+  speedscope.app compatible format. A trace .json file is written next to the
+  compiled object file, containing hierarchical time information about frontend
+  activities (file parsing, template instantiation) and backend activities
+  (modules and functions being optimized, optimization passes).
 
 Deprecated Compiler Flags
 -------------------------
