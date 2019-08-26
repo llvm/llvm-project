@@ -106,10 +106,21 @@ Changes to building LLVM
 * Building LLVM with Visual Studio now requires version 2017 or later.
 
 
+Changes to the AArch64 Backend
+------------------------------
+
+* Assembly-level support was added for: Scalable Vector Extension 2 (SVE2) and
+  Memory Tagging Extensions (MTE).
+
 Changes to the ARM Backend
 --------------------------
 
- During this release ...
+* Assembly-level support was added for the Armv8.1-M architecture, including
+  the M-Profile Vector Extension (MVE).
+
+* A pipeline model was added for Cortex-M4. This pipeline model is also used to
+  tune for cores where this gives a benefit too: Cortex-M3, SC300, Cortex-M33
+  and Cortex-M35P.
 
 
 Changes to the MIPS Target
