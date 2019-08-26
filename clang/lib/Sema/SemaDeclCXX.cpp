@@ -1225,7 +1225,8 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (E.isInvalid())
       return true;
     RefVD->setInit(E.get());
-    RefVD->checkInitIsICE();
+    if (!E.get()->isValueDependent())
+      RefVD->checkInitIsICE();
 
     E = S.BuildDeclarationNameExpr(CXXScopeSpec(),
                                    DeclarationNameInfo(B->getDeclName(), Loc),
