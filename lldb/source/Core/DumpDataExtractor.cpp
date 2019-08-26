@@ -20,6 +20,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "clang/AST/ASTContext.h"
@@ -28,6 +29,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <limits>
@@ -64,8 +66,9 @@ static float half2float(uint16_t half) {
   return u.f * ldexpf(1, -112);
 }
 
-static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
-                     lldb::offset_t byte_size, llvm::APInt &result) {
+static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
+                                            lldb::offset_t *offset_ptr,
+                                            lldb::offset_t byte_size) {
   llvm::SmallVector<uint64_t, 2> uint64_array;
   lldb::offset_t bytes_left = byte_size;
   uint64_t u64;
@@ -81,8 +84,7 @@ static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
       }
       uint64_array.push_back(u64);
     }
-    result = llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
-    return true;
+    return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   } else if (byte_order == lldb::eByteOrderBig) {
     lldb::offset_t be_offset = *offset_ptr + byte_size;
     lldb::offset_t temp_offset;
@@ -101,18 +103,17 @@ static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
       uint64_array.push_back(u64);
     }
     *offset_ptr += byte_size;
-    result = llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
-    return true;
+    return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   }
-  return false;
+  return llvm::None;
 }
 
 static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 lldb::offset_t offset, lldb::offset_t byte_size,
                                 bool is_signed, unsigned radix) {
-  llvm::APInt apint;
-  if (GetAPInt(data, &offset, byte_size, apint)) {
-    std::string apint_str(apint.toString(radix, is_signed));
+  llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
+  if (apint.hasValue()) {
+    std::string apint_str(apint.getValue().toString(radix, is_signed));
     switch (radix) {
     case 2:
       s->Write("0b", 2);
@@ -572,10 +573,11 @@ lldb::offset_t lldb_private::DumpDataExtractor(
                                     apint);
               apfloat.toString(sv, format_precision, format_max_padding);
             } else if (item_bit_size == ast->getTypeSize(ast->DoubleTy)) {
-              llvm::APInt apint;
-              if (GetAPInt(DE, &offset, item_byte_size, apint)) {
+              llvm::Optional<llvm::APInt> apint =
+                  GetAPInt(DE, &offset, item_byte_size);
+              if (apint.hasValue()) {
                 llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->DoubleTy),
-                                      apint);
+                                      apint.getValue());
                 apfloat.toString(sv, format_precision, format_max_padding);
               }
             } else if (item_bit_size == ast->getTypeSize(ast->LongDoubleTy)) {
@@ -586,9 +588,10 @@ lldb::offset_t lldb_private::DumpDataExtractor(
               if (&semantics == &llvm::APFloatBase::x87DoubleExtended())
                 byte_size = (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
 
-              llvm::APInt apint;
-              if (GetAPInt(DE, &offset, byte_size, apint)) {
-                llvm::APFloat apfloat(semantics, apint);
+              llvm::Optional<llvm::APInt> apint =
+                  GetAPInt(DE, &offset, byte_size);
+              if (apint.hasValue()) {
+                llvm::APFloat apfloat(semantics, apint.getValue());
                 apfloat.toString(sv, format_precision, format_max_padding);
               }
             } else if (item_bit_size == ast->getTypeSize(ast->HalfTy)) {
