@@ -22,6 +22,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
@@ -390,6 +391,19 @@ Sema::~Sema() {
   SemaPPCallbackHandler->reset();
 
   assert(DelayedTypos.empty() && "Uncorrected typos!");
+}
+
+void Sema::warnStackExhausted(SourceLocation Loc) {
+  // Only warn about this once.
+  if (!WarnedStackExhausted) {
+    Diag(Loc, diag::warn_stack_exhausted);
+    WarnedStackExhausted = true;
+  }
+}
+
+void Sema::runWithSufficientStackSpace(SourceLocation Loc,
+                                       llvm::function_ref<void()> Fn) {
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
 /// makeUnavailableInSystemHeader - There is an error in the current

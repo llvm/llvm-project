@@ -6242,8 +6242,11 @@ PerformConstructorInitialization(Sema &S,
     // the definition for completely trivial constructors.
     assert(Constructor->getParent() && "No parent class for constructor.");
     if (Constructor->isDefaulted() && Constructor->isDefaultConstructor() &&
-        Constructor->isTrivial() && !Constructor->isUsed(false))
-      S.DefineImplicitDefaultConstructor(Loc, Constructor);
+        Constructor->isTrivial() && !Constructor->isUsed(false)) {
+      S.runWithSufficientStackSpace(Loc, [&] {
+        S.DefineImplicitDefaultConstructor(Loc, Constructor);
+      });
+    }
   }
 
   ExprResult CurInit((Expr *)nullptr);

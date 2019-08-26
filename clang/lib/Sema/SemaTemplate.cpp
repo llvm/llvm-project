@@ -20,6 +20,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"

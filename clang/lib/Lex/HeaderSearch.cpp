@@ -314,7 +314,7 @@ Optional<FileEntryRef> HeaderSearch::getFileAndSuggestModule(
   if (!File) {
     // For rare, surprising errors (e.g. "out of file handles"), diag the EC
     // message.
-    std::error_code EC = File.getError();
+    std::error_code EC = llvm::errorToErrorCode(File.takeError());
     if (EC != llvm::errc::no_such_file_or_directory &&
         EC != llvm::errc::invalid_argument &&
         EC != llvm::errc::is_a_directory && EC != llvm::errc::not_a_directory) {
@@ -401,7 +401,7 @@ Optional<FileEntryRef> DirectoryLookup::LookupFile(
       FixupSearchPath();
       return *Result;
     }
-  } else if (auto Res = HS.getFileMgr().getFileRef(Dest)) {
+  } else if (auto Res = HS.getFileMgr().getOptionalFileRef(Dest)) {
     FixupSearchPath();
     return *Res;
   }
@@ -553,9 +553,8 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
   FrameworkName.append(Filename.begin()+SlashPos+1, Filename.end());
 
-  llvm::ErrorOr<FileEntryRef> File =
-      FileMgr.getFileRef(FrameworkName, /*OpenFile=*/!SuggestedModule);
-
+  auto File =
+      FileMgr.getOptionalFileRef(FrameworkName, /*OpenFile=*/!SuggestedModule);
   if (!File) {
     // Check "/System/Library/Frameworks/Cocoa.framework/PrivateHeaders/file.h"
     const char *Private = "Private";
@@ -565,7 +564,8 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
       SearchPath->insert(SearchPath->begin()+OrigSize, Private,
                          Private+strlen(Private));
 
-    File = FileMgr.getFileRef(FrameworkName, /*OpenFile=*/!SuggestedModule);
+    File = FileMgr.getOptionalFileRef(FrameworkName,
+                                      /*OpenFile=*/!SuggestedModule);
   }
 
   // If we found the header and are allowed to suggest a module, do so now.
@@ -1076,9 +1076,7 @@ Optional<FileEntryRef> HeaderSearch::LookupSubframeworkHeader(
   }
 
   HeadersFilename.append(Filename.begin()+SlashPos+1, Filename.end());
-  llvm::ErrorOr<FileEntryRef> File =
-      FileMgr.getFileRef(HeadersFilename, /*OpenFile=*/true);
-
+  auto File = FileMgr.getOptionalFileRef(HeadersFilename, /*OpenFile=*/true);
   if (!File) {
     // Check ".../Frameworks/HIToolbox.framework/PrivateHeaders/HIToolbox.h"
     HeadersFilename = FrameworkName;
@@ -1090,7 +1088,7 @@ Optional<FileEntryRef> HeaderSearch::LookupSubframeworkHeader(
     }
 
     HeadersFilename.append(Filename.begin()+SlashPos+1, Filename.end());
-    File = FileMgr.getFileRef(HeadersFilename, /*OpenFile=*/true);
+    File = FileMgr.getOptionalFileRef(HeadersFilename, /*OpenFile=*/true);
 
     if (!File)
       return None;
