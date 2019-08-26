@@ -2746,6 +2746,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                        tok::kw_void))
         return true;
     }
+    // `foo as const;` casts into a const type.
+    if (Left.endsSequence(tok::kw_const, Keywords.kw_as)) {
+      return false;
+    }
     if ((Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                       tok::kw_const) ||
          // "of" is only a keyword if it appears after another identifier

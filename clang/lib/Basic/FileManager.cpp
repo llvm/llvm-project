@@ -263,15 +263,15 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // If the name returned by getStatValue is different than Filename, re-intern
   // the name.
   if (Status.getName() != Filename) {
-    auto &NamedFileEnt =
+    auto &NewNamedFileEnt =
         *SeenFileEntries.insert({Status.getName(), &UFE}).first;
-    assert((*NamedFileEnt.second).get<FileEntry *>() == &UFE &&
+    assert((*NewNamedFileEnt.second).get<FileEntry *>() == &UFE &&
            "filename from getStatValue() refers to wrong file");
-    InterndFileName = NamedFileEnt.first().data();
+    InterndFileName = NewNamedFileEnt.first().data();
     // In addition to re-interning the name, construct a redirecting seen file
     // entry, that will point to the name the filesystem actually wants to use.
     StringRef *Redirect = new (CanonicalNameStorage) StringRef(InterndFileName);
-    SeenFileInsertResult.first->second = Redirect;
+    NamedFileEnt.second = Redirect;
   }
 
   if (UFE.isValid()) { // Already have an entry with this inode, return it.

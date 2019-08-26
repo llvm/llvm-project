@@ -6648,9 +6648,11 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
     Path.push_back({IndirectLocalPathEntry::GslPointerInit, Arg, D});
     if (Arg->isGLValue())
       visitLocalsRetainedByReferenceBinding(Path, Arg, RK_ReferenceBinding,
-                                            Visit, true);
+                                            Visit,
+                                            /*EnableLifetimeWarnings=*/true);
     else
-      visitLocalsRetainedByInitializer(Path, Arg, Visit, true, true);
+      visitLocalsRetainedByInitializer(Path, Arg, Visit, true,
+                                       /*EnableLifetimeWarnings=*/true);
     Path.pop_back();
   };
 
@@ -6725,9 +6727,11 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     Path.push_back({IndirectLocalPathEntry::LifetimeBoundCall, Arg, D});
     if (Arg->isGLValue())
       visitLocalsRetainedByReferenceBinding(Path, Arg, RK_ReferenceBinding,
-                                            Visit, false);
+                                            Visit,
+                                            /*EnableLifetimeWarnings=*/false);
     else
-      visitLocalsRetainedByInitializer(Path, Arg, Visit, true, false);
+      visitLocalsRetainedByInitializer(Path, Arg, Visit, true,
+                                       /*EnableLifetimeWarnings=*/false);
     Path.pop_back();
   };
 

@@ -2014,13 +2014,14 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
     CompilationDatabase = std::move(File);
   }
   auto &CDB = *CompilationDatabase;
-  SmallString<128> Buf;
-  if (llvm::sys::fs::current_path(Buf))
-    Buf = ".";
-  CDB << "{ \"directory\": \"" << escape(Buf) << "\"";
+  auto CWD = D.getVFS().getCurrentWorkingDirectory();
+  if (!CWD)
+    CWD = ".";
+  CDB << "{ \"directory\": \"" << escape(*CWD) << "\"";
   CDB << ", \"file\": \"" << escape(Input.getFilename()) << "\"";
   CDB << ", \"output\": \"" << escape(Output.getFilename()) << "\"";
   CDB << ", \"arguments\": [\"" << escape(D.ClangExecutable) << "\"";
+  SmallString<128> Buf;
   Buf = "-x";
   Buf += types::getTypeName(Input.getType());
   CDB << ", \"" << escape(Buf) << "\"";
@@ -2038,6 +2039,8 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
     // Skip writing dependency output and the compilation database itself.
     if (O.getGroup().isValid() && O.getGroup().getID() == options::OPT_M_Group)
       continue;
+    if (O.getID() == options::OPT_gen_cdb_fragment_path)
+      continue;
     // Skip inputs.
     if (O.getKind() == Option::InputClass)
       continue;
@@ -2050,6 +2053,40 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
   Buf = "--target=";
   Buf += Target;
   CDB << ", \"" << escape(Buf) << "\"]},\n";
+}
+
+void Clang::DumpCompilationDatabaseFragmentToDir(
+    StringRef Dir, Compilation &C, StringRef Target, const InputInfo &Output,
+    const InputInfo &Input, const llvm::opt::ArgList &Args) const {
+  // If this is a dry run, do not create the compilation database file.
+  if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH))
+    return;
+
+  if (CompilationDatabase)
+    DumpCompilationDatabase(C, "", Target, Output, Input, Args);
+
+  SmallString<256> Path = Dir;
+  const auto &Driver = C.getDriver();
+  Driver.getVFS().makeAbsolute(Path);
+  auto Err = llvm::sys::fs::create_directory(Path, /*IgnoreExisting=*/true);
+  if (Err) {
+    Driver.Diag(diag::err_drv_compilationdatabase) << Dir << Err.message();
+    return;
+  }
+
+  llvm::sys::path::append(
+      Path,
+      Twine(llvm::sys::path::filename(Input.getFilename())) + ".%%%%.json");
+  int FD;
+  SmallString<256> TempPath;
+  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath);
+  if (Err) {
+    Driver.Diag(diag::err_drv_compilationdatabase) << Path << Err.message();
+    return;
+  }
+  CompilationDatabase =
+      std::make_unique<llvm::raw_fd_ostream>(FD, /*shouldClose=*/true);
+  DumpCompilationDatabase(C, "", Target, Output, Input, Args);
 }
 
 static void CollectArgsForIntegratedAssembler(Compilation &C,
@@ -3496,6 +3533,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
     Args.ClaimAllArgs(options::OPT_MJ);
+  } else if (const Arg *GenCDBFragment =
+                 Args.getLastArg(options::OPT_gen_cdb_fragment_path)) {
+    DumpCompilationDatabaseFragmentToDir(GenCDBFragment->getValue(), C,
+                                         TripleStr, Output, Input, Args);
+    Args.ClaimAllArgs(options::OPT_gen_cdb_fragment_path);
   }
 
   if (IsCuda || IsHIP) {
@@ -4081,8 +4123,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // toolchains which have the integrated assembler on by default.
   bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
   if (Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
-                   IsIntegratedAssemblerDefault) ||
-      Args.hasArg(options::OPT_dA))
+                   IsIntegratedAssemblerDefault))
     CmdArgs.push_back("-masm-verbose");
 
   if (!TC.useIntegratedAs())
