@@ -109,6 +109,9 @@ Windows Support
   ``clang-cl /diagnostic:caret /c test.cc`` for example now produces
   ``clang: error: no such file or directory: '/diagnostic:caret'; did you mean '/diagnostics:caret'?``
 
+- clang now parses the ``__declspec(allocator)`` specifier and generates debug
+  information, so that memory usage can be tracked in Visual Studio.
+
 - The ``-print-search-dirs`` option now separates elements with semicolons,
   as is the norm for path lists on Windows
 
