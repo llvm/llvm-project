@@ -51,54 +51,23 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
   return npdb::GetLLDBRegisterNumber(arch_type, reg_id);
 }
 
-static bool ParseFPOSingleAssignmentProgram(llvm::StringRef program,
-                                            llvm::BumpPtrAllocator &alloc,
-                                            llvm::StringRef &register_name,
-                                            Node *&ast) {
-  // lvalue of assignment is always first token
-  // rvalue program goes next
-  std::tie(register_name, program) = getToken(program);
-  if (register_name.empty())
-    return false;
-
-  ast = Parse(program, alloc);
-  return ast != nullptr;
-}
-
-static Node *ParseFPOProgram(llvm::StringRef program,
+static Node *ResolveFPOProgram(llvm::StringRef program,
                              llvm::StringRef register_name,
                              llvm::Triple::ArchType arch_type,
                              llvm::BumpPtrAllocator &alloc) {
-  llvm::DenseMap<llvm::StringRef, Node *> dependent_programs;
+  std::vector<std::pair<llvm::StringRef, Node *>> parsed =
+      postfix::ParseFPOProgram(program, alloc);
 
-  size_t cur = 0;
-  while (true) {
-    size_t assign_index = program.find('=', cur);
-    if (assign_index == llvm::StringRef::npos) {
-      llvm::StringRef tail = program.slice(cur, llvm::StringRef::npos);
-      if (!tail.trim().empty()) {
-        // missing assign operator
-        return nullptr;
-      }
-      break;
-    }
-    llvm::StringRef assignment_program = program.slice(cur, assign_index);
-
-    llvm::StringRef lvalue_name;
-    Node *rvalue_ast = nullptr;
-    if (!ParseFPOSingleAssignmentProgram(assignment_program, alloc, lvalue_name,
-                                         rvalue_ast)) {
-      return nullptr;
-    }
-
-    lldbassert(rvalue_ast);
-
+  for (auto it = parsed.begin(), end = parsed.end(); it != end; ++it) {
     // Emplace valid dependent subtrees to make target assignment independent
     // from predecessors. Resolve all other SymbolNodes as registers.
     bool success =
-        ResolveSymbols(rvalue_ast, [&](SymbolNode &symbol) -> Node * {
-          if (Node *node = dependent_programs.lookup(symbol.GetName()))
-            return node;
+        ResolveSymbols(it->second, [&](SymbolNode &symbol) -> Node * {
+          for (const auto &pair : llvm::make_range(parsed.begin(), it)) {
+            if (pair.first == symbol.GetName())
+              return pair.second;
+          }
+
           uint32_t reg_num =
               ResolveLLDBRegisterNum(symbol.GetName().drop_front(1), arch_type);
 
@@ -110,13 +79,10 @@ static Node *ParseFPOProgram(llvm::StringRef program,
     if (!success)
       return nullptr;
 
-    if (lvalue_name == register_name) {
+    if (it->first == register_name) {
       // found target assignment program - no need to parse further
-      return rvalue_ast;
+      return it->second;
     }
-
-    dependent_programs[lvalue_name] = rvalue_ast;
-    cur = assign_index + 1;
   }
 
   return nullptr;
@@ -127,7 +93,7 @@ bool lldb_private::npdb::TranslateFPOProgramToDWARFExpression(
     llvm::Triple::ArchType arch_type, Stream &stream) {
   llvm::BumpPtrAllocator node_alloc;
   Node *target_program =
-      ParseFPOProgram(program, register_name, arch_type, node_alloc);
+      ResolveFPOProgram(program, register_name, arch_type, node_alloc);
   if (target_program == nullptr) {
     return false;
   }
