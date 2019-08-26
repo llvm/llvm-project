@@ -108,12 +108,10 @@ ParseFPOAndStringify(llvm::StringRef prog) {
   llvm::BumpPtrAllocator alloc;
   std::vector<std::pair<llvm::StringRef, Node *>> parsed =
       ParseFPOProgram(prog, alloc);
-  auto range = llvm::map_range(
-      parsed, [](const std::pair<llvm::StringRef, Node *> &pair) {
-        return std::make_pair(pair.first, ASTPrinter::Print(pair.second));
-      });
-  return std::vector<std::pair<std::string, std::string>>(range.begin(),
-                                                          range.end());
+  std::vector<std::pair<std::string, std::string>> result;
+  for (const auto &p : parsed)
+    result.emplace_back(p.first, ASTPrinter::Print(p.second));
+  return result;
 }
 
 TEST(PostfixExpression, ParseFPOProgram) {
