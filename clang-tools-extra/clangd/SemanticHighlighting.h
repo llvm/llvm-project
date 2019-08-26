@@ -71,15 +71,15 @@ toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens);
 /// Return a line-by-line diff between two highlightings.
 ///  - if the tokens on a line are the same in both hightlightings, this line is
 ///  omitted.
-///  - if a line exists in New but not in Old the tokens on this line are
+///  - if a line exists in New but not in Old, the tokens on this line are
 ///  emitted.
-///  - if a line does not exists in New but exists in Old an empty line is
+///  - if a line does not exist in New but exists in Old, an empty line is
 ///  emitted (to tell client to clear the previous highlightings on this line).
-/// \p NewMaxLine is the maximum line number from the new file.
+///
 /// REQUIRED: Old and New are sorted.
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
-                  ArrayRef<HighlightingToken> Old, int NewMaxLine);
+                  ArrayRef<HighlightingToken> Old);
 
 } // namespace clangd
 } // namespace clang

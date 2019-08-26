@@ -56,8 +56,7 @@ public:
   /// where generated from.
   virtual void
   onHighlightingsReady(PathRef File,
-                       std::vector<HighlightingToken> Highlightings,
-                       int NumLines) {}
+                       std::vector<HighlightingToken> Highlightings) {}
 };
 
 /// When set, used by ClangdServer to get clang-tidy options for each particular

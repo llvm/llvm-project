@@ -1195,7 +1195,7 @@ bool ClangdLSPServer::shouldRunCompletion(
 }
 
 void ClangdLSPServer::onHighlightingsReady(
-    PathRef File, std::vector<HighlightingToken> Highlightings, int NumLines) {
+    PathRef File, std::vector<HighlightingToken> Highlightings) {
   std::vector<HighlightingToken> Old;
   std::vector<HighlightingToken> HighlightingsCopy = Highlightings;
   {
@@ -1205,8 +1205,7 @@ void ClangdLSPServer::onHighlightingsReady(
   }
   // LSP allows us to send incremental edits of highlightings. Also need to diff
   // to remove highlightings from tokens that should no longer have them.
-  std::vector<LineHighlightings> Diffed =
-      diffHighlightings(Highlightings, Old, NumLines);
+  std::vector<LineHighlightings> Diffed = diffHighlightings(Highlightings, Old);
   publishSemanticHighlighting(
       {{URIForFile::canonicalize(File, /*TUPath=*/File)},
        toSemanticHighlightingInformation(Diffed)});
