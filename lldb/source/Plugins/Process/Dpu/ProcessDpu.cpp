@@ -90,9 +90,7 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
   if (!success)
     return Status("Cannot reset DPU rank ").ToError();
 
-  assert(launch_info.GetArchitecture() == k_dpu_arch);
   Dpu *dpu = rank->GetDpu(0);
-
   success = dpu->LoadElf(launch_info.GetExecutableFile());
   if (!success)
     return Status("Cannot load Elf in DPU rank ").ToError();
