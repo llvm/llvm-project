@@ -95,6 +95,10 @@ private:
                                const InputInfo &Output, const InputInfo &Input,
                                const llvm::opt::ArgList &Args) const;
 
+  void DumpCompilationDatabaseFragmentToDir(
+      StringRef Dir, Compilation &C, StringRef Target, const InputInfo &Output,
+      const InputInfo &Input, const llvm::opt::ArgList &Args) const;
+
 public:
   Clang(const ToolChain &TC);
   ~Clang() override;
