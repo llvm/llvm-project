@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_WIN64)
+#if defined(__x86_64__) || defined(_M_X64)
 #ifndef liblldb_NativeRegisterContextWindows_x86_64_h_
 #define liblldb_NativeRegisterContextWindows_x86_64_h_
 
@@ -79,4 +79,4 @@ private:
 } // namespace lldb_private
 
 #endif // liblldb_NativeRegisterContextWindows_x86_64_h_
-#endif // defined(_WIN64)
+#endif // defined(__x86_64__) || defined(_M_X64)
