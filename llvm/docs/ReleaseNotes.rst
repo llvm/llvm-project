@@ -144,7 +144,30 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+* Improved handling of TOC pointer spills for indirect calls
+
+* Improve precision of square root reciprocal estimate
+
+* Enabled MachinePipeliner support for P9 with -ppc-enable-pipeliner.
+
+* MMX/SSE/SSE2 intrinsics headers have been ported to PowerPC using Altivec.
+
+* Machine verification failures cleaned, EXPENSIVE_CHECKS will run
+  MachineVerification by default now.
+
+* PowerPC scheduling enhancements, with customized PPC specific scheduler
+  strategy.
+
+* Inner most loop now always align to 32 bytes.
+
+* Enhancements of hardware loops interaction with LSR.
+
+* New builtins added, eg: __builtin_setrnd.
+
+* Various codegen improvements for both scalar and vector code
+
+* Various new exploitations and bug fixes, eg: exploited P9 maddld.
+
 
 Changes to the SystemZ Target
 -----------------------------
