@@ -204,9 +204,7 @@ Optional<FileEntryRef> HeaderMap::LookupFile(StringRef Filename,
   if (Dest.empty())
     return None;
 
-  if (auto File = FM.getFileRef(Dest))
-    return *File;
-  return None;
+  return FM.getOptionalFileRef(Dest);
 }
 
 StringRef HeaderMapImpl::lookupFilename(StringRef Filename,

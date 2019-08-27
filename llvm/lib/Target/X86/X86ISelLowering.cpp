@@ -43712,9 +43712,17 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
 /// The all-ones vector constant can be materialized using a pcmpeq instruction
 /// that is commonly recognized as an idiom (has no register dependency), so
 /// that's better/smaller than loading a splat 1 constant.
-static SDValue combineIncDecVector(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineIncDecVector(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
   assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Unexpected opcode for increment/decrement transform");
+
+  // Delay this until legalize ops to avoid interfering with early DAG combines
+  // that may expect canonical adds.
+  // FIXME: We may want to consider moving this to custom lowering or all the
+  // way to isel, but lets start here.
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   // Pseudo-legality check: getOnesVector() expects one of these types, so bail
   // out and wait for legalization if we have an unsupported vector length.
@@ -43962,6 +43970,7 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   const SDNodeFlags Flags = N->getFlags();
   if (Flags.hasVectorReduction()) {
@@ -43992,7 +44001,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                             HADDBuilder);
   }
 
-  if (SDValue V = combineIncDecVector(N, DAG))
+  if (SDValue V = combineIncDecVector(N, DAG, DCI))
     return V;
 
   return combineAddOrSubToADCOrSBB(N, DAG);
@@ -44086,6 +44095,7 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -44122,7 +44132,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                             HSUBBuilder);
   }
 
-  if (SDValue V = combineIncDecVector(N, DAG))
+  if (SDValue V = combineIncDecVector(N, DAG, DCI))
     return V;
 
   // Try to create PSUBUS if SUB's argument is max/min
@@ -44659,6 +44669,34 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnesValue(64), DCI))
     return SDValue(N, 0);
 
+  // If the input is an extend_invec and the SimplifyDemandedBits call didn't
+  // convert it to any_extend_invec, due to the LegalOperations check, do the
+  // conversion directly to a vector shuffle manually. This exposes combine
+  // opportunities missed by combineExtInVec not calling
+  // combineX86ShufflesRecursively on SSE4.1 targets.
+  // FIXME: This is basically a hack around several other issues related to
+  // ANY_EXTEND_VECTOR_INREG.
+  if (N->getValueType(0) == MVT::v2i64 && LHS.hasOneUse() &&
+      (LHS.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG ||
+       LHS.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG) &&
+      LHS.getOperand(0).getValueType() == MVT::v4i32) {
+    SDLoc dl(N);
+    LHS = DAG.getVectorShuffle(MVT::v4i32, dl, LHS.getOperand(0),
+                               LHS.getOperand(0), { 0, -1, 1, -1 });
+    LHS = DAG.getBitcast(MVT::v2i64, LHS);
+    return DAG.getNode(N->getOpcode(), dl, MVT::v2i64, LHS, RHS);
+  }
+  if (N->getValueType(0) == MVT::v2i64 && RHS.hasOneUse() &&
+      (RHS.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG ||
+       RHS.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG) &&
+      RHS.getOperand(0).getValueType() == MVT::v4i32) {
+    SDLoc dl(N);
+    RHS = DAG.getVectorShuffle(MVT::v4i32, dl, RHS.getOperand(0),
+                               RHS.getOperand(0), { 0, -1, 1, -1 });
+    RHS = DAG.getBitcast(MVT::v2i64, RHS);
+    return DAG.getNode(N->getOpcode(), dl, MVT::v2i64, LHS, RHS);
+  }
+
   return SDValue();
 }
 
@@ -44733,8 +44771,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
   case X86ISD::CMP:         return combineCMP(N, DAG);
-  case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
-  case ISD::SUB:            return combineSub(N, DAG, Subtarget);
+  case ISD::ADD:            return combineAdd(N, DAG, DCI, Subtarget);
+  case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
   case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI);
   case X86ISD::SBB:         return combineSBB(N, DAG);

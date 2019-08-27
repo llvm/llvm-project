@@ -946,6 +946,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (CTy->isAppleBlockExtension())
       addFlag(Buffer, dwarf::DW_AT_APPLE_block);
 
+    if (CTy->getExportSymbols())
+      addFlag(Buffer, dwarf::DW_AT_export_symbols);
+
     // This is outside the DWARF spec, but GDB expects a DW_AT_containing_type
     // inside C++ composite types to point to the base class with the vtable.
     // Rust uses DW_AT_containing_type to link a vtable to the type

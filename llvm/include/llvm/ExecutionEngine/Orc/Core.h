@@ -430,6 +430,7 @@ enum class SymbolState : uint8_t {
   NeverSearched, /// Added to the symbol table, never queried.
   Materializing, /// Queried, materialization begun.
   Resolved,      /// Assigned address, still materializing.
+  Emitted,       /// Emitted to memory, but waiting on transitive dependencies.
   Ready = 0x3f   /// Ready and safe for clients to access.
 };
 
@@ -637,7 +638,6 @@ private:
   struct MaterializingInfo {
     SymbolDependenceMap Dependants;
     SymbolDependenceMap UnemittedDependencies;
-    bool IsEmitted = false;
 
     void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     void removeQuery(const AsynchronousSymbolQuery &Q);
@@ -736,13 +736,6 @@ private:
 
   SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const;
 
-  // Move a symbol to the failure state.
-  // Detaches the symbol from all dependencies, moves all dependants to the
-  // error state (but does not fail them), deletes the MaterializingInfo for
-  // the symbol (if present) and returns the set of queries that need to be
-  // notified of the failure.
-  AsynchronousSymbolQuerySet failSymbol(const SymbolStringPtr &Name);
-
   void addDependencies(const SymbolStringPtr &Name,
                        const SymbolDependenceMap &Dependants);
 
@@ -750,7 +743,9 @@ private:
 
   Error emit(const SymbolFlagsMap &Emitted);
 
-  void notifyFailed(const SymbolFlagsMap &FailedSymbols);
+  using FailedSymbolsWorklist =
+      std::vector<std::pair<JITDylib *, SymbolStringPtr>>;
+  static void notifyFailed(FailedSymbolsWorklist FailedSymbols);
 
   ExecutionSession &ES;
   std::string JITDylibName;

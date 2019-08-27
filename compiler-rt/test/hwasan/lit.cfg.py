@@ -11,15 +11,18 @@ config.test_source_root = os.path.dirname(__file__)
 # Setup default compiler flags used with -fsanitize=memory option.
 clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
-clang_hwasan_oldrt_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
 if config.target_arch == 'x86_64':
   # This does basically the same thing as tagged-globals on aarch64. Because
   # the x86_64 implementation is for testing purposes only there is no
   # equivalent target feature implemented on x86_64.
-  clang_hwasan_oldrt_cflags += ["-mcmodel=large"]
-clang_hwasan_cflags = clang_hwasan_oldrt_cflags + ["-mllvm", "-hwasan-globals",
+  clang_hwasan_common_cflags += ["-mcmodel=large"]
+clang_hwasan_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-globals",
                                                    "-mllvm", "-hwasan-instrument-landing-pads=0",
                                                    "-mllvm", "-hwasan-instrument-personality-functions"]
+clang_hwasan_oldrt_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-instrument-landing-pads=1",
+                                                          "-mllvm", "-hwasan-instrument-personality-functions=0"]
+
 clang_hwasan_cxxflags = config.cxx_mode_flags + clang_hwasan_cflags
 clang_hwasan_oldrt_cxxflags = config.cxx_mode_flags + clang_hwasan_oldrt_cflags
 

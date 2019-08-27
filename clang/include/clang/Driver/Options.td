@@ -280,6 +280,8 @@ def arcmt_migrate_emit_arc_errors : Flag<["-"], "arcmt-migrate-emit-errors">,
   Flags<[CC1Option]>;
 def gen_reproducer: Flag<["-"], "gen-reproducer">, InternalDebugOpt,
   HelpText<"Auto-generates preprocessed source files and a reproduction script">;
+def gen_cdb_fragment_path: Separate<["-"], "gen-cdb-fragment-path">, InternalDebugOpt,
+  HelpText<"Emit a compilation database fragment to the specified directory">;
 
 def _migrate : Flag<["--"], "migrate">, Flags<[DriverOption]>,
   HelpText<"Run the migrator">;

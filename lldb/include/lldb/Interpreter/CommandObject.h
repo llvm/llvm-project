@@ -340,8 +340,8 @@ protected:
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target is present you want to prime the dummy
   // target with entities that will be copied over to new targets.
-  Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target *GetDummyTarget();
+  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
+  Target &GetDummyTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

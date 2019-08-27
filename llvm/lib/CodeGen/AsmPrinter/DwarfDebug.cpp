@@ -709,8 +709,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
   // for both tail and non-tail calls. Don't use DW_AT_call_all_source_calls
   // because one of its requirements is not met: call site entries for
   // optimized-out calls are elided.
-  CU.addFlag(ScopeDIE,
-             CU.getDwarf5OrGNUCallSiteAttr(dwarf::DW_AT_call_all_calls));
+  CU.addFlag(ScopeDIE, CU.getDwarf5OrGNUAttr(dwarf::DW_AT_call_all_calls));
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "TargetInstrInfo not found: cannot label tail calls");

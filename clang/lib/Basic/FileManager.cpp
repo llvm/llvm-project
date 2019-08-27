@@ -187,10 +187,10 @@ FileManager::getFile(StringRef Filename, bool openFile, bool CacheFailure) {
   auto Result = getFileRef(Filename, openFile, CacheFailure);
   if (Result)
     return &Result->getFileEntry();
-  return Result.getError();
+  return llvm::errorToErrorCode(Result.takeError());
 }
 
-llvm::ErrorOr<FileEntryRef>
+llvm::Expected<FileEntryRef>
 FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   ++NumFileLookups;
 
@@ -199,7 +199,8 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
   if (!SeenFileInsertResult.second) {
     if (!SeenFileInsertResult.first->second)
-      return SeenFileInsertResult.first->second.getError();
+      return llvm::errorCodeToError(
+          SeenFileInsertResult.first->second.getError());
     // Construct and return and FileEntryRef, unless it's a redirect to another
     // filename.
     SeenFileEntryOrRedirect Value = *SeenFileInsertResult.first->second;
@@ -230,7 +231,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     else
       SeenFileEntries.erase(Filename);
 
-    return DirInfoOrErr.getError();
+    return llvm::errorCodeToError(DirInfoOrErr.getError());
   }
   const DirectoryEntry *DirInfo = *DirInfoOrErr;
 
@@ -249,7 +250,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     else
       SeenFileEntries.erase(Filename);
 
-    return statError;
+    return llvm::errorCodeToError(statError);
   }
 
   assert((openFile || !F) && "undesired open file");
@@ -263,15 +264,15 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // If the name returned by getStatValue is different than Filename, re-intern
   // the name.
   if (Status.getName() != Filename) {
-    auto &NamedFileEnt =
+    auto &NewNamedFileEnt =
         *SeenFileEntries.insert({Status.getName(), &UFE}).first;
-    assert((*NamedFileEnt.second).get<FileEntry *>() == &UFE &&
+    assert((*NewNamedFileEnt.second).get<FileEntry *>() == &UFE &&
            "filename from getStatValue() refers to wrong file");
-    InterndFileName = NamedFileEnt.first().data();
+    InterndFileName = NewNamedFileEnt.first().data();
     // In addition to re-interning the name, construct a redirecting seen file
     // entry, that will point to the name the filesystem actually wants to use.
     StringRef *Redirect = new (CanonicalNameStorage) StringRef(InterndFileName);
-    SeenFileInsertResult.first->second = Redirect;
+    NamedFileEnt.second = Redirect;
   }
 
   if (UFE.isValid()) { // Already have an entry with this inode, return it.

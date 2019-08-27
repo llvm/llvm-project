@@ -198,6 +198,10 @@ class Addr2LineSymbolizer(Symbolizer):
           assert not file_name, file_name
           logging.debug("got empty function name -> no more input")
           break
+        if not function_name and not file_name:
+          logging.debug("got empty function and file name -> unknown function")
+          function_name = '??'
+          file_name = '??:0'
         lines.append((function_name, file_name));
     except BrokenPipeError:
       logging.debug("got broken pipe, addr2line returncode=%d" % self.pipe.poll())

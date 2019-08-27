@@ -87,7 +87,6 @@ private:
   void writeSections();
 
   uint64_t fileSize = 0;
-  uint32_t tableBase = 0;
 
   std::vector<WasmInitEntry> initFunctions;
   llvm::StringMap<std::vector<InputSection *>> customSectionMapping;
@@ -852,7 +851,7 @@ void Writer::createSyntheticSections() {
   out.globalSec = make<GlobalSection>();
   out.eventSec = make<EventSection>();
   out.exportSec = make<ExportSection>();
-  out.elemSec = make<ElemSection>(tableBase);
+  out.elemSec = make<ElemSection>();
   out.dataCountSec = make<DataCountSection>(segments.size());
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
   out.nameSec = make<NameSection>();
@@ -867,9 +866,9 @@ void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
   if (!config->isPic) {
-    tableBase = 1;
+    config->tableBase = 1;
     if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVirtualAddress(tableBase);
+      WasmSym::definedTableBase->setVirtualAddress(config->tableBase);
   }
 
   log("-- createOutputSegments");

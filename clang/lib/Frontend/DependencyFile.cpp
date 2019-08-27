@@ -59,7 +59,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsModuleFile*/false, /*IsMissing*/false);
   }
 
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(SkippedFile.getName());

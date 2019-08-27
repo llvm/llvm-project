@@ -103,10 +103,10 @@ public:
   }
 
   // Sanity check to ensure we have already populated a skipped file.
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
 #ifndef NDEBUG
-    auto URI = toURI(&SkippedFile);
+    auto URI = toURI(&SkippedFile.getFileEntry());
     if (!URI)
       return;
     auto I = IG.try_emplace(*URI);

@@ -4672,51 +4672,49 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     m_stop_hook_sp.reset();
 
-    Target *target = GetSelectedOrDummyTarget();
-    if (target) {
-      Target::StopHookSP new_hook_sp = target->CreateStopHook();
+    Target &target = GetSelectedOrDummyTarget();
+    Target::StopHookSP new_hook_sp = target.CreateStopHook();
 
-      //  First step, make the specifier.
-      std::unique_ptr<SymbolContextSpecifier> specifier_up;
-      if (m_options.m_sym_ctx_specified) {
-        specifier_up.reset(
-            new SymbolContextSpecifier(GetDebugger().GetSelectedTarget()));
+    //  First step, make the specifier.
+    std::unique_ptr<SymbolContextSpecifier> specifier_up;
+    if (m_options.m_sym_ctx_specified) {
+      specifier_up.reset(
+          new SymbolContextSpecifier(GetDebugger().GetSelectedTarget()));
 
-        if (!m_options.m_module_name.empty()) {
-          specifier_up->AddSpecification(
-              m_options.m_module_name.c_str(),
-              SymbolContextSpecifier::eModuleSpecified);
-        }
-
-        if (!m_options.m_class_name.empty()) {
-          specifier_up->AddSpecification(
-              m_options.m_class_name.c_str(),
-              SymbolContextSpecifier::eClassOrNamespaceSpecified);
-        }
-
-        if (!m_options.m_file_name.empty()) {
-          specifier_up->AddSpecification(
-              m_options.m_file_name.c_str(),
-              SymbolContextSpecifier::eFileSpecified);
-        }
-
-        if (m_options.m_line_start != 0) {
-          specifier_up->AddLineSpecification(
-              m_options.m_line_start,
-              SymbolContextSpecifier::eLineStartSpecified);
-        }
-
-        if (m_options.m_line_end != UINT_MAX) {
-          specifier_up->AddLineSpecification(
-              m_options.m_line_end, SymbolContextSpecifier::eLineEndSpecified);
-        }
-
-        if (!m_options.m_function_name.empty()) {
-          specifier_up->AddSpecification(
-              m_options.m_function_name.c_str(),
-              SymbolContextSpecifier::eFunctionSpecified);
-        }
+      if (!m_options.m_module_name.empty()) {
+        specifier_up->AddSpecification(
+            m_options.m_module_name.c_str(),
+            SymbolContextSpecifier::eModuleSpecified);
       }
+
+      if (!m_options.m_class_name.empty()) {
+        specifier_up->AddSpecification(
+            m_options.m_class_name.c_str(),
+            SymbolContextSpecifier::eClassOrNamespaceSpecified);
+      }
+
+      if (!m_options.m_file_name.empty()) {
+        specifier_up->AddSpecification(m_options.m_file_name.c_str(),
+                                       SymbolContextSpecifier::eFileSpecified);
+      }
+
+      if (m_options.m_line_start != 0) {
+        specifier_up->AddLineSpecification(
+            m_options.m_line_start,
+            SymbolContextSpecifier::eLineStartSpecified);
+      }
+
+      if (m_options.m_line_end != UINT_MAX) {
+        specifier_up->AddLineSpecification(
+            m_options.m_line_end, SymbolContextSpecifier::eLineEndSpecified);
+      }
+
+      if (!m_options.m_function_name.empty()) {
+        specifier_up->AddSpecification(
+            m_options.m_function_name.c_str(),
+            SymbolContextSpecifier::eFunctionSpecified);
+      }
+    }
 
       if (specifier_up)
         new_hook_sp->SetSpecifier(specifier_up.release());
@@ -4760,10 +4758,6 @@ protected:
                       // into our IOHandlerDelegate functions
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else {
-      result.AppendError("invalid target\n");
-      result.SetStatus(eReturnStatusFailed);
-    }
 
     return result.Succeeded();
   }
@@ -4788,43 +4782,37 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetSelectedOrDummyTarget();
-    if (target) {
-      // FIXME: see if we can use the breakpoint id style parser?
-      size_t num_args = command.GetArgumentCount();
-      if (num_args == 0) {
-        if (!m_interpreter.Confirm("Delete all stop hooks?", true)) {
+    Target &target = GetSelectedOrDummyTarget();
+    // FIXME: see if we can use the breakpoint id style parser?
+    size_t num_args = command.GetArgumentCount();
+    if (num_args == 0) {
+      if (!m_interpreter.Confirm("Delete all stop hooks?", true)) {
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      } else {
+        target.RemoveAllStopHooks();
+      }
+    } else {
+      bool success;
+      for (size_t i = 0; i < num_args; i++) {
+        lldb::user_id_t user_id = StringConvert::ToUInt32(
+            command.GetArgumentAtIndex(i), 0, 0, &success);
+        if (!success) {
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
+                                       command.GetArgumentAtIndex(i));
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else {
-          target->RemoveAllStopHooks();
         }
-      } else {
-        bool success;
-        for (size_t i = 0; i < num_args; i++) {
-          lldb::user_id_t user_id = StringConvert::ToUInt32(
-              command.GetArgumentAtIndex(i), 0, 0, &success);
-          if (!success) {
-            result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
-                                         command.GetArgumentAtIndex(i));
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
-          success = target->RemoveStopHookByID(user_id);
-          if (!success) {
-            result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
-                                         command.GetArgumentAtIndex(i));
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
+        success = target.RemoveStopHookByID(user_id);
+        if (!success) {
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
+                                       command.GetArgumentAtIndex(i));
+          result.SetStatus(eReturnStatusFailed);
+          return false;
         }
       }
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else {
-      result.AppendError("invalid target\n");
-      result.SetStatus(eReturnStatusFailed);
     }
-
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();
   }
 };
@@ -4845,38 +4833,33 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetSelectedOrDummyTarget();
-    if (target) {
-      // FIXME: see if we can use the breakpoint id style parser?
-      size_t num_args = command.GetArgumentCount();
-      bool success;
+    Target &target = GetSelectedOrDummyTarget();
+    // FIXME: see if we can use the breakpoint id style parser?
+    size_t num_args = command.GetArgumentCount();
+    bool success;
 
-      if (num_args == 0) {
-        target->SetAllStopHooksActiveState(m_enable);
-      } else {
-        for (size_t i = 0; i < num_args; i++) {
-          lldb::user_id_t user_id = StringConvert::ToUInt32(
-              command.GetArgumentAtIndex(i), 0, 0, &success);
-          if (!success) {
-            result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
-                                         command.GetArgumentAtIndex(i));
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
-          success = target->SetStopHookActiveStateByID(user_id, m_enable);
-          if (!success) {
-            result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
-                                         command.GetArgumentAtIndex(i));
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
+    if (num_args == 0) {
+      target.SetAllStopHooksActiveState(m_enable);
+    } else {
+      for (size_t i = 0; i < num_args; i++) {
+        lldb::user_id_t user_id = StringConvert::ToUInt32(
+            command.GetArgumentAtIndex(i), 0, 0, &success);
+        if (!success) {
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
+                                       command.GetArgumentAtIndex(i));
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+        success = target.SetStopHookActiveStateByID(user_id, m_enable);
+        if (!success) {
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
+                                       command.GetArgumentAtIndex(i));
+          result.SetStatus(eReturnStatusFailed);
+          return false;
         }
       }
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else {
-      result.AppendError("invalid target\n");
-      result.SetStatus(eReturnStatusFailed);
     }
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();
   }
 
@@ -4899,19 +4882,14 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetSelectedOrDummyTarget();
-    if (!target) {
-      result.AppendError("invalid target\n");
-      result.SetStatus(eReturnStatusFailed);
-      return result.Succeeded();
-    }
+    Target &target = GetSelectedOrDummyTarget();
 
-    size_t num_hooks = target->GetNumStopHooks();
+    size_t num_hooks = target.GetNumStopHooks();
     if (num_hooks == 0) {
       result.GetOutputStream().PutCString("No stop hooks.\n");
     } else {
       for (size_t i = 0; i < num_hooks; i++) {
-        Target::StopHookSP this_hook = target->GetStopHookAtIndex(i);
+        Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
         if (i > 0)
           result.GetOutputStream().PutCString("\n");
         this_hook->GetDescription(&(result.GetOutputStream()),

@@ -12,7 +12,6 @@
 
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
-
 def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;

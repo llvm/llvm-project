@@ -833,6 +833,8 @@ bool CompilerInstance::InitializeSourceManager(
   if (InputFile != "-") {
     auto FileOrErr = FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
     if (!FileOrErr) {
+      // FIXME: include the error in the diagnostic.
+      consumeError(FileOrErr.takeError());
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;
     }
@@ -889,6 +891,11 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");
   assert(!getFrontendOpts().ShowVersion && "Client must handle '-version'!");
+
+  // Mark this point as the bottom of the stack if we don't have somewhere
+  // better. We generally expect frontend actions to be invoked with (nearly)
+  // DesiredStackSpace available.
+  noteBottomOfStack();
 
   // FIXME: Take this as an argument, once all the APIs we used have moved to
   // taking it as an input instead of hard-coding llvm::errs.

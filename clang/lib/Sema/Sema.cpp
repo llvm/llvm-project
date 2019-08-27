@@ -22,6 +22,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
@@ -384,6 +385,19 @@ Sema::~Sema() {
   SemaPPCallbackHandler->reset();
 
   assert(DelayedTypos.empty() && "Uncorrected typos!");
+}
+
+void Sema::warnStackExhausted(SourceLocation Loc) {
+  // Only warn about this once.
+  if (!WarnedStackExhausted) {
+    Diag(Loc, diag::warn_stack_exhausted);
+    WarnedStackExhausted = true;
+  }
+}
+
+void Sema::runWithSufficientStackSpace(SourceLocation Loc,
+                                       llvm::function_ref<void()> Fn) {
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
 /// makeUnavailableInSystemHeader - There is an error in the current
@@ -1790,6 +1804,22 @@ FunctionScopeInfo *Sema::getEnclosingFunction() const {
   return nullptr;
 }
 
+LambdaScopeInfo *Sema::getEnclosingLambda() const {
+  for (auto *Scope : llvm::reverse(FunctionScopes)) {
+    if (auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Scope)) {
+      if (LSI->Lambda && !LSI->Lambda->Encloses(CurContext)) {
+        // We have switched contexts due to template instantiation.
+        // FIXME: We should swap out the FunctionScopes during code synthesis
+        // so that we don't need to check for this.
+        assert(!CodeSynthesisContexts.empty());
+        return nullptr;
+      }
+      return LSI;
+    }
+  }
+  return nullptr;
+}
+
 LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
   if (FunctionScopes.empty())
     return nullptr;
@@ -1812,6 +1842,7 @@ LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
 
   return CurLSI;
 }
+
 // We have a generic lambda if we parsed auto parameters, or we have
 // an associated template parameter list.
 LambdaScopeInfo *Sema::getCurGenericLambda() {

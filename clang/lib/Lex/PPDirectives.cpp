@@ -2029,7 +2029,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
         RelativePath, Action == Import ? SuggestedModule.getModule() : nullptr,
         FileCharacter);
     if (Action == Skip && File)
-      Callbacks->FileSkipped(File->getFileEntry(), FilenameTok, FileCharacter);
+      Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
 
   if (!File)

@@ -924,7 +924,11 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   assert(TheLoop->getNumBlocks() > 1 && "Single block loops are vectorizable");
 
-  // A list of pointers that we can safely read and write to.
+  // A list of pointers which are known to be dereferenceable within scope of
+  // the loop body for each iteration of the loop which executes.  That is,
+  // the memory pointed to can be dereferenced (with the access size implied by
+  // the value's type) unconditionally within the loop header without
+  // introducing a new fault.
   SmallPtrSet<Value *, 8> SafePointes;
 
   // Collect safe addresses.

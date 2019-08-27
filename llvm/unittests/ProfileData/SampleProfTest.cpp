@@ -305,7 +305,6 @@ TEST_F(SampleProfTest, sample_overflow_saturation) {
   const uint64_t Max = std::numeric_limits<uint64_t>::max();
   sampleprof_error Result;
 
-  StringRef FooName("_Z3fooi");
   FunctionSamples FooSamples;
   Result = FooSamples.addTotalSamples(1);
   ASSERT_EQ(Result, sampleprof_error::success);

@@ -107,6 +107,10 @@ static cl::opt<unsigned>
     MaxFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
+static cl::opt<bool> VerifyMaxFixpointIterations(
+    "attributor-max-iterations-verify", cl::Hidden,
+    cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
+    cl::init(false));
 
 static cl::opt<bool> DisableAttributor(
     "attributor-disable", cl::Hidden,
@@ -146,7 +150,9 @@ bool genericValueTraversal(
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
     LivenessAA = &A.getAAFor<AAIsDead>(
-        QueryingAA, IRPosition::function(*IRP.getAnchorScope()));
+        QueryingAA, IRPosition::function(*IRP.getAnchorScope()),
+        /* TrackDependence */ false);
+  bool AnyDead = false;
 
   // TODO: Use Positions here to allow context sensitivity in VisitValueCB
   SmallPtrSet<Value *, 16> Visited;
@@ -199,8 +205,11 @@ bool genericValueTraversal(
              "Expected liveness in the presence of instructions!");
       for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
         const BasicBlock *IncomingBB = PHI->getIncomingBlock(u);
-        if (!LivenessAA->isAssumedDead(IncomingBB->getTerminator()))
-          Worklist.push_back(PHI->getIncomingValue(u));
+        if (LivenessAA->isAssumedDead(IncomingBB->getTerminator())) {
+          AnyDead =true;
+          continue;
+        }
+        Worklist.push_back(PHI->getIncomingValue(u));
       }
       continue;
     }
@@ -209,6 +218,10 @@ bool genericValueTraversal(
     if (!VisitValueCB(*V, State, Iteration > 1))
       return false;
   } while (!Worklist.empty());
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    A.recordDependence(*LivenessAA, QueryingAA);
 
   // All values have been visited.
   return true;
@@ -680,7 +693,7 @@ class AAReturnedValuesImpl : public AAReturnedValues, public AbstractState {
 
   /// Mapping of values potentially returned by the associated function to the
   /// return instructions that might return them.
-  DenseMap<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
+  MapVector<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
 
   /// Mapping to remember the number of returned values for a call site such
   /// that we can avoid updates if nothing changed.
@@ -2282,7 +2295,8 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
 
   if (!LivenessAA)
     LivenessAA =
-        &getAAFor<AAIsDead>(AA, IRPosition::function(*CtxI->getFunction()));
+        &getAAFor<AAIsDead>(AA, IRPosition::function(*CtxI->getFunction()),
+                            /* TrackDependence */ false);
 
   // Don't check liveness for AAIsDead.
   if (&AA == LivenessAA)
@@ -2291,8 +2305,9 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
   if (!LivenessAA->isAssumedDead(CtxI))
     return false;
 
-  // TODO: Do not track dependences automatically but add it here as only a
-  //       "is-assumed-dead" result causes a dependence.
+  // We actually used liveness information so we have to record a dependence.
+  recordDependence(*LivenessAA, AA);
+
   return true;
 }
 
@@ -2323,12 +2338,16 @@ bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
 
     Function *Caller = I->getFunction();
 
-    const auto &LivenessAA =
-        getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*Caller));
+    const auto &LivenessAA = getAAFor<AAIsDead>(
+        QueryingAA, IRPosition::function(*Caller), /* TrackDependence */ false);
 
     // Skip dead calls.
-    if (LivenessAA.isAssumedDead(I))
+    if (LivenessAA.isAssumedDead(I)) {
+      // We actually used liveness information so we have to record a
+      // dependence.
+      recordDependence(LivenessAA, QueryingAA);
       continue;
+    }
 
     CallSite CS(U.getUser());
     if (!CS || !CS.isCallee(&U) || !CS.getCaller()->hasExactDefinition()) {
@@ -2405,20 +2424,28 @@ bool Attributor::checkForAllInstructions(
     return false;
 
   const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
-  const auto &LivenessAA = getAAFor<AAIsDead>(QueryingAA, QueryIRP);
+  const auto &LivenessAA =
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
+  bool AnyDead = false;
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
   for (unsigned Opcode : Opcodes) {
     for (Instruction *I : OpcodeInstMap[Opcode]) {
       // Skip dead instructions.
-      if (LivenessAA.isAssumedDead(I))
+      if (LivenessAA.isAssumedDead(I)) {
+        AnyDead = true;
         continue;
+      }
 
       if (!Pred(*I))
         return false;
     }
   }
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    recordDependence(LivenessAA, QueryingAA);
 
   return true;
 }
@@ -2432,18 +2459,25 @@ bool Attributor::checkForAllReadWriteInstructions(
   if (!AssociatedFunction)
     return false;
 
-  const auto &LivenessAA =
-      getAAFor<AAIsDead>(QueryingAA, QueryingAA.getIRPosition());
+  const auto &LivenessAA = getAAFor<AAIsDead>(
+      QueryingAA, QueryingAA.getIRPosition(), /* TrackDependence */ false);
+  bool AnyDead = false;
 
   for (Instruction *I :
        InfoCache.getReadOrWriteInstsForFunction(*AssociatedFunction)) {
     // Skip dead instructions.
-    if (LivenessAA.isAssumedDead(I))
+    if (LivenessAA.isAssumedDead(I)) {
+      AnyDead = true;
       continue;
+    }
 
     if (!Pred(*I))
       return false;
   }
+
+  // If we actually used liveness information so we have to record a dependence.
+  if (AnyDead)
+    recordDependence(LivenessAA, QueryingAA);
 
   return true;
 }
@@ -2479,6 +2513,10 @@ ChangeStatus Attributor::run() {
       Worklist.insert(QuerriedAAs.begin(), QuerriedAAs.end());
     }
 
+    LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
+                      << ", Worklist+Dependent size: " << Worklist.size()
+                      << "\n");
+
     // Reset the changed set.
     ChangedAAs.clear();
 
@@ -2499,13 +2537,17 @@ ChangeStatus Attributor::run() {
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
 
-  } while (!Worklist.empty() && ++IterationCounter < MaxFixpointIterations);
+  } while (!Worklist.empty() && IterationCounter++ < MaxFixpointIterations);
 
   size_t NumFinalAAs = AllAbstractAttributes.size();
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
                     << IterationCounter << "/" << MaxFixpointIterations
                     << " iterations\n");
+
+  if (VerifyMaxFixpointIterations && IterationCounter != MaxFixpointIterations)
+    llvm_unreachable("The fixpoint was not reached with exactly the number of "
+                     "specified iterations!");
 
   bool FinishedAtFixpoint = Worklist.empty();
 
@@ -2599,6 +2641,26 @@ ChangeStatus Attributor::run() {
   assert(
       NumFinalAAs == AllAbstractAttributes.size() &&
       "Expected the final number of abstract attributes to remain unchanged!");
+
+  // Delete stuff at the end to avoid invalid references and a nice order.
+  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete " << ToBeDeletedFunctions.size()
+                    << " functions and " << ToBeDeletedBlocks.size()
+                    << " blocks and " << ToBeDeletedInsts.size()
+                    << " instructions\n");
+  for (Instruction *I : ToBeDeletedInsts) {
+    if (I->hasNUsesOrMore(1))
+      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->eraseFromParent();
+  }
+  for (BasicBlock *BB : ToBeDeletedBlocks) {
+    // TODO: Check if we need to replace users (PHIs, indirect branches?)
+    BB->eraseFromParent();
+  }
+  for (Function *Fn : ToBeDeletedFunctions) {
+    Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
+    Fn->eraseFromParent();
+  }
+
   return ManifestChange;
 }
 

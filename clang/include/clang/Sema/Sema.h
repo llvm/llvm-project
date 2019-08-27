@@ -1278,6 +1278,8 @@ public:
 
   void addImplicitTypedef(StringRef Name, QualType T);
 
+  bool WarnedStackExhausted = false;
+
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
@@ -1308,6 +1310,16 @@ public:
   void addExternalSource(ExternalSemaSource *E);
 
   void PrintStats() const;
+
+  /// Warn that the stack is nearly exhausted.
+  void warnStackExhausted(SourceLocation Loc);
+
+  /// Run some code with "sufficient" stack space. (Currently, at least 256K is
+  /// guaranteed). Produces a warning if we're low on stack space and allocates
+  /// more in that case. Use this in code that may recurse deeply (for example,
+  /// in template instantiation) to avoid stack overflow.
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   /// Helper class that creates diagnostics with optional
   /// template instantiation stacks.
@@ -1461,6 +1473,11 @@ public:
 
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
+
+  /// Get the innermost lambda enclosing the current location, if any. This
+  /// looks through intervening non-lambda scopes such as local functions and
+  /// blocks.
+  sema::LambdaScopeInfo *getEnclosingLambda() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most

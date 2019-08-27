@@ -12706,6 +12706,13 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                          Context.getAdjustedParameterType(T),
                                          TSInfo, SC, nullptr);
 
+  // Make a note if we created a new pack in the scope of a lambda, so that
+  // we know that references to that pack must also be expanded within the
+  // lambda scope.
+  if (New->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(New);
+
   // Parameters can not be abstract class types.
   // For record types, this is done by the AbstractClassUsageDiagnoser once
   // the class has been completely parsed.

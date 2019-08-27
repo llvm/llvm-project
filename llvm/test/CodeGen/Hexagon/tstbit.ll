@@ -24,11 +24,11 @@ define i64 @is_upper_bit_clear_i64(i64 %x) #0 {
 ; CHECK-LABEL: is_upper_bit_clear_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1:0 = extractu(r1:0,#1,#37)
+; CHECK-NEXT:     p0 = tstbit(r1,#5)
+; CHECK-NEXT:     r1 = #0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = togglebit(r0,#0)
-; CHECK-NEXT:     r1 = #0
+; CHECK-NEXT:     r0 = mux(p0,#0,#1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %sh = lshr i64 %x, 37
@@ -41,11 +41,11 @@ define i64 @is_lower_bit_clear_i64(i64 %x) #0 {
 ; CHECK-LABEL: is_lower_bit_clear_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1:0 = extractu(r1:0,#1,#27)
+; CHECK-NEXT:     p0 = tstbit(r0,#27)
+; CHECK-NEXT:     r1 = #0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = togglebit(r0,#0)
-; CHECK-NEXT:     r1 = #0
+; CHECK-NEXT:     r0 = mux(p0,#0,#1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %sh = lshr i64 %x, 27
@@ -58,13 +58,10 @@ define i32 @is_bit_clear_i32(i32 %x) #0 {
 ; CHECK-LABEL: is_bit_clear_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = #-1
+; CHECK-NEXT:     p0 = tstbit(r0,#27)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 ^= lsr(r0,#27)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = and(r1,#1)
+; CHECK-NEXT:     r0 = mux(p0,#0,#1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %sh = lshr i32 %x, 27
@@ -77,13 +74,10 @@ define i16 @is_bit_clear_i16(i16 %x) #0 {
 ; CHECK-LABEL: is_bit_clear_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = #-1
+; CHECK-NEXT:     p0 = tstbit(r0,#7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 ^= lsr(r0,#7)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = and(r1,#1)
+; CHECK-NEXT:     r0 = mux(p0,#0,#1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %sh = lshr i16 %x, 7
@@ -96,13 +90,10 @@ define i8 @is_bit_clear_i8(i8 %x) #0 {
 ; CHECK-LABEL: is_bit_clear_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = #-1
+; CHECK-NEXT:     p0 = tstbit(r0,#3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 ^= lsr(r0,#3)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = and(r1,#1)
+; CHECK-NEXT:     r0 = mux(p0,#0,#1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %sh = lshr i8 %x, 3

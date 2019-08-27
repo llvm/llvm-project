@@ -164,11 +164,12 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClInstrumentLandingPads("hwasan-instrument-landing-pads",
                             cl::desc("instrument landing pads"), cl::Hidden,
-                            cl::init(false));
+                            cl::init(false), cl::ZeroOrMore);
 
 static cl::opt<bool> ClInstrumentPersonalityFunctions(
     "hwasan-instrument-personality-functions",
-    cl::desc("instrument personality functions"), cl::Hidden, cl::init(false));
+    cl::desc("instrument personality functions"), cl::Hidden, cl::init(false),
+    cl::ZeroOrMore);
 
 static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),

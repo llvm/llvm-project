@@ -162,6 +162,11 @@ def IsNPow2_64H: PatLeaf<(i64 imm), [{
   return isPowerOf2_64(NV) && Log2_64(NV) >= 32;
 }]>;
 
+class IsULE<int Width, int Arg>: PatLeaf<(i32 imm),
+  "uint64_t V = N->getZExtValue();" #
+  "return isUInt<" # Width # ">(V) && V <= " # Arg # ";"
+>;
+
 class IsUGT<int Width, int Arg>: PatLeaf<(i32 imm),
   "uint64_t V = N->getZExtValue();" #
   "return isUInt<" # Width # ">(V) && V > " # Arg # ";"
@@ -1739,6 +1744,7 @@ let AddedComplexity = 20 in { // Complexity greater than and/or/xor
                      (i32 (LoReg $Rss)))>;
 }
 
+
 let AddedComplexity = 20 in { // Complexity greater than cmp reg-imm.
   def: Pat<(i1 (setne (and (shl 1, u5_0ImmPred:$u5), I32:$Rs), 0)),
            (S2_tstbit_i IntRegs:$Rs, imm:$u5)>;
@@ -1749,6 +1755,22 @@ let AddedComplexity = 20 in { // Complexity greater than cmp reg-imm.
   def: Pat<(i1 (trunc I64:$Rs)),
            (S2_tstbit_i (LoReg DoubleRegs:$Rs), 0)>;
 }
+
+def: Pat<(and (srl I32:$Rs, u5_0ImmPred:$u5), 1),
+         (I1toI32 (S2_tstbit_i I32:$Rs, imm:$u5))>;
+def: Pat<(and (srl I64:$Rss, IsULE<32,31>:$u6), 1),
+         (ToZext64 (I1toI32 (S2_tstbit_i (LoReg $Rss), imm:$u6)))>;
+def: Pat<(and (srl I64:$Rss, IsUGT<32,31>:$u6), 1),
+         (ToZext64 (I1toI32 (S2_tstbit_i (HiReg $Rss), (UDEC32 $u6))))>;
+
+def N1toI32:  OutPatFrag<(ops node:$Pu), (C2_muxii (i1 $Pu), 0, 1)>;
+
+def: Pat<(and (not (srl I32:$Rs, u5_0ImmPred:$u5)), 1),
+         (N1toI32 (S2_tstbit_i I32:$Rs, imm:$u5))>;
+def: Pat<(and (not (srl I64:$Rss, IsULE<32,31>:$u6)), 1),
+         (ToZext64 (N1toI32 (S2_tstbit_i (LoReg $Rss), imm:$u6)))>;
+def: Pat<(and (not (srl I64:$Rss, IsUGT<32,31>:$u6)), 1),
+         (ToZext64 (N1toI32 (S2_tstbit_i (HiReg $Rss), (UDEC32 $u6))))>;
 
 let AddedComplexity = 20 in { // Complexity greater than compare reg-imm.
   def: Pat<(i1 (seteq (and I32:$Rs, u6_0ImmPred:$u6), 0)),

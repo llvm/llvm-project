@@ -4832,8 +4832,10 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
       //   default argument expression appears.
       ContextRAII SavedContext(*this, FD);
       LocalInstantiationScope Local(*this);
-      Result = SubstInitializer(UninstExpr, MutiLevelArgList,
-                                /*DirectInit*/false);
+      runWithSufficientStackSpace(CallLoc, [&] {
+        Result = SubstInitializer(UninstExpr, MutiLevelArgList,
+                                  /*DirectInit*/false);
+      });
     }
     if (Result.isInvalid())
       return true;
@@ -15175,6 +15177,17 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   if (IsRecursiveCall && OdrUse == OdrUseContext::Used)
     OdrUse = OdrUseContext::FormallyOdrUsed;
 
+  // Trivial default constructors and destructors are never actually used.
+  // FIXME: What about other special members?
+  if (Func->isTrivial() && !Func->hasAttr<DLLExportAttr>() &&
+      OdrUse == OdrUseContext::Used) {
+    if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Func))
+      if (Constructor->isDefaultConstructor())
+        OdrUse = OdrUseContext::FormallyOdrUsed;
+    if (isa<CXXDestructorDecl>(Func))
+      OdrUse = OdrUseContext::FormallyOdrUsed;
+  }
+
   // C++20 [expr.const]p12:
   //   A function [...] is needed for constant evaluation if it is [...] a
   //   constexpr function that is named by an expression that is potentially
@@ -15235,98 +15248,101 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
-    if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
-      Constructor = cast<CXXConstructorDecl>(Constructor->getFirstDecl());
-      if (Constructor->isDefaulted() && !Constructor->isDeleted()) {
-        if (Constructor->isDefaultConstructor()) {
-          if (Constructor->isTrivial() &&
-              !Constructor->hasAttr<DLLExportAttr>())
+    runWithSufficientStackSpace(Loc, [&] {
+      if (CXXConstructorDecl *Constructor =
+              dyn_cast<CXXConstructorDecl>(Func)) {
+        Constructor = cast<CXXConstructorDecl>(Constructor->getFirstDecl());
+        if (Constructor->isDefaulted() && !Constructor->isDeleted()) {
+          if (Constructor->isDefaultConstructor()) {
+            if (Constructor->isTrivial() &&
+                !Constructor->hasAttr<DLLExportAttr>())
+              return;
+            DefineImplicitDefaultConstructor(Loc, Constructor);
+          } else if (Constructor->isCopyConstructor()) {
+            DefineImplicitCopyConstructor(Loc, Constructor);
+          } else if (Constructor->isMoveConstructor()) {
+            DefineImplicitMoveConstructor(Loc, Constructor);
+          }
+        } else if (Constructor->getInheritedConstructor()) {
+          DefineInheritingConstructor(Loc, Constructor);
+        }
+      } else if (CXXDestructorDecl *Destructor =
+                     dyn_cast<CXXDestructorDecl>(Func)) {
+        Destructor = cast<CXXDestructorDecl>(Destructor->getFirstDecl());
+        if (Destructor->isDefaulted() && !Destructor->isDeleted()) {
+          if (Destructor->isTrivial() && !Destructor->hasAttr<DLLExportAttr>())
             return;
-          DefineImplicitDefaultConstructor(Loc, Constructor);
-        } else if (Constructor->isCopyConstructor()) {
-          DefineImplicitCopyConstructor(Loc, Constructor);
-        } else if (Constructor->isMoveConstructor()) {
-          DefineImplicitMoveConstructor(Loc, Constructor);
+          DefineImplicitDestructor(Loc, Destructor);
         }
-      } else if (Constructor->getInheritedConstructor()) {
-        DefineInheritingConstructor(Loc, Constructor);
-      }
-    } else if (CXXDestructorDecl *Destructor =
-                   dyn_cast<CXXDestructorDecl>(Func)) {
-      Destructor = cast<CXXDestructorDecl>(Destructor->getFirstDecl());
-      if (Destructor->isDefaulted() && !Destructor->isDeleted()) {
-        if (Destructor->isTrivial() && !Destructor->hasAttr<DLLExportAttr>())
-          return;
-        DefineImplicitDestructor(Loc, Destructor);
-      }
-      if (Destructor->isVirtual() && getLangOpts().AppleKext)
-        MarkVTableUsed(Loc, Destructor->getParent());
-    } else if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(Func)) {
-      if (MethodDecl->isOverloadedOperator() &&
-          MethodDecl->getOverloadedOperator() == OO_Equal) {
-        MethodDecl = cast<CXXMethodDecl>(MethodDecl->getFirstDecl());
-        if (MethodDecl->isDefaulted() && !MethodDecl->isDeleted()) {
-          if (MethodDecl->isCopyAssignmentOperator())
-            DefineImplicitCopyAssignment(Loc, MethodDecl);
-          else if (MethodDecl->isMoveAssignmentOperator())
-            DefineImplicitMoveAssignment(Loc, MethodDecl);
-        }
-      } else if (isa<CXXConversionDecl>(MethodDecl) &&
-                 MethodDecl->getParent()->isLambda()) {
-        CXXConversionDecl *Conversion =
-            cast<CXXConversionDecl>(MethodDecl->getFirstDecl());
-        if (Conversion->isLambdaToBlockPointerConversion())
-          DefineImplicitLambdaToBlockPointerConversion(Loc, Conversion);
-        else
-          DefineImplicitLambdaToFunctionPointerConversion(Loc, Conversion);
-      } else if (MethodDecl->isVirtual() && getLangOpts().AppleKext)
-        MarkVTableUsed(Loc, MethodDecl->getParent());
-    }
-
-    // Implicit instantiation of function templates and member functions of
-    // class templates.
-    if (Func->isImplicitlyInstantiable()) {
-      TemplateSpecializationKind TSK =
-          Func->getTemplateSpecializationKindForInstantiation();
-      SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
-      bool FirstInstantiation = PointOfInstantiation.isInvalid();
-      if (FirstInstantiation) {
-        PointOfInstantiation = Loc;
-        Func->setTemplateSpecializationKind(TSK, PointOfInstantiation);
-      } else if (TSK != TSK_ImplicitInstantiation) {
-        // Use the point of use as the point of instantiation, instead of the
-        // point of explicit instantiation (which we track as the actual point
-        // of instantiation). This gives better backtraces in diagnostics.
-        PointOfInstantiation = Loc;
+        if (Destructor->isVirtual() && getLangOpts().AppleKext)
+          MarkVTableUsed(Loc, Destructor->getParent());
+      } else if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(Func)) {
+        if (MethodDecl->isOverloadedOperator() &&
+            MethodDecl->getOverloadedOperator() == OO_Equal) {
+          MethodDecl = cast<CXXMethodDecl>(MethodDecl->getFirstDecl());
+          if (MethodDecl->isDefaulted() && !MethodDecl->isDeleted()) {
+            if (MethodDecl->isCopyAssignmentOperator())
+              DefineImplicitCopyAssignment(Loc, MethodDecl);
+            else if (MethodDecl->isMoveAssignmentOperator())
+              DefineImplicitMoveAssignment(Loc, MethodDecl);
+          }
+        } else if (isa<CXXConversionDecl>(MethodDecl) &&
+                   MethodDecl->getParent()->isLambda()) {
+          CXXConversionDecl *Conversion =
+              cast<CXXConversionDecl>(MethodDecl->getFirstDecl());
+          if (Conversion->isLambdaToBlockPointerConversion())
+            DefineImplicitLambdaToBlockPointerConversion(Loc, Conversion);
+          else
+            DefineImplicitLambdaToFunctionPointerConversion(Loc, Conversion);
+        } else if (MethodDecl->isVirtual() && getLangOpts().AppleKext)
+          MarkVTableUsed(Loc, MethodDecl->getParent());
       }
 
-      if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
-          Func->isConstexpr()) {
-        if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
-            cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
-            CodeSynthesisContexts.size())
-          PendingLocalImplicitInstantiations.push_back(
-              std::make_pair(Func, PointOfInstantiation));
-        else if (Func->isConstexpr())
-          // Do not defer instantiations of constexpr functions, to avoid the
-          // expression evaluator needing to call back into Sema if it sees a
-          // call to such a function.
-          InstantiateFunctionDefinition(PointOfInstantiation, Func);
-        else {
-          Func->setInstantiationIsPending(true);
-          PendingInstantiations.push_back(
-              std::make_pair(Func, PointOfInstantiation));
-          // Notify the consumer that a function was implicitly instantiated.
-          Consumer.HandleCXXImplicitFunctionInstantiation(Func);
+      // Implicit instantiation of function templates and member functions of
+      // class templates.
+      if (Func->isImplicitlyInstantiable()) {
+        TemplateSpecializationKind TSK =
+            Func->getTemplateSpecializationKindForInstantiation();
+        SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
+        bool FirstInstantiation = PointOfInstantiation.isInvalid();
+        if (FirstInstantiation) {
+          PointOfInstantiation = Loc;
+          Func->setTemplateSpecializationKind(TSK, PointOfInstantiation);
+        } else if (TSK != TSK_ImplicitInstantiation) {
+          // Use the point of use as the point of instantiation, instead of the
+          // point of explicit instantiation (which we track as the actual point
+          // of instantiation). This gives better backtraces in diagnostics.
+          PointOfInstantiation = Loc;
+        }
+
+        if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
+            Func->isConstexpr()) {
+          if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
+              cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
+              CodeSynthesisContexts.size())
+            PendingLocalImplicitInstantiations.push_back(
+                std::make_pair(Func, PointOfInstantiation));
+          else if (Func->isConstexpr())
+            // Do not defer instantiations of constexpr functions, to avoid the
+            // expression evaluator needing to call back into Sema if it sees a
+            // call to such a function.
+            InstantiateFunctionDefinition(PointOfInstantiation, Func);
+          else {
+            Func->setInstantiationIsPending(true);
+            PendingInstantiations.push_back(
+                std::make_pair(Func, PointOfInstantiation));
+            // Notify the consumer that a function was implicitly instantiated.
+            Consumer.HandleCXXImplicitFunctionInstantiation(Func);
+          }
+        }
+      } else {
+        // Walk redefinitions, as some of them may be instantiable.
+        for (auto i : Func->redecls()) {
+          if (!i->isUsed(false) && i->isImplicitlyInstantiable())
+            MarkFunctionReferenced(Loc, i, MightBeOdrUse);
         }
       }
-    } else {
-      // Walk redefinitions, as some of them may be instantiable.
-      for (auto i : Func->redecls()) {
-        if (!i->isUsed(false) && i->isImplicitlyInstantiable())
-          MarkFunctionReferenced(Loc, i, MightBeOdrUse);
-      }
-    }
+    });
   }
 
   // If this is the first "real" use, act on that.
@@ -16493,7 +16509,9 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
         if (UsableInConstantExpr) {
           // Do not defer instantiations of variables that could be used in a
           // constant expression.
-          SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
+          SemaRef.runWithSufficientStackSpace(PointOfInstantiation, [&] {
+            SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
+          });
         } else if (FirstInstantiation ||
                    isa<VarTemplateSpecializationDecl>(Var)) {
           // FIXME: For a specialization of a variable template, we don't

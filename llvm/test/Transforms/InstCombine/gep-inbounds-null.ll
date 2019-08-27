@@ -75,12 +75,10 @@ entry:
   ret i1 %cnd
 }
 
-;; TODO: vectors not yet handled
 define <2 x i1> @test_vector_base(<2 x i8*> %base, i64 %idx) {
 ; CHECK-LABEL: @test_vector_base(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, <2 x i8*> [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[GEP]], zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[BASE:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:
@@ -92,8 +90,9 @@ entry:
 define <2 x i1> @test_vector_index(i8* %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], <2 x i64> [[IDX:%.*]]
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[GEP]], zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8*> undef, i8* [[BASE:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i8*> [[DOTSPLATINSERT]], <2 x i8*> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[DOTSPLAT]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:
@@ -105,8 +104,7 @@ entry:
 define <2 x i1> @test_vector_both(<2 x i8*> %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_both(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, <2 x i8*> [[BASE:%.*]], <2 x i64> [[IDX:%.*]]
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[GEP]], zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[BASE:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:

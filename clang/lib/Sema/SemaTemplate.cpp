@@ -20,6 +20,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
@@ -1012,6 +1013,10 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
                                    Typename, IsParameterPack);
   Param->setAccess(AS_public);
 
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
+
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, ParamNameLoc, ParamName);
 
@@ -1210,6 +1215,10 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   if (Invalid)
     Param->setInvalidDecl();
 
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
+
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, D.getIdentifierLoc(),
                                          ParamName);
@@ -1272,6 +1281,10 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(Scope* S,
                                      Depth, Position, IsParameterPack,
                                      Name, Params);
   Param->setAccess(AS_public);
+
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
 
   // If the template template parameter has a name, then link the identifier
   // into the scope and lookup mechanisms.

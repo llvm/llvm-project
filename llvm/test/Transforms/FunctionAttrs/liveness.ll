@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations=6 -S < %s | FileCheck %s
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s
 
 declare void @no_return_call() nofree noreturn nounwind readnone
 

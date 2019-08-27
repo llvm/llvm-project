@@ -1050,6 +1050,10 @@ TEST(StringRefTest, DropWhileUntil) {
 }
 
 TEST(StringRefTest, StringLiteral) {
+  constexpr StringRef StringRefs[] = {"Foo", "Bar"};
+  EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
+  EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
+
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
