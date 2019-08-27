@@ -231,12 +231,6 @@ def create_parser():
         help=('Specifies the file where test results will be written '
               'according to the results-formatter class used'))
     group.add_argument(
-        '--results-port',
-        action='store',
-        type=int,
-        help=('Specifies the localhost port to which the results '
-              'formatted output should be sent'))
-    group.add_argument(
         '--results-formatter',
         action='store',
         help=('Specifies the full package/module/class name used to translate '

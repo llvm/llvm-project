@@ -155,14 +155,14 @@ class XunitFormatter(ResultsFormatter):
                 regex_list.append(re.compile(pattern))
         return regex_list
 
-    def __init__(self, out_file, options, file_is_stream):
+    def __init__(self, out_file, options):
         """Initializes the XunitFormatter instance.
         @param out_file file-like object where formatted output is written.
         @param options specifies a dictionary of options for the
         formatter.
         """
         # Initialize the parent
-        super(XunitFormatter, self).__init__(out_file, options, file_is_stream)
+        super(XunitFormatter, self).__init__(out_file, options)
         self.text_encoding = "UTF-8"
         self.invalid_xml_re = XunitFormatter._build_illegal_xml_regex()
         self.total_test_count = 0

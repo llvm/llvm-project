@@ -24,7 +24,6 @@ class FormatterConfig(object):
 
     def __init__(self):
         self.filename = None
-        self.port = None
         self.formatter_name = None
         self.formatter_options = None
 
@@ -48,43 +47,10 @@ def create_results_formatter(config):
     @return an instance of CreatedFormatter.
     """
 
-    def create_socket(port):
-        """Creates a socket to the localhost on the given port.
-
-        @param port the port number of the listening port on
-        the localhost.
-
-        @return (socket object, socket closing function)
-        """
-
-        def socket_closer(open_sock):
-            """Close down an opened socket properly."""
-            open_sock.shutdown(socket.SHUT_RDWR)
-            open_sock.close()
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(("localhost", port))
-
-        # Wait for the ack from the listener side.
-        # This is needed to prevent a race condition
-        # in the main dosep.py processing loop: we
-        # can't allow a worker queue thread to die
-        # that has outstanding messages to a listener
-        # socket before the listener socket asyncore
-        # listener socket gets spun up; otherwise,
-        # we lose the test result info.
-        read_bytes = sock.recv(1)
-        if read_bytes is None or (len(read_bytes) < 1) or (read_bytes != b'*'):
-            raise Exception(
-                "listening socket did not respond with ack byte: response={}".format(read_bytes))
-
-        return sock, lambda: socket_closer(sock)
-
     default_formatter_name = None
     results_file_object = None
     cleanup_func = None
 
-    file_is_stream = False
     if config.filename:
         # Open the results file for writing.
         if config.filename == 'stdout':
@@ -98,12 +64,6 @@ def create_results_formatter(config):
             cleanup_func = results_file_object.close
         default_formatter_name = (
             "lldbsuite.test_event.formatter.xunit.XunitFormatter")
-    elif config.port:
-        # Connect to the specified localhost port.
-        results_file_object, cleanup_func = create_socket(config.port)
-        default_formatter_name = (
-            "lldbsuite.test_event.formatter.pickled.RawPickledFormatter")
-        file_is_stream = True
 
     # If we have a results formatter name specified and we didn't specify
     # a results file, we should use stdout.
@@ -141,8 +101,7 @@ def create_results_formatter(config):
         # Create the TestResultsFormatter given the processed options.
         results_formatter_object = cls(
             results_file_object,
-            formatter_options,
-            file_is_stream)
+            formatter_options)
 
         def shutdown_formatter():
             """Shuts down the formatter when it is no longer needed."""
