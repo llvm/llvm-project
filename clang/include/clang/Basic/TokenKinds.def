@@ -439,6 +439,9 @@ TYPE_TRAIT_1(__is_sealed, IsSealed, KEYMS)
 KEYWORD(_Cilk_spawn                 , KEYALL)
 KEYWORD(_Cilk_sync                  , KEYALL)
 KEYWORD(_Cilk_for                   , KEYALL)
+// Tapir Extensions
+KEYWORD(_tapir_spawn                 , KEYTAPIR)
+KEYWORD(_tapir_sync                  , KEYTAPIR)
 
 // MSVC12.0 / VS2013 Type Traits
 TYPE_TRAIT_1(__is_destructible, IsDestructible, KEYMS)
