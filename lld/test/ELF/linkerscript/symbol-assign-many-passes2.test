@@ -1,5 +1,5 @@
 # REQUIRES: arm
-# RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-linux-gnueabihf %S/../arm-thunk-many-passes.s -o %t.o
+# RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-linux-gnueabihf %S/Inputs/arm-thunk-many-passes.s -o %t.o
 # RUN: ld.lld %t.o -T %s -o %t
 # RUN: llvm-nm %t | FileCheck %s
 

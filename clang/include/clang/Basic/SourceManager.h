@@ -140,9 +140,9 @@ namespace SrcMgr {
     /// exist.
     unsigned BufferOverridden : 1;
 
-    /// True if this content cache was initially created for a source
-    /// file considered as a system one.
-    unsigned IsSystemFile : 1;
+    /// True if this content cache was initially created for a source file
+    /// considered to be volatile (likely to change between stat and open).
+    unsigned IsFileVolatile : 1;
 
     /// True if this file may be transient, that is, if it might not
     /// exist at some later point in time when this content entry is used,
@@ -152,15 +152,15 @@ namespace SrcMgr {
     ContentCache(const FileEntry *Ent = nullptr) : ContentCache(Ent, Ent) {}
 
     ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
-      : Buffer(nullptr, false), OrigEntry(Ent), ContentsEntry(contentEnt),
-        BufferOverridden(false), IsSystemFile(false), IsTransient(false) {}
+        : Buffer(nullptr, false), OrigEntry(Ent), ContentsEntry(contentEnt),
+          BufferOverridden(false), IsFileVolatile(false), IsTransient(false) {}
 
     /// The copy ctor does not allow copies where source object has either
     /// a non-NULL Buffer or SourceLineCache.  Ownership of allocated memory
     /// is not transferred, so this is a logical error.
     ContentCache(const ContentCache &RHS)
-      : Buffer(nullptr, false), BufferOverridden(false), IsSystemFile(false),
-        IsTransient(false) {
+        : Buffer(nullptr, false), BufferOverridden(false),
+          IsFileVolatile(false), IsTransient(false) {
       OrigEntry = RHS.OrigEntry;
       ContentsEntry = RHS.ContentsEntry;
 
@@ -185,7 +185,7 @@ namespace SrcMgr {
     ///
     /// \param Invalid If non-NULL, will be set \c true if an error occurred.
     const llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
-                                        const SourceManager &SM,
+                                        FileManager &FM,
                                         SourceLocation Loc = SourceLocation(),
                                         bool *Invalid = nullptr) const;
 
@@ -986,8 +986,8 @@ public:
       return getFakeBufferForRecovery();
     }
 
-    return Entry.getFile().getContentCache()->getBuffer(Diag, *this, Loc,
-                                                        Invalid);
+    return Entry.getFile().getContentCache()->getBuffer(Diag, getFileManager(),
+                                                        Loc, Invalid);
   }
 
   const llvm::MemoryBuffer *getBuffer(FileID FID,
@@ -1001,9 +1001,8 @@ public:
       return getFakeBufferForRecovery();
     }
 
-    return Entry.getFile().getContentCache()->getBuffer(Diag, *this,
-                                                        SourceLocation(),
-                                                        Invalid);
+    return Entry.getFile().getContentCache()->getBuffer(
+        Diag, getFileManager(), SourceLocation(), Invalid);
   }
 
   /// Returns the FileEntry record for the provided FileID.

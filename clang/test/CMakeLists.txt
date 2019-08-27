@@ -112,6 +112,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-lto2
     llvm-modextract
     llvm-nm
+    llvm-objcopy
     llvm-objdump
     llvm-profdata
     llvm-readelf

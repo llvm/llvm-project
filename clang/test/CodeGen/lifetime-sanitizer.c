@@ -2,6 +2,12 @@
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=address -fsanitize-address-use-after-scope %s | \
 // RUN:     FileCheck %s -check-prefix=LIFETIME
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN:     -fsanitize=memory %s | \
+// RUN:     FileCheck %s -check-prefix=LIFETIME
+// RUN: %clang -target aarch64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN:     -fsanitize=hwaddress %s | \
+// RUN:     FileCheck %s -check-prefix=LIFETIME
 
 extern int bar(char *A, int n);
 

@@ -820,6 +820,9 @@ public:
   /// Whether the lambda contains an unexpanded parameter pack.
   bool ContainsUnexpandedParameterPack = false;
 
+  /// Packs introduced by this lambda, if any.
+  SmallVector<NamedDecl*, 4> LocalPacks;
+
   /// If this is a generic lambda, use this as the depth of
   /// each 'auto' parameter, during initial AST construction.
   unsigned AutoTemplateParameterDepth = 0;

@@ -367,9 +367,6 @@ def parseOptionsAndInitTestdirs():
             usage(parser)
         configuration.filters.extend(args.f)
 
-    if args.l:
-        configuration.skip_long_running_test = False
-
     if args.framework:
         configuration.lldbFrameworkPath = args.framework
 
@@ -1143,10 +1140,6 @@ def run_suite():
 
     setupSysPath()
 
-    #
-    # If '-l' is specified, do not skip the long running tests.
-    if not configuration.skip_long_running_test:
-        os.environ["LLDB_SKIP_LONG_RUNNING_TEST"] = "NO"
 
     # For the time being, let's bracket the test runner within the
     # lldb.SBDebugger.Initialize()/Terminate() pair.

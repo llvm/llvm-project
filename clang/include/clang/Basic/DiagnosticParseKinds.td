@@ -126,8 +126,8 @@ def err_duplicate_default_assoc : Error<
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
 
-def ext_c11_alignment : Extension<
-  "%0 is a C11-specific feature">, InGroup<C11>;
+def ext_c11_feature : Extension<
+  "%0 is a C11 extension">, InGroup<C11>;
 
 def ext_c11_noreturn : Extension<
   "_Noreturn functions are a C11-specific feature">, InGroup<C11>;
