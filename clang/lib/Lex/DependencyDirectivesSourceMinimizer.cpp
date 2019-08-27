@@ -833,7 +833,14 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
   return lexDefault(Kind, Id.Name, First, End);
 }
 
+static void skipUTF8ByteOrderMark(const char *&First, const char *const End) {
+  if ((End - First) >= 3 && First[0] == '\xef' && First[1] == '\xbb' &&
+      First[2] == '\xbf')
+    First += 3;
+}
+
 bool Minimizer::minimizeImpl(const char *First, const char *const End) {
+  skipUTF8ByteOrderMark(First, End);
   while (First != End)
     if (lexPPLine(First, End))
       return true;
