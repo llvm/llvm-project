@@ -162,7 +162,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
   if (!OffsetOp.isImm() || OffsetOp.getImm() > 3)
     return false;
 
-  unsigned OffsetReg = MI.getOperand(2).getReg();
+  Register OffsetReg = MI.getOperand(2).getReg();
   RegisterRef OffsetRR;
   NodeId OffsetRegRD = 0;
   for (NodeAddr<UseNode *> UA : AddAslSN.Addr->members_if(DFG->IsUse, *DFG)) {
@@ -348,7 +348,7 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
                                         MachineInstr *AddMI,
                                         const NodeList &UNodeList) {
 
-  unsigned AddDefR = AddMI->getOperand(0).getReg();
+  Register AddDefR = AddMI->getOperand(0).getReg();
   for (auto I = UNodeList.rbegin(), E = UNodeList.rend(); I != E; ++I) {
     NodeAddr<UseNode *> UN = *I;
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
@@ -381,7 +381,7 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
     // Ex: Rx= add(Rt,#10)
     //     memw(Rx+#0) = Rs
     // will be replaced with =>  memw(Rt+#10) = Rs
-    unsigned BaseReg = AddMI->getOperand(1).getReg();
+    Register BaseReg = AddMI->getOperand(1).getReg();
     if (!isSafeToExtLR(AddSN, AddMI, BaseReg, UNodeList))
       return false;
   }
@@ -411,7 +411,7 @@ bool HexagonOptAddrMode::updateAddUses(MachineInstr *AddMI,
                                         MachineInstr *UseMI) {
   const MachineOperand ImmOp = AddMI->getOperand(2);
   const MachineOperand AddRegOp = AddMI->getOperand(1);
-  unsigned newReg = AddRegOp.getReg();
+  Register newReg = AddRegOp.getReg();
   const MCInstrDesc &MID = UseMI->getDesc();
 
   MachineOperand &BaseOp = MID.mayLoad() ? UseMI->getOperand(1)
@@ -724,7 +724,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
     }
 
     short SizeInc = 0;
-    unsigned DefR = MI->getOperand(0).getReg();
+    Register DefR = MI->getOperand(0).getReg();
     InstrEvalMap InstrEvalResult;
 
     // Analyze all uses and calculate increase in size. Perform the optimization

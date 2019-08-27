@@ -155,7 +155,7 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!HasFP || (needsStackRealignment(MF) && FrameIndex >= 0))
     Offset += MF.getFrameInfo().getStackSize();
 
-  unsigned FrameReg = getFrameRegister(MF);
+  Register FrameReg = getFrameRegister(MF);
   if (FrameIndex >= 0) {
     if (hasBasePointer(MF))
       FrameReg = getBaseRegister();

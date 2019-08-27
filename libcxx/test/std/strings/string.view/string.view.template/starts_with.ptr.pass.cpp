@@ -15,7 +15,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "constexpr_char_traits.hpp"
+#include "constexpr_char_traits.h"
 
 int main(int, char**)
 {

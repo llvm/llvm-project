@@ -273,7 +273,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   AsmPrinter::EmitFunctionEntryLabel();
 }
 
-void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
+void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
@@ -677,7 +677,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         if (!MO.isReg())
           continue;
 
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         switch (Reg) {
         case AMDGPU::EXEC:
         case AMDGPU::EXEC_LO:

@@ -705,7 +705,7 @@ template <> struct DenseMapInfo<AttributeList> {
 /// equality, presence of attributes, etc.
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::map<std::string, std::string> TargetDepAttrs;
+  std::map<std::string, std::string, std::less<>> TargetDepAttrs;
   MaybeAlign Alignment;
   MaybeAlign StackAlignment;
   uint64_t DerefBytes = 0;

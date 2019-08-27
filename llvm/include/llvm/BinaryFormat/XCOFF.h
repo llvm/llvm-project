@@ -147,6 +147,29 @@ enum SymbolType {
   XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
 };
 
+struct FileHeader32 {
+  uint16_t Magic;
+  uint16_t NumberOfSections;
+  int32_t TimeStamp;
+  uint32_t SymbolTableFileOffset;
+  int32_t NumberOfSymbolTableEntries;
+  uint16_t AuxiliaryHeaderSize;
+  uint16_t Flags;
+};
+
+struct SectionHeader32 {
+  char Name[XCOFF::NameSize];
+  uint32_t PhysicalAddress;
+  uint32_t VirtualAddress;
+  uint32_t Size;
+  uint32_t FileOffsetToData;
+  uint32_t FileOffsetToRelocations;
+  uint32_t FileOffsetToLineNumbers;
+  uint16_t NumberOfRelocations;
+  uint16_t NumberOfLineNumbers;
+  int32_t Flags;
+};
+
 } // end namespace XCOFF
 } // end namespace llvm
 

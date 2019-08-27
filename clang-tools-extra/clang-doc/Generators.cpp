@@ -57,7 +57,9 @@ std::string getTagType(TagTypeKind AS) {
   llvm_unreachable("Unknown TagTypeKind");
 }
 
-bool Generator::createResources(ClangDocContext &CDCtx) { return true; }
+llvm::Error Generator::createResources(ClangDocContext &CDCtx) {
+  return llvm::Error::success();
+}
 
 // A function to add a reference to Info in Idx.
 // Given an Info X with the following namespaces: [B,A]; a reference to X will

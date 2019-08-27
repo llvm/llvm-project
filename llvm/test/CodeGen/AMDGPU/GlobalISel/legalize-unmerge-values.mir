@@ -61,13 +61,20 @@ body: |
     ; CHECK-LABEL: name: test_unmerge_s16_v3s16
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
-    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
-    ; CHECK: $vgpr2 = COPY [[ANYEXT2]](s32)
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
+    ; CHECK: $vgpr1 = COPY [[COPY1]](s32)
+    ; CHECK: $vgpr2 = COPY [[COPY2]](s32)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(s16), %2:_(s16),  %3:_(s16) = G_UNMERGE_VALUES %0
     %4:_(s32) = G_ANYEXT %1

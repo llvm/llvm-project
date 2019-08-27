@@ -207,11 +207,7 @@ MachineInstrBuilder MachineIRBuilder::buildGEP(const DstOp &Res,
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).isScalar() && "invalid offset type");
 
-  auto MIB = buildInstr(TargetOpcode::G_GEP);
-  Res.addDefToMIB(*getMRI(), MIB);
-  Op0.addSrcToMIB(MIB);
-  Op1.addSrcToMIB(MIB);
-  return MIB;
+  return buildInstr(TargetOpcode::G_GEP, {Res}, {Op0, Op1});
 }
 
 Optional<MachineInstrBuilder>

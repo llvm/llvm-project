@@ -48,14 +48,14 @@ typedef llvm::DenseMap<const clang::Stmt *, std::string>
 /// A vector used to store the AST subtrees of an Expr.
 typedef llvm::SmallVector<const clang::Expr *, 16> ComponentVector;
 
-/// \brief Class used build the reverse AST properties needed to detect
+/// Class used build the reverse AST properties needed to detect
 /// name conflicts and free variables.
 class StmtAncestorASTVisitor
     : public clang::RecursiveASTVisitor<StmtAncestorASTVisitor> {
 public:
   StmtAncestorASTVisitor() { StmtStack.push_back(nullptr); }
 
-  /// \brief Run the analysis on the AST.
+  /// Run the analysis on the AST.
   ///
   /// In case we're running this analysis multiple times, don't repeat the work.
   void gatherAncestors(ASTContext &Ctx) {
@@ -116,7 +116,7 @@ public:
       : StmtParents(StmtParents), DeclParents(DeclParents),
         ContainingStmt(ContainingStmt), ReplacedVars(ReplacedVars) {}
 
-  /// \brief Run the analysis on Body, and return true iff the expression
+  /// Run the analysis on Body, and return true iff the expression
   /// depends on some variable declared within ContainingStmt.
   ///
   /// This is intended to protect against hoisting the container expression
@@ -200,7 +200,7 @@ private:
   bool VisitTypeLoc(clang::TypeLoc TL);
 };
 
-/// \brief The information needed to describe a valid convertible usage
+/// The information needed to describe a valid convertible usage
 /// of an array index or iterator.
 struct Usage {
   enum UsageKind {
@@ -238,7 +238,7 @@ struct Usage {
       : Expression(E), Kind(Kind), Range(std::move(Range)) {}
 };
 
-/// \brief A class to encapsulate lowering of the tool's confidence level.
+/// A class to encapsulate lowering of the tool's confidence level.
 class Confidence {
 public:
   enum Level {
@@ -251,15 +251,15 @@ public:
     // Transformations that will not change semantics.
     CL_Safe
   };
-  /// \brief Initialize confidence level.
+  /// Initialize confidence level.
   explicit Confidence(Confidence::Level Level) : CurrentLevel(Level) {}
 
-  /// \brief Lower the internal confidence level to Level, but do not raise it.
+  /// Lower the internal confidence level to Level, but do not raise it.
   void lowerTo(Confidence::Level Level) {
     CurrentLevel = std::min(Level, CurrentLevel);
   }
 
-  /// \brief Return the internal confidence level.
+  /// Return the internal confidence level.
   Level getLevel() const { return CurrentLevel; }
 
 private:
@@ -275,7 +275,7 @@ bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second);
 const DeclRefExpr *getDeclRef(const Expr *E);
 bool areSameVariable(const ValueDecl *First, const ValueDecl *Second);
 
-/// \brief Discover usages of expressions consisting of index or iterator
+/// Discover usages of expressions consisting of index or iterator
 /// access.
 ///
 /// Given an index variable, recursively crawls a for loop to discover if the
@@ -288,7 +288,7 @@ public:
                          const Expr *ArrayBoundExpr,
                          bool ContainerNeedsDereference);
 
-  /// \brief Finds all uses of IndexVar in Body, placing all usages in Usages,
+  /// Finds all uses of IndexVar in Body, placing all usages in Usages,
   /// and returns true if IndexVar was only used in a way consistent with a
   /// range-based for loop.
   ///
@@ -301,35 +301,35 @@ public:
   /// function and in overloaded operator[].
   bool findAndVerifyUsages(const Stmt *Body);
 
-  /// \brief Add a set of components that we should consider relevant to the
+  /// Add a set of components that we should consider relevant to the
   /// container.
   void addComponents(const ComponentVector &Components);
 
-  /// \brief Accessor for Usages.
+  /// Accessor for Usages.
   const UsageResult &getUsages() const { return Usages; }
 
-  /// \brief Adds the Usage if it was not added before.
+  /// Adds the Usage if it was not added before.
   void addUsage(const Usage &U);
 
-  /// \brief Get the container indexed by IndexVar, if any.
+  /// Get the container indexed by IndexVar, if any.
   const Expr *getContainerIndexed() const { return ContainerExpr; }
 
-  /// \brief Returns the statement declaring the variable created as an alias
+  /// Returns the statement declaring the variable created as an alias
   /// for the loop element, if any.
   const DeclStmt *getAliasDecl() const { return AliasDecl; }
 
-  /// \brief Accessor for ConfidenceLevel.
+  /// Accessor for ConfidenceLevel.
   Confidence::Level getConfidenceLevel() const {
     return ConfidenceLevel.getLevel();
   }
 
-  /// \brief Indicates if the alias declaration was in a place where it cannot
+  /// Indicates if the alias declaration was in a place where it cannot
   /// simply be removed but rather replaced with a use of the alias variable.
   /// For example, variables declared in the condition of an if, switch, or for
   /// stmt.
   bool aliasUseRequired() const { return ReplaceWithAliasUse; }
 
-  /// \brief Indicates if the alias declaration came from the init clause of a
+  /// Indicates if the alias declaration came from the init clause of a
   /// nested for loop. SourceRanges provided by Clang for DeclStmts in this
   /// case need to be adjusted.
   bool aliasFromForInit() const { return AliasFromForInit; }
@@ -351,7 +351,7 @@ private:
   bool VisitDeclStmt(DeclStmt *S);
   bool TraverseStmt(Stmt *S);
 
-  /// \brief Add an expression to the list of expressions on which the container
+  /// Add an expression to the list of expressions on which the container
   /// expression depends.
   void addComponent(const Expr *E);
 
@@ -376,7 +376,7 @@ private:
   /// The DeclStmt for an alias to the container element.
   const DeclStmt *AliasDecl;
   Confidence ConfidenceLevel;
-  /// \brief A list of expressions on which ContainerExpr depends.
+  /// A list of expressions on which ContainerExpr depends.
   ///
   /// If any of these expressions are encountered outside of an acceptable usage
   /// of the loop element, lower our confidence level.
@@ -398,7 +398,7 @@ private:
 };
 
 struct TUTrackingInfo {
-  /// \brief Reset and initialize per-TU tracking information.
+  /// Reset and initialize per-TU tracking information.
   ///
   /// Must be called before using container accessors.
   TUTrackingInfo() : ParentFinder(new StmtAncestorASTVisitor) {}
@@ -413,7 +413,7 @@ private:
   ReplacedVarsMap ReplacedVars;
 };
 
-/// \brief Create names for generated variables within a particular statement.
+/// Create names for generated variables within a particular statement.
 ///
 /// VariableNamer uses a DeclContext as a reference point, checking for any
 /// conflicting declarations higher up in the context or within SourceStmt.
@@ -438,7 +438,7 @@ public:
         SourceStmt(SourceStmt), OldIndex(OldIndex), TheContainer(TheContainer),
         Context(Context), Style(Style) {}
 
-  /// \brief Generate a new index name.
+  /// Generate a new index name.
   ///
   /// Generates the name to be used for an inserted iterator. It relies on
   /// declarationExists() to determine that there are no naming conflicts, and

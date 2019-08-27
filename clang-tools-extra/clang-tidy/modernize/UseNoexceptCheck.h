@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// \brief Replace dynamic exception specifications, with
+/// Replace dynamic exception specifications, with
 /// `noexcept` (or user-defined macro) or `noexcept(false)`.
 /// \code
 ///   void foo() throw();

@@ -376,7 +376,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   assert(VNI && VNI->def == Idx.getRegSlot() && "Not defined by copy");
 #endif
 
-  unsigned SrcReg = CopyMI.getOperand(1).getReg();
+  Register SrcReg = CopyMI.getOperand(1).getReg();
   LiveInterval &SrcLI = LIS.getInterval(SrcReg);
   VNInfo *SrcVNI = SrcLI.getVNInfoAt(Idx);
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
@@ -844,7 +844,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   for (MIBundleOperands MO(*MI); MO.isValid(); ++MO) {
     if (!MO->isReg())
       continue;
-    unsigned Reg = MO->getReg();
+    Register Reg = MO->getReg();
     if (!Reg || Register::isVirtualRegister(Reg) || MRI.isReserved(Reg)) {
       continue;
     }

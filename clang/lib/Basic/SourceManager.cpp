@@ -96,7 +96,7 @@ void ContentCache::replaceBuffer(const llvm::MemoryBuffer *B, bool DoNotFree) {
 }
 
 const llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
-                                                  const SourceManager &SM,
+                                                  FileManager &FM,
                                                   SourceLocation Loc,
                                                   bool *Invalid) const {
   // Lazily create the Buffer for ContentCaches that wrap files.  If we already
@@ -134,9 +134,7 @@ const llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
     return Buffer.getPointer();
   }
 
-  bool isVolatile = SM.userFilesAreVolatile() && !IsSystemFile;
-  auto BufferOrError =
-      SM.getFileManager().getBufferForFile(ContentsEntry, isVolatile);
+  auto BufferOrError = FM.getBufferForFile(ContentsEntry, IsFileVolatile);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
@@ -389,7 +387,7 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
     Clone->OrigEntry = Cache->OrigEntry;
     Clone->ContentsEntry = Cache->ContentsEntry;
     Clone->BufferOverridden = Cache->BufferOverridden;
-    Clone->IsSystemFile = Cache->IsSystemFile;
+    Clone->IsFileVolatile = Cache->IsFileVolatile;
     Clone->IsTransient = Cache->IsTransient;
     Clone->replaceBuffer(Cache->getRawBuffer(), /*DoNotFree*/true);
     return Clone;
@@ -438,7 +436,7 @@ SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
     new (Entry) ContentCache(FileEnt);
   }
 
-  Entry->IsSystemFile = isSystemFile;
+  Entry->IsFileVolatile = UserFilesAreVolatile && !isSystemFile;
   Entry->IsTransient = FilesAreTransient;
 
   return Entry;
@@ -466,10 +464,9 @@ const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
     // If the file of the SLocEntry changed we could still have loaded it.
     if (!SLocEntryLoaded[Index]) {
       // Try to recover; create a SLocEntry so the rest of clang can handle it.
-      LoadedSLocEntryTable[Index] = SLocEntry::get(0,
-                                 FileInfo::get(SourceLocation(),
-                                               getFakeContentCacheForRecovery(),
-                                               SrcMgr::C_User));
+      LoadedSLocEntryTable[Index] = SLocEntry::get(
+          0, FileInfo::get(SourceLocation(), getFakeContentCacheForRecovery(),
+                           SrcMgr::C_User, ""));
     }
   }
 
@@ -556,7 +553,7 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
-FileID SourceManager::createFileID(const ContentCache *File,
+FileID SourceManager::createFileID(const ContentCache *File, StringRef Filename,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID, unsigned LoadedOffset) {
@@ -565,14 +562,14 @@ FileID SourceManager::createFileID(const ContentCache *File,
     unsigned Index = unsigned(-LoadedID) - 2;
     assert(Index < LoadedSLocEntryTable.size() && "FileID out of range");
     assert(!SLocEntryLoaded[Index] && "FileID already loaded");
-    LoadedSLocEntryTable[Index] = SLocEntry::get(LoadedOffset,
-        FileInfo::get(IncludePos, File, FileCharacter));
+    LoadedSLocEntryTable[Index] = SLocEntry::get(
+        LoadedOffset, FileInfo::get(IncludePos, File, FileCharacter, Filename));
     SLocEntryLoaded[Index] = true;
     return FileID::get(LoadedID);
   }
-  LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset,
-                                               FileInfo::get(IncludePos, File,
-                                                             FileCharacter)));
+  LocalSLocEntryTable.push_back(
+      SLocEntry::get(NextLocalOffset,
+                     FileInfo::get(IncludePos, File, FileCharacter, Filename)));
   unsigned FileSize = File->getSize();
   assert(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
          NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset &&
@@ -646,7 +643,7 @@ const llvm::MemoryBuffer *
 SourceManager::getMemoryBufferForFile(const FileEntry *File, bool *Invalid) {
   const SrcMgr::ContentCache *IR = getOrCreateContentCache(File);
   assert(IR && "getOrCreateContentCache() cannot return NULL");
-  return IR->getBuffer(Diag, *this, SourceLocation(), Invalid);
+  return IR->getBuffer(Diag, getFileManager(), SourceLocation(), Invalid);
 }
 
 void SourceManager::overrideFileContents(const FileEntry *SourceFile,
@@ -700,7 +697,7 @@ StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
   }
 
   const llvm::MemoryBuffer *Buf = SLoc.getFile().getContentCache()->getBuffer(
-      Diag, *this, SourceLocation(), &MyInvalid);
+      Diag, getFileManager(), SourceLocation(), &MyInvalid);
   if (Invalid)
     *Invalid = MyInvalid;
 
@@ -1131,7 +1128,7 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
   }
   const llvm::MemoryBuffer *Buffer =
       Entry.getFile().getContentCache()->getBuffer(
-          Diag, *this, SourceLocation(), &CharDataInvalid);
+          Diag, getFileManager(), SourceLocation(), &CharDataInvalid);
   if (Invalid)
     *Invalid = CharDataInvalid;
   return Buffer->getBufferStart() + (CharDataInvalid? 0 : LocInfo.second);
@@ -1228,7 +1225,7 @@ static void ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
                                const SourceManager &SM, bool &Invalid) {
   // Note that calling 'getBuffer()' may lazily page in the file.
   const MemoryBuffer *Buffer =
-      FI->getBuffer(Diag, SM, SourceLocation(), &Invalid);
+      FI->getBuffer(Diag, SM.getFileManager(), SourceLocation(), &Invalid);
   if (Invalid)
     return;
 
@@ -1459,7 +1456,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   if (C->OrigEntry)
     Filename = C->OrigEntry->getName();
   else
-    Filename = C->getBuffer(Diag, *this)->getBufferIdentifier();
+    Filename = C->getBuffer(Diag, getFileManager())->getBufferIdentifier();
 
   unsigned LineNo = getLineNumber(LocInfo.first, LocInfo.second, &Invalid);
   if (Invalid)
@@ -1558,22 +1555,6 @@ unsigned SourceManager::getFileIDSize(FileID FID) const {
 // Other miscellaneous methods.
 //===----------------------------------------------------------------------===//
 
-/// Retrieve the inode for the given file entry, if possible.
-///
-/// This routine involves a system call, and therefore should only be used
-/// in non-performance-critical code.
-static Optional<llvm::sys::fs::UniqueID>
-getActualFileUID(const FileEntry *File) {
-  if (!File)
-    return None;
-
-  llvm::sys::fs::UniqueID ID;
-  if (llvm::sys::fs::getUniqueID(File->getName(), ID))
-    return None;
-
-  return ID;
-}
-
 /// Get the source location for the given file:line:col triplet.
 ///
 /// If the source file is included multiple times, the source location will
@@ -1595,13 +1576,8 @@ SourceLocation SourceManager::translateFileLineCol(const FileEntry *SourceFile,
 FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   assert(SourceFile && "Null source file!");
 
-  // Find the first file ID that corresponds to the given file.
-  FileID FirstFID;
-
   // First, check the main file ID, since it is common to look for a
   // location in the main file.
-  Optional<llvm::sys::fs::UniqueID> SourceFileUID;
-  Optional<StringRef> SourceFileName;
   if (MainFileID.isValid()) {
     bool Invalid = false;
     const SLocEntry &MainSLoc = getSLocEntry(MainFileID, &Invalid);
@@ -1609,100 +1585,35 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
       return FileID();
 
     if (MainSLoc.isFile()) {
-      const ContentCache *MainContentCache
-        = MainSLoc.getFile().getContentCache();
-      if (!MainContentCache || !MainContentCache->OrigEntry) {
-        // Can't do anything
-      } else if (MainContentCache->OrigEntry == SourceFile) {
-        FirstFID = MainFileID;
-      } else {
-        // Fall back: check whether we have the same base name and inode
-        // as the main file.
-        const FileEntry *MainFile = MainContentCache->OrigEntry;
-        SourceFileName = llvm::sys::path::filename(SourceFile->getName());
-        if (*SourceFileName == llvm::sys::path::filename(MainFile->getName())) {
-          SourceFileUID = getActualFileUID(SourceFile);
-          if (SourceFileUID) {
-            if (Optional<llvm::sys::fs::UniqueID> MainFileUID =
-                    getActualFileUID(MainFile)) {
-              if (*SourceFileUID == *MainFileUID) {
-                FirstFID = MainFileID;
-                SourceFile = MainFile;
-              }
-            }
-          }
-        }
-      }
+      const ContentCache *MainContentCache =
+          MainSLoc.getFile().getContentCache();
+      if (MainContentCache && MainContentCache->OrigEntry == SourceFile)
+        return MainFileID;
     }
   }
 
-  if (FirstFID.isInvalid()) {
-    // The location we're looking for isn't in the main file; look
-    // through all of the local source locations.
-    for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
-      bool Invalid = false;
-      const SLocEntry &SLoc = getLocalSLocEntry(I, &Invalid);
-      if (Invalid)
-        return FileID();
-
-      if (SLoc.isFile() &&
-          SLoc.getFile().getContentCache() &&
-          SLoc.getFile().getContentCache()->OrigEntry == SourceFile) {
-        FirstFID = FileID::get(I);
-        break;
-      }
-    }
-    // If that still didn't help, try the modules.
-    if (FirstFID.isInvalid()) {
-      for (unsigned I = 0, N = loaded_sloc_entry_size(); I != N; ++I) {
-        const SLocEntry &SLoc = getLoadedSLocEntry(I);
-        if (SLoc.isFile() &&
-            SLoc.getFile().getContentCache() &&
-            SLoc.getFile().getContentCache()->OrigEntry == SourceFile) {
-          FirstFID = FileID::get(-int(I) - 2);
-          break;
-        }
-      }
-    }
-  }
-
-  // If we haven't found what we want yet, try again, but this time stat()
-  // each of the files in case the files have changed since we originally
-  // parsed the file.
-  if (FirstFID.isInvalid() &&
-      (SourceFileName ||
-       (SourceFileName = llvm::sys::path::filename(SourceFile->getName()))) &&
-      (SourceFileUID || (SourceFileUID = getActualFileUID(SourceFile)))) {
+  // The location we're looking for isn't in the main file; look
+  // through all of the local source locations.
+  for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
     bool Invalid = false;
-    for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
-      FileID IFileID;
-      IFileID.ID = I;
-      const SLocEntry &SLoc = getSLocEntry(IFileID, &Invalid);
-      if (Invalid)
-        return FileID();
+    const SLocEntry &SLoc = getLocalSLocEntry(I, &Invalid);
+    if (Invalid)
+      return FileID();
 
-      if (SLoc.isFile()) {
-        const ContentCache *FileContentCache
-          = SLoc.getFile().getContentCache();
-        const FileEntry *Entry = FileContentCache ? FileContentCache->OrigEntry
-                                                  : nullptr;
-        if (Entry &&
-            *SourceFileName == llvm::sys::path::filename(Entry->getName())) {
-          if (Optional<llvm::sys::fs::UniqueID> EntryUID =
-                  getActualFileUID(Entry)) {
-            if (*SourceFileUID == *EntryUID) {
-              FirstFID = FileID::get(I);
-              SourceFile = Entry;
-              break;
-            }
-          }
-        }
-      }
-    }
+    if (SLoc.isFile() && SLoc.getFile().getContentCache() &&
+        SLoc.getFile().getContentCache()->OrigEntry == SourceFile)
+      return FileID::get(I);
   }
 
-  (void) SourceFile;
-  return FirstFID;
+  // If that still didn't help, try the modules.
+  for (unsigned I = 0, N = loaded_sloc_entry_size(); I != N; ++I) {
+    const SLocEntry &SLoc = getLoadedSLocEntry(I);
+    if (SLoc.isFile() && SLoc.getFile().getContentCache() &&
+        SLoc.getFile().getContentCache()->OrigEntry == SourceFile)
+      return FileID::get(-int(I) - 2);
+  }
+
+  return FileID();
 }
 
 /// Get the source location in \arg FID for the given line:col.
@@ -1745,13 +1656,13 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
   }
 
   if (Line > Content->NumLines) {
-    unsigned Size = Content->getBuffer(Diag, *this)->getBufferSize();
+    unsigned Size = Content->getBuffer(Diag, getFileManager())->getBufferSize();
     if (Size > 0)
       --Size;
     return FileLoc.getLocWithOffset(Size);
   }
 
-  const llvm::MemoryBuffer *Buffer = Content->getBuffer(Diag, *this);
+  const llvm::MemoryBuffer *Buffer = Content->getBuffer(Diag, getFileManager());
   unsigned FilePos = Content->SourceLineCache[Line - 1];
   const char *Buf = Buffer->getBufferStart() + FilePos;
   unsigned BufLength = Buffer->getBufferSize() - FilePos;

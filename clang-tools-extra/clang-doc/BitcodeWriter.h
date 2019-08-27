@@ -30,7 +30,7 @@ namespace doc {
 // Current version number of clang-doc bitcode.
 // Should be bumped when removing or changing BlockIds, RecordIds, or
 // BitCodeConstants, though they can be added without breaking it.
-static const unsigned VersionNumber = 2;
+static const unsigned VersionNumber = 3;
 
 struct BitCodeConstants {
   static constexpr unsigned RecordSize = 32U;
@@ -40,7 +40,7 @@ struct BitCodeConstants {
   static constexpr unsigned IntSize = 16U;
   static constexpr unsigned StringLengthSize = 16U;
   static constexpr unsigned FilenameLengthSize = 16U;
-  static constexpr unsigned LineNumberSize = 16U;
+  static constexpr unsigned LineNumberSize = 32U;
   static constexpr unsigned ReferenceTypeSize = 8U;
   static constexpr unsigned USRLengthSize = 6U;
   static constexpr unsigned USRBitLengthSize = 8U;
@@ -58,6 +58,7 @@ enum BlockId {
   BI_FIELD_TYPE_BLOCK_ID,
   BI_MEMBER_TYPE_BLOCK_ID,
   BI_RECORD_BLOCK_ID,
+  BI_BASE_RECORD_BLOCK_ID,
   BI_FUNCTION_BLOCK_ID,
   BI_COMMENT_BLOCK_ID,
   BI_REFERENCE_BLOCK_ID,
@@ -105,6 +106,13 @@ enum RecordId {
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
   RECORD_IS_TYPE_DEF,
+  BASE_RECORD_USR,
+  BASE_RECORD_NAME,
+  BASE_RECORD_PATH,
+  BASE_RECORD_TAG_TYPE,
+  BASE_RECORD_IS_VIRTUAL,
+  BASE_RECORD_ACCESS,
+  BASE_RECORD_IS_PARENT,
   REFERENCE_USR,
   REFERENCE_NAME,
   REFERENCE_TYPE,
@@ -143,6 +151,7 @@ public:
   // Block emission of different info types.
   void emitBlock(const NamespaceInfo &I);
   void emitBlock(const RecordInfo &I);
+  void emitBlock(const BaseRecordInfo &I);
   void emitBlock(const FunctionInfo &I);
   void emitBlock(const EnumInfo &I);
   void emitBlock(const TypeInfo &B);

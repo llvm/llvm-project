@@ -90,7 +90,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   if (!MO.isReg())
     return false;
 
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
 
   if (!TRI->isVGPR(*MRI, Reg))
     return false;
@@ -124,14 +124,14 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
         if (!MO.isReg())
           continue;
 
-        const unsigned VirtReg = MO.getReg();
+        const Register VirtReg = MO.getReg();
         if (Register::isPhysicalRegister(VirtReg))
           continue;
 
         if (!VRM->hasPhys(VirtReg))
           continue;
 
-        unsigned PhysReg = VRM->getPhys(VirtReg);
+        Register PhysReg = VRM->getPhys(VirtReg);
         const unsigned SubReg = MO.getSubReg();
         if (SubReg != 0) {
           PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -149,7 +149,7 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   for (unsigned Reg : RegsToRewrite) {
     LIS->removeInterval(Reg);
 
-    const unsigned PhysReg = VRM->getPhys(Reg);
+    const Register PhysReg = VRM->getPhys(Reg);
     assert(PhysReg != 0);
     MFI->ReserveWWMRegister(PhysReg);
   }

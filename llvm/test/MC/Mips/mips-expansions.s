@@ -122,17 +122,17 @@
 # CHECK-LE: sw      $10, 0($1)                # encoding: [0x00,0x00,0x2a,0xac]
 
   lw $8, 1f+8
-# CHECK-LE: lw      $8, %got(($tmp0)+8)($gp)  # encoding: [A,A,0x88,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(($tmp0)+8), kind: fixup_Mips_GOT
-# CHECK-LE: addiu   $8, $8, %lo(($tmp0)+8)    # encoding: [A,A,0x08,0x25]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %lo(($tmp0)+8), kind: fixup_Mips_LO16
-# CHECK-LE: lw      $8, 0($8)                 # encoding: [0x00,0x00,0x08,0x8d]
+# CHECK-LE:      lw    $8, %got($tmp0)($gp)   # encoding: [A,A,0x88,0x8f]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
+# CHECK-LE-NEXT: addiu $8, $8, %lo($tmp0)     # encoding: [A,A,0x08,0x25]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+# CHECK-LE-NEXT: lw    $8, 8($8)              # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, 1f+8
-# CHECK-LE: lw      $1, %got(($tmp0)+8)($gp)  # encoding: [A,A,0x81,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(($tmp0)+8), kind: fixup_Mips_GOT
-# CHECK-LE: addiu   $1, $1, %lo(($tmp0)+8)    # encoding: [A,A,0x21,0x24]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %lo(($tmp0)+8), kind: fixup_Mips_LO16
-# CHECK-LE: sw      $8, 0($1)                 # encoding: [0x00,0x00,0x28,0xac]
+# CHECK-LE:      lw    $1, %got($tmp0)($gp)   # encoding: [A,A,0x81,0x8f]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
+# CHECK-LE-NEXT: addiu $1, $1, %lo($tmp0)     # encoding: [A,A,0x21,0x24]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+# CHECK-LE-NEXT: sw    $8, 8($1)              # encoding: [0x08,0x00,0x28,0xac]
 
   lw $10, 655483($4)
 # CHECK-LE: lui     $10, 10                   # encoding: [0x0a,0x00,0x0a,0x3c]
@@ -144,15 +144,13 @@
 # CHECK-LE: sw      $10, -7616($1)            # encoding: [0x40,0xe2,0x2a,0xac]
 
   lw $8, symbol+8
-# CHECK-LE: lw      $8, %got(symbol+8)($gp)   # encoding: [A,A,0x88,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
-# CHECK-LE: addiu   $8, $8, 8                 # encoding: [0x08,0x00,0x08,0x25]
-# CHECK-LE: lw      $8, 0($8)                 # encoding: [0x00,0x00,0x08,0x8d]
+# CHECK-LE:      lw $8, %got(symbol)($gp)     # encoding: [A,A,0x88,0x8f]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE-NEXT: lw $8, 8($8)                 # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, symbol+8
-# CHECK-LE: lw      $1, %got(symbol+8)($gp)   # encoding: [A,A,0x81,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
-# CHECK-LE: addiu   $1, $1, 8                 # encoding: [0x08,0x00,0x21,0x24]
-# CHECK-LE: sw      $8, 0($1)                 # encoding: [0x00,0x00,0x28,0xac]
+# CHECK-LE:      lw $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
+# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# CHECK-LE-NEXT: sw $8, 8($1)                 # encoding: [0x08,0x00,0x28,0xac]
 
   ldc1 $f0, symbol
 # CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]

@@ -173,11 +173,11 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
   bool NSA = false;
   for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + I);
-    unsigned Reg = Op.getReg();
+    Register Reg = Op.getReg();
     if (Register::isPhysicalRegister(Reg) || !VRM->isAssignedReg(Reg))
       return NSA_Status::FIXED;
 
-    unsigned PhysReg = VRM->getPhys(Reg);
+    Register PhysReg = VRM->getPhys(Reg);
 
     if (!Fast) {
       if (!PhysReg)
@@ -276,7 +276,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
     SlotIndex MinInd, MaxInd;
     for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
       const MachineOperand &Op = MI->getOperand(VAddr0Idx + I);
-      unsigned Reg = Op.getReg();
+      Register Reg = Op.getReg();
       LiveInterval *LI = &LIS->getInterval(Reg);
       if (llvm::find(Intervals, LI) != Intervals.end()) {
         // Same register used, unable to make sequential

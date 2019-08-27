@@ -113,7 +113,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       unsigned Size = DL.getPointerSizeInBits();
       assert((Size % 8) == 0 && "Need pointer size in bytes.");
       Size /= 8;
-      unsigned Reg = (++MOI)->getReg();
+      Register Reg = (++MOI)->getReg();
       int64_t Imm = (++MOI)->getImm();
       Locs.emplace_back(StackMaps::Location::Direct, Size,
                         getDwarfRegNum(Reg, TRI), Imm);
@@ -122,7 +122,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     case StackMaps::IndirectMemRefOp: {
       int64_t Size = (++MOI)->getImm();
       assert(Size > 0 && "Need a valid size for indirect memory locations.");
-      unsigned Reg = (++MOI)->getReg();
+      Register Reg = (++MOI)->getReg();
       int64_t Imm = (++MOI)->getImm();
       Locs.emplace_back(StackMaps::Location::Indirect, Size,
                         getDwarfRegNum(Reg, TRI), Imm);

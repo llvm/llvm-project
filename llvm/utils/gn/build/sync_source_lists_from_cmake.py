@@ -124,7 +124,7 @@ def sync_source_lists(write):
         else:
             print()
 
-    return bool(changes_by_rev)
+    return bool(changes_by_rev) and not write
 
 
 def sync_unittests():

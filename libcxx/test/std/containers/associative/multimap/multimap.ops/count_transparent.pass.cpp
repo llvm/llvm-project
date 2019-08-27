@@ -20,7 +20,7 @@
 #include <utility>
 
 #include "min_allocator.h"
-#include "private_constructor.hpp"
+#include "private_constructor.h"
 #include "test_macros.h"
 
 struct Comp {

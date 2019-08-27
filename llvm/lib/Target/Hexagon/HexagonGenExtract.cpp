@@ -184,7 +184,7 @@ bool HexagonGenExtract::convert(Instruction *In) {
   // The width of the extracted field is the minimum of the original bits
   // that remain after the shifts and the number of contiguous 1s in the mask.
   uint32_t W = std::min(U, T);
-  if (W == 0)
+  if (W == 0 || W == 1)
     return false;
 
   // Check if the extracted bits are contained within the mask that it is

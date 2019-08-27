@@ -426,9 +426,10 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
-  MCAsmBackend &Backend = Asm.getBackend();
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
+  // The WebAssembly backend should never generate FKF_IsPCRel fixups
+  assert(!(Asm.getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
+           MCFixupKindInfo::FKF_IsPCRel));
+
   const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
@@ -439,51 +440,22 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    assert(RefB->getKind() == MCSymbolRefExpr::VK_None &&
-           "Should not have constructed this");
-
-    // Let A, B and C being the components of Target and R be the location of
-    // the fixup. If the fixup is not pcrel, we want to compute (A - B + C).
-    // If it is pcrel, we want to compute (A - B + C - R).
-
-    // In general, Wasm has no relocations for -B. It can only represent (A + C)
-    // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
-    // replace B to implement it: (A - R - K + C)
-    if (IsPCRel) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "No relocation available to represent this relative expression");
-      return;
-    }
-
+    // To get here the A - B expression must have failed evaluateAsRelocatable.
+    // This means either A or B must be undefined and in WebAssembly we can't
+    // support either of those cases.
     const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
-
-    if (SymB.isUndefined()) {
-      Ctx.reportError(Fixup.getLoc(),
-                      Twine("symbol '") + SymB.getName() +
-                          "' can not be undefined in a subtraction expression");
-      return;
-    }
-
-    assert(!SymB.isAbsolute() && "Should have been folded");
-    const MCSection &SecB = SymB.getSection();
-    if (&SecB != &FixupSection) {
-      Ctx.reportError(Fixup.getLoc(),
-                      "Cannot represent a difference across sections");
-      return;
-    }
-
-    uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
-    uint64_t K = SymBOffset - FixupOffset;
-    IsPCRel = true;
-    C -= K;
+    Ctx.reportError(
+        Fixup.getLoc(),
+        Twine("symbol '") + SymB.getName() +
+            "': unsupported subtraction expression used in relocation.");
+    return;
   }
 
   // We either rejected the fixup or folded B into C at this point.
   const MCSymbolRefExpr *RefA = Target.getSymA();
-  const auto *SymA = RefA ? cast<MCSymbolWasm>(&RefA->getSymbol()) : nullptr;
+  const auto *SymA = cast<MCSymbolWasm>(&RefA->getSymbol());
 
-  if (SymA && SymA->isVariable()) {
+  if (SymA->isVariable()) {
     const MCExpr *Expr = SymA->getVariableValue();
     const auto *Inner = cast<MCSymbolRefExpr>(Expr);
     if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
@@ -496,8 +468,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   FixedValue = 0;
 
   unsigned Type = TargetObjectWriter->getRelocType(Target, Fixup);
-  assert(!IsPCRel);
-  assert(SymA);
 
   // Absolute offset within a section or a function.
   // Currently only supported for for metadata sections.

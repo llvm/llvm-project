@@ -46,6 +46,17 @@ public:
 
     /// If true and removing some text leaves a blank line
     /// also remove the empty line (false by default).
+    ///
+    /// FIXME: This sometimes corrupts the file's rewrite buffer due to
+    /// incorrect indexing in the implementation (see the FIXME in
+    /// clang::RewriteBuffer::RemoveText).  Moreover, it's inefficient because
+    /// it must scan the buffer from the beginning to find the start of the
+    /// line.  When feasible, it's better for the caller to check for a blank
+    /// line and then, if found, expand the removal range to include it.
+    /// Checking for a blank line is easy if, for example, the caller can
+    /// guarantee this is the first edit of a line.  In that case, it can just
+    /// scan before and after the removal range until the next newline or
+    /// begin/end of the input.
     bool RemoveLineIfEmpty = false;
 
     RewriteOptions() {}

@@ -210,6 +210,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
+  case 0x2d: // YAML '-'
+    if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
+      return file_magic::tapi_file;
+    break;
+
   default:
     break;
   }

@@ -1393,7 +1393,7 @@ std::string PatternToMatch::getPredicateCheck() const {
     if (!P.getCondString().empty())
       PredList.push_back(&P);
   }
-  llvm::sort(PredList, deref<llvm::less>());
+  llvm::sort(PredList, deref<std::less<>>());
 
   std::string Check;
   for (unsigned i = 0, e = PredList.size(); i != e; ++i) {

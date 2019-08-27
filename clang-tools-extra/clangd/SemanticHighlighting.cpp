@@ -11,6 +11,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include <algorithm>
@@ -38,7 +39,27 @@ public:
     llvm::sort(Tokens);
     auto Last = std::unique(Tokens.begin(), Tokens.end());
     Tokens.erase(Last, Tokens.end());
-    return Tokens;
+    // Macros can give tokens that have the same source range but conflicting
+    // kinds. In this case all tokens sharing this source range should be
+    // removed.
+    std::vector<HighlightingToken> NonConflicting;
+    NonConflicting.reserve(Tokens.size());
+    for (ArrayRef<HighlightingToken> TokRef = Tokens; !TokRef.empty();) {
+      ArrayRef<HighlightingToken> Conflicting =
+          TokRef.take_while([&](const HighlightingToken &T) {
+            // TokRef is guaranteed at least one element here because otherwise
+            // this predicate would never fire.
+            return T.R == TokRef.front().R;
+          });
+      // If there is exactly one token with this range it's non conflicting and
+      // should be in the highlightings.
+      if (Conflicting.size() == 1)
+        NonConflicting.push_back(TokRef.front());
+      // TokRef[Conflicting.size()] is the next token with a different range (or
+      // the end of the Tokens).
+      TokRef = TokRef.drop_front(Conflicting.size());
+    }
+    return NonConflicting;
   }
 
   bool VisitNamespaceAliasDecl(NamespaceAliasDecl *NAD) {
@@ -200,6 +221,10 @@ private:
       addToken(Loc, HighlightingKind::EnumConstant);
       return;
     }
+    if (isa<ParmVarDecl>(D)) {
+      addToken(Loc, HighlightingKind::Parameter);
+      return;
+    }
     if (isa<VarDecl>(D)) {
       addToken(Loc, HighlightingKind::Variable);
       return;
@@ -224,16 +249,25 @@ private:
       addToken(Loc, HighlightingKind::TemplateParameter);
       return;
     }
+    if (isa<NonTypeTemplateParmDecl>(D)) {
+      addToken(Loc, HighlightingKind::TemplateParameter);
+      return;
+    }
   }
 
   void addToken(SourceLocation Loc, HighlightingKind Kind) {
-    if (Loc.isMacroID())
-      // FIXME: skip tokens inside macros for now.
-      return;
+    if(Loc.isMacroID()) {
+      // Only intereseted in highlighting arguments in macros (DEF_X(arg)).
+      if (!SM.isMacroArgExpansion(Loc))
+        return;
+      Loc = SM.getSpellingLoc(Loc);
+    }
 
     // Non top level decls that are included from a header are not filtered by
     // topLevelDecls. (example: method declarations being included from another
     // file for a class from another file)
+    // There are also cases with macros where the spelling loc will not be in the
+    // main file and the highlighting would be incorrect.
     if (!isInsideMainFile(Loc, SM))
       return;
 
@@ -305,9 +339,11 @@ takeLine(ArrayRef<HighlightingToken> AllTokens,
 
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
-                  ArrayRef<HighlightingToken> Old, int NewMaxLine) {
-  assert(std::is_sorted(New.begin(), New.end()) && "New must be a sorted vector");
-  assert(std::is_sorted(Old.begin(), Old.end()) && "Old must be a sorted vector");
+                  ArrayRef<HighlightingToken> Old) {
+  assert(std::is_sorted(New.begin(), New.end()) &&
+         "New must be a sorted vector");
+  assert(std::is_sorted(Old.begin(), Old.end()) &&
+         "Old must be a sorted vector");
 
   // FIXME: There's an edge case when tokens span multiple lines. If the first
   // token on the line started on a line above the current one and the rest of
@@ -337,9 +373,7 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
     return std::min(NextNew, NextOld);
   };
 
-  // If the New file has fewer lines than the Old file we don't want to send
-  // highlightings beyond the end of the file.
-  for (int LineNumber = 0; LineNumber < NewMaxLine;
+  for (int LineNumber = 0; NewLine.end() < NewEnd || OldLine.end() < OldEnd;
        LineNumber = NextLineNumber()) {
     NewLine = takeLine(New, NewLine.end(), LineNumber);
     OldLine = takeLine(Old, OldLine.end(), LineNumber);
@@ -402,6 +436,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.function.method.cpp";
   case HighlightingKind::Variable:
     return "variable.other.cpp";
+  case HighlightingKind::Parameter:
+    return "variable.parameter.cpp";
   case HighlightingKind::Field:
     return "variable.other.field.cpp";
   case HighlightingKind::Class:

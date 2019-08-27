@@ -79,7 +79,7 @@ bool Localizer::shouldLocalize(const MachineInstr &MI) {
     return true;
   case TargetOpcode::G_GLOBAL_VALUE: {
     unsigned RematCost = TTI->getGISelRematGlobalCost();
-    unsigned Reg = MI.getOperand(0).getReg();
+    Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);
     if (MaxUses == UINT_MAX)
       return true; // Remats are "free" so always localize.
@@ -121,7 +121,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Should localize: " << MI);
     assert(MI.getDesc().getNumDefs() == 1 &&
            "More than one definition not supported yet");
-    unsigned Reg = MI.getOperand(0).getReg();
+    Register Reg = MI.getOperand(0).getReg();
     // Check if all the users of MI are local.
     // We are going to invalidation the list of use operands, so we
     // can't use range iterator.
@@ -151,7 +151,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
                             LocalizedMI);
 
         // Set a new register for the definition.
-        unsigned NewReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
+        Register NewReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
         MRI->setRegClassOrRegBank(NewReg, MRI->getRegClassOrRegBank(Reg));
         LocalizedMI->getOperand(0).setReg(NewReg);
         NewVRegIt =
@@ -177,7 +177,7 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
   // many users, but this case may be better served by regalloc improvements.
 
   for (MachineInstr *MI : LocalizedInstrs) {
-    unsigned Reg = MI->getOperand(0).getReg();
+    Register Reg = MI->getOperand(0).getReg();
     MachineBasicBlock &MBB = *MI->getParent();
     // All of the user MIs of this reg.
     SmallPtrSet<MachineInstr *, 32> Users;

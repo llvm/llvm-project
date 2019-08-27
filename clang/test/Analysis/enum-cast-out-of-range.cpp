@@ -150,7 +150,15 @@ void scopedSpecifiedCStyle() {
   scoped_specified_t InvalidAfterRangeEnd = (scoped_specified_t)(5); // expected-warning {{The value provided to the cast expression is not in the valid range of values for the enum}}
 }
 
-void rangeContstrained1(int input) {
+unscoped_unspecified_t unused;
+void unusedExpr() {
+  // following line is not something that EnumCastOutOfRangeChecker should evaluate.  checker should either ignore this line
+  // or process it without producing any warnings.  However, compilation will (and should) still generate a warning having
+  // nothing to do with this checker.
+  unused; // expected-warning {{expression result unused}}
+}
+
+void rangeConstrained1(int input) {
   if (input > -5 && input < 5)
     auto value = static_cast<scoped_specified_t>(input); // OK. Being conservative, this is a possibly good value.
 }

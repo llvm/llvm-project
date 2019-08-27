@@ -122,10 +122,12 @@ add_clang_library(clangDaemon
   clangTidyFuchsiaModule
   clangTidyGoogleModule
   clangTidyHICPPModule
+  clangTidyLinuxKernelModule
   clangTidyLLVMModule
   clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyObjCModule
+  clangTidyOpenMPModule
   clangTidyPerformanceModule
   clangTidyPortabilityModule
   clangTidyReadabilityModule

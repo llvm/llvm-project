@@ -3272,23 +3272,6 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // decl and its redeclarations may be required.
   }
 
-  // Import Ctor initializers.
-  if (auto *FromConstructor = dyn_cast<CXXConstructorDecl>(D)) {
-    if (unsigned NumInitializers = FromConstructor->getNumCtorInitializers()) {
-      SmallVector<CXXCtorInitializer *, 4> CtorInitializers(NumInitializers);
-      // Import first, then allocate memory and copy if there was no error.
-      if (Error Err = ImportContainerChecked(
-          FromConstructor->inits(), CtorInitializers))
-        return std::move(Err);
-      auto **Memory =
-          new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
-      auto *ToCtor = cast<CXXConstructorDecl>(ToFunction);
-      ToCtor->setCtorInitializers(Memory);
-      ToCtor->setNumCtorInitializers(NumInitializers);
-    }
-  }
-
   ToFunction->setQualifierInfo(ToQualifierLoc);
   ToFunction->setAccess(D->getAccess());
   ToFunction->setLexicalDeclContext(LexicalDC);
@@ -3330,6 +3313,23 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     auto ToFTOrErr = import(FromFT);
     if (!ToFTOrErr)
       return ToFTOrErr.takeError();
+  }
+
+  // Import Ctor initializers.
+  if (auto *FromConstructor = dyn_cast<CXXConstructorDecl>(D)) {
+    if (unsigned NumInitializers = FromConstructor->getNumCtorInitializers()) {
+      SmallVector<CXXCtorInitializer *, 4> CtorInitializers(NumInitializers);
+      // Import first, then allocate memory and copy if there was no error.
+      if (Error Err = ImportContainerChecked(
+          FromConstructor->inits(), CtorInitializers))
+        return std::move(Err);
+      auto **Memory =
+          new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
+      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
+      auto *ToCtor = cast<CXXConstructorDecl>(ToFunction);
+      ToCtor->setCtorInitializers(Memory);
+      ToCtor->setNumCtorInitializers(NumInitializers);
+    }
   }
 
   if (D->doesThisDeclarationHaveABody()) {
@@ -8503,8 +8503,9 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
     if (ToID.isInvalid() || IsBuiltin) {
       // FIXME: We want to re-use the existing MemoryBuffer!
       bool Invalid = true;
-      const llvm::MemoryBuffer *FromBuf = Cache->getBuffer(
-          FromContext.getDiagnostics(), FromSM, SourceLocation{}, &Invalid);
+      const llvm::MemoryBuffer *FromBuf =
+          Cache->getBuffer(FromContext.getDiagnostics(),
+                           FromSM.getFileManager(), SourceLocation{}, &Invalid);
       if (!FromBuf || Invalid)
         // FIXME: Use a new error kind?
         return llvm::make_error<ImportError>(ImportError::Unknown);

@@ -782,25 +782,114 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
       LinModifiers, Steps, SourceRange(Loc, EndLoc));
 }
 
+/// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
+///
+///    default-clause:
+///         'default' '(' 'none' | 'shared' ')
+///
+///    proc_bind-clause:
+///         'proc_bind' '(' 'master' | 'close' | 'spread' ')
+///
+///    device_type-clause:
+///         'device_type' '(' 'host' | 'nohost' | 'any' )'
+namespace {
+  struct SimpleClauseData {
+    unsigned Type;
+    SourceLocation Loc;
+    SourceLocation LOpen;
+    SourceLocation TypeLoc;
+    SourceLocation RLoc;
+    SimpleClauseData(unsigned Type, SourceLocation Loc, SourceLocation LOpen,
+                     SourceLocation TypeLoc, SourceLocation RLoc)
+        : Type(Type), Loc(Loc), LOpen(LOpen), TypeLoc(TypeLoc), RLoc(RLoc) {}
+  };
+} // anonymous namespace
+
+static Optional<SimpleClauseData>
+parseOpenMPSimpleClause(Parser &P, OpenMPClauseKind Kind) {
+  const Token &Tok = P.getCurToken();
+  SourceLocation Loc = Tok.getLocation();
+  SourceLocation LOpen = P.ConsumeToken();
+  // Parse '('.
+  BalancedDelimiterTracker T(P, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPClauseName(Kind)))
+    return llvm::None;
+
+  unsigned Type = getOpenMPSimpleClauseType(
+      Kind, Tok.isAnnotation() ? "" : P.getPreprocessor().getSpelling(Tok));
+  SourceLocation TypeLoc = Tok.getLocation();
+  if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+      Tok.isNot(tok::annot_pragma_openmp_end))
+    P.ConsumeAnyToken();
+
+  // Parse ')'.
+  SourceLocation RLoc = Tok.getLocation();
+  if (!T.consumeClose())
+    RLoc = T.getCloseLocation();
+
+  return SimpleClauseData(Type, Loc, LOpen, TypeLoc, RLoc);
+}
+
 Parser::DeclGroupPtrTy Parser::ParseOMPDeclareTargetClauses() {
   // OpenMP 4.5 syntax with list of entities.
   Sema::NamedDeclSetType SameDirectiveDecls;
+  SmallVector<std::tuple<OMPDeclareTargetDeclAttr::MapTypeTy, SourceLocation,
+                         NamedDecl *>,
+              4>
+      DeclareTargetDecls;
+  OMPDeclareTargetDeclAttr::DevTypeTy DT = OMPDeclareTargetDeclAttr::DT_Any;
+  SourceLocation DeviceTypeLoc;
   while (Tok.isNot(tok::annot_pragma_openmp_end)) {
     OMPDeclareTargetDeclAttr::MapTypeTy MT = OMPDeclareTargetDeclAttr::MT_To;
     if (Tok.is(tok::identifier)) {
       IdentifierInfo *II = Tok.getIdentifierInfo();
       StringRef ClauseName = II->getName();
-      // Parse 'to|link' clauses.
-      if (!OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName, MT)) {
-        Diag(Tok, diag::err_omp_declare_target_unexpected_clause) << ClauseName;
+      bool IsDeviceTypeClause =
+          getLangOpts().OpenMP >= 50 &&
+          getOpenMPClauseKind(ClauseName) == OMPC_device_type;
+      // Parse 'to|link|device_type' clauses.
+      if (!OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName, MT) &&
+          !IsDeviceTypeClause) {
+        Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
+            << ClauseName << (getLangOpts().OpenMP >= 50 ? 1 : 0);
         break;
+      }
+      // Parse 'device_type' clause and go to next clause if any.
+      if (IsDeviceTypeClause) {
+        Optional<SimpleClauseData> DevTypeData =
+            parseOpenMPSimpleClause(*this, OMPC_device_type);
+        if (DevTypeData.hasValue()) {
+          if (DeviceTypeLoc.isValid()) {
+            // We already saw another device_type clause, diagnose it.
+            Diag(DevTypeData.getValue().Loc,
+                 diag::warn_omp_more_one_device_type_clause);
+          }
+          switch(static_cast<OpenMPDeviceType>(DevTypeData.getValue().Type)) {
+          case OMPC_DEVICE_TYPE_any:
+            DT = OMPDeclareTargetDeclAttr::DT_Any;
+            break;
+          case OMPC_DEVICE_TYPE_host:
+            DT = OMPDeclareTargetDeclAttr::DT_Host;
+            break;
+          case OMPC_DEVICE_TYPE_nohost:
+            DT = OMPDeclareTargetDeclAttr::DT_NoHost;
+            break;
+          case OMPC_DEVICE_TYPE_unknown:
+            llvm_unreachable("Unexpected device_type");
+          }
+          DeviceTypeLoc = DevTypeData.getValue().Loc;
+        }
+        continue;
       }
       ConsumeToken();
     }
-    auto &&Callback = [this, MT, &SameDirectiveDecls](
-        CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
-      Actions.ActOnOpenMPDeclareTargetName(getCurScope(), SS, NameInfo, MT,
-                                           SameDirectiveDecls);
+    auto &&Callback = [this, MT, &DeclareTargetDecls, &SameDirectiveDecls](
+                          CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
+      NamedDecl *ND = Actions.lookupOpenMPDeclareTargetName(
+          getCurScope(), SS, NameInfo, SameDirectiveDecls);
+      if (ND)
+        DeclareTargetDecls.emplace_back(MT, NameInfo.getLoc(), ND);
     };
     if (ParseOpenMPSimpleVarList(OMPD_declare_target, Callback,
                                  /*AllowScopeSpecifier=*/true))
@@ -812,6 +901,15 @@ Parser::DeclGroupPtrTy Parser::ParseOMPDeclareTargetClauses() {
   }
   SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
   ConsumeAnyToken();
+  for (auto &MTLocDecl : DeclareTargetDecls) {
+    OMPDeclareTargetDeclAttr::MapTypeTy MT;
+    SourceLocation Loc;
+    NamedDecl *ND;
+    std::tie(MT, Loc, ND) = MTLocDecl;
+    // device_type clause is applied only to functions.
+    Actions.ActOnOpenMPDeclareTargetName(
+        ND, Loc, MT, isa<VarDecl>(ND) ? OMPDeclareTargetDeclAttr::DT_Any : DT);
+  }
   SmallVector<Decl *, 4> Decls(SameDirectiveDecls.begin(),
                                SameDirectiveDecls.end());
   if (Decls.empty())
@@ -1712,6 +1810,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_allocate:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
     break;
+  case OMPC_device_type:
   case OMPC_unknown:
     Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
         << getOpenMPDirectiveName(DKind);
@@ -1811,29 +1910,12 @@ OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
 ///
 OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
                                            bool ParseOnly) {
-  SourceLocation Loc = Tok.getLocation();
-  SourceLocation LOpen = ConsumeToken();
-  // Parse '('.
-  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
-  if (T.expectAndConsume(diag::err_expected_lparen_after,
-                         getOpenMPClauseName(Kind)))
+  llvm::Optional<SimpleClauseData> Val = parseOpenMPSimpleClause(*this, Kind);
+  if (!Val || ParseOnly)
     return nullptr;
-
-  unsigned Type = getOpenMPSimpleClauseType(
-      Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
-  SourceLocation TypeLoc = Tok.getLocation();
-  if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
-      Tok.isNot(tok::annot_pragma_openmp_end))
-    ConsumeAnyToken();
-
-  // Parse ')'.
-  SourceLocation RLoc = Tok.getLocation();
-  if (!T.consumeClose())
-    RLoc = T.getCloseLocation();
-
-  if (ParseOnly)
-    return nullptr;
-  return Actions.ActOnOpenMPSimpleClause(Kind, Type, TypeLoc, LOpen, Loc, RLoc);
+  return Actions.ActOnOpenMPSimpleClause(
+      Kind, Val.getValue().Type, Val.getValue().TypeLoc, Val.getValue().LOpen,
+      Val.getValue().Loc, Val.getValue().RLoc);
 }
 
 /// Parsing of OpenMP clauses like 'ordered'.

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file provides the main function for the
+/// This file provides the main function for the
 /// clang-apply-replacements tool.
 ///
 //===----------------------------------------------------------------------===//

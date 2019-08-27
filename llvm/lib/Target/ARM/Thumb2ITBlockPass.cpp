@@ -87,7 +87,7 @@ static void TrackDefUses(MachineInstr *MI, RegisterSet &Defs, RegisterSet &Uses,
   for (auto &MO : MI->operands()) {
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg || Reg == ARM::ITSTATE || Reg == ARM::SP)
       continue;
     if (MO.isUse())
@@ -145,8 +145,8 @@ Thumb2ITBlock::MoveCopyOutOfITBlock(MachineInstr *MI,
          MI->getOperand(1).getSubReg() == 0 &&
          "Sub-register indices still around?");
 
-  unsigned DstReg = MI->getOperand(0).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
 
   // First check if it's safe to move it.
   if (Uses.count(DstReg) || Defs.count(SrcReg))

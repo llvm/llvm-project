@@ -1056,8 +1056,9 @@ SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
     return SDValue();
 
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  MakeLibCallOptions CallOptions;
   return makeLibCall(DAG, RTLIB::RETURN_ADDRESS, Op.getValueType(),
-                     {DAG.getConstant(Depth, DL, MVT::i32)}, false, DL)
+                     {DAG.getConstant(Depth, DL, MVT::i32)}, CallOptions, DL)
       .first;
 }
 

@@ -244,7 +244,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     // Get allocation hints from copies.
     if (!mi->isCopy())
       continue;
-    unsigned hint = copyHint(mi, li.reg, tri, mri);
+    Register hint = copyHint(mi, li.reg, tri, mri);
     if (!hint)
       continue;
     // Force hweight onto the stack so that x86 doesn't add hidden precision,

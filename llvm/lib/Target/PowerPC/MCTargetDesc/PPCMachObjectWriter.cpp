@@ -178,7 +178,7 @@ static uint32_t getFixupOffset(const MCAsmLayout &Layout,
   uint32_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
   // On Mach-O, ppc_fixup_half16 relocations must refer to the
   // start of the instruction, not the second halfword, as ELF does
-  if (unsigned(Fixup.getKind()) == PPC::fixup_ppc_half16)
+  if (Fixup.getTargetKind() == PPC::fixup_ppc_half16)
     FixupOffset &= ~uint32_t(3);
   return FixupOffset;
 }

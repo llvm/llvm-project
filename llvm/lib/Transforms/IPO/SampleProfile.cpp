@@ -192,7 +192,7 @@ class GUIDToFuncNameMapper {
 public:
   GUIDToFuncNameMapper(Module &M, SampleProfileReader &Reader,
                         DenseMap<uint64_t, StringRef> &GUIDToFuncNameMap)
-      : CurrentReader(Reader), CurrentModule(M), 
+      : CurrentReader(Reader), CurrentModule(M),
       CurrentGUIDToFuncNameMap(GUIDToFuncNameMap) {
     if (CurrentReader.getFormat() != SPF_Compact_Binary)
       return;
@@ -1292,17 +1292,12 @@ void SampleProfileLoader::buildEdges(Function &F) {
 }
 
 /// Returns the sorted CallTargetMap \p M by count in descending order.
-static SmallVector<InstrProfValueData, 2> SortCallTargets(
-    const SampleRecord::CallTargetMap &M) {
+static SmallVector<InstrProfValueData, 2> GetSortedValueDataFromCallTargets(
+    const SampleRecord::CallTargetMap & M) {
   SmallVector<InstrProfValueData, 2> R;
-  for (auto I = M.begin(); I != M.end(); ++I)
-    R.push_back({FunctionSamples::getGUID(I->getKey()), I->getValue()});
-  llvm::sort(R, [](const InstrProfValueData &L, const InstrProfValueData &R) {
-    if (L.Count == R.Count)
-      return L.Value > R.Value;
-    else
-      return L.Count > R.Count;
-  });
+  for (const auto &I : SampleRecord::SortCallTargets(M)) {
+    R.emplace_back(InstrProfValueData{FunctionSamples::getGUID(I.first), I.second});
+  }
   return R;
 }
 
@@ -1397,7 +1392,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           if (!T || T.get().empty())
             continue;
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
-              SortCallTargets(T.get());
+              GetSortedValueDataFromCallTargets(T.get());
           uint64_t Sum;
           findIndirectCallFunctionSamples(I, Sum);
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
@@ -1724,7 +1719,7 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
-  
+
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is

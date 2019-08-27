@@ -390,7 +390,7 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   MachineMemOperand *LMMO = *LoadInst->memoperands_begin();
   MachineMemOperand *SMMO = *StoreInst->memoperands_begin();
 
-  unsigned Reg1 = MRI->createVirtualRegister(
+  Register Reg1 = MRI->createVirtualRegister(
       TII->getRegClass(TII->get(NLoadOpcode), 0, TRI, *(MBB->getParent())));
   MachineInstr *NewLoad =
       BuildMI(*MBB, LoadInst, LoadInst->getDebugLoc(), TII->get(NLoadOpcode),

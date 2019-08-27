@@ -13,6 +13,7 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_MAC
 #include "sanitizer_mac.h"
+#include "interception/interception.h"
 
 // Use 64-bit inodes in file operations. ASan does not support OS X 10.5, so
 // the clients will most certainly use 64-bit ones as well.
@@ -1181,7 +1182,7 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
   if (!buffer || !length || length > 256)
     return false;
   // arc4random never fails.
-  arc4random_buf(buffer, length);
+  REAL(arc4random_buf)(buffer, length);
   return true;
 }
 

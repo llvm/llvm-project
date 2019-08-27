@@ -1314,7 +1314,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
       isReMaterializable = 1 in {
     def XXLEQVOnes : XX3Form_SameOp<60, 186, (outs vsrc:$XT), (ins),
                          "xxleqv $XT, $XT, $XT", IIC_VecGeneral,
-                         [(set v4i32:$XT, (v4i32 immAllOnesV))]>;
+                         [(set v4i32:$XT, (bitconvert (v16i8 immAllOnesV)))]>;
   }
 
   def XXLORC : XX3Form<60, 170,
@@ -4103,8 +4103,6 @@ let AddedComplexity = 400 in {
   }
 
   let Predicates = [HasP8Vector] in {
-    def : Pat<(v4i32 (bitconvert (v16i8 immAllOnesV))),
-              (XXLEQVOnes)>;
     def : Pat<(v1i128 (bitconvert (v16i8 immAllOnesV))),
               (v1i128 (COPY_TO_REGCLASS(XXLEQVOnes), VSRC))>;
     def : Pat<(v2i64 (bitconvert (v16i8 immAllOnesV))),

@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -132,7 +135,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < 10; ++k) {
   }
 
-#pragma omp target teams distribute simd private(j) map(j) // expected-error {{private variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} expected-note {{defined as private}}
+#pragma omp target teams distribute simd private(j) map(j) // le45-error {{private variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} le45-note {{defined as private}}
   for (int k = 0; k < argc; ++k) ++k;
 
   return 0;

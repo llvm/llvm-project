@@ -70,5 +70,24 @@ TEST(GeneratorTest, emitIndex) {
   CheckIndex(ExpectedIdx, Idx);
 }
 
+TEST(GeneratorTest, sortIndex) {
+  Index Idx;
+  Idx.Children.emplace_back("b");
+  Idx.Children.emplace_back("aA");
+  Idx.Children.emplace_back("aa");
+  Idx.Children.emplace_back("A");
+  Idx.Children.emplace_back("a");
+  Idx.sort();
+
+  Index ExpectedIdx;
+  ExpectedIdx.Children.emplace_back("a");
+  ExpectedIdx.Children.emplace_back("A");
+  ExpectedIdx.Children.emplace_back("aa");
+  ExpectedIdx.Children.emplace_back("aA");
+  ExpectedIdx.Children.emplace_back("b");
+
+  CheckIndex(ExpectedIdx, Idx);
+}
+
 } // namespace doc
 } // namespace clang

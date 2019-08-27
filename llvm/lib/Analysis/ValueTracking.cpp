@@ -1373,7 +1373,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
           else if (LR == I)
             L = LL;
           else
-            break;
+            continue; // Check for recurrence with L and R flipped.
           // Ok, we have a PHI of the form L op= R. Check for low
           // zero bits.
           computeKnownBits(R, Known2, Depth + 1, Q);
@@ -3677,7 +3677,9 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
   return Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
          Call->getIntrinsicID() == Intrinsic::strip_invariant_group ||
          Call->getIntrinsicID() == Intrinsic::aarch64_irg ||
-         Call->getIntrinsicID() == Intrinsic::aarch64_tagp;
+         Call->getIntrinsicID() == Intrinsic::aarch64_tagp ||
+         (!MustPreserveNullness &&
+          Call->getIntrinsicID() == Intrinsic::ptrmask);
 }
 
 /// \p PN defines a loop-variant pointer to an object.  Check if the
@@ -3735,7 +3737,7 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true)) {
+        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
           V = RP;
           continue;
         }
@@ -5698,4 +5700,82 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
   return CR;
+}
+
+static Optional<int64_t>
+getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
+  // Skip over the first indices.
+  gep_type_iterator GTI = gep_type_begin(GEP);
+  for (unsigned i = 1; i != Idx; ++i, ++GTI)
+    /*skip along*/;
+
+  // Compute the offset implied by the rest of the indices.
+  int64_t Offset = 0;
+  for (unsigned i = Idx, e = GEP->getNumOperands(); i != e; ++i, ++GTI) {
+    ConstantInt *OpC = dyn_cast<ConstantInt>(GEP->getOperand(i));
+    if (!OpC)
+      return None;
+    if (OpC->isZero())
+      continue; // No offset.
+
+    // Handle struct indices, which add their field offset to the pointer.
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      Offset += DL.getStructLayout(STy)->getElementOffset(OpC->getZExtValue());
+      continue;
+    }
+
+    // Otherwise, we have a sequential type like an array or vector.  Multiply
+    // the index by the ElementSize.
+    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType());
+    Offset += Size * OpC->getSExtValue();
+  }
+
+  return Offset;
+}
+
+Optional<int64_t> llvm::isPointerOffset(const Value *Ptr1, const Value *Ptr2,
+                                        const DataLayout &DL) {
+  Ptr1 = Ptr1->stripPointerCasts();
+  Ptr2 = Ptr2->stripPointerCasts();
+
+  // Handle the trivial case first.
+  if (Ptr1 == Ptr2) {
+    return 0;
+  }
+
+  const GEPOperator *GEP1 = dyn_cast<GEPOperator>(Ptr1);
+  const GEPOperator *GEP2 = dyn_cast<GEPOperator>(Ptr2);
+
+  // If one pointer is a GEP and the other isn't, then see if the GEP is a
+  // constant offset from the base, as in "P" and "gep P, 1".
+  if (GEP1 && !GEP2 && GEP1->getOperand(0)->stripPointerCasts() == Ptr2) {
+    auto Offset = getOffsetFromIndex(GEP1, 1, DL);
+    if (!Offset)
+      return None;
+    return -*Offset;
+  }
+
+  if (GEP2 && !GEP1 && GEP2->getOperand(0)->stripPointerCasts() == Ptr1) {
+    return getOffsetFromIndex(GEP2, 1, DL);
+  }
+
+  // Right now we handle the case when Ptr1/Ptr2 are both GEPs with an identical
+  // base.  After that base, they may have some number of common (and
+  // potentially variable) indices.  After that they handle some constant
+  // offset, which determines their offset from each other.  At this point, we
+  // handle no other case.
+  if (!GEP1 || !GEP2 || GEP1->getOperand(0) != GEP2->getOperand(0))
+    return None;
+
+  // Skip any common indices and track the GEP types.
+  unsigned Idx = 1;
+  for (; Idx != GEP1->getNumOperands() && Idx != GEP2->getNumOperands(); ++Idx)
+    if (GEP1->getOperand(Idx) != GEP2->getOperand(Idx))
+      break;
+
+  auto Offset1 = getOffsetFromIndex(GEP1, Idx, DL);
+  auto Offset2 = getOffsetFromIndex(GEP2, Idx, DL);
+  if (!Offset1 || !Offset2)
+    return None;
+  return *Offset2 - *Offset1;
 }

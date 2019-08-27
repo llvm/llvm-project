@@ -21,12 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
@@ -39,6 +33,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -94,11 +89,6 @@ static cl::opt<bool> PrintExternalCommands(
              "instead of actually executing them - for testing purposes.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
-static cl::opt<bool> DumpTemporaryFiles(
-    "dump-temporary-files",
-    cl::desc("Dumps any temporary files created - for testing purposes.\n"),
-    cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
 
@@ -115,12 +105,6 @@ static void getOffloadKindAndTriple(StringRef Target, StringRef &OffloadKind,
   auto KindTriplePair = Target.split('-');
   OffloadKind = KindTriplePair.first;
   Triple = KindTriplePair.second;
-}
-static StringRef getTriple(StringRef Target) {
-  StringRef OffloadKind;
-  StringRef Triple;
-  getOffloadKindAndTriple(Target, OffloadKind, Triple);
-  return Triple;
 }
 static bool hasHostKind(StringRef Target) {
   StringRef OffloadKind;
@@ -410,19 +394,6 @@ class ObjectFileHandler final : public FileHandler {
   /// read from the buffers.
   unsigned NumberOfProcessedInputs = 0;
 
-  /// LLVM context used to create the auxiliary modules.
-  LLVMContext VMContext;
-
-  /// LLVM module used to create an object with all the bundle
-  /// components.
-  std::unique_ptr<Module> AuxModule;
-
-  /// The current triple we are working with.
-  StringRef CurrentTriple;
-
-  /// The name of the main input file.
-  StringRef MainInputFileName;
-
   /// Iterator of the current and next section.
   section_iterator CurrentSection;
   section_iterator NextSection;
@@ -476,19 +447,10 @@ public:
 
     // Record number of inputs.
     NumberOfInputs = Inputs.size();
-
-    // Create an LLVM module to have the content we need to bundle.
-    auto *M = new Module("clang-offload-bundle", VMContext);
-    M->setTargetTriple(getTriple(TargetNames[HostInputIndex]));
-    AuxModule.reset(M);
   }
 
   void WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
     ++NumberOfProcessedInputs;
-
-    // Record the triple we are using, that will be used to name the section we
-    // will create.
-    CurrentTriple = TargetTriple;
   }
 
   bool WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
@@ -500,76 +462,39 @@ public:
     if (NumberOfProcessedInputs != NumberOfInputs)
       return false;
 
-    // Create the bitcode file name to write the resulting code to. Keep it if
-    // save-temps is active.
-    SmallString<128> BitcodeFileName;
-    if (sys::fs::createTemporaryFile("clang-offload-bundler", "bc",
-                                     BitcodeFileName)) {
-      errs() << "error: unable to create temporary file.\n";
+    // Find llvm-objcopy in order to create the bundle binary.
+    ErrorOr<std::string> Objcopy = sys::findProgramByName(
+        "llvm-objcopy", sys::path::parent_path(BundlerExecutable));
+    if (!Objcopy) {
+      errs() << "error: unable to find 'llvm-objcopy' in path.\n";
       return true;
     }
 
-    // Dump the contents of the temporary file if that was requested.
-    if (DumpTemporaryFiles) {
-      errs() << ";\n; Object file bundler IR file.\n;\n";
-      AuxModule.get()->print(errs(), nullptr,
-                             /*ShouldPreserveUseListOrder=*/false,
-                             /*IsForDebug=*/true);
-      errs() << '\n';
-    }
-
-    // Find clang in order to create the bundle binary.
-    StringRef Dir = sys::path::parent_path(BundlerExecutable);
-
-    auto ClangBinary = sys::findProgramByName("clang", Dir);
-    if (ClangBinary.getError()) {
-      // Remove bitcode file.
-      sys::fs::remove(BitcodeFileName);
-
-      errs() << "error: unable to find 'clang' in path.\n";
-      return true;
-    }
-
-    // Do the incremental linking. We write to the output file directly. So, we
-    // close it and use the name to pass down to clang.
+    // We write to the output file directly. So, we close it and use the name
+    // to pass down to llvm-objcopy.
     OS.close();
-    SmallString<128> TargetName = getTriple(TargetNames[HostInputIndex]);
-    std::vector<StringRef> ClangArgs = {"clang",
-                                        "-r",
-                                        "-target",
-                                        TargetName.c_str(),
-                                        "-o",
-                                        OutputFileNames.front().c_str(),
-                                        InputFileNames[HostInputIndex].c_str(),
-                                        BitcodeFileName.c_str(),
-                                        "-nostdlib"};
+
+    // Compose command line for the objcopy tool.
+    BumpPtrAllocator Alloc;
+    StringSaver SS{Alloc};
+    SmallVector<StringRef, 8u> ObjcopyArgs{"llvm-objcopy"};
+    for (unsigned I = 0; I < NumberOfInputs; ++I)
+      ObjcopyArgs.push_back(SS.save(Twine("--add-section=") +
+                                    OFFLOAD_BUNDLER_MAGIC_STR + TargetNames[I] +
+                                    "=" + InputFileNames[I]));
+    ObjcopyArgs.push_back(InputFileNames[HostInputIndex]);
+    ObjcopyArgs.push_back(OutputFileNames.front());
 
     // If the user asked for the commands to be printed out, we do that instead
     // of executing it.
     if (PrintExternalCommands) {
-      errs() << "\"" << ClangBinary.get() << "\"";
-      for (StringRef Arg : ClangArgs)
+      errs() << "\"" << Objcopy.get() << "\"";
+      for (StringRef Arg : drop_begin(ObjcopyArgs, 1))
         errs() << " \"" << Arg << "\"";
       errs() << "\n";
     } else {
-      // Write the bitcode contents to the temporary file.
-      {
-        std::error_code EC;
-        raw_fd_ostream BitcodeFile(BitcodeFileName, EC, sys::fs::OF_None);
-        if (EC) {
-          errs() << "error: unable to open temporary file.\n";
-          return true;
-        }
-        WriteBitcodeToFile(*AuxModule, BitcodeFile);
-      }
-
-      bool Failed = sys::ExecuteAndWait(ClangBinary.get(), ClangArgs);
-
-      // Remove bitcode file.
-      sys::fs::remove(BitcodeFileName);
-
-      if (Failed) {
-        errs() << "error: incremental linking by external tool failed.\n";
+      if (sys::ExecuteAndWait(Objcopy.get(), ObjcopyArgs)) {
+        errs() << "error: llvm-objcopy tool failed.\n";
         return true;
       }
     }
@@ -577,26 +502,7 @@ public:
     return false;
   }
 
-  void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
-    Module *M = AuxModule.get();
-
-    // Create the new section name, it will consist of the reserved prefix
-    // concatenated with the triple.
-    std::string SectionName = OFFLOAD_BUNDLER_MAGIC_STR;
-    SectionName += CurrentTriple;
-
-    // Create the constant with the content of the section.
-    auto *Content = ConstantDataArray::get(
-        VMContext, ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(
-                                         Input.getBufferStart()),
-                                     Input.getBufferSize()));
-
-    // Create the global in the desired section. We don't want these globals
-    // in the symbol table, so we mark them private.
-    auto *GV = new GlobalVariable(*M, Content->getType(), /*IsConstant=*/true,
-                                  GlobalVariable::PrivateLinkage, Content);
-    GV->setSection(SectionName);
-  }
+  void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {}
 };
 
 /// Handler for text files. The bundled file will have the following format.

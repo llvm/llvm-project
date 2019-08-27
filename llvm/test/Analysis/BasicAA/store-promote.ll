@@ -1,8 +1,9 @@
-; Test that LICM uses basicaa to do alias analysis, which is capable of 
+; Test that LICM uses basicaa to do alias analysis, which is capable of
 ; disambiguating some obvious cases.  If LICM is able to disambiguate the
 ; two pointers, then the load should be hoisted, and the store sunk.
 
-; RUN: opt < %s -basicaa -licm -S | FileCheck %s
+; RUN: opt < %s -basicaa -licm -enable-mssa-loop-dependency=false -S | FileCheck %s -check-prefixes=CHECK,AST
+; RUN: opt < %s -basicaa -licm -enable-mssa-loop-dependency=true  -S | FileCheck %s -check-prefixes=CHECK,MSSA
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 @A = global i32 7               ; <i32*> [#uses=3]
@@ -25,10 +26,13 @@ Out:            ; preds = %Loop
 ; The Loop block should be empty after the load/store are promoted.
 ; CHECK:     @test1
 ; CHECK:        load i32, i32* @A
+; MSSA:         load i32, i32* @A
+; MSSA:         store i32 %Atmp, i32* @B
 ; CHECK:      Loop:
 ; CHECK-NEXT:   br i1 %c, label %Out, label %Loop
 ; CHECK:      Out:
-; CHECK:        store i32 %Atmp, i32* @B
+; AST:          store i32 %Atmp, i32* @B
+; AST:          load i32, i32* @A
 }
 
 define i32 @test2(i1 %c) {

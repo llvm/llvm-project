@@ -294,7 +294,7 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
-  if (EnableMSSALoopDependency)
+  if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
 
   return PA;
@@ -1392,7 +1392,7 @@ static Instruction *CloneInstructionInExitBlock(
         MSSAU->insertDef(MemDef, /*RenameUses=*/true);
       else {
         auto *MemUse = cast<MemoryUse>(NewMemAcc);
-        MSSAU->insertUse(MemUse);
+        MSSAU->insertUse(MemUse, /*RenameUses=*/true);
       }
     }
   }
@@ -2119,9 +2119,11 @@ bool llvm::promoteLoopAccessesToScalars(
     PreheaderLoadMemoryAccess = MSSAU->createMemoryAccessInBB(
         PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
     MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
-    MSSAU->insertUse(NewMemUse);
+    MSSAU->insertUse(NewMemUse, /*RenameUses=*/true);
   }
 
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
   // Rewrite all the loads in the loop and remember all the definitions from
   // stores in the loop.
   Promoter.run(LoopUses);

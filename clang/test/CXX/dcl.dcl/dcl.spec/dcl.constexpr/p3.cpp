@@ -136,9 +136,13 @@ constexpr int AllowedStmtsCXX11() {
 }
 
 //  or a compound-statement that does not contain [CXX1Y]
-constexpr int DisallowedStmtsCXX1Y_1() {
+constexpr int DisallowedStmtsCXX1Y_1(bool b) {
   //  - an asm-definition
-  asm("int3"); // expected-error {{statement not allowed in constexpr function}}
+  if (b)
+    asm("int3");
+#if !defined(CXX2A)
+  // expected-error@-2 {{use of this statement in a constexpr function is a C++2a extension}}
+#endif
   return 0;
 }
 constexpr int DisallowedStmtsCXX1Y_2() {

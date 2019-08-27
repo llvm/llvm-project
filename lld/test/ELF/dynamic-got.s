@@ -17,7 +17,7 @@
 // CHECK-NEXT: AddressAlignment:
 // CHECK-NEXT: EntrySize:
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 00200000
+// CHECK-NEXT:   0000: 74210000
 // CHECK-NEXT: )
 
 // CHECK:     Name: .got.plt
@@ -34,19 +34,19 @@
 // CHECK-NEXT:     AddressAlignment:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 00200000 00000000 00000000
+// CHECK-NEXT:       0000: 74210000 00000000 00000000
 // CHECK-NEXT:     )
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
-// CHECK-NEXT:     0x2050 R_386_RELATIVE - 0x0
+// CHECK-NEXT:     0x21C4 R_386_RELATIVE - 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 // CHECK:      Type: PT_DYNAMIC
-// CHECK-NEXT: Offset: 0x2000
-// CHECK-NEXT: VirtualAddress: 0x2000
-// CHECK-NEXT: PhysicalAddress: 0x2000
+// CHECK-NEXT: Offset: 0x174
+// CHECK-NEXT: VirtualAddress: 0x2174
+// CHECK-NEXT: PhysicalAddress: 0x2174
 
         calll   .L0$pb
 .L0$pb:

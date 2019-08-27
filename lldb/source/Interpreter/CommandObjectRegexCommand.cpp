@@ -30,15 +30,14 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
                                           CommandReturnObject &result) {
   EntryCollection::const_iterator pos, end = m_entries.end();
   for (pos = m_entries.begin(); pos != end; ++pos) {
-    RegularExpression::Match regex_match(m_max_matches);
-
-    if (pos->regex.Execute(command, &regex_match)) {
+    llvm::SmallVector<llvm::StringRef, 4> matches;
+    if (pos->regex.Execute(command, &matches)) {
       std::string new_command(pos->command);
-      std::string match_str;
       char percent_var[8];
       size_t idx, percent_var_idx;
       for (uint32_t match_idx = 1; match_idx <= m_max_matches; ++match_idx) {
-        if (regex_match.GetMatchAtIndex(command, match_idx, match_str)) {
+        if (match_idx < matches.size()) {
+          const std::string match_str = matches[match_idx].str();
           const int percent_var_len =
               ::snprintf(percent_var, sizeof(percent_var), "%%%u", match_idx);
           for (idx = 0; (percent_var_idx = new_command.find(
@@ -74,8 +73,9 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
                                                 const char *command_cstr) {
   m_entries.resize(m_entries.size() + 1);
   // Only add the regular expression if it compiles
-  if (m_entries.back().regex.Compile(
-          llvm::StringRef::withNullAsEmpty(re_cstr))) {
+  m_entries.back().regex =
+      RegularExpression(llvm::StringRef::withNullAsEmpty(re_cstr));
+  if (m_entries.back().regex.IsValid()) {
     m_entries.back().command.assign(command_cstr);
     return true;
   }
@@ -84,13 +84,9 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
   return false;
 }
 
-int CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
+void CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
-    return request.GetNumberOfMatches();
-  } else {
-    request.SetWordComplete(false);
   }
-  return 0;
 }

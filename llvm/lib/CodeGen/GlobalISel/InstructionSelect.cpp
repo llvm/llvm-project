@@ -160,8 +160,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         --MII;
       if (MI.getOpcode() != TargetOpcode::COPY)
         continue;
-      unsigned SrcReg = MI.getOperand(1).getReg();
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       if (Register::isVirtualRegister(SrcReg) &&
           Register::isVirtualRegister(DstReg)) {
         auto SrcRC = MRI.getRegClass(SrcReg);

@@ -43,11 +43,11 @@ void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 void BPFInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
-  unsigned DstReg = MI->getOperand(0).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
   uint64_t CopyLen = MI->getOperand(2).getImm();
   uint64_t Alignment = MI->getOperand(3).getImm();
-  unsigned ScratchReg = MI->getOperand(4).getReg();
+  Register ScratchReg = MI->getOperand(4).getReg();
   MachineBasicBlock *BB = MI->getParent();
   DebugLoc dl = MI->getDebugLoc();
   unsigned LdOpc, StOpc;

@@ -151,7 +151,7 @@ static void setCallTargetReg(MachineBasicBlock *MBB,
                              MachineBasicBlock::iterator I) {
   MachineFunction &MF = *MBB->getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  unsigned SrcReg = I->getOperand(0).getReg();
+  Register SrcReg = I->getOperand(0).getReg();
   unsigned DstReg = getRegTy(SrcReg, MF) == MVT::i32 ? Mips::T9 : Mips::T9_64;
   BuildMI(*MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), DstReg)
       .addReg(SrcReg);

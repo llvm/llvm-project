@@ -19,7 +19,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 struct B
 {

@@ -2370,6 +2370,12 @@ let isCall = 1,
   def BMOVPCB_CALL : ARMPseudoInst<(outs), (ins arm_bl_target:$func),
                                8, IIC_Br, [(ARMcall_nolink tglobaladdr:$func)]>,
                       Requires<[IsARM]>, Sched<[WriteBr]>;
+
+  // push lr before the call
+  def BL_PUSHLR : ARMPseudoInst<(outs), (ins GPRlr:$ra, arm_bl_target:$func),
+                  4, IIC_Br,
+                  []>,
+             Requires<[IsARM]>, Sched<[WriteBr]>;
 }
 
 let isBranch = 1, isTerminator = 1 in {

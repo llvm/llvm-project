@@ -437,28 +437,6 @@ if (NOT LLDB_DISABLE_CURSES)
     include_directories(${CURSES_INCLUDE_DIR})
 endif ()
 
-check_cxx_symbol_exists("__GLIBCXX__" "string" LLDB_USING_LIBSTDCXX)
-if(LLDB_USING_LIBSTDCXX)
-    # There doesn't seem to be an easy way to check the library version. Instead, we rely on the
-    # fact that std::set did not have the allocator constructor available until version 4.9
-    check_cxx_source_compiles("
-            #include <set>
-            std::set<int> s = std::set<int>(std::allocator<int>());
-            int main() { return 0; }"
-            LLDB_USING_LIBSTDCXX_4_9)
-    if (NOT LLDB_USING_LIBSTDCXX_4_9 AND NOT LLVM_ENABLE_EH)
-        message(WARNING
-            "You appear to be linking to libstdc++ version lesser than 4.9 without exceptions "
-            "enabled. These versions of the library have an issue, which causes occasional "
-            "lldb crashes. See <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59656> for "
-            "details. Possible courses of action are:\n"
-            "- use libstdc++ version 4.9 or newer\n"
-            "- use libc++ (via LLVM_ENABLE_LIBCXX)\n"
-            "- enable exceptions (via LLVM_ENABLE_EH)\n"
-            "- ignore this warning and accept occasional instability")
-    endif()
-endif()
-
 if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
     ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
   add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)

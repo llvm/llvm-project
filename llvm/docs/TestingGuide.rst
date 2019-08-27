@@ -92,7 +92,7 @@ The test are written in C based languages or in LLVM assembly language.
 
 These tests are compiled and run under a debugger. The debugger output
 is checked to validate of debugging information. See README.txt in the
-test suite for more information . This test suite is located in the
+test suite for more information. This test suite is located in the
 ``debuginfo-tests`` Subversion module.
 
 Quick start

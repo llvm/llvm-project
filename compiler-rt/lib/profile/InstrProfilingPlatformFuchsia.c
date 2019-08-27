@@ -27,6 +27,7 @@
 
 #include <zircon/process.h>
 #include <zircon/sanitizer.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include "InstrProfiling.h"
@@ -57,45 +58,57 @@ static inline void lprofWrite(const char *fmt, ...) {
   __sanitizer_log_write(s, ret + 1);
 }
 
-static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
-                               uint32_t NumIOVecs) {
-  /* Allocate VMO if it hasn't been created yet. */
-  if (__llvm_profile_vmo == ZX_HANDLE_INVALID) {
-    /* Get information about the current process. */
-    zx_info_handle_basic_t Info;
-    zx_status_t Status =
-        _zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
-                            sizeof(Info), NULL, NULL);
-    if (Status != ZX_OK)
-      return -1;
+static void createVMO() {
+  /* Don't create VMO if it has been alread created. */
+  if (__llvm_profile_vmo != ZX_HANDLE_INVALID)
+    return;
 
-    /* Create VMO to hold the profile data. */
-    Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &__llvm_profile_vmo);
-    if (Status != ZX_OK)
-      return -1;
-
-    /* Give the VMO a name including our process KOID so it's easy to spot. */
-    char VmoName[ZX_MAX_NAME_LEN];
-    snprintf(VmoName, sizeof(VmoName), "%s.%" PRIu64, ProfileSinkName,
-             Info.koid);
-    _zx_object_set_property(__llvm_profile_vmo, ZX_PROP_NAME, VmoName,
-                            strlen(VmoName));
-
-    /* Duplicate the handle since __sanitizer_publish_data consumes it. */
-    zx_handle_t Handle;
-    Status =
-        _zx_handle_duplicate(__llvm_profile_vmo, ZX_RIGHT_SAME_RIGHTS, &Handle);
-    if (Status != ZX_OK)
-      return -1;
-
-    /* Publish the VMO which contains profile data to the system. */
-    __sanitizer_publish_data(ProfileSinkName, Handle);
-
-    /* Use the dumpfile symbolizer markup element to write the name of VMO. */
-    lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n",
-               ProfileSinkName, VmoName);
+  /* Get information about the current process. */
+  zx_info_handle_basic_t Info;
+  zx_status_t Status =
+      _zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
+                          sizeof(Info), NULL, NULL);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: cannot get info about current process: %s\n",
+               _zx_status_get_string(Status));
+    return;
   }
 
+  /* Create VMO to hold the profile data. */
+  Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &__llvm_profile_vmo);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: cannot create VMO: %s\n",
+               _zx_status_get_string(Status));
+    return;
+  }
+
+  /* Give the VMO a name including our process KOID so it's easy to spot. */
+  char VmoName[ZX_MAX_NAME_LEN];
+  snprintf(VmoName, sizeof(VmoName), "%s.%" PRIu64, ProfileSinkName, Info.koid);
+  _zx_object_set_property(__llvm_profile_vmo, ZX_PROP_NAME, VmoName,
+                          strlen(VmoName));
+
+  /* Duplicate the handle since __sanitizer_publish_data consumes it. */
+  zx_handle_t Handle;
+  Status =
+      _zx_handle_duplicate(__llvm_profile_vmo, ZX_RIGHT_SAME_RIGHTS, &Handle);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: cannot duplicate VMO handle: %s\n",
+               _zx_status_get_string(Status));
+    _zx_handle_close(__llvm_profile_vmo);
+    __llvm_profile_vmo = ZX_HANDLE_INVALID;
+    return;
+  }
+
+  /* Publish the VMO which contains profile data to the system. */
+  __sanitizer_publish_data(ProfileSinkName, Handle);
+
+  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
+  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
+}
+
+static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
+                               uint32_t NumIOVecs) {
   /* Compute the total length of data to be written. */
   size_t Length = 0;
   for (uint32_t I = 0; I < NumIOVecs; I++)
@@ -129,13 +142,13 @@ static void initVMOWriter(ProfDataWriter *This) {
 
 static int dump(void) {
   if (lprofProfileDumped()) {
-    lprofWrite("Profile data not published: already written.\n");
+    lprofWrite("LLVM Profile: data not published: already written.\n");
     return 0;
   }
 
   /* Check if there is llvm/runtime version mismatch. */
   if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    lprofWrite("Runtime and instrumentation version mismatch : "
+    lprofWrite("LLVM Profile: runtime and instrumentation version mismatch: "
                "expected %d, but got %d\n",
                INSTR_PROF_RAW_VERSION,
                (int)GET_VERSION(__llvm_profile_get_version()));
@@ -164,7 +177,7 @@ static void dumpWithoutReturn(void) { dump(); }
  * InstrProfilingRuntime.o if it is linked in.
  */
 COMPILER_RT_VISIBILITY
-void __llvm_profile_initialize_file(void) {}
+void __llvm_profile_initialize_file(void) { createVMO(); }
 
 COMPILER_RT_VISIBILITY
 int __llvm_profile_register_write_file_atexit(void) {

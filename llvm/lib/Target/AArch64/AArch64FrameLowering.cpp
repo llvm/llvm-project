@@ -1829,7 +1829,7 @@ static void computeCalleeSaveRegisterPairs(
             (CSI[i].getFrameIdx() + 1 == CSI[i + 1].getFrameIdx())) &&
            "Out of order callee saved regs!");
 
-    assert((!RPI.isPaired() || RPI.Reg2 != AArch64::FP ||
+    assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
             RPI.Reg1 == AArch64::LR) &&
            "FrameRecord must be allocated together with LR");
 

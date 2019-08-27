@@ -375,7 +375,7 @@ public:
     const uptr From = Base;
     const uptr To = Base + Size;
     auto Lambda = [this, From, To, Callback, Arg](uptr Block) {
-      if (Block < From || Block > To)
+      if (Block < From || Block >= To)
         return;
       uptr ChunkSize;
       const uptr ChunkBase = getChunkFromBlock(Block, &ChunkSize);

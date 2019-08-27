@@ -146,6 +146,9 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
       return X86II::MO_DLLIMPORT;
     return X86II::MO_COFFSTUB;
   }
+  // Some JIT users use *-win32-elf triples; these shouldn't use GOT tables.
+  if (isOSWindows())
+    return X86II::MO_NO_FLAG;
 
   if (is64Bit()) {
     // ELF supports a large, truly PIC code model with non-PC relative GOT

@@ -265,7 +265,7 @@ RegisterSubReg HexagonGenPredicate::getPredRegFor(const RegisterSubReg &Reg) {
   MachineBasicBlock &B = *DefI->getParent();
   DebugLoc DL = DefI->getDebugLoc();
   const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
-  unsigned NewPR = MRI->createVirtualRegister(PredRC);
+  Register NewPR = MRI->createVirtualRegister(PredRC);
 
   // For convertible instructions, do not modify them, so that they can
   // be converted later.  Generate a copy from Reg to NewPR.
@@ -432,7 +432,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
   // Generate a copy-out: NewGPR = NewPR, and replace all uses of OutR
   // with NewGPR.
   const TargetRegisterClass *RC = MRI->getRegClass(OutR.R);
-  unsigned NewOutR = MRI->createVirtualRegister(RC);
+  Register NewOutR = MRI->createVirtualRegister(RC);
   BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), NewOutR)
     .addReg(NewPR.R, 0, NewPR.S);
   MRI->replaceRegWith(OutR.R, NewOutR);

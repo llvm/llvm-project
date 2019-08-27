@@ -185,7 +185,7 @@ define void @nonpow2_load_narrowing() {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %5:fpr32(s32) = G_EXTRACT %21:fpr(s128), 64 (in function: nonpow2_store_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %5:fpr32(s32) = G_EXTRACT %{{[0-9]+}}:fpr(s128), 64 (in function: nonpow2_store_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_store_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_store_narrowing:
 define void @nonpow2_store_narrowing(i96* %c) {

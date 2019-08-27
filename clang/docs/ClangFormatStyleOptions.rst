@@ -2050,8 +2050,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
      true:                                  false:
-     int a = 5;                     vs.     int a=5;
-     a += 42                                a+=42;
+     int a = 5;                     vs.     int a= 5;
+     a += 42;                               a+= 42;
 
 **SpaceBeforeCpp11BracedList** (``bool``)
   If ``true``, a space will be inserted before a C++11 braced list

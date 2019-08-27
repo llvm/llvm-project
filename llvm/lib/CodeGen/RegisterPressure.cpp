@@ -134,6 +134,22 @@ void PressureDiff::dump(const TargetRegisterInfo &TRI) const {
   }
   dbgs() << '\n';
 }
+
+LLVM_DUMP_METHOD
+void PressureChange::dump() const {
+  dbgs() << "[" << getPSetOrMax() << ", " << getUnitInc() << "]\n";
+}
+
+void RegPressureDelta::dump() const {
+  dbgs() << "[Excess=";
+  Excess.dump();
+  dbgs() << ", CriticalMax=";
+  CriticalMax.dump();
+  dbgs() << ", CurrentMax=";
+  CurrentMax.dump();
+  dbgs() << "]\n";
+}
+
 #endif
 
 void RegPressureTracker::increaseRegPressure(unsigned RegUnit,
@@ -483,7 +499,7 @@ class RegisterOperandsCollector {
   void collectOperand(const MachineOperand &MO) const {
     if (!MO.isReg() || !MO.getReg())
       return;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (MO.isUse()) {
       if (!MO.isUndef() && !MO.isInternalRead())
         pushReg(Reg, RegOpers.Uses);
@@ -514,7 +530,7 @@ class RegisterOperandsCollector {
   void collectOperandLanes(const MachineOperand &MO) const {
     if (!MO.isReg() || !MO.getReg())
       return;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     unsigned SubRegIdx = MO.getSubReg();
     if (MO.isUse()) {
       if (!MO.isUndef() && !MO.isInternalRead())

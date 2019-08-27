@@ -27,6 +27,8 @@
     ret <2 x half> undef
   }
 
+  define void @test_s128(i128 %p) { ret void }
+
 ...
 ---
 name:            test_v2s64_unmerge
@@ -207,4 +209,19 @@ body:             |
     $s0 = COPY %1(<2 x s16>)
     $s1 = COPY %2(<2 x s16>)
     RET_ReallyLR implicit $s0
+...
+---
+name:            test_s128
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0
+    %0:fpr(s128) = COPY $q0
+    %1:fpr(s64), %2:fpr(s64) = G_UNMERGE_VALUES %0(s128)
+    $d0 = COPY %1(s64)
+    $d1 = COPY %2(s64)
+    RET_ReallyLR implicit $d0, implicit $d1
 ...

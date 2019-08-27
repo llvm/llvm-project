@@ -21,14 +21,14 @@ _start:
 // SEC-NEXT:   SHF_ALLOC
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x2200B0
+// SEC-NEXT: Address: 0x220300
 
-// page(0x2200B0) - page(0x20004) = 65536
-// 0x0B0 = 176
+// page(0x220300) - page(0x21023c) = 65536
+// 0x23c = 768
 
 // CHECK:      _start:
-// CHECK-NEXT: 210000: nop
-// CHECK-NEXT: 210004: adrp    x0, #65536
-// CHECK-NEXT: 210008: ldr     x0, [x0, #176]
-// CHECK-NEXT: 21000c: nop
-// CHECK-NEXT: 210010: nop
+// CHECK-NEXT: 210238: nop
+// CHECK-NEXT: 21023c: adrp    x0, #65536
+// CHECK-NEXT: 210240: ldr     x0, [x0, #768]
+// CHECK-NEXT: 210244: nop
+// CHECK-NEXT: 210248: nop

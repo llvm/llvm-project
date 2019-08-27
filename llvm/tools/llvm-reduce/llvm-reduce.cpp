@@ -89,17 +89,22 @@ int main(int argc, char **argv) {
   StringRef ReducedFilename = sys::path::filename(Tester.getReducedFilepath());
 
   if (ReducedFilename == sys::path::filename(InputFilename)) {
-    outs() << "\nCouldnt reduce input :/\n";
+    errs() << "\nCouldnt reduce input :/\n";
   } else {
-    if (ReplaceInput) // In-place
-      OutputFilename = InputFilename.c_str();
-    else if (OutputFilename.empty())
-      OutputFilename = "reduced.ll";
-    else
-      OutputFilename += ".ll";
+    // Print reduced file to STDOUT
+    if (OutputFilename == "-")
+      Tester.getProgram()->print(outs(), nullptr);
+    else {
+      if (ReplaceInput) // In-place
+        OutputFilename = InputFilename.c_str();
+      else if (OutputFilename.empty())
+        OutputFilename = "reduced.ll";
+      else
+        OutputFilename += ".ll";
 
-    sys::fs::copy_file(Tester.getReducedFilepath(), OutputFilename);
-    outs() << "\nDone reducing! Reduced IR to file: " << OutputFilename << "\n";
+      sys::fs::copy_file(Tester.getReducedFilepath(), OutputFilename);
+      errs() << "\nDone reducing! Reduced testcase: " << OutputFilename << "\n";
+    }
   }
 
   return 0;

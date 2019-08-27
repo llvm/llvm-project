@@ -13,6 +13,7 @@
 
 #include "clang/Driver/Driver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -319,6 +320,7 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
 }
 
 int main(int argc_, const char **argv_) {
+  noteBottomOfStack();
   llvm::InitLLVM X(argc_, argv_);
   SmallVector<const char *, 256> argv(argv_, argv_ + argc_);
 

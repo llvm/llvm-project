@@ -673,7 +673,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         Assert(InitArray, "wrong initalizer for intrinsic global variable",
                Init);
         for (Value *Op : InitArray->operands()) {
-          Value *V = Op->stripPointerCastsNoFollowAliases();
+          Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
                  "invalid llvm.used member", V);

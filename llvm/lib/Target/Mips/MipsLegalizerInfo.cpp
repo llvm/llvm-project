@@ -50,9 +50,17 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
      .legalFor({{s64, s32}});
 
   getActionDefinitionsBuilder({G_ZEXTLOAD, G_SEXTLOAD})
-    .legalForTypesWithMemDesc({{s32, p0, 8, 8},
-                               {s32, p0, 16, 8}})
-      .minScalar(0, s32);
+      .legalForTypesWithMemDesc({{s32, p0, 8, 8},
+                                 {s32, p0, 16, 8}})
+      .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT})
+      .legalIf([](const LegalityQuery &Query) { return false; })
+      .maxScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_TRUNC)
+      .legalIf([](const LegalityQuery &Query) { return false; })
+      .maxScalar(1, s32);
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalForCartesianProduct({p0, s32, s64}, {s32})
@@ -80,8 +88,8 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .libcallFor({s64});
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
-    .legalFor({s32, s32})
-    .minScalar(1, s32);
+      .legalFor({{s32, s32}})
+      .clampScalar(1, s32, s32);
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s32}, {s32, p0})

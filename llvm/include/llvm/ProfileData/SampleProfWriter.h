@@ -36,7 +36,7 @@ public:
   /// Write sample profiles in \p S.
   ///
   /// \returns status code of the file update operation.
-  virtual std::error_code write(const FunctionSamples &S) = 0;
+  virtual std::error_code writeSample(const FunctionSamples &S) = 0;
 
   /// Write all the sample profiles in the given map of samples.
   ///
@@ -64,6 +64,10 @@ protected:
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) = 0;
 
+  // Write function profiles to the profile file.
+  virtual std::error_code
+  writeFuncProfiles(const StringMap<FunctionSamples> &ProfileMap);
+
   /// Output stream where to emit the profile to.
   std::unique_ptr<raw_ostream> OutputStream;
 
@@ -72,12 +76,15 @@ protected:
 
   /// Compute summary for this profile.
   void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
+
+  /// Profile format.
+  SampleProfileFormat Format;
 };
 
 /// Sample-based profile writer (text format).
 class SampleProfileWriterText : public SampleProfileWriter {
 public:
-  std::error_code write(const FunctionSamples &S) override;
+  std::error_code writeSample(const FunctionSamples &S) override;
 
 protected:
   SampleProfileWriterText(std::unique_ptr<raw_ostream> &OS)
@@ -102,13 +109,14 @@ private:
 /// Sample-based profile writer (binary format).
 class SampleProfileWriterBinary : public SampleProfileWriter {
 public:
-  virtual std::error_code write(const FunctionSamples &S) override;
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS) {}
 
+  virtual std::error_code writeSample(const FunctionSamples &S) override;
+
 protected:
-  virtual std::error_code writeNameTable() = 0;
-  virtual std::error_code writeMagicIdent() = 0;
+  virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
+  virtual std::error_code writeNameTable();
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeSummary();
@@ -118,10 +126,10 @@ protected:
 
   MapVector<StringRef, uint32_t> NameTable;
 
-private:
   void addName(StringRef FName);
   void addNames(const FunctionSamples &S);
 
+private:
   friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
@@ -129,10 +137,50 @@ private:
 
 class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
+};
+
+class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
+  using SampleProfileWriterBinary::SampleProfileWriterBinary;
+
+public:
+  virtual std::error_code
+  write(const StringMap<FunctionSamples> &ProfileMap) override;
 
 protected:
-  virtual std::error_code writeNameTable() override;
-  virtual std::error_code writeMagicIdent() override;
+  uint64_t markSectionStart();
+  uint64_t addNewSection(SecType Sec, uint64_t SectionStart);
+  virtual void initSectionLayout() = 0;
+  virtual std::error_code
+  writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
+
+  // Specifiy the section layout in the profile. Note that the order in
+  // SecHdrTable (order to collect sections) may be different from the
+  // order in SectionLayout (order to write out sections into profile).
+  SmallVector<SecType, 8> SectionLayout;
+
+private:
+  void allocSecHdrTable();
+  std::error_code writeSecHdrTable();
+  virtual std::error_code
+  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+
+  // The location where the output stream starts.
+  uint64_t FileStart;
+  // The location in the output stream where the SecHdrTable should be
+  // written to.
+  uint64_t SecHdrTableOffset;
+  std::vector<SecHdrTableEntry> SecHdrTable;
+};
+
+class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
+  using SampleProfileWriterExtBinaryBase::SampleProfileWriterExtBinaryBase;
+
+private:
+  virtual void initSectionLayout() override {
+    SectionLayout = {SecProfSummary, SecNameTable, SecLBRProfile};
+  };
+  virtual std::error_code
+  writeSections(const StringMap<FunctionSamples> &ProfileMap) override;
 };
 
 // CompactBinary is a compact format of binary profile which both reduces
@@ -169,7 +217,7 @@ class SampleProfileWriterCompactBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 
 public:
-  virtual std::error_code write(const FunctionSamples &S) override;
+  virtual std::error_code writeSample(const FunctionSamples &S) override;
   virtual std::error_code
   write(const StringMap<FunctionSamples> &ProfileMap) override;
 
@@ -181,7 +229,6 @@ protected:
   /// towards profile start.
   uint64_t TableOffset;
   virtual std::error_code writeNameTable() override;
-  virtual std::error_code writeMagicIdent() override;
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeFuncOffsetTable();

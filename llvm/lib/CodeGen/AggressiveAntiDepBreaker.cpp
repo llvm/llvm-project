@@ -232,7 +232,7 @@ bool AggressiveAntiDepBreaker::IsImplicitDefUse(MachineInstr &MI,
   if (!MO.isReg() || !MO.isImplicit())
     return false;
 
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   if (Reg == 0)
     return false;
 
@@ -252,7 +252,7 @@ void AggressiveAntiDepBreaker::GetPassthruRegs(
     if (!MO.isReg()) continue;
     if ((MO.isDef() && MI.isRegTiedToUseOperand(i)) ||
         IsImplicitDefUse(MI, MO)) {
-      const unsigned Reg = MO.getReg();
+      const Register Reg = MO.getReg();
       for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
            SubRegs.isValid(); ++SubRegs)
         PassthruRegs.insert(*SubRegs);
@@ -365,7 +365,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isDef()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
     HandleLastUse(Reg, Count + 1, "", "\tDead Def: ", "\n");
@@ -375,7 +375,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isDef()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
     LLVM_DEBUG(dbgs() << " " << printReg(Reg, TRI) << "=g"
@@ -418,7 +418,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isDef()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
     // Ignore KILLs and passthru registers for liveness...
     if (MI.isKill() || (PassthruRegs.count(Reg) != 0))
@@ -471,7 +471,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isUse()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
     LLVM_DEBUG(dbgs() << " " << printReg(Reg, TRI) << "=g"
@@ -506,7 +506,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg()) continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Reg == 0) continue;
 
       if (FirstReg != 0) {

@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
   class X86Subtarget;
@@ -143,6 +142,10 @@ namespace llvm {
       /// Special wrapper used under X86-64 PIC mode for RIP
       /// relative displacements.
       WrapperRIP,
+
+      /// Copies a 64-bit value from an MMX vector to the low word
+      /// of an XMM vector, with the high word zero filled.
+      MOVQ2DQ,
 
       /// Copies a 64-bit value from the low word of an XMM vector
       /// to an MMX vector.

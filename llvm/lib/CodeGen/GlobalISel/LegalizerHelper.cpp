@@ -615,6 +615,39 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_ZEXT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    if (SizeOp0 % NarrowTy.getSizeInBits() != 0)
+      return UnableToLegalize;
+
+    // Generate a merge where the bottom bits are taken from the source, and
+    // zero everything else.
+    Register ZeroReg = MIRBuilder.buildConstant(NarrowTy, 0).getReg(0);
+    unsigned NumParts = SizeOp0 / NarrowTy.getSizeInBits();
+    SmallVector<Register, 4> Srcs = {MI.getOperand(1).getReg()};
+    for (unsigned Part = 1; Part < NumParts; ++Part)
+      Srcs.push_back(ZeroReg);
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), Srcs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_TRUNC: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    uint64_t SizeOp1 = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    if (NarrowTy.getSizeInBits() * 2 != SizeOp1) {
+      LLVM_DEBUG(dbgs() << "Can't narrow trunc to type " << NarrowTy << "\n");
+      return UnableToLegalize;
+    }
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1).getReg());
+    MIRBuilder.buildCopy(MI.getOperand(0).getReg(), Unmerge.getReg(0));
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   case TargetOpcode::G_ADD: {
     // FIXME: add support for when SizeOp0 isn't an exact multiple of
@@ -628,15 +661,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
     extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
 
-    Register CarryIn = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    MIRBuilder.buildConstant(CarryIn, 0);
-
+    Register CarryIn;
     for (int i = 0; i < NumParts; ++i) {
       Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
       Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
-      MIRBuilder.buildUAdde(DstReg, CarryOut, Src1Regs[i],
-                            Src2Regs[i], CarryIn);
+      if (i == 0)
+        MIRBuilder.buildUAddo(DstReg, CarryOut, Src1Regs[i], Src2Regs[i]);
+      else {
+        MIRBuilder.buildUAdde(DstReg, CarryOut, Src1Regs[i],
+                              Src2Regs[i], CarryIn);
+      }
 
       DstRegs.push_back(DstReg);
       CarryIn = CarryOut;
@@ -3111,6 +3146,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    int NumDst = MI.getNumOperands() - 1;
+    moreElementsVectorSrc(MI, MoreTy, NumDst);
+
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+    for (int I = 0; I != NumDst; ++I)
+      MIB.addDef(MI.getOperand(I).getReg());
+
+    int NewNumDst = MoreTy.getSizeInBits() / DstTy.getSizeInBits();
+    for (int I = NumDst; I != NewNumDst; ++I)
+      MIB.addDef(MRI.createGenericVirtualRegister(DstTy));
+
+    MIB.addUse(MI.getOperand(NumDst).getReg());
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_PHI:
     return moreElementsVectorPhi(MI, TypeIdx, MoreTy);
   default:
@@ -3823,7 +3878,6 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   Register Src1Reg = MI.getOperand(2).getReg();
   LLT Src0Ty = MRI.getType(Src0Reg);
   LLT DstTy = MRI.getType(DstReg);
-  LLT EltTy = DstTy.getElementType();
   LLT IdxTy = LLT::scalar(32);
 
   const Constant *ShufMask = MI.getOperand(3).getShuffleMask();
@@ -3831,8 +3885,25 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   SmallVector<int, 32> Mask;
   ShuffleVectorInst::getShuffleMask(ShufMask, Mask);
 
+  if (DstTy.isScalar()) {
+    if (Src0Ty.isVector())
+      return UnableToLegalize;
+
+    // This is just a SELECT.
+    assert(Mask.size() == 1 && "Expected a single mask element");
+    Register Val;
+    if (Mask[0] < 0 || Mask[0] > 1)
+      Val = MIRBuilder.buildUndef(DstTy).getReg(0);
+    else
+      Val = Mask[0] == 0 ? Src0Reg : Src1Reg;
+    MIRBuilder.buildCopy(DstReg, Val);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   Register Undef;
   SmallVector<Register, 32> BuildVec;
+  LLT EltTy = DstTy.getElementType();
 
   for (int Idx : Mask) {
     if (Idx < 0) {

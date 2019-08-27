@@ -7192,19 +7192,32 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
   thr->th.th_set_nproc = thr->th.th_teams_size.nteams = num_teams;
 
   // Remember the number of threads for inner parallel regions
+  if (!TCR_4(__kmp_init_middle))
+    __kmp_middle_initialize(); // get internal globals calculated
+  KMP_DEBUG_ASSERT(__kmp_avail_proc);
+  KMP_DEBUG_ASSERT(__kmp_dflt_team_nth);
   if (num_threads == 0) {
-    if (!TCR_4(__kmp_init_middle))
-      __kmp_middle_initialize(); // get __kmp_avail_proc calculated
     num_threads = __kmp_avail_proc / num_teams;
+    // adjust num_threads w/o warning as it is not user setting
+    // num_threads = min(num_threads, nthreads-var, thread-limit-var)
+    // no thread_limit clause specified -  do not change thread-limit-var ICV
+    if (num_threads > __kmp_dflt_team_nth) {
+      num_threads = __kmp_dflt_team_nth; // honor nthreads-var ICV
+    }
+    if (num_threads > thr->th.th_current_task->td_icvs.thread_limit) {
+      num_threads = thr->th.th_current_task->td_icvs.thread_limit;
+    } // prevent team size to exceed thread-limit-var
     if (num_teams * num_threads > __kmp_teams_max_nth) {
-      // adjust num_threads w/o warning as it is not user setting
       num_threads = __kmp_teams_max_nth / num_teams;
     }
   } else {
     // This thread will be the master of the league masters
     // Store new thread limit; old limit is saved in th_cg_roots list
     thr->th.th_current_task->td_icvs.thread_limit = num_threads;
-
+    // num_threads = min(num_threads, nthreads-var)
+    if (num_threads > __kmp_dflt_team_nth) {
+      num_threads = __kmp_dflt_team_nth; // honor nthreads-var ICV
+    }
     if (num_teams * num_threads > __kmp_teams_max_nth) {
       int new_threads = __kmp_teams_max_nth / num_teams;
       if (!__kmp_reserve_warn) { // user asked for too many threads

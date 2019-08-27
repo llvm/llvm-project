@@ -367,8 +367,8 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
     RestoreSpillList(MBB, MBBI, dl, TII, RemainingAdj, SpillList);
 
     // Return to the landing pad.
-    unsigned EhStackReg = MBBI->getOperand(0).getReg();
-    unsigned EhHandlerReg = MBBI->getOperand(1).getReg();
+    Register EhStackReg = MBBI->getOperand(0).getReg();
+    Register EhHandlerReg = MBBI->getOperand(1).getReg();
     BuildMI(MBB, MBBI, dl, TII.get(XCore::SETSP_1r)).addReg(EhStackReg);
     BuildMI(MBB, MBBI, dl, TII.get(XCore::BAU_1r)).addReg(EhHandlerReg);
     MBB.erase(MBBI);  // Erase the previous return instruction.

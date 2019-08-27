@@ -431,12 +431,22 @@ if( MSVC )
       endif()
     endif()
   endif()
+endif( MSVC )
 
-elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
+# Warnings-as-errors handling for GCC-compatible compilers:
+if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
+endif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
+
+# Specific default warnings-as-errors for compilers accepting GCC-compatible warning flags:
+if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
+endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
+
+# C++ language standard selection for compilers accepting the GCC-style option:
+if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
   check_cxx_compiler_flag("-std=${LLVM_CXX_STD}" CXX_SUPPORTS_CXX_STD)
   if (CXX_SUPPORTS_CXX_STD)
    if (CYGWIN OR MINGW)
@@ -450,39 +460,41 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   else()
     message(FATAL_ERROR "The host compiler does not support '-std=${LLVM_CXX_STD}'.")
   endif()
-  if (LLVM_ENABLE_MODULES)
-    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(module_flags "-fmodules -fmodules-cache-path=${PROJECT_BINARY_DIR}/module.cache")
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      # On Darwin -fmodules does not imply -fcxx-modules.
-      set(module_flags "${module_flags} -fcxx-modules")
-    endif()
-    if (LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
-      set(module_flags "${module_flags} -Xclang -fmodules-local-submodule-visibility")
-    endif()
-    if (LLVM_ENABLE_MODULE_DEBUGGING AND
-        ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR
-         (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")))
-      set(module_flags "${module_flags} -gmodules")
-    endif()
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${module_flags}")
+endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
-    # Check that we can build code with modules enabled, and that repeatedly
-    # including <cassert> still manages to respect NDEBUG properly.
-    CHECK_CXX_SOURCE_COMPILES("#undef NDEBUG
-                               #include <cassert>
-                               #define NDEBUG
-                               #include <cassert>
-                               int main() { assert(this code is not compiled); }"
-                               CXX_SUPPORTS_MODULES)
-    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    if (CXX_SUPPORTS_MODULES)
-      append("${module_flags}" CMAKE_CXX_FLAGS)
-    else()
-      message(FATAL_ERROR "LLVM_ENABLE_MODULES is not supported by this compiler")
-    endif()
-  endif(LLVM_ENABLE_MODULES)
-endif( MSVC )
+# Modules enablement for GCC-compatible compilers:
+if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(module_flags "-fmodules -fmodules-cache-path=${PROJECT_BINARY_DIR}/module.cache")
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # On Darwin -fmodules does not imply -fcxx-modules.
+    set(module_flags "${module_flags} -fcxx-modules")
+  endif()
+  if (LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
+    set(module_flags "${module_flags} -Xclang -fmodules-local-submodule-visibility")
+  endif()
+  if (LLVM_ENABLE_MODULE_DEBUGGING AND
+      ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR
+       (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")))
+    set(module_flags "${module_flags} -gmodules")
+  endif()
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${module_flags}")
+
+  # Check that we can build code with modules enabled, and that repeatedly
+  # including <cassert> still manages to respect NDEBUG properly.
+  CHECK_CXX_SOURCE_COMPILES("#undef NDEBUG
+                             #include <cassert>
+                             #define NDEBUG
+                             #include <cassert>
+                             int main() { assert(this code is not compiled); }"
+                             CXX_SUPPORTS_MODULES)
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+  if (CXX_SUPPORTS_MODULES)
+    append("${module_flags}" CMAKE_CXX_FLAGS)
+  else()
+    message(FATAL_ERROR "LLVM_ENABLE_MODULES is not supported by this compiler")
+  endif()
+endif( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
 
 if (MSVC)
   if (NOT CLANG_CL)
@@ -531,12 +543,10 @@ if (MSVC)
           # is fixed.
       -wd4709 # Suppress comma operator within array index expression
 
-      # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
+      # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
-      # When we switch to requiring a version of MSVC that supports the 'alignas'
-      # specifier (MSVC 2015?) this warning can be re-enabled.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
 
       # Promoted warnings.

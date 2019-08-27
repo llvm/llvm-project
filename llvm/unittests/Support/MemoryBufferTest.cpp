@@ -17,6 +17,15 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#if LLVM_ENABLE_THREADS
+#include <thread>
+#endif
+#if LLVM_ON_UNIX
+#include <unistd.h>
+#endif
+#if _WIN32
+#include <windows.h>
+#endif
 
 using namespace llvm;
 
@@ -151,6 +160,38 @@ TEST_F(MemoryBufferTest, copy) {
   // verify the two copies do not point to the same place
   EXPECT_NE(MBC1->getBufferStart(), MBC2->getBufferStart());
 }
+
+#if LLVM_ENABLE_THREADS
+TEST_F(MemoryBufferTest, createFromPipe) {
+  sys::fs::file_t pipes[2];
+#if LLVM_ON_UNIX
+  ASSERT_EQ(::pipe(pipes), 0) << strerror(errno);
+#else
+  ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
+      << ::GetLastError();
+#endif
+  auto ReadCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[0]); });
+  std::thread Writer([&] {
+    auto WriteCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[1]); });
+    for (unsigned i = 0; i < 5; ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#if LLVM_ON_UNIX
+      ASSERT_EQ(::write(pipes[1], "foo", 3), 3) << strerror(errno);
+#else
+      DWORD Written;
+      ASSERT_TRUE(::WriteFile(pipes[1], "foo", 3, &Written, nullptr))
+          << ::GetLastError();
+      ASSERT_EQ(Written, 3u);
+#endif
+    }
+  });
+  ErrorOr<OwningBuffer> MB =
+      MemoryBuffer::getOpenFile(pipes[0], "pipe", /*FileSize*/ -1);
+  Writer.join();
+  ASSERT_NO_ERROR(MB.getError());
+  EXPECT_EQ(MB.get()->getBuffer(), "foofoofoofoofoo");
+}
+#endif
 
 TEST_F(MemoryBufferTest, make_new) {
   // 0-sized buffer

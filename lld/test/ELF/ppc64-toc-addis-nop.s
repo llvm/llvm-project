@@ -4,12 +4,15 @@
 # RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
-# RUN: ld.lld -shared %t2.o -o %t2.so
+# RUN: ld.lld -shared -soname=t2.so %t2.o -o %t2.so
+
+## Place all sections in the same segment so that .text and .TOC. are on the same page.
+# RUN: echo 'PHDRS { all PT_LOAD; }' > %t.script
 #
-# RUN: ld.lld  %t2.so %t.o -o %t
+# RUN: ld.lld %t2.so %t.o -T %t.script -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=Dis %s
 #
-# RUN: ld.lld --no-toc-optimize %t2.so %t.o -o %t
+# RUN: ld.lld %t2.so %t.o -T %t.script --no-toc-optimize -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=NoOpt %s
 
 # InputRelocs:  Relocation section '.rela.text'
@@ -39,18 +42,18 @@ bytes:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
-# Dis-NEXT:   lbz   3, 32624(2)
+# Dis-NEXT:   lbz   3, -32752(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   stb   3, 32625(2)
+# Dis-NEXT:   stb   3, -32751(2)
 # Dis-NEXT:   blr
 
 # NoOpt-LABEL: bytes:
 # NoOpt-NEXT:     addis
 # NoOpt-NEXT:     addi
 # NoOpt-NEXT:     addis 3, 2, 0
-# NoOpt-NEXT:     lbz 3, 32624(3)
+# NoOpt-NEXT:     lbz 3, -32752(3)
 # NoOpt-NEXT:     addis 4, 2, 0
-# NoOpt-NEXT:     stb 3, 32625(4)
+# NoOpt-NEXT:     stb 3, -32751(4)
 # NoOpt-NEXT:     blr
 
         .global  halfs
@@ -73,22 +76,22 @@ halfs:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
-# Dis-NEXT:   lhz   3, 32626(2)
+# Dis-NEXT:   lhz 3, -32750(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   lha 4, 32626(2)
+# Dis-NEXT:   lha 4, -32750(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   sth 4, 32628(2)
+# Dis-NEXT:   sth 4, -32748(2)
 # Dis-NEXT:   blr
 
 # NoOpt-LABEL: halfs:
 # NoOpt-NEXT:   addis
 # NoOpt-NEXT:   addi
 # NoOpt-NEXT:   addis 3, 2, 0
-# NoOpt-NEXT:   lhz   3, 32626(3)
+# NoOpt-NEXT:   lhz   3, -32750(3)
 # NoOpt-NEXT:   addis 4, 2, 0
-# NoOpt-NEXT:   lha 4, 32626(4)
+# NoOpt-NEXT:   lha 4, -32750(4)
 # NoOpt-NEXT:   addis 5, 2, 0
-# NoOpt-NEXT:   sth 4, 32628(5)
+# NoOpt-NEXT:   sth 4, -32748(5)
 # NoOpt-NEXT:   blr
 
 
@@ -112,22 +115,22 @@ words:
 # Dis-NEXT:    addis
 # Dis-NEXT:    addi
 # Dis-NEXT:    nop
-# Dis-NEXT:    lwz 3, 32632(2)
+# Dis-NEXT:    lwz 3, -32744(2)
 # Dis-NEXT:    nop
-# Dis-NEXT:    lwa 4, 32632(2)
+# Dis-NEXT:    lwa 4, -32744(2)
 # Dis-NEXT:    nop
-# Dis-NEXT:    stw 4, 32636(2)
+# Dis-NEXT:    stw 4, -32740(2)
 # Dis-NEXT:    blr
 
 # NoOpt-LABEL: words
 # NoOpt-NEXT:    addis
 # NoOpt-NEXT:    addi
 # NoOpt-NEXT:    addis 3, 2, 0
-# NoOpt-NEXT:    lwz 3, 32632(3)
+# NoOpt-NEXT:    lwz 3, -32744(3)
 # NoOpt-NEXT:    addis 4, 2, 0
-# NoOpt-NEXT:    lwa 4, 32632(4)
+# NoOpt-NEXT:    lwa 4, -32744(4)
 # NoOpt-NEXT:    addis 5, 2, 0
-# NoOpt-NEXT:    stw 4, 32636(5)
+# NoOpt-NEXT:    stw 4, -32740(5)
 # NoOpt-NEXT:    blr
 
         .global doublewords
@@ -149,18 +152,18 @@ doublewords:
 # Dis-NEXT:    addis
 # Dis-NEXT:    addi
 # Dis-NEXT:    nop
-# Dis-NEXT:    ld 3, 32640(2)
+# Dis-NEXT:    ld 3, -32736(2)
 # Dis-NEXT:    nop
-# Dis-NEXT:    std 3, 32648(2)
+# Dis-NEXT:    std 3, -32728(2)
 # Dis-NEXT:    blr
 
 # NoOpt-LABEL: doublewords
 # NoOpt-NEXT:    addis
 # NoOpt-NEXT:    addi
 # NoOpt-NEXT:    addis 3, 2, 0
-# NoOpt-NEXT:    ld 3, 32640(3)
+# NoOpt-NEXT:    ld 3, -32736(3)
 # NoOpt-NEXT:    addis 4, 2, 0
-# NoOpt-NEXT:    std 3, 32648(4)
+# NoOpt-NEXT:    std 3, -32728(4)
 # NoOpt-NEXT:    blr
 
        .global vec_dq
@@ -182,18 +185,18 @@ vec_dq:
 # Dis-NEXT:    addis
 # Dis-NEXT:    addi
 # Dis-NEXT:    nop
-# Dis-NEXT:    lxv 3, 32656(2)
+# Dis-NEXT:    lxv 3, -32720(2)
 # Dis-NEXT:    nop
-# Dis-NEXT:    stxv 3, 32672(2)
+# Dis-NEXT:    stxv 3, -32704(2)
 # Dis-NEXT:    blr
 
 # NoOpt-LABEL: vec_dq:
 # NoOpt-NEXT:    addis
 # NoOpt-NEXT:    addi
 # NoOpt-NEXT:    addis 3, 2, 0
-# NoOpt-NEXT:    lxv 3, 32656(3)
+# NoOpt-NEXT:    lxv 3, -32720(3)
 # NoOpt-NEXT:    addis 3, 2, 0
-# NoOpt-NEXT:    stxv 3, 32672(3)
+# NoOpt-NEXT:    stxv 3, -32704(3)
 # NoOpt-NEXT:    blr
 
        .global vec_ds
@@ -218,26 +221,26 @@ vec_ds:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
-# Dis-NEXT:   lxsd 3, 32656(2)
+# Dis-NEXT:   lxsd 3, -32720(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   stxsd 3, 32672(2)
+# Dis-NEXT:   stxsd 3, -32704(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   lxssp 3, 32656(2)
+# Dis-NEXT:   lxssp 3, -32720(2)
 # Dis-NEXT:   nop
-# Dis-NEXT:   stxssp 3, 32672(2)
+# Dis-NEXT:   stxssp 3, -32704(2)
 # Dis-NEXT:   blr
 
 # NoOpt-LABEL: vec_ds:
 # NoOpt-NEXT:   addis
 # NoOpt-NEXT:   addi
 # NoOpt-NEXT:   addis 3, 2, 0
-# NoOpt-NEXT:   lxsd 3, 32656(3)
+# NoOpt-NEXT:   lxsd 3, -32720(3)
 # NoOpt-NEXT:   addis 3, 2, 0
-# NoOpt-NEXT:   stxsd 3, 32672(3)
+# NoOpt-NEXT:   stxsd 3, -32704(3)
 # NoOpt-NEXT:   addis 3, 2, 0
-# NoOpt-NEXT:   lxssp 3, 32656(3)
+# NoOpt-NEXT:   lxssp 3, -32720(3)
 # NoOpt-NEXT:   addis 3, 2, 0
-# NoOpt-NEXT:   stxssp 3, 32672(3)
+# NoOpt-NEXT:   stxssp 3, -32704(3)
 # NoOpt-NEXT:   blr
 
 

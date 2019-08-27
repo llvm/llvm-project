@@ -95,18 +95,6 @@ template <class Ty> struct identity {
   }
 };
 
-template <class Ty> struct less_ptr {
-  bool operator()(const Ty* left, const Ty* right) const {
-    return *left < *right;
-  }
-};
-
-template <class Ty> struct greater_ptr {
-  bool operator()(const Ty* left, const Ty* right) const {
-    return *right < *left;
-  }
-};
-
 /// An efficient, type-erasing, non-owning reference to a callable. This is
 /// intended for use as the type of a function parameter that is not used
 /// after the function in question returns.
@@ -1376,41 +1364,6 @@ void replace(Container &Cont, typename Container::iterator ContIt,
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//
 
-// Implement make_unique according to N3656.
-
-/// Constructs a `new T()` with the given args and returns a
-///        `unique_ptr<T>` which owns the object.
-///
-/// Example:
-///
-///     auto p = make_unique<int>();
-///     auto p = make_unique<std::tuple<int, int>>(0, 1);
-template <class T, class... Args>
-typename std::enable_if<!std::is_array<T>::value, std::unique_ptr<T>>::type
-make_unique(Args &&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
-/// Constructs a `new T[n]` with the given args and returns a
-///        `unique_ptr<T[]>` which owns the object.
-///
-/// \param n size of the new array.
-///
-/// Example:
-///
-///     auto p = make_unique<int[]>(2); // value-initializes the array with 0's.
-template <class T>
-typename std::enable_if<std::is_array<T>::value && std::extent<T>::value == 0,
-                        std::unique_ptr<T>>::type
-make_unique(size_t n) {
-  return std::unique_ptr<T>(new typename std::remove_extent<T>::type[n]());
-}
-
-/// This function isn't used and is only here to provide better compile errors.
-template <class T, class... Args>
-typename std::enable_if<std::extent<T>::value != 0>::type
-make_unique(Args &&...) = delete;
-
 struct FreeDeleter {
   void operator()(void* v) {
     ::free(v);
@@ -1421,20 +1374,6 @@ template<typename First, typename Second>
 struct pair_hash {
   size_t operator()(const std::pair<First, Second> &P) const {
     return std::hash<First>()(P.first) * 31 + std::hash<Second>()(P.second);
-  }
-};
-
-/// A functor like C++14's std::less<void> in its absence.
-struct less {
-  template <typename A, typename B> bool operator()(A &&a, B &&b) const {
-    return std::forward<A>(a) < std::forward<B>(b);
-  }
-};
-
-/// A functor like C++14's std::equal<void> in its absence.
-struct equal {
-  template <typename A, typename B> bool operator()(A &&a, B &&b) const {
-    return std::forward<A>(a) == std::forward<B>(b);
   }
 };
 

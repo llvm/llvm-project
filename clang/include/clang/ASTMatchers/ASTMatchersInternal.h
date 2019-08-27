@@ -183,7 +183,8 @@ public:
   /// Note that we're using std::map here, as for memoization:
   /// - we need a comparison operator
   /// - we need an assignment operator
-  using IDToNodeMap = std::map<std::string, ast_type_traits::DynTypedNode>;
+  using IDToNodeMap =
+      std::map<std::string, ast_type_traits::DynTypedNode, std::less<>>;
 
   const IDToNodeMap &getMap() const {
     return NodeMap;

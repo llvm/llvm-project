@@ -1682,10 +1682,11 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
     TheUse = InsertedShift;
   }
 
-  // If we removed all uses, nuke the shift.
+  // If we removed all uses, or there are none, nuke the shift.
   if (ShiftI->use_empty()) {
     salvageDebugInfo(*ShiftI);
     ShiftI->eraseFromParent();
+    MadeChange = true;
   }
 
   return MadeChange;
@@ -7103,7 +7104,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
     for (auto &I : reverse(BB)) {
       if (makeBitReverse(I, *DL, *TLI)) {
         MadeBitReverse = MadeChange = true;
-        ModifiedDT = true;
         break;
       }
     }

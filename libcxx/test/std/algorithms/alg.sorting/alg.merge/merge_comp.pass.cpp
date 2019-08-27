@@ -26,7 +26,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 
 // #if TEST_STD_VER > 17
 // TEST_CONSTEXPR bool test_constexpr() {

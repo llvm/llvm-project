@@ -861,7 +861,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // this use.  We do this by moving it to the entry block (if it is a
     // non-instruction value) or right after the definition.  These negates will
     // be zapped by reassociate later, so we don't need much finesse here.
-    BinaryOperator *TheNeg = cast<BinaryOperator>(U);
+    Instruction *TheNeg = cast<Instruction>(U);
 
     // Verify that the negate is in this function, V might be a constant expr.
     if (TheNeg->getParent()->getParent() != BI->getParent()->getParent())

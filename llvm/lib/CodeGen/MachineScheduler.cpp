@@ -933,7 +933,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
     if (TrackLaneMasks && !MO.isUse())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
 
@@ -1687,12 +1687,12 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
 
   // Check for pure vreg copies.
   const MachineOperand &SrcOp = Copy->getOperand(1);
-  unsigned SrcReg = SrcOp.getReg();
+  Register SrcReg = SrcOp.getReg();
   if (!Register::isVirtualRegister(SrcReg) || !SrcOp.readsReg())
     return;
 
   const MachineOperand &DstOp = Copy->getOperand(0);
-  unsigned DstReg = DstOp.getReg();
+  Register DstReg = DstOp.getReg();
   if (!Register::isVirtualRegister(DstReg) || DstOp.isDead())
     return;
 

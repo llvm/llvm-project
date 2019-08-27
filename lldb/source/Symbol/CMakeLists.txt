@@ -42,7 +42,6 @@ add_lldb_library(lldbSymbol
   UnwindTable.cpp
   Variable.cpp
   VariableList.cpp
-  VerifyDecl.cpp
 
   ${PLATFORM_SOURCES}
 

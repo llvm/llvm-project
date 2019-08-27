@@ -171,7 +171,7 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || MO.isImplicit())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     BitVector &Set = MO.isDef() ? Defs : Uses;
     expandReg(R, Set);
   }
@@ -239,14 +239,14 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned Opc = MI->getOpcode();
     if (!isCondTransfer(Opc))
       continue;
-    unsigned DR = MI->getOperand(0).getReg();
+    Register DR = MI->getOperand(0).getReg();
     if (isRegPair(DR))
       continue;
     MachineOperand &PredOp = MI->getOperand(1);
     if (PredOp.isUndef())
       continue;
 
-    unsigned PR = PredOp.getReg();
+    Register PR = PredOp.getReg();
     unsigned Idx = I2X.lookup(MI);
     CondsetMap::iterator F = CM.find(DR);
     bool IfTrue = HII->isPredicatedTrue(Opc);

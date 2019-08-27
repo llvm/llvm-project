@@ -34,12 +34,12 @@ _start:
 .Lfunc_end0:
     .size   _start, .Lfunc_end0-.Lfunc_begin0
 
-# NM-DAG: 0000000010028000 d .TOC.
-# NM-DAG: 0000000010010000 T _start
+# NM-DAG: 00000000100281f0 d .TOC.
+# NM-DAG: 00000000100101d0 T _start
 
-# 0x10010000 = (4097<<16) + 0
-# CHECK:      10010000:       lis 4, 4097
-# CHECK-NEXT: 10010004:       addi 4, 4, 0
-# .TOC. - _start = (2<<16) - 32768
-# CHECK-NEXT: 10010008:       lis 5, 2
-# CHECK-NEXT: 1001000c:       addi 5, 5, -32768
+# 0x100101d0 = (4097<<16) + 464
+# CHECK:      100101d0:       lis 4, 4097
+# CHECK-NEXT: 100101d4:       addi 4, 4, 464
+# .TOC. - _start = (2<<16) - 32736
+# CHECK-NEXT: 100101d8:       lis 5, 2
+# CHECK-NEXT: 100101dc:       addi 5, 5, -32736

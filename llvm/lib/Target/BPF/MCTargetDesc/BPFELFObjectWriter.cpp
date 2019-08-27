@@ -39,7 +39,7 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   // determine the type of the relocation
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_SecRel_8:

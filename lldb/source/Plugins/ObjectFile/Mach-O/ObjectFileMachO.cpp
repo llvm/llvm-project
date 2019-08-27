@@ -913,16 +913,11 @@ size_t ObjectFileMachO::GetModuleSpecifications(
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
       if (data_sp) {
-        ModuleSpec spec;
-        spec.GetFileSpec() = file;
-        spec.SetObjectOffset(file_offset);
-        spec.SetObjectSize(length);
-
-        spec.GetArchitecture() = GetArchitecture(header, data, data_offset);
-        if (spec.GetArchitecture().IsValid()) {
-          spec.GetUUID() = GetUUID(header, data, data_offset);
-          specs.Append(spec);
-        }
+        ModuleSpec base_spec;
+        base_spec.GetFileSpec() = file;
+        base_spec.SetObjectOffset(file_offset);
+        base_spec.SetObjectSize(length);
+        GetAllArchSpecs(header, data, data_offset, base_spec, specs);
       }
     }
   }
@@ -1104,11 +1099,19 @@ bool ObjectFileMachO::ParseHeader() {
     if (can_parse) {
       m_data.GetU32(&offset, &m_header.cputype, 6);
 
-      if (ArchSpec mach_arch = GetArchitecture()) {
+      ModuleSpecList all_specs;
+      ModuleSpec base_spec;
+      GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
+                      base_spec, all_specs);
+
+      for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
+        ArchSpec mach_arch =
+            all_specs.GetModuleSpecRefAtIndex(i).GetArchitecture();
+
         // Check if the module has a required architecture
         const ArchSpec &module_arch = module_sp->GetArchitecture();
         if (module_arch.IsValid() && !module_arch.IsCompatibleMatch(mach_arch))
-          return false;
+          continue;
 
         if (SetModulesArchitecture(mach_arch)) {
           const size_t header_and_lc_size =
@@ -1123,7 +1126,7 @@ bool ObjectFileMachO::ParseHeader() {
               // Read in all only the load command data from the file on disk
               data_sp = MapFileData(m_file, header_and_lc_size, m_file_offset);
               if (data_sp->GetByteSize() != header_and_lc_size)
-                return false;
+                continue;
             }
             if (data_sp)
               m_data.SetData(data_sp);
@@ -1131,6 +1134,8 @@ bool ObjectFileMachO::ParseHeader() {
         }
         return true;
       }
+      // None found.
+      return false;
     } else {
       memset(&m_header, 0, sizeof(struct mach_header));
     }
@@ -4831,11 +4836,22 @@ void ObjectFileMachO::Dump(Stream *s) {
     else
       s->PutCString("ObjectFileMachO32");
 
-    ArchSpec header_arch = GetArchitecture();
-
-    *s << ", file = '" << m_file
-       << "', triple = " << header_arch.GetTriple().getTriple() << "\n";
-
+    *s << ", file = '" << m_file;
+    ModuleSpecList all_specs;
+    ModuleSpec base_spec;
+    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
+                    base_spec, all_specs);
+    for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
+      *s << "', triple";
+      if (e)
+        s->Printf("[%d]", i);
+      *s << " = ";
+      *s << all_specs.GetModuleSpecRefAtIndex(i)
+                .GetArchitecture()
+                .GetTriple()
+                .getTriple();
+    }
+    *s << "\n";
     SectionList *sections = GetSectionList();
     if (sections)
       sections->Dump(s, nullptr, true, UINT32_MAX);
@@ -4901,38 +4917,41 @@ namespace {
     llvm::StringRef environment;
     OSEnv(uint32_t cmd) {
       switch (cmd) {
-      case PLATFORM_MACOS:
+      case llvm::MachO::PLATFORM_MACOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::MacOSX);
         return;
-      case PLATFORM_IOS:
+      case llvm::MachO::PLATFORM_IOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
         return;
-      case PLATFORM_TVOS:
+      case llvm::MachO::PLATFORM_TVOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
         return;
-      case PLATFORM_WATCHOS:
+      case llvm::MachO::PLATFORM_WATCHOS:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
         return;
-// NEED_BRIDGEOS_TRIPLE      case PLATFORM_BRIDGEOS:
+// NEED_BRIDGEOS_TRIPLE      case llvm::MachO::PLATFORM_BRIDGEOS:
 // NEED_BRIDGEOS_TRIPLE        os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
 // NEED_BRIDGEOS_TRIPLE        return;
-#if defined (PLATFORM_IOSSIMULATOR) && defined (PLATFORM_TVOSSIMULATOR) && defined (PLATFORM_WATCHOSSIMULATOR)
-      case PLATFORM_IOSSIMULATOR:
+      case llvm::MachO::PLATFORM_MACCATALYST:
+        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
+        environment =
+            llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
+        return;
+      case llvm::MachO::PLATFORM_IOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
         return;
-      case PLATFORM_TVOSSIMULATOR:
+      case llvm::MachO::PLATFORM_TVOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
         return;
-      case PLATFORM_WATCHOSSIMULATOR:
+      case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
         os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
         environment =
             llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
         return;
-#endif
       default: {
         Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
                                                         LIBLLDB_LOG_PROCESS));
@@ -4951,116 +4970,164 @@ namespace {
   };
 } // namespace
 
-ArchSpec
-ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
-                                 const lldb_private::DataExtractor &data,
-                                 lldb::offset_t lc_offset) {
-  ArchSpec arch;
-  arch.SetArchitecture(eArchTypeMachO, header.cputype, header.cpusubtype);
+void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
+                                      const lldb_private::DataExtractor &data,
+                                      lldb::offset_t lc_offset,
+                                      ModuleSpec &base_spec,
+                                      lldb_private::ModuleSpecList &all_specs) {
+  auto &base_arch = base_spec.GetArchitecture();
+  base_arch.SetArchitecture(eArchTypeMachO, header.cputype, header.cpusubtype);
+  if (!base_arch.IsValid())
+    return;
 
-  if (arch.IsValid()) {
-    llvm::Triple &triple = arch.GetTriple();
+  bool found_any = false;
+  auto add_triple = [&](const llvm::Triple &triple) {
+    auto spec = base_spec;
+    spec.GetArchitecture().GetTriple() = triple;
+    if (spec.GetArchitecture().IsValid()) {
+      spec.GetUUID() = ObjectFileMachO::GetUUID(header, data, lc_offset);
+      all_specs.Append(spec);
+      found_any = true;
+    }
+  };
 
-    // Set OS to an unspecified unknown or a "*" so it can match any OS
-    triple.setOS(llvm::Triple::UnknownOS);
-    triple.setOSName(llvm::StringRef());
+  // Set OS to an unspecified unknown or a "*" so it can match any OS
+  llvm::Triple base_triple = base_arch.GetTriple();
+  base_triple.setOS(llvm::Triple::UnknownOS);
+  base_triple.setOSName(llvm::StringRef());
 
-    if (header.filetype == MH_PRELOAD) {
-      if (header.cputype == CPU_TYPE_ARM) {
-        // If this is a 32-bit arm binary, and it's a standalone binary, force
-        // the Vendor to Apple so we don't accidentally pick up the generic
-        // armv7 ABI at runtime.  Apple's armv7 ABI always uses r7 for the
-        // frame pointer register; most other armv7 ABIs use a combination of
-        // r7 and r11.
-        triple.setVendor(llvm::Triple::Apple);
-      } else {
-        // Set vendor to an unspecified unknown or a "*" so it can match any
-        // vendor This is required for correct behavior of EFI debugging on
-        // x86_64
-        triple.setVendor(llvm::Triple::UnknownVendor);
-        triple.setVendorName(llvm::StringRef());
-      }
-      return arch;
+  if (header.filetype == MH_PRELOAD) {
+    if (header.cputype == CPU_TYPE_ARM) {
+      // If this is a 32-bit arm binary, and it's a standalone binary, force
+      // the Vendor to Apple so we don't accidentally pick up the generic
+      // armv7 ABI at runtime.  Apple's armv7 ABI always uses r7 for the
+      // frame pointer register; most other armv7 ABIs use a combination of
+      // r7 and r11.
+      base_triple.setVendor(llvm::Triple::Apple);
     } else {
-      struct load_command load_cmd;
-      llvm::SmallString<16> os_name;
+      // Set vendor to an unspecified unknown or a "*" so it can match any
+      // vendor This is required for correct behavior of EFI debugging on
+      // x86_64
+      base_triple.setVendor(llvm::Triple::UnknownVendor);
+      base_triple.setVendorName(llvm::StringRef());
+    }
+    return add_triple(base_triple);
+  }
+
+  struct load_command load_cmd;
+
+  // See if there is an LC_VERSION_MIN_* load command that can give
+  // us the OS type.
+  lldb::offset_t offset = lc_offset;
+  for (uint32_t i = 0; i < header.ncmds; ++i) {
+    const lldb::offset_t cmd_offset = offset;
+    if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+      break;
+
+    struct version_min_command version_min;
+    switch (load_cmd.cmd) {
+    case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
+    case llvm::MachO::LC_VERSION_MIN_MACOSX:
+    case llvm::MachO::LC_VERSION_MIN_TVOS:
+    case llvm::MachO::LC_VERSION_MIN_WATCHOS: {
+      if (load_cmd.cmdsize != sizeof(version_min))
+        break;
+      if (data.ExtractBytes(cmd_offset, sizeof(version_min),
+                            data.GetByteOrder(), &version_min) == 0)
+        break;
+      MinOS min_os(version_min.version);
+      llvm::SmallString<32> os_name;
       llvm::raw_svector_ostream os(os_name);
+      os << GetOSName(load_cmd.cmd) << min_os.major_version << '.'
+         << min_os.minor_version << '.' << min_os.patch_version;
 
-      // See if there is an LC_VERSION_MIN_* load command that can give
-      // us the OS type.
-      lldb::offset_t offset = lc_offset;
-      for (uint32_t i = 0; i < header.ncmds; ++i) {
-        const lldb::offset_t cmd_offset = offset;
-        if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      auto triple = base_triple;
+      triple.setOSName(os.str());
+      os_name.clear();
+      add_triple(triple);
+      break;
+    }
+    default:
+      break;
+    }
+
+    offset = cmd_offset + load_cmd.cmdsize;
+  }
+
+  // See if there are LC_BUILD_VERSION load commands that can give
+  // us the OS type.
+  offset = lc_offset;
+  for (uint32_t i = 0; i < header.ncmds; ++i) {
+    const lldb::offset_t cmd_offset = offset;
+    if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+      break;
+
+    do {
+      if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
+        struct build_version_command build_version;
+        if (load_cmd.cmdsize < sizeof(build_version)) {
+          // Malformed load command.
           break;
-
-        struct version_min_command version_min;
-        switch (load_cmd.cmd) {
-        case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
-        case llvm::MachO::LC_VERSION_MIN_MACOSX:
-        case llvm::MachO::LC_VERSION_MIN_TVOS:
-        case llvm::MachO::LC_VERSION_MIN_WATCHOS: {
-          if (load_cmd.cmdsize != sizeof(version_min))
-            break;
-          if (data.ExtractBytes(cmd_offset, sizeof(version_min),
-                                data.GetByteOrder(), &version_min) == 0)
-            break;
-          MinOS min_os(version_min.version);
-          os << GetOSName(load_cmd.cmd) << min_os.major_version << '.'
-             << min_os.minor_version << '.' << min_os.patch_version;
-          triple.setOSName(os.str());
-          return arch;
         }
-        default:
+        if (data.ExtractBytes(cmd_offset, sizeof(build_version),
+                              data.GetByteOrder(), &build_version) == 0)
           break;
-        }
-
-        offset = cmd_offset + load_cmd.cmdsize;
+        MinOS min_os(build_version.minos);
+        OSEnv os_env(build_version.platform);
+        llvm::SmallString<16> os_name;
+        llvm::raw_svector_ostream os(os_name);
+        os << os_env.os_type << min_os.major_version << '.'
+           << min_os.minor_version << '.' << min_os.patch_version;
+        auto triple = base_triple;
+        triple.setOSName(os.str());
+        os_name.clear();
+        if (!os_env.environment.empty())
+          triple.setEnvironmentName(os_env.environment);
+        add_triple(triple);
       }
+    } while (0);
+    offset = cmd_offset + load_cmd.cmdsize;
+  }
 
-      // See if there is an LC_BUILD_VERSION load command that can give
-      // us the OS type.
-
-      offset = lc_offset;
-      for (uint32_t i = 0; i < header.ncmds; ++i) {
-        const lldb::offset_t cmd_offset = offset;
-        if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
-          break;
-        do {
-          if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
-            struct build_version_command build_version;
-            if (load_cmd.cmdsize < sizeof(build_version)) {
-              // Malformed load command.
-              break;
-            }
-            if (data.ExtractBytes(cmd_offset, sizeof(build_version),
-                                  data.GetByteOrder(), &build_version) == 0)
-              break;
-            MinOS min_os(build_version.minos);
-            OSEnv os_env(build_version.platform);
-            if (os_env.os_type.empty())
-              break;
-            os << os_env.os_type << min_os.major_version << '.'
-               << min_os.minor_version << '.' << min_os.patch_version;
-            triple.setOSName(os.str());
-            if (!os_env.environment.empty())
-              triple.setEnvironmentName(os_env.environment);
-            return arch;
-          }
-        } while (false);
-        offset = cmd_offset + load_cmd.cmdsize;
-      }
-
-      if (header.filetype != MH_KEXT_BUNDLE) {
-        // We didn't find a LC_VERSION_MIN load command and this isn't a KEXT
-        // so lets not say our Vendor is Apple, leave it as an unspecified
-        // unknown
-        triple.setVendor(llvm::Triple::UnknownVendor);
-        triple.setVendorName(llvm::StringRef());
-      }
+  if (!found_any) {
+    if (header.filetype == MH_KEXT_BUNDLE) {
+      base_triple.setVendor(llvm::Triple::Apple);
+      add_triple (base_triple);
+    } else {
+      // We didn't find a LC_VERSION_MIN load command and this isn't a KEXT
+      // so lets not say our Vendor is Apple, leave it as an unspecified
+      // unknown.
+      base_triple.setVendor(llvm::Triple::UnknownVendor);
+      base_triple.setVendorName(llvm::StringRef());
+      add_triple(base_triple);
     }
   }
-  return arch;
+}
+
+ArchSpec ObjectFileMachO::GetArchitecture(
+    ModuleSP module_sp, const llvm::MachO::mach_header &header,
+    const lldb_private::DataExtractor &data, lldb::offset_t lc_offset) {
+  ModuleSpecList all_specs;
+  ModuleSpec base_spec;
+  GetAllArchSpecs(header, data, MachHeaderSizeFromMagic(header.magic),
+                  base_spec, all_specs);
+
+  // If the object file offers multiple alternative load commands,
+  // pick the one that matches the module.
+  if (module_sp) {
+    const ArchSpec &module_arch = module_sp->GetArchitecture();
+    for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
+      ArchSpec mach_arch =
+          all_specs.GetModuleSpecRefAtIndex(i).GetArchitecture();
+      if (module_arch.IsCompatibleMatch(mach_arch))
+        return mach_arch;
+    }
+  }
+
+  // Return the first arch we found.
+  if (all_specs.GetSize() == 0)
+    return {};
+  return all_specs.GetModuleSpecRefAtIndex(0).GetArchitecture();
 }
 
 UUID ObjectFileMachO::GetUUID() {
@@ -5703,7 +5770,7 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    return GetArchitecture(m_header, m_data,
+    return GetArchitecture(module_sp, m_header, m_data,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
   return arch;

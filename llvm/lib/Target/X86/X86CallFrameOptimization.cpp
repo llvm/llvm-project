@@ -335,7 +335,7 @@ X86CallFrameOptimization::classifyInstruction(
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg())
       continue;
-    unsigned int Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isPhysicalRegister(Reg))
       continue;
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
@@ -380,7 +380,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   while (I->getOpcode() == X86::LEA32r || I->isDebugInstr())
     ++I;
 
-  unsigned StackPtr = RegInfo.getStackRegister();
+  Register StackPtr = RegInfo.getStackRegister();
   auto StackPtrCopyInst = MBB.end();
   // SelectionDAG (but not FastISel) inserts a copy of ESP into a virtual
   // register.  If it's there, use that virtual register as stack pointer
@@ -453,7 +453,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     for (const MachineOperand &MO : I->uses()) {
       if (!MO.isReg())
         continue;
-      unsigned int Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg))
         UsedRegs.insert(Reg);
     }
@@ -534,12 +534,12 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       break;
     case X86::MOV32mr:
     case X86::MOV64mr: {
-      unsigned int Reg = PushOp.getReg();
+      Register Reg = PushOp.getReg();
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
       // in preparation for the PUSH64. The upper 32 bits can be undef.
       if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
-        unsigned UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+        Register UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::INSERT_SUBREG), Reg)

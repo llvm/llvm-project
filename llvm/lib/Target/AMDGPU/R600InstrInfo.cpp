@@ -293,7 +293,7 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
     for (unsigned j = 0; j < 8; j++) {
       MachineOperand &MO =
           MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][0]));
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (Reg == R600::ALU_CONST) {
         MachineOperand &Sel =
             MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
@@ -316,7 +316,7 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
     if (SrcIdx < 0)
       break;
     MachineOperand &MO = MI.getOperand(SrcIdx);
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == R600::ALU_CONST) {
       MachineOperand &Sel =
           MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
@@ -347,7 +347,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
   unsigned i = 0;
   for (const auto &Src : getSrcs(MI)) {
     ++i;
-    unsigned Reg = Src.first->getReg();
+    Register Reg = Src.first->getReg();
     int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == R600::OQAP) {
       Result.push_back(std::make_pair(Index, 0U));
@@ -864,7 +864,7 @@ bool R600InstrInfo::isPredicated(const MachineInstr &MI) const {
   if (idx < 0)
     return false;
 
-  unsigned Reg = MI.getOperand(idx).getReg();
+  Register Reg = MI.getOperand(idx).getReg();
   switch (Reg) {
   default: return false;
   case R600::PRED_SEL_ONE:
@@ -1037,7 +1037,7 @@ bool R600InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       unsigned RegIndex = MI.getOperand(RegOpIdx).getImm();
       unsigned Channel = MI.getOperand(ChanOpIdx).getImm();
       unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-      unsigned OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
+      Register OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
       if (OffsetReg == R600::INDIRECT_BASE_ADDR) {
         buildMovInstr(MBB, MI, MI.getOperand(DstOpIdx).getReg(),
                       getIndirectAddrRegClass()->getRegister(Address));
@@ -1051,7 +1051,7 @@ bool R600InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       unsigned RegIndex = MI.getOperand(RegOpIdx).getImm();
       unsigned Channel = MI.getOperand(ChanOpIdx).getImm();
       unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-      unsigned OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
+      Register OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
       if (OffsetReg == R600::INDIRECT_BASE_ADDR) {
         buildMovInstr(MBB, MI, getIndirectAddrRegClass()->getRegister(Address),
                       MI.getOperand(ValOpIdx).getReg());

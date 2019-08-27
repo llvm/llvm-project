@@ -22,7 +22,7 @@
 #include <set>
 #include <utility>
 #include <cassert>
-#include "container_debug_tests.hpp"
+#include "container_debug_tests.h"
 #include "test_macros.h"
 #include "debug_mode_helper.h"
 

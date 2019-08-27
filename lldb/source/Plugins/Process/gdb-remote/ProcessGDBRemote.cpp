@@ -1828,8 +1828,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       }
 
       for (const auto &pair : expedited_register_map) {
-        StringExtractor reg_value_extractor;
-        reg_value_extractor.GetStringRef() = pair.second;
+        StringExtractor reg_value_extractor(pair.second);
         DataBufferSP buffer_sp(new DataBufferHeap(
             reg_value_extractor.GetStringRef().size() / 2, 0));
         reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
@@ -2646,7 +2645,7 @@ Status ProcessGDBRemote::DoDestroy() {
           LLDB_LOGF(log,
                     "ProcessGDBRemote::DoDestroy - got unexpected response "
                     "to k packet: %s",
-                    response.GetStringRef().c_str());
+                    response.GetStringRef().data());
           exit_string.assign("got unexpected response to k packet: ");
           exit_string.append(response.GetStringRef());
         }
@@ -2808,7 +2807,7 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
     else
       error.SetErrorStringWithFormat(
           "unexpected response to GDB server memory read packet '%s': '%s'",
-          packet, response.GetStringRef().c_str());
+          packet, response.GetStringRef().data());
   } else {
     error.SetErrorStringWithFormat("failed to send packet: '%s'", packet);
   }
@@ -2918,7 +2917,7 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
       else
         status.SetErrorStringWithFormat(
             "unexpected response to GDB server flash erase packet '%s': '%s'",
-            packet.GetData(), response.GetStringRef().c_str());
+            packet.GetData(), response.GetStringRef().data());
     }
   } else {
     status.SetErrorStringWithFormat("failed to send packet: '%s'",
@@ -2946,7 +2945,7 @@ Status ProcessGDBRemote::FlashDone() {
       else
         status.SetErrorStringWithFormat(
             "unexpected response to GDB server flash done packet: '%s'",
-            response.GetStringRef().c_str());
+            response.GetStringRef().data());
     }
   } else {
     status.SetErrorStringWithFormat("failed to send flash done packet");
@@ -3009,7 +3008,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
     else
       error.SetErrorStringWithFormat(
           "unexpected response to GDB server memory write packet '%s': '%s'",
-          packet.GetData(), response.GetStringRef().c_str());
+          packet.GetData(), response.GetStringRef().data());
   } else {
     error.SetErrorStringWithFormat("failed to send packet: '%s'",
                                    packet.GetData());
@@ -4452,14 +4451,13 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (name == "invalidate_regnums") {
             SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 0);
           } else if (name == "dynamic_size_dwarf_expr_bytes") {
-            StringExtractor opcode_extractor;
             std::string opcode_string = value.str();
             size_t dwarf_opcode_len = opcode_string.length() / 2;
             assert(dwarf_opcode_len > 0);
 
             dwarf_opcode_bytes.resize(dwarf_opcode_len);
             reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
-            opcode_extractor.GetStringRef().swap(opcode_string);
+            StringExtractor opcode_extractor(opcode_string);
             uint32_t ret_val =
                 opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
             assert(dwarf_opcode_len == ret_val);
@@ -5327,7 +5325,7 @@ public:
         result.SetStatus(eReturnStatusSuccessFinishResult);
         Stream &output_strm = result.GetOutputStream();
         output_strm.Printf("  packet: %s\n", packet_cstr);
-        std::string &response_str = response.GetStringRef();
+        std::string response_str = response.GetStringRef();
 
         if (strstr(packet_cstr, "qGetProfileData") != nullptr) {
           response_str = process->HarmonizeThreadIdsForProfileData(response);
@@ -5336,7 +5334,7 @@ public:
         if (response_str.empty())
           output_strm.PutCString("response: \nerror: UNIMPLEMENTED\n");
         else
-          output_strm.Printf("response: %s\n", response.GetStringRef().c_str());
+          output_strm.Printf("response: %s\n", response.GetStringRef().data());
       }
     }
     return true;
@@ -5385,7 +5383,7 @@ public:
       if (response_str.empty())
         output_strm.PutCString("response: \nerror: UNIMPLEMENTED\n");
       else
-        output_strm.Printf("response: %s\n", response.GetStringRef().c_str());
+        output_strm.Printf("response: %s\n", response.GetStringRef().data());
     }
     return true;
   }

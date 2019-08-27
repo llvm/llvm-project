@@ -166,9 +166,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   }
 
   default:
-    error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                   short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;
@@ -294,7 +292,7 @@ CommandObjectExpression::~CommandObjectExpression() = default;
 
 Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
-int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
+void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(m_varobj_options.use_objc);
   options.SetLanguage(m_command_options.language);
@@ -311,17 +309,14 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   // This didn't work, so let's get out before we start doing things that
   // expect a valid frame pointer.
   if (m_interpreter.GetExecutionContext().GetFramePtr() == nullptr)
-    return 0;
+    return;
 
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
 
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target)
-    target = GetDummyTarget();
-
-  if (!target)
-    return 0;
+    target = &GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
   llvm::StringRef code = request.GetRawLine();
@@ -341,7 +336,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   // exit.
   // FIXME: We should complete the options here.
   if (cursor_pos < raw_start)
-    return 0;
+    return;
 
   // Make the cursor_pos again relative to the start of the code string.
   assert(cursor_pos >= raw_start);
@@ -354,10 +349,9 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
       options, nullptr, error));
   if (error.Fail())
-    return 0;
+    return;
 
   expr->Complete(exe_ctx, request, cursor_pos);
-  return request.GetNumberOfMatches();
 }
 
 static lldb_private::Status
@@ -383,9 +377,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target)
-    target = GetDummyTarget();
+    target = &GetDummyTarget();
 
-  if (target) {
     lldb::ValueObjectSP result_valobj_sp;
     bool keep_in_memory = true;
     StackFrame *frame = exe_ctx.GetFramePtr();
@@ -497,10 +490,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         }
       }
     }
-  } else {
-    error_stream->Printf("error: invalid execution context for expression\n");
-    return false;
-  }
 
   return true;
 }
@@ -665,11 +654,11 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target *target = GetSelectedOrDummyTarget();
+  Target &target = GetSelectedOrDummyTarget();
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
 
-    if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
+    if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
       // FIXME: Can we figure out what the user actually typed (e.g. some alias
       // for expr???)
@@ -684,12 +673,12 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       history.AppendString(fixed_command);
     }
     // Increment statistics to record this expression evaluation success.
-    target->IncrementStats(StatisticKind::ExpressionSuccessful);
+    target.IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
   // Increment statistics to record this expression evaluation failure.
-  target->IncrementStats(StatisticKind::ExpressionFailure);
+  target.IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

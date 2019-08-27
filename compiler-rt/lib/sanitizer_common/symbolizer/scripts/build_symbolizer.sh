@@ -127,7 +127,7 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC LLVMDemangle
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC LLVMDemangle LLVMTextAPI
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -135,7 +135,7 @@ mkdir ${SYMBOLIZER_BUILD}
 cd ${SYMBOLIZER_BUILD}
 
 echo "Compiling..."
-SYMBOLIZER_FLAGS="$LLVM_FLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++11"
+SYMBOLIZER_FLAGS="$LLVM_FLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++14"
 $CXX $SYMBOLIZER_FLAGS ${SRC_DIR}/sanitizer_symbolize.cpp ${SRC_DIR}/sanitizer_wrappers.cpp -c
 $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
@@ -152,6 +152,7 @@ $SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
                         $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
                         $LLVM_BUILD/lib/libLLVMDemangle.a \
                         $LLVM_BUILD/lib/libLLVMMC.a \
+                        $LLVM_BUILD/lib/libLLVMTextAPI.a \
                         $ZLIB_BUILD/libz.a \
                         symbolizer.a \
                         all.bc

@@ -6618,7 +6618,17 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   EXPECT_EQ("auto x = [] { A<A<A<A>>> a; };",
             format("auto x=[]{A<A<A<A> >> a;};", getGoogleStyle()));
 
-  verifyFormat("A<A>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
+  verifyFormat("A<A<int>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
+
+  // template closer followed by a token that starts with > or =
+  verifyFormat("bool b = a<1> > 1;");
+  verifyFormat("bool b = a<1> >= 1;");
+  verifyFormat("int i = a<1> >> 1;");
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeAssignmentOperators = false;
+  verifyFormat("bool b= a<1> == 1;", Style);
+  verifyFormat("a<int> = 1;", Style);
+  verifyFormat("a<int> >>= 1;", Style);
 
   verifyFormat("test >> a >> b;");
   verifyFormat("test << a >> b;");

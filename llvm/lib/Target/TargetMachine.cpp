@@ -128,8 +128,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   // don't assume the variables to be DSO local unless we actually know
   // that for sure. This only has to be done for variables; for functions
   // the linker can insert thunks for calling functions from another DLL.
-  if (TT.isWindowsGNUEnvironment() && GV && GV->isDeclarationForLinker() &&
-      isa<GlobalVariable>(GV))
+  if (TT.isWindowsGNUEnvironment() && TT.isOSBinFormatCOFF() && GV &&
+      GV->isDeclarationForLinker() && isa<GlobalVariable>(GV))
     return false;
 
   // On COFF, don't mark 'extern_weak' symbols as DSO local. If these symbols
@@ -142,7 +142,9 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   // Make an exception for windows OS in the triple: Some firmware builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations
   // without GOT tables in older clang versions; Keep this behaviour.
-  if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
+  // Some JIT users use *-win32-elf triples; these shouldn't use GOT tables
+  // either.
+  if (TT.isOSBinFormatCOFF() || TT.isOSWindows())
     return true;
 
   // Most PIC code sequences that assume that a symbol is local cannot

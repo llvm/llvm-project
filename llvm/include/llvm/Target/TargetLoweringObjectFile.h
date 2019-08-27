@@ -191,7 +191,8 @@ public:
   }
 
   /// Get the target specific PC relative GOT entry relocation
-  virtual const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+  virtual const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                                  const MCSymbol *Sym,
                                                   const MCValue &MV,
                                                   int64_t Offset,
                                                   MachineModuleInfo *MMI,

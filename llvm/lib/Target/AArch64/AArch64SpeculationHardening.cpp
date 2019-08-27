@@ -115,9 +115,9 @@ using namespace llvm;
 
 #define AARCH64_SPECULATION_HARDENING_NAME "AArch64 speculation hardening pass"
 
-cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
-                          cl::desc("Sanitize loads from memory."),
-                          cl::init(true));
+static cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
+                                 cl::desc("Sanitize loads from memory."),
+                                 cl::init(true));
 
 namespace {
 

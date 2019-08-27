@@ -158,7 +158,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     // We need to materialize the offset via an add instruction.
     unsigned Opcode;
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     assert(DstReg != AVR::R29R28 && "Dest reg cannot be the frame pointer");
 
     II++; // Skip over the FRMIDX (and now MOVW) instruction.

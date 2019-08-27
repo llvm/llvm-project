@@ -581,7 +581,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         MRI->constrainRegClass(DstReg, DstRC);
       }
 
-      unsigned NewVR = MRI->createVirtualRegister(RC);
+      Register NewVR = MRI->createVirtualRegister(RC);
       MachineInstr *Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
                                    TII->get(TargetOpcode::COPY), NewVR)
         .addReg(DstReg, 0, SubIdx);
@@ -761,7 +761,7 @@ insertPHI(MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
   // NewRC is only correct if no subregisters are involved. findNextSource()
   // should have rejected those cases already.
   assert(SrcRegs[0].SubReg == 0 && "should not have subreg operand");
-  unsigned NewVR = MRI.createVirtualRegister(NewRC);
+  Register NewVR = MRI.createVirtualRegister(NewRC);
   MachineBasicBlock *MBB = OrigPHI.getParent();
   MachineInstrBuilder MIB = BuildMI(*MBB, &OrigPHI, OrigPHI.getDebugLoc(),
                                     TII.get(TargetOpcode::PHI), NewVR);
@@ -1229,7 +1229,7 @@ PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
 
   // Insert the COPY.
   const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
-  unsigned NewVReg = MRI->createVirtualRegister(DefRC);
+  Register NewVReg = MRI->createVirtualRegister(DefRC);
 
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
@@ -1315,7 +1315,7 @@ bool PeepholeOptimizer::isLoadFoldable(
   if (MCID.getNumDefs() != 1)
     return false;
 
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   // To reduce compilation time, we check MRI->hasOneNonDBGUser when inserting
   // loads. It should be checked when processing uses of the load, since
   // uses can be removed during peephole.
@@ -1335,7 +1335,7 @@ bool PeepholeOptimizer::isMoveImmediate(
     return false;
   if (MCID.getNumDefs() != 1)
     return false;
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   if (Register::isVirtualRegister(Reg)) {
     ImmDefMIs.insert(std::make_pair(Reg, &MI));
     ImmDefRegs.insert(Reg);
@@ -1358,7 +1358,7 @@ bool PeepholeOptimizer::foldImmediate(MachineInstr &MI,
     // Ignore dead implicit defs.
     if (MO.isImplicit() && MO.isDead())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
     if (ImmDefRegs.count(Reg) == 0)
@@ -1392,11 +1392,11 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI,
     DenseMap<unsigned, MachineInstr *> &CopyMIs) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
-  unsigned SrcReg = MI.getOperand(1).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   if (!Register::isVirtualRegister(SrcReg))
     return false;
 
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   if (!Register::isVirtualRegister(DstReg))
     return false;
 
@@ -1415,7 +1415,7 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI,
   if (SrcSubReg != PrevSrcSubReg)
     return false;
 
-  unsigned PrevDstReg = PrevCopy->getOperand(0).getReg();
+  Register PrevDstReg = PrevCopy->getOperand(0).getReg();
 
   // Only replace if the copy register class is the same.
   //
@@ -1442,8 +1442,8 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   if (DisableNAPhysCopyOpt)
     return false;
 
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   if (isNAPhysCopy(SrcReg) && Register::isVirtualRegister(DstReg)) {
     // %vreg = COPY %physreg
     // Avoid using a datastructure which can track multiple live non-allocatable
@@ -1465,7 +1465,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
     return false;
   }
 
-  unsigned PrevDstReg = PrevCopy->second->getOperand(0).getReg();
+  Register PrevDstReg = PrevCopy->second->getOperand(0).getReg();
   if (PrevDstReg == SrcReg) {
     // Remove the virt->phys copy: we saw the virtual register definition, and
     // the non-allocatable physical register's state hasn't changed since then.
@@ -1660,7 +1660,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         for (const MachineOperand &MO : MI->operands()) {
           // Visit all operands: definitions can be implicit or explicit.
           if (MO.isReg()) {
-            unsigned Reg = MO.getReg();
+            Register Reg = MO.getReg();
             if (MO.isDef() && isNAPhysCopy(Reg)) {
               const auto &Def = NAPhysToVirtMIs.find(Reg);
               if (Def != NAPhysToVirtMIs.end()) {
@@ -1808,7 +1808,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->isCopy() && "Invalid definition");
   // Copy instruction are supposed to be: Def = Src.
   // If someone breaks this assumption, bad things will happen everywhere.
-  assert(Def->getNumOperands() == 2 && "Invalid number of operands");
+  // There may be implicit uses preventing the copy to be moved across
+  // some target specific register definitions
+  assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
+         "Invalid number of operands");
+  assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
 
   if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
     // If we look for a different subreg, it means we want a subreg of src.
@@ -1852,6 +1856,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
       return ValueTrackerResult();
     SrcIdx = OpIdx;
   }
+
+  // In some rare case, Def has no input, SrcIdx is out of bound,
+  // getOperand(SrcIdx) will fail below.
+  if (SrcIdx >= Def->getNumOperands())
+    return ValueTrackerResult();
 
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.

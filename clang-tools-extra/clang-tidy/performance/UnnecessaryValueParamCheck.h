@@ -17,7 +17,7 @@ namespace clang {
 namespace tidy {
 namespace performance {
 
-/// \brief A check that flags value parameters of expensive to copy types that
+/// A check that flags value parameters of expensive to copy types that
 /// can safely be converted to const references.
 ///
 /// For the user-facing documentation see:

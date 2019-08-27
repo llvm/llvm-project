@@ -1076,36 +1076,29 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       }
 
       if (Offset != 0) {
-        Register NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
         LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
         auto OffsetMIB = MIRBuilder.buildConstant({OffsetTy}, Offset);
-        MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetMIB.getReg(0));
-
-        BaseReg = NewBaseReg;
+        BaseReg =
+            MIRBuilder.buildGEP(PtrTy, BaseReg, OffsetMIB.getReg(0)).getReg(0);
         Offset = 0;
       }
 
       Register IdxReg = getOrCreateVReg(*Idx);
-      if (MRI->getType(IdxReg) != OffsetTy) {
-        Register NewIdxReg = MRI->createGenericVirtualRegister(OffsetTy);
-        MIRBuilder.buildSExtOrTrunc(NewIdxReg, IdxReg);
-        IdxReg = NewIdxReg;
-      }
+      if (MRI->getType(IdxReg) != OffsetTy)
+        IdxReg = MIRBuilder.buildSExtOrTrunc(OffsetTy, IdxReg).getReg(0);
 
       // N = N + Idx * ElementSize;
       // Avoid doing it for ElementSize of 1.
       Register GepOffsetReg;
       if (ElementSize != 1) {
-        GepOffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
         auto ElementSizeMIB = MIRBuilder.buildConstant(
             getLLTForType(*OffsetIRTy, *DL), ElementSize);
-        MIRBuilder.buildMul(GepOffsetReg, ElementSizeMIB.getReg(0), IdxReg);
+        GepOffsetReg =
+            MIRBuilder.buildMul(OffsetTy, ElementSizeMIB, IdxReg).getReg(0);
       } else
         GepOffsetReg = IdxReg;
 
-      Register NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
-      MIRBuilder.buildGEP(NewBaseReg, BaseReg, GepOffsetReg);
-      BaseReg = NewBaseReg;
+      BaseReg = MIRBuilder.buildGEP(PtrTy, BaseReg, GepOffsetReg).getReg(0);
     }
   }
 
@@ -1380,12 +1373,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
       MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
     } else {
-      Register Reg = getOrCreateVReg(*V);
-      // FIXME: This does not handle register-indirect values at offset 0. The
-      // direct/indirect thing shouldn't really be handled by something as
-      // implicit as reg+noreg vs reg+imm in the first palce, but it seems
-      // pretty baked in right now.
-      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
+      for (Register Reg : getOrCreateVRegs(*V)) {
+        // FIXME: This does not handle register-indirect values at offset 0. The
+        // direct/indirect thing shouldn't really be handled by something as
+        // implicit as reg+noreg vs reg+imm in the first place, but it seems
+        // pretty baked in right now.
+        MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
+      }
     }
     return true;
   }

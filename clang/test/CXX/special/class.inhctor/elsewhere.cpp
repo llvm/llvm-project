@@ -62,3 +62,4 @@ struct G : T {
   G(int &) : G(0) {}
 };
 G<B1> g(123);
+G<const B1> g2(123);

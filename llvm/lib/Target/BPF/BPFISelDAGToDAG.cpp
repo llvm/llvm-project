@@ -591,7 +591,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
       const MachineOperand &MOP = MI.getOperand(i);
       if (!MOP.isReg() || !MOP.isDef())
         continue;
-      unsigned Reg = MOP.getReg();
+      Register Reg = MOP.getReg();
       if (Register::isVirtualRegister(Reg) && Reg == AndOpReg) {
         MII = &MI;
         break;

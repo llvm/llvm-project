@@ -15,7 +15,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "pointer_comparison_test_helper.hpp"
+#include "pointer_comparison_test_helper.h"
 
 int main(int, char**)
 {

@@ -2013,13 +2013,14 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
     CompilationDatabase = std::move(File);
   }
   auto &CDB = *CompilationDatabase;
-  SmallString<128> Buf;
-  if (llvm::sys::fs::current_path(Buf))
-    Buf = ".";
-  CDB << "{ \"directory\": \"" << escape(Buf) << "\"";
+  auto CWD = D.getVFS().getCurrentWorkingDirectory();
+  if (!CWD)
+    CWD = ".";
+  CDB << "{ \"directory\": \"" << escape(*CWD) << "\"";
   CDB << ", \"file\": \"" << escape(Input.getFilename()) << "\"";
   CDB << ", \"output\": \"" << escape(Output.getFilename()) << "\"";
   CDB << ", \"arguments\": [\"" << escape(D.ClangExecutable) << "\"";
+  SmallString<128> Buf;
   Buf = "-x";
   Buf += types::getTypeName(Input.getType());
   CDB << ", \"" << escape(Buf) << "\"";
@@ -2037,6 +2038,8 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
     // Skip writing dependency output and the compilation database itself.
     if (O.getGroup().isValid() && O.getGroup().getID() == options::OPT_M_Group)
       continue;
+    if (O.getID() == options::OPT_gen_cdb_fragment_path)
+      continue;
     // Skip inputs.
     if (O.getKind() == Option::InputClass)
       continue;
@@ -2049,6 +2052,40 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
   Buf = "--target=";
   Buf += Target;
   CDB << ", \"" << escape(Buf) << "\"]},\n";
+}
+
+void Clang::DumpCompilationDatabaseFragmentToDir(
+    StringRef Dir, Compilation &C, StringRef Target, const InputInfo &Output,
+    const InputInfo &Input, const llvm::opt::ArgList &Args) const {
+  // If this is a dry run, do not create the compilation database file.
+  if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH))
+    return;
+
+  if (CompilationDatabase)
+    DumpCompilationDatabase(C, "", Target, Output, Input, Args);
+
+  SmallString<256> Path = Dir;
+  const auto &Driver = C.getDriver();
+  Driver.getVFS().makeAbsolute(Path);
+  auto Err = llvm::sys::fs::create_directory(Path, /*IgnoreExisting=*/true);
+  if (Err) {
+    Driver.Diag(diag::err_drv_compilationdatabase) << Dir << Err.message();
+    return;
+  }
+
+  llvm::sys::path::append(
+      Path,
+      Twine(llvm::sys::path::filename(Input.getFilename())) + ".%%%%.json");
+  int FD;
+  SmallString<256> TempPath;
+  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath);
+  if (Err) {
+    Driver.Diag(diag::err_drv_compilationdatabase) << Path << Err.message();
+    return;
+  }
+  CompilationDatabase =
+      std::make_unique<llvm::raw_fd_ostream>(FD, /*shouldClose=*/true);
+  DumpCompilationDatabase(C, "", Target, Output, Input, Args);
 }
 
 static void CollectArgsForIntegratedAssembler(Compilation &C,
@@ -3495,6 +3532,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
     Args.ClaimAllArgs(options::OPT_MJ);
+  } else if (const Arg *GenCDBFragment =
+                 Args.getLastArg(options::OPT_gen_cdb_fragment_path)) {
+    DumpCompilationDatabaseFragmentToDir(GenCDBFragment->getValue(), C,
+                                         TripleStr, Output, Input, Args);
+    Args.ClaimAllArgs(options::OPT_gen_cdb_fragment_path);
   }
 
   if (IsCuda || IsHIP) {
@@ -3631,20 +3673,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                JA.getType() == types::TY_LTO_BC) {
       CmdArgs.push_back("-emit-llvm-bc");
     } else if (JA.getType() == types::TY_IFS) {
+      StringRef ArgStr =
+          Args.hasArg(options::OPT_iterface_stub_version_EQ)
+              ? Args.getLastArgValue(options::OPT_iterface_stub_version_EQ)
+              : "";
       StringRef StubFormat =
-          llvm::StringSwitch<StringRef>(
-              Args.hasArg(options::OPT_iterface_stub_version_EQ)
-                  ? Args.getLastArgValue(options::OPT_iterface_stub_version_EQ)
-                  : "")
-              .Case("experimental-yaml-elf-v1", "experimental-yaml-elf-v1")
-              .Case("experimental-tapi-elf-v1", "experimental-tapi-elf-v1")
+          llvm::StringSwitch<StringRef>(ArgStr)
+              .Case("experimental-ifs-v1", "experimental-ifs-v1")
               .Default("");
 
-      if (StubFormat.empty())
+      if (StubFormat.empty()) {
+        std::string ErrorMessage =
+            "Invalid interface stub format: " + ArgStr.str() +
+            ((ArgStr == "experimental-yaml-elf-v1" ||
+              ArgStr == "experimental-tapi-elf-v1")
+                 ? " is deprecated."
+                 : ".");
         D.Diag(diag::err_drv_invalid_value)
-            << "Must specify a valid interface stub format type using "
-            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
-               "experimental-yaml-elf-v1>";
+            << "Must specify a valid interface stub format type, ie: "
+               "-interface-stub-version=experimental-ifs-v1"
+            << ErrorMessage;
+      }
 
       CmdArgs.push_back("-emit-interface-stubs");
       CmdArgs.push_back(
@@ -4057,11 +4106,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_64,
-                               options::OPT_mlong_double_128)) {
+  if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
     if (TC.getArch() == llvm::Triple::x86 ||
-        TC.getArch() == llvm::Triple::x86_64 ||
-        TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64())
+        TC.getArch() == llvm::Triple::x86_64)
+      A->render(Args, CmdArgs);
+    else if ((TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64()) &&
+             (A->getOption().getID() != options::OPT_mlong_double_80))
       A->render(Args, CmdArgs);
     else
       D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -4072,8 +4122,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // toolchains which have the integrated assembler on by default.
   bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
   if (Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
-                   IsIntegratedAssemblerDefault) ||
-      Args.hasArg(options::OPT_dA))
+                   IsIntegratedAssemblerDefault))
     CmdArgs.push_back("-masm-verbose");
 
   if (!TC.useIntegratedAs())

@@ -47,7 +47,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
     if (O->isReg()) {
       if (!O->isDef() || O->isDebug())
         continue;
-      unsigned Reg = O->getReg();
+      Register Reg = O->getReg();
       if (!Register::isPhysicalRegister(Reg))
         continue;
       removeReg(Reg);
@@ -59,7 +59,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->readsReg() || O->isDebug())
       continue;
-    unsigned Reg = O->getReg();
+    Register Reg = O->getReg();
     if (!Register::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
@@ -70,7 +70,7 @@ void LiveRegUnits::accumulate(const MachineInstr &MI) {
   // Add defs, uses and regmask clobbers to the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
-      unsigned Reg = O->getReg();
+      Register Reg = O->getReg();
       if (!Register::isPhysicalRegister(Reg))
         continue;
       if (!O->isDef() && !O->readsReg())

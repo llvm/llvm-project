@@ -109,7 +109,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   MachineOperand &MO = MI->getOperand(OpIdx);
   assert(MO.isUndef() && "Expected undef machine operand");
 
-  unsigned OriginalReg = MO.getReg();
+  Register OriginalReg = MO.getReg();
 
   // Update only undef operands that have reg units that are mapped to one root.
   for (MCRegUnitIterator Unit(OriginalReg, TRI); Unit.isValid(); ++Unit) {
@@ -162,7 +162,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 
 bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
                                            unsigned Pref) {
-  unsigned reg = MI->getOperand(OpIdx).getReg();
+  Register reg = MI->getOperand(OpIdx).getReg();
   unsigned Clearance = RDA->getClearance(MI, reg);
   LLVM_DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);
 

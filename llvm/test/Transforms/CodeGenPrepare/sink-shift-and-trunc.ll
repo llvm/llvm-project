@@ -1,5 +1,5 @@
 ; REQUIRES: aarch64-registered-target
-; RUN: opt -codegenprepare -mtriple=arm64-apple=ios -S -o - %s | FileCheck %s
+; RUN: opt < %s -codegenprepare -mtriple=arm64-apple-ios -S | FileCheck %s
 
 @first_ones = external global [65536 x i8]
 
@@ -56,6 +56,23 @@ if.then17:                                        ; preds = %if.end13
 return:                                           ; preds = %if.then17, %if.end13, %if.then7, %if.then
   %retval.0 = phi i32 [ %conv, %if.then ], [ %add, %if.then7 ], [ %add23, %if.then17 ], [ 64, %if.end13 ], !dbg !62
   ret i32 %retval.0, !dbg !63
+}
+
+; CodeGenPrepare was erasing the unused lshr instruction, but then further
+; processing the instruction after it was freed. If this bug is still present,
+; this test will always crash in an LLVM built with ASAN enabled, and may
+; crash even if ASAN is not enabled.
+
+define i32 @shift_unused(i32 %a) {
+; CHECK-LABEL: @shift_unused(
+; CHECK-NEXT:  BB2:
+; CHECK-NEXT:    ret i32 [[A:%.*]]
+;
+  %as = lshr i32 %a, 3
+  br label %BB2
+
+BB2:
+  ret i32 %a
 }
 
 ; CHECK: [[shift1_loc]] = !DILocation(line: 1

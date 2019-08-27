@@ -37,6 +37,7 @@ enum ProfileFormat {
   PF_None = 0,
   PF_Text,
   PF_Compact_Binary,
+  PF_Ext_Binary,
   PF_GCC,
   PF_Binary
 };
@@ -314,7 +315,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     exitWithError("Cannot write indexed profdata format to stdout.");
 
   if (OutputFormat != PF_Binary && OutputFormat != PF_Compact_Binary &&
-      OutputFormat != PF_Text)
+      OutputFormat != PF_Ext_Binary && OutputFormat != PF_Text)
     exitWithError("Unknown format is specified.");
 
   std::mutex ErrorLock;
@@ -425,8 +426,12 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None, sampleprof::SPF_Text, sampleprof::SPF_Compact_Binary,
-    sampleprof::SPF_GCC, sampleprof::SPF_Binary};
+    sampleprof::SPF_None,
+    sampleprof::SPF_Text,
+    sampleprof::SPF_Compact_Binary,
+    sampleprof::SPF_Ext_Binary,
+    sampleprof::SPF_GCC,
+    sampleprof::SPF_Binary};
 
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
                                SymbolRemapper *Remapper,
@@ -583,12 +588,14 @@ static int merge_main(int argc, const char *argv[]) {
                  clEnumVal(sample, "Sample profile")));
   cl::opt<ProfileFormat> OutputFormat(
       cl::desc("Format of output profile"), cl::init(PF_Binary),
-      cl::values(clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
-                 clEnumValN(PF_Compact_Binary, "compbinary",
-                            "Compact binary encoding"),
-                 clEnumValN(PF_Text, "text", "Text encoding"),
-                 clEnumValN(PF_GCC, "gcc",
-                            "GCC encoding (only meaningful for -sample)")));
+      cl::values(
+          clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
+          clEnumValN(PF_Compact_Binary, "compbinary",
+                     "Compact binary encoding"),
+          clEnumValN(PF_Ext_Binary, "extbinary", "Extensible binary encoding"),
+          clEnumValN(PF_Text, "text", "Text encoding"),
+          clEnumValN(PF_GCC, "gcc",
+                     "GCC encoding (only meaningful for -sample)")));
   cl::opt<bool> OutputSparse("sparse", cl::init(false),
       cl::desc("Generate a sparse profile (only meaningful for -instr)"));
   cl::opt<unsigned> NumThreads(

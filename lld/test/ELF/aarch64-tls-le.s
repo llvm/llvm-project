@@ -20,12 +20,12 @@ _start:
 # TCB size = 0x16 and foo is first element from TLS register.
 #CHECK: Disassembly of section .text:
 #CHECK: _start:
-#CHECK:  210000: 40 d0 3b d5     mrs     x0, TPIDR_EL0
-#CHECK:  210004: 00 00 40 91     add     x0, x0, #0, lsl #12
-#CHECK:  210008: 00 40 00 91     add     x0, x0, #16
-#CHECK:  21000c: 40 d0 3b d5     mrs     x0, TPIDR_EL0
-#CHECK:  210010: 00 fc 7f 91     add     x0, x0, #4095, lsl #12
-#CHECK:  210014: 00 e0 3f 91     add     x0, x0, #4088
+#CHECK:  210158: 40 d0 3b d5     mrs     x0, TPIDR_EL0
+#CHECK:  21015c: 00 00 40 91     add     x0, x0, #0, lsl #12
+#CHECK:  210160: 00 40 00 91     add     x0, x0, #16
+#CHECK:  210164: 40 d0 3b d5     mrs     x0, TPIDR_EL0
+#CHECK:  210168: 00 fc 7f 91     add     x0, x0, #4095, lsl #12
+#CHECK:  21016c: 00 e0 3f 91     add     x0, x0, #4088
 
 .section        .tbss,"awT",@nobits
 

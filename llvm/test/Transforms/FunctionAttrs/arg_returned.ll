@@ -1,5 +1,5 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-disable=false -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=26 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 ; RUN: opt -attributor -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Test cases specifically designed for the "returned" argument attribute.
@@ -806,5 +806,8 @@ attributes #0 = { noinline nounwind uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable willreturn }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind uwtable willreturn }
+; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync willreturn }
+; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync }
+; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noreturn nosync }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { noreturn }
 ; BOTH-NOT: attributes #

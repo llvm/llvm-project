@@ -735,7 +735,7 @@ static void checkARCPropertyImpl(Sema &S, SourceLocation propertyImplLoc,
     return;
 
   // If the ivar is private, and it's implicitly __unsafe_unretained
-  // becaues of its type, then pretend it was actually implicitly
+  // because of its type, then pretend it was actually implicitly
   // __strong.  This is only sound because we're processing the
   // property implementation before parsing any method bodies.
   if (ivarLifetime == Qualifiers::OCL_ExplicitNone &&

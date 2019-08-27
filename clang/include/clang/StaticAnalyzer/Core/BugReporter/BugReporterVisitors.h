@@ -135,12 +135,6 @@ class FindLastStoreBRVisitor final : public BugReporterVisitor {
   const StackFrameContext *OriginSFC;
 
 public:
-  /// Creates a visitor for every VarDecl inside a Stmt and registers it with
-  /// the BugReport.
-  static void registerStatementVarDecls(BugReport &BR, const Stmt *S,
-                                        bool EnableNullFPSuppression,
-                                        TrackingKind TKind);
-
   /// \param V We're searching for the store where \c R received this value.
   /// \param R The region we're tracking.
   /// \param TKind May limit the amount of notes added to the bug report.
@@ -217,8 +211,10 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final : public BugReporterVisitor {
   // FIXME: constexpr initialization isn't supported by MSVC2013.
-  static const char *const GenericTrueMessage;
-  static const char *const GenericFalseMessage;
+  constexpr static llvm::StringLiteral GenericTrueMessage =
+      "Assuming the condition is true";
+  constexpr static llvm::StringLiteral GenericFalseMessage =
+      "Assuming the condition is false";
 
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {

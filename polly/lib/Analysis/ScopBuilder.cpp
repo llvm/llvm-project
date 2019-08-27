@@ -2095,7 +2095,7 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // shouldModelInst() repeatedly.
   SmallVector<Instruction *, 32> ModeledInsts;
   EquivalenceClasses<Instruction *> UnionFind;
-  Instruction *MainInst = nullptr;
+  Instruction *MainInst = nullptr, *MainLeader = nullptr;
   for (Instruction &Inst : *BB) {
     if (!shouldModelInst(&Inst, L))
       continue;
@@ -2129,6 +2129,8 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
     if (LeaderIt == UnionFind.member_end())
       continue;
 
+    if (&Inst == MainInst)
+      MainLeader = *LeaderIt;
     std::vector<Instruction *> &InstList = LeaderToInstList[*LeaderIt];
     InstList.push_back(&Inst);
   }
@@ -2136,19 +2138,11 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Finally build the statements.
   int Count = 0;
   long BBIdx = scop->getNextStmtIdx();
-  bool MainFound = false;
   for (auto &Instructions : reverse(LeaderToInstList)) {
     std::vector<Instruction *> &InstList = Instructions.second;
 
     // If there is no main instruction, make the first statement the main.
-    bool IsMain;
-    if (MainInst)
-      IsMain = std::find(InstList.begin(), InstList.end(), MainInst) !=
-               InstList.end();
-    else
-      IsMain = (Count == 0);
-    if (IsMain)
-      MainFound = true;
+    bool IsMain = (MainInst ? MainLeader == Instructions.first : Count == 0);
 
     std::reverse(InstList.begin(), InstList.end());
     std::string Name = makeStmtName(BB, BBIdx, Count, IsMain);
@@ -2159,8 +2153,10 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Unconditionally add an epilogue (last statement). It contains no
   // instructions, but holds the PHI write accesses for successor basic blocks,
   // if the incoming value is not defined in another statement if the same BB.
+  // The epilogue becomes the main statement only if there is no other
+  // statement that could become main.
   // The epilogue will be removed if no PHIWrite is added to it.
-  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, !MainFound, true);
+  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, Count == 0, true);
   scop->addScopStmt(BB, EpilogueName, L, {});
 }
 

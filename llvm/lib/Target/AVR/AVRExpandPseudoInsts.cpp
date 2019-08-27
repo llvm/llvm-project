@@ -140,8 +140,8 @@ bool AVRExpandPseudo::
 expandArith(unsigned OpLo, unsigned OpHi, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(2).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   bool SrcIsKill = MI.getOperand(2).isKill();
@@ -173,8 +173,8 @@ bool AVRExpandPseudo::
 expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned SrcLoReg, SrcHiReg, DstLoReg, DstHiReg;
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(2).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   bool SrcIsKill = MI.getOperand(2).isKill();
@@ -220,7 +220,7 @@ bool AVRExpandPseudo::
 expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned DstLoReg, DstHiReg;
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool SrcIsKill = MI.getOperand(1).isKill();
   bool ImpIsDead = MI.getOperand(3).isDead();

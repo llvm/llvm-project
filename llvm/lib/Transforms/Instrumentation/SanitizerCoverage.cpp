@@ -1020,15 +1020,6 @@ SanitizerCoverage::getSectionName(const std::string &Section) const {
   return "__" + Section;
 }
 
-std::string
-SanitizerCoverage::getSectionStart(const std::string &Section) const {
-  return getSectionStartImpl(TargetTriple, Section);
-}
-
-std::string SanitizerCoverage::getSectionEnd(const std::string &Section) const {
-  return getSectionEndImpl(TargetTriple, Section);
-}
-
 INITIALIZE_PASS(ModuleSanitizerCoverageLegacyPass, "module-sancov",
                 "Pass for inserting sancov top-level initialization calls",
                 false, false)

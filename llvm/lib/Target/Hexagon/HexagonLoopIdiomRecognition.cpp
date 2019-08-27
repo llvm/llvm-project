@@ -93,9 +93,9 @@ static cl::opt<bool> OnlyNonNestedMemmove("only-nonnested-memmove-idiom",
   cl::Hidden, cl::init(true),
   cl::desc("Only enable generating memmove in non-nested loops"));
 
-cl::opt<bool> HexagonVolatileMemcpy("disable-hexagon-volatile-memcpy",
-  cl::Hidden, cl::init(false),
-  cl::desc("Enable Hexagon-specific memcpy for volatile destination."));
+static cl::opt<bool> HexagonVolatileMemcpy(
+    "disable-hexagon-volatile-memcpy", cl::Hidden, cl::init(false),
+    cl::desc("Enable Hexagon-specific memcpy for volatile destination."));
 
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));

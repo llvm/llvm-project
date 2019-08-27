@@ -644,7 +644,8 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
           if (isa<SCEVCouldNotCompute>(ExitCount))
             continue;
           if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-            ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
+            if (AddRec->getLoop() == L)
+              ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
           if (isa<SCEVCouldNotCompute>(ExitValue) ||
               !SE->isLoopInvariant(ExitValue, L) ||
               !isSafeToExpand(ExitValue, *SE))

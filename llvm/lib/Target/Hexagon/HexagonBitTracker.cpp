@@ -1042,7 +1042,7 @@ unsigned HexagonEvaluator::getUniqueDefVReg(const MachineInstr &MI) const {
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.isDef())
       continue;
-    unsigned R = Op.getReg();
+    Register R = Op.getReg();
     if (!Register::isVirtualRegister(R))
       continue;
     if (DefReg != 0)

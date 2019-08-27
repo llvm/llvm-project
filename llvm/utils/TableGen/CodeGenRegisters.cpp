@@ -734,8 +734,8 @@ struct TupleExpander : SetTheory::Expander {
 //===----------------------------------------------------------------------===//
 
 static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
-  llvm::sort(M, deref<llvm::less>());
-  M.erase(std::unique(M.begin(), M.end(), deref<llvm::equal>()), M.end());
+  llvm::sort(M, deref<std::less<>>());
+  M.erase(std::unique(M.begin(), M.end(), deref<std::equal_to<>>()), M.end());
 }
 
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
@@ -860,7 +860,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
 
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
   return std::binary_search(Members.begin(), Members.end(), Reg,
-                            deref<llvm::less>());
+                            deref<std::less<>>());
 }
 
 namespace llvm {
@@ -896,7 +896,7 @@ static bool testSubClass(const CodeGenRegisterClass *A,
   return A->RSI.isSubClassOf(B->RSI) &&
          std::includes(A->getMembers().begin(), A->getMembers().end(),
                        B->getMembers().begin(), B->getMembers().end(),
-                       deref<llvm::less>());
+                       deref<std::less<>>());
 }
 
 /// Sorting predicate for register classes.  This provides a topological
@@ -2140,9 +2140,10 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
     const CodeGenRegister::Vec &Memb1 = RC1->getMembers();
     const CodeGenRegister::Vec &Memb2 = RC2->getMembers();
     CodeGenRegister::Vec Intersection;
-    std::set_intersection(
-        Memb1.begin(), Memb1.end(), Memb2.begin(), Memb2.end(),
-        std::inserter(Intersection, Intersection.begin()), deref<llvm::less>());
+    std::set_intersection(Memb1.begin(), Memb1.end(), Memb2.begin(),
+                          Memb2.end(),
+                          std::inserter(Intersection, Intersection.begin()),
+                          deref<std::less<>>());
 
     // Skip disjoint class pairs.
     if (Intersection.empty())
@@ -2167,7 +2168,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
   typedef std::map<const CodeGenSubRegIndex *, CodeGenRegister::Vec,
-                   deref<llvm::less>> SubReg2SetMap;
+                   deref<std::less<>>>
+      SubReg2SetMap;
 
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;

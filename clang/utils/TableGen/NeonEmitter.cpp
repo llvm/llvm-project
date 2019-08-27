@@ -2456,7 +2456,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
+  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2563,7 +2563,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
+  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.

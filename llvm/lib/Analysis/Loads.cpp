@@ -41,13 +41,6 @@ static bool isAligned(const Value *Base, const APInt &Offset, unsigned Align,
   return BaseAlign.uge(Alignment) && !(Offset & (Alignment-1));
 }
 
-static bool isAligned(const Value *Base, unsigned Align, const DataLayout &DL) {
-  Type *Ty = Base->getType();
-  assert(Ty->isSized() && "must be sized");
-  APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
-  return isAligned(Base, Offset, Align, DL);
-}
-
 /// Test if V is always a pointer to allocated and suitably aligned memory for
 /// a simple load or store.
 static bool isDereferenceableAndAlignedPointer(
@@ -69,11 +62,16 @@ static bool isDereferenceableAndAlignedPointer(
   bool CheckForNonNull = false;
   APInt KnownDerefBytes(Size.getBitWidth(),
                         V->getPointerDereferenceableBytes(DL, CheckForNonNull));
-  if (KnownDerefBytes.getBoolValue()) {
-    if (KnownDerefBytes.uge(Size))
-      if (!CheckForNonNull || isKnownNonZero(V, DL, 0, nullptr, CtxI, DT))
-        return isAligned(V, Align, DL);
-  }
+  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size))
+    if (!CheckForNonNull || isKnownNonZero(V, DL, 0, nullptr, CtxI, DT)) {
+      // FIXME: We need to pass through original size/offset when we recurse,
+      // the result here is wrong for cases such as a 4 byte load, 2 bytes
+      // off a 8 byte aligned base.
+      Type *Ty = V->getType();
+      assert(Ty->isSized() && "must be sized");
+      APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+      return isAligned(V, Offset, Align, DL);
+    }
 
   // For GEPs, determine if the indexing lands within the allocated object.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {

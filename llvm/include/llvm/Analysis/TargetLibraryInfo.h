@@ -48,7 +48,7 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
-  static StringRef const StandardNames[NumLibFuncs];
+  static StringLiteral const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
 
   enum AvailabilityState {

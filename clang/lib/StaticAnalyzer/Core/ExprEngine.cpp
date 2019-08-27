@@ -977,8 +977,8 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
   Region = makeZeroElementRegion(state, loc::MemRegionVal(Region), varType,
                                  CallOpts.IsArrayCtorOrDtor).getAsRegion();
 
-  VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(), /*IsBase=*/ false,
-                     Pred, Dst, CallOpts);
+  VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(),
+                     /*IsBase=*/false, Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
@@ -1036,8 +1036,9 @@ void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
   SVal BaseVal = getStoreManager().evalDerivedToBase(ThisVal, BaseTy,
                                                      Base->isVirtual());
 
-  VisitCXXDestructor(BaseTy, BaseVal.castAs<loc::MemRegionVal>().getRegion(),
-                     CurDtor->getBody(), /*IsBase=*/ true, Pred, Dst, {});
+  EvalCallOptions CallOpts;
+  VisitCXXDestructor(BaseTy, BaseVal.getAsRegion(), CurDtor->getBody(),
+                     /*IsBase=*/true, Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
@@ -1048,10 +1049,10 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   const LocationContext *LCtx = Pred->getLocationContext();
 
   const auto *CurDtor = cast<CXXDestructorDecl>(LCtx->getDecl());
-  Loc ThisVal = getSValBuilder().getCXXThis(CurDtor,
-                                            LCtx->getStackFrame());
-  SVal FieldVal =
-      State->getLValue(Member, State->getSVal(ThisVal).castAs<Loc>());
+  Loc ThisStorageLoc =
+      getSValBuilder().getCXXThis(CurDtor, LCtx->getStackFrame());
+  Loc ThisLoc = State->getSVal(ThisStorageLoc).castAs<Loc>();
+  SVal FieldVal = State->getLValue(Member, ThisLoc);
 
   // FIXME: We need to run the same destructor on every element of the array.
   // This workaround will just run the first destructor (which will still
@@ -1060,8 +1061,8 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   FieldVal = makeZeroElementRegion(State, FieldVal, T,
                                    CallOpts.IsArrayCtorOrDtor);
 
-  VisitCXXDestructor(T, FieldVal.castAs<loc::MemRegionVal>().getRegion(),
-                     CurDtor->getBody(), /*IsBase=*/false, Pred, Dst, CallOpts);
+  VisitCXXDestructor(T, FieldVal.getAsRegion(), CurDtor->getBody(),
+                     /*IsBase=*/false, Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
@@ -1109,8 +1110,6 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   EvalCallOptions CallOpts;
   CallOpts.IsTemporaryCtorOrDtor = true;
   if (!MR) {
-    CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
-
     // If we have no MR, we still need to unwrap the array to avoid destroying
     // the whole array at once. Regardless, we'd eventually need to model array
     // destructors properly, element-by-element.

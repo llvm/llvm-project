@@ -280,6 +280,8 @@ def arcmt_migrate_emit_arc_errors : Flag<["-"], "arcmt-migrate-emit-errors">,
   Flags<[CC1Option]>;
 def gen_reproducer: Flag<["-"], "gen-reproducer">, InternalDebugOpt,
   HelpText<"Auto-generates preprocessed source files and a reproduction script">;
+def gen_cdb_fragment_path: Separate<["-"], "gen-cdb-fragment-path">, InternalDebugOpt,
+  HelpText<"Emit a compilation database fragment to the specified directory">;
 
 def _migrate : Flag<["--"], "migrate">, Flags<[DriverOption]>,
   HelpText<"Run the migrator">;
@@ -595,7 +597,6 @@ def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-scri
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
-def dA : Flag<["-"], "dA">, Group<d_Group>;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
 def dI : Flag<["-"], "dI">, Group<d_Group>, Flags<[CC1Option]>,
@@ -1808,6 +1809,7 @@ def fuse_init_array : Flag<["-"], "fuse-init-array">, Group<f_Group>, Flags<[CC1
   HelpText<"Use .init_array instead of .ctors">;
 def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Group>;
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>;
+def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
   HelpText<"Set the default symbol visibility for all global declarations">, Values<"hidden,default">;
 def fvisibility_inlines_hidden : Flag<["-"], "fvisibility-inlines-hidden">, Group<f_Group>,
@@ -2040,9 +2042,14 @@ def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Grou
 def mfancy_math_387 : Flag<["-"], "mfancy-math-387">, Group<clang_ignored_m_Group>;
 def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_Group>,
   HelpText<"Generate branches with extended addressability, usually via indirect jumps.">;
-def mlong_double_64 : Flag<["-"], "mlong-double-64">, Group<f_Group>, Flags<[CC1Option]>,
+def LongDouble_Group : OptionGroup<"<LongDouble group>">, Group<m_Group>,
+  DocName<"Long double flags">,
+  DocBrief<[{Selects the long double implementation}]>;
+def mlong_double_64 : Flag<["-"], "mlong-double-64">, Group<LongDouble_Group>, Flags<[CC1Option]>,
   HelpText<"Force long double to be 64 bits">;
-def mlong_double_128 : Flag<["-"], "mlong-double-128">, Group<f_Group>, Flags<[CC1Option]>,
+def mlong_double_80 : Flag<["-"], "mlong-double-80">, Group<LongDouble_Group>, Flags<[CC1Option]>,
+  HelpText<"Force long double to be 80 bits, padded to 128 bits for storage">;
+def mlong_double_128 : Flag<["-"], "mlong-double-128">, Group<LongDouble_Group>, Flags<[CC1Option]>,
   HelpText<"Force long double to be 128 bits">;
 def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;

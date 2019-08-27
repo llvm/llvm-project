@@ -160,10 +160,11 @@ class PointerUnion
               void *, pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
               pointer_union_detail::PointerUnionUIntTraits<PTs...>>,
           0, PTs...> {
-  // The first type is special in some ways, but we don't want PointerUnion to
-  // be a 'template <typename First, typename ...Rest>' because it's much more
-  // convenient to have a name for the whole pack. So split off the first type
-  // here.
+  // The first type is special because we want to directly cast a pointer to a
+  // default-initialized union to a pointer to the first type. But we don't
+  // want PointerUnion to be a 'template <typename First, typename ...Rest>'
+  // because it's much more convenient to have a name for the whole pack. So
+  // split off the first type here.
   using First = typename pointer_union_detail::GetFirstType<PTs...>::type;
   using Base = typename PointerUnion::PointerUnionMembers;
 
@@ -175,12 +176,7 @@ public:
 
   /// Test if the pointer held in the union is null, regardless of
   /// which type it is.
-  bool isNull() const {
-    // Convert from the void* to one of the pointer types, to make sure that
-    // we recursively strip off low bits if we have a nested PointerUnion.
-    return !PointerLikeTypeTraits<First>::getFromVoidPointer(
-        this->Val.getPointer());
-  }
+  bool isNull() const { return !this->Val.getPointer(); }
 
   explicit operator bool() const { return !isNull(); }
 
@@ -219,7 +215,8 @@ public:
   First *getAddrOfPtr1() {
     assert(is<First>() && "Val is not the first pointer");
     assert(
-        get<First>() == this->Val.getPointer() &&
+        PointerLikeTypeTraits<First>::getAsVoidPointer(get<First>()) ==
+            this->Val.getPointer() &&
         "Can't get the address because PointerLikeTypeTraits changes the ptr");
     return const_cast<First *>(
         reinterpret_cast<const First *>(this->Val.getAddrOfPointer()));

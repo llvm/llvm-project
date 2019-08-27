@@ -7,8 +7,8 @@
 
 #include "benchmark/benchmark.h"
 
-#include "CartesianBenchmarks.hpp"
-#include "GenerateInput.hpp"
+#include "CartesianBenchmarks.h"
+#include "GenerateInput.h"
 
 namespace {
 

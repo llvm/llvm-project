@@ -7775,7 +7775,7 @@ class BuiltinOperatorOverloadBuilder {
   static constexpr int ArithmeticTypesCap = 24;
   SmallVector<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
 
-  // Define some indices used to iterate over the arithemetic types in
+  // Define some indices used to iterate over the arithmetic types in
   // ArithmeticTypes.  The "promoted arithmetic types" are the arithmetic
   // types are that preserved by promotion (C++ [over.built]p2).
   unsigned FirstIntegralType,

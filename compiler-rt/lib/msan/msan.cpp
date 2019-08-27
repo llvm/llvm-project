@@ -403,7 +403,6 @@ void __msan_init() {
   AvoidCVE_2016_2143();
 
   CacheBinaryName();
-  CheckASLR();
   InitializeFlags();
 
   // Install tool-specific callbacks in sanitizer_common.
@@ -412,6 +411,7 @@ void __msan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializeInterceptors();
+  CheckASLR();
   InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.

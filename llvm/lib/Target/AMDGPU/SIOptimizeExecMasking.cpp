@@ -202,12 +202,6 @@ static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
     MI.setDesc(TII.get(AMDGPU::S_OR_B32));
     return true;
   }
-  case AMDGPU::S_OR_B64_term: {
-    // This is only a terminator to get the correct spill code placement during
-    // register allocation.
-    MI.setDesc(TII.get(AMDGPU::S_OR_B64));
-    return true;
-  }
   case AMDGPU::S_ANDN2_B64_term: {
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -328,7 +322,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
-    unsigned CopyFromExec = CopyFromExecInst->getOperand(0).getReg();
+    Register CopyFromExec = CopyFromExecInst->getOperand(0).getReg();
     MachineInstr *SaveExecInst = nullptr;
     SmallVector<MachineInstr *, 4> OtherUseInsts;
 

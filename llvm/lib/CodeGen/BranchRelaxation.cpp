@@ -143,7 +143,7 @@ void BranchRelaxation::verify() {
 LLVM_DUMP_METHOD void BranchRelaxation::dumpBBs() {
   for (auto &MBB : *MF) {
     const BasicBlockInfo &BBI = BlockInfo[MBB.getNumber()];
-    dbgs() << format("%bb.%u\toffset=%08x\t", MBB.getNumber(), BBI.Offset)
+    dbgs() << format("%%bb.%u\toffset=%08x\t", MBB.getNumber(), BBI.Offset)
            << format("size=%#x\n", BBI.Size);
   }
 }

@@ -833,8 +833,9 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
 
 Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                       QualType Ty) const {
-  bool IsIndirect =
-      isAggregateTypeForABI(Ty) && !isSingleElementStruct(Ty, getContext());
+  bool IsIndirect = isAggregateTypeForABI(Ty) &&
+                    !isEmptyRecord(getContext(), Ty, true) &&
+                    !isSingleElementStruct(Ty, getContext());
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(4),

@@ -109,9 +109,7 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
     error = summary_string.SetCurrentValue(option_arg);
     break;
   default:
-    error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                   short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;

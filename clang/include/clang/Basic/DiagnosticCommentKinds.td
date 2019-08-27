@@ -156,7 +156,7 @@ def note_add_deprecation_attr : Note<
 // inline contents commands
 
 def warn_doc_inline_contents_no_argument : Warning<
-  "'%select{\\|@}0%1' command does not have an argument">,
+  "'%select{\\|@}0%1' command does not have a valid word argument">,
   InGroup<Documentation>, DefaultIgnore;
 
 // verbatim block commands

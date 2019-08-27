@@ -85,9 +85,7 @@ protected:
         m_clear.SetOptionWasSet();
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -215,13 +213,12 @@ public:
     return "";
   }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -254,9 +251,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -371,9 +366,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -966,11 +959,9 @@ protected:
     if (m_regex_cmd_up) {
       StringList lines;
       if (lines.SplitIntoLines(data)) {
-        const size_t num_lines = lines.GetSize();
         bool check_only = false;
-        for (size_t i = 0; i < num_lines; ++i) {
-          llvm::StringRef bytes_strref(lines[i]);
-          Status error = AppendRegexSubstitution(bytes_strref, check_only);
+        for (const std::string &line : lines) {
+          Status error = AppendRegexSubstitution(line, check_only);
           if (error.Fail()) {
             if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
               StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
@@ -1164,9 +1155,7 @@ private:
         m_syntax.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1390,13 +1379,12 @@ public:
 
   ~CommandObjectCommandsScriptImport() override = default;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1418,9 +1406,7 @@ protected:
         m_allow_reload = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1572,9 +1558,7 @@ protected:
               option_arg.str().c_str());
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

@@ -18,11 +18,6 @@ class FoundationDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # rdar://problem/8504895
-    # Crash while doing 'disassemble -n "-[NSNumber descriptionWithLocale:]"
-    @unittest2.skipIf(
-        TestBase.skipLongRunningTest(),
-        "Skip this long running test")
     def test_foundation_disasm(self):
         """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
         self.build()

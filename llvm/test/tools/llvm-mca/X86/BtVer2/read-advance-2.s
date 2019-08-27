@@ -9,13 +9,13 @@
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      11
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.36
+# CHECK-NEXT: IPC:               0.18
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -26,14 +26,15 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imull	%esi
-# CHECK-NEXT:  2      6     1.00    *                   imull	(%rdi)
+# CHECK-NEXT:  2      3     2.00                        imull	%esi
+# CHECK-NEXT:  2      6     2.00    *                   imull	(%rdi)
 
 # CHECK:      Timeline view:
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER   .   imull	%esi
-# CHECK-NEXT: [0,1]     .DeeeeeeER   imull	(%rdi)
+# CHECK:      [0,0]     DeeeER    .   imull	%esi
+# CHECK-NEXT: [0,1]     .D=eeeeeeER   imull	(%rdi)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -43,4 +44,4 @@
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%esi
-# CHECK-NEXT: 1.     1     1.0    1.0    0.0       imull	(%rdi)
+# CHECK-NEXT: 1.     1     2.0    2.0    0.0       imull	(%rdi)

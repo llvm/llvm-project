@@ -73,8 +73,8 @@ class AssumptionCache {
   /// Get the vector of assumptions which affect a value from the cache.
   SmallVector<WeakTrackingVH, 1> &getOrInsertAffectedValues(Value *V);
 
-  /// Copy affected values in the cache for OV to be affected values for NV.
-  void copyAffectedValuesInCache(Value *OV, Value *NV);
+  /// Move affected values in the cache for OV to be affected values for NV.
+  void transferAffectedValuesInCache(Value *OV, Value *NV);
 
   /// Flag tracking whether we have scanned the function yet.
   ///

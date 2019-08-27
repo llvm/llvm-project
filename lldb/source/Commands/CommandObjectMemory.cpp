@@ -96,9 +96,7 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
     return error;
   }
@@ -163,6 +161,7 @@ public:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
+    case eFormatUnicode8:
     case eFormatUnicode16:
     case eFormatUnicode32:
     case eFormatUnsigned:
@@ -935,9 +934,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1225,9 +1222,7 @@ public:
       } break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1411,6 +1406,7 @@ protected:
       case eFormatBytesWithASCII:
       case eFormatComplex:
       case eFormatEnum:
+      case eFormatUnicode8:
       case eFormatUnicode16:
       case eFormatUnicode32:
       case eFormatVectorOfChar:

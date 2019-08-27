@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Implementations for preprocessor tracking.
+/// Implementations for preprocessor tracking.
 ///
 /// See the header for details.
 ///
@@ -112,11 +112,11 @@ void PPCallbacksTracker::FileChanged(SourceLocation Loc,
 
 // Callback invoked whenever a source file is skipped as the result
 // of header guard optimization.
-void PPCallbacksTracker::FileSkipped(const FileEntry &SkippedFile,
+void PPCallbacksTracker::FileSkipped(const FileEntryRef &SkippedFile,
                                      const Token &FilenameTok,
                                      SrcMgr::CharacteristicKind FileType) {
   beginCallback("FileSkipped");
-  appendArgument("ParentFile", &SkippedFile);
+  appendArgument("ParentFile", &SkippedFile.getFileEntry());
   appendArgument("FilenameTok", FilenameTok);
   appendArgument("FileType", FileType, CharacteristicKindStrings);
 }

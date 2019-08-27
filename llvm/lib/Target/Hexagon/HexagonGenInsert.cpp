@@ -606,7 +606,7 @@ void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
       for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
         const MachineOperand &MO = MI->getOperand(i);
         if (MO.isReg() && MO.isDef()) {
-          unsigned R = MO.getReg();
+          Register R = MO.getReg();
           assert(MO.getSubReg() == 0 && "Unexpected subregister in definition");
           if (Register::isVirtualRegister(R))
             RO.insert(std::make_pair(R, Index++));
@@ -724,7 +724,7 @@ void HexagonGenInsert::getInstrDefs(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || !MO.isDef())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (!Register::isVirtualRegister(R))
       continue;
     Defs.insert(R);
@@ -737,7 +737,7 @@ void HexagonGenInsert::getInstrUses(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || !MO.isUse())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (!Register::isVirtualRegister(R))
       continue;
     Uses.insert(R);
@@ -1399,7 +1399,7 @@ bool HexagonGenInsert::generateInserts() {
   for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
     unsigned VR = I->first;
     const TargetRegisterClass *RC = MRI->getRegClass(VR);
-    unsigned NewVR = MRI->createVirtualRegister(RC);
+    Register NewVR = MRI->createVirtualRegister(RC);
     RegMap[VR] = NewVR;
   }
 
@@ -1477,7 +1477,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
     for (const MachineOperand &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned R = MO.getReg();
+      Register R = MO.getReg();
       if (!Register::isVirtualRegister(R) || !MRI->use_nodbg_empty(R)) {
         AllDead = false;
         break;

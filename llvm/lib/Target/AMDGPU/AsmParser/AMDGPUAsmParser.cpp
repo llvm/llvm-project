@@ -3283,6 +3283,10 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
     if (!MO.isImm() || !AMDGPU::isSISrcOperand(Desc, OpIdx))
       continue;
 
+    if (OpIdx == Src2Idx && (Desc.TSFlags & SIInstrFlags::IsMAI) &&
+        getFeatureBits()[AMDGPU::FeatureMFMAInlineLiteralBug])
+      return false;
+
     if (!isInlineConstant(Inst, OpIdx)) {
       uint32_t Value = static_cast<uint32_t>(MO.getImm());
       if (NumLiterals == 0 || LiteralValue != Value) {

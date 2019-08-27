@@ -40,7 +40,7 @@ auto printable(const T &V) -> decltype(StreamSwitch<T>::printable(V)) {
 
 // If raw_ostream support is enabled, we specialize for types with operator<<
 // that takes a raw_ostream.
-#if !GTEST_NO_LLVM_RAW_OSTREAM
+#if !GTEST_NO_LLVM_SUPPORT
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -81,6 +81,6 @@ struct StreamSwitch<llvm::Optional<T>,
   }
 };
 } // namespace llvm_gtest
-#endif  // !GTEST_NO_LLVM_RAW_OSTREAM
+#endif  // !GTEST_NO_LLVM_SUPPORT
 
 #endif // GTEST_INCLUDE_GTEST_INTERNAL_CUSTOM_RAW_OSTREAM_H_

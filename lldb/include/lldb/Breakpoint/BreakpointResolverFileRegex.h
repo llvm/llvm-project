@@ -24,7 +24,7 @@ namespace lldb_private {
 class BreakpointResolverFileRegex : public BreakpointResolver {
 public:
   BreakpointResolverFileRegex(
-      Breakpoint *bkpt, RegularExpression &regex,
+      Breakpoint *bkpt, RegularExpression regex,
       const std::unordered_set<std::string> &func_name_set, bool exact_match);
 
   static BreakpointResolver *

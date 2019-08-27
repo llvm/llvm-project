@@ -494,10 +494,6 @@ public:
   /// This is always at least as good as the ABI alignment.
   unsigned getPrefTypeAlignment(Type *Ty) const;
 
-  /// Returns the preferred alignment for the specified type, returned as
-  /// log2 of the value (a shift amount).
-  unsigned getPreferredTypeAlignmentShift(Type *Ty) const;
-
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
   IntegerType *getIntPtrType(LLVMContext &C, unsigned AddressSpace = 0) const;

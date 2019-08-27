@@ -294,7 +294,7 @@ ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
 ANALYZER_OPTION(bool, ShouldTrackConditions, "track-conditions",
                 "Whether to track conditions that are a control dependency of "
                 "an already tracked variable.",
-                false)
+                true)
 
 ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
                 "Whether to place an event at each tracked condition.",
@@ -380,18 +380,24 @@ ANALYZER_OPTION(
     "Value: \"constructors\", \"destructors\", \"methods\".",
     "destructors")
 
-ANALYZER_OPTION_DEPENDS_ON_USER_MODE(
-    StringRef, IPAMode, "ipa",
-    "Controls the mode of inter-procedural analysis. Value: \"none\", "
-    "\"basic-inlining\", \"inlining\", \"dynamic\", \"dynamic-bifurcate\".",
-    /* SHALLOW_VAL */ "inlining", /* DEEP_VAL */ "dynamic-bifurcate")
-
 ANALYZER_OPTION(
     StringRef, ExplorationStrategy, "exploration_strategy",
     "Value: \"dfs\", \"bfs\", \"unexplored_first\", "
     "\"unexplored_first_queue\", \"unexplored_first_location_queue\", "
     "\"bfs_block_dfs_contents\".",
     "unexplored_first_queue")
+
+ANALYZER_OPTION(
+    StringRef, RawSilencedCheckersAndPackages, "silence-checkers",
+    "A semicolon separated list of checker and package names to silence. "
+    "Silenced checkers will not emit reports, but the modeling remain enabled.",
+    "")
+
+ANALYZER_OPTION_DEPENDS_ON_USER_MODE(
+    StringRef, IPAMode, "ipa",
+    "Controls the mode of inter-procedural analysis. Value: \"none\", "
+    "\"basic-inlining\", \"inlining\", \"dynamic\", \"dynamic-bifurcate\".",
+    /* SHALLOW_VAL */ "inlining", /* DEEP_VAL */ "dynamic-bifurcate")
 
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 #undef ANALYZER_OPTION
