@@ -721,8 +721,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
-  createOptionalSymbols();
-
   // Handle the `--undefined <sym>` options.
   for (auto *arg : args.filtered(OPT_undefined))
     handleUndefined(arg->getValue());
@@ -741,6 +739,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       error("entry symbol not defined (pass --no-entry to supress): " +
             config->entry);
   }
+
+  createOptionalSymbols();
 
   if (errorCount())
     return;

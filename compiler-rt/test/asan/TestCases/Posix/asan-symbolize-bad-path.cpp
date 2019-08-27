@@ -6,8 +6,8 @@
 
 // Also test that asan_symbolize doesn't assert on an invalid address with a valid file:
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: echo '#0 0xabcdabcd (%t+0x0)' | %asan_symbolize | FileCheck %s -check-prefix CHECK-BAD-ADDR
-// CHECK-BAD-ADDR: #0 0xabcdabcd in ??
+// RUN: echo '#0 0xabcdabcd (%t+0xabcdabcd)' | %asan_symbolize | FileCheck %s -check-prefix CHECK-BAD-ADDR
+// CHECK-BAD-ADDR: #0 0xabcdabcd in
 // CHECK-BAD-ADDR-EMPTY:
 
 int main() {
