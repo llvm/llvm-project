@@ -137,6 +137,13 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('log enable lldb expr -f ' + src_dir,
                               ['main.cpp'])
 
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_file(self):
+        # Complete in our source directory which contains a 'main.cpp' file.
+        src_dir =  os.path.dirname(os.path.realpath(__file__))
+        self.complete_from_to('log enable lldb expr -f ' + src_dir,
+                              [src_dir + "/"])
+
     # <rdar://problem/11052829>
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_infinite_loop_while_completing(self):
