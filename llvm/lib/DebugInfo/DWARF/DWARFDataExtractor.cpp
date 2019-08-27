@@ -13,13 +13,14 @@
 using namespace llvm;
 
 uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
-                                               uint64_t *SecNdx) const {
+                                               uint64_t *SecNdx,
+                                               Error *Err) const {
   if (SecNdx)
     *SecNdx = object::SectionedAddress::UndefSection;
   if (!Section)
-    return getUnsigned(Off, Size);
+    return getUnsigned(Off, Size, Err);
   Optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
-  uint64_t A = getUnsigned(Off, Size);
+  uint64_t A = getUnsigned(Off, Size, Err);
   if (!E)
     return A;
   if (SecNdx)
