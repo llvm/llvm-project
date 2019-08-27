@@ -256,7 +256,7 @@ bool TestRefactoringResultConsumer::handleAllResults() {
 
 std::unique_ptr<ClangRefactorToolConsumerInterface>
 TestSelectionRangesInFile::createConsumer() const {
-  return llvm::make_unique<TestRefactoringResultConsumer>(*this);
+  return std::make_unique<TestRefactoringResultConsumer>(*this);
 }
 
 /// Adds the \p ColumnOffset to file offset \p Offset, without going past a

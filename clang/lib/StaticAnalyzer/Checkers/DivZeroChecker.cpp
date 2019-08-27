@@ -47,7 +47,7 @@ void DivZeroChecker::reportBug(
     if (!BT)
       BT.reset(new BuiltinBug(this, "Division by zero"));
 
-    auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
+    auto R = std::make_unique<BugReport>(*BT, Msg, N);
     R->addVisitor(std::move(Visitor));
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
@@ -88,7 +88,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   bool TaintedD = isTainted(C.getState(), *DV);
   if ((stateNotZero && stateZero && TaintedD)) {
     reportBug("Division by a tainted value, possibly zero", stateZero, C,
-              llvm::make_unique<taint::TaintBugVisitor>(*DV));
+              std::make_unique<taint::TaintBugVisitor>(*DV));
     return;
   }
 

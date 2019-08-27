@@ -77,7 +77,7 @@ void tools::SHAVE::Compiler::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("moviCompile"));
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
+  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
                                           CmdArgs, Inputs));
 }
 
@@ -112,7 +112,7 @@ void tools::SHAVE::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("moviAsm"));
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
+  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
                                           CmdArgs, Inputs));
 }
 
@@ -198,7 +198,7 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Exec =
       Args.MakeArgString(TC.GetProgramPath("sparc-myriad-rtems-ld"));
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
+  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
                                           CmdArgs, Inputs));
 }
 

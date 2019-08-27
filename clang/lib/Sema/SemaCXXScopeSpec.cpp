@@ -440,7 +440,7 @@ public:
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<NestedNameSpecifierValidatorCCC>(*this);
+    return std::make_unique<NestedNameSpecifierValidatorCCC>(*this);
   }
 
  private:

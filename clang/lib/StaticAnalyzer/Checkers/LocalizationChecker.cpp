@@ -772,7 +772,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
 
   const MemRegion *StringRegion = S.getAsRegion();
   if (StringRegion)
-    R->addVisitor(llvm::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
+    R->addVisitor(std::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
 
   C.emitReport(std::move(R));
 }

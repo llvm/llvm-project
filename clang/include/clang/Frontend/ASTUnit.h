@@ -315,7 +315,7 @@ public:
 
   CodeCompletionTUInfo &getCodeCompletionTUInfo() {
     if (!CCTUInfo)
-      CCTUInfo = llvm::make_unique<CodeCompletionTUInfo>(
+      CCTUInfo = std::make_unique<CodeCompletionTUInfo>(
           std::make_shared<GlobalCodeCompletionAllocator>());
     return *CCTUInfo;
   }

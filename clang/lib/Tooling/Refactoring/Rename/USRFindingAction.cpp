@@ -264,7 +264,7 @@ private:
 };
 
 std::unique_ptr<ASTConsumer> USRFindingAction::newASTConsumer() {
-  return llvm::make_unique<NamedDeclFindingConsumer>(
+  return std::make_unique<NamedDeclFindingConsumer>(
       SymbolOffsets, QualifiedNames, SpellingNames, USRList, Force,
       ErrorOccurred);
 }

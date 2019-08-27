@@ -162,7 +162,7 @@ public:
       return make_string_error(
           "[AllTUsToolExecutorPlugin] Please provide a directory/file path in "
           "the compilation database.");
-    return llvm::make_unique<AllTUsToolExecutor>(std::move(OptionsParser),
+    return std::make_unique<AllTUsToolExecutor>(std::move(OptionsParser),
                                                  ExecutorConcurrency);
   }
 };

@@ -139,7 +139,7 @@ namespace {
 std::unique_ptr<ASTConsumer>
 clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
                         StringRef FilterString) {
-  return llvm::make_unique<ASTPrinter>(std::move(Out), ASTPrinter::Print,
+  return std::make_unique<ASTPrinter>(std::move(Out), ASTPrinter::Print,
                                        ADOF_Default, FilterString);
 }
 
@@ -148,7 +148,7 @@ clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
                        bool DumpDecls, bool Deserialize, bool DumpLookups,
                        ASTDumpOutputFormat Format) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
-  return llvm::make_unique<ASTPrinter>(std::move(Out),
+  return std::make_unique<ASTPrinter>(std::move(Out),
                                        Deserialize ? ASTPrinter::DumpFull :
                                        DumpDecls ? ASTPrinter::Dump :
                                        ASTPrinter::None, Format,
@@ -156,7 +156,7 @@ clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDeclNodeLister() {
-  return llvm::make_unique<ASTDeclNodeLister>(nullptr);
+  return std::make_unique<ASTDeclNodeLister>(nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -193,5 +193,5 @@ void ASTViewer::HandleTopLevelSingleDecl(Decl *D) {
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTViewer() {
-  return llvm::make_unique<ASTViewer>();
+  return std::make_unique<ASTViewer>();
 }

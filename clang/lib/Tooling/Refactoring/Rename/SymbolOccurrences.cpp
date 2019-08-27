@@ -25,7 +25,7 @@ SymbolOccurrence::SymbolOccurrence(const SymbolName &Name, OccurrenceKind Kind,
         Locations[0], Locations[0].getLocWithOffset(NamePieces[0].size()));
     return;
   }
-  MultipleRanges = llvm::make_unique<SourceRange[]>(Locations.size());
+  MultipleRanges = std::make_unique<SourceRange[]>(Locations.size());
   RangeOrNumRanges.setBegin(
       SourceLocation::getFromRawEncoding(Locations.size()));
   for (const auto &Loc : llvm::enumerate(Locations)) {

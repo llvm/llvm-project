@@ -274,7 +274,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (!N)
     return;
 
-  auto R = llvm::make_unique<BugReport>(
+  auto R = std::make_unique<BugReport>(
       BT,
       "MIG callback fails with error after deallocating argument value. "
       "This is a use-after-free vulnerability because the caller will try to "

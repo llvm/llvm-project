@@ -30,7 +30,7 @@ std::unique_ptr<CheckerManager> ento::createCheckerManager(
     ArrayRef<std::string> plugins,
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
     DiagnosticsEngine &diags) {
-  auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
+  auto checkerMgr = std::make_unique<CheckerManager>(context, opts);
 
   CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts(),
                               checkerRegistrationFns);

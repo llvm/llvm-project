@@ -300,8 +300,8 @@ public:
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
     if (Context.getLangOpts().CUDA)
-      return llvm::make_unique<MSHIPNumberingContext>();
-    return llvm::make_unique<MicrosoftNumberingContext>();
+      return std::make_unique<MSHIPNumberingContext>();
+    return std::make_unique<MicrosoftNumberingContext>();
   }
 };
 }

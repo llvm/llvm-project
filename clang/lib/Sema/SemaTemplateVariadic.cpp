@@ -937,7 +937,7 @@ class ParameterPackValidatorCCC final : public CorrectionCandidateCallback {
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
-    return llvm::make_unique<ParameterPackValidatorCCC>(*this);
+    return std::make_unique<ParameterPackValidatorCCC>(*this);
   }
 };
 

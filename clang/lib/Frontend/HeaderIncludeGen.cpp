@@ -120,7 +120,7 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
   // the GNU way to generate rules is -M / -MM / -MD / -MMD.
   for (const auto &Header : DepOpts.ExtraDeps)
     PrintHeaderInfo(OutputFile, Header, ShowDepth, 2, MSStyle);
-  PP.addPPCallbacks(llvm::make_unique<HeaderIncludesCallback>(
+  PP.addPPCallbacks(std::make_unique<HeaderIncludesCallback>(
       &PP, ShowAllHeaders, OutputFile, DepOpts, OwnsOutputFile, ShowDepth,
       MSStyle));
 }

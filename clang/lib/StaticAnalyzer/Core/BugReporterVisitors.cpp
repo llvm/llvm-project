@@ -789,7 +789,7 @@ public:
     AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
     if (EnableNullFPSuppression &&
         Options.ShouldSuppressNullReturnPaths && V.getAs<Loc>())
-      BR.addVisitor(llvm::make_unique<MacroNullReturnSuppressionVisitor>(
+      BR.addVisitor(std::make_unique<MacroNullReturnSuppressionVisitor>(
               R->getAs<SubRegion>(), V));
   }
 
@@ -951,7 +951,7 @@ public:
       if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
-    BR.addVisitor(llvm::make_unique<ReturnVisitor>(CalleeContext,
+    BR.addVisitor(std::make_unique<ReturnVisitor>(CalleeContext,
                                                    EnableNullFPSuppression,
                                                    Options, TKind));
   }
@@ -1190,7 +1190,7 @@ void FindLastStoreBRVisitor::registerStatementVarDecls(
 
         if (V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
           // Register a new visitor with the BugReport.
-          BR.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+          BR.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
               V.castAs<KnownSVal>(), R, EnableNullFPSuppression, TKind));
         }
       }
@@ -1468,7 +1468,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
               dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
             if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
-              BR.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+              BR.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
                   *KV, OriginalR, EnableNullFPSuppression, TKind, OriginSFC));
           }
         }
@@ -1926,7 +1926,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
   // TODO: Shouldn't we track control dependencies of every bug location, rather
   // than only tracked expressions?
   if (LVState->getAnalysisManager().getAnalyzerOptions().ShouldTrackConditions)
-    report.addVisitor(llvm::make_unique<TrackControlDependencyCondBRVisitor>(
+    report.addVisitor(std::make_unique<TrackControlDependencyCondBRVisitor>(
           InputNode));
 
   // The message send could be nil due to the receiver being nil.
@@ -1954,7 +1954,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     // got initialized.
     if (RR && !LVIsNull)
       if (auto KV = LVal.getAs<KnownSVal>())
-        report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+        report.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
             *KV, RR, EnableNullFPSuppression, TKind, SFC));
 
     // In case of C++ references, we want to differentiate between a null
@@ -1969,17 +1969,17 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
       report.addVisitor(
-          llvm::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
+          std::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           LVNode, R, EnableNullFPSuppression, report, V);
 
       report.markInteresting(V);
-      report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(R));
+      report.addVisitor(std::make_unique<UndefOrNullArgVisitor>(R));
 
       // If the contents are symbolic, find out when they became null.
       if (V.getAsLocSymbol(/*IncludeBaseRegions*/ true))
-        report.addVisitor(llvm::make_unique<TrackConstraintBRVisitor>(
+        report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
               V.castAs<DefinedSVal>(), false));
 
       // Add visitor, which will suppress inline defensive checks.
@@ -1987,11 +1987,11 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
         if (!DV->isZeroConstant() && LVState->isNull(*DV).isConstrainedTrue() &&
             EnableNullFPSuppression)
           report.addVisitor(
-              llvm::make_unique<SuppressInlineDefensiveChecksVisitor>(*DV,
+              std::make_unique<SuppressInlineDefensiveChecksVisitor>(*DV,
                                                                       LVNode));
 
       if (auto KV = V.getAs<KnownSVal>())
-        report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+        report.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
             *KV, R, EnableNullFPSuppression, TKind, SFC));
       return true;
     }
@@ -2006,7 +2006,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
   // Is it a symbolic value?
   if (auto L = V.getAs<loc::MemRegionVal>()) {
-    report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
+    report.addVisitor(std::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
 
     // FIXME: this is a hack for fixing a later crash when attempting to
     // dereference a void* pointer.
@@ -2030,13 +2030,13 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
     if (CanDereference)
       if (auto KV = RVal.getAs<KnownSVal>())
-        report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+        report.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
             *KV, L->getRegion(), EnableNullFPSuppression, TKind, SFC));
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
       report.markInteresting(RegionRVal);
-      report.addVisitor(llvm::make_unique<TrackConstraintBRVisitor>(
+      report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
             loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
   }

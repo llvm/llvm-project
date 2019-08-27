@@ -97,7 +97,7 @@ public:
                          bool EnteringContext)
       : Typo(TypoName.getName().getAsIdentifierInfo()), CurrentTCIndex(0),
         SavedTCIndex(0), SemaRef(SemaRef), S(S),
-        SS(SS ? llvm::make_unique<CXXScopeSpec>(*SS) : nullptr),
+        SS(SS ? std::make_unique<CXXScopeSpec>(*SS) : nullptr),
         CorrectionValidator(std::move(CCC)), MemberContext(MemberContext),
         Result(SemaRef, TypoName, LookupKind),
         Namespaces(SemaRef.Context, SemaRef.CurContext, SS),
