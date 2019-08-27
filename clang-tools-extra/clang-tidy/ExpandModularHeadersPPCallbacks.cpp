@@ -210,7 +210,7 @@ void ExpandModularHeadersPPCallbacks::PragmaDiagnostic(SourceLocation Loc,
   parseToLocation(Loc);
 }
 void ExpandModularHeadersPPCallbacks::HasInclude(SourceLocation Loc, StringRef,
-                                                 bool, const FileEntry *,
+                                                 bool, Optional<FileEntryRef>,
                                                  SrcMgr::CharacteristicKind) {
   parseToLocation(Loc);
 }
