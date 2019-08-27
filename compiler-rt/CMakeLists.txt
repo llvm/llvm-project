@@ -513,3 +513,5 @@ if(COMPILER_RT_INCLUDE_TESTS)
     endif()
   endif()
 endif()
+
+add_subdirectory(tools)
