@@ -38,7 +38,8 @@ class IOHandlerCompletionTest(TestBase):
 
         self.child = pexpect.spawn(
             '%s %s %s %s' %
-            (lldbtest_config.lldbExec, self.lldbOption, "", exe))
+            (lldbtest_config.lldbExec, self.lldbOption, "", exe),
+            dimensions=(100, 500))
 
         self.expect_string(prompt)
         # Start tab completion, go to the next page and then display all with 'a'.
