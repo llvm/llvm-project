@@ -300,4 +300,4 @@ define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 ; OPT: !0 = !{i32 0, i32 257}
 ; OPT: !1 = !{i32 0, i32 256}
 
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" }

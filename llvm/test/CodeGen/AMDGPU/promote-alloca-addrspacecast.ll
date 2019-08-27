@@ -18,4 +18,4 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
