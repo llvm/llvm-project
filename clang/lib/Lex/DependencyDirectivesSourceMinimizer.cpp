@@ -196,29 +196,15 @@ static void skipString(const char *&First, const char *const End) {
     ++First; // Finish off the string.
 }
 
-// Returns the length of EOL, either 0 (no end-of-line), 1 (\n) or 2 (\r\n)
-static unsigned isEOL(const char *First, const char *const End) {
-  if (First == End)
-    return 0;
-  if (End - First > 1 && isVerticalWhitespace(First[0]) &&
-      isVerticalWhitespace(First[1]) && First[0] != First[1])
-    return 2;
-  return !!isVerticalWhitespace(First[0]);
-}
-
-// Returns the length of the skipped newline
-static unsigned skipNewline(const char *&First, const char *End) {
-  if (First == End)
-    return 0;
+static void skipNewline(const char *&First, const char *End) {
   assert(isVerticalWhitespace(*First));
-  unsigned Len = isEOL(First, End);
-  assert(Len && "expected newline");
-  First += Len;
-  return Len;
-}
+  ++First;
+  if (First == End)
+    return;
 
-static bool wasLineContinuation(const char *First, unsigned EOLLen) {
-  return *(First - (int)EOLLen - 1) == '\\';
+  // Check for "\n\r" and "\r\n".
+  if (LLVM_UNLIKELY(isVerticalWhitespace(*First) && First[-1] != First[0]))
+    ++First;
 }
 
 static void skipToNewlineRaw(const char *&First, const char *const End) {
@@ -226,21 +212,17 @@ static void skipToNewlineRaw(const char *&First, const char *const End) {
     if (First == End)
       return;
 
-    unsigned Len = isEOL(First, End);
-    if (Len)
+    if (isVerticalWhitespace(*First))
       return;
 
-    do {
+    while (!isVerticalWhitespace(*First))
       if (++First == End)
         return;
-      Len = isEOL(First, End);
-    } while (!Len);
 
     if (First[-1] != '\\')
       return;
 
-    First += Len;
-    // Keep skipping lines...
+    ++First; // Keep going...
   }
 }
 
@@ -295,7 +277,7 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 static void skipLine(const char *&First, const char *const End) {
-  for (;;) {
+  do {
     assert(First <= End);
     if (First == End)
       return;
@@ -340,10 +322,9 @@ static void skipLine(const char *&First, const char *const End) {
       return;
 
     // Skip over the newline.
-    unsigned Len = skipNewline(First, End);
-    if (!wasLineContinuation(First, Len)) // Continue past line-continuations.
-      break;
-  }
+    assert(isVerticalWhitespace(*First));
+    skipNewline(First, End);
+  } while (First[-2] == '\\'); // Continue past line-continuations.
 }
 
 static void skipDirective(StringRef Name, const char *&First,
@@ -399,8 +380,6 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     // Print out the string.
     if (Last == End || Last == First || Last[-1] != '\\') {
       append(First, reverseOverSpaces(First, Last));
-      First = Last;
-      skipNewline(First, End);
       return;
     }
 
