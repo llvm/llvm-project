@@ -59,7 +59,8 @@ buildCompilerInvocation(const ParseInputs &Inputs) {
       CompilerInstance::createDiagnostics(new DiagnosticOptions,
                                           &IgnoreDiagnostics, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      ArgStrs, CommandLineDiagsEngine, Inputs.FS);
+      ArgStrs, CommandLineDiagsEngine, Inputs.FS,
+      /*ShouldRecoverOnErrors=*/true);
   if (!CI)
     return nullptr;
   // createInvocationFromCommandLine sets DisableFree.

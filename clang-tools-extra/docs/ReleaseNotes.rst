@@ -104,3 +104,11 @@ Improvements to pp-trace
 ------------------------
 
 The improvements are...
+
+Clang-tidy visual studio plugin
+-------------------------------
+
+The clang-tidy-vs plugin has been removed from clang, as
+it's no longer maintained. Users should migrate to
+`Clang Power Tools <https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools>`_
+instead.
