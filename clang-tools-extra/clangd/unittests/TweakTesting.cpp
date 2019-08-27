@@ -89,8 +89,10 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
   Tweak::Selection S(AST, Selection.first, Selection.second);
 
   auto T = prepareTweak(TweakID, S);
-  if (!T)
+  if (!T) {
+    llvm::consumeError(T.takeError());
     return "unavailable";
+  }
   llvm::Expected<Tweak::Effect> Result = (*T)->apply(S);
   if (!Result)
     return "fail: " + llvm::toString(Result.takeError());

@@ -937,29 +937,6 @@ iterator_range<base_reloc_iterator> COFFObjectFile::base_relocs() const {
 }
 
 std::error_code
-COFFObjectFile::getCOFFHeader(const coff_file_header *&Res) const {
-  Res = COFFHeader;
-  return std::error_code();
-}
-
-std::error_code
-COFFObjectFile::getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const {
-  Res = COFFBigObjHeader;
-  return std::error_code();
-}
-
-std::error_code COFFObjectFile::getPE32Header(const pe32_header *&Res) const {
-  Res = PE32Header;
-  return std::error_code();
-}
-
-std::error_code
-COFFObjectFile::getPE32PlusHeader(const pe32plus_header *&Res) const {
-  Res = PE32PlusHeader;
-  return std::error_code();
-}
-
-std::error_code
 COFFObjectFile::getDataDirectory(uint32_t Index,
                                  const data_directory *&Res) const {
   // Error if there's no data directory or the index is out of range.

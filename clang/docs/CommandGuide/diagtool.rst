@@ -9,7 +9,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`diagtool` is a combination of four tool for dealing with diagnostics in :program:`clang`.
+:program:`diagtool` is a combination of four tools for dealing with diagnostics in :program:`clang`.
 
 SUBCOMMANDS
 -----------

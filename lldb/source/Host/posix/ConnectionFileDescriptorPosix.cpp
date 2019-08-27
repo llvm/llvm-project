@@ -312,9 +312,6 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   // descriptor.  If that's the case, then send the "q" char to the command
   // file channel so the read will wake up and the connection will then know to
   // shut down.
-
-  m_shutting_down = true;
-
   std::unique_lock<std::recursive_mutex> locker(m_mutex, std::defer_lock);
   if (!locker.try_lock()) {
     if (m_pipe.CanWrite()) {
@@ -333,6 +330,9 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
     }
     locker.lock();
   }
+
+  // Prevents reads and writes during shutdown.
+  m_shutting_down = true;
 
   Status error = m_read_sp->Close();
   Status error2 = m_write_sp->Close();
@@ -369,6 +369,8 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   }
 
   if (m_shutting_down) {
+    if (error_ptr)
+      error_ptr->SetErrorString("shutting down");
     status = eConnectionStatusError;
     return 0;
   }
@@ -470,6 +472,13 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
     if (error_ptr)
       error_ptr->SetErrorString("not connected");
     status = eConnectionStatusNoConnection;
+    return 0;
+  }
+
+  if (m_shutting_down) {
+    if (error_ptr)
+      error_ptr->SetErrorString("shutting down");
+    status = eConnectionStatusError;
     return 0;
   }
 

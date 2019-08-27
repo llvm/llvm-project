@@ -193,7 +193,7 @@ static inline void parseOperands(const MachineInstr &MI,
     if (!MO.isReg())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
 
@@ -727,7 +727,7 @@ unsigned HexagonInstrInfo::reduceLoopCount(
   // The loop trip count is a run-time value. We generate code to subtract
   // one from the trip count, and update the loop instruction.
   assert(Loop->getOpcode() == Hexagon::J2_loop0r && "Unexpected instruction");
-  unsigned LoopCount = Loop->getOperand(1).getReg();
+  Register LoopCount = Loop->getOperand(1).getReg();
   // Check if we're done with the loop.
   unsigned LoopEnd = createVR(MF, MVT::i1);
   MachineInstr *NewCmp = BuildMI(&MBB, DL, get(Hexagon::C2_cmpgtui), LoopEnd).
@@ -839,8 +839,8 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
   if (Hexagon::HvxWRRegClass.contains(SrcReg, DestReg)) {
-    unsigned LoSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
-    unsigned HiSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+    Register LoSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
+    Register HiSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
     BuildMI(MBB, I, DL, get(Hexagon::V6_vcombine), DestReg)
       .addReg(HiSrc, KillFlag)
       .addReg(LoSrc, KillFlag);
@@ -1017,7 +1017,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
 
   auto RealCirc = [&](unsigned Opc, bool HasImm, unsigned MxOp) {
-    unsigned Mx = MI.getOperand(MxOp).getReg();
+    Register Mx = MI.getOperand(MxOp).getReg();
     unsigned CSx = (Mx == Hexagon::M0 ? Hexagon::CS0 : Hexagon::CS1);
     BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrrcr), CSx)
         .add(MI.getOperand((HasImm ? 5 : 4)));
@@ -1049,8 +1049,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     case Hexagon::V6_vassignp: {
-      unsigned SrcReg = MI.getOperand(1).getReg();
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       unsigned Kill = getKillRegState(MI.getOperand(1).isKill());
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vcombine), DstReg)
         .addReg(HRI.getSubReg(SrcReg, Hexagon::vsub_hi), Kill)
@@ -1059,18 +1059,18 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return true;
     }
     case Hexagon::V6_lo: {
-      unsigned SrcReg = MI.getOperand(1).getReg();
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
+      Register SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubLo, MI.getOperand(1).isKill());
       MBB.erase(MI);
       MRI.clearKillFlags(SrcSubLo);
       return true;
     }
     case Hexagon::V6_hi: {
-      unsigned SrcReg = MI.getOperand(1).getReg();
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+      Register SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubHi, MI.getOperand(1).isKill());
       MBB.erase(MI);
       MRI.clearKillFlags(SrcSubHi);
@@ -1079,9 +1079,9 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     case Hexagon::PS_vstorerw_ai:
     case Hexagon::PS_vstorerwu_ai: {
       bool Aligned = Opc == Hexagon::PS_vstorerw_ai;
-      unsigned SrcReg = MI.getOperand(2).getReg();
-      unsigned SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
-      unsigned SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
+      Register SrcReg = MI.getOperand(2).getReg();
+      Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+      Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
       unsigned NewOpc = Aligned ? Hexagon::V6_vS32b_ai : Hexagon::V6_vS32Ub_ai;
       unsigned Offset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
 
@@ -1103,7 +1103,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     case Hexagon::PS_vloadrw_ai:
     case Hexagon::PS_vloadrwu_ai: {
       bool Aligned = Opc == Hexagon::PS_vloadrw_ai;
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       unsigned NewOpc = Aligned ? Hexagon::V6_vL32b_ai : Hexagon::V6_vL32Ub_ai;
       unsigned Offset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
 
@@ -1122,7 +1122,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return true;
     }
     case Hexagon::PS_true: {
-      unsigned Reg = MI.getOperand(0).getReg();
+      Register Reg = MI.getOperand(0).getReg();
       BuildMI(MBB, MI, DL, get(Hexagon::C2_orn), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
@@ -1130,7 +1130,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return true;
     }
     case Hexagon::PS_false: {
-      unsigned Reg = MI.getOperand(0).getReg();
+      Register Reg = MI.getOperand(0).getReg();
       BuildMI(MBB, MI, DL, get(Hexagon::C2_andn), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
@@ -1152,7 +1152,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return true;
     }
     case Hexagon::PS_vdd0: {
-      unsigned Vd = MI.getOperand(0).getReg();
+      Register Vd = MI.getOperand(0).getReg();
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vsubw_dv), Vd)
         .addReg(Vd, RegState::Undef)
         .addReg(Vd, RegState::Undef);
@@ -1161,13 +1161,13 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     case Hexagon::PS_vmulw: {
       // Expand a 64-bit vector multiply into 2 32-bit scalar multiplies.
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned Src1Reg = MI.getOperand(1).getReg();
-      unsigned Src2Reg = MI.getOperand(2).getReg();
-      unsigned Src1SubHi = HRI.getSubReg(Src1Reg, Hexagon::isub_hi);
-      unsigned Src1SubLo = HRI.getSubReg(Src1Reg, Hexagon::isub_lo);
-      unsigned Src2SubHi = HRI.getSubReg(Src2Reg, Hexagon::isub_hi);
-      unsigned Src2SubLo = HRI.getSubReg(Src2Reg, Hexagon::isub_lo);
+      Register DstReg = MI.getOperand(0).getReg();
+      Register Src1Reg = MI.getOperand(1).getReg();
+      Register Src2Reg = MI.getOperand(2).getReg();
+      Register Src1SubHi = HRI.getSubReg(Src1Reg, Hexagon::isub_hi);
+      Register Src1SubLo = HRI.getSubReg(Src1Reg, Hexagon::isub_lo);
+      Register Src2SubHi = HRI.getSubReg(Src2Reg, Hexagon::isub_hi);
+      Register Src2SubLo = HRI.getSubReg(Src2Reg, Hexagon::isub_lo);
       BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::M2_mpyi),
               HRI.getSubReg(DstReg, Hexagon::isub_hi))
           .addReg(Src1SubHi)
@@ -1185,16 +1185,16 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     case Hexagon::PS_vmulw_acc: {
       // Expand 64-bit vector multiply with addition into 2 scalar multiplies.
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned Src1Reg = MI.getOperand(1).getReg();
-      unsigned Src2Reg = MI.getOperand(2).getReg();
-      unsigned Src3Reg = MI.getOperand(3).getReg();
-      unsigned Src1SubHi = HRI.getSubReg(Src1Reg, Hexagon::isub_hi);
-      unsigned Src1SubLo = HRI.getSubReg(Src1Reg, Hexagon::isub_lo);
-      unsigned Src2SubHi = HRI.getSubReg(Src2Reg, Hexagon::isub_hi);
-      unsigned Src2SubLo = HRI.getSubReg(Src2Reg, Hexagon::isub_lo);
-      unsigned Src3SubHi = HRI.getSubReg(Src3Reg, Hexagon::isub_hi);
-      unsigned Src3SubLo = HRI.getSubReg(Src3Reg, Hexagon::isub_lo);
+      Register DstReg = MI.getOperand(0).getReg();
+      Register Src1Reg = MI.getOperand(1).getReg();
+      Register Src2Reg = MI.getOperand(2).getReg();
+      Register Src3Reg = MI.getOperand(3).getReg();
+      Register Src1SubHi = HRI.getSubReg(Src1Reg, Hexagon::isub_hi);
+      Register Src1SubLo = HRI.getSubReg(Src1Reg, Hexagon::isub_lo);
+      Register Src2SubHi = HRI.getSubReg(Src2Reg, Hexagon::isub_hi);
+      Register Src2SubLo = HRI.getSubReg(Src2Reg, Hexagon::isub_lo);
+      Register Src3SubHi = HRI.getSubReg(Src3Reg, Hexagon::isub_hi);
+      Register Src3SubLo = HRI.getSubReg(Src3Reg, Hexagon::isub_lo);
       BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::M2_maci),
               HRI.getSubReg(DstReg, Hexagon::isub_hi))
           .addReg(Src1SubHi)
@@ -1219,10 +1219,10 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
       const MachineOperand &Op3 = MI.getOperand(3);
-      unsigned Rd = Op0.getReg();
-      unsigned Pu = Op1.getReg();
-      unsigned Rs = Op2.getReg();
-      unsigned Rt = Op3.getReg();
+      Register Rd = Op0.getReg();
+      Register Pu = Op1.getReg();
+      Register Rs = Op2.getReg();
+      Register Rt = Op3.getReg();
       DebugLoc DL = MI.getDebugLoc();
       unsigned K1 = getKillRegState(Op1.isKill());
       unsigned K2 = getKillRegState(Op2.isKill());
@@ -1246,7 +1246,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
-      unsigned PReg = Op1.getReg();
+      Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
       unsigned PState = getRegState(Op1);
 
@@ -1280,15 +1280,15 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
-      unsigned PReg = Op1.getReg();
+      Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
       unsigned PState = getRegState(Op1);
 
       if (Op0.getReg() != Op2.getReg()) {
         unsigned S = Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill
                                                   : PState;
-        unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_lo);
-        unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_hi);
+        Register SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_lo);
+        Register SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
                      .add(Op0)
                      .addReg(PReg, S)
@@ -1299,8 +1299,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         IsDestLive = true;
       }
       if (Op0.getReg() != Op3.getReg()) {
-        unsigned SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_lo);
-        unsigned SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_hi);
+        Register SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_lo);
+        Register SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
                      .add(Op0)
                      .addReg(PReg, PState)
@@ -1872,7 +1872,7 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
   if (!getBaseAndOffsetPosition(MIa, BasePosA, OffsetPosA))
     return false;
   const MachineOperand &BaseA = MIa.getOperand(BasePosA);
-  unsigned BaseRegA = BaseA.getReg();
+  Register BaseRegA = BaseA.getReg();
   unsigned BaseSubA = BaseA.getSubReg();
 
   // Get the base register in MIb.
@@ -1880,7 +1880,7 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
   if (!getBaseAndOffsetPosition(MIb, BasePosB, OffsetPosB))
     return false;
   const MachineOperand &BaseB = MIb.getOperand(BasePosB);
-  unsigned BaseRegB = BaseB.getReg();
+  Register BaseRegB = BaseB.getReg();
   unsigned BaseSubB = BaseB.getSubReg();
 
   if (BaseRegA != BaseRegB || BaseSubA != BaseSubB)
@@ -1984,7 +1984,7 @@ unsigned HexagonInstrInfo::createVR(MachineFunction *MF, MVT VT) const {
     llvm_unreachable("Cannot handle this register class");
   }
 
-  unsigned NewReg = MRI.createVirtualRegister(TRC);
+  Register NewReg = MRI.createVirtualRegister(TRC);
   return NewReg;
 }
 
@@ -2605,7 +2605,7 @@ bool HexagonInstrInfo::isToBeScheduledASAP(const MachineInstr &MI1,
       const MachineInstr &MI2) const {
   if (mayBeCurLoad(MI1)) {
     // if (result of SU is used in Next) return true;
-    unsigned DstReg = MI1.getOperand(0).getReg();
+    Register DstReg = MI1.getOperand(0).getReg();
     int N = MI2.getNumOperands();
     for (int I = 0; I < N; I++)
       if (MI2.getOperand(I).isReg() && DstReg == MI2.getOperand(I).getReg())
@@ -3374,7 +3374,7 @@ unsigned HexagonInstrInfo::getCompoundOpcode(const MachineInstr &GA,
   if ((GA.getOpcode() != Hexagon::C2_cmpeqi) ||
       (GB.getOpcode() != Hexagon::J2_jumptnew))
     return -1u;
-  unsigned DestReg = GA.getOperand(0).getReg();
+  Register DestReg = GA.getOperand(0).getReg();
   if (!GB.readsRegister(DestReg))
     return -1u;
   if (DestReg != Hexagon::P0 && DestReg != Hexagon::P1)

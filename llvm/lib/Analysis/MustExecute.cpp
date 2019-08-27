@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MustExecute.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
@@ -19,7 +21,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
+
+#define DEBUG_TYPE "must-execute"
 
 const DenseMap<BasicBlock *, ColorVector> &
 LoopSafetyInfo::getBlockColors() const {
@@ -306,6 +311,17 @@ namespace {
     }
     bool runOnFunction(Function &F) override;
   };
+  struct MustBeExecutedContextPrinter : public ModulePass {
+    static char ID;
+
+    MustBeExecutedContextPrinter() : ModulePass(ID) {
+      initializeMustBeExecutedContextPrinterPass(*PassRegistry::getPassRegistry());
+    }
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesAll();
+    }
+    bool runOnModule(Module &M) override;
+  };
 }
 
 char MustExecutePrinter::ID = 0;
@@ -318,6 +334,36 @@ INITIALIZE_PASS_END(MustExecutePrinter, "print-mustexecute",
 
 FunctionPass *llvm::createMustExecutePrinter() {
   return new MustExecutePrinter();
+}
+
+char MustBeExecutedContextPrinter::ID = 0;
+INITIALIZE_PASS_BEGIN(
+    MustBeExecutedContextPrinter, "print-must-be-executed-contexts",
+    "print the must-be-executed-contexed for all instructions", false, true)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(MustBeExecutedContextPrinter,
+                    "print-must-be-executed-contexts",
+                    "print the must-be-executed-contexed for all instructions",
+                    false, true)
+
+ModulePass *llvm::createMustBeExecutedContextPrinter() {
+  return new MustBeExecutedContextPrinter();
+}
+
+bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
+  MustBeExecutedContextExplorer Explorer(true);
+  for (Function &F : M) {
+    for (Instruction &I : instructions(F)) {
+      dbgs() << "-- Explore context of: " << I << "\n";
+      for (const Instruction *CI : Explorer.range(&I))
+        dbgs() << "  [F: " << CI->getFunction()->getName() << "] " << *CI
+               << "\n";
+    }
+  }
+
+  return false;
 }
 
 static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
@@ -395,4 +441,76 @@ bool MustExecutePrinter::runOnFunction(Function &F) {
   F.print(dbgs(), &Writer);
 
   return false;
+}
+
+const Instruction *
+MustBeExecutedContextExplorer::getMustBeExecutedNextInstruction(
+    MustBeExecutedIterator &It, const Instruction *PP) {
+  if (!PP)
+    return PP;
+  LLVM_DEBUG(dbgs() << "Find next instruction for " << *PP << "\n");
+
+  // If we explore only inside a given basic block we stop at terminators.
+  if (!ExploreInterBlock && PP->isTerminator()) {
+    LLVM_DEBUG(dbgs() << "\tReached terminator in intra-block mode, done\n");
+    return nullptr;
+  }
+
+  // If we do not traverse the call graph we check if we can make progress in
+  // the current function. First, check if the instruction is guaranteed to
+  // transfer execution to the successor.
+  bool TransfersExecution = isGuaranteedToTransferExecutionToSuccessor(PP);
+  if (!TransfersExecution)
+    return nullptr;
+
+  // If this is not a terminator we know that there is a single instruction
+  // after this one that is executed next if control is transfered. If not,
+  // we can try to go back to a call site we entered earlier. If none exists, we
+  // do not know any instruction that has to be executd next.
+  if (!PP->isTerminator()) {
+    const Instruction *NextPP = PP->getNextNode();
+    LLVM_DEBUG(dbgs() << "\tIntermediate instruction does transfer control\n");
+    return NextPP;
+  }
+
+  // Finally, we have to handle terminators, trivial ones first.
+  assert(PP->isTerminator() && "Expected a terminator!");
+
+  // A terminator without a successor is not handled yet.
+  if (PP->getNumSuccessors() == 0) {
+    LLVM_DEBUG(dbgs() << "\tUnhandled terminator\n");
+    return nullptr;
+  }
+
+  // A terminator with a single successor, we will continue at the beginning of
+  // that one.
+  if (PP->getNumSuccessors() == 1) {
+    LLVM_DEBUG(
+        dbgs() << "\tUnconditional terminator, continue with successor\n");
+    return &PP->getSuccessor(0)->front();
+  }
+
+  LLVM_DEBUG(dbgs() << "\tNo join point found\n");
+  return nullptr;
+}
+
+MustBeExecutedIterator::MustBeExecutedIterator(
+    MustBeExecutedContextExplorer &Explorer, const Instruction *I)
+    : Explorer(Explorer), CurInst(I) {
+  reset(I);
+}
+
+void MustBeExecutedIterator::reset(const Instruction *I) {
+  CurInst = I;
+  Visited.clear();
+  Visited.insert(I);
+}
+
+const Instruction *MustBeExecutedIterator::advance() {
+  assert(CurInst && "Cannot advance an end iterator!");
+  const Instruction *Next =
+      Explorer.getMustBeExecutedNextInstruction(*this, CurInst);
+  if (Next && !Visited.insert(Next).second)
+    Next = nullptr;
+  return Next;
 }

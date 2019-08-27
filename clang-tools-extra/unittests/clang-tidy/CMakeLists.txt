@@ -10,6 +10,7 @@ add_extra_unittest(ClangTidyTests
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp
   IncludeInserterTest.cpp
+  GlobListTest.cpp
   GoogleModuleTest.cpp
   LLVMModuleTest.cpp
   NamespaceAliaserTest.cpp

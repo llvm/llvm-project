@@ -22,7 +22,7 @@
 #include <system_error>
 
 #include "test_macros.h"
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 #include "MoveOnly.h"
 
 #if defined(_LIBCPP_ENABLE_TUPLE_IMPLICIT_REDUCED_ARITY_EXTENSION)

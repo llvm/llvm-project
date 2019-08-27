@@ -1191,7 +1191,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   }
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
     if (!getLangOpts().C11)
-      Diag(Tok, diag::ext_c11_alignment) << Tok.getName();
+      Diag(Tok, diag::ext_c11_feature) << Tok.getName();
     LLVM_FALLTHROUGH;
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
@@ -1772,12 +1772,12 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             OpKind == tok::arrow ? tok::period : tok::arrow;
         ExprResult CorrectedLHS(/*Invalid=*/true);
         if (getLangOpts().CPlusPlus && OrigLHS) {
-          const bool DiagsAreSuppressed = Diags.getSuppressAllDiagnostics();
-          Diags.setSuppressAllDiagnostics(true);
+          // FIXME: Creating a TentativeAnalysisScope from outside Sema is a
+          // hack.
+          Sema::TentativeAnalysisScope Trap(Actions);
           CorrectedLHS = Actions.ActOnStartCXXMemberReference(
               getCurScope(), OrigLHS, OpLoc, CorrectedOpKind, ObjectType,
               MayBePseudoDestructor);
-          Diags.setSuppressAllDiagnostics(DiagsAreSuppressed);
         }
 
         Expr *Base = LHS.get();

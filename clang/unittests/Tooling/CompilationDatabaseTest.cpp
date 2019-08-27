@@ -371,8 +371,6 @@ TEST(findCompileArgsInJsonDatabase, FindsEntry) {
 }
 
 TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
-  StringRef Directory("//net/dir");
-  StringRef FileName("//net/dir/filename");
   std::vector<std::pair<std::string, std::string>> Cases = {
       {"distcc gcc foo.c", "gcc foo.c"},
       {"gomacc clang++ foo.c", "clang++ foo.c"},

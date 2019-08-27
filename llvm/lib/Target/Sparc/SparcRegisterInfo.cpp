@@ -182,9 +182,9 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!Subtarget.isV9() || !Subtarget.hasHardQuad()) {
     if (MI.getOpcode() == SP::STQFri) {
       const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-      unsigned SrcReg = MI.getOperand(2).getReg();
-      unsigned SrcEvenReg = getSubReg(SrcReg, SP::sub_even64);
-      unsigned SrcOddReg  = getSubReg(SrcReg, SP::sub_odd64);
+      Register SrcReg = MI.getOperand(2).getReg();
+      Register SrcEvenReg = getSubReg(SrcReg, SP::sub_even64);
+      Register SrcOddReg = getSubReg(SrcReg, SP::sub_odd64);
       MachineInstr *StMI =
         BuildMI(*MI.getParent(), II, dl, TII.get(SP::STDFri))
         .addReg(FrameReg).addImm(0).addReg(SrcEvenReg);
@@ -194,9 +194,9 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       Offset += 8;
     } else if (MI.getOpcode() == SP::LDQFri) {
       const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-      unsigned DestReg     = MI.getOperand(0).getReg();
-      unsigned DestEvenReg = getSubReg(DestReg, SP::sub_even64);
-      unsigned DestOddReg  = getSubReg(DestReg, SP::sub_odd64);
+      Register DestReg = MI.getOperand(0).getReg();
+      Register DestEvenReg = getSubReg(DestReg, SP::sub_even64);
+      Register DestOddReg = getSubReg(DestReg, SP::sub_odd64);
       MachineInstr *LdMI =
         BuildMI(*MI.getParent(), II, dl, TII.get(SP::LDDFri), DestEvenReg)
         .addReg(FrameReg).addImm(0);

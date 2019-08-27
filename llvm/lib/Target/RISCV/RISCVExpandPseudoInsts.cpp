@@ -271,9 +271,9 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
 }
 
 static void insertMaskedMerge(const RISCVInstrInfo *TII, DebugLoc DL,
-                              MachineBasicBlock *MBB, unsigned DestReg,
-                              unsigned OldValReg, unsigned NewValReg,
-                              unsigned MaskReg, unsigned ScratchReg) {
+                              MachineBasicBlock *MBB, Register DestReg,
+                              Register OldValReg, Register NewValReg,
+                              Register MaskReg, Register ScratchReg) {
   assert(OldValReg != ScratchReg && "OldValReg and ScratchReg must be unique");
   assert(OldValReg != MaskReg && "OldValReg and MaskReg must be unique");
   assert(ScratchReg != MaskReg && "ScratchReg and MaskReg must be unique");
@@ -394,8 +394,8 @@ bool RISCVExpandPseudo::expandAtomicBinOp(
 }
 
 static void insertSext(const RISCVInstrInfo *TII, DebugLoc DL,
-                       MachineBasicBlock *MBB, unsigned ValReg,
-                       unsigned ShamtReg) {
+                       MachineBasicBlock *MBB, Register ValReg,
+                       Register ShamtReg) {
   BuildMI(MBB, DL, TII->get(RISCV::SLL), ValReg)
       .addReg(ValReg)
       .addReg(ShamtReg);

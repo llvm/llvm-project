@@ -522,6 +522,13 @@ public:
     assert(!isStackEmpty() && "No directive at specified level.");
     return getStackElemAtLevel(Level).Directive;
   }
+  /// Returns the capture region at the specified level.
+  OpenMPDirectiveKind getCaptureRegion(unsigned Level,
+                                       unsigned OpenMPCaptureLevel) const {
+    SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+    getOpenMPCaptureRegions(CaptureRegions, getDirective(Level));
+    return CaptureRegions[OpenMPCaptureLevel];
+  }
   /// Returns parent directive.
   OpenMPDirectiveKind getParentDirective() const {
     const SharingMapTy *Parent = getSecondOnStackOrNull();
@@ -1340,7 +1347,8 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
         }
         const_iterator End = end();
         if (!SemaRef.isOpenMPCapturedByRef(
-                D, std::distance(ParentIterTarget, End))) {
+                D, std::distance(ParentIterTarget, End),
+                /*OpenMPCaptureLevel=*/0)) {
           DVar.RefExpr =
               buildDeclRefExpr(SemaRef, VD, D->getType().getNonReferenceType(),
                                IterTarget->ConstructLoc);
@@ -1548,45 +1556,174 @@ static bool isOpenMPDeviceDelayedContext(Sema &S) {
          !S.isInOpenMPDeclareTargetContext();
 }
 
+namespace {
+/// Status of the function emission on the host/device.
+enum class FunctionEmissionStatus {
+  Emitted,
+  Discarded,
+  Unknown,
+};
+} // anonymous namespace
+
 /// Do we know that we will eventually codegen the given function?
-static bool isKnownEmitted(Sema &S, FunctionDecl *FD) {
+static FunctionEmissionStatus isKnownDeviceEmitted(Sema &S, FunctionDecl *FD) {
   assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
   // Templates are emitted when they're instantiated.
   if (FD->isDependentContext())
-    return false;
+    return FunctionEmissionStatus::Discarded;
 
-  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
-          FD->getCanonicalDecl()))
-    return true;
+  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+      OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
+  if (DevTy.hasValue())
+    return (*DevTy == OMPDeclareTargetDeclAttr::DT_Host)
+               ? FunctionEmissionStatus::Discarded
+               : FunctionEmissionStatus::Emitted;
 
   // Otherwise, the function is known-emitted if it's in our set of
   // known-emitted functions.
-  return S.DeviceKnownEmittedFns.count(FD) > 0;
+  return (S.DeviceKnownEmittedFns.count(FD) > 0)
+             ? FunctionEmissionStatus::Emitted
+             : FunctionEmissionStatus::Unknown;
 }
 
 Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
                                                      unsigned DiagID) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
-  return DeviceDiagBuilder((isOpenMPDeviceDelayedContext(*this) &&
-                            !isKnownEmitted(*this, getCurFunctionDecl()))
-                               ? DeviceDiagBuilder::K_Deferred
-                               : DeviceDiagBuilder::K_Immediate,
-                           Loc, DiagID, getCurFunctionDecl(), *this);
+  FunctionEmissionStatus FES =
+      isKnownDeviceEmitted(*this, getCurFunctionDecl());
+  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
+  switch (FES) {
+  case FunctionEmissionStatus::Emitted:
+    Kind = DeviceDiagBuilder::K_Immediate;
+    break;
+  case FunctionEmissionStatus::Unknown:
+    Kind = isOpenMPDeviceDelayedContext(*this) ? DeviceDiagBuilder::K_Deferred
+                                               : DeviceDiagBuilder::K_Immediate;
+    break;
+  case FunctionEmissionStatus::Discarded:
+    Kind = DeviceDiagBuilder::K_Nop;
+    break;
+  }
+
+  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
+/// Do we know that we will eventually codegen the given function?
+static FunctionEmissionStatus isKnownHostEmitted(Sema &S, FunctionDecl *FD) {
+  assert(S.LangOpts.OpenMP && !S.LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP host compilation.");
+  // In OpenMP 4.5 all the functions are host functions.
+  if (S.LangOpts.OpenMP <= 45)
+    return FunctionEmissionStatus::Emitted;
+
+  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+      OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
+  if (DevTy.hasValue())
+    return (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
+               ? FunctionEmissionStatus::Discarded
+               : FunctionEmissionStatus::Emitted;
+
+  // Otherwise, the function is known-emitted if it's in our set of
+  // known-emitted functions.
+  return (S.DeviceKnownEmittedFns.count(FD) > 0)
+             ? FunctionEmissionStatus::Emitted
+             : FunctionEmissionStatus::Unknown;
+}
+
+Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
+                                                   unsigned DiagID) {
+  assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP host compilation.");
+  FunctionEmissionStatus FES =
+      isKnownHostEmitted(*this, getCurFunctionDecl());
+  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
+  switch (FES) {
+  case FunctionEmissionStatus::Emitted:
+    Kind = DeviceDiagBuilder::K_Immediate;
+    break;
+  case FunctionEmissionStatus::Unknown:
+    Kind = DeviceDiagBuilder::K_Deferred;
+    break;
+  case FunctionEmissionStatus::Discarded:
+    Kind = DeviceDiagBuilder::K_Nop;
+    break;
+  }
+
+  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+}
+
+void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
+                                     bool CheckForDelayedContext) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
   assert(Callee && "Callee may not be null.");
+  Callee = Callee->getMostRecentDecl();
   FunctionDecl *Caller = getCurFunctionDecl();
 
+  // host only function are not available on the device.
+  if (Caller &&
+      (isKnownDeviceEmitted(*this, Caller) == FunctionEmissionStatus::Emitted ||
+       (!isOpenMPDeviceDelayedContext(*this) &&
+        isKnownDeviceEmitted(*this, Caller) ==
+            FunctionEmissionStatus::Unknown)) &&
+      isKnownDeviceEmitted(*this, Callee) ==
+          FunctionEmissionStatus::Discarded) {
+    StringRef HostDevTy =
+        getOpenMPSimpleClauseTypeName(OMPC_device_type, OMPC_DEVICE_TYPE_host);
+    Diag(Loc, diag::err_omp_wrong_device_function_call) << HostDevTy << 0;
+    Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+         diag::note_omp_marked_device_type_here)
+        << HostDevTy;
+    return;
+  }
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
-  if (!isOpenMPDeviceDelayedContext(*this) ||
-      (Caller && isKnownEmitted(*this, Caller)))
-    markKnownEmitted(*this, Caller, Callee, Loc, isKnownEmitted);
+  if ((CheckForDelayedContext && !isOpenMPDeviceDelayedContext(*this)) ||
+      (!Caller && !CheckForDelayedContext) ||
+      (Caller &&
+       isKnownDeviceEmitted(*this, Caller) == FunctionEmissionStatus::Emitted))
+    markKnownEmitted(*this, Caller, Callee, Loc,
+                     [CheckForDelayedContext](Sema &S, FunctionDecl *FD) {
+                       return CheckForDelayedContext &&
+                              isKnownDeviceEmitted(S, FD) ==
+                                  FunctionEmissionStatus::Emitted;
+                     });
+  else if (Caller)
+    DeviceCallGraph[Caller].insert({Callee, Loc});
+}
+
+void Sema::checkOpenMPHostFunction(SourceLocation Loc, FunctionDecl *Callee,
+                                   bool CheckCaller) {
+  assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP host compilation.");
+  assert(Callee && "Callee may not be null.");
+  Callee = Callee->getMostRecentDecl();
+  FunctionDecl *Caller = getCurFunctionDecl();
+
+  // device only function are not available on the host.
+  if (Caller &&
+      isKnownHostEmitted(*this, Caller) == FunctionEmissionStatus::Emitted &&
+      isKnownHostEmitted(*this, Callee) == FunctionEmissionStatus::Discarded) {
+    StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
+        OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
+    Diag(Loc, diag::err_omp_wrong_device_function_call) << NoHostDevTy << 1;
+    Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+         diag::note_omp_marked_device_type_here)
+        << NoHostDevTy;
+    return;
+  }
+  // If the caller is known-emitted, mark the callee as known-emitted.
+  // Otherwise, mark the call in our call graph so we can traverse it later.
+  if ((!CheckCaller && !Caller) ||
+      (Caller &&
+       isKnownHostEmitted(*this, Caller) == FunctionEmissionStatus::Emitted))
+    markKnownEmitted(
+        *this, Caller, Callee, Loc, [CheckCaller](Sema &S, FunctionDecl *FD) {
+          return CheckCaller &&
+                 isKnownHostEmitted(S, FD) == FunctionEmissionStatus::Emitted;
+        });
   else if (Caller)
     DeviceCallGraph[Caller].insert({Callee, Loc});
 }
@@ -1606,7 +1743,8 @@ void Sema::checkOpenMPDeviceExpr(const Expr *E) {
         << Context.getTargetInfo().getTriple().str() << E->getSourceRange();
 }
 
-bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
+bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
+                                 unsigned OpenMPCaptureLevel) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 
   ASTContext &Ctx = getASTContext();
@@ -1616,6 +1754,7 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   D = cast<ValueDecl>(D->getCanonicalDecl());
   QualType Ty = D->getType();
 
+  bool IsVariableUsedInMapClause = false;
   if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective, Level)) {
     // This table summarizes how a given variable should be passed to the device
     // given its type and the clauses where it appears. This table is based on
@@ -1677,7 +1816,6 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
     // Locate map clauses and see if the variable being captured is referred to
     // in any of those clauses. Here we only care about variables, not fields,
     // because fields are part of aggregates.
-    bool IsVariableUsedInMapClause = false;
     bool IsVariableAssociatedWithSection = false;
 
     DSAStack->checkMappableExprComponentListsForDeclAtLevel(
@@ -1735,10 +1873,13 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
 
   if (IsByRef && Ty.getNonReferenceType()->isScalarType()) {
     IsByRef =
-        !DSAStack->hasExplicitDSA(
-            D,
-            [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
-            Level, /*NotLastprivate=*/true) &&
+        ((IsVariableUsedInMapClause &&
+          DSAStack->getCaptureRegion(Level, OpenMPCaptureLevel) ==
+              OMPD_target) ||
+         !DSAStack->hasExplicitDSA(
+             D,
+             [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
+             Level, /*NotLastprivate=*/true)) &&
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
@@ -1796,7 +1937,8 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     if (isInOpenMPDeclareTargetContext()) {
       // Try to mark variable as declare target if it is used in capturing
       // regions.
-      if (!OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+      if (LangOpts.OpenMP <= 45 &&
+          !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
         checkDeclIsAllowedInOpenMPTarget(nullptr, VD);
       return nullptr;
     } else if (isInOpenMPTargetExecutionDirective()) {
@@ -1951,6 +2093,54 @@ bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D,
 }
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
+
+void Sema::finalizeOpenMPDelayedAnalysis() {
+  assert(LangOpts.OpenMP && "Expected OpenMP compilation mode.");
+  // Diagnose implicit declare target functions and their callees.
+  for (const auto &CallerCallees : DeviceCallGraph) {
+    Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+        OMPDeclareTargetDeclAttr::getDeviceType(
+            CallerCallees.getFirst()->getMostRecentDecl());
+    // Ignore host functions during device analyzis.
+    if (LangOpts.OpenMPIsDevice && DevTy &&
+        *DevTy == OMPDeclareTargetDeclAttr::DT_Host)
+      continue;
+    // Ignore nohost functions during host analyzis.
+    if (!LangOpts.OpenMPIsDevice && DevTy &&
+        *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
+      continue;
+    for (const std::pair<CanonicalDeclPtr<FunctionDecl>, SourceLocation>
+             &Callee : CallerCallees.getSecond()) {
+      const FunctionDecl *FD = Callee.first->getMostRecentDecl();
+      Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+          OMPDeclareTargetDeclAttr::getDeviceType(FD);
+      if (LangOpts.OpenMPIsDevice && DevTy &&
+          *DevTy == OMPDeclareTargetDeclAttr::DT_Host) {
+        // Diagnose host function called during device codegen.
+        StringRef HostDevTy = getOpenMPSimpleClauseTypeName(
+            OMPC_device_type, OMPC_DEVICE_TYPE_host);
+        Diag(Callee.second, diag::err_omp_wrong_device_function_call)
+            << HostDevTy << 0;
+        Diag(FD->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+             diag::note_omp_marked_device_type_here)
+            << HostDevTy;
+        continue;
+      }
+      if (!LangOpts.OpenMPIsDevice && DevTy &&
+          *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
+        // Diagnose nohost function called during host codegen.
+        StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
+            OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
+        Diag(Callee.second, diag::err_omp_wrong_device_function_call)
+            << NoHostDevTy << 1;
+        Diag(FD->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+             diag::note_omp_marked_device_type_here)
+            << NoHostDevTy;
+        continue;
+      }
+    }
+  }
+}
 
 void Sema::StartOpenMPDSABlock(OpenMPDirectiveKind DKind,
                                const DeclarationNameInfo &DirName,
@@ -2959,7 +3149,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
@@ -2970,7 +3160,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget);
+                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
     Sema::CapturedParamNameType ParamsTeamsOrParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
@@ -2979,7 +3169,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeamsOrParallel);
+                             ParamsTeamsOrParallel, /*OpenMPCaptureLevel=*/2);
     break;
   }
   case OMPD_target:
@@ -3003,14 +3193,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, AlwaysInlineAttr::Keyword_forceinline));
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             std::make_pair(StringRef(), QualType()));
+                             std::make_pair(StringRef(), QualType()),
+                             /*OpenMPCaptureLevel=*/1);
     break;
   }
   case OMPD_simd:
@@ -3142,7 +3333,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params);
+                             Params, /*OpenMPCaptureLevel=*/0);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
@@ -3153,7 +3344,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget);
+                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
 
     Sema::CapturedParamNameType ParamsTeams[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3162,7 +3353,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeams);
+                             ParamsTeams, /*OpenMPCaptureLevel=*/2);
 
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3174,7 +3365,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel);
+                             ParamsParallel, /*OpenMPCaptureLevel=*/3);
     break;
   }
 
@@ -3191,7 +3382,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTeams);
+                             ParamsTeams, /*OpenMPCaptureLevel=*/0);
 
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
@@ -3203,7 +3394,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel);
+                             ParamsParallel, /*OpenMPCaptureLevel=*/1);
     break;
   }
   case OMPD_target_update:
@@ -4396,6 +4587,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_reverse_offload:
       case OMPC_dynamic_allocators:
       case OMPC_atomic_default_mem_order:
+      case OMPC_device_type:
         llvm_unreachable("Unexpected clause");
       }
       for (Stmt *CC : C->children()) {
@@ -5798,8 +5990,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
     Scope *S, Expr *Cond,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
   // Try to build LB <op> UB, where <op> is <, >, <=, or >=.
-  bool Suppress = SemaRef.getDiagnostics().getSuppressAllDiagnostics();
-  SemaRef.getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
+  Sema::TentativeAnalysisScope Trap(SemaRef);
 
   ExprResult NewLB =
       InitDependOnLC ? LB : tryBuildCapture(SemaRef, LB, Captures);
@@ -5821,7 +6012,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
           CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
           /*AllowExplicit=*/true);
   }
-  SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
+
   // Otherwise use original loop condition and evaluate it in runtime.
   return CondExpr.isUsable() ? CondExpr.get() : Cond;
 }
@@ -6243,8 +6434,8 @@ static ExprResult buildCounterUpdate(
   if (VarRef.get()->getType()->isOverloadableType() ||
       NewStart.get()->getType()->isOverloadableType() ||
       Update.get()->getType()->isOverloadableType()) {
-    bool Suppress = SemaRef.getDiagnostics().getSuppressAllDiagnostics();
-    SemaRef.getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
+    Sema::TentativeAnalysisScope Trap(SemaRef);
+
     Update =
         SemaRef.BuildBinOp(S, Loc, BO_Assign, VarRef.get(), NewStart.get());
     if (Update.isUsable()) {
@@ -6256,7 +6447,6 @@ static ExprResult buildCounterUpdate(
                                             UpdateVal.get());
       }
     }
-    SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
   }
 
   // Second attempt: try to build 'VarRef = Start (+|-) Iter * Step'.
@@ -9625,6 +9815,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_device_type:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -10167,6 +10358,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_device_type:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -10560,6 +10752,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_device_type:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -10738,6 +10931,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_device_type:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -10947,6 +11141,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
   case OMPC_atomic_default_mem_order:
+  case OMPC_device_type:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -11153,6 +11348,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_device_type:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -11253,7 +11449,13 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
     // A list item cannot appear in both a map clause and a data-sharing
     // attribute clause on the same construct
-    if (isOpenMPTargetExecutionDirective(CurrDir)) {
+    //
+    // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+    // A list item cannot appear in both a map clause and a data-sharing
+    // attribute clause on the same construct unless the construct is a
+    // combined construct.
+    if ((LangOpts.OpenMP <= 45 && isOpenMPTargetExecutionDirective(CurrDir)) ||
+        CurrDir == OMPD_target) {
       OpenMPClauseKind ConflictKind;
       if (DSAStack->checkMappableExprComponentListsForDecl(
               VD, /*CurrentRegionOnly=*/true,
@@ -11488,7 +11690,14 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (isOpenMPTargetExecutionDirective(CurrDir)) {
+      //
+      // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct unless the construct is a
+      // combined construct.
+      if ((LangOpts.OpenMP <= 45 &&
+           isOpenMPTargetExecutionDirective(CurrDir)) ||
+          CurrDir == OMPD_target) {
         OpenMPClauseKind ConflictKind;
         if (DSAStack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
@@ -13605,11 +13814,13 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
             << RefExpr->getSourceRange();
         continue;
       }
-      bool Suppress = getDiagnostics().getSuppressAllDiagnostics();
-      getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
-      ExprResult Res =
-          CreateBuiltinUnaryOp(ELoc, UO_AddrOf, RefExpr->IgnoreParenImpCasts());
-      getDiagnostics().setSuppressAllDiagnostics(Suppress);
+
+      ExprResult Res;
+      {
+        Sema::TentativeAnalysisScope Trap(*this);
+        Res = CreateBuiltinUnaryOp(ELoc, UO_AddrOf,
+                                   RefExpr->IgnoreParenImpCasts());
+      }
       if (!Res.isUsable() && !isa<OMPArraySectionExpr>(SimpleExpr)) {
         Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
             << RefExpr->getSourceRange();
@@ -14600,7 +14811,14 @@ static void checkMappableExpressionList(
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (VD && isOpenMPTargetExecutionDirective(DKind)) {
+      //
+      // OpenMP 5.0 [2.19.7.1, Restrictions, p.7]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct unless the construct is a
+      // combined construct.
+      if (VD && ((SemaRef.LangOpts.OpenMP <= 45 &&
+                  isOpenMPTargetExecutionDirective(DKind)) ||
+                 DKind == OMPD_target)) {
         DSAStackTy::DSAVarData DVar = DSAS->getTopDSA(VD, /*FromParent=*/false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
@@ -15294,16 +15512,15 @@ void Sema::ActOnFinishOpenMPDeclareTargetDirective() {
   --DeclareTargetNestingLevel;
 }
 
-void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,
-                                        CXXScopeSpec &ScopeSpec,
-                                        const DeclarationNameInfo &Id,
-                                        OMPDeclareTargetDeclAttr::MapTypeTy MT,
-                                        NamedDeclSetType &SameDirectiveDecls) {
+NamedDecl *
+Sema::lookupOpenMPDeclareTargetName(Scope *CurScope, CXXScopeSpec &ScopeSpec,
+                                    const DeclarationNameInfo &Id,
+                                    NamedDeclSetType &SameDirectiveDecls) {
   LookupResult Lookup(*this, Id, LookupOrdinaryName);
   LookupParsedName(Lookup, CurScope, &ScopeSpec, true);
 
   if (Lookup.isAmbiguous())
-    return;
+    return nullptr;
   Lookup.suppressDiagnostics();
 
   if (!Lookup.isSingleResult()) {
@@ -15314,33 +15531,56 @@ void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,
       diagnoseTypo(Corrected, PDiag(diag::err_undeclared_var_use_suggest)
                                   << Id.getName());
       checkDeclIsAllowedInOpenMPTarget(nullptr, Corrected.getCorrectionDecl());
-      return;
+      return nullptr;
     }
 
     Diag(Id.getLoc(), diag::err_undeclared_var_use) << Id.getName();
-    return;
+    return nullptr;
   }
 
   NamedDecl *ND = Lookup.getAsSingle<NamedDecl>();
-  if (isa<VarDecl>(ND) || isa<FunctionDecl>(ND) ||
-      isa<FunctionTemplateDecl>(ND)) {
-    if (!SameDirectiveDecls.insert(cast<NamedDecl>(ND->getCanonicalDecl())))
-      Diag(Id.getLoc(), diag::err_omp_declare_target_multiple) << Id.getName();
-    llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
-            cast<ValueDecl>(ND));
-    if (!Res) {
-      auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(Context, MT);
-      ND->addAttr(A);
-      if (ASTMutationListener *ML = Context.getASTMutationListener())
-        ML->DeclarationMarkedOpenMPDeclareTarget(ND, A);
-      checkDeclIsAllowedInOpenMPTarget(nullptr, ND, Id.getLoc());
-    } else if (*Res != MT) {
-      Diag(Id.getLoc(), diag::err_omp_declare_target_to_and_link)
-          << Id.getName();
-    }
-  } else {
+  if (!isa<VarDecl>(ND) && !isa<FunctionDecl>(ND) &&
+      !isa<FunctionTemplateDecl>(ND)) {
     Diag(Id.getLoc(), diag::err_omp_invalid_target_decl) << Id.getName();
+    return nullptr;
+  }
+  if (!SameDirectiveDecls.insert(cast<NamedDecl>(ND->getCanonicalDecl())))
+    Diag(Id.getLoc(), diag::err_omp_declare_target_multiple) << Id.getName();
+  return ND;
+}
+
+void Sema::ActOnOpenMPDeclareTargetName(
+    NamedDecl *ND, SourceLocation Loc, OMPDeclareTargetDeclAttr::MapTypeTy MT,
+    OMPDeclareTargetDeclAttr::DevTypeTy DT) {
+  assert((isa<VarDecl>(ND) || isa<FunctionDecl>(ND) ||
+          isa<FunctionTemplateDecl>(ND)) &&
+         "Expected variable, function or function template.");
+
+  // Diagnose marking after use as it may lead to incorrect diagnosis and
+  // codegen.
+  if (LangOpts.OpenMP >= 50 &&
+      (ND->isUsed(/*CheckUsedAttr=*/false) || ND->isReferenced()))
+    Diag(Loc, diag::warn_omp_declare_target_after_first_use);
+
+  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+      OMPDeclareTargetDeclAttr::getDeviceType(cast<ValueDecl>(ND));
+  if (DevTy.hasValue() && *DevTy != DT) {
+    Diag(Loc, diag::err_omp_device_type_mismatch)
+        << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(DT)
+        << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(*DevTy);
+    return;
+  }
+  Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(cast<ValueDecl>(ND));
+  if (!Res) {
+    auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(Context, MT, DT,
+                                                       SourceRange(Loc, Loc));
+    ND->addAttr(A);
+    if (ASTMutationListener *ML = Context.getASTMutationListener())
+      ML->DeclarationMarkedOpenMPDeclareTarget(ND, A);
+    checkDeclIsAllowedInOpenMPTarget(nullptr, ND, Loc);
+  } else if (*Res != MT) {
+    Diag(Loc, diag::err_omp_declare_target_to_and_link) << ND;
   }
 }
 
@@ -15349,7 +15589,28 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
   if (!D || !isa<VarDecl>(D))
     return;
   auto *VD = cast<VarDecl>(D);
-  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+  Optional<OMPDeclareTargetDeclAttr::MapTypeTy> MapTy =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
+  if (SemaRef.LangOpts.OpenMP >= 50 &&
+      (SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true) ||
+       SemaRef.getCurBlock() || SemaRef.getCurCapturedRegion()) &&
+      VD->hasGlobalStorage()) {
+    llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> MapTy =
+        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
+    if (!MapTy || *MapTy != OMPDeclareTargetDeclAttr::MT_To) {
+      // OpenMP 5.0, 2.12.7 declare target Directive, Restrictions
+      // If a lambda declaration and definition appears between a
+      // declare target directive and the matching end declare target
+      // directive, all variables that are captured by the lambda
+      // expression must also appear in a to clause.
+      SemaRef.Diag(VD->getLocation(),
+                   diag::err_omp_lambda_capture_in_declare_target_not_to);
+      SemaRef.Diag(SL, diag::note_var_explicitly_captured_here)
+          << VD << 0 << SR;
+      return;
+    }
+  }
+  if (MapTy.hasValue())
     return;
   SemaRef.Diag(VD->getLocation(), diag::warn_omp_not_in_target_context);
   SemaRef.Diag(SL, diag::note_used_here) << SR;
@@ -15358,7 +15619,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
 static bool checkValueDeclInTarget(SourceLocation SL, SourceRange SR,
                                    Sema &SemaRef, DSAStackTy *Stack,
                                    ValueDecl *VD) {
-  return VD->hasAttr<OMPDeclareTargetDeclAttr>() ||
+  return OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) ||
          checkTypeMappable(SL, SR, SemaRef, Stack, VD->getType(),
                            /*FullCheck=*/false);
 }
@@ -15384,15 +15645,23 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   }
   if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
     D = FTD->getTemplatedDecl();
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD);
-    if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
-      assert(IdLoc.isValid() && "Source location is expected");
+    if (IdLoc.isValid() && Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
       Diag(IdLoc, diag::err_omp_function_in_link_clause);
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }
+    // Mark the function as must be emitted for the device.
+    Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+        OMPDeclareTargetDeclAttr::getDeviceType(FD);
+    if (LangOpts.OpenMPIsDevice && Res.hasValue() && IdLoc.isValid() &&
+        *DevTy != OMPDeclareTargetDeclAttr::DT_Host)
+      checkOpenMPDeviceFunction(IdLoc, FD, /*CheckForDelayedContext=*/false);
+    if (!LangOpts.OpenMPIsDevice && Res.hasValue() && IdLoc.isValid() &&
+        *DevTy != OMPDeclareTargetDeclAttr::DT_NoHost)
+      checkOpenMPHostFunction(IdLoc, FD, /*CheckCaller=*/false);
   }
   if (auto *VD = dyn_cast<ValueDecl>(D)) {
     // Problem if any with var declared with incomplete type will be reported
@@ -15405,7 +15674,8 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       if (isa<VarDecl>(D) || isa<FunctionDecl>(D) ||
           isa<FunctionTemplateDecl>(D)) {
         auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-            Context, OMPDeclareTargetDeclAttr::MT_To);
+            Context, OMPDeclareTargetDeclAttr::MT_To,
+            OMPDeclareTargetDeclAttr::DT_Any, SourceRange(IdLoc, IdLoc));
         D->addAttr(A);
         if (ASTMutationListener *ML = Context.getASTMutationListener())
           ML->DeclarationMarkedOpenMPDeclareTarget(D, A);

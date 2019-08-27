@@ -4,10 +4,10 @@
 # RUN: llvm-readelf -S %t.so | FileCheck %s
 # RUN: llvm-objdump -d %t.so | FileCheck --check-prefix=DISASM %s
 
-# CHECK: .got.plt          PROGBITS        00003000
+# CHECK: .got.plt          PROGBITS        00003190
 
-## 0x3000 - 0x1000 = 8192
-# DISASM: 1000: {{.*}} movl $8192, %eax
+## 0x3190 - 0x1158 = 8248
+# DISASM: 1158: {{.*}} movl $8248, %eax
 
 .section .foo,"ax",@progbits
 foo:

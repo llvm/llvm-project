@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "test_macros.h"
+#include "test_iterators.h"
 
 struct indirect_less
 {
@@ -42,6 +43,15 @@ void test(int N)
         std::push_heap(ia, ia+i, std::greater<int>());
         assert(std::is_heap(ia, ia+i, std::greater<int>()));
     }
+
+    typedef random_access_iterator<int *> RI;
+    std::shuffle(RI(ia), RI(ia+N), randomness);
+    for (int i = 0; i <= N; ++i)
+    {
+        std::push_heap(RI(ia), RI(ia+i), std::greater<int>());
+        assert(std::is_heap(RI(ia), RI(ia+i), std::greater<int>()));
+    }
+
     delete [] ia;
 }
 

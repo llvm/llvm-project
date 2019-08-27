@@ -81,6 +81,10 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
   I.IsTypeDef = true;
+  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
+                       AccessSpecifier::AS_public, true);
+  I.Bases.back().ChildFunctions.emplace_back();
+  I.Bases.back().Members.emplace_back("int", "X", AccessSpecifier::AS_private);
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
@@ -106,6 +110,8 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
   I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   I.Params.emplace_back("int", "P");
 
+  I.Access = AccessSpecifier::AS_none;
+
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);
   std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
@@ -126,8 +132,7 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
-  // TODO: fix access
-  // I.Access = AccessSpecifier::AS_private;
+  I.Access = AccessSpecifier::AS_public;
 
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);

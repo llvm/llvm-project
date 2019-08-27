@@ -289,9 +289,11 @@ def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
+def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
 def Dangling : DiagGroup<"dangling", [DanglingField,
                                       DanglingInitializerList,
+                                      DanglingGsl,
                                       ReturnStackAddress]>;
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
@@ -512,6 +514,7 @@ def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
 def Varargs : DiagGroup<"varargs">;
+def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
 def Unsequenced : DiagGroup<"unsequenced">;
 // GCC name for -Wunsequenced

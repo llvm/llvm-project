@@ -81,7 +81,7 @@ static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
          MI->getOpcode() == X86::WIN_ALLOCA_64);
   assert(MI->getOperand(0).isReg());
 
-  unsigned AmountReg = MI->getOperand(0).getReg();
+  Register AmountReg = MI->getOperand(0).getReg();
   MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
 
   if (!Def ||
@@ -261,7 +261,7 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
     break;
   }
 
-  unsigned AmountReg = MI->getOperand(0).getReg();
+  Register AmountReg = MI->getOperand(0).getReg();
   MI->eraseFromParent();
 
   // Delete the definition of AmountReg.

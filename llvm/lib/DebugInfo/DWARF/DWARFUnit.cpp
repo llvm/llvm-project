@@ -243,11 +243,9 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     IndexEntry = Index->getFromOffset(*offset_ptr);
   Length = debug_info.getRelocatedValue(4, offset_ptr);
   FormParams.Format = DWARF32;
-  unsigned SizeOfLength = 4;
   if (Length == dwarf::DW_LENGTH_DWARF64) {
     Length = debug_info.getU64(offset_ptr);
     FormParams.Format = DWARF64;
-    SizeOfLength = 8;
   }
   FormParams.Version = debug_info.getU16(offset_ptr);
   if (FormParams.Version >= 5) {
@@ -277,7 +275,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   }
   if (isTypeUnit()) {
     TypeHash = debug_info.getU64(offset_ptr);
-    TypeOffset = debug_info.getU32(offset_ptr);
+    TypeOffset =
+        debug_info.getUnsigned(offset_ptr, FormParams.getDwarfOffsetByteSize());
   } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
     DWOId = debug_info.getU64(offset_ptr);
 
@@ -290,7 +289,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   bool TypeOffsetOK =
       !isTypeUnit()
           ? true
-          : TypeOffset >= Size && TypeOffset < getLength() + SizeOfLength;
+          : TypeOffset >= Size &&
+                TypeOffset < getLength() + getUnitLengthFieldByteSize();
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
   bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;

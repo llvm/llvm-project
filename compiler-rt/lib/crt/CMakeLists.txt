@@ -19,6 +19,7 @@ function(check_cxx_section_exists section output)
   if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
     list(APPEND try_compile_flags "-target ${CMAKE_C_COMPILER_TARGET}")
   endif()
+  append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto try_compile_flags)
 
   string(REPLACE ";" " " extra_flags "${try_compile_flags}")
 

@@ -91,8 +91,8 @@ int main (int argc, char const *argv[])
     packed.c = 0x7112233;
 
     struct LargePackedBits {
-        unsigned long a: 36;
-        unsigned long b: 36;
+        uint64_t a: 36;
+        uint64_t b: 36;
     } __attribute__((packed));
 
     struct LargePackedBits large_packed =

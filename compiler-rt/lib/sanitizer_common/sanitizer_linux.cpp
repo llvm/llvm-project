@@ -2011,6 +2011,35 @@ void CheckASLR() {
     CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
     ReExec();
   }
+#elif SANITIZER_FREEBSD
+  int aslr_pie;
+  uptr len = sizeof(aslr_pie);
+#if SANITIZER_WORDSIZE == 64
+  if (UNLIKELY(internal_sysctlbyname("kern.elf64.aslr.pie_enable",
+      &aslr_pie, &len, NULL, 0) == -1)) {
+    // We're making things less 'dramatic' here since
+    // the OID is not necessarily guaranteed to be here
+    // just yet regarding FreeBSD release
+    return;
+  }
+
+  if (aslr_pie > 0) {
+    Printf("This sanitizer is not compatible with enabled ASLR "
+           "and binaries compiled with PIE\n");
+    Die();
+  }
+#endif
+  // there might be 32 bits compat for 64 bits
+  if (UNLIKELY(internal_sysctlbyname("kern.elf32.aslr.pie_enable",
+      &aslr_pie, &len, NULL, 0) == -1)) {
+    return;
+  }
+
+  if (aslr_pie > 0) {
+    Printf("This sanitizer is not compatible with enabled ASLR "
+           "and binaries compiled with PIE\n");
+    Die();
+  }
 #else
   // Do nothing
 #endif

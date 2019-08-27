@@ -46,7 +46,7 @@ static_assert(alignof(outer<int,char>::inner<double,short>) == alignof(int) * al
 
 static_assert(alignof(int(int)) >= 1, "alignof(function) not positive"); // expected-error{{invalid application of 'alignof' to a function type}}
 
-[[__carries_dependency__]]  // expected-warning{{unknown attribute '__carries_dependency__' ignored}}
+[[__carries_dependency__]]
 void func(void);
 
 alignas(4) auto PR19252 = 0;

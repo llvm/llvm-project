@@ -888,7 +888,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Keep track of sub-register names as well. These are not differentially
   // encoded.
   typedef SmallVector<const CodeGenSubRegIndex*, 4> SubRegIdxVec;
-  SequenceToOffsetTable<SubRegIdxVec, deref<llvm::less>> SubRegIdxSeqs;
+  SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs;
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
 
   SequenceToOffsetTable<std::string> RegStrings;
@@ -1315,7 +1315,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
     // Compress the sub-reg index lists.
     typedef std::vector<const CodeGenSubRegIndex*> IdxList;
     SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
-    SequenceToOffsetTable<IdxList, deref<llvm::less>> SuperRegIdxSeqs;
+    SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
     BitVector MaskBV(RegisterClasses.size());
 
     for (const auto &RC : RegisterClasses) {

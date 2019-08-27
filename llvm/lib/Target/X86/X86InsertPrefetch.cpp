@@ -79,8 +79,8 @@ ErrorOr<PrefetchHints> getPrefetchHints(const FunctionSamples *TopSamples,
 // The prefetch instruction can't take memory operands involving vector
 // registers.
 bool IsMemOpCompatibleWithPrefetch(const MachineInstr &MI, int Op) {
-  unsigned BaseReg = MI.getOperand(Op + X86::AddrBaseReg).getReg();
-  unsigned IndexReg = MI.getOperand(Op + X86::AddrIndexReg).getReg();
+  Register BaseReg = MI.getOperand(Op + X86::AddrBaseReg).getReg();
+  Register IndexReg = MI.getOperand(Op + X86::AddrIndexReg).getReg();
   return (BaseReg == 0 ||
           X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
           X86MCRegisterClasses[X86::GR32RegClassID].contains(BaseReg)) &&

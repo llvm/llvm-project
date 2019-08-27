@@ -118,5 +118,14 @@ Defined *Undefined::getWeakAlias() {
       return d;
   return nullptr;
 }
+
+MemoryBufferRef Lazy::getMemberBuffer() {
+  Archive::Child c =
+    CHECK(sym.getMember(),
+          "could not get the member for symbol " + toCOFFString(sym));
+  return CHECK(c.getMemoryBufferRef(),
+      "could not get the buffer for the member defining symbol " +
+      toCOFFString(sym));
+}
 } // namespace coff
 } // namespace lld

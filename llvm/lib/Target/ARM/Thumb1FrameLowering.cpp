@@ -164,7 +164,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = RegInfo->getFrameRegister(MF);
   unsigned BasePtr = RegInfo->getBaseRegister();
   int CFAOffset = 0;
 
@@ -459,8 +459,8 @@ static bool isCSRestore(MachineInstr &MI, const MCPhysReg *CSRegs) {
   else if (MI.getOpcode() == ARM::tPOP) {
     return true;
   } else if (MI.getOpcode() == ARM::tMOVr) {
-    unsigned Dst = MI.getOperand(0).getReg();
-    unsigned Src = MI.getOperand(1).getReg();
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
     return ((ARM::tGPRRegClass.contains(Src) || Src == ARM::LR) &&
             ARM::hGPRRegClass.contains(Dst));
   }
@@ -483,7 +483,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
   assert((unsigned)NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = RegInfo->getFrameRegister(MF);
 
   if (!AFI->hasStackFrame()) {
     if (NumBytes - ArgRegsSaveSize != 0)

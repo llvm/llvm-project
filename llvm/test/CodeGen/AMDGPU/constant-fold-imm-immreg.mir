@@ -882,7 +882,7 @@ body:             |
 ---
 
 # GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_immreg{{$}}
-# GCN: %3:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec, implicit $exec
+# GCN: %3:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %3
 
 name: constant_fold_lshl_or_reg0_immreg_immreg

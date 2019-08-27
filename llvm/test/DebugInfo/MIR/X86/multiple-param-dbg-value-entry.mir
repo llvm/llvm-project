@@ -17,9 +17,9 @@
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'
   source_filename = "multiple-param-dbg-value-entry.c"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-  
+
   @global = common dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
-  
+
   define dso_local i32 @foo(i32 %p, i32 %q, i32 %r) local_unnamed_addr !dbg !11 {
   entry:
     call void @llvm.dbg.value(metadata i32 %p, metadata !15, metadata !DIExpression()), !dbg !18
@@ -30,14 +30,14 @@
     tail call void asm sideeffect "", "~{edi},~{esi},~{edx},~{dirflag},~{fpsr},~{flags}"(), !dbg !18, !srcloc !19
     ret i32 123, !dbg !18
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!2}
   !llvm.module.flags = !{!7, !8, !9}
   !llvm.ident = !{!10}
-  
+
   !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
   !1 = distinct !DIGlobalVariable(name: "global", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
   !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 9.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: None)
@@ -64,12 +64,12 @@
 name:            foo
 alignment:       4
 tracksRegLiveness: true
-liveins:         
+liveins:
   - { reg: '$edi' }
 body:             |
   bb.0.entry:
     liveins: $edi
-  
+
     DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
     DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
     DBG_VALUE $esi, $noreg, !16, !DIExpression(), debug-location !18

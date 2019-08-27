@@ -2599,9 +2599,11 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
 void
 SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  TargetLowering::MakeLibCallOptions CallOptions;
+  CallOptions.setDiscardResult(true);
   SDValue Chain =
       TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
-                      None, false, getCurSDLoc(), false, false).second;
+                      None, CallOptions, getCurSDLoc()).second;
   // On PS4, the "return address" must still be within the calling function,
   // even if it's at the very end, so emit an explicit TRAP here.
   // Passing 'true' for doesNotReturn above won't generate the trap for us.
@@ -4117,7 +4119,7 @@ void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
 
   SDValue Src = getValue(SrcV);
   // Create a virtual register, then update the virtual register.
-  unsigned VReg =
+  Register VReg =
       SwiftError.getOrCreateVRegDefAt(&I, FuncInfo.MBB, I.getPointerOperand());
   // Chain, DL, Reg, N or Chain, DL, Reg, N, Glue
   // Chain can be getRoot or getControlRoot.
@@ -5325,8 +5327,9 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
 // getUnderlyingArgRegs - Find underlying registers used for a truncated,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
-void getUnderlyingArgRegs(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
-                          const SDValue &N) {
+static void
+getUnderlyingArgRegs(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
+                     const SDValue &N) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -7154,7 +7157,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    unsigned VReg = SwiftError.getOrCreateVRegDefAt(
+    Register VReg = SwiftError.getOrCreateVRegDefAt(
         CS.getInstruction(), FuncInfo.MBB, SwiftErrorVal);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
     DAG.setRoot(CopyNode);
@@ -9725,7 +9728,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     MachineFunction& MF = SDB->DAG.getMachineFunction();
     MachineRegisterInfo& RegInfo = MF.getRegInfo();
-    unsigned SRetReg = RegInfo.createVirtualRegister(TLI->getRegClassFor(RegVT));
+    Register SRetReg =
+        RegInfo.createVirtualRegister(TLI->getRegClassFor(RegVT));
     FuncInfo->DemoteRegister = SRetReg;
     NewRoot =
         SDB->DAG.getCopyToReg(NewRoot, SDB->getCurSDLoc(), SRetReg, ArgValue);

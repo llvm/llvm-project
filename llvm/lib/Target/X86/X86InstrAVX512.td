@@ -2836,13 +2836,21 @@ def : Pat<(i8 (bitconvert (v8i1 VK8:$src))),
 
 def : Pat<(i32 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
           (KMOVWrk VK16:$src)>;
+def : Pat<(i64 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
+          (SUBREG_TO_REG (i64 0), (KMOVWrk VK16:$src), sub_32bit)>;
 def : Pat<(i32 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
           (COPY_TO_REGCLASS VK16:$src, GR32)>;
+def : Pat<(i64 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
+          (INSERT_SUBREG (IMPLICIT_DEF), (COPY_TO_REGCLASS VK16:$src, GR32), sub_32bit)>;
 
 def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
           (KMOVBrk VK8:$src)>, Requires<[HasDQI]>;
+def : Pat<(i64 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
+          (SUBREG_TO_REG (i64 0), (KMOVBrk VK8:$src), sub_32bit)>, Requires<[HasDQI]>;
 def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (COPY_TO_REGCLASS VK8:$src, GR32)>;
+def : Pat<(i64 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
+          (INSERT_SUBREG (IMPLICIT_DEF), (COPY_TO_REGCLASS VK8:$src, GR32), sub_32bit)>;
 
 def : Pat<(v32i1 (bitconvert (i32 GR32:$src))),
           (COPY_TO_REGCLASS GR32:$src, VK32)>;
@@ -11880,12 +11888,14 @@ defm VPEXPANDW : expand_by_elt_width <0x62, "vpexpandw", WriteVarShuffle256,
 
 let Constraints = "$src1 = $dst" in
 multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
-                    X86FoldableSchedWrite sched, X86VectorVTInfo VTI> {
+                    X86FoldableSchedWrite sched, X86VectorVTInfo VTI,
+                    bit IsCommutable> {
   defm r  :   AVX512_maskable_3src<Op, MRMSrcReg, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.RC:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1,
-                                            VTI.RC:$src2, VTI.RC:$src3))>,
+                                            VTI.RC:$src2, VTI.RC:$src3)),
+                                   IsCommutable, IsCommutable>,
                                    EVEX_4V, T8PD, Sched<[sched]>;
   defm m  :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
@@ -11906,20 +11916,52 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
 }
 
 multiclass VNNI_common<bits<8> Op, string OpStr, SDNode OpNode,
-                       X86SchedWriteWidths sched> {
+                       X86SchedWriteWidths sched, bit IsCommutable> {
   let Predicates = [HasVNNI] in
-  defm Z      :   VNNI_rmb<Op, OpStr, OpNode, sched.ZMM, v16i32_info>, EVEX_V512;
+  defm Z      :   VNNI_rmb<Op, OpStr, OpNode, sched.ZMM, v16i32_info,
+                           IsCommutable>, EVEX_V512;
   let Predicates = [HasVNNI, HasVLX] in {
-    defm Z256 :   VNNI_rmb<Op, OpStr, OpNode, sched.YMM, v8i32x_info>, EVEX_V256;
-    defm Z128 :   VNNI_rmb<Op, OpStr, OpNode, sched.XMM, v4i32x_info>, EVEX_V128;
+    defm Z256 :   VNNI_rmb<Op, OpStr, OpNode, sched.YMM, v8i32x_info,
+                           IsCommutable>, EVEX_V256;
+    defm Z128 :   VNNI_rmb<Op, OpStr, OpNode, sched.XMM, v4i32x_info,
+                           IsCommutable>, EVEX_V128;
   }
 }
 
 // FIXME: Is there a better scheduler class for VPDP?
-defm VPDPBUSD   : VNNI_common<0x50, "vpdpbusd", X86Vpdpbusd, SchedWriteVecIMul>;
-defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul>;
-defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul>;
-defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul>;
+defm VPDPBUSD   : VNNI_common<0x50, "vpdpbusd", X86Vpdpbusd, SchedWriteVecIMul, 0>;
+defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul, 0>;
+defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1>;
+defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1>;
+
+def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
+                             (X86vpmaddwd node:$lhs, node:$rhs), [{
+  return N->hasOneUse();
+}]>;
+
+// Patterns to match VPDPWSSD from existing instructions/intrinsics.
+let Predicates = [HasVNNI] in {
+  def : Pat<(v16i32 (add VR512:$src1,
+                         (X86vpmaddwd_su VR512:$src2, VR512:$src3))),
+            (VPDPWSSDZr VR512:$src1, VR512:$src2, VR512:$src3)>;
+  def : Pat<(v16i32 (add VR512:$src1,
+                         (X86vpmaddwd_su VR512:$src2, (load addr:$src3)))),
+            (VPDPWSSDZm VR512:$src1, VR512:$src2, addr:$src3)>;
+}
+let Predicates = [HasVNNI,HasVLX] in {
+  def : Pat<(v8i32 (add VR256X:$src1,
+                        (X86vpmaddwd_su VR256X:$src2, VR256X:$src3))),
+            (VPDPWSSDZ256r VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+  def : Pat<(v8i32 (add VR256X:$src1,
+                        (X86vpmaddwd_su VR256X:$src2, (load addr:$src3)))),
+            (VPDPWSSDZ256m VR256X:$src1, VR256X:$src2, addr:$src3)>;
+  def : Pat<(v4i32 (add VR128X:$src1,
+                        (X86vpmaddwd_su VR128X:$src2, VR128X:$src3))),
+            (VPDPWSSDZ128r VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+  def : Pat<(v4i32 (add VR128X:$src1,
+                        (X86vpmaddwd_su VR128X:$src2, (load addr:$src3)))),
+            (VPDPWSSDZ128m VR128X:$src1, VR128X:$src2, addr:$src3)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Bit Algorithms

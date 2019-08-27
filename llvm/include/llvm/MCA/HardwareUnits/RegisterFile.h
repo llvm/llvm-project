@@ -220,7 +220,7 @@ public:
   //
   // Current implementation can simulate up to 32 register files (including the
   // special register file at index #0).
-  unsigned isAvailable(ArrayRef<unsigned> Regs) const;
+  unsigned isAvailable(ArrayRef<MCPhysReg> Regs) const;
 
   // Returns the number of PRFs implemented by this processor.
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }

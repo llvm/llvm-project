@@ -802,7 +802,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     return { false, false };
 
   MachineOperand &NewDstMO = DefMI->getOperand(NewDstIdx);
-  unsigned NewReg = NewDstMO.getReg();
+  Register NewReg = NewDstMO.getReg();
   if (NewReg != IntB.reg || !IntB.Query(AValNo->def).isKill())
     return { false, false };
 
@@ -1240,7 +1240,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     return false;
   // Only support subregister destinations when the def is read-undef.
   MachineOperand &DstOperand = CopyMI->getOperand(0);
-  unsigned CopyDstReg = DstOperand.getReg();
+  Register CopyDstReg = DstOperand.getReg();
   if (DstOperand.getSubReg() && !DstOperand.isUndef())
     return false;
 
@@ -2411,7 +2411,7 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
     assert(MI && "No defining instruction");
     if (!MI->isFullCopy())
       return std::make_pair(VNI, TrackReg);
-    unsigned SrcReg = MI->getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
     if (!Register::isVirtualRegister(SrcReg))
       return std::make_pair(VNI, TrackReg);
 
@@ -3189,7 +3189,7 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
       MachineInstr *MI = Indexes->getInstructionFromIndex(Def);
       assert(MI && "No instruction to erase");
       if (MI->isCopy()) {
-        unsigned Reg = MI->getOperand(1).getReg();
+        Register Reg = MI->getOperand(1).getReg();
         if (Register::isVirtualRegister(Reg) && Reg != CP.getSrcReg() &&
             Reg != CP.getDstReg())
           ShrinkRegs.push_back(Reg);
@@ -3463,8 +3463,8 @@ static bool isLocalCopy(MachineInstr *Copy, const LiveIntervals *LIS) {
   if (Copy->getOperand(1).isUndef())
     return false;
 
-  unsigned SrcReg = Copy->getOperand(1).getReg();
-  unsigned DstReg = Copy->getOperand(0).getReg();
+  Register SrcReg = Copy->getOperand(1).getReg();
+  Register DstReg = Copy->getOperand(0).getReg();
   if (Register::isPhysicalRegister(SrcReg) ||
       Register::isPhysicalRegister(DstReg))
     return false;

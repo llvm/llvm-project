@@ -427,6 +427,22 @@ public:
     return getNumExplicitDefs() + MCID->getNumImplicitDefs();
   }
 
+  /// Returns true if the instruction has implicit definition.
+  bool hasImplicitDef() const {
+    for (unsigned I = getNumExplicitOperands(), E = getNumOperands();
+      I != E; ++I) {
+      const MachineOperand &MO = getOperand(I);
+      if (MO.isDef() && MO.isImplicit())
+        return true;
+    }
+    return false;
+  }
+
+  /// Returns the implicit operands number.
+  unsigned getNumImplicitOperands() const {
+    return getNumOperands() - getNumExplicitOperands();
+  }
+
   /// Return true if operand \p OpIdx is a subregister index.
   bool isOperandSubregIdx(unsigned OpIdx) const {
     assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&

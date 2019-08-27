@@ -144,11 +144,14 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   // If this type comes from a Clang module, look in the DWARF section
   // of the pcm file in the module cache. Clang generates DWO skeleton
   // units as breadcrumbs to find them.
-  std::vector<CompilerContext> decl_context;
+  llvm::SmallVector<CompilerContext, 4> decl_context;
   die.GetDeclContext(decl_context);
   TypeMap dwo_types;
 
-  if (!dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, true,
+  // The type in the Clang module must have the same langage as the current CU.
+  LanguageSet languages;
+  languages.Insert(die.GetCU()->GetLanguageType());
+  if (!dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages, true,
                                                  dwo_types)) {
     if (!IsClangModuleFwdDecl(die))
       return TypeSP();
@@ -159,8 +162,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
     for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
-      if (name_module.second->GetSymbolFile()->FindTypes(decl_context, true,
-                                                         dwo_types))
+      if (name_module.second->GetSymbolFile()->FindTypes(
+              decl_context, languages, true, dwo_types))
         break;
     }
   }

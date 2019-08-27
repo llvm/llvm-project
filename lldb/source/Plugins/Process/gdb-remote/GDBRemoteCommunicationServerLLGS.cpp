@@ -218,7 +218,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
 
   if (should_forward_stdio) {
     // Temporarily relax the following for Windows until we can take advantage
-    // of the recently added pty support. This doesn't really affect the use of 
+    // of the recently added pty support. This doesn't really affect the use of
     // lldb-server on Windows.
 #if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
@@ -1377,7 +1377,7 @@ GDBRemoteCommunicationServerLLGS::Handle_C(StringExtractorGDBRemote &packet) {
   if (packet.GetBytesLeft() > 0) {
     // FIXME add continue at address support for $C{signo}[;{continue-address}].
     if (*packet.Peek() == ';')
-      return SendUnimplementedResponse(packet.GetStringRef().c_str());
+      return SendUnimplementedResponse(packet.GetStringRef().data());
     else
       return SendIllFormedResponse(
           packet, "unexpected content after $C{signal-number}");
@@ -1440,7 +1440,7 @@ GDBRemoteCommunicationServerLLGS::Handle_c(StringExtractorGDBRemote &packet) {
   if (has_continue_address) {
     LLDB_LOG(log, "not implemented for c[address] variant [{0} remains]",
              packet.Peek());
-    return SendUnimplementedResponse(packet.GetStringRef().c_str());
+    return SendUnimplementedResponse(packet.GetStringRef().data());
   }
 
   // Ensure we have a native process.
@@ -1960,7 +1960,7 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, could not "
               "parse register number from request \"%s\"",
-              __FUNCTION__, packet.GetStringRef().c_str());
+              __FUNCTION__, packet.GetStringRef().data());
     return SendErrorResponse(0x15);
   }
 
@@ -2040,7 +2040,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, could not "
               "parse register number from request \"%s\"",
-              __FUNCTION__, packet.GetStringRef().c_str());
+              __FUNCTION__, packet.GetStringRef().data());
     return SendErrorResponse(0x29);
   }
 
@@ -3060,7 +3060,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qThreadStopInfo(
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, could not "
               "parse thread id from request \"%s\"",
-              __FUNCTION__, packet.GetStringRef().c_str());
+              __FUNCTION__, packet.GetStringRef().data());
     return SendErrorResponse(0x15);
   }
   return SendStopReplyPacketForThread(tid);
@@ -3234,7 +3234,7 @@ NativeThreadProtocol *GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
               "GDBRemoteCommunicationServerLLGS::%s gdb-remote parse "
               "error: expected ';' prior to start of thread suffix: packet "
               "contents = '%s'",
-              __FUNCTION__, packet.GetStringRef().c_str());
+              __FUNCTION__, packet.GetStringRef().data());
     return nullptr;
   }
 
@@ -3247,7 +3247,7 @@ NativeThreadProtocol *GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
               "GDBRemoteCommunicationServerLLGS::%s gdb-remote parse "
               "error: expected 'thread:' but not found, packet contents = "
               "'%s'",
-              __FUNCTION__, packet.GetStringRef().c_str());
+              __FUNCTION__, packet.GetStringRef().data());
     return nullptr;
   }
   packet.SetFilePos(packet.GetFilePos() + strlen("thread:"));

@@ -737,7 +737,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // valid.
       .clampScalar(LitTyIdx, S16, S256)
       .widenScalarToNextPow2(LitTyIdx, /*Min*/ 32)
-      .legalIf(all(typeIs(0, S16), typeIs(1, LLT::vector(3, 16)))) // FIXME: Testing hack
+      .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
       .fewerElementsIf(all(typeIs(0, S16), vectorWiderThan(1, 32),
                            elementTypeIs(1, S16)),
                        changeTo(1, V2S16))

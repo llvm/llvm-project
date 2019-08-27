@@ -831,33 +831,39 @@ bool CompilerInstance::InitializeSourceManager(
 
   // Figure out where to get and map in the main file.
   if (InputFile != "-") {
-    auto FileOrErr = FileMgr.getFile(InputFile, /*OpenFile=*/true);
+    auto FileOrErr = FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
     if (!FileOrErr) {
+      // FIXME: include the error in the diagnostic.
+      consumeError(FileOrErr.takeError());
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;
     }
-    auto File = *FileOrErr;
+    FileEntryRef File = *FileOrErr;
 
     // The natural SourceManager infrastructure can't currently handle named
     // pipes, but we would at least like to accept them for the main
     // file. Detect them here, read them with the volatile flag so FileMgr will
     // pick up the correct size, and simply override their contents as we do for
     // STDIN.
-    if (File->isNamedPipe()) {
-      auto MB = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
+    if (File.getFileEntry().isNamedPipe()) {
+      auto MB =
+          FileMgr.getBufferForFile(&File.getFileEntry(), /*isVolatile=*/true);
       if (MB) {
         // Create a new virtual file that will have the correct size.
-        File = FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
-        SourceMgr.overrideFileContents(File, std::move(*MB));
+        const FileEntry *FE =
+            FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
+        SourceMgr.overrideFileContents(FE, std::move(*MB));
+        SourceMgr.setMainFileID(
+            SourceMgr.createFileID(FE, SourceLocation(), Kind));
       } else {
         Diags.Report(diag::err_cannot_open_file) << InputFile
                                                  << MB.getError().message();
         return false;
       }
+    } else {
+      SourceMgr.setMainFileID(
+          SourceMgr.createFileID(File, SourceLocation(), Kind));
     }
-
-    SourceMgr.setMainFileID(
-        SourceMgr.createFileID(File, SourceLocation(), Kind));
   } else {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> SBOrErr =
         llvm::MemoryBuffer::getSTDIN();
@@ -885,6 +891,11 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");
   assert(!getFrontendOpts().ShowVersion && "Client must handle '-version'!");
+
+  // Mark this point as the bottom of the stack if we don't have somewhere
+  // better. We generally expect frontend actions to be invoked with (nearly)
+  // DesiredStackSpace available.
+  noteBottomOfStack();
 
   // FIXME: Take this as an argument, once all the APIs we used have moved to
   // taking it as an input instead of hard-coding llvm::errs.

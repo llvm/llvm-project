@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -100,7 +101,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
                                             const MCSubtargetInfo &STI) const {
   MCInst TmpInst;
   MCOperand Func;
-  unsigned Ra;
+  Register Ra;
   if (MI.getOpcode() == RISCV::PseudoTAIL) {
     Func = MI.getOperand(0);
     Ra = RISCV::X6;
@@ -266,6 +267,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     switch (RVExpr->getKind()) {
     case RISCVMCExpr::VK_RISCV_None:
     case RISCVMCExpr::VK_RISCV_Invalid:
+    case RISCVMCExpr::VK_RISCV_32_PCREL:
       llvm_unreachable("Unhandled fixup kind!");
     case RISCVMCExpr::VK_RISCV_TPREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted

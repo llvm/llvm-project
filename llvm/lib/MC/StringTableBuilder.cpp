@@ -38,6 +38,7 @@ void StringTableBuilder::initSize() {
     // Start the table with a NUL byte.
     Size = 1;
     break;
+  case XCOFF:
   case WinCOFF:
     // Make room to write the table size later.
     Size = 4;
@@ -67,9 +68,12 @@ void StringTableBuilder::write(uint8_t *Buf) const {
     if (!Data.empty())
       memcpy(Buf + P.second, Data.data(), Data.size());
   }
-  if (K != WinCOFF)
-    return;
-  support::endian::write32le(Buf, Size);
+  // The COFF formats store the size of the string table in the first 4 bytes.
+  // For Windows, the format is little-endian; for AIX, it is big-endian.
+  if (K == WinCOFF)
+    support::endian::write32le(Buf, Size);
+  else if (K == XCOFF)
+    support::endian::write32be(Buf, Size);
 }
 
 // Returns the character at Pos from end of a string.

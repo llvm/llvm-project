@@ -154,6 +154,12 @@ def FeatureLdsMisalignedBug : SubtargetFeature<"lds-misaligned-bug",
   "Some GFX10 bug with misaligned multi-dword LDS access in WGP mode"
 >;
 
+def FeatureMFMAInlineLiteralBug : SubtargetFeature<"mfma-inline-literal-bug",
+  "HasMFMAInlineLiteralBug",
+  "true",
+  "MFMA cannot use inline literal as SrcC"
+>;
+
 def FeatureVcmpxPermlaneHazard : SubtargetFeature<"vcmpx-permlane-hazard",
   "HasVcmpxPermlaneHazard",
   "true",
@@ -811,6 +817,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddInsts,
    FeatureSRAMECC,
+   FeatureMFMAInlineLiteralBug,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<

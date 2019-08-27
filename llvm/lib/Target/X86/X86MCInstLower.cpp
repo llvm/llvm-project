@@ -500,20 +500,16 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions have register
-  // inputs modeled as normal uses instead of implicit uses.  As such, truncate
-  // off all but the first operand (the callee).  FIXME: Change isel.
+  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions used to have
+  // register inputs modeled as normal uses instead of implicit uses.  As such,
+  // they we used to truncate off all but the first operand (the callee). This
+  // issue seems to have been fixed at some point. This assert verifies that.
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
   case X86::CALL64r:
-  case X86::CALL64pcrel32: {
-    unsigned Opcode = OutMI.getOpcode();
-    MCOperand Saved = OutMI.getOperand(0);
-    OutMI = MCInst();
-    OutMI.setOpcode(Opcode);
-    OutMI.addOperand(Saved);
+  case X86::CALL64pcrel32:
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     break;
-  }
 
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
@@ -552,21 +548,15 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       goto SetTailJmpOpcode;
 
     SetTailJmpOpcode:
-      MCOperand Saved = OutMI.getOperand(0);
-      OutMI = MCInst();
+      assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
       OutMI.setOpcode(Opcode);
-      OutMI.addOperand(Saved);
       break;
     }
 
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC: {
-    MCOperand Saved = OutMI.getOperand(0);
-    MCOperand Saved2 = OutMI.getOperand(1);
-    OutMI = MCInst();
+    assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
     OutMI.setOpcode(X86::JCC_1);
-    OutMI.addOperand(Saved);
-    OutMI.addOperand(Saved2);
     break;
   }
 
@@ -958,7 +948,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
   //                  <opcode>, <operands>
 
-  unsigned DefRegister = FaultingMI.getOperand(0).getReg();
+  Register DefRegister = FaultingMI.getOperand(0).getReg();
   FaultMaps::FaultKind FK =
       static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
   MCSymbol *HandlerLabel = FaultingMI.getOperand(2).getMBB()->getSymbol();
@@ -1079,7 +1069,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
     // Emit MOV to materialize the target address and the CALL to target.
     // This is encoded with 12-13 bytes, depending on which register is used.
-    unsigned ScratchReg = MI.getOperand(ScratchIdx).getReg();
+    Register ScratchReg = MI.getOperand(ScratchIdx).getReg();
     if (X86II::isX86_64ExtendedReg(ScratchReg))
       EncodedBytes = 13;
     else
@@ -1650,7 +1640,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     // Lower these as normal, but add some comments.
-    unsigned Reg = MI->getOperand(0).getReg();
+    Register Reg = MI->getOperand(0).getReg();
     OutStreamer->AddComment(StringRef("eh_return, addr: %") +
                             X86ATTInstPrinter::getRegisterName(Reg));
     break;
@@ -1699,9 +1689,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
     const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
-    unsigned Reg = MI->getOperand(0).getReg();
-    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
-    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+    Register Reg = MI->getOperand(0).getReg();
+    Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
 
     // Load the first mask register
     MCInstBuilder MIB = MCInstBuilder(X86::KMOVWkm);
@@ -1732,9 +1722,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
     const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
-    unsigned Reg = MI->getOperand(X86::AddrNumOperands).getReg();
-    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
-    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+    Register Reg = MI->getOperand(X86::AddrNumOperands).getReg();
+    Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
 
     // Store the first mask register
     MCInstBuilder MIB = MCInstBuilder(X86::KMOVWmk);

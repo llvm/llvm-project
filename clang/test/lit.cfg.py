@@ -175,6 +175,9 @@ if lit.util.which('xmllint'):
 if config.enable_backtrace:
     config.available_features.add('backtrace')
 
+if config.enable_threads:
+    config.available_features.add('thread_support')
+
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get('enable_console', '0'))
 if run_console_tests != 0:

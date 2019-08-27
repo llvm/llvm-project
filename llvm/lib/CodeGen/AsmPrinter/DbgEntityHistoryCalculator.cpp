@@ -177,13 +177,13 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
         IndicesToErase.push_back(Index);
         Entry.endEntry(NewIndex);
       }
-      if (unsigned Reg = isDescribedByReg(DV))
+      if (Register Reg = isDescribedByReg(DV))
         TrackedRegs[Reg] |= !Overlaps;
     }
 
     // If the new debug value is described by a register, add tracking of
     // that register if it is not already tracked.
-    if (unsigned NewReg = isDescribedByReg(DV)) {
+    if (Register NewReg = isDescribedByReg(DV)) {
       if (!TrackedRegs.count(NewReg))
         addRegDescribedVar(RegVars, NewReg, Var);
       LiveEntries[Var].insert(NewIndex);
@@ -234,7 +234,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
                                      DbgLabelInstrMap &DbgLabels) {
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-  unsigned FrameReg = TRI->getFrameRegister(*MF);
+  Register FrameReg = TRI->getFrameRegister(*MF);
   RegDescribedVarsMap RegVars;
   DbgValueEntriesMap LiveEntries;
   for (const auto &MBB : *MF) {

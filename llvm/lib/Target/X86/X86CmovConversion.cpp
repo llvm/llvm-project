@@ -436,7 +436,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
           // Checks for "isUse()" as "uses()" returns also implicit definitions.
           if (!MO.isReg() || !MO.isUse())
             continue;
-          unsigned Reg = MO.getReg();
+          Register Reg = MO.getReg();
           auto &RDM = RegDefMaps[Register::isVirtualRegister(Reg)];
           if (MachineInstr *DefMI = RDM.lookup(Reg)) {
             OperandToDefMap[&MO] = DefMI;
@@ -456,7 +456,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
         for (auto &MO : MI.operands()) {
           if (!MO.isReg() || !MO.isDef())
             continue;
-          unsigned Reg = MO.getReg();
+          Register Reg = MO.getReg();
           RegDefMaps[Register::isVirtualRegister(Reg)][Reg] = &MI;
         }
 
@@ -710,7 +710,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     // Skip any CMOVs in this group which don't load from memory.
     if (!MI.mayLoad()) {
       // Remember the false-side register input.
-      unsigned FalseReg =
+      Register FalseReg =
           MI.getOperand(X86::getCondFromCMov(MI) == CC ? 1 : 2).getReg();
       // Walk back through any intermediate cmovs referenced.
       while (true) {
@@ -753,7 +753,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 
     // Get a fresh register to use as the destination of the MOV.
     const TargetRegisterClass *RC = MRI->getRegClass(MI.getOperand(0).getReg());
-    unsigned TmpReg = MRI->createVirtualRegister(RC);
+    Register TmpReg = MRI->createVirtualRegister(RC);
 
     SmallVector<MachineInstr *, 4> NewMIs;
     bool Unfolded = TII->unfoldMemoryOperand(*MBB->getParent(), MI, TmpReg,
@@ -810,9 +810,9 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
-    unsigned DestReg = MIIt->getOperand(0).getReg();
-    unsigned Op1Reg = MIIt->getOperand(1).getReg();
-    unsigned Op2Reg = MIIt->getOperand(2).getReg();
+    Register DestReg = MIIt->getOperand(0).getReg();
+    Register Op1Reg = MIIt->getOperand(1).getReg();
+    Register Op2Reg = MIIt->getOperand(2).getReg();
 
     // If this CMOV we are processing is the opposite condition from the jump we
     // generated, then we have to swap the operands for the PHI that is going to

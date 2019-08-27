@@ -170,9 +170,8 @@ void WatchpointOptions::CommandBaton::GetDescription(
 
   s->IndentMore();
   if (data && data->user_source.GetSize() > 0) {
-    const size_t num_strings = data->user_source.GetSize();
-    for (size_t i = 0; i < num_strings; ++i) {
-      s->Indent(data->user_source.GetStringAtIndex(i));
+    for (const std::string &line : data->user_source) {
+      s->Indent(line);
       s->EOL();
     }
   } else {

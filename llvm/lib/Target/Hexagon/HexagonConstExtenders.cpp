@@ -1525,7 +1525,7 @@ void HCE::calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
 }
 
 HCE::Register HCE::insertInitializer(Loc DefL, const ExtenderInit &ExtI) {
-  unsigned DefR = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
+  llvm::Register DefR = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
   MachineBasicBlock &MBB = *DefL.Block;
   MachineBasicBlock::iterator At = DefL.At;
   DebugLoc dl = DefL.Block->findDebugLoc(DefL.At);

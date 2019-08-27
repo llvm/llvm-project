@@ -135,7 +135,7 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
 
         const R600RegisterInfo &TRI = TII->getRegisterInfo();
 
-        unsigned DstReg = MI.getOperand(0).getReg();
+        Register DstReg = MI.getOperand(0).getReg();
         unsigned DstBase = TRI.getEncodingValue(DstReg) & HW_REG_MASK;
 
         for (unsigned Chan = 0; Chan < 4; ++Chan) {
@@ -155,12 +155,12 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
           unsigned Opcode = BMI->getOpcode();
           // While not strictly necessary from hw point of view, we force
           // all src operands of a dot4 inst to belong to the same slot.
-          unsigned Src0 = BMI->getOperand(
-              TII->getOperandIdx(Opcode, R600::OpName::src0))
-              .getReg();
-          unsigned Src1 = BMI->getOperand(
-              TII->getOperandIdx(Opcode, R600::OpName::src1))
-              .getReg();
+          Register Src0 =
+              BMI->getOperand(TII->getOperandIdx(Opcode, R600::OpName::src0))
+                  .getReg();
+          Register Src1 =
+              BMI->getOperand(TII->getOperandIdx(Opcode, R600::OpName::src1))
+                  .getReg();
           (void) Src0;
           (void) Src1;
           if ((TRI.getEncodingValue(Src0) & 0xff) < 127 &&
@@ -205,10 +205,10 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
       // T0_Z = CUBE T1_X, T1_Z
       // T0_W = CUBE T1_Y, T1_Z
       for (unsigned Chan = 0; Chan < 4; Chan++) {
-        unsigned DstReg = MI.getOperand(
-                            TII->getOperandIdx(MI, R600::OpName::dst)).getReg();
-        unsigned Src0 = MI.getOperand(
-                           TII->getOperandIdx(MI, R600::OpName::src0)).getReg();
+        Register DstReg =
+            MI.getOperand(TII->getOperandIdx(MI, R600::OpName::dst)).getReg();
+        Register Src0 =
+            MI.getOperand(TII->getOperandIdx(MI, R600::OpName::src0)).getReg();
         unsigned Src1 = 0;
 
         // Determine the correct source registers

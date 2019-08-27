@@ -48,7 +48,7 @@ public:
 
   // Materializes the given int32 Val into DstReg.
   void movImm32(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                const DebugLoc &DL, unsigned DstReg, uint64_t Val,
+                const DebugLoc &DL, Register DstReg, uint64_t Val,
                 MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;

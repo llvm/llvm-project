@@ -364,7 +364,7 @@ unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
     if (!Op.isReg() || Op.isUndef())
       continue;
 
-    unsigned R = Op.getReg();
+    Register R = Op.getReg();
     if (TRI->hasAGPRs(TRI->getRegClassForReg(*MRI, R)))
       continue;
 
@@ -425,7 +425,7 @@ bool GCNRegBankReassign::isReassignable(unsigned Reg) const {
 
   const MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
 
-  unsigned PhysReg = VRM->getPhys(Reg);
+  Register PhysReg = VRM->getPhys(Reg);
 
   if (Def && Def->isCopy() && Def->getOperand(1).getReg() == PhysReg)
     return false;
@@ -654,7 +654,7 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
   }
   std::sort(BankStalls.begin(), BankStalls.end());
 
-  unsigned OrigReg = VRM->getPhys(C.Reg);
+  Register OrigReg = VRM->getPhys(C.Reg);
   LRM->unassign(LI);
   while (!BankStalls.empty()) {
     BankStall BS = BankStalls.pop_back_val();

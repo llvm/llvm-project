@@ -57,10 +57,9 @@ public:
   /// \param FilenameTok The file name token in \#include "FileName" directive
   /// or macro expanded file name token from \#include MACRO(PARAMS) directive.
   /// Note that FilenameTok contains corresponding quotes/angles symbols.
-  virtual void FileSkipped(const FileEntry &SkippedFile,
+  virtual void FileSkipped(const FileEntryRef &SkippedFile,
                            const Token &FilenameTok,
-                           SrcMgr::CharacteristicKind FileType) {
-  }
+                           SrcMgr::CharacteristicKind FileType) {}
 
   /// Callback invoked whenever an inclusion directive results in a
   /// file-not-found error.
@@ -390,8 +389,7 @@ public:
     Second->FileChanged(Loc, Reason, FileType, PrevFID);
   }
 
-  void FileSkipped(const FileEntry &SkippedFile,
-                   const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
     First->FileSkipped(SkippedFile, FilenameTok, FileType);
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);

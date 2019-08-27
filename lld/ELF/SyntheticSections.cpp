@@ -402,7 +402,7 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
 // a list of FDEs. This function searches an existing CIE or create a new
 // one and associates FDEs to the CIE.
 template <class ELFT, class RelTy>
-void EhFrameSection::addSectionAux(EhInputSection *sec, ArrayRef<RelTy> rels) {
+void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   offsetToCie.clear();
   for (EhSectionPiece &piece : sec->pieces) {
     // The empty record is the end marker.
@@ -428,8 +428,17 @@ void EhFrameSection::addSectionAux(EhInputSection *sec, ArrayRef<RelTy> rels) {
   }
 }
 
-template <class ELFT> void EhFrameSection::addSection(InputSectionBase *c) {
-  auto *sec = cast<EhInputSection>(c);
+template <class ELFT>
+void EhFrameSection::addSectionAux(EhInputSection *sec) {
+  if (!sec->isLive())
+    return;
+  if (sec->areRelocsRela)
+    addRecords<ELFT>(sec, sec->template relas<ELFT>());
+  else
+    addRecords<ELFT>(sec, sec->template rels<ELFT>());
+}
+
+void EhFrameSection::addSection(EhInputSection *sec) {
   sec->parent = this;
 
   alignment = std::max(alignment, sec->alignment);
@@ -437,14 +446,6 @@ template <class ELFT> void EhFrameSection::addSection(InputSectionBase *c) {
 
   for (auto *ds : sec->dependentSections)
     dependentSections.push_back(ds);
-
-  if (sec->pieces.empty())
-    return;
-
-  if (sec->areRelocsRela)
-    addSectionAux<ELFT>(sec, sec->template relas<ELFT>());
-  else
-    addSectionAux<ELFT>(sec, sec->template rels<ELFT>());
 }
 
 static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
@@ -461,6 +462,28 @@ static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
 
 void EhFrameSection::finalizeContents() {
   assert(!this->size); // Not finalized.
+
+  switch (config->ekind) {
+  case ELFNoneKind:
+    llvm_unreachable("invalid ekind");
+  case ELF32LEKind:
+    for (EhInputSection *sec : sections)
+      addSectionAux<ELF32LE>(sec);
+    break;
+  case ELF32BEKind:
+    for (EhInputSection *sec : sections)
+      addSectionAux<ELF32BE>(sec);
+    break;
+  case ELF64LEKind:
+    for (EhInputSection *sec : sections)
+      addSectionAux<ELF64LE>(sec);
+    break;
+  case ELF64BEKind:
+    for (EhInputSection *sec : sections)
+      addSectionAux<ELF64BE>(sec);
+    break;
+  }
+
   size_t off = 0;
   for (CieRecord *rec : cieRecords) {
     rec->cie->outputOff = off;
@@ -1702,6 +1725,56 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
       relativeGroups.emplace_back(std::move(group));
   }
 
+  // For non-relative relocations, we would like to:
+  //   1. Have relocations with the same symbol offset to be consecutive, so
+  //      that the runtime linker can speed-up symbol lookup by implementing an
+  //      1-entry cache.
+  //   2. Group relocations by r_info to reduce the size of the relocation
+  //      section.
+  // Since the symbol offset is the high bits in r_info, sorting by r_info
+  // allows us to do both.
+  //
+  // For Rela, we also want to sort by r_addend when r_info is the same. This
+  // enables us to group by r_addend as well.
+  llvm::stable_sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
+    if (a.r_info != b.r_info)
+      return a.r_info < b.r_info;
+    if (config->isRela)
+      return a.r_addend < b.r_addend;
+    return false;
+  });
+
+  // Group relocations with the same r_info. Note that each group emits a group
+  // header and that may make the relocation section larger. It is hard to
+  // estimate the size of a group header as the encoded size of that varies
+  // based on r_info. However, we can approximate this trade-off by the number
+  // of values encoded. Each group header contains 3 values, and each relocation
+  // in a group encodes one less value, as compared to when it is not grouped.
+  // Therefore, we only group relocations if there are 3 or more of them with
+  // the same r_info.
+  //
+  // For Rela, the addend for most non-relative relocations is zero, and thus we
+  // can usually get a smaller relocation section if we group relocations with 0
+  // addend as well.
+  std::vector<Elf_Rela> ungroupedNonRelatives;
+  std::vector<std::vector<Elf_Rela>> nonRelativeGroups;
+  for (auto i = nonRelatives.begin(), e = nonRelatives.end(); i != e;) {
+    auto j = i + 1;
+    while (j != e && i->r_info == j->r_info &&
+           (!config->isRela || i->r_addend == j->r_addend))
+      ++j;
+    if (j - i < 3 || (config->isRela && i->r_addend != 0))
+      ungroupedNonRelatives.insert(ungroupedNonRelatives.end(), i, j);
+    else
+      nonRelativeGroups.emplace_back(i, j);
+    i = j;
+  }
+
+  // Sort ungrouped relocations by offset to minimize the encoded length.
+  llvm::sort(ungroupedNonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
+    return a.r_offset < b.r_offset;
+  });
+
   unsigned hasAddendIfRela =
       config->isRela ? RELOCATION_GROUP_HAS_ADDEND_FLAG : 0;
 
@@ -1756,14 +1829,23 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
     }
   }
 
-  // Finally the non-relative relocations.
-  llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
-    return a.r_offset < b.r_offset;
-  });
-  if (!nonRelatives.empty()) {
-    add(nonRelatives.size());
+  // Grouped non-relatives.
+  for (ArrayRef<Elf_Rela> g : nonRelativeGroups) {
+    add(g.size());
+    add(RELOCATION_GROUPED_BY_INFO_FLAG);
+    add(g[0].r_info);
+    for (const Elf_Rela &r : g) {
+      add(r.r_offset - offset);
+      offset = r.r_offset;
+    }
+    addend = 0;
+  }
+
+  // Finally the ungrouped non-relative relocations.
+  if (!ungroupedNonRelatives.empty()) {
+    add(ungroupedNonRelatives.size());
     add(hasAddendIfRela);
-    for (Elf_Rela &r : nonRelatives) {
+    for (Elf_Rela &r : ungroupedNonRelatives) {
       add(r.r_offset - offset);
       offset = r.r_offset;
       add(r.r_info);
@@ -3208,17 +3290,14 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
 // with the highest address and any InputSections that have mergeable
 // .ARM.exidx table entries are removed from it.
 void ARMExidxSyntheticSection::finalizeContents() {
-  if (script->hasSectionsCommand) {
-    // The executableSections and exidxSections that we use to derive the
-    // final contents of this SyntheticSection are populated before the
-    // linker script assigns InputSections to OutputSections. The linker script
-    // SECTIONS command may have a /DISCARD/ entry that removes executable
-    // InputSections and their dependent .ARM.exidx section that we recorded
-    // earlier.
-    auto isDiscarded = [](const InputSection *isec) { return !isec->isLive(); };
-    llvm::erase_if(executableSections, isDiscarded);
-    llvm::erase_if(exidxSections, isDiscarded);
-  }
+  // The executableSections and exidxSections that we use to derive the final
+  // contents of this SyntheticSection are populated before
+  // processSectionCommands() and ICF. A /DISCARD/ entry in SECTIONS command or
+  // ICF may remove executable InputSections and their dependent .ARM.exidx
+  // section that we recorded earlier.
+  auto isDiscarded = [](const InputSection *isec) { return !isec->isLive(); };
+  llvm::erase_if(executableSections, isDiscarded);
+  llvm::erase_if(exidxSections, isDiscarded);
 
   // Sort the executable sections that may or may not have associated
   // .ARM.exidx sections by order of ascending address. This requires the
@@ -3579,11 +3658,6 @@ template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
 template void elf::splitSections<ELF64LE>();
 template void elf::splitSections<ELF64BE>();
-
-template void EhFrameSection::addSection<ELF32LE>(InputSectionBase *);
-template void EhFrameSection::addSection<ELF32BE>(InputSectionBase *);
-template void EhFrameSection::addSection<ELF64LE>(InputSectionBase *);
-template void EhFrameSection::addSection<ELF64BE>(InputSectionBase *);
 
 template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF32BE>(Symbol &Sym);

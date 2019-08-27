@@ -2,6 +2,11 @@
 # Check that it converts to .o without errors, but don't check any output:
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+atomics,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
 
+
+empty_func:
+    .functype empty_func () -> ()
+    end_function
+
 test0:
     # Test all types:
     .functype   test0 (i32, i64) -> (i32)
@@ -111,6 +116,9 @@ test0:
     .globaltype __stack_pointer, i32
 
 # CHECK:           .text
+# CHECK-LABEL: empty_func:
+# CHECK-NEXT:      .functype	empty_func () -> ()
+# CHECK-NEXT:      end_function
 # CHECK-LABEL: test0:
 # CHECK-NEXT:      .functype   test0 (i32, i64) -> (i32)
 # CHECK-NEXT:      .eventtype  __cpp_exception i32

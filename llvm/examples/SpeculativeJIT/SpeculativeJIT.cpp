@@ -105,7 +105,7 @@ private:
         CompileLayer(*this->ES, ObjLayer,
                      ConcurrentIRCompiler(std::move(JTMB))),
         S(Imps, *this->ES),
-        SpeculateLayer(*this->ES, CompileLayer, S, BlockFreqQuery()),
+        SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
         CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
                  std::move(ISMBuilder)) {
     this->ES->getMainJITDylib().addGenerator(

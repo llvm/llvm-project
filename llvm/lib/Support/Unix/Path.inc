@@ -999,44 +999,28 @@ file_t getStdinHandle() { return 0; }
 file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
-std::error_code readNativeFile(file_t FD, MutableArrayRef<char> Buf,
-                               size_t *BytesRead) {
-  *BytesRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
-  if (ssize_t(*BytesRead) == -1)
-    return std::error_code(errno, std::generic_category());
-  return std::error_code();
+Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
+  if (ssize_t(NumRead) == -1)
+    return errorCodeToError(std::error_code(errno, std::generic_category()));
+  return NumRead;
 }
 
-std::error_code readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
-                                    size_t Offset) {
-  char *BufPtr = Buf.data();
-  size_t BytesLeft = Buf.size();
-
-#ifndef HAVE_PREAD
-  // If we don't have pread, seek to Offset.
-  if (lseek(FD, Offset, SEEK_SET) == -1)
-    return std::error_code(errno, std::generic_category());
-#endif
-
-  while (BytesLeft) {
+Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
+                                     uint64_t Offset) {
 #ifdef HAVE_PREAD
-    ssize_t NumRead = sys::RetryAfterSignal(-1, ::pread, FD, BufPtr, BytesLeft,
-                                            Buf.size() - BytesLeft + Offset);
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Buf.size(), Offset);
 #else
-    ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, BufPtr, BytesLeft);
+  if (lseek(FD, Offset, SEEK_SET) == -1)
+    return errorCodeToError(std::error_code(errno, std::generic_category()));
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
 #endif
-    if (NumRead == -1) {
-      // Error while reading.
-      return std::error_code(errno, std::generic_category());
-    }
-    if (NumRead == 0) {
-      memset(BufPtr, 0, BytesLeft); // zero-initialize rest of the buffer.
-      break;
-    }
-    BytesLeft -= NumRead;
-    BufPtr += NumRead;
-  }
-  return std::error_code();
+  if (NumRead == -1)
+    return errorCodeToError(std::error_code(errno, std::generic_category()));
+  return NumRead;
 }
 
 std::error_code closeFile(file_t &F) {

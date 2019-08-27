@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a function that runs clangd on a single input.
+/// This file implements a function that runs clangd on a single input.
 /// This function is then linked into the Fuzzer library.
 ///
 //===----------------------------------------------------------------------===//

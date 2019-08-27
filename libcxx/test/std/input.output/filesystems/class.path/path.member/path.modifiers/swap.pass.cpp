@@ -14,14 +14,14 @@
 
 // void swap(path& rhs) noexcept;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "count_new.hpp"
-#include "filesystem_test_helper.hpp"
+#include "count_new.h"
+#include "filesystem_test_helper.h"
 
 
 struct SwapTestcase {

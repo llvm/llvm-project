@@ -2037,37 +2037,50 @@ TEST(FindReferences, WithinAST) {
 TEST(FindReferences, ExplicitSymbols) {
   const char *Tests[] = {
       R"cpp(
-      struct Foo { Foo* [self]() const; };
+      struct Foo { Foo* [[self]]() const; };
       void f() {
-        if (Foo* T = foo.[^self]()) {} // Foo member call expr.
+        Foo foo;
+        if (Foo* T = foo.[[^self]]()) {} // Foo member call expr.
       }
       )cpp",
 
       R"cpp(
       struct Foo { Foo(int); };
       Foo f() {
-        int [b];
-        return [^b]; // Foo constructor expr.
+        int [[b]];
+        return [[^b]]; // Foo constructor expr.
       }
       )cpp",
 
       R"cpp(
       struct Foo {};
       void g(Foo);
-      Foo [f]();
+      Foo [[f]]();
       void call() {
-        g([^f]());  // Foo constructor expr.
+        g([[^f]]());  // Foo constructor expr.
       }
       )cpp",
 
       R"cpp(
-      void [foo](int);
-      void [foo](double);
+      void [[foo]](int);
+      void [[foo]](double);
 
       namespace ns {
-      using ::[fo^o];
+      using ::[[fo^o]];
       }
       )cpp",
+
+      R"cpp(
+      struct X {
+        operator bool();
+      };
+
+      int test() {
+        X [[a]];
+        [[a]].operator bool();
+        if ([[a^]]) {} // ignore implicit conversion-operator AST node
+      }
+    )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -2075,6 +2088,7 @@ TEST(FindReferences, ExplicitSymbols) {
     std::vector<Matcher<Location>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
+    ASSERT_THAT(ExpectedLocations, Not(IsEmpty()));
     EXPECT_THAT(findReferences(AST, T.point(), 0),
                 ElementsAreArray(ExpectedLocations))
         << Test;

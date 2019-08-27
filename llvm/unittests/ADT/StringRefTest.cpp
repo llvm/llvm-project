@@ -1050,9 +1050,19 @@ TEST(StringRefTest, DropWhileUntil) {
 }
 
 TEST(StringRefTest, StringLiteral) {
+  constexpr StringRef StringRefs[] = {"Foo", "Bar"};
+  EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
+  EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
+
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
+}
+
+// Check gtest prints StringRef as a string instead of a container of chars.
+// The code is in utils/unittest/googletest/internal/custom/gtest-printers.h
+TEST(StringRefTest, GTestPrinter) {
+  EXPECT_EQ(R"("foo")", ::testing::PrintToString(StringRef("foo")));
 }
 
 static_assert(is_trivially_copyable<StringRef>::value, "trivially copyable");

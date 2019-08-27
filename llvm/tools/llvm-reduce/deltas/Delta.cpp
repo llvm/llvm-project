@@ -50,23 +50,6 @@ static SmallString<128> createTmpFile(Module *M, StringRef TmpDir) {
   return UniqueFilepath;
 }
 
-/// Prints the Chunk Indexes with the following format: [start, end], if
-/// chunk is at minimum size (1), then it just displays [start].
-static void printChunks(std::vector<Chunk> Chunks, bool Oneline = false) {
-  if (Chunks.empty()) {
-    outs() << "No Chunks";
-    return;
-  }
-
-  for (auto C : Chunks) {
-    if (!Oneline)
-      outs() << '\t';
-    C.print();
-    if (!Oneline)
-      outs() << '\n';
-  }
-}
-
 /// Counts the amount of lines for a given file
 static unsigned getLines(StringRef Filepath) {
   unsigned Lines = 0;
@@ -82,7 +65,7 @@ static unsigned getLines(StringRef Filepath) {
 /// Splits Chunks in half and prints them.
 /// If unable to split (when chunk size is 1) returns false.
 static bool increaseGranularity(std::vector<Chunk> &Chunks) {
-  outs() << "Increasing granularity...";
+  errs() << "Increasing granularity...";
   std::vector<Chunk> NewChunks;
   bool SplitOne = false;
 
@@ -98,8 +81,12 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   }
   if (SplitOne) {
     Chunks = NewChunks;
-    outs() << "Success! New Chunks:\n";
-    printChunks(Chunks);
+    errs() << "Success! New Chunks:\n";
+    for (auto C : Chunks) {
+      errs() << '\t';
+      C.print();
+      errs() << '\n';
+    }
   }
   return SplitOne;
 }
@@ -112,11 +99,11 @@ void llvm::runDeltaPass(
     std::function<void(const std::vector<Chunk> &, Module *)>
         ExtractChunksFromModule) {
   if (!Targets) {
-    outs() << "\nNothing to reduce\n";
+    errs() << "\nNothing to reduce\n";
     return;
   }
   if (!Test.run(Test.getReducedFilepath())) {
-    outs() << "\nInput isn't interesting! Verify interesting-ness test\n";
+    errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
     exit(1);
   }
 
@@ -125,7 +112,7 @@ void llvm::runDeltaPass(
   std::unique_ptr<Module> ReducedProgram;
 
   if (!increaseGranularity(Chunks)) {
-    outs() << "\nAlready at minimum size. Cannot reduce anymore.\n";
+    errs() << "\nAlready at minimum size. Cannot reduce anymore.\n";
     return;
   }
 
@@ -149,20 +136,23 @@ void llvm::runDeltaPass(
       SmallString<128> CurrentFilepath =
           createTmpFile(Clone.get(), Test.getTmpDir());
 
-      outs() << "Testing with: ";
-      printChunks(CurrentChunks, /*Oneline=*/true);
-      outs() << " | " << sys::path::filename(CurrentFilepath);
+      errs() << "Ignoring: ";
+      Chunks[I].print();
+      for (auto C : UninterestingChunks)
+        C.print();
+
+      errs() << " | " << sys::path::filename(CurrentFilepath);
 
       // Current Chunks aren't interesting
       if (!Test.run(CurrentFilepath)) {
-        outs() << "\n";
+        errs() << "\n";
         continue;
       }
 
       UninterestingChunks.insert(Chunks[I]);
       Test.setReducedFilepath(CurrentFilepath);
       ReducedProgram = std::move(Clone);
-      outs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
+      errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
     }
     // Delete uninteresting chunks
     erase_if(Chunks, [&UninterestingChunks](const Chunk &C) {
@@ -174,5 +164,5 @@ void llvm::runDeltaPass(
   // If we reduced the testcase replace it
   if (ReducedProgram)
     Test.setProgram(std::move(ReducedProgram));
-  outs() << "Couldn't increase anymore.\n";
+  errs() << "Couldn't increase anymore.\n";
 }

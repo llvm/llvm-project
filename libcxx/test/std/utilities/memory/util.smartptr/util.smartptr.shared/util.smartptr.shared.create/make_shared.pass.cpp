@@ -16,7 +16,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 #if TEST_STD_VER >= 11
 #define DELETE_FUNCTION = delete

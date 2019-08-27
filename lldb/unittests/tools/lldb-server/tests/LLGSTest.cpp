@@ -18,6 +18,9 @@ using namespace llvm;
 #undef SendMessage
 #endif
 
+// Disable this test on Windows as it appears to have a race condition
+// that causes lldb-server not to exit after the inferior hangs up.
+#if !defined(_WIN32)
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 
@@ -32,6 +35,7 @@ TEST_F(TestBase, LaunchModePreservesEnvironment) {
       HasValue(testing::Property(&StopReply::getKind,
                                  WaitStatus{WaitStatus::Exit, 0})));
 }
+#endif
 
 TEST_F(TestBase, DS_TEST(DebugserverEnv)) {
   // Test that --env takes precedence over inherited environment variables.

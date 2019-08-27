@@ -96,8 +96,6 @@ Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
 
 uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
 
-void error(std::error_code ec);
-void error(Error E);
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void parseInputMachO(StringRef Filename);
 void parseInputMachO(object::MachOUniversalBinary *UB);
@@ -129,23 +127,22 @@ void printSectionHeaders(const object::ObjectFile *O);
 void printSectionContents(const object::ObjectFile *O);
 void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
                       StringRef ArchitectureName = StringRef());
-void warn(Twine Message);
-LLVM_ATTRIBUTE_NORETURN void error(Twine Message);
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message);
-LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File);
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message);
+LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef File);
 LLVM_ATTRIBUTE_NORETURN void
-report_error(Error E, StringRef FileName, StringRef ArchiveName,
-             StringRef ArchitectureName = StringRef());
-LLVM_ATTRIBUTE_NORETURN void
-report_error(Error E, StringRef ArchiveName, const object::Archive::Child &C,
-             StringRef ArchitectureName = StringRef());
+reportError(Error E, StringRef FileName, StringRef ArchiveName,
+            StringRef ArchitectureName = StringRef());
+void reportWarning(Twine Message, StringRef File);
 
 template <typename T, typename... Ts>
 T unwrapOrError(Expected<T> EO, Ts &&... Args) {
   if (EO)
     return std::move(*EO);
-  report_error(EO.takeError(), std::forward<Ts>(Args)...);
+  reportError(EO.takeError(), std::forward<Ts>(Args)...);
 }
+
+std::string getFileNameForError(const object::Archive::Child &C,
+                                unsigned Index);
 
 } // end namespace llvm
 

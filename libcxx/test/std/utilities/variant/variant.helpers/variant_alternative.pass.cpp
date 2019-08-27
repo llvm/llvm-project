@@ -26,7 +26,7 @@
 #include <variant>
 
 #include "test_macros.h"
-#include "variant_test_helpers.hpp"
+#include "variant_test_helpers.h"
 
 template <class V, size_t I, class E> void test() {
   static_assert(

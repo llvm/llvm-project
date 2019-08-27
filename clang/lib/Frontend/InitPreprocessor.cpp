@@ -480,6 +480,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_user_defined_literals", "200809L");
     Builder.defineMacro("__cpp_lambdas", "200907L");
     Builder.defineMacro("__cpp_constexpr",
+                        LangOpts.CPlusPlus2a ? "201907L" :
                         LangOpts.CPlusPlus17 ? "201603L" :
                         LangOpts.CPlusPlus14 ? "201304L" : "200704");
     Builder.defineMacro("__cpp_range_based_for",

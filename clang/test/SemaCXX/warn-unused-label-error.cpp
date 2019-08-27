@@ -18,9 +18,9 @@ namespace PR8455 {
   }
 
   void h() {
-    D: // expected-warning {{unused label 'D'}}
-      #pragma weak unused_local_static
-      __attribute__((unused))  // expected-warning {{declaration does not declare anything}}
-      ;
+  D:
+#pragma weak unused_local_static
+    __attribute__((unused)) // expected-error {{'unused' attribute cannot be applied to a statement}}
+    ;
   }
 }

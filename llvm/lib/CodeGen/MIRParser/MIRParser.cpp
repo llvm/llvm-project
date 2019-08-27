@@ -357,8 +357,8 @@ bool MIRParserImpl::initializeCallSiteInfo(
                    Twine(" call instruction offset out of range.") +
                    "Unable to reference instruction at bb: " +
                    Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset));
-    auto CallI = std::next(CallB->begin(), MILoc.Offset);
-    if (!CallI->isCall())
+    auto CallI = std::next(CallB->instr_begin(), MILoc.Offset);
+    if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" call site info should reference call "
                          "instruction. Instruction at bb:") +

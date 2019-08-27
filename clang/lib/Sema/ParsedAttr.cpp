@@ -125,7 +125,8 @@ static StringRef normalizeAttrName(StringRef AttrName,
       SyntaxUsed == ParsedAttr::AS_GNU ||
       ((SyntaxUsed == ParsedAttr::AS_CXX11 ||
         SyntaxUsed == ParsedAttr::AS_C2x) &&
-       (NormalizedScopeName == "gnu" || NormalizedScopeName == "clang"));
+       (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
+        NormalizedScopeName == "clang"));
   if (ShouldNormalize && AttrName.size() >= 4 && AttrName.startswith("__") &&
       AttrName.endswith("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);

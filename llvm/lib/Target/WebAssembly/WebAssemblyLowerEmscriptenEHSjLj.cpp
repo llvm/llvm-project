@@ -274,6 +274,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
 
   bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
+  bool isEmAsmCall(Module &M, const Value *Callee) const;
 
   void rebuildSSA(Function &F);
 
@@ -537,6 +538,23 @@ bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(Module &M,
   return true;
 }
 
+bool WebAssemblyLowerEmscriptenEHSjLj::isEmAsmCall(Module &M,
+                                                   const Value *Callee) const {
+  // This is an exhaustive list from Emscripten's <emscripten/em_asm.h>.
+  Function *EmAsmConstIntF = M.getFunction("emscripten_asm_const_int");
+  Function *EmAsmConstDoubleF = M.getFunction("emscripten_asm_const_double");
+  Function *EmAsmConstIntSyncMainF =
+      M.getFunction("emscripten_asm_const_int_sync_on_main_thread");
+  Function *EmAsmConstDoubleSyncMainF =
+      M.getFunction("emscripten_asm_const_double_sync_on_main_thread");
+  Function *EmAsmConstAsyncMainF =
+      M.getFunction("emscripten_asm_const_async_on_main_thread");
+
+  return Callee == EmAsmConstIntF || Callee == EmAsmConstDoubleF ||
+         Callee == EmAsmConstIntSyncMainF ||
+         Callee == EmAsmConstDoubleSyncMainF || Callee == EmAsmConstAsyncMainF;
+}
+
 // Generate testSetjmp function call seqence with preamble and postamble.
 // The code this generates is equivalent to the following JavaScript code:
 // if (%__THREW__.val != 0 & threwValue != 0) {
@@ -618,15 +636,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
   SSAUpdater SSA;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      SSA.Initialize(I.getType(), I.getName());
+      SSA.AddAvailableValue(&BB, &I);
       for (auto UI = I.use_begin(), UE = I.use_end(); UI != UE;) {
         Use &U = *UI;
         ++UI;
-        SSA.Initialize(I.getType(), I.getName());
-        SSA.AddAvailableValue(&BB, &I);
         auto *User = cast<Instruction>(U.getUser());
-        if (User->getParent() == &BB)
-          continue;
-
         if (auto *UserPN = dyn_cast<PHINode>(User))
           if (UserPN->getIncomingBlock(U) == &BB)
             continue;
@@ -983,6 +998,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       const Value *Callee = CI->getCalledValue();
       if (!canLongjmp(M, Callee))
         continue;
+      if (isEmAsmCall(M, Callee))
+        report_fatal_error("Cannot use EM_ASM* alongside setjmp/longjmp in " +
+                               F.getName() +
+                               ". Please consider using EM_JS, or move the "
+                               "EM_ASM into another function.",
+                           false);
 
       Value *Threw = nullptr;
       BasicBlock *Tail;

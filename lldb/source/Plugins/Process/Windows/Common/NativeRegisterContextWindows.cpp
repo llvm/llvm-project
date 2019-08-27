@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/Windows/HostThreadWindows.h"
+#include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/Log.h"
 

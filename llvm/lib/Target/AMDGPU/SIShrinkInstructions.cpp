@@ -77,7 +77,7 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   // Try to fold Src0
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
   if (Src0.isReg()) {
-    unsigned Reg = Src0.getReg();
+    Register Reg = Src0.getReg();
     if (Register::isVirtualRegister(Reg) && MRI.hasOneUse(Reg)) {
       MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
@@ -457,13 +457,13 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
   assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
          MovT.getOpcode() == AMDGPU::COPY);
 
-  unsigned T = MovT.getOperand(0).getReg();
+  Register T = MovT.getOperand(0).getReg();
   unsigned Tsub = MovT.getOperand(0).getSubReg();
   MachineOperand &Xop = MovT.getOperand(1);
 
   if (!Xop.isReg())
     return nullptr;
-  unsigned X = Xop.getReg();
+  Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
 
   unsigned Size = TII->getOpSize(MovT, 0) / 4;
@@ -482,7 +482,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         MovY.getOperand(1).getSubReg() != Tsub)
       continue;
 
-    unsigned Y = MovY.getOperand(0).getReg();
+    Register Y = MovY.getOperand(0).getReg();
     unsigned Ysub = MovY.getOperand(0).getSubReg();
 
     if (!TRI.isVGPR(MRI, Y) || MovT.getParent() != MovY.getParent())
@@ -717,7 +717,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
-        unsigned DstReg = MI.getOperand(0).getReg();
+        Register DstReg = MI.getOperand(0).getReg();
         if (Register::isVirtualRegister(DstReg)) {
           // VOPC instructions can only write to the VCC register. We can't
           // force them to use VCC here, because this is only one register and
@@ -741,7 +741,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
             TII->getNamedOperand(MI, AMDGPU::OpName::src2);
         if (!Src2->isReg())
           continue;
-        unsigned SReg = Src2->getReg();
+        Register SReg = Src2->getReg();
         if (Register::isVirtualRegister(SReg)) {
           MRI.setRegAllocationHint(SReg, 0, VCCReg);
           continue;

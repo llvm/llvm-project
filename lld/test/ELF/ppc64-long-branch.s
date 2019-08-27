@@ -1,13 +1,13 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize %t.o -o %t
+# RUN: ld.lld --no-toc-optimize -z separate-code %t.o -o %t
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck %s -check-prefix=BRANCH-LE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize %t.o -o %t
+# RUN: ld.lld --no-toc-optimize -z separate-code %t.o -o %t
 # RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck %s -check-prefix=BRANCH-BE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
@@ -82,13 +82,13 @@ a:
 # CHECK:   12010038:       bl .+16
 
 # BRANCH-LE:     section '.branch_lt':
-# BRANCH-LE-NEXT: 0x12030008 08000110 00000000
+# BRANCH-LE-NEXT: 0x12030018 08000110 00000000
 # BRANCH-BE:     section '.branch_lt':
-# BRANCH-BE-NEXT: 0x12030008 00000000 10010008
+# BRANCH-BE-NEXT: 0x12030018 00000000 10010008
 
-# .branch_lt - .TOC. = 0x12030008 - 0x12028000 = (1<<16) - 32760
+# .branch_lt - .TOC. = 0x12030018 - 0x12028000 = (1<<16) - 32744
 # CHECK:     __long_branch_callee:
 # CHECK-NEXT: 12010048:       addis 12, 2, 1
-# CHECK-NEXT:                 ld 12, -32760(12)
+# CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr

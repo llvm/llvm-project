@@ -9,10 +9,7 @@
 #ifndef liblldb_DeclVendor_h_
 #define liblldb_DeclVendor_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/lldb-defines.h"
-
-#include "clang/AST/ExternalASTMerger.h"
 
 #include <vector>
 
@@ -22,10 +19,18 @@ namespace lldb_private {
 // declarations that are not necessarily backed by a specific symbol file.
 class DeclVendor {
 public:
+  enum DeclVendorKind {
+    eClangDeclVendor,
+    eClangModuleDeclVendor,
+    eAppleObjCDeclVendor,
+    eLastClangDeclVendor,
+  };
   // Constructors and Destructors
-  DeclVendor() {}
+  DeclVendor(DeclVendorKind kind) : m_kind(kind) {}
 
   virtual ~DeclVendor() {}
+
+  DeclVendorKind GetKind() const { return m_kind; }
 
   /// Look up the set of Decls that the DeclVendor currently knows about
   /// matching a given name.
@@ -45,7 +50,7 @@ public:
   ///     max_matches.
   virtual uint32_t FindDecls(ConstString name, bool append,
                              uint32_t max_matches,
-                             std::vector<clang::NamedDecl *> &decls) = 0;
+                             std::vector<CompilerDecl> &decls) = 0;
 
   /// Look up the types that the DeclVendor currently knows about matching a
   /// given name.
@@ -60,16 +65,11 @@ public:
   ///     The vector of CompilerTypes that was found.
   std::vector<CompilerType> FindTypes(ConstString name, uint32_t max_matches);
 
-  /// Interface for ExternalASTMerger.  Returns an ImporterSource 
-  /// allowing type completion.
-  ///
-  /// \return
-  ///     An ImporterSource for this DeclVendor.
-  virtual clang::ExternalASTMerger::ImporterSource GetImporterSource() = 0;
-
 private:
   // For DeclVendor only
   DISALLOW_COPY_AND_ASSIGN(DeclVendor);
+
+  const DeclVendorKind m_kind;
 };
 
 } // namespace lldb_private

@@ -36,15 +36,15 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // 2162688 = 0x210000
-// CHECK:         210000:       b       #4
-// CHECK-NEXT:    210004:       bl      #4
-// CHECK-NEXT:    210008:       b.eq    #4
-// CHECK-NEXT:    21000c:       cbz     x1, #4
-// CHECK-NEXT:    210010:       adr     x0, #0
-// CHECK-NEXT:    210014:       adrp    x0, #0
-// CHECK:         210018:       00 00 00 00 .word   0x00000000
-// CHECK-NEXT:    21001c:       00 00 00 00 .word   0x00000000
-// CHECK-NEXT:    210020:       00 00 00 00 .word   0x00000000
-// CHECK-NEXT:    210024:       00 00 .short  0x0000
+// CHECK:         210120:       b       #4
+// CHECK-NEXT:    210124:       bl      #4
+// CHECK-NEXT:    210128:       b.eq    #4
+// CHECK-NEXT:    21012c:       cbz     x1, #4
+// CHECK-NEXT:    210130:       adr     x0, #0
+// CHECK-NEXT:    210134:       adrp    x0, #0
+// CHECK:         210138:       00 00 00 00 .word   0x00000000
+// CHECK-NEXT:    21013c:       00 00 00 00 .word   0x00000000
+// CHECK-NEXT:    210140:       00 00 00 00 .word   0x00000000
+// CHECK-NEXT:    210144:       00 00 .short  0x0000
 // CHECK:         $x.2:
-// CHECK-NEXT:    210026:       ldr     x8, #0
+// CHECK-NEXT:    210146:       ldr     x8, #0

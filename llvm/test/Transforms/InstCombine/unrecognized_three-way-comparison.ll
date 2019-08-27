@@ -457,3 +457,225 @@ exit:
   ret i32 42
 }
 
+declare void @use1(i1)
+define i32 @compare_against_fortytwo_commutatibility_0(i32 %x) {
+; CHECK-LABEL: @compare_against_fortytwo_commutatibility_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 84
+;
+entry:
+  %cmp1 = icmp eq i32 %x, 42
+  %cmp2 = icmp slt i32 %x, 42
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 0, i32 %select1
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 84
+}
+define i32 @compare_against_fortytwo_commutatibility_1(i32 %x) {
+; CHECK-LABEL: @compare_against_fortytwo_commutatibility_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 42
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 84
+;
+entry:
+  %cmp1 = icmp ne i32 %x, 42 ; inverted
+  call void @use1(i1 %cmp1)
+  %cmp2 = icmp slt i32 %x, 42
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 %select1, i32 0 ; swapped
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 84
+}
+define i32 @compare_against_fortytwo_commutatibility_2(i32 %x) {
+; CHECK-LABEL: @compare_against_fortytwo_commutatibility_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 84
+;
+entry:
+  %cmp1 = icmp eq i32 %x, 42
+  %cmp2 = icmp sgt i32 %x, 41 ; inverted
+  %select1 = select i1 %cmp2, i32 1, i32 -1 ; swapped
+  %select2 = select i1 %cmp1, i32 0, i32 %select1
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 84
+}
+define i32 @compare_against_fortytwo_commutatibility_3(i32 %x) {
+; CHECK-LABEL: @compare_against_fortytwo_commutatibility_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 42
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 84
+;
+entry:
+  %cmp1 = icmp ne i32 %x, 42 ; inverted
+  call void @use1(i1 %cmp1)
+  %cmp2 = icmp sgt i32 %x, 41 ; inverted
+  %select1 = select i1 %cmp2, i32 1, i32 -1 ; swapped
+  %select2 = select i1 %cmp1, i32 %select1, i32 0 ; swapped
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 84
+}
+
+define i32 @compare_against_arbitrary_value_commutativity0(i32 %x, i32 %c) {
+; CHECK-LABEL: @compare_against_arbitrary_value_commutativity0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 42
+;
+entry:
+  %cmp1 = icmp eq i32 %x, %c
+  %cmp2 = icmp slt i32 %x, %c
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 0, i32 %select1
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 42
+}
+define i32 @compare_against_arbitrary_value_commutativity1(i32 %x, i32 %c) {
+; CHECK-LABEL: @compare_against_arbitrary_value_commutativity1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 42
+;
+entry:
+  %cmp1 = icmp eq i32 %x, %c
+  %cmp2 = icmp sgt i32 %c, %x ; swapped
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 0, i32 %select1
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 42
+}
+define i32 @compare_against_arbitrary_value_commutativity2(i32 %x, i32 %c) {
+; CHECK-LABEL: @compare_against_arbitrary_value_commutativity2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], [[C]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 42
+;
+entry:
+  %cmp1 = icmp ne i32 %x, %c ; inverted
+  call void @use1(i1 %cmp1)
+  %cmp2 = icmp slt i32 %x, %c
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 %select1, i32 0 ; swapped
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 42
+}
+define i32 @compare_against_arbitrary_value_commutativity3(i32 %x, i32 %c) {
+; CHECK-LABEL: @compare_against_arbitrary_value_commutativity3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], [[C]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK:       callfoo:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 42
+;
+entry:
+  %cmp1 = icmp ne i32 %x, %c ; inverted
+  call void @use1(i1 %cmp1)
+  %cmp2 = icmp sgt i32 %c, %x ; swapped
+  %select1 = select i1 %cmp2, i32 -1, i32 1
+  %select2 = select i1 %cmp1, i32 %select1, i32 0 ; swapped
+  %cond = icmp sgt i32 %select2, 0
+  br i1 %cond, label %callfoo, label %exit
+
+callfoo:
+  call void @foo(i32 %select2)
+  br label %exit
+
+exit:
+  ret i32 42
+}

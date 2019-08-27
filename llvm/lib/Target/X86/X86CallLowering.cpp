@@ -237,7 +237,7 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
-    unsigned AddrReg = MRI.createGenericVirtualRegister(
+    Register AddrReg = MRI.createGenericVirtualRegister(
         LLT::pointer(0, DL.getPointerSizeInBits(0)));
     MIRBuilder.buildFrameIndex(AddrReg, FI);
     return AddrReg;

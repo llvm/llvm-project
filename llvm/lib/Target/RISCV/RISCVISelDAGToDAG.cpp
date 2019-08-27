@@ -179,6 +179,9 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
     // operand and need no special handling.
     OutOps.push_back(Op);
     return false;
+  case InlineAsm::Constraint_A:
+    OutOps.push_back(Op);
+    return false;
   default:
     break;
   }

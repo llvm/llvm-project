@@ -278,12 +278,12 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
     if (!(MOA.isReg() && MOA.getReg()))
       continue;
 
-    unsigned RegA = MOA.getReg();
+    Register RegA = MOA.getReg();
     for (auto MOB : B->operands()) {
       if (!(MOB.isReg() && MOB.getReg()))
         continue;
 
-      unsigned RegB = MOB.getReg();
+      Register RegB = MOB.getReg();
 
       if (TRI->regsOverlap(RegA, RegB) && (MOA.isDef() || MOB.isDef()))
         return false;
@@ -517,7 +517,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   //
   // we must ensure that there are no instructions between the 'test' and
   // conditional jump that modify %rax.
-  const unsigned PointerReg = MBP.LHS.getReg();
+  const Register PointerReg = MBP.LHS.getReg();
 
   assert(MBP.ConditionDef->getParent() ==  &MBB && "Should be in basic block");
 
@@ -689,7 +689,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     for (const MachineOperand &MO : FaultingInstr->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg || MBB->isLiveIn(Reg))
         continue;
       MBB->addLiveIn(Reg);

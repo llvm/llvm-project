@@ -13,6 +13,7 @@
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
 #include "gwp_asan/random.h"
+#include "gwp_asan/stack_trace_compressor.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,9 +40,15 @@ public:
   };
 
   struct AllocationMetadata {
-    // Maximum number of stack trace frames to collect for allocations + frees.
-    // TODO(hctim): Implement stack frame compression, a-la Chromium.
-    static constexpr size_t kMaximumStackFrames = 64;
+    // The number of bytes used to store a compressed stack frame. On 64-bit
+    // platforms, assuming a compression ratio of 50%, this should allow us to
+    // store ~64 frames per trace.
+    static constexpr size_t kStackFrameStorageBytes = 256;
+
+    // Maximum number of stack frames to collect on allocation/deallocation. The
+    // actual number of collected frames may be less than this as the stack
+    // frames are compressed into a fixed memory range.
+    static constexpr size_t kMaxTraceLengthToCollect = 128;
 
     // Records the given allocation metadata into this struct.
     void RecordAllocation(uintptr_t Addr, size_t Size,
@@ -51,12 +58,13 @@ public:
     void RecordDeallocation(options::Backtrace_t Backtrace);
 
     struct CallSiteInfo {
-      // The backtrace to the allocation/deallocation.
-      uintptr_t Trace[kMaximumStackFrames] = {};
+      // The compressed backtrace to the allocation/deallocation.
+      uint8_t CompressedTrace[kStackFrameStorageBytes];
       // The thread ID for this trace, or kInvalidThreadID if not available.
       uint64_t ThreadID = kInvalidThreadID;
-      // The length of the trace. Zero indicates that no trace was collected.
-      size_t TraceLength = 0;
+      // The size of the compressed trace (in bytes). Zero indicates that no
+      // trace was collected.
+      size_t TraceSize = 0;
     };
 
     // The address of this allocation.

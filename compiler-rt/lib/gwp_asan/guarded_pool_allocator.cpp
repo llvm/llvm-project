@@ -13,7 +13,7 @@
 // RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
 // macro is defined before including <inttypes.h>.
 #ifndef __STDC_FORMAT_MACROS
-  #define __STDC_FORMAT_MACROS 1
+#define __STDC_FORMAT_MACROS 1
 #endif
 
 #include <assert.h>
@@ -69,12 +69,18 @@ void GuardedPoolAllocator::AllocationMetadata::RecordAllocation(
   // TODO(hctim): Ask the caller to provide the thread ID, so we don't waste
   // other thread's time getting the thread ID under lock.
   AllocationTrace.ThreadID = getThreadID();
-  AllocationTrace.TraceLength = 0;
-  DeallocationTrace.TraceLength = 0;
+  AllocationTrace.TraceSize = 0;
+  DeallocationTrace.TraceSize = 0;
   DeallocationTrace.ThreadID = kInvalidThreadID;
-  if (Backtrace)
-    AllocationTrace.TraceLength =
-        Backtrace(AllocationTrace.Trace, kMaximumStackFrames);
+
+  if (Backtrace) {
+    uintptr_t UncompressedBuffer[kMaxTraceLengthToCollect];
+    size_t BacktraceLength =
+        Backtrace(UncompressedBuffer, kMaxTraceLengthToCollect);
+    AllocationTrace.TraceSize = compression::pack(
+        UncompressedBuffer, BacktraceLength, AllocationTrace.CompressedTrace,
+        kStackFrameStorageBytes);
+  }
 }
 
 void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation(
@@ -82,11 +88,16 @@ void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation(
   IsDeallocated = true;
   // Ensure that the unwinder is not called if the recursive flag is set,
   // otherwise non-reentrant unwinders may deadlock.
-  DeallocationTrace.TraceLength = 0;
+  DeallocationTrace.TraceSize = 0;
   if (Backtrace && !ThreadLocals.RecursiveGuard) {
     ScopedBoolean B(ThreadLocals.RecursiveGuard);
-    DeallocationTrace.TraceLength =
-        Backtrace(DeallocationTrace.Trace, kMaximumStackFrames);
+
+    uintptr_t UncompressedBuffer[kMaxTraceLengthToCollect];
+    size_t BacktraceLength =
+        Backtrace(UncompressedBuffer, kMaxTraceLengthToCollect);
+    DeallocationTrace.TraceSize = compression::pack(
+        UncompressedBuffer, BacktraceLength, DeallocationTrace.CompressedTrace,
+        kStackFrameStorageBytes);
   }
   DeallocationTrace.ThreadID = getThreadID();
 }
@@ -162,7 +173,7 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
 
   // Ensure that signal handlers are installed as late as possible, as the class
   // is not thread-safe until init() is finished, and thus a SIGSEGV may cause a
-  // race to members if recieved during init().
+  // race to members if received during init().
   if (Opts.InstallSignalHandlers)
     installSignalHandlers();
 }
@@ -374,7 +385,7 @@ void printErrorType(Error E, uintptr_t AccessPtr, AllocationMetadata *Meta,
   case Error::UNKNOWN:
     ErrorString = "GWP-ASan couldn't automatically determine the source of "
                   "the memory error. It was likely caused by a wild memory "
-                  "access into the GWP-ASan pool. The error occured";
+                  "access into the GWP-ASan pool. The error occurred";
     break;
   case Error::USE_AFTER_FREE:
     ErrorString = "Use after free";
@@ -443,8 +454,13 @@ void printAllocDeallocTraces(uintptr_t AccessPtr, AllocationMetadata *Meta,
       Printf("0x%zx was deallocated by thread %zu here:\n", AccessPtr,
              Meta->DeallocationTrace.ThreadID);
 
-    PrintBacktrace(Meta->DeallocationTrace.Trace,
-                   Meta->DeallocationTrace.TraceLength, Printf);
+    uintptr_t UncompressedTrace[AllocationMetadata::kMaxTraceLengthToCollect];
+    size_t UncompressedLength = compression::unpack(
+        Meta->DeallocationTrace.CompressedTrace,
+        Meta->DeallocationTrace.TraceSize, UncompressedTrace,
+        AllocationMetadata::kMaxTraceLengthToCollect);
+
+    PrintBacktrace(UncompressedTrace, UncompressedLength, Printf);
   }
 
   if (Meta->AllocationTrace.ThreadID == GuardedPoolAllocator::kInvalidThreadID)
@@ -453,8 +469,12 @@ void printAllocDeallocTraces(uintptr_t AccessPtr, AllocationMetadata *Meta,
     Printf("0x%zx was allocated by thread %zu here:\n", Meta->Addr,
            Meta->AllocationTrace.ThreadID);
 
-  PrintBacktrace(Meta->AllocationTrace.Trace, Meta->AllocationTrace.TraceLength,
-                 Printf);
+  uintptr_t UncompressedTrace[AllocationMetadata::kMaxTraceLengthToCollect];
+  size_t UncompressedLength = compression::unpack(
+      Meta->AllocationTrace.CompressedTrace, Meta->AllocationTrace.TraceSize,
+      UncompressedTrace, AllocationMetadata::kMaxTraceLengthToCollect);
+
+  PrintBacktrace(UncompressedTrace, UncompressedLength, Printf);
 }
 
 struct ScopedEndOfReportDecorator {

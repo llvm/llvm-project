@@ -206,7 +206,7 @@ void ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   LLVM_DEBUG(dbgs() << "Offset             : " << Offset << "\n"
                     << "<--------->\n");
 
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   assert(ARC::GPR32RegClass.contains(Reg) && "Unexpected register operand");
 
   if (!TFI->hasFP(MF)) {

@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/Range.h"
+#include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/Support/DataExtractor.h"
 #include <algorithm>
 #include <inttypes.h>
 
@@ -52,4 +54,38 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const AddressRanges &AR) {
     OS << AR[I];
   }
   return OS;
+}
+
+void AddressRange::encode(FileWriter &O, uint64_t BaseAddr) const {
+  assert(Start >= BaseAddr);
+  O.writeULEB(Start - BaseAddr);
+  O.writeULEB(size());
+}
+
+void AddressRange::decode(DataExtractor &Data, uint64_t BaseAddr,
+                          uint64_t &Offset) {
+  const uint64_t AddrOffset = Data.getULEB128(&Offset);
+  const uint64_t Size = Data.getULEB128(&Offset);
+  const uint64_t StartAddr = BaseAddr + AddrOffset;
+  Start = StartAddr;
+  End = StartAddr + Size;
+}
+
+void AddressRanges::encode(FileWriter &O, uint64_t BaseAddr) const {
+  O.writeULEB(Ranges.size());
+  if (Ranges.empty())
+    return;
+  for (auto Range : Ranges)
+    Range.encode(O, BaseAddr);
+}
+
+void AddressRanges::decode(DataExtractor &Data, uint64_t BaseAddr,
+                           uint64_t &Offset) {
+  clear();
+  uint64_t NumRanges = Data.getULEB128(&Offset);
+  if (NumRanges == 0)
+    return;
+  Ranges.resize(NumRanges);
+  for (auto &Range : Ranges)
+    Range.decode(Data, BaseAddr, Offset);
 }

@@ -319,7 +319,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       auto *CalledValue = CS.getCalledValue();
       auto *CalledFunction = CS.getCalledFunction();
       if (CalledValue && !CalledFunction) {
-        CalledValue = CalledValue->stripPointerCastsNoFollowAliases();
+        CalledValue = CalledValue->stripPointerCasts();
         // Stripping pointer casts can reveal a called function.
         CalledFunction = dyn_cast<Function>(CalledValue);
       }

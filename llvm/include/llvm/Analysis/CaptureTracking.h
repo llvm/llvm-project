@@ -17,6 +17,7 @@ namespace llvm {
 
   class Value;
   class Use;
+  class DataLayout;
   class Instruction;
   class DominatorTree;
   class OrderedBasicBlock;
@@ -83,6 +84,11 @@ namespace llvm {
     /// use U. Return true to stop the traversal or false to continue looking
     /// for more capturing instructions.
     virtual bool captured(const Use *U) = 0;
+
+    /// isDereferenceableOrNull - Overload to allow clients with additional
+    /// knowledge about pointer dereferenceability to provide it and thereby
+    /// avoid conservative responses when a pointer is compared to null.
+    virtual bool isDereferenceableOrNull(Value *O, const DataLayout &DL);
   };
 
   /// PointerMayBeCaptured - Visit the value and the values derived from it and

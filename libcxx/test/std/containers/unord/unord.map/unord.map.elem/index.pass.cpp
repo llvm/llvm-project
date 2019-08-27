@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 #if TEST_STD_VER >= 11
 #include "container_test_types.h"

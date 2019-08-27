@@ -175,7 +175,7 @@ public:
   /// Implements __cxa_guard_acquire
   AcquireResult cxa_guard_acquire() {
     AtomicInt<uint8_t> guard_byte(guard_byte_address);
-    if (guard_byte.load(std::_AO_Acquire) == COMPLETE_BIT)
+    if (guard_byte.load(std::_AO_Acquire) != UNSET)
       return INIT_IS_DONE;
     return derived()->acquire_init_byte();
   }

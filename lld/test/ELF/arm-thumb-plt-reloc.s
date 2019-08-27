@@ -4,8 +4,7 @@
 // RUN: ld.lld %t1 %t2 -o %t
 // RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t | FileCheck %s
 // RUN: ld.lld --hash-style=sysv -shared %t1 %t2 -o %t3
-// RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOTHUMB %s
-// RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOARM %s
+// RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSO %s
 // RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
@@ -43,57 +42,57 @@ _start:
 // Expect PLT entries as symbols can be preempted
 // .text is Thumb and .plt is ARM, llvm-objdump can currently only disassemble
 // as ARM or Thumb. Work around by disassembling twice.
-// DSOTHUMB: Disassembly of section .text:
-// DSOTHUMB-EMPTY:
-// DSOTHUMB-NEXT: func1:
-// DSOTHUMB-NEXT:     1000:     70 47   bx      lr
-// DSOTHUMB: func2:
-// DSOTHUMB-NEXT:     1002:     70 47   bx      lr
-// DSOTHUMB: func3:
-// DSOTHUMB-NEXT:     1004:     70 47   bx      lr
-// DSOTHUMB-NEXT:     1006:     d4 d4   bmi     #-88
-// DSOTHUMB: _start:
+// DSO: Disassembly of section .text:
+// DSO-EMPTY:
+// DSO-NEXT: func1:
+// DSO-NEXT:     1000:     70 47   bx      lr
+// DSO: func2:
+// DSO-NEXT:     1002:     70 47   bx      lr
+// DSO: func3:
+// DSO-NEXT:     1004:     70 47   bx      lr
+// DSO-NEXT:     1006:     d4 d4   bmi     #-88
+// DSO: _start:
 // 0x1008 + 0x34 + 4 = 0x1040 = PLT func1
-// DSOTHUMB-NEXT:     1008:     00 f0 1a e8     blx     #52
+// DSO-NEXT:     1008:     00 f0 1a e8     blx     #52
 // 0x100c + 0x40 + 4 = 0x1050 = PLT func2
-// DSOTHUMB-NEXT:     100c:     00 f0 20 e8     blx     #64
+// DSO-NEXT:     100c:     00 f0 20 e8     blx     #64
 // 0x1010 + 0x4C + 4 = 0x1060 = PLT func3
-// DSOTHUMB-NEXT:     1010:     00 f0 26 e8     blx     #76
-// DSOARM: Disassembly of section .plt:
-// DSOARM-EMPTY:
-// DSOARM-NEXT: $a:
-// DSOARM-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
+// DSO-NEXT:     1010:     00 f0 26 e8     blx     #76
+// DSO: Disassembly of section .plt:
+// DSO-EMPTY:
+// DSO-NEXT: $a:
+// DSO-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // (0x1024 + 8) + (0 RoR 12) + 4096 + (0xfdc) = 0x3008 = .got.plt[3]
-// DSOARM-NEXT:     1024:       00 e6 8f e2     add     lr, pc, #0, #12
-// DSOARM-NEXT:     1028:       01 ea 8e e2     add     lr, lr, #4096
-// DSOARM-NEXT:     102c:       dc ff be e5     ldr     pc, [lr, #4060]!
-// DSOARM: $d:
+// DSO-NEXT:     1024:       00 e6 8f e2     add     lr, pc, #0, #12
+// DSO-NEXT:     1028:       01 ea 8e e2     add     lr, lr, #4096
+// DSO-NEXT:     102c:       dc ff be e5     ldr     pc, [lr, #4060]!
+// DSO: $d:
 
-// DSOARM-NEXT:     1030:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM-NEXT:     1034:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM-NEXT:     1038:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM-NEXT:     103c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM: $a:
+// DSO-NEXT:     1030:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1034:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1038:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     103c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO: $a:
 // (0x1040 + 8) + (0 RoR 12) + 4096 + (0xfc4) = 0x300c
-// DSOARM-NEXT:     1040:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSOARM-NEXT:     1044:       01 ca 8c e2     add     r12, r12, #4096
-// DSOARM-NEXT:     1048:       c4 ff bc e5     ldr     pc, [r12, #4036]!
-// DSOARM: $d:
-// DSOARM-NEXT:     104c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM: $a:
+// DSO-NEXT:     1040:       00 c6 8f e2     add     r12, pc, #0, #12
+// DSO-NEXT:     1044:       01 ca 8c e2     add     r12, r12, #4096
+// DSO-NEXT:     1048:       c4 ff bc e5     ldr     pc, [r12, #4036]!
+// DSO: $d:
+// DSO-NEXT:     104c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO: $a:
 // (0x1050 + 8) + (0 RoR 12) + 4096 + (0xfb8) = 0x3010
-// DSOARM-NEXT:     1050:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSOARM-NEXT:     1054:       01 ca 8c e2     add     r12, r12, #4096
-// DSOARM-NEXT:     1058:       b8 ff bc e5     ldr     pc, [r12, #4024]!
-// DSOARM: $d:
-// DSOARM-NEXT:     105c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSOARM: $a:
+// DSO-NEXT:     1050:       00 c6 8f e2     add     r12, pc, #0, #12
+// DSO-NEXT:     1054:       01 ca 8c e2     add     r12, r12, #4096
+// DSO-NEXT:     1058:       b8 ff bc e5     ldr     pc, [r12, #4024]!
+// DSO: $d:
+// DSO-NEXT:     105c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO: $a:
 // (0x1060 + 8) + (0 RoR 12) + 4096 + (0xfac) = 0x3014
-// DSOARM-NEXT:     1060:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSOARM-NEXT:     1064:       01 ca 8c e2     add     r12, r12, #4096
-// DSOARM-NEXT:     1068:       ac ff bc e5     ldr     pc, [r12, #4012]!
-// DSOARM: $d:
-// DSOARM-NEXT:     106c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DSO-NEXT:     1060:       00 c6 8f e2     add     r12, pc, #0, #12
+// DSO-NEXT:     1064:       01 ca 8c e2     add     r12, r12, #4096
+// DSO-NEXT:     1068:       ac ff bc e5     ldr     pc, [r12, #4012]!
+// DSO: $d:
+// DSO-NEXT:     106c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 
 // DSOREL:    Name: .got.plt
 // DSOREL-NEXT:    Type: SHT_PROGBITS

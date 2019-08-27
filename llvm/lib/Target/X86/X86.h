@@ -137,13 +137,13 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
-void initializeX86ExpandPseudoPass(PassRegistry&);
 void initializeX86CondBrFoldingPassPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
+void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
+void initializeX86OptimizeLEAPassPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
-
 } // End llvm namespace
 
 #endif

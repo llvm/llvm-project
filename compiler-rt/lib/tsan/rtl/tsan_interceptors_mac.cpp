@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <libkern/OSAtomic.h>
 #include <objc/objc-sync.h>
+#include <os/lock.h>
 #include <sys/ucontext.h>
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
@@ -244,6 +245,45 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
   SCOPED_TSAN_INTERCEPTOR(os_lock_unlock, lock);
   Release(thr, pc, (uptr)lock);
   REAL(os_lock_unlock)(lock);
+}
+
+TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_lock)(lock);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock, lock);
+  REAL(os_unfair_lock_lock)(lock);
+  Acquire(thr, pc, (uptr)lock);
+}
+
+TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
+                 u32 options) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_lock_with_options)(lock, options);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_options, lock, options);
+  REAL(os_unfair_lock_lock_with_options)(lock, options);
+  Acquire(thr, pc, (uptr)lock);
+}
+
+TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_trylock)(lock);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_trylock, lock);
+  bool result = REAL(os_unfair_lock_trylock)(lock);
+  if (result)
+    Acquire(thr, pc, (uptr)lock);
+  return result;
+}
+
+TSAN_INTERCEPTOR(void, os_unfair_lock_unlock, os_unfair_lock_t lock) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_unlock)(lock);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_unlock, lock);
+  Release(thr, pc, (uptr)lock);
+  REAL(os_unfair_lock_unlock)(lock);
 }
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)

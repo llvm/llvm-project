@@ -1309,7 +1309,7 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
           llvm_unreachable(nullptr);
         }
       case MVT::i32:
-        unsigned VReg = RegInfo.createVirtualRegister(&XCore::GRRegsRegClass);
+        Register VReg = RegInfo.createVirtualRegister(&XCore::GRRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
         ArgIn = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
         CFRegNode.push_back(ArgIn.getValue(ArgIn->getNumValues() - 1));
@@ -1360,7 +1360,7 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
         offset -= StackSlotSize;
         SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
         // Move argument from phys reg -> virt reg
-        unsigned VReg = RegInfo.createVirtualRegister(&XCore::GRRegsRegClass);
+        Register VReg = RegInfo.createVirtualRegister(&XCore::GRRegsRegClass);
         RegInfo.addLiveIn(ArgRegs[i], VReg);
         SDValue Val = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
         CFRegNode.push_back(Val.getValue(Val->getNumValues() - 1));

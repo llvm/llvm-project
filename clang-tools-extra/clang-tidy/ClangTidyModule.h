@@ -19,7 +19,7 @@
 namespace clang {
 namespace tidy {
 
-/// \brief A collection of \c ClangTidyCheckFactory instances.
+/// A collection of \c ClangTidyCheckFactory instances.
 ///
 /// All clang-tidy modules register their check factories with an instance of
 /// this object.
@@ -29,12 +29,12 @@ public:
                                          ClangTidyContext *Context)>
       CheckFactory;
 
-  /// \brief Registers check \p Factory with name \p Name.
+  /// Registers check \p Factory with name \p Name.
   ///
   /// For all checks that have default constructors, use \c registerCheck.
   void registerCheckFactory(StringRef Name, CheckFactory Factory);
 
-  /// \brief Registers the \c CheckType with the name \p Name.
+  /// Registers the \c CheckType with the name \p Name.
   ///
   /// This method should be used for all \c ClangTidyChecks that don't require
   /// constructor parameters.
@@ -62,7 +62,7 @@ public:
                          });
   }
 
-  /// \brief Create instances of all checks matching \p CheckRegexString and
+  /// Create instances of all checks matching \p CheckRegexString and
   /// store them in \p Checks.
   ///
   /// The caller takes ownership of the return \c ClangTidyChecks.
@@ -78,17 +78,17 @@ private:
   FactoryMap Factories;
 };
 
-/// \brief A clang-tidy module groups a number of \c ClangTidyChecks and gives
+/// A clang-tidy module groups a number of \c ClangTidyChecks and gives
 /// them a prefixed name.
 class ClangTidyModule {
 public:
   virtual ~ClangTidyModule() {}
 
-  /// \brief Implement this function in order to register all \c CheckFactories
+  /// Implement this function in order to register all \c CheckFactories
   /// belonging to this module.
   virtual void addCheckFactories(ClangTidyCheckFactories &CheckFactories) = 0;
 
-  /// \brief Gets default options for checks defined in this module.
+  /// Gets default options for checks defined in this module.
   virtual ClangTidyOptions getModuleOptions();
 };
 

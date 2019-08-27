@@ -143,7 +143,7 @@ void ImportSection::writeBody() {
   }
 
   if (config->importTable) {
-    uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
+    uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
     WasmImport import;
     import.Module = defaultModule;
     import.Field = functionTableName;
@@ -212,7 +212,7 @@ void FunctionSection::addFunction(InputFunction *func) {
 }
 
 void TableSection::writeBody() {
-  uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
+  uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
 
   raw_ostream &os = bodyOutputStream;
   writeUleb128(os, 1, "table count");
@@ -313,7 +313,7 @@ void ExportSection::writeBody() {
 void ElemSection::addEntry(FunctionSymbol *sym) {
   if (sym->hasTableIndex())
     return;
-  sym->setTableIndex(elemOffset + indirectFunctions.size());
+  sym->setTableIndex(config->tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
 }
 
@@ -328,12 +328,12 @@ void ElemSection::writeBody() {
     initExpr.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
     initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = elemOffset;
+    initExpr.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
   writeUleb128(os, indirectFunctions.size(), "elem count");
 
-  uint32_t tableIndex = elemOffset;
+  uint32_t tableIndex = config->tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     assert(sym->getTableIndex() == tableIndex);
     writeUleb128(os, sym->getFunctionIndex(), "function index");

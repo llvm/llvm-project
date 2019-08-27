@@ -23,7 +23,7 @@ namespace tidy {
 namespace modernize {
 
 namespace {
-/// \brief Matches move-constructible classes.
+/// Matches move-constructible classes.
 ///
 /// Given
 /// \code
@@ -54,12 +54,12 @@ static TypeMatcher nonConstValueType() {
   return qualType(unless(anyOf(referenceType(), isConstQualified())));
 }
 
-/// \brief Whether or not \p ParamDecl is used exactly one time in \p Ctor.
+/// Whether or not \p ParamDecl is used exactly one time in \p Ctor.
 ///
 /// Checks both in the init-list and the body of the constructor.
 static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
                                      const ParmVarDecl *ParamDecl) {
-  /// \brief \c clang::RecursiveASTVisitor that checks that the given
+  /// \c clang::RecursiveASTVisitor that checks that the given
   /// \c ParmVarDecl is used exactly one time.
   ///
   /// \see ExactlyOneUsageVisitor::hasExactlyOneUsageIn()
@@ -71,7 +71,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     ExactlyOneUsageVisitor(const ParmVarDecl *ParamDecl)
         : ParamDecl(ParamDecl) {}
 
-    /// \brief Whether or not the parameter variable is referred only once in
+    /// Whether or not the parameter variable is referred only once in
     /// the
     /// given constructor.
     bool hasExactlyOneUsageIn(const CXXConstructorDecl *Ctor) {
@@ -81,7 +81,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     }
 
   private:
-    /// \brief Counts the number of references to a variable.
+    /// Counts the number of references to a variable.
     ///
     /// Stops the AST traversal if more than one usage is found.
     bool VisitDeclRefExpr(DeclRefExpr *D) {
@@ -104,7 +104,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
   return ExactlyOneUsageVisitor(ParamDecl).hasExactlyOneUsageIn(Ctor);
 }
 
-/// \brief Find all references to \p ParamDecl across all of the
+/// Find all references to \p ParamDecl across all of the
 /// redeclarations of \p Ctor.
 static SmallVector<const ParmVarDecl *, 2>
 collectParamDecls(const CXXConstructorDecl *Ctor,

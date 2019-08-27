@@ -97,33 +97,3 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
 
   return Result;
 }
-
-// The following is temporary code aimed to preserve compatibility with
-// existing code which uses 32-bit offsets.
-// It will be removed when migration to 64-bit offsets is finished.
-
-namespace {
-
-class WrapOffset {
-  uint64_t Offset64;
-  uint32_t *Offset32;
-
-public:
-  WrapOffset(uint32_t *Offset)
-      : Offset64(*Offset), Offset32(Offset) {}
-  ~WrapOffset() { *Offset32 = Offset64; }
-  operator uint64_t *() { return &Offset64; }
-};
-
-}
-
-uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint32_t *Off,
-                                               uint64_t *SecNdx) const {
-  return getRelocatedValue(Size, WrapOffset(Off), SecNdx);
-}
-
-Optional<uint64_t>
-DWARFDataExtractor::getEncodedPointer(uint32_t *Offset, uint8_t Encoding,
-                                      uint64_t PCRelOffset) const {
-  return getEncodedPointer(WrapOffset(Offset), Encoding, PCRelOffset);
-}

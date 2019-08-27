@@ -516,13 +516,13 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
       // Avoid creating a conditional cleanup just to hold an llvm.lifetime.end
       // marker. Instead, start the lifetime of a conditional temporary earlier
-      // so that it's unconditional. Don't do this in ASan's use-after-scope
-      // mode so that it gets the more precise lifetime marks. If the type has
-      // a non-trivial destructor, we'll have a cleanup block for it anyway,
-      // so this typically doesn't help; skip it in that case.
+      // so that it's unconditional. Don't do this with sanitizers which need
+      // more precise lifetime marks.
       ConditionalEvaluation *OldConditional = nullptr;
       CGBuilderTy::InsertPoint OldIP;
       if (isInConditionalBranch() && !E->getType().isDestructedType() &&
+          !SanOpts.has(SanitizerKind::HWAddress) &&
+          !SanOpts.has(SanitizerKind::Memory) &&
           !CGM.getCodeGenOpts().SanitizeAddressUseAfterScope) {
         OldConditional = OutermostConditional;
         OutermostConditional = nullptr;
@@ -677,8 +677,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   // Quickly determine whether we have a pointer to an alloca. It's possible
   // to skip null checks, and some alignment checks, for these pointers. This
   // can reduce compile-time significantly.
-  auto PtrToAlloca =
-      dyn_cast<llvm::AllocaInst>(Ptr->stripPointerCastsNoFollowAliases());
+  auto PtrToAlloca = dyn_cast<llvm::AllocaInst>(Ptr->stripPointerCasts());
 
   llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
   llvm::Value *IsNonNull = nullptr;

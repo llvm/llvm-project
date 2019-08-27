@@ -164,7 +164,40 @@ public:
   using ConfigTable = llvm::StringMap<std::string>;
 
   static std::vector<StringRef>
-  getRegisteredCheckers(bool IncludeExperimental = false);
+  getRegisteredCheckers(bool IncludeExperimental = false) {
+    static const StringRef StaticAnalyzerChecks[] = {
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN) FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+    };
+    std::vector<StringRef> Checkers;
+    for (StringRef CheckerName : StaticAnalyzerChecks) {
+      if (!CheckerName.startswith("debug.") &&
+          (IncludeExperimental || !CheckerName.startswith("alpha.")))
+        Checkers.push_back(CheckerName);
+    }
+    return Checkers;
+  }
+
+  static std::vector<StringRef>
+  getRegisteredPackages(bool IncludeExperimental = false) {
+    static const StringRef StaticAnalyzerPackages[] = {
+#define GET_PACKAGES
+#define PACKAGE(FULLNAME) FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef PACKAGE
+#undef GET_PACKAGES
+    };
+    std::vector<StringRef> Packages;
+    for (StringRef PackageName : StaticAnalyzerPackages) {
+      if (PackageName != "debug" &&
+          (IncludeExperimental || PackageName != "alpha"))
+        Packages.push_back(PackageName);
+    }
+    return Packages;
+  }
 
   /// Convenience function for printing options or checkers and their
   /// description in a formatted manner. If \p MinLineWidth is set to 0, no line
@@ -188,9 +221,11 @@ public:
       std::pair<StringRef, StringRef> EntryDescPair,
       size_t EntryWidth, size_t InitialPad, size_t MinLineWidth = 0);
 
+  /// Pairs of checker/package name and enable/disable.
+  std::vector<std::pair<std::string, bool>> CheckersAndPackages;
 
-  /// Pair of checker name and enable/disable.
-  std::vector<std::pair<std::string, bool>> CheckersControlList;
+  /// Vector of checker/package names which will not emit warnings.
+  std::vector<std::string> SilencedCheckersAndPackages;
 
   /// A key-value table of use-specified configuration values.
   // TODO: This shouldn't be public.

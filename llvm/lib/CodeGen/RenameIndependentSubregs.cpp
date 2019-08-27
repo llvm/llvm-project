@@ -138,7 +138,7 @@ bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
   LLVM_DEBUG(dbgs() << printReg(Reg) << ": Splitting into newly created:");
   for (unsigned I = 1, NumClasses = Classes.getNumClasses(); I < NumClasses;
        ++I) {
-    unsigned NewVReg = MRI->createVirtualRegister(RegClass);
+    Register NewVReg = MRI->createVirtualRegister(RegClass);
     LiveInterval &NewLI = LIS->createEmptyInterval(NewVReg);
     Intervals.push_back(&NewLI);
     LLVM_DEBUG(dbgs() << ' ' << printReg(NewVReg));

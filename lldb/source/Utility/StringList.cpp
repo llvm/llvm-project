@@ -61,10 +61,8 @@ void StringList::AppendList(const char **strv, int strc) {
 }
 
 void StringList::AppendList(StringList strings) {
-  size_t len = strings.GetSize();
-
-  for (size_t i = 0; i < len; ++i)
-    m_strings.push_back(strings.GetStringAtIndex(i));
+  m_strings.reserve(m_strings.size() + strings.GetSize());
+  m_strings.insert(m_strings.end(), strings.begin(), strings.end());
 }
 
 size_t StringList::GetSize() const { return m_strings.size(); }
@@ -223,29 +221,6 @@ StringList &StringList::operator=(const std::vector<std::string> &rhs) {
   m_strings.assign(rhs.begin(), rhs.end());
 
   return *this;
-}
-
-size_t StringList::AutoComplete(llvm::StringRef s, StringList &matches,
-                                size_t &exact_idx) const {
-  matches.Clear();
-  exact_idx = SIZE_MAX;
-  if (s.empty()) {
-    // No string, so it matches everything
-    matches = *this;
-    return matches.GetSize();
-  }
-
-  const size_t s_len = s.size();
-  const size_t num_strings = m_strings.size();
-
-  for (size_t i = 0; i < num_strings; ++i) {
-    if (m_strings[i].find(s) == 0) {
-      if (exact_idx == SIZE_MAX && m_strings[i].size() == s_len)
-        exact_idx = matches.GetSize();
-      matches.AppendString(m_strings[i]);
-    }
-  }
-  return matches.GetSize();
 }
 
 void StringList::LogDump(Log *log, const char *name) {

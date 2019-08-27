@@ -16,15 +16,15 @@
 // void last_write_time(const path& p, file_time_type new_type,
 //                      std::error_code& ec) noexcept;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <chrono>
 #include <fstream>
 #include <cstdlib>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.hpp"
-#include "filesystem_test_helper.hpp"
+#include "rapid-cxx-test.h"
+#include "filesystem_test_helper.h"
 
 #include <sys/stat.h>
 #include <iostream>

@@ -332,11 +332,12 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
             std::string regex_str = "^";
             regex_str += echo_packet;
             regex_str += "$";
-            response_regex.Compile(regex_str);
+            response_regex = RegularExpression(regex_str);
           } else {
             echo_packet_len =
                 ::snprintf(echo_packet, sizeof(echo_packet), "qC");
-            response_regex.Compile(llvm::StringRef("^QC[0-9A-Fa-f]+$"));
+            response_regex =
+                RegularExpression(llvm::StringRef("^QC[0-9A-Fa-f]+$"));
           }
 
           PacketResult echo_packet_result =
@@ -750,7 +751,6 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       size_t content_end = content_start + content_length;
 
       bool success = true;
-      std::string &packet_str = packet.GetStringRef();
       if (log) {
         // If logging was just enabled and we have history, then dump out what
         // we have to the log so we get the historical context. The Dump() call
@@ -812,11 +812,10 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
                           GDBRemoteCommunicationHistory::ePacketTypeRecv,
                           total_length);
 
-      // Clear packet_str in case there is some existing data in it.
-      packet_str.clear();
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process. Reserve enough byte for the most common case
       // (no RLE used)
+      std ::string packet_str;
       packet_str.reserve(m_bytes.length());
       for (std::string::const_iterator c = m_bytes.begin() + content_start;
            c != m_bytes.begin() + content_end; ++c) {
@@ -839,6 +838,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           packet_str.push_back(*c);
         }
       }
+      packet = StringExtractorGDBRemote(packet_str);
 
       if (m_bytes[0] == '$' || m_bytes[0] == '%') {
         assert(checksum_idx < m_bytes.size());
@@ -1339,7 +1339,7 @@ void GDBRemoteCommunication::AppendBytesToCache(const uint8_t *bytes,
 
     if (type == PacketType::Notify) {
       // put this packet into an event
-      const char *pdata = packet.GetStringRef().c_str();
+      const char *pdata = packet.GetStringRef().data();
 
       // as the communication class, we are a broadcaster and the async thread
       // is tuned to listen to us

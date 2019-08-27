@@ -12,7 +12,7 @@ void no_tuple_size_2() { auto [x, y] = A(); } // ok, decompose elementwise
 
 struct Bad1 { int a, b; };
 template<> struct std::tuple_size<Bad1> {};
-void no_tuple_size_3() { auto [x, y] = Bad1(); } // expected-error {{cannot decompose this type; 'std::tuple_size<Bad1>::value' is not a valid integral constant expression}}
+void no_tuple_size_3() { auto [x, y] = Bad1(); } // ok, omitting value is valid after DR2386
 
 struct Bad2 {};
 template<> struct std::tuple_size<Bad2> { const int value = 5; };
@@ -127,7 +127,7 @@ void referenced_type() {
   using ConstInt3 = decltype(bcr2);
 }
 
-struct C { template<int> int get(); };
+struct C { template<int> int get() const; };
 template<> struct std::tuple_size<C> { static const int value = 1; };
 template<> struct std::tuple_element<0, C> { typedef int type; };
 
@@ -136,6 +136,12 @@ int member_get() {
   using T = int;
   using T = decltype(c);
   return c;
+}
+
+constexpr C c = C();
+template<const C *p> void dependent_binding_PR40674() {
+  const auto &[c] = *p;
+  (void)c;
 }
 
 struct D {

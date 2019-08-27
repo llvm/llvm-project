@@ -1,5 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=LLC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=LLC %s
 
 ; OPT: declare void @foo4() local_unnamed_addr #0
 ; OPT: define internal fastcc void @foo3.2() unnamed_addr #1

@@ -400,7 +400,7 @@ public:
   /// By default, this method prints the label for the specified
   /// MachineBasicBlock, an alignment (if present) and a comment describing it
   /// if appropriate.
-  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB) const;
+  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB);
 
   /// Targets can override this to emit stuff at the end of a basic block.
   virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB);
@@ -634,6 +634,11 @@ public:
   /// This emits linkage information about \p GVSym based on \p GV, if this is
   /// supported by the target.
   void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
+
+  /// Return the alignment in log2 form for the specified \p GV.
+  static unsigned getGVAlignmentLog2(const GlobalValue *GV,
+                                     const DataLayout &DL,
+                                     unsigned InBits = 0);
 
 private:
   /// Private state for PrintSpecial()

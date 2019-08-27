@@ -98,6 +98,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v256i8:   return "MVT::v256i8";
   case MVT::v1i16:    return "MVT::v1i16";
   case MVT::v2i16:    return "MVT::v2i16";
+  case MVT::v3i16:    return "MVT::v3i16";
   case MVT::v4i16:    return "MVT::v4i16";
   case MVT::v8i16:    return "MVT::v8i16";
   case MVT::v16i16:   return "MVT::v16i16";
@@ -126,6 +127,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v32i64:   return "MVT::v32i64";
   case MVT::v1i128:   return "MVT::v1i128";
   case MVT::v2f16:    return "MVT::v2f16";
+  case MVT::v3f16:    return "MVT::v3f16";
   case MVT::v4f16:    return "MVT::v4f16";
   case MVT::v8f16:    return "MVT::v8f16";
   case MVT::v1f32:    return "MVT::v1f32";
@@ -291,6 +293,46 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
     RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
   return *RegBank;
+}
+
+Optional<CodeGenRegisterClass *>
+CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
+                                    CodeGenRegBank &RegBank,
+                                    const CodeGenSubRegIndex *SubIdx) const {
+  std::vector<CodeGenRegisterClass *> Candidates;
+  auto &RegClasses = RegBank.getRegClasses();
+
+  // Try to find a register class which supports ValueTy, and also contains
+  // SubIdx.
+  for (CodeGenRegisterClass &RC : RegClasses) {
+    // Is there a subclass of this class which contains this subregister index?
+    CodeGenRegisterClass *SubClassWithSubReg = RC.getSubClassWithSubReg(SubIdx);
+    if (!SubClassWithSubReg)
+      continue;
+
+    // We have a class. Check if it supports this value type.
+    if (llvm::none_of(SubClassWithSubReg->VTs,
+                      [&ValueTy](const ValueTypeByHwMode &ClassVT) {
+                        return ClassVT == ValueTy;
+                      }))
+      continue;
+
+    // We have a register class which supports both the value type and
+    // subregister index. Remember it.
+    Candidates.push_back(SubClassWithSubReg);
+  }
+
+  // If we didn't find anything, we're done.
+  if (Candidates.empty())
+    return None;
+
+  // Find and return the largest of our candidate classes.
+  llvm::sort(Candidates,
+             [&](const CodeGenRegisterClass *A, const CodeGenRegisterClass *B) {
+               return A->getMembers().size() > B->getMembers().size();
+             });
+
+  return Candidates[0];
 }
 
 void CodeGenTarget::ReadRegAltNameIndices() const {
@@ -760,4 +802,11 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
 
   // Sort the argument attributes for later benefit.
   llvm::sort(ArgumentAttributes);
+}
+
+bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
+  if (ParamIdx >= IS.ParamVTs.size())
+    return false;
+  MVT ParamType = MVT(IS.ParamVTs[ParamIdx]);
+  return ParamType == MVT::iPTR || ParamType == MVT::iPTRAny;
 }

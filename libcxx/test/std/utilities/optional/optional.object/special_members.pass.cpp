@@ -16,7 +16,7 @@
 #include <optional>
 #include <type_traits>
 
-#include "archetypes.hpp"
+#include "archetypes.h"
 
 #include "test_macros.h"
 

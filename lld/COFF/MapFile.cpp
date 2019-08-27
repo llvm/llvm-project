@@ -35,8 +35,8 @@ using namespace lld::coff;
 using SymbolMapTy =
     DenseMap<const SectionChunk *, SmallVector<DefinedRegular *, 4>>;
 
-static const std::string indent8 = "        ";          // 8 spaces
-static const std::string indent16 = "                "; // 16 spaces
+static constexpr char indent8[] = "        ";          // 8 spaces
+static constexpr char indent16[] = "                "; // 16 spaces
 
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &os, uint64_t addr, uint64_t size,

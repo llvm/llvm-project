@@ -165,8 +165,9 @@ body:             |
     ; CHECK-LABEL: name: zext_i1_to_i64
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32bit
-    ; CHECK: [[AND64ri8_:%[0-9]+]]:gr64 = AND64ri8 [[SUBREG_TO_REG]], 1, implicit-def $eflags
+    ; CHECK: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32bit
+    ; CHECK: [[AND64ri8_:%[0-9]+]]:gr64 = AND64ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
     ; CHECK: $rax = COPY [[AND64ri8_]]
     ; CHECK: RET 0, implicit $rax
     %1:gpr(s32) = COPY $edi
@@ -258,8 +259,9 @@ body:             |
     ; CHECK-LABEL: name: zext_i8_to_i64
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32bit
-    ; CHECK: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[SUBREG_TO_REG]], 255, implicit-def $eflags
+    ; CHECK: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32bit
+    ; CHECK: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[INSERT_SUBREG]], 255, implicit-def $eflags
     ; CHECK: $rax = COPY [[AND64ri32_]]
     ; CHECK: RET 0, implicit $rax
     %1:gpr(s32) = COPY $edi
@@ -320,8 +322,9 @@ body:             |
     ; CHECK-LABEL: name: zext_i16_to_i64
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32bit
-    ; CHECK: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[SUBREG_TO_REG]], 65535, implicit-def $eflags
+    ; CHECK: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32bit
+    ; CHECK: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[INSERT_SUBREG]], 65535, implicit-def $eflags
     ; CHECK: $rax = COPY [[AND64ri32_]]
     ; CHECK: RET 0, implicit $rax
     %1:gpr(s32) = COPY $edi

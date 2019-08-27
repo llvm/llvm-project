@@ -49,7 +49,7 @@ int TestRunner::run(StringRef Filename) {
   if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test\n",
                                       inconvertibleErrorCode());
-    outs() << toString(std::move(E));
+    errs() << toString(std::move(E));
     exit(1);
   }
 

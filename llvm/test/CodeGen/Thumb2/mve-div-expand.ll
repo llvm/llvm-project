@@ -755,14 +755,12 @@ define arm_aapcs_vfpcc <2 x i64> @udiv_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
 ; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    vmov.32 q4[1], r1
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __aeabi_uldivmod
 ; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov.32 q4[3], r1
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
@@ -790,14 +788,12 @@ define arm_aapcs_vfpcc <2 x i64> @sdiv_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
 ; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    vmov.32 q4[1], r1
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    lsrl r0, r1, #32
-; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov.32 q4[3], r1
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}

@@ -405,6 +405,12 @@ public:
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
 
+  /// Holds TypoExprs that are created from `createDelayedTypo`. This is used by
+  /// `TransformTypos` in order to keep track of any TypoExprs that are created
+  /// recursively during typo correction and wipe them away if the correction
+  /// fails.
+  llvm::SmallVector<TypoExpr *, 2> TypoExprs;
+
   /// pragma clang section kind
   enum PragmaClangSectionKind {
     PCSK_Invalid      = 0,
@@ -1272,6 +1278,8 @@ public:
 
   void addImplicitTypedef(StringRef Name, QualType T);
 
+  bool WarnedStackExhausted = false;
+
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
@@ -1302,6 +1310,16 @@ public:
   void addExternalSource(ExternalSemaSource *E);
 
   void PrintStats() const;
+
+  /// Warn that the stack is nearly exhausted.
+  void warnStackExhausted(SourceLocation Loc);
+
+  /// Run some code with "sufficient" stack space. (Currently, at least 256K is
+  /// guaranteed). Produces a warning if we're low on stack space and allocates
+  /// more in that case. Use this in code that may recurse deeply (for example,
+  /// in template instantiation) to avoid stack overflow.
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   /// Helper class that creates diagnostics with optional
   /// template instantiation stacks.
@@ -1415,8 +1433,8 @@ public:
   void RecordParsingTemplateParameterDepth(unsigned Depth);
 
   void PushCapturedRegionScope(Scope *RegionScope, CapturedDecl *CD,
-                               RecordDecl *RD,
-                               CapturedRegionKind K);
+                               RecordDecl *RD, CapturedRegionKind K,
+                               unsigned OpenMPCaptureLevel = 0);
 
   /// Custom deleter to allow FunctionScopeInfos to be kept alive for a short
   /// time after they've been popped.
@@ -1455,6 +1473,11 @@ public:
 
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
+
+  /// Get the innermost lambda enclosing the current location, if any. This
+  /// looks through intervening non-lambda scopes such as local functions and
+  /// blocks.
+  sema::LambdaScopeInfo *getEnclosingLambda() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
@@ -3973,7 +3996,8 @@ public:
   typedef std::pair<StringRef, QualType> CapturedParamNameType;
   void ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
                                 CapturedRegionKind Kind,
-                                ArrayRef<CapturedParamNameType> Params);
+                                ArrayRef<CapturedParamNameType> Params,
+                                unsigned OpenMPCaptureLevel = 0);
   StmtResult ActOnCapturedRegionEnd(Stmt *S);
   void ActOnCapturedRegionError();
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
@@ -8991,11 +9015,20 @@ private:
   void popOpenMPFunctionRegion(const sema::FunctionScopeInfo *OldFSI);
 
   /// Check whether we're allowed to call Callee from the current function.
-  void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+  void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
+                                 bool CheckForDelayedContext = true);
+
+  /// Check whether we're allowed to call Callee from the current function.
+  void checkOpenMPHostFunction(SourceLocation Loc, FunctionDecl *Callee,
+                               bool CheckCaller = true);
 
   /// Check if the expression is allowed to be used in expressions for the
   /// OpenMP devices.
   void checkOpenMPDeviceExpr(const Expr *E);
+
+  /// Finishes analysis of the deferred functions calls that may be declared as
+  /// host/nohost during device/host compilation.
+  void finalizeOpenMPDelayedAnalysis();
 
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
@@ -9021,7 +9054,9 @@ public:
   /// reference.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.
-  bool isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const;
+  /// \param OpenMPCaptureLevel Capture level within an OpenMP construct.
+  bool isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
+                             unsigned OpenMPCaptureLevel) const;
 
   /// Check if the specified variable is used in one of the private
   /// clauses (private, firstprivate, lastprivate, reduction etc.) in OpenMP
@@ -9141,11 +9176,16 @@ public:
   bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);
   /// Called at the end of target region i.e. '#pragme omp end declare target'.
   void ActOnFinishOpenMPDeclareTargetDirective();
+  /// Searches for the provided declaration name for OpenMP declare target
+  /// directive.
+  NamedDecl *
+  lookupOpenMPDeclareTargetName(Scope *CurScope, CXXScopeSpec &ScopeSpec,
+                                const DeclarationNameInfo &Id,
+                                NamedDeclSetType &SameDirectiveDecls);
   /// Called on correct id-expression from the '#pragma omp declare target'.
-  void ActOnOpenMPDeclareTargetName(Scope *CurScope, CXXScopeSpec &ScopeSpec,
-                                    const DeclarationNameInfo &Id,
+  void ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
                                     OMPDeclareTargetDeclAttr::MapTypeTy MT,
-                                    NamedDeclSetType &SameDirectiveDecls);
+                                    OMPDeclareTargetDeclAttr::DevTypeTy DT);
   /// Check declaration inside target region.
   void
   checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
@@ -10528,6 +10568,21 @@ public:
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
   DeviceDiagBuilder diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current
+  /// context is "used as host code".
+  ///
+  /// - If CurContext is a `declare target` function or it is known that the
+  /// function is emitted for the host, emits the diagnostics immediately.
+  /// - If CurContext is a non-host function, just ignore it.
+  ///
+  /// Example usage:
+  ///
+  ///  // Variable-length arrays are not allowed in NVPTX device code.
+  ///  if (diagIfOpenMPHostode(Loc, diag::err_vla_unsupported))
+  ///    return ExprError();
+  ///  // Otherwise, continue parsing as normal.
+  DeviceDiagBuilder diagIfOpenMPHostCode(SourceLocation Loc, unsigned DiagID);
 
   DeviceDiagBuilder targetDiag(SourceLocation Loc, unsigned DiagID);
 

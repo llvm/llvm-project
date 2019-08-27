@@ -10,9 +10,9 @@ define <4 x i1> @test_4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
+; CHECK-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    callq _f
-; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
+; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 2-byte Reload
 ; CHECK-NEXT:    vpmovm2d %k0, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
@@ -32,10 +32,10 @@ define <8 x i1> @test_8i1(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    vpcmpnleud %ymm1, %ymm0, %k0
 ; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    korb %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
+; CHECK-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
-; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
+; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 2-byte Reload
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
@@ -55,10 +55,10 @@ define <16 x i1> @test_16i1(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
+; CHECK-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
-; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
+; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 2-byte Reload
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
@@ -77,10 +77,10 @@ define <32 x i1> @test_32i1(<32 x i16> %a, <32 x i16> %b) {
 ; CHECK-NEXT:    vpcmpnleuw %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpcmpgtw %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    kord %k1, %k0, %k0
-; CHECK-NEXT:    kmovd %k0, {{[0-9]+}}(%rsp) ## 4-byte Spill
+; CHECK-NEXT:    kmovd %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
-; CHECK-NEXT:    kmovd {{[0-9]+}}(%rsp), %k0 ## 4-byte Reload
+; CHECK-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 4-byte Reload
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

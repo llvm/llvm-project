@@ -2919,7 +2919,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
   SmallVector<unsigned, 2> RecoloringCandidates;
   HintsInfo Info;
   unsigned Reg = VirtReg.reg;
-  unsigned PhysReg = VRM->getPhys(Reg);
+  Register PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
   Visited.insert(Reg);
@@ -2940,7 +2940,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    unsigned CurrPhys = VRM->getPhys(Reg);
+    Register CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||

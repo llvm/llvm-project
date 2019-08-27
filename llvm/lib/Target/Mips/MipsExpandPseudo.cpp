@@ -99,15 +99,15 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
                             : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
   }
 
-  unsigned Dest = I->getOperand(0).getReg();
-  unsigned Ptr = I->getOperand(1).getReg();
-  unsigned Mask = I->getOperand(2).getReg();
-  unsigned ShiftCmpVal = I->getOperand(3).getReg();
-  unsigned Mask2 = I->getOperand(4).getReg();
-  unsigned ShiftNewVal = I->getOperand(5).getReg();
-  unsigned ShiftAmnt = I->getOperand(6).getReg();
-  unsigned Scratch = I->getOperand(7).getReg();
-  unsigned Scratch2 = I->getOperand(8).getReg();
+  Register Dest = I->getOperand(0).getReg();
+  Register Ptr = I->getOperand(1).getReg();
+  Register Mask = I->getOperand(2).getReg();
+  Register ShiftCmpVal = I->getOperand(3).getReg();
+  Register Mask2 = I->getOperand(4).getReg();
+  Register ShiftNewVal = I->getOperand(5).getReg();
+  Register ShiftAmnt = I->getOperand(6).getReg();
+  Register Scratch = I->getOperand(7).getReg();
+  Register Scratch2 = I->getOperand(8).getReg();
 
   // insert new blocks after the current block
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
@@ -240,11 +240,11 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
     MOVE = Mips::OR64;
   }
 
-  unsigned Dest = I->getOperand(0).getReg();
-  unsigned Ptr = I->getOperand(1).getReg();
-  unsigned OldVal = I->getOperand(2).getReg();
-  unsigned NewVal = I->getOperand(3).getReg();
-  unsigned Scratch = I->getOperand(4).getReg();
+  Register Dest = I->getOperand(0).getReg();
+  Register Ptr = I->getOperand(1).getReg();
+  Register OldVal = I->getOperand(2).getReg();
+  Register NewVal = I->getOperand(3).getReg();
+  Register Scratch = I->getOperand(4).getReg();
 
   // insert new blocks after the current block
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
@@ -374,15 +374,15 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     llvm_unreachable("Unknown subword atomic pseudo for expansion!");
   }
 
-  unsigned Dest = I->getOperand(0).getReg();
-  unsigned Ptr = I->getOperand(1).getReg();
-  unsigned Incr = I->getOperand(2).getReg();
-  unsigned Mask = I->getOperand(3).getReg();
-  unsigned Mask2 = I->getOperand(4).getReg();
-  unsigned ShiftAmnt = I->getOperand(5).getReg();
-  unsigned OldVal = I->getOperand(6).getReg();
-  unsigned BinOpRes = I->getOperand(7).getReg();
-  unsigned StoreVal = I->getOperand(8).getReg();
+  Register Dest = I->getOperand(0).getReg();
+  Register Ptr = I->getOperand(1).getReg();
+  Register Incr = I->getOperand(2).getReg();
+  Register Mask = I->getOperand(3).getReg();
+  Register Mask2 = I->getOperand(4).getReg();
+  Register ShiftAmnt = I->getOperand(5).getReg();
+  Register OldVal = I->getOperand(6).getReg();
+  Register BinOpRes = I->getOperand(7).getReg();
+  Register StoreVal = I->getOperand(8).getReg();
 
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -513,10 +513,10 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     BEQ = Mips::BEQ64;
   }
 
-  unsigned OldVal = I->getOperand(0).getReg();
-  unsigned Ptr = I->getOperand(1).getReg();
-  unsigned Incr = I->getOperand(2).getReg();
-  unsigned Scratch = I->getOperand(3).getReg();
+  Register OldVal = I->getOperand(0).getReg();
+  Register Ptr = I->getOperand(1).getReg();
+  Register Incr = I->getOperand(2).getReg();
+  Register Scratch = I->getOperand(3).getReg();
 
   unsigned Opcode = 0;
   unsigned OR = 0;

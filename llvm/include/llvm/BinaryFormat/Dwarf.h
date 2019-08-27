@@ -513,6 +513,17 @@ struct FormParams {
   explicit operator bool() const { return Version && AddrSize; }
 };
 
+/// Get the byte size of the unit length field depending on the DWARF format.
+inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
+  switch (Format) {
+  case DwarfFormat::DWARF32:
+    return 4;
+  case DwarfFormat::DWARF64:
+    return 12;
+  }
+  llvm_unreachable("Invalid Format value");
+}
+
 /// Get the fixed byte size for a given form.
 ///
 /// If the form has a fixed byte size, then an Optional with a value will be

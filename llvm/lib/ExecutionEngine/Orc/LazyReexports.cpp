@@ -182,8 +182,9 @@ void LazyReexportsMaterializationUnit::materialize(
   for (auto &Alias : RequestedAliases)
     Stubs[Alias.first] = ISManager.findStub(*Alias.first, false);
 
-  R.notifyResolved(Stubs);
-  R.notifyEmitted();
+  // No registered dependencies, so these calls cannot fail.
+  cantFail(R.notifyResolved(Stubs));
+  cantFail(R.notifyEmitted());
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,

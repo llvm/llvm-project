@@ -80,21 +80,61 @@ struct S test_struct(char *fmt, ...) {
   return v;
 }
 
-// CHECK: define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
-// CHECK:   [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
-// CHECK:   [[VA:%[^,=]+]] = alloca i8*, align 4
-// CHECK:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
-// CHECK:   [[VA1:%[^,=]+]] = bitcast i8** [[VA]] to i8*
-// CHECK:   call void @llvm.va_start(i8* [[VA1]])
-// CHECK:   [[ARGP_CUR:%[^,=]+]] = load i8*, i8** [[VA]], align 4
-// CHECK:   [[ARGP_NEXT:%[^,=]+]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 4
-// CHECK:   store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
-// CHECK:   [[R3:%[^,=]+]] = bitcast i8* [[ARGP_CUR]] to [[STRUCT_S]]**
-// CHECK:   [[R4:%[^,=]+]] = load [[STRUCT_S]]*, [[STRUCT_S]]** %0, align 4
-// CHECK:   [[R5:%[^,=]+]] = bitcast [[STRUCT_S]]* [[AGG_RESULT]] to i8*
-// CHECK:   [[R6:%[^,=]+]] = bitcast [[STRUCT_S]]* [[R4]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R5]], i8* align 4 [[R6]], i32 12, i1 false)
-// CHECK:   [[VA2:%[^,=]+]] = bitcast i8** [[VA]] to i8*
-// CHECK:   call void @llvm.va_end(i8* [[VA2]])
-// CHECK:   ret void
-// CHECK: }
+// CHECK:      define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
+// CHECK:        [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
+// CHECK-NEXT:   [[VA:%[^,=]+]] = alloca i8*, align 4
+// CHECK-NEXT:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
+// CHECK-NEXT:   [[VA1:%[^,=]+]] = bitcast i8** [[VA]] to i8*
+// CHECK-NEXT:   call void @llvm.va_start(i8* [[VA1]])
+// CHECK-NEXT:   [[ARGP_CUR:%[^,=]+]] = load i8*, i8** [[VA]], align 4
+// CHECK-NEXT:   [[ARGP_NEXT:%[^,=]+]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 4
+// CHECK-NEXT:   store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
+// CHECK-NEXT:   [[R3:%[^,=]+]] = bitcast i8* [[ARGP_CUR]] to [[STRUCT_S]]**
+// CHECK-NEXT:   [[R4:%[^,=]+]] = load [[STRUCT_S]]*, [[STRUCT_S]]** [[R3]], align 4
+// CHECK-NEXT:   [[R5:%[^,=]+]] = bitcast [[STRUCT_S]]* [[AGG_RESULT]] to i8*
+// CHECK-NEXT:   [[R6:%[^,=]+]] = bitcast [[STRUCT_S]]* [[R4]] to i8*
+// CHECK-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R5]], i8* align 4 [[R6]], i32 12, i1 false)
+// CHECK-NEXT:   [[VA2:%[^,=]+]] = bitcast i8** [[VA]] to i8*
+// CHECK-NEXT:   call void @llvm.va_end(i8* [[VA2]])
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+struct Z {};
+
+struct S test_empty_struct(char *fmt, ...) {
+  va_list va;
+
+  va_start(va, fmt);
+  struct Z u = va_arg(va, struct Z);
+  struct S v = va_arg(va, struct S);
+  va_end(va);
+
+  return v;
+}
+
+// CHECK:      define void @test_empty_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
+// CHECK:        [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
+// CHECK-NEXT:   [[VA:%[^,=]+]] = alloca i8*, align 4
+// CHECK-NEXT:   [[U:%[^,=]+]] = alloca [[STRUCT_Z:%[^,=]+]], align 1
+// CHECK-NEXT:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
+// CHECK-NEXT:   [[VA1:%[^,=]+]] = bitcast i8** [[VA]] to i8*
+// CHECK-NEXT:   call void @llvm.va_start(i8* [[VA1]])
+// CHECK-NEXT:   [[ARGP_CUR:%[^,=]+]] = load i8*, i8** [[VA]], align 4
+// CHECK-NEXT:   [[ARGP_NEXT:%[^,=]+]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 0
+// CHECK-NEXT:   store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
+// CHECK-NEXT:   [[R0:%[^,=]+]] = bitcast i8* [[ARGP_CUR]] to [[STRUCT_Z]]*
+// CHECK-NEXT:   [[R1:%[^,=]+]] = bitcast [[STRUCT_Z]]* [[U]] to i8*
+// CHECK-NEXT:   [[R2:%[^,=]+]] = bitcast [[STRUCT_Z]]* [[R0]] to i8*
+// CHECK-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[R1]], i8* align 4 [[R2]], i32 0, i1 false)
+// CHECK-NEXT:   [[ARGP_CUR2:%[^,=]+]] = load i8*, i8** [[VA]], align 4
+// CHECK-NEXT:   [[ARGP_NEXT2:%[^,=]+]] = getelementptr inbounds i8, i8* [[ARGP_CUR2]], i32 4
+// CHECK-NEXT:   store i8* [[ARGP_NEXT2]], i8** [[VA]], align 4
+// CHECK-NEXT:   [[R3:%[^,=]+]] = bitcast i8* [[ARGP_CUR2]] to [[STRUCT_S]]**
+// CHECK-NEXT:   [[R4:%[^,=]+]] = load [[STRUCT_S]]*, [[STRUCT_S]]** [[R3]], align 4
+// CHECK-NEXT:   [[R5:%[^,=]+]] = bitcast [[STRUCT_S]]* [[AGG_RESULT]] to i8*
+// CHECK-NEXT:   [[R6:%[^,=]+]] = bitcast [[STRUCT_S]]* [[R4]] to i8*
+// CHECK-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R5]], i8* align 4 [[R6]], i32 12, i1 false)
+// CHECK-NEXT:   [[VA2:%[^,=]+]] = bitcast i8** [[VA]] to i8*
+// CHECK-NEXT:   call void @llvm.va_end(i8* [[VA2]])
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

@@ -36,10 +36,10 @@ struct Chunk {
   bool contains(unsigned Index) const { return Index >= begin && Index <= end; }
 
   void print() const {
-    outs() << "[" << begin;
+    errs() << "[" << begin;
     if (end - begin != 0)
-      outs() << "," << end;
-    outs() << "]";
+      errs() << "," << end;
+    errs() << "]";
   }
 
   /// Operator when populating CurrentChunks in Generic Delta Pass

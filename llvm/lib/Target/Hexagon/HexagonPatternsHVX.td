@@ -1,5 +1,3 @@
-def SDTVecLeaf:
-  SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecBinOp:
   SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>]>;
 
@@ -259,28 +257,18 @@ class Vneg1<ValueType VecTy>
 class Vnot<ValueType VecTy>
   : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;
 
-multiclass VMinMax_pat<InstHexagon MinInst, InstHexagon MaxInst, PatFrag CmpOp,
-                       ValueType CmpType, PatFrag CmpPred> {
-  def: Pat<(vselect (CmpType (CmpOp CmpPred:$Vs, CmpPred:$Vt)),
-                             CmpPred:$Vt, CmpPred:$Vs),
-           (MinInst CmpPred:$Vs, CmpPred:$Vt)>;
-  def: Pat<(vselect (CmpType (CmpOp CmpPred:$Vs, CmpPred:$Vt)),
-                             CmpPred:$Vs, CmpPred:$Vt),
-           (MaxInst CmpPred:$Vs, CmpPred:$Vt)>;
-}
-
 let Predicates = [UseHVX] in {
   let AddedComplexity = 220 in {
-    defm: VMinMax_pat<V6_vminb,  V6_vmaxb,   setgt,  VecQ8,  HVI8>;
-    defm: VMinMax_pat<V6_vminb,  V6_vmaxb,   setge,  VecQ8,  HVI8>;
-    defm: VMinMax_pat<V6_vminub, V6_vmaxub, setugt,  VecQ8,  HVI8>;
-    defm: VMinMax_pat<V6_vminub, V6_vmaxub, setuge,  VecQ8,  HVI8>;
-    defm: VMinMax_pat<V6_vminh,  V6_vmaxh,   setgt, VecQ16, HVI16>;
-    defm: VMinMax_pat<V6_vminh,  V6_vmaxh,   setge, VecQ16, HVI16>;
-    defm: VMinMax_pat<V6_vminuh, V6_vmaxuh, setugt, VecQ16, HVI16>;
-    defm: VMinMax_pat<V6_vminuh, V6_vmaxuh, setuge, VecQ16, HVI16>;
-    defm: VMinMax_pat<V6_vminw,  V6_vmaxw,   setgt, VecQ32, HVI32>;
-    defm: VMinMax_pat<V6_vminw,  V6_vmaxw,   setge, VecQ32, HVI32>;
+    defm: MinMax_pats<V6_vminb,  V6_vmaxb,  vselect,  setgt,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminb,  V6_vmaxb,  vselect,  setge,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminub, V6_vmaxub, vselect, setugt,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminub, V6_vmaxub, vselect, setuge,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminh,  V6_vmaxh,  vselect,  setgt, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminh,  V6_vmaxh,  vselect,  setge, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminuh, V6_vmaxuh, vselect, setugt, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminuh, V6_vmaxuh, vselect, setuge, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminw,  V6_vmaxw,  vselect,  setgt, VecQ32, HVI32>;
+    defm: MinMax_pats<V6_vminw,  V6_vmaxw,  vselect,  setge, VecQ32, HVI32>;
   }
 }
 

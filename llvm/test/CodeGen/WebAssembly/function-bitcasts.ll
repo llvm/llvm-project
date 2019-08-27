@@ -5,7 +5,11 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-declare void @has_i32_arg(i32)
+define void @has_i32_arg(i32) {
+entry:
+  ret void
+}
+
 declare void @has_struct_arg({i32})
 declare i32 @has_i32_ret()
 declare void @vararg(...)
@@ -53,6 +57,19 @@ entry:
 
   ret void
 }
+
+; Calling aliases should also generate a wrapper
+
+@alias_i32_arg = weak hidden alias void (i32), void (i32)* @has_i32_arg
+
+; CHECK-LABEL: test_alias:
+; CHECK: call    .Lhas_i32_arg_bitcast.2
+define void @test_alias() {
+entry:
+  call void bitcast (void (i32)* @alias_i32_arg to void ()*)()
+  ret void
+}
+
 
 ; CHECK-LABEL: test_structs:
 ; CHECK: call     .Lhas_i32_arg_bitcast.1, $pop{{[0-9]+}}, $pop{{[0-9]+$}}

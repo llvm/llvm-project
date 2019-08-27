@@ -105,6 +105,7 @@ llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
   llvm_unreachable("unhandled ParseFormat");
 }
 
+namespace {
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
   std::unique_ptr<RemarkParser> TheParser;
@@ -120,6 +121,7 @@ struct CParser {
   bool hasError() const { return Err.hasValue(); }
   const char *getMessage() const { return Err ? Err->c_str() : nullptr; };
 };
+} // namespace
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CParser, LLVMRemarkParserRef)

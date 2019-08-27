@@ -3,7 +3,7 @@
 # CHECK-NOT: DoLoopStart
 # CHECK-NOT: DLS
 # CHECK: bb.1.for.body:
-# CHECK:   t2CMPri $lr, 0, 14, $cpsr, implicit-def $cpsr
+# CHECK:   t2CMPri $lr, 0, 14, $noreg, implicit-def $cpsr
 # CHECK:   t2Bcc %bb.3, 1, $cpsr
 # CHECK:   tB %bb.2, 14, $noreg
 # CHECK: bb.2.for.cond.cleanup:

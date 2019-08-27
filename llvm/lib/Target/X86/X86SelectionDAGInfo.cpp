@@ -36,7 +36,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 
   const X86RegisterInfo *TRI = static_cast<const X86RegisterInfo *>(
       DAG.getSubtarget().getRegisterInfo());
-  unsigned BaseReg = TRI->getBaseRegister();
+  Register BaseReg = TRI->getBaseRegister();
   for (unsigned R : ClobberSet)
     if (BaseReg == R)
       return true;

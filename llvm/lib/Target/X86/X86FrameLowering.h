@@ -99,6 +99,8 @@ public:
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
 
+  int getWin64EHFrameIndexRef(const MachineFunction &MF,
+                              int FI, unsigned &SPReg) const;
   int getFrameIndexReferenceSP(const MachineFunction &MF,
                                int FI, unsigned &SPReg, int Adjustment) const;
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
@@ -217,10 +219,6 @@ private:
   void emitCatchRetReturnValue(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineInstr *CatchRet) const;
-
-  /// Select the best opcode for the subtarget when funclet XMM CSRs
-  /// save/restore.
-  unsigned getXMMAlignedLoadStoreOp(const bool IsLoad) const;
 };
 
 } // End llvm namespace

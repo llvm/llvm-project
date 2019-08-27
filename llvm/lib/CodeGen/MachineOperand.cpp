@@ -750,7 +750,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   printTargetFlags(OS, *this);
   switch (getType()) {
   case MachineOperand::MO_Register: {
-    unsigned Reg = getReg();
+    Register Reg = getReg();
     if (isImplicit())
       OS << (isDef() ? "implicit-def " : "implicit ");
     else if (PrintDef && isDef())

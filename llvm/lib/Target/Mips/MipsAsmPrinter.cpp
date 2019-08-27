@@ -376,7 +376,7 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
 void MipsAsmPrinter::emitFrameDirective() {
   const TargetRegisterInfo &RI = *MF->getSubtarget().getRegisterInfo();
 
-  unsigned stackReg  = RI.getFrameRegister(*MF);
+  Register stackReg = RI.getFrameRegister(*MF);
   unsigned returnReg = RI.getRARegister();
   unsigned stackSize = MF->getFrameInfo().getStackSize();
 
@@ -571,7 +571,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       // for 2 for 32 bit mode and 1 for 64 bit mode.
       if (NumVals != 2) {
         if (Subtarget->isGP64bit() && NumVals == 1 && MO.isReg()) {
-          unsigned Reg = MO.getReg();
+          Register Reg = MO.getReg();
           O << '$' << MipsInstPrinter::getRegisterName(Reg);
           return false;
         }
@@ -597,7 +597,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         const MachineOperand &MO = MI->getOperand(RegOp);
         if (!MO.isReg())
           return true;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         O << '$' << MipsInstPrinter::getRegisterName(Reg);
         return false;
       }

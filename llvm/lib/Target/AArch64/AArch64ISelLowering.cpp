@@ -2193,7 +2193,8 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
                                              RTLIB::Libcall Call) const {
   SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
-  return makeLibCall(DAG, Call, MVT::f128, Ops, false, SDLoc(Op)).first;
+  MakeLibCallOptions CallOptions;
+  return makeLibCall(DAG, Call, MVT::f128, Ops, CallOptions, SDLoc(Op)).first;
 }
 
 // Returns true if the given Op is the overflow flag result of an overflow
@@ -2402,7 +2403,8 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   // precise. That doesn't take part in the LibCall so we can't directly use
   // LowerF128Call.
   SDValue SrcVal = Op.getOperand(0);
-  return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, /*isSigned*/ false,
+  MakeLibCallOptions CallOptions;
+  return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, CallOptions,
                      SDLoc(Op)).first;
 }
 
@@ -2472,7 +2474,8 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
     LC = RTLIB::getFPTOUINT(Op.getOperand(0).getValueType(), Op.getValueType());
 
   SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
-  return makeLibCall(DAG, LC, Op.getValueType(), Ops, false, SDLoc(Op)).first;
+  MakeLibCallOptions CallOptions;
+  return makeLibCall(DAG, LC, Op.getValueType(), Ops, CallOptions, SDLoc(Op)).first;
 }
 
 static SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) {
@@ -6538,8 +6541,7 @@ static SDValue tryFormConcatFromShuffle(SDValue Op, SelectionDAG &DAG) {
   if (!isConcatMask(Mask, VT, SplitV0))
     return SDValue();
 
-  EVT CastVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
-                                VT.getVectorNumElements() / 2);
+  EVT CastVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
   if (SplitV0) {
     V0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, CastVT, V0,
                      DAG.getConstant(0, DL, MVT::i64));
@@ -10607,10 +10609,10 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return ReplacedSplat;
 
   SDLoc DL(S);
-  unsigned NumElts = VT.getVectorNumElements() / 2;
+
   // Split VT into two.
-  EVT HalfVT =
-      EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), NumElts);
+  EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  unsigned NumElts = HalfVT.getVectorNumElements();
   SDValue SubVector0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, StVal,
                                    DAG.getConstant(0, DL, MVT::i64));
   SDValue SubVector1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, StVal,

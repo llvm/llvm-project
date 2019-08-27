@@ -1945,6 +1945,11 @@ uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   return SectSize;
 }
 
+ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint32_t Offset,
+                                                      uint64_t Size) const {
+  return arrayRefFromStringRef(getData().substr(Offset, Size));
+}
+
 Expected<ArrayRef<uint8_t>>
 MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
   uint32_t Offset;
@@ -1960,7 +1965,7 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
     Size = Sect.size;
   }
 
-  return arrayRefFromStringRef(getData().substr(Offset, Size));
+  return getSectionContents(Offset, Size);
 }
 
 uint64_t MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {

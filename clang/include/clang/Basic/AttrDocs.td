@@ -3176,6 +3176,27 @@ The syntax of the declare target directive is as follows:
     #pragma omp declare target new-line
     declarations-definition-seq
     #pragma omp end declare target new-line
+
+or
+
+  .. code-block:: c
+
+    #pragma omp declare target (extended-list) new-line
+
+or
+
+  .. code-block:: c
+
+    #pragma omp declare target clause[ [,] clause ... ] new-line
+
+where clause is one of the following:
+
+
+  .. code-block:: c
+
+     to(extended-list)
+     link(list)
+     device_type(host | nohost | any)
   }];
 }
 

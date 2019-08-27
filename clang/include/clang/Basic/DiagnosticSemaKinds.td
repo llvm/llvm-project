@@ -12,7 +12,6 @@
 
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
-
 def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
@@ -3326,6 +3325,15 @@ def warn_address_of_reference_bool_conversion : Warning<
   "code; pointer may be assumed to always convert to true">,
   InGroup<UndefinedBoolConversion>;
 
+def warn_xor_used_as_pow_base_extra : Warning<
+  "result of '%0' is %1; did you mean '%2' (%3)?">,
+  InGroup<XorUsedAsPow>;
+def warn_xor_used_as_pow_base : Warning<
+  "result of '%0' is %1; did you mean '%2'?">,
+  InGroup<XorUsedAsPow>;
+def note_xor_used_as_pow_silence : Note<
+  "replace expression with '%0' to silence this warning">;
+
 def warn_null_pointer_compare : Warning<
     "comparison of %select{address of|function|array}0 '%1' %select{not |}2"
     "equal to a null pointer is always %select{true|false}2">,
@@ -3346,6 +3354,8 @@ def warn_address_of_reference_null_compare : Warning<
   InGroup<TautologicalUndefinedCompare>;
 def note_reference_is_return_value : Note<"%0 returns a reference">;
 
+def note_pointer_declared_here : Note<
+  "pointer %0 declared here">;
 def warn_division_sizeof_ptr : Warning<
   "'%0' will return the size of the pointer, not the array itself">,
   InGroup<DiagGroup<"sizeof-pointer-div">>;
@@ -8110,7 +8120,7 @@ def warn_dangling_member : Warning<
 def warn_dangling_lifetime_pointer_member : Warning<
   "initializing pointer member %0 to point to a temporary object "
   "whose lifetime is shorter than the lifetime of the constructed object">,
-  InGroup<DanglingField>;
+  InGroup<DanglingGsl>;
 def note_lifetime_extending_member_declared_here : Note<
   "%select{%select{reference|'std::initializer_list'}0 member|"
   "member with %select{reference|'std::initializer_list'}0 subobject}1 "
@@ -8132,7 +8142,7 @@ def warn_new_dangling_reference : Warning<
 def warn_dangling_lifetime_pointer : Warning<
   "object backing the pointer "
   "will be destroyed at the end of the full-expression">,
-  InGroup<Dangling>;
+  InGroup<DanglingGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"
@@ -9318,6 +9328,16 @@ def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
 def err_omp_unsupported_type : Error <
   "host requires %0 bit size %1 type support, but device '%2' does not support it">;
+def err_omp_lambda_capture_in_declare_target_not_to : Error<
+  "variable captured in declare target region must appear in a to clause">;
+def err_omp_device_type_mismatch : Error<
+  "'device_type(%0)' does not match previously specified 'device_type(%1)' for the same declaration">;
+def err_omp_wrong_device_function_call : Error<
+  "function with 'device_type(%0)' is not available on %select{device|host}1">;
+def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def warn_omp_declare_target_after_first_use : Warning<
+  "declaration marked as declare target after first use, it may lead to incorrect results">,
+  InGroup<OpenMPTarget>;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

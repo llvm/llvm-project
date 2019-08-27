@@ -49,7 +49,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   if (IsPCRel) {
-    switch((unsigned)Fixup.getKind()) {
+    switch(Fixup.getTargetKind()) {
     default:
       llvm_unreachable("Unimplemented fixup -> relocation");
     case FK_Data_1:                  return ELF::R_SPARC_DISP8;
@@ -65,7 +65,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     }
   }
 
-  switch((unsigned)Fixup.getKind()) {
+  switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
   case FK_Data_1:                return ELF::R_SPARC_8;

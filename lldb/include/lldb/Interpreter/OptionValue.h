@@ -93,8 +93,8 @@ public:
 
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
-  virtual size_t AutoComplete(CommandInterpreter &interpreter,
-                              CompletionRequest &request);
+  virtual void AutoComplete(CommandInterpreter &interpreter,
+                            CompletionRequest &request);
 
   // Subclasses can override these functions
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,

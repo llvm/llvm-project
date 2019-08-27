@@ -402,7 +402,6 @@ static void AsanInitInternal() {
   asan_init_is_running = true;
 
   CacheBinaryName();
-  CheckASLR();
 
   // Initialize flags. This must be done early, because most of the
   // initialization steps look at flags().
@@ -450,6 +449,7 @@ static void AsanInitInternal() {
   SetLowLevelAllocateCallback(OnLowLevelAllocate);
 
   InitializeAsanInterceptors();
+  CheckASLR();
 
   // Enable system log ("adb logcat") on Android.
   // Doing this before interceptors are initialized crashes in:

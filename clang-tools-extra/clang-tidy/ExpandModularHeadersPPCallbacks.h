@@ -22,7 +22,7 @@ class ModuleFile;
 
 namespace tooling {
 
-/// \brief Handles PPCallbacks and re-runs preprocessing of the whole
+/// Handles PPCallbacks and re-runs preprocessing of the whole
 /// translation unit with modules disabled.
 ///
 /// This way it's possible to get PPCallbacks for the whole translation unit
@@ -40,7 +40,7 @@ public:
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   ~ExpandModularHeadersPPCallbacks();
 
-  /// \brief Returns the preprocessor that provides callbacks for the whole
+  /// Returns the preprocessor that provides callbacks for the whole
   /// translation unit, including the main file, textual headers, and modular
   /// headers.
   ///

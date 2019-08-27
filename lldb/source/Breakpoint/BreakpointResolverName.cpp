@@ -31,7 +31,8 @@ BreakpointResolverName::BreakpointResolverName(
       m_class_name(), m_regex(), m_match_type(type), m_language(language),
       m_skip_prologue(skip_prologue) {
   if (m_match_type == Breakpoint::Regexp) {
-    if (!m_regex.Compile(llvm::StringRef::withNullAsEmpty(name_cstr))) {
+    m_regex = RegularExpression(llvm::StringRef::withNullAsEmpty(name_cstr));
+    if (!m_regex.IsValid()) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
       if (log)
@@ -70,12 +71,12 @@ BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
 }
 
 BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
-                                               RegularExpression &func_regex,
+                                               RegularExpression func_regex,
                                                lldb::LanguageType language,
                                                lldb::addr_t offset,
                                                bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(nullptr), m_regex(func_regex),
+      m_class_name(nullptr), m_regex(std::move(func_regex)),
       m_match_type(Breakpoint::Regexp), m_language(language),
       m_skip_prologue(skip_prologue) {}
 

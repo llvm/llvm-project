@@ -57,10 +57,10 @@ define <1 x i128> @add_v1i128(<1 x i128> %x, <1 x i128> %y) nounwind {
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    subl $-1, %esi
-; X86-NEXT:    sbbl $-1, %edi
-; X86-NEXT:    sbbl $-1, %edx
-; X86-NEXT:    sbbl $-1, %ecx
+; X86-NEXT:    addl $1, %esi
+; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)

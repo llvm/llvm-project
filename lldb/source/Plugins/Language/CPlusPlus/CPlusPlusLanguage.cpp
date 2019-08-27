@@ -486,8 +486,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
       "libc++ std::list synthetic children",
-      ConstString("^std::__[[:alnum:]]+::list<.+>(( )?&)?$"), stl_deref_flags,
-      true);
+      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>(( )?&)?$"
+      // so that it does not clash with: "^std::(__cxx11::)?list<.+>(( )?&)?$"
+      ConstString("^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
+                  "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>(( )?&)?$"),
+      stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator,
@@ -583,11 +586,14 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::list summary provider",
                 ConstString("^std::__[[:alnum:]]+::forward_list<.+>(( )?&)?$"),
                 stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxContainerSummaryProvider,
-                "libc++ std::list summary provider",
-                ConstString("^std::__[[:alnum:]]+::list<.+>(( )?&)?$"),
-                stl_summary_flags, true);
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider,
+      "libc++ std::list summary provider",
+      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>(( )?&)?$"
+      // so that it does not clash with: "^std::(__cxx11::)?list<.+>(( )?&)?$"
+      ConstString("^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
+                  "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>(( )?&)?$"),
+      stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::map summary provider",
@@ -854,6 +860,14 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   // FIXME because of a bug in the FormattersContainer we need to add a summary
   // for both X* and const X* (<rdar://problem/12717717>)
   AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::Char8StringSummaryProvider,
+      "char8_t * summary provider", ConstString("char8_t *"), string_flags);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::Char8StringSummaryProvider,
+                "char8_t [] summary provider",
+                ConstString("char8_t \\[[0-9]+\\]"), string_array_flags, true);
+
+  AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16StringSummaryProvider,
       "char16_t * summary provider", ConstString("char16_t *"), string_flags);
   AddCXXSummary(cpp_category_sp,
@@ -890,6 +904,9 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetHideItemNames(true)
       .SetShowMembersOneLiner(false);
 
+  AddCXXSummary(cpp_category_sp, lldb_private::formatters::Char8SummaryProvider,
+                "char8_t summary provider", ConstString("char8_t"),
+                widechar_flags);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16SummaryProvider,
       "char16_t summary provider", ConstString("char16_t"), widechar_flags);

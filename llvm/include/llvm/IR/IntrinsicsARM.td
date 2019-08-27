@@ -778,4 +778,9 @@ def int_arm_neon_udot : Neon_Dot_Intrinsic;
 def int_arm_neon_sdot : Neon_Dot_Intrinsic;
 
 
+// GNU eabi mcount
+def int_arm_gnu_eabi_mcount : Intrinsic<[],
+                                    [],
+                                    [IntrReadMem, IntrWriteMem]>;
+
 } // end TargetPrefix

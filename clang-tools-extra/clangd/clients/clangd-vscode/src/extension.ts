@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as vscodelc from 'vscode-languageclient';
+import * as semanticHighlighting from './semantic-highlighting';
 
 /**
  * Method to get workspace configuration option
@@ -108,6 +109,17 @@ export function activate(context: vscode.ExtensionContext) {
 
   const clangdClient = new ClangdLanguageClient('Clang Language Server',
                                                 serverOptions, clientOptions);
+  const semanticHighlightingFeature =
+      new semanticHighlighting.SemanticHighlightingFeature();
+  clangdClient.registerFeature(semanticHighlightingFeature);
+  // The notification handler must be registered after the client is ready or
+  // the client will crash.
+  clangdClient.onReady().then(
+      () => clangdClient.onNotification(
+          semanticHighlighting.NotificationType,
+          semanticHighlightingFeature.handleNotification.bind(
+              semanticHighlightingFeature)));
+
   console.log('Clang Language Server is now active!');
   context.subscriptions.push(clangdClient.start());
   context.subscriptions.push(vscode.commands.registerCommand(

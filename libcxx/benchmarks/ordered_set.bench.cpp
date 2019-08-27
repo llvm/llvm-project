@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "CartesianBenchmarks.hpp"
+#include "CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 

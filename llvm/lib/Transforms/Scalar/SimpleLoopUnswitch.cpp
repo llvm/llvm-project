@@ -2880,7 +2880,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
 
   auto PA = getLoopPassPreservedAnalyses();
-  if (EnableMSSALoopDependency)
+  if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
 }

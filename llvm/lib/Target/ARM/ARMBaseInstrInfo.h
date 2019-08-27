@@ -601,7 +601,8 @@ bool rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
 bool rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                          unsigned FrameReg, int &Offset,
-                         const ARMBaseInstrInfo &TII);
+                         const ARMBaseInstrInfo &TII,
+                         const TargetRegisterInfo *TRI);
 
 /// Return true if Reg is defd between From and To
 bool registerDefinedBetween(unsigned Reg, MachineBasicBlock::iterator From,

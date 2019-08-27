@@ -645,8 +645,6 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
 bool Options::HandleOptionCompletion(CompletionRequest &request,
                                      OptionElementVector &opt_element_vector,
                                      CommandInterpreter &interpreter) {
-  request.SetWordComplete(true);
-
   // For now we just scan the completions to see if the cursor position is in
   // an option or its argument.  Otherwise we'll call HandleArgumentCompletion.
   // In the future we can use completion to validate options as well if we
@@ -739,7 +737,6 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
       if (opt_defs_index != -1) {
         HandleOptionArgumentCompletion(subrequest, opt_element_vector, i,
                                        interpreter);
-        request.SetWordComplete(subrequest.GetWordComplete());
         return true;
       } else {
         // No completion callback means no completions...
@@ -754,7 +751,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
   return false;
 }
 
-bool Options::HandleOptionArgumentCompletion(
+void Options::HandleOptionArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector,
     int opt_element_index, CommandInterpreter &interpreter) {
   auto opt_defs = GetDefinitions();
@@ -767,7 +764,6 @@ bool Options::HandleOptionArgumentCompletion(
 
   const auto &enum_values = opt_defs[opt_defs_index].enum_values;
   if (!enum_values.empty()) {
-    bool return_value = false;
     std::string match_string(
         request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos),
         request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos) +
@@ -777,10 +773,8 @@ bool Options::HandleOptionArgumentCompletion(
       if (strstr(enum_value.string_value, match_string.c_str()) ==
           enum_value.string_value) {
         request.AddCompletion(enum_value.string_value);
-        return_value = true;
       }
     }
-    return return_value;
   }
 
   // If this is a source file or symbol type completion, and  there is a -shlib
@@ -836,7 +830,7 @@ bool Options::HandleOptionArgumentCompletion(
     }
   }
 
-  return CommandCompletions::InvokeCommonCompletionCallbacks(
+  CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 

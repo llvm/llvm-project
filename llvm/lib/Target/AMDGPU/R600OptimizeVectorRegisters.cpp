@@ -197,17 +197,17 @@ unsigned getReassignedChan(
 MachineInstr *R600VectorRegMerger::RebuildVector(
     RegSeqInfo *RSI, const RegSeqInfo *BaseRSI,
     const std::vector<std::pair<unsigned, unsigned>> &RemapChan) const {
-  unsigned Reg = RSI->Instr->getOperand(0).getReg();
+  Register Reg = RSI->Instr->getOperand(0).getReg();
   MachineBasicBlock::iterator Pos = RSI->Instr;
   MachineBasicBlock &MBB = *Pos->getParent();
   DebugLoc DL = Pos->getDebugLoc();
 
-  unsigned SrcVec = BaseRSI->Instr->getOperand(0).getReg();
+  Register SrcVec = BaseRSI->Instr->getOperand(0).getReg();
   DenseMap<unsigned, unsigned> UpdatedRegToChan = BaseRSI->RegToChan;
   std::vector<unsigned> UpdatedUndef = BaseRSI->UndefReg;
   for (DenseMap<unsigned, unsigned>::iterator It = RSI->RegToChan.begin(),
       E = RSI->RegToChan.end(); It != E; ++It) {
-    unsigned DstReg = MRI->createVirtualRegister(&R600::R600_Reg128RegClass);
+    Register DstReg = MRI->createVirtualRegister(&R600::R600_Reg128RegClass);
     unsigned SubReg = (*It).first;
     unsigned Swizzle = (*It).second;
     unsigned Chan = getReassignedChan(RemapChan, Swizzle);
@@ -350,7 +350,7 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
       MachineInstr &MI = *MII;
       if (MI.getOpcode() != R600::REG_SEQUENCE) {
         if (TII->get(MI.getOpcode()).TSFlags & R600_InstFlag::TEX_INST) {
-          unsigned Reg = MI.getOperand(1).getReg();
+          Register Reg = MI.getOperand(1).getReg();
           for (MachineRegisterInfo::def_instr_iterator
                It = MRI->def_instr_begin(Reg), E = MRI->def_instr_end();
                It != E; ++It) {
@@ -363,7 +363,7 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
       RegSeqInfo RSI(*MRI, &MI);
 
       // All uses of MI are swizzeable ?
-      unsigned Reg = MI.getOperand(0).getReg();
+      Register Reg = MI.getOperand(0).getReg();
       if (!areAllUsesSwizzeable(Reg))
         continue;
 

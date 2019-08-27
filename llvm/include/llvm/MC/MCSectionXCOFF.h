@@ -37,11 +37,13 @@ class MCSectionXCOFF final : public MCSection {
   StringRef Name;
   XCOFF::StorageMappingClass MappingClass;
   XCOFF::SymbolType Type;
+  XCOFF::StorageClass StorageClass;
 
   MCSectionXCOFF(StringRef Section, XCOFF::StorageMappingClass SMC,
-                 XCOFF::SymbolType ST, SectionKind K, MCSymbol *Begin)
+                 XCOFF::SymbolType ST, XCOFF::StorageClass SC, SectionKind K,
+                 MCSymbol *Begin)
       : MCSection(SV_XCOFF, K, Begin), Name(Section), MappingClass(SMC),
-        Type(ST) {
+        Type(ST), StorageClass(SC) {
     assert((ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM) &&
            "Invalid or unhandled type for csect.");
   }

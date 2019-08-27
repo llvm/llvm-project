@@ -1815,7 +1815,7 @@ bool IfConverter::IfConvertDiamondCommon(
       for (const MachineOperand &MO : FI.operands()) {
         if (!MO.isReg())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (!Reg)
           continue;
         if (MO.isDef()) {
@@ -1983,7 +1983,7 @@ static bool MaySpeculate(const MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (MO.isDef() && !LaterRedefs.count(Reg))

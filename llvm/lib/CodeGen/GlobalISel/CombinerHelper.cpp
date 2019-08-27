@@ -62,8 +62,8 @@ bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
 bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::COPY)
     return false;
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
   // Simple Copy Propagation.
@@ -73,8 +73,8 @@ bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
   return false;
 }
 void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, SrcReg);
 }
@@ -286,7 +286,7 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
     // up the type and extend so that it uses the preferred use.
     if (UseMI->getOpcode() == Preferred.ExtendOpcode ||
         UseMI->getOpcode() == TargetOpcode::G_ANYEXT) {
-      unsigned UseDstReg = UseMI->getOperand(0).getReg();
+      Register UseDstReg = UseMI->getOperand(0).getReg();
       MachineOperand &UseSrcMO = UseMI->getOperand(1);
       const LLT &UseDstTy = MRI.getType(UseDstReg);
       if (UseDstReg != ChosenDstReg) {
@@ -883,8 +883,8 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   unsigned DstAlign = MemOp->getBaseAlignment();
   unsigned SrcAlign = 0;
-  unsigned Dst = MI.getOperand(1).getReg();
-  unsigned Src = MI.getOperand(2).getReg();
+  Register Dst = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
   Register Len = MI.getOperand(3).getReg();
 
   if (ID != Intrinsic::memset) {

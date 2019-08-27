@@ -55,7 +55,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
     AR.MSSA->verifyMemorySSA();
 
   auto PA = getLoopPassPreservedAnalyses();
-  if (EnableMSSALoopDependency)
+  if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
 }

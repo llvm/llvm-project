@@ -232,10 +232,7 @@ public:
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
-  ///
-  /// \return
-  ///     \btrue if we were in an option, \bfalse otherwise.
-  virtual int HandleCompletion(CompletionRequest &request);
+  virtual void HandleCompletion(CompletionRequest &request);
 
   /// The input array contains a parsed version of the line.  The insertion
   /// point is given by cursor_index (the index in input of the word containing
@@ -250,14 +247,9 @@ public:
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
-  ///
-  /// \return
-  ///     The number of completions.
-  virtual int
+  virtual void
   HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) {
-    return 0;
-  }
+                           OptionElementVector &opt_element_vector) {}
 
   bool HelpTextContainsWord(llvm::StringRef search_word,
                             bool search_short_help = true,
@@ -348,8 +340,8 @@ protected:
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target is present you want to prime the dummy
   // target with entities that will be copied over to new targets.
-  Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target *GetDummyTarget();
+  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
+  Target &GetDummyTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

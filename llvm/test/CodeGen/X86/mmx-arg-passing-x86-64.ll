@@ -22,12 +22,11 @@ define void @t3() nounwind  {
 define void @t4(x86_mmx %v1, x86_mmx %v2) nounwind  {
 ; X86-64-LABEL: t4:
 ; X86-64:       ## %bb.0:
-; X86-64-NEXT:    movdq2q %xmm0, %mm0
-; X86-64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
 ; X86-64-NEXT:    movdq2q %xmm1, %mm0
-; X86-64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X86-64-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
-; X86-64-NEXT:    paddb -{{[0-9]+}}(%rsp), %xmm0
+; X86-64-NEXT:    movdq2q %xmm0, %mm1
+; X86-64-NEXT:    movq2dq %mm1, %xmm1
+; X86-64-NEXT:    movq2dq %mm0, %xmm0
+; X86-64-NEXT:    paddb %xmm1, %xmm0
 ; X86-64-NEXT:    movb $1, %al
 ; X86-64-NEXT:    jmp _pass_v8qi ## TAILCALL
   %v1a = bitcast x86_mmx %v1 to <8 x i8>

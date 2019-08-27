@@ -127,6 +127,8 @@ public:
 
 extern int testImportOfIncompleteDefaultParmDuringImport(int);
 
+extern int testImportOfDelegateConstructor(int);
+
 int main() {
   clang_analyzer_eval(f(3) == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(f(4) == 3); // expected-warning{{TRUE}}
@@ -163,4 +165,6 @@ int main() {
   clang_analyzer_eval(TestAnonUnionUSR::Test == 5); // expected-warning{{TRUE}}
 
   clang_analyzer_eval(testImportOfIncompleteDefaultParmDuringImport(9) == 9); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(testImportOfDelegateConstructor(10) == 10); // expected-warning{{TRUE}}
 }

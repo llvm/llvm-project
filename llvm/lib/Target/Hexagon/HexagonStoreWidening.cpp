@@ -441,7 +441,7 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     // Create vreg = A2_tfrsi #Acc; mem[hw] = vreg
     const MCInstrDesc &TfrD = TII->get(Hexagon::A2_tfrsi);
     const TargetRegisterClass *RC = TII->getRegClass(TfrD, 0, TRI, *MF);
-    unsigned VReg = MF->getRegInfo().createVirtualRegister(RC);
+    Register VReg = MF->getRegInfo().createVirtualRegister(RC);
     MachineInstr *TfrI = BuildMI(*MF, DL, TfrD, VReg)
                            .addImm(int(Acc));
     NG.push_back(TfrI);

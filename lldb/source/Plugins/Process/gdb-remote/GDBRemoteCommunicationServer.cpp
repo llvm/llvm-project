@@ -59,14 +59,13 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
       break;
 
     case StringExtractorGDBRemote::eServerPacketType_unimplemented:
-      packet_result = SendUnimplementedResponse(packet.GetStringRef().c_str());
+      packet_result = SendUnimplementedResponse(packet.GetStringRef().data());
       break;
 
     default:
       auto handler_it = m_packet_handlers.find(packet_type);
       if (handler_it == m_packet_handlers.end())
-        packet_result =
-            SendUnimplementedResponse(packet.GetStringRef().c_str());
+        packet_result = SendUnimplementedResponse(packet.GetStringRef().data());
       else
         packet_result = handler_it->second(packet, error, interrupt, quit);
       break;
@@ -140,7 +139,7 @@ GDBRemoteCommunicationServer::SendIllFormedResponse(
     const StringExtractorGDBRemote &failed_packet, const char *message) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
   LLDB_LOGF(log, "GDBRemoteCommunicationServer::%s: ILLFORMED: '%s' (%s)",
-            __FUNCTION__, failed_packet.GetStringRef().c_str(),
+            __FUNCTION__, failed_packet.GetStringRef().data(),
             message ? message : "");
   return SendErrorResponse(0x03);
 }

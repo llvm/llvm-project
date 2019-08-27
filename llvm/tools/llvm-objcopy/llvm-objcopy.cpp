@@ -84,7 +84,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 ErrorSuccess reportWarning(Error E) {
   assert(E);
-  WithColor::warning(errs(), ToolName) << toString(std::move(E));
+  WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();
 }
 

@@ -85,7 +85,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   // Set up the two 64-bit registers and remember super reg and its flags.
   MachineOperand &HighRegOp = EarlierMI->getOperand(0);
   MachineOperand &LowRegOp = MI->getOperand(0);
-  unsigned Reg128 = LowRegOp.getReg();
+  Register Reg128 = LowRegOp.getReg();
   unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
   unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
@@ -147,7 +147,7 @@ void SystemZInstrInfo::splitAdjDynAlloc(MachineBasicBlock::iterator MI) const {
 void SystemZInstrInfo::expandRIPseudo(MachineInstr &MI, unsigned LowOpcode,
                                       unsigned HighOpcode,
                                       bool ConvertHigh) const {
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   bool IsHigh = isHighReg(Reg);
   MI.setDesc(get(IsHigh ? HighOpcode : LowOpcode));
   if (IsHigh && ConvertHigh)
@@ -161,8 +161,8 @@ void SystemZInstrInfo::expandRIPseudo(MachineInstr &MI, unsigned LowOpcode,
 void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned LowOpcodeK,
                                        unsigned HighOpcode) const {
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   bool DestIsHigh = isHighReg(DestReg);
   bool SrcIsHigh = isHighReg(SrcReg);
   if (!DestIsHigh && !SrcIsHigh)
@@ -184,7 +184,7 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
 // is a high GR32.
 void SystemZInstrInfo::expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned HighOpcode) const {
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   unsigned Opcode = getOpcodeForOffset(isHighReg(Reg) ? HighOpcode : LowOpcode,
                                        MI.getOperand(2).getImm());
   MI.setDesc(get(Opcode));
@@ -195,7 +195,7 @@ void SystemZInstrInfo::expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
 // register is a low GR32 and HighOpcode if the register is a high GR32.
 void SystemZInstrInfo::expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned HighOpcode) const {
-  unsigned Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getOperand(0).getReg();
   unsigned Opcode = isHighReg(Reg) ? HighOpcode : LowOpcode;
   MI.setDesc(get(Opcode));
 }
@@ -205,8 +205,8 @@ void SystemZInstrInfo::expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
 // source and destination are both high GR32s.
 void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
                                         unsigned HighOpcode) const {
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(2).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
   bool DestIsHigh = isHighReg(DestReg);
   bool SrcIsHigh = isHighReg(SrcReg);
 
@@ -229,9 +229,9 @@ void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
 void SystemZInstrInfo::expandSELRPseudo(MachineInstr &MI, unsigned LowOpcode,
                                         unsigned HighOpcode,
                                         unsigned MixedOpcode) const {
-  unsigned DestReg = MI.getOperand(0).getReg();
-  unsigned Src1Reg = MI.getOperand(1).getReg();
-  unsigned Src2Reg = MI.getOperand(2).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
   bool DestIsHigh = isHighReg(DestReg);
   bool Src1IsHigh = isHighReg(Src1Reg);
   bool Src2IsHigh = isHighReg(Src2Reg);
@@ -302,8 +302,8 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
 void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction &MF = *MBB->getParent();
-  const unsigned Reg64 = MI->getOperand(0).getReg();
-  const unsigned Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
+  const Register Reg64 = MI->getOperand(0).getReg();
+  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
 
   // EAR can only load the low subregister so us a shift for %a0 to produce
   // the GR containing %a0 and %a1.
@@ -676,8 +676,8 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     else {
       Opc = SystemZ::LOCR;
       MRI.constrainRegClass(DstReg, &SystemZ::GR32BitRegClass);
-      unsigned TReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
-      unsigned FReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+      Register TReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+      Register FReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
       BuildMI(MBB, I, DL, get(TargetOpcode::COPY), TReg).addReg(TrueReg);
       BuildMI(MBB, I, DL, get(TargetOpcode::COPY), FReg).addReg(FalseReg);
       TrueReg = TReg;

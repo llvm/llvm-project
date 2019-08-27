@@ -129,6 +129,8 @@ public:
   bool operator==(const PressureChange &RHS) const {
     return PSetID == RHS.PSetID && UnitInc == RHS.UnitInc;
   }
+
+  void dump() const;
 };
 
 /// List of PressureChanges in order of increasing, unique PSetID.
@@ -248,6 +250,7 @@ struct RegPressureDelta {
   bool operator!=(const RegPressureDelta &RHS) const {
     return !operator==(RHS);
   }
+  void dump() const;
 };
 
 /// A set of live virtual registers and physical register units.

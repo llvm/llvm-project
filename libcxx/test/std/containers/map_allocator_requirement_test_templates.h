@@ -23,7 +23,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "count_new.hpp"
+#include "count_new.h"
 #include "container_test_types.h"
 #include "assert_checkpoint.h"
 

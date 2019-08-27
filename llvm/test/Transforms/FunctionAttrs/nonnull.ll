@@ -1,6 +1,6 @@
 ; RUN: opt -S -functionattrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
 ; RUN: opt -S -passes=function-attrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
-; RUN: opt -attributor --attributor-disable=false -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=12 -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -198,7 +198,7 @@ bb4:                                              ; preds = %bb1
 
 bb6:                                              ; preds = %bb1
 ; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call i32* @f2(i32* %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -213,7 +213,7 @@ define internal i32* @f2(i32* %arg) {
 bb:
 
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull %arg) 
-; ATTRIBUTOR:   %tmp = tail call i32* @f1(i32* %arg)
+; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* %arg)
   %tmp = tail call i32* @f1(i32* %arg)
   ret i32* %tmp
 }

@@ -177,12 +177,6 @@ struct Object {
   static Expected<Object> create(const object::MinidumpFile &File);
 };
 
-/// Serialize the minidump file represented by Obj to OS in binary form.
-void writeAsBinary(Object &Obj, raw_ostream &OS);
-
-/// Serialize the yaml string as a minidump file to OS in binary form.
-Error writeAsBinary(StringRef Yaml, raw_ostream &OS);
-
 } // namespace MinidumpYAML
 
 namespace yaml {

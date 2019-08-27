@@ -200,7 +200,7 @@ private:
   const Function *F;
   std::string CurrentFnName;
 
-  void EmitBasicBlockStart(const MachineBasicBlock &MBB) const override;
+  void EmitBasicBlockStart(const MachineBasicBlock &MBB) override;
   void EmitFunctionEntryLabel() override;
   void EmitFunctionBodyStart() override;
   void EmitFunctionBodyEnd() override;

@@ -1,0 +1,114 @@
+# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - -verify-machineinstrs | FileCheck %s
+
+# ADDI instr: ToBeChangedReg = ADDI FrameBaseReg, OffsetAddi
+# ADD instr:  ToBeDeletedReg = ADD ToBeChangedReg(killed), ScaleReg
+# Imm instr:  Reg            = op OffsetImm, ToBeDeletedReg(killed)
+# 
+# can be folded to:
+#
+# new ADDI instr: ToBeChangedReg = ADDI FrameBaseReg, (OffsetAddi + OffsetImm)
+# Index instr:    Reg            = opx ScaleReg, ToBeChangedReg(killed)
+
+---
+name: testIndexForm1
+#CHECK : name : testIndexForm1
+# ToBeDeletedReg equals to ScaleReg
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x4 = ADD8 killed $x3, killed $x4
+    ; CHECK: $x4 = ADD8 killed $x3, killed $x4
+    $x6 = LD 4, killed $x4
+    ; CHECK: $x6 = LD 4, killed $x4
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm2
+#CHECK : name : testIndexForm2
+# ToBeDeletedReg equals to ToBeChangedReg
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x3 = ADD8 killed $x3, killed $x4
+    ; CHECK: $x3 = ADD8 killed $x3, killed $x4
+    $x6 = LD 4, killed $x3
+    ; CHECK: $x6 = LD 4, killed $x3
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm3
+#CHECK : name : testIndexForm3
+# There is other use for ToBeDeletedReg between ADD instr and Imm instr
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x3 = ADD8 killed $x3, killed $x4
+    ; CHECK: $x3 = ADD8 killed $x3, killed $x4
+    STD $x3, killed $x6, 100
+    ; CHECK: STD $x3, killed $x6, 100
+    $x6 = LD 4, killed $x3
+    ; CHECK: $x6 = LD 4, killed $x3
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm4
+#CHECK : name : testIndexForm3
+# There is other use for ToBeChangedReg between ADDI instr and ADD instr
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    STD $x3, killed $x6, 100
+    ; CHECK: STD $x3, killed $x6, 100
+    $x3 = ADD8 killed $x3, killed $x4
+    ; CHECK: $x3 = ADD8 killed $x3, killed $x4
+    $x6 = LD 4, killed $x3
+    ; CHECK: $x6 = LD 4, killed $x3
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm5
+#CHECK : name : testIndexForm5
+# ToBeChangedReg has no killed flag
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x4 = ADD8 $x3, killed $x4
+    ; CHECK: $x4 = ADD8 $x3, killed $x4
+    STD killed $x3, killed $x6, 100
+    ; CHECK: STD killed $x3, killed $x6, 100
+    $x6 = LD 4, killed $x4
+    ; CHECK: $x6 = LD 4, killed $x4
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm6
+#CHECK : name : testIndexForm6
+# ToBeDeletedReg has no killed flag
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x4 = ADD8 killed $x3, killed $x4
+    ; CHECK: $x4 = ADD8 killed $x3, killed $x4
+    $x6 = LD 4, $x4
+    ; CHECK: $x6 = LD 4, $x4
+    STD killed $x4, killed $x6, 100
+    BLR8 implicit $lr8, implicit $rm
+...

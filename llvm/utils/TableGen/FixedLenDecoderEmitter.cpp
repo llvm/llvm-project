@@ -2465,7 +2465,7 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS);
 
-  OS << "\n} // End llvm namespace\n";
+  OS << "\n} // end namespace llvm\n";
 }
 
 namespace llvm {

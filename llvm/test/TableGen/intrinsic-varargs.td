@@ -1,14 +1,10 @@
-// RUN: llvm-tblgen -gen-intrinsic-impl %s | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s | FileCheck %s
 // XFAIL: vg_leak
+
+include "llvm/CodeGen/ValueTypes.td"
 
 class IntrinsicProperty;
 class SDNodeProperty;
-
-class ValueType<int size, int value> {
-  string Namespace = "MVT";
-  int Size = size;
-  int Value = value;
-}
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
@@ -24,8 +20,6 @@ class Intrinsic<string name, list<LLVMType> param_types = []> {
   list<SDNodeProperty> Properties = [];
 }
 
-// isVoid needs to match the definition in ValueTypes.td
-def isVoid : ValueType<0, 127>;   // Produces no value
 def llvm_vararg_ty : LLVMType<isVoid>;   // this means vararg here
 
 // CHECK: /* 0 */ 0, 29, 0,

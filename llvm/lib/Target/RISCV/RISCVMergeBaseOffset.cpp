@@ -45,7 +45,7 @@ struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   bool detectAndFoldOffset(MachineInstr &HiLUI, MachineInstr &LoADDI);
   void foldOffset(MachineInstr &HiLUI, MachineInstr &LoADDI, MachineInstr &Tail,
                   int64_t Offset);
-  bool matchLargeOffset(MachineInstr &TailAdd, unsigned GSReg, int64_t &Offset);
+  bool matchLargeOffset(MachineInstr &TailAdd, Register GSReg, int64_t &Offset);
   RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -132,12 +132,12 @@ void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &HiLUI,
 //                       \                                  /
 //                         TailAdd: add  vreg4, vreg2, voff
 bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
-                                               unsigned GAReg,
+                                               Register GAReg,
                                                int64_t &Offset) {
   assert((TailAdd.getOpcode() == RISCV::ADD) && "Expected ADD instruction!");
   Register Rs = TailAdd.getOperand(1).getReg();
   Register Rt = TailAdd.getOperand(2).getReg();
-  unsigned Reg = Rs == GAReg ? Rt : Rs;
+  Register Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
   if (!MRI->hasOneUse(Reg))

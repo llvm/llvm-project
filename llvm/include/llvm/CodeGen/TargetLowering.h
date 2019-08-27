@@ -1574,18 +1574,6 @@ public:
     report_fatal_error("Funclet EH is not implemented for this target");
   }
 
-  /// Returns the target's jmp_buf size in bytes (if never set, the default is
-  /// 200)
-  unsigned getJumpBufSize() const {
-    return JumpBufSize;
-  }
-
-  /// Returns the target's jmp_buf alignment in bytes (if never set, the default
-  /// is 0)
-  unsigned getJumpBufAlignment() const {
-    return JumpBufAlignment;
-  }
-
   /// Return the minimum stack alignment of an argument.
   unsigned getMinStackArgumentAlignment() const {
     return MinStackArgumentAlignment;
@@ -2107,17 +2095,6 @@ protected:
   void setTargetDAGCombine(ISD::NodeType NT) {
     assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
     TargetDAGCombineArray[NT >> 3] |= 1 << (NT&7);
-  }
-
-  /// Set the target's required jmp_buf buffer size (in bytes); default is 200
-  void setJumpBufSize(unsigned Size) {
-    JumpBufSize = Size;
-  }
-
-  /// Set the target's required jmp_buf buffer alignment (in bytes); default is
-  /// 0
-  void setJumpBufAlignment(unsigned Align) {
-    JumpBufAlignment = Align;
   }
 
   /// Set the target's minimum function alignment (in log2(bytes))
@@ -2703,12 +2680,6 @@ private:
   /// register usage.
   Sched::Preference SchedPreferenceInfo;
 
-  /// The size, in bytes, of the target's jmp_buf buffers
-  unsigned JumpBufSize;
-
-  /// The alignment, in bytes, of the target's jmp_buf buffers
-  unsigned JumpBufAlignment;
-
   /// The minimum alignment that any argument on the stack needs to have.
   unsigned MinStackArgumentAlignment;
 
@@ -2943,6 +2914,7 @@ protected:
 class TargetLowering : public TargetLoweringBase {
 public:
   struct DAGCombinerInfo;
+  struct MakeLibCallOptions;
 
   TargetLowering(const TargetLowering &) = delete;
   TargetLowering &operator=(const TargetLowering &) = delete;
@@ -3017,10 +2989,10 @@ public:
 
   /// Returns a pair of (return value, chain).
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
-  std::pair<SDValue, SDValue> makeLibCall(
-      SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
-      bool isSigned, const SDLoc &dl, bool doesNotReturn = false,
-      bool isReturnValueUsed = true, bool isPostTypeLegalization = false) const;
+  std::pair<SDValue, SDValue> makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
+                                          EVT RetVT, ArrayRef<SDValue> Ops,
+                                          MakeLibCallOptions CallOptions,
+                                          const SDLoc &dl) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -3546,6 +3518,38 @@ public:
 
     ArgListTy &getArgs() {
       return Args;
+    }
+  };
+
+  /// This structure is used to pass arguments to makeLibCall function.
+  struct MakeLibCallOptions {
+    bool IsSExt : 1;
+    bool DoesNotReturn : 1;
+    bool IsReturnValueUsed : 1;
+    bool IsPostTypeLegalization : 1;
+
+    MakeLibCallOptions()
+        : IsSExt(false), DoesNotReturn(false), IsReturnValueUsed(true),
+          IsPostTypeLegalization(false) {}
+
+    MakeLibCallOptions &setSExt(bool Value = true) {
+      IsSExt = Value;
+      return *this;
+    }
+
+    MakeLibCallOptions &setNoReturn(bool Value = true) {
+      DoesNotReturn = Value;
+      return *this;
+    }
+
+    MakeLibCallOptions &setDiscardResult(bool Value = true) {
+      IsReturnValueUsed = !Value;
+      return *this;
+    }
+
+    MakeLibCallOptions &setIsPostTypeLegalization(bool Value = true) {
+      IsPostTypeLegalization = Value;
+      return *this;
     }
   };
 

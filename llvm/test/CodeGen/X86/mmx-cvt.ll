@@ -294,26 +294,20 @@ define <2 x double> @sitofp_v2i32_v2f64(<1 x i64>*) nounwind {
 define <4 x float> @sitofp_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X86-LABEL: sitofp_v2i32_v2f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movq2dq %mm0, %xmm0
+; X86-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_v2i32_v2f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    paddd %mm0, %mm0
-; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %2 = bitcast <1 x i64>* %0 to x86_mmx*

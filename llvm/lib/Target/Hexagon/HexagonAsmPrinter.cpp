@@ -130,7 +130,7 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       if (!MO.isReg())
         return true;
-      unsigned RegNumber = MO.getReg();
+      Register RegNumber = MO.getReg();
       // This should be an assert in the frontend.
       if (Hexagon::DoubleRegsRegClass.contains(RegNumber))
         RegNumber = TRI->getSubReg(RegNumber, ExtraCode[0] == 'L' ?

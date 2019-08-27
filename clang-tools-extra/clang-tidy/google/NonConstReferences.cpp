@@ -52,6 +52,9 @@ void NonConstReferences::check(const MatchFinder::MatchResult &Result) {
   if (Function == nullptr || Function->isImplicit())
     return;
 
+  if (Function->getLocation().isMacroID())
+    return;
+
   if (!Function->isCanonicalDecl())
     return;
 

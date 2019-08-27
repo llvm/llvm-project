@@ -372,7 +372,7 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   auto IsRegDef = [this,Reg,LM] (MachineOperand &Op) -> std::pair<bool,bool> {
     if (!Op.isReg() || !Op.isDef())
       return { false, false };
-    unsigned DR = Op.getReg(), DSR = Op.getSubReg();
+    Register DR = Op.getReg(), DSR = Op.getSubReg();
     if (!Register::isVirtualRegister(DR) || DR != Reg)
       return { false, false };
     LaneBitmask SLM = getLaneMask(DR, DSR);
@@ -589,7 +589,7 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
       assert(Register::isPhysicalRegister(RS.Reg));
       PhysR = RS.Reg;
     }
-    unsigned PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
+    Register PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysS);
     switch (TRI->getRegSizeInBits(*RC)) {
       case 32:
@@ -671,7 +671,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   MachineOperand &MD = MI.getOperand(0);  // Definition
   MachineOperand &MP = MI.getOperand(1);  // Predicate register
   assert(MD.isDef());
-  unsigned DR = MD.getReg(), DSR = MD.getSubReg();
+  Register DR = MD.getReg(), DSR = MD.getSubReg();
   bool ReadUndef = MD.isUndef();
   MachineBasicBlock::iterator At = MI;
 
@@ -954,7 +954,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
     return false;
 
   RegisterRef RT(MS);
-  unsigned PredR = MP.getReg();
+  Register PredR = MP.getReg();
   MachineInstr *DefI = getReachingDefForPred(RT, TfrI, PredR, Cond);
   if (!DefI || !isPredicable(DefI))
     return false;

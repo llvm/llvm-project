@@ -157,18 +157,11 @@ public:
   using TargetAndLikelies = DenseMap<SymbolStringPtr, SymbolNameSet>;
 
   IRSpeculationLayer(ExecutionSession &ES, IRCompileLayer &BaseLayer,
-                     Speculator &Spec, ResultEval Interpreter)
-      : IRLayer(ES), NextLayer(BaseLayer), S(Spec), QueryAnalysis(Interpreter) {
+                     Speculator &Spec, MangleAndInterner &Mangle,
+                     ResultEval Interpreter)
+      : IRLayer(ES), NextLayer(BaseLayer), S(Spec), Mangle(Mangle),
+        QueryAnalysis(Interpreter) {
     PB.registerFunctionAnalyses(FAM);
-  }
-
-  template <
-      typename AnalysisTy,
-      typename std::enable_if<
-          std::is_base_of<AnalysisInfoMixin<AnalysisTy>, AnalysisTy>::value,
-          bool>::type = true>
-  void registerAnalysis() {
-    FAM.registerPass([]() { return AnalysisTy(); });
   }
 
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM);
@@ -179,19 +172,18 @@ private:
     assert(!IRNames.empty() && "No IRNames received to Intern?");
     TargetAndLikelies InternedNames;
     DenseSet<SymbolStringPtr> TargetJITNames;
-    ExecutionSession &Es = getExecutionSession();
     for (auto &NamePair : IRNames) {
       for (auto &TargetNames : NamePair.second)
-        TargetJITNames.insert(Es.intern(TargetNames));
+        TargetJITNames.insert(Mangle(TargetNames));
 
-      InternedNames.insert(
-          {Es.intern(NamePair.first), std::move(TargetJITNames)});
+      InternedNames[Mangle(NamePair.first)] = std::move(TargetJITNames);
     }
     return InternedNames;
   }
 
   IRCompileLayer &NextLayer;
   Speculator &S;
+  MangleAndInterner &Mangle;
   PassBuilder PB;
   FunctionAnalysisManager FAM;
   ResultEval QueryAnalysis;

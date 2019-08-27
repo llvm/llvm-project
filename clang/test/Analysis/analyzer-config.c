@@ -82,14 +82,15 @@
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
 // CHECK-NEXT: serialize-stats = false
+// CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false
 // CHECK-NEXT: suppress-c++-stdlib = true
 // CHECK-NEXT: suppress-inlined-defensive-checks = true
 // CHECK-NEXT: suppress-null-return-paths = true
-// CHECK-NEXT: track-conditions = false
+// CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 89
+// CHECK-NEXT: num-entries = 90

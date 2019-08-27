@@ -111,10 +111,11 @@ template <class ELFT> class ELFState {
 
   NameToIdxMap SN2I;
   NameToIdxMap SymN2I;
+  NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
   bool buildSectionIndex();
-  bool buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols);
+  bool buildSymbolIndexes();
   void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
   bool initImplicitHeader(ELFState<ELFT> &State, ContiguousBlobAccumulator &CBA,
@@ -717,11 +718,12 @@ bool ELFState<ELFT>::writeSectionContent(
 
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
+  const NameToIdxMap &SymMap = Section.Link == ".dynsym" ? DynSymN2I : SymN2I;
   for (const auto &Rel : Section.Relocations) {
     unsigned SymIdx = 0;
     // If a relocation references a symbol, try to look one up in the symbol
     // table. If it is not there, treat the value as a symbol index.
-    if (Rel.Symbol && !SymN2I.lookup(*Rel.Symbol, SymIdx) &&
+    if (Rel.Symbol && !SymMap.lookup(*Rel.Symbol, SymIdx) &&
         !to_integer(*Rel.Symbol, SymIdx)) {
       WithColor::error() << "Unknown symbol referenced: '" << *Rel.Symbol
                          << "' at YAML section '" << Section.Name << "'.\n";
@@ -987,11 +989,10 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
   return true;
 }
 
-template <class ELFT>
-bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
+static bool buildSymbolsMap(ArrayRef<ELFYAML::Symbol> V, NameToIdxMap &Map) {
   bool GlobalSymbolSeen = false;
   std::size_t I = 0;
-  for (const auto &Sym : Symbols) {
+  for (const ELFYAML::Symbol &Sym : V) {
     ++I;
 
     StringRef Name = Sym.Name;
@@ -1003,12 +1004,17 @@ bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
     if (Sym.Binding.value != ELF::STB_LOCAL)
       GlobalSymbolSeen = true;
 
-    if (!Name.empty() && !SymN2I.addName(Name, I)) {
+    if (!Name.empty() && !Map.addName(Name, I)) {
       WithColor::error() << "Repeated symbol name: '" << Name << "'.\n";
       return false;
     }
   }
   return true;
+}
+
+template <class ELFT> bool ELFState<ELFT>::buildSymbolIndexes() {
+  return buildSymbolsMap(Doc.Symbols, SymN2I) &&
+         buildSymbolsMap(Doc.DynamicSymbols, DynSymN2I);
 }
 
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
@@ -1049,10 +1055,7 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   // sections that might want to use them.
   State.finalizeStrings();
 
-  if (!State.buildSectionIndex())
-    return 1;
-
-  if (!State.buildSymbolIndex(Doc.Symbols))
+  if (!State.buildSectionIndex() || !State.buildSymbolIndexes())
     return 1;
 
   Elf_Ehdr Header;

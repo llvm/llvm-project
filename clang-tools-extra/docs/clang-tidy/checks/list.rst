@@ -44,6 +44,7 @@ Clang-Tidy Checks
    bugprone-branch-clone
    bugprone-copy-constructor-init
    bugprone-dangling-handle
+   bugprone-dynamic-static-initializers
    bugprone-exception-escape
    bugprone-fold-init-type
    bugprone-forward-declaration-namespace
