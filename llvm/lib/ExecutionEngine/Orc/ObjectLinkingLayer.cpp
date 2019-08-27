@@ -127,7 +127,11 @@ public:
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
 
-    MR.notifyResolved(InternedResult);
+    if (auto Err = MR.notifyResolved(InternedResult)) {
+      Layer.getExecutionSession().reportError(std::move(Err));
+      MR.failMaterialization();
+      return;
+    }
 
     Layer.notifyLoaded(MR);
   }
@@ -138,10 +142,12 @@ public:
     if (auto Err = Layer.notifyEmitted(MR, std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
-
       return;
     }
-    MR.notifyEmitted();
+    if (auto Err = MR.notifyEmitted()) {
+      Layer.getExecutionSession().reportError(std::move(Err));
+      MR.failMaterialization();
+    }
   }
 
   AtomGraphPassFunction getMarkLivePass(const Triple &TT) const override {
@@ -330,7 +336,7 @@ ObjectLinkingLayer::~ObjectLinkingLayer() {
 void ObjectLinkingLayer::emit(MaterializationResponsibility R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
-  jitLink(llvm::make_unique<ObjectLinkingLayerJITLinkContext>(
+  jitLink(std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), std::move(O)));
 }
 

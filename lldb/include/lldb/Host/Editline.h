@@ -53,6 +53,7 @@
 #include <vector>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Predicate.h"
 
@@ -97,10 +98,7 @@ typedef int (*FixIndentationCallbackType)(Editline *editline,
                                           const StringList &lines,
                                           int cursor_position, void *baton);
 
-typedef int (*CompleteCallbackType)(const char *current_line,
-                                    const char *cursor, const char *last_char,
-                                    StringList &matches,
-                                    StringList &descriptions, void *baton);
+typedef void (*CompleteCallbackType)(CompletionRequest &request, void *baton);
 
 /// Status used to decide when and how to start editing another line in
 /// multi-line sessions

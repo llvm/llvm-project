@@ -7915,6 +7915,7 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
     CSEMap.InsertNode(N, IP);
 
   InsertNode(N);
+  NewSDValueDbgMsg(SDValue(N, 0), "Creating new machine node: ", this);
   return N;
 }
 
@@ -9002,14 +9003,27 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
       !isNullConstant(Extract->getOperand(1)))
     return SDValue();
 
-  SDValue Op = Extract->getOperand(0);
-
   // Match against one of the candidate binary ops.
+  SDValue Op = Extract->getOperand(0);
   if (llvm::none_of(CandidateBinOps, [Op](ISD::NodeType BinOp) {
         return Op.getOpcode() == unsigned(BinOp);
       }))
     return SDValue();
+
+  // Floating-point reductions may require relaxed constraints on the final step
+  // of the reduction because they may reorder intermediate operations.
   unsigned CandidateBinOp = Op.getOpcode();
+  if (Op.getValueType().isFloatingPoint()) {
+    SDNodeFlags Flags = Op->getFlags();
+    switch (CandidateBinOp) {
+    case ISD::FADD:
+      if (!Flags.hasNoSignedZeros() || !Flags.hasAllowReassociation())
+        return SDValue();
+      break;
+    default:
+      llvm_unreachable("Unhandled FP opcode for binop reduction");
+    }
+  }
 
   // Matching failed - attempt to see if we did enough stages that a partial
   // reduction from a subvector is possible.

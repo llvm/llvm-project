@@ -140,7 +140,7 @@ void AssumptionCache::AffectedValueCallbackVH::deleted() {
   // 'this' now dangles!
 }
 
-void AssumptionCache::copyAffectedValuesInCache(Value *OV, Value *NV) {
+void AssumptionCache::transferAffectedValuesInCache(Value *OV, Value *NV) {
   auto &NAVV = getOrInsertAffectedValues(NV);
   auto AVI = AffectedValues.find(OV);
   if (AVI == AffectedValues.end())
@@ -149,6 +149,7 @@ void AssumptionCache::copyAffectedValuesInCache(Value *OV, Value *NV) {
   for (auto &A : AVI->second)
     if (std::find(NAVV.begin(), NAVV.end(), A) == NAVV.end())
       NAVV.push_back(A);
+  AffectedValues.erase(OV);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::allUsesReplacedWith(Value *NV) {
@@ -157,7 +158,7 @@ void AssumptionCache::AffectedValueCallbackVH::allUsesReplacedWith(Value *NV) {
 
   // Any assumptions that affected this value now affect the new value.
 
-  AC->copyAffectedValuesInCache(getValPtr(), NV);
+  AC->transferAffectedValuesInCache(getValPtr(), NV);
   // 'this' now might dangle! If the AffectedValues map was resized to add an
   // entry for NV then this object might have been destroyed in favor of some
   // copy in the grown map.
@@ -252,7 +253,7 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
   // Ok, build a new cache by scanning the function, insert it and the value
   // handle into our map, and return the newly populated cache.
   auto IP = AssumptionCaches.insert(std::make_pair(
-      FunctionCallbackVH(&F, this), llvm::make_unique<AssumptionCache>(F)));
+      FunctionCallbackVH(&F, this), std::make_unique<AssumptionCache>(F)));
   assert(IP.second && "Scanning function already in the map?");
   return *IP.first->second;
 }

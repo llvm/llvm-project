@@ -3,25 +3,28 @@
 # RUN: yaml2obj --docnum=1 %s > %t1.so
 # RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --notes %t1.so | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-objcopy --strip-sections %t1.so %t1.stripped.so
+# RUN: llvm-readelf --notes %t1.stripped.so | FileCheck %s --check-prefix=GNU-STRIPPED --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --notes %t1.stripped.so | FileCheck %s --check-prefix=LLVM-STRIPPED
 
-#      GNU:Displaying notes found at file offset 0x00000200 with length 0x00000020:
+#      GNU:Displaying notes found at file offset 0x00000238 with length 0x00000020:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:    OS: Linux, ABI: 2.6.32
 
-#      GNU:Displaying notes found at file offset 0x00000220 with length 0x00000020:
+#      GNU:Displaying notes found at file offset 0x00000258 with length 0x00000020:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
 # GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
-#      GNU:Displaying notes found at file offset 0x00000240 with length 0x0000001c:
+#      GNU:Displaying notes found at file offset 0x00000278 with length 0x0000001c:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
 # GNU-NEXT:    Version: gold 1.11
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x200
+# LLVM-NEXT:     Offset: 0x238
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -32,7 +35,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x220
+# LLVM-NEXT:     Offset: 0x258
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -42,7 +45,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x240
+# LLVM-NEXT:     Offset: 0x278
 # LLVM-NEXT:     Size: 0x1C
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -52,6 +55,24 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
+
+# LLVM-STRIPPED:      Notes [
+# LLVM-STRIPPED-NEXT:   NoteSection {
+# LLVM-STRIPPED-NEXT:     Offset: 0x78
+# LLVM-STRIPPED-NEXT:     Size: 0x20
+# LLVM-STRIPPED-NEXT:     Note {
+# LLVM-STRIPPED-NEXT:       Owner: GNU
+# LLVM-STRIPPED-NEXT:       Data size: 0x10
+# LLVM-STRIPPED-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# LLVM-STRIPPED-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# LLVM-STRIPPED-NEXT:     }
+# LLVM-STRIPPED-NEXT:   }
+# LLVM-STRIPPED-NEXT: ]
+
+#      GNU-STRIPPED:Displaying notes found at file offset 0x00000078 with length 0x00000020:
+# GNU-STRIPPED-NEXT:  Owner                Data size 	Description
+# GNU-STRIPPED-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
+# GNU-STRIPPED-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
 --- !ELF
 FileHeader:
@@ -74,6 +95,11 @@ Sections:
     Type:         SHT_NOTE
     AddressAlign: 0x0000000000000004
     Content:      040000000900000004000000474E5500676F6C6420312E3131000000
+ProgramHeaders:
+  - Type: PT_NOTE
+    FileSize: 0x20
+    Sections:
+      - Section: .note.gnu.build-id
 
 ## Test tools report an error if a note section has an invalid offset
 ## that goes past the end of file.

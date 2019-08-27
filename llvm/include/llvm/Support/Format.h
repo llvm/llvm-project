@@ -29,6 +29,7 @@
 #include <cassert>
 #include <cstdio>
 #include <tuple>
+#include <utility>
 
 namespace llvm {
 
@@ -91,7 +92,7 @@ class format_object final : public format_object_base {
 
   template <std::size_t... Is>
   int snprint_tuple(char *Buffer, unsigned BufferSize,
-                    index_sequence<Is...>) const {
+                    std::index_sequence<Is...>) const {
 #ifdef _MSC_VER
     return _snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
 #else
@@ -106,7 +107,7 @@ public:
   }
 
   int snprint(char *Buffer, unsigned BufferSize) const override {
-    return snprint_tuple(Buffer, BufferSize, index_sequence_for<Ts...>());
+    return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
   }
 };
 

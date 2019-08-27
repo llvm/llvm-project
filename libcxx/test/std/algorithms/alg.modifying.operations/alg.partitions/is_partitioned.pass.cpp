@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 
 struct is_odd {
   TEST_CONSTEXPR bool operator()(const int &i) const { return i & 1; }

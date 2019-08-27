@@ -83,14 +83,12 @@ protected:
                        WantDiagnostics WD,
                        llvm::unique_function<void(std::vector<Diag>)> CB) {
     Path OrigFile = File.str();
-    WithContextValue Ctx(
-        DiagsCallbackKey,
-        Bind(
-            [OrigFile](decltype(CB) CB, PathRef File, std::vector<Diag> Diags) {
-              assert(File == OrigFile);
-              CB(std::move(Diags));
-            },
-            std::move(CB)));
+    WithContextValue Ctx(DiagsCallbackKey,
+                         [OrigFile, CB = std::move(CB)](
+                             PathRef File, std::vector<Diag> Diags) mutable {
+                           assert(File == OrigFile);
+                           CB(std::move(Diags));
+                         });
     S.update(File, std::move(Inputs), WD);
   }
 

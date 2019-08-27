@@ -289,7 +289,7 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, PreservedAnalysesT,
       AnalysisResultConcept<IRUnitT, PreservedAnalysesT, InvalidatorT>>
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) override {
-    return llvm::make_unique<ResultModelT>(
+    return std::make_unique<ResultModelT>(
         Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...));
   }
 

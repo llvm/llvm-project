@@ -238,7 +238,8 @@ const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
 //   <empty line>
 class LLVMSymbolizerProcess : public SymbolizerProcess {
  public:
-  explicit LLVMSymbolizerProcess(const char *path) : SymbolizerProcess(path) {}
+  explicit LLVMSymbolizerProcess(const char *path)
+      : SymbolizerProcess(path, /*use_posix_spawn=*/SANITIZER_MAC) {}
 
  private:
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override {

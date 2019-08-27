@@ -119,7 +119,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   FeatureBitset Features = getFeatureBits();
   if (HexagonDisableDuplex)
-    setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
+    setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
   setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
 
   return *this;
@@ -344,7 +344,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
   if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
-    unsigned DReg = DstInst->getOperand(0).getReg();
+    Register DReg = DstInst->getOperand(0).getReg();
     MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
     unsigned UseIdx = -1;
     for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
@@ -374,15 +374,15 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
 
 void HexagonSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
-  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
-  Mutations.push_back(llvm::make_unique<BankConflictMutation>());
+  Mutations.push_back(std::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<BankConflictMutation>());
 }
 
 void HexagonSubtarget::getSMSMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
-  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
 }
 
 // Pin the vtable to this file.

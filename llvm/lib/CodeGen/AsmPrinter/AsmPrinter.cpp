@@ -162,8 +162,9 @@ static gcp_map_type &getGCMap(void *&P) {
 /// getGVAlignmentLog2 - Return the alignment to use for the specified global
 /// value in log2 form.  This rounds up to the preferred alignment if possible
 /// and legal.
-static unsigned getGVAlignmentLog2(const GlobalValue *GV, const DataLayout &DL,
-                                   unsigned InBits = 0) {
+unsigned AsmPrinter::getGVAlignmentLog2(const GlobalValue *GV,
+                                        const DataLayout &DL,
+                                        unsigned InBits) {
   unsigned NumBits = 0;
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
     NumBits = DL.getPreferredAlignmentLog(GVar);
@@ -311,7 +312,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isOSWindows()) {
-      Handlers.emplace_back(llvm::make_unique<CodeViewDebug>(this),
+      Handlers.emplace_back(std::make_unique<CodeViewDebug>(this),
                             DbgTimerName, DbgTimerDescription,
                             CodeViewLineTablesGroupName,
                             CodeViewLineTablesGroupDescription);
@@ -380,7 +381,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (mdconst::extract_or_null<ConstantInt>(
           MMI->getModule()->getModuleFlag("cfguardtable")))
-    Handlers.emplace_back(llvm::make_unique<WinCFGuard>(this), CFGuardName,
+    Handlers.emplace_back(std::make_unique<WinCFGuard>(this), CFGuardName,
                           CFGuardDescription, DWARFGroupName,
                           DWARFGroupDescription);
 
@@ -783,7 +784,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
 /// emitImplicitDef - This method emits the specified machine instruction
 /// that is an implicit def.
 void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
-  unsigned RegNo = MI->getOperand(0).getReg();
+  Register RegNo = MI->getOperand(0).getReg();
 
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
@@ -1025,7 +1026,7 @@ void AsmPrinter::EmitFunctionBody() {
     // Get MachineDominatorTree or compute it on the fly if it's unavailable
     MDT = getAnalysisIfAvailable<MachineDominatorTree>();
     if (!MDT) {
-      OwnedMDT = make_unique<MachineDominatorTree>();
+      OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->getBase().recalculate(*MF);
       MDT = OwnedMDT.get();
     }
@@ -1033,7 +1034,7 @@ void AsmPrinter::EmitFunctionBody() {
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
     MLI = getAnalysisIfAvailable<MachineLoopInfo>();
     if (!MLI) {
-      OwnedMLI = make_unique<MachineLoopInfo>();
+      OwnedMLI = std::make_unique<MachineLoopInfo>();
       OwnedMLI->getBase().analyze(MDT->getBase());
       MLI = OwnedMLI.get();
     }
@@ -1572,8 +1573,7 @@ bool AsmPrinter::doFinalization(Module &M) {
              "expected llvm.used to be an array type");
       if (const auto *A = cast<ConstantArray>(LU->getInitializer())) {
         for (const Value *Op : A->operands()) {
-          const auto *GV =
-              cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
+          const auto *GV = cast<GlobalValue>(Op->stripPointerCasts());
           // Global symbols with internal or private linkage are not visible to
           // the linker, and thus would cause an error when the linker tried to
           // preserve the symbol due to the `/include:` directive.
@@ -2635,7 +2635,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   const GlobalValue *FinalGV = dyn_cast<GlobalValue>(GV->getOperand(0));
   const MCSymbol *FinalSym = AP.getSymbol(FinalGV);
   *ME = AP.getObjFileLowering().getIndirectSymViaGOTPCRel(
-      FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
+      FinalGV, FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
 
   // Update GOT equivalent usage information
   --NumUses;
@@ -2895,7 +2895,7 @@ void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
 /// EmitBasicBlockStart - This method prints the label for the specified
 /// MachineBasicBlock, an alignment (if present) and a comment describing
 /// it if appropriate.
-void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
+void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   // End the previous funclet and start a new one.
   if (MBB.isEHFuncletEntry()) {
     for (const HandlerInfo &HI : Handlers) {

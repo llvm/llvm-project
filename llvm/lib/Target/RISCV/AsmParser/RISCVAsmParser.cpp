@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -79,7 +80,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
   // synthesize the desired immedate value into the destination register.
-  void emitLoadImm(unsigned DestReg, int64_t Value, MCStreamer &Out);
+  void emitLoadImm(Register DestReg, int64_t Value, MCStreamer &Out);
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
   // helpers such as emitLoadLocalAddress and emitLoadAddress.
@@ -194,7 +195,7 @@ public:
 /// instruction
 struct RISCVOperand : public MCParsedAsmOperand {
 
-  enum KindTy {
+  enum class KindTy {
     Token,
     Register,
     Immediate,
@@ -204,7 +205,7 @@ struct RISCVOperand : public MCParsedAsmOperand {
   bool IsRV64;
 
   struct RegOp {
-    unsigned RegNum;
+    Register RegNum;
   };
 
   struct ImmOp {
@@ -236,26 +237,26 @@ public:
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;
     switch (Kind) {
-    case Register:
+    case KindTy::Register:
       Reg = o.Reg;
       break;
-    case Immediate:
+    case KindTy::Immediate:
       Imm = o.Imm;
       break;
-    case Token:
+    case KindTy::Token:
       Tok = o.Tok;
       break;
-    case SystemRegister:
+    case KindTy::SystemRegister:
       SysReg = o.SysReg;
       break;
     }
   }
 
-  bool isToken() const override { return Kind == Token; }
-  bool isReg() const override { return Kind == Register; }
-  bool isImm() const override { return Kind == Immediate; }
+  bool isToken() const override { return Kind == KindTy::Token; }
+  bool isReg() const override { return Kind == KindTy::Register; }
+  bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
-  bool isSystemRegister() const { return Kind == SystemRegister; }
+  bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -593,38 +594,38 @@ public:
   bool isRV64() const { return IsRV64; }
 
   unsigned getReg() const override {
-    assert(Kind == Register && "Invalid type access!");
-    return Reg.RegNum;
+    assert(Kind == KindTy::Register && "Invalid type access!");
+    return Reg.RegNum.id();
   }
 
   StringRef getSysReg() const {
-    assert(Kind == SystemRegister && "Invalid access!");
+    assert(Kind == KindTy::SystemRegister && "Invalid access!");
     return StringRef(SysReg.Data, SysReg.Length);
   }
 
   const MCExpr *getImm() const {
-    assert(Kind == Immediate && "Invalid type access!");
+    assert(Kind == KindTy::Immediate && "Invalid type access!");
     return Imm.Val;
   }
 
   StringRef getToken() const {
-    assert(Kind == Token && "Invalid type access!");
+    assert(Kind == KindTy::Token && "Invalid type access!");
     return Tok;
   }
 
   void print(raw_ostream &OS) const override {
     switch (Kind) {
-    case Immediate:
+    case KindTy::Immediate:
       OS << *getImm();
       break;
-    case Register:
+    case KindTy::Register:
       OS << "<register x";
       OS << getReg() << ">";
       break;
-    case Token:
+    case KindTy::Token:
       OS << "'" << getToken() << "'";
       break;
-    case SystemRegister:
+    case KindTy::SystemRegister:
       OS << "<sysreg: " << getSysReg() << '>';
       break;
     }
@@ -632,7 +633,7 @@ public:
 
   static std::unique_ptr<RISCVOperand> createToken(StringRef Str, SMLoc S,
                                                    bool IsRV64) {
-    auto Op = make_unique<RISCVOperand>(Token);
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Token);
     Op->Tok = Str;
     Op->StartLoc = S;
     Op->EndLoc = S;
@@ -642,7 +643,7 @@ public:
 
   static std::unique_ptr<RISCVOperand> createReg(unsigned RegNo, SMLoc S,
                                                  SMLoc E, bool IsRV64) {
-    auto Op = make_unique<RISCVOperand>(Register);
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.RegNum = RegNo;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -652,7 +653,7 @@ public:
 
   static std::unique_ptr<RISCVOperand> createImm(const MCExpr *Val, SMLoc S,
                                                  SMLoc E, bool IsRV64) {
-    auto Op = make_unique<RISCVOperand>(Immediate);
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Immediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -662,7 +663,7 @@ public:
 
   static std::unique_ptr<RISCVOperand>
   createSysReg(StringRef Str, SMLoc S, unsigned Encoding, bool IsRV64) {
-    auto Op = make_unique<RISCVOperand>(SystemRegister);
+    auto Op = std::make_unique<RISCVOperand>(KindTy::SystemRegister);
     Op->SysReg.Data = Str.data();
     Op->SysReg.Length = Str.size();
     Op->SysReg.Encoding = Encoding;
@@ -743,7 +744,7 @@ public:
 // Return the matching FPR64 register for the given FPR32.
 // FIXME: Ideally this function could be removed in favour of using
 // information from TableGen.
-unsigned convertFPR32ToFPR64(unsigned Reg) {
+static Register convertFPR32ToFPR64(Register Reg) {
   switch (Reg) {
   default:
     llvm_unreachable("Not a recognised FPR32 register");
@@ -788,7 +789,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   if (!Op.isReg())
     return Match_InvalidOperand;
 
-  unsigned Reg = Op.getReg();
+  Register Reg = Op.getReg();
   bool IsRegFPR32 =
       RISCVMCRegisterClasses[RISCV::FPR32RegClassID].contains(Reg);
   bool IsRegFPR32C =
@@ -863,6 +864,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
+  case Match_InvalidImmZero: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "immediate must be zero");
+  }
   case Match_InvalidUImmLog2XLen:
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
@@ -978,7 +983,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 // alternative ABI names), setting RegNo to the matching register. Upon
 // failure, returns true and sets RegNo to 0. If IsRV32E then registers
 // x16-x31 will be rejected.
-static bool matchRegisterNameHelper(bool IsRV32E, unsigned &RegNo,
+static bool matchRegisterNameHelper(bool IsRV32E, Register &RegNo,
                                     StringRef Name) {
   RegNo = MatchRegisterName(Name);
   if (RegNo == 0)
@@ -996,7 +1001,7 @@ bool RISCVAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   RegNo = 0;
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(isRV32E(), RegNo, Name))
+  if (matchRegisterNameHelper(isRV32E(), (Register&)RegNo, Name))
     return Error(StartLoc, "invalid register name");
 
   getParser().Lex(); // Eat identifier token.
@@ -1028,7 +1033,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     return MatchOperand_NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
-    unsigned RegNo;
+    Register RegNo;
     matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
     if (RegNo == 0) {
@@ -1218,6 +1223,24 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
     Res = V;
   } else
     Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+
+  MCBinaryExpr::Opcode Opcode;
+  switch (getLexer().getKind()) {
+  default:
+    Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+    return MatchOperand_Success;
+  case AsmToken::Plus:
+    Opcode = MCBinaryExpr::Add;
+    break;
+  case AsmToken::Minus:
+    Opcode = MCBinaryExpr::Sub;
+    break;
+  }
+
+  const MCExpr *Expr;
+  if (getParser().parseExpression(Expr))
+    return MatchOperand_ParseFail;
+  Res = MCBinaryExpr::create(Opcode, Res, Expr, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return MatchOperand_Success;
 }
@@ -1600,12 +1623,12 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.EmitInstruction((Res ? CInst : Inst), getSTI());
 }
 
-void RISCVAsmParser::emitLoadImm(unsigned DestReg, int64_t Value,
+void RISCVAsmParser::emitLoadImm(Register DestReg, int64_t Value,
                                  MCStreamer &Out) {
   RISCVMatInt::InstSeq Seq;
   RISCVMatInt::generateInstSeq(Value, isRV64(), Seq);
 
-  unsigned SrcReg = RISCV::X0;
+  Register SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {
     if (Inst.Opc == RISCV::LUI) {
       emitToStreamer(
@@ -1759,7 +1782,7 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   default:
     break;
   case RISCV::PseudoLI: {
-    unsigned Reg = Inst.getOperand(0).getReg();
+    Register Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);
     if (Op1.isExpr()) {
       // We must have li reg, %lo(sym) or li reg, %pcrel_lo(sym) or similar.

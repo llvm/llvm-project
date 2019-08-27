@@ -250,7 +250,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   unsigned Opc = T1I->getOpcode();
   if (Opc != Hexagon::J2_jumpt && Opc != Hexagon::J2_jumpf)
     return false;
-  unsigned PredR = T1I->getOperand(0).getReg();
+  Register PredR = T1I->getOperand(0).getReg();
 
   // Get the layout successor, or 0 if B does not have one.
   MachineFunction::iterator NextBI = std::next(MachineFunction::iterator(B));
@@ -384,7 +384,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
     for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned R = MO.getReg();
+      Register R = MO.getReg();
       if (!Register::isVirtualRegister(R))
         continue;
       if (!isPredicate(R))
@@ -401,7 +401,7 @@ bool HexagonEarlyIfConversion::usesUndefVReg(const MachineInstr *MI) const {
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isUse())
       continue;
-    unsigned R = MO.getReg();
+    Register R = MO.getReg();
     if (!Register::isVirtualRegister(R))
       continue;
     const MachineInstr *DefI = MRI->getVRegDef(R);
@@ -437,7 +437,7 @@ bool HexagonEarlyIfConversion::isValid(const FlowPattern &FP) const {
         break;
       if (usesUndefVReg(&MI))
         return false;
-      unsigned DefR = MI.getOperand(0).getReg();
+      Register DefR = MI.getOperand(0).getReg();
       if (isPredicate(DefR))
         return false;
     }
@@ -491,7 +491,7 @@ unsigned HexagonEarlyIfConversion::countPredicateDefs(
     for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      unsigned R = MO.getReg();
+      Register R = MO.getReg();
       if (!Register::isVirtualRegister(R))
         continue;
       if (isPredicate(R))
@@ -798,7 +798,7 @@ unsigned HexagonEarlyIfConversion::buildMux(MachineBasicBlock *B,
   const MCInstrDesc &D = HII->get(Opc);
 
   DebugLoc DL = B->findBranchDebugLoc();
-  unsigned MuxR = MRI->createVirtualRegister(DRC);
+  Register MuxR = MRI->createVirtualRegister(DRC);
   BuildMI(*B, At, DL, D, MuxR)
     .addReg(PredR)
     .addReg(TR, 0, TSR)
@@ -837,7 +837,7 @@ void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
     unsigned MuxR = 0, MuxSR = 0;
 
     if (TR && FR) {
-      unsigned DR = PN->getOperand(0).getReg();
+      Register DR = PN->getOperand(0).getReg();
       const TargetRegisterClass *RC = MRI->getRegClass(DR);
       MuxR = buildMux(FP.SplitB, FP.SplitB->getFirstTerminator(), RC,
                       FP.PredR, TR, TSR, FR, FSR);
@@ -988,8 +988,8 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
     MachineInstr *PN = &*I;
     assert(PN->getNumOperands() == 3 && "Invalid phi node");
     MachineOperand &UO = PN->getOperand(1);
-    unsigned UseR = UO.getReg(), UseSR = UO.getSubReg();
-    unsigned DefR = PN->getOperand(0).getReg();
+    Register UseR = UO.getReg(), UseSR = UO.getSubReg();
+    Register DefR = PN->getOperand(0).getReg();
     unsigned NewR = UseR;
     if (UseSR) {
       // MRI.replaceVregUsesWith does not allow to update the subregister,

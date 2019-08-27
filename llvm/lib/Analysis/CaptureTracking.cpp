@@ -33,6 +33,22 @@ CaptureTracker::~CaptureTracker() {}
 
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
 
+bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
+  // An inbounds GEP can either be a valid pointer (pointing into
+  // or to the end of an allocation), or be null in the default
+  // address space. So for an inbounds GEP there is no way to let
+  // the pointer escape using clever GEP hacking because doing so
+  // would make the pointer point outside of the allocated object
+  // and thus make the GEP result a poison value. Similarly, other
+  // dereferenceable pointers cannot be manipulated without producing
+  // poison.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
+    if (GEP->isInBounds())
+      return true;
+  bool CanBeNull;
+  return O->getPointerDereferenceableBytes(DL, CanBeNull);
+}
+
 namespace {
   struct SimpleCaptureTracker : public CaptureTracker {
     explicit SimpleCaptureTracker(bool ReturnCaptures)
@@ -251,7 +267,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // marked with nocapture do not capture. This means that places like
       // GetUnderlyingObject in ValueTracking or DecomposeGEPExpression
       // in BasicAA also need to know about this property.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call)) {
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call,
+                                                                      true)) {
         AddUses(Call);
         break;
       }
@@ -330,7 +347,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       AddUses(I);
       break;
     case Instruction::ICmp: {
-      if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(1))) {
+      unsigned Idx = (I->getOperand(0) == V) ? 0 : 1;
+      unsigned OtherIdx = 1 - Idx;
+      if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
         // Don't count comparisons of a no-alias return value against null as
         // captures. This allows us to ignore comparisons of malloc results
         // with null, for example.
@@ -338,29 +357,18 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
           if (isNoAliasCall(V->stripPointerCasts()))
             break;
         if (!I->getFunction()->nullPointerIsDefined()) {
-          auto *O = I->getOperand(0)->stripPointerCastsSameRepresentation();
-          // An inbounds GEP can either be a valid pointer (pointing into
-          // or to the end of an allocation), or be null in the default
-          // address space. So for an inbounds GEPs there is no way to let
-          // the pointer escape using clever GEP hacking because doing so
-          // would make the pointer point outside of the allocated object
-          // and thus make the GEP result a poison value.
-          if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
-            if (GEP->isInBounds())
-              break;
-          // Comparing a dereferenceable_or_null argument against null
-          // cannot lead to pointer escapes, because if it is not null it
-          // must be a valid (in-bounds) pointer.
-          bool CanBeNull;
-          if (O->getPointerDereferenceableBytes(I->getModule()->getDataLayout(), CanBeNull))
+          auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
+          // Comparing a dereferenceable_or_null pointer against null cannot
+          // lead to pointer escapes, because if it is not null it must be a
+          // valid (in-bounds) pointer.
+          if (Tracker->isDereferenceableOrNull(O, I->getModule()->getDataLayout()))
             break;
         }
       }
       // Comparison against value stored in global variable. Given the pointer
       // does not escape, its value cannot be guessed and stored separately in a
       // global variable.
-      unsigned OtherIndex = (I->getOperand(0) == V) ? 1 : 0;
-      auto *LI = dyn_cast<LoadInst>(I->getOperand(OtherIndex));
+      auto *LI = dyn_cast<LoadInst>(I->getOperand(OtherIdx));
       if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
         break;
       // Otherwise, be conservative. There are crazy ways to capture pointers

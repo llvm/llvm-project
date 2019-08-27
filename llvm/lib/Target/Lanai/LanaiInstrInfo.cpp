@@ -505,7 +505,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
 
   // Find new register class to use.
   MachineOperand FalseReg = MI.getOperand(Invert ? 1 : 2);
-  unsigned DestReg = MI.getOperand(0).getReg();
+  Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
     return nullptr;

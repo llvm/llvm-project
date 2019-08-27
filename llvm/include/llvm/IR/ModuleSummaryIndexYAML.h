@@ -220,7 +220,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           V.emplace(RefGUID, /*IsAnalysis=*/false);
         Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*V.find(RefGUID)));
       }
-      Elem.SummaryList.push_back(llvm::make_unique<FunctionSummary>(
+      Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal, FSum.CanAutoHide),

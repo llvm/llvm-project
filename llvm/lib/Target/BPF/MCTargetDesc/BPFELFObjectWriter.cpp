@@ -39,7 +39,7 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   // determine the type of the relocation
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_SecRel_8:
@@ -85,5 +85,5 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createBPFELFObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<BPFELFObjectWriter>(OSABI);
+  return std::make_unique<BPFELFObjectWriter>(OSABI);
 }

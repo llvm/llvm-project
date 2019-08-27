@@ -343,7 +343,7 @@ public:
     int64_t Val = Int.getIntVal();
     if (IsNegative)
       Val = -Val;
-    Operands.push_back(make_unique<WebAssemblyOperand>(
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Integer, Int.getLoc(), Int.getEndLoc(),
         WebAssemblyOperand::IntOp{Val}));
     Parser.Lex();
@@ -356,7 +356,7 @@ public:
       return error("Cannot parse real: ", Flt);
     if (IsNegative)
       Val = -Val;
-    Operands.push_back(make_unique<WebAssemblyOperand>(
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
         WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
@@ -378,7 +378,7 @@ public:
     }
     if (IsNegative)
       Val = -Val;
-    Operands.push_back(make_unique<WebAssemblyOperand>(
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
         WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
@@ -407,7 +407,7 @@ public:
         // an opcode until after the assembly matcher, so set a default to fix
         // up later.
         auto Tok = Lexer.getTok();
-        Operands.push_back(make_unique<WebAssemblyOperand>(
+        Operands.push_back(std::make_unique<WebAssemblyOperand>(
             WebAssemblyOperand::Integer, Tok.getLoc(), Tok.getEndLoc(),
             WebAssemblyOperand::IntOp{-1}));
       }
@@ -417,7 +417,7 @@ public:
 
   void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
                            WebAssembly::ExprType BT) {
-    Operands.push_back(make_unique<WebAssemblyOperand>(
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Integer, NameLoc, NameLoc,
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
@@ -449,7 +449,7 @@ public:
     }
 
     // Now construct the name as first operand.
-    Operands.push_back(make_unique<WebAssemblyOperand>(
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Token, NameLoc, SMLoc::getFromPointer(Name.end()),
         WebAssemblyOperand::TokOp{Name}));
 
@@ -489,6 +489,7 @@ public:
       if (pop(Name, Block))
         return true;
     } else if (Name == "end_function") {
+      ensureLocals(getStreamer());
       CurrentState = EndFunction;
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
@@ -498,7 +499,7 @@ public:
       // attach it to an anonymous symbol, which is what WasmObjectWriter
       // expects to be able to recreate the actual unique-ified type indices.
       auto Loc = Parser.getTok();
-      auto Signature = make_unique<wasm::WasmSignature>();
+      auto Signature = std::make_unique<wasm::WasmSignature>();
       if (parseSignature(Signature.get()))
         return true;
       auto &Ctx = getStreamer().getContext();
@@ -510,7 +511,7 @@ public:
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       const MCExpr *Expr = MCSymbolRefExpr::create(
           WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
-      Operands.push_back(make_unique<WebAssemblyOperand>(
+      Operands.push_back(std::make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
           WebAssemblyOperand::SymOp{Expr}));
     }
@@ -535,7 +536,7 @@ public:
           SMLoc End;
           if (Parser.parseExpression(Val, End))
             return error("Cannot parse symbol: ", Lexer.getTok());
-          Operands.push_back(make_unique<WebAssemblyOperand>(
+          Operands.push_back(std::make_unique<WebAssemblyOperand>(
               WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
               WebAssemblyOperand::SymOp{Val}));
           if (checkForP2AlignIfLoadStore(Operands, Name))
@@ -570,7 +571,7 @@ public:
       }
       case AsmToken::LCurly: {
         Parser.Lex();
-        auto Op = make_unique<WebAssemblyOperand>(
+        auto Op = std::make_unique<WebAssemblyOperand>(
             WebAssemblyOperand::BrList, Tok.getLoc(), Tok.getEndLoc());
         if (!Lexer.is(AsmToken::RCurly))
           for (;;) {
@@ -692,7 +693,7 @@ public:
         LastFunctionLabel = LastLabel;
         push(Function);
       }
-      auto Signature = make_unique<wasm::WasmSignature>();
+      auto Signature = std::make_unique<wasm::WasmSignature>();
       if (parseSignature(Signature.get()))
         return true;
       WasmSym->setSignature(Signature.get());
@@ -708,7 +709,7 @@ public:
       if (SymName.empty())
         return true;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      auto Signature = make_unique<wasm::WasmSignature>();
+      auto Signature = std::make_unique<wasm::WasmSignature>();
       if (parseRegTypeList(Signature->Params))
         return true;
       WasmSym->setSignature(Signature.get());
@@ -758,6 +759,19 @@ public:
     return true; // We didn't process this directive.
   }
 
+  // Called either when the first instruction is parsed of the function ends.
+  void ensureLocals(MCStreamer &Out) {
+    if (CurrentState == FunctionStart) {
+      // We haven't seen a .local directive yet. The streamer requires locals to
+      // be encoded as a prelude to the instructions, so emit an empty list of
+      // locals here.
+      auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
+          *Out.getTargetStreamer());
+      TOut.emitLocal(SmallVector<wasm::ValType, 0>());
+      CurrentState = FunctionLocals;
+    }
+  }
+
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -768,15 +782,7 @@ public:
         MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
     switch (MatchResult) {
     case Match_Success: {
-      if (CurrentState == FunctionStart) {
-        // This is the first instruction in a function, but we haven't seen
-        // a .local directive yet. The streamer requires locals to be encoded
-        // as a prelude to the instructions, so emit an empty list of locals
-        // here.
-        auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
-            *Out.getTargetStreamer());
-        TOut.emitLocal(SmallVector<wasm::ValType, 0>());
-      }
+      ensureLocals(Out);
       // Fix unknown p2align operands.
       auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
       if (Align != -1U) {

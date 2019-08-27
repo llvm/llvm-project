@@ -103,7 +103,7 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
     std::error_code EC;
     sys::fs::OpenFlags OpenFlags = sys::fs::OF_Append;
     std::unique_ptr<ToolOutputFile> CoverageFile =
-        llvm::make_unique<ToolOutputFile>(CoverageFilename, EC, OpenFlags);
+        std::make_unique<ToolOutputFile>(CoverageFilename, EC, OpenFlags);
     if (EC)
       return false;
 

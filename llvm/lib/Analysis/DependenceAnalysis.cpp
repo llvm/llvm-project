@@ -254,7 +254,7 @@ FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
       LoopIndependent(PossiblyLoopIndependent) {
   Consistent = true;
   if (CommonLevels)
-    DV = make_unique<DVEntry[]>(CommonLevels);
+    DV = std::make_unique<DVEntry[]>(CommonLevels);
 }
 
 // The rest are simple getters that hide the implementation.
@@ -3415,7 +3415,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (!isLoadOrStore(Src) || !isLoadOrStore(Dst)) {
     // can only analyze simple loads and stores, i.e., no calls, invokes, etc.
     LLVM_DEBUG(dbgs() << "can only handle simple loads and stores\n");
-    return make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst);
   }
 
   assert(isLoadOrStore(Src) && "instruction is not load or store");
@@ -3430,7 +3430,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   case PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-    return make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst);
   case NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
@@ -3777,7 +3777,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       return nullptr;
   }
 
-  return make_unique<FullDependence>(std::move(Result));
+  return std::make_unique<FullDependence>(std::move(Result));
 }
 
 

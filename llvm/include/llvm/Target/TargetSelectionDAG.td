@@ -239,6 +239,9 @@ def SDTVecExtract : SDTypeProfile<1, 2, [   // vector extract
 def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
   SDTCisEltOfVec<2, 1>, SDTCisSameAs<0, 1>, SDTCisPtrTy<3>
 ]>;
+def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
+  SDTCisInt<0>, SDTCisVec<1>
+]>;
 
 def SDTSubVecExtract : SDTypeProfile<1, 2, [// subvector extract
   SDTCisSubVecOfVec<0,1>, SDTCisInt<2>
@@ -414,6 +417,8 @@ def bitconvert : SDNode<"ISD::BITCAST"    , SDTUnaryOp>;
 def addrspacecast : SDNode<"ISD::ADDRSPACECAST", SDTUnaryOp>;
 def extractelt : SDNode<"ISD::EXTRACT_VECTOR_ELT", SDTVecExtract>;
 def insertelt  : SDNode<"ISD::INSERT_VECTOR_ELT", SDTVecInsert>;
+
+def vecreduce_add  : SDNode<"ISD::VECREDUCE_ADD", SDTVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;

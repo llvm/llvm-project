@@ -313,9 +313,9 @@ struct SysAlias {
   uint16_t Encoding;
   FeatureBitset FeaturesRequired;
 
-  SysAlias (const char *N, uint16_t E) : Name(N), Encoding(E) {};
-  SysAlias (const char *N, uint16_t E, FeatureBitset F) :
-    Name(N), Encoding(E), FeaturesRequired(F) {};
+  constexpr SysAlias(const char *N, uint16_t E) : Name(N), Encoding(E) {}
+  constexpr SysAlias(const char *N, uint16_t E, FeatureBitset F)
+      : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
@@ -326,9 +326,10 @@ struct SysAlias {
 
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
-  SysAliasReg(const char *N, uint16_t E, bool R) : SysAlias(N, E), NeedsReg(R) {};
-  SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F) : SysAlias(N, E, F),
-    NeedsReg(R) {};
+  constexpr SysAliasReg(const char *N, uint16_t E, bool R)
+      : SysAlias(N, E), NeedsReg(R) {}
+  constexpr SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F)
+      : SysAlias(N, E, F), NeedsReg(R) {}
 };
 
 namespace AArch64AT{

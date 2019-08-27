@@ -879,7 +879,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   if (!ImportedFunctionsStats &&
       InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
     ImportedFunctionsStats =
-        llvm::make_unique<ImportedFunctionsInliningStatistics>();
+        std::make_unique<ImportedFunctionsInliningStatistics>();
     ImportedFunctionsStats->setModuleInfo(M);
   }
 

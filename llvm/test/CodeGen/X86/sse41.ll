@@ -656,7 +656,8 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X86-AVX512-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX512-NEXT:    vbroadcastss (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x08]
+; X86-AVX512-NEXT:    vpermilps $36, (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0x08,0x24]
+; X86-AVX512-NEXT:    ## xmm1 = mem[0,1,2,0]
 ; X86-AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
@@ -679,7 +680,8 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ;
 ; X64-AVX512-LABEL: pinsrd_from_shufflevector_i32:
 ; X64-AVX512:       ## %bb.0: ## %entry
-; X64-AVX512-NEXT:    vbroadcastss (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x0f]
+; X64-AVX512-NEXT:    vpermilps $36, (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0x0f,0x24]
+; X64-AVX512-NEXT:    ## xmm1 = mem[0,1,2,0]
 ; X64-AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -1224,7 +1226,8 @@ define <4 x i32> @i32_shuf_X00A(<4 x i32> %x, <4 x i32> %a) {
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe8,0x57,0xd2]
 ; AVX512-NEXT:    vblendps $1, %xmm0, %xmm2, %xmm0 ## encoding: [0xc4,0xe3,0x69,0x0c,0xc0,0x01]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX512-NEXT:    vbroadcastss %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0xc9]
+; AVX512-NEXT:    vpermilps $36, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc9,0x24]
+; AVX512-NEXT:    ## xmm1 = xmm1[0,1,2,0]
 ; AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]

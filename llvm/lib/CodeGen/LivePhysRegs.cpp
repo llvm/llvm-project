@@ -46,7 +46,7 @@ void LivePhysRegs::removeDefs(const MachineInstr &MI) {
     if (O->isReg()) {
       if (!O->isDef() || O->isDebug())
         continue;
-      unsigned Reg = O->getReg();
+      Register Reg = O->getReg();
       if (!Register::isPhysicalRegister(Reg))
         continue;
       removeReg(Reg);
@@ -60,7 +60,7 @@ void LivePhysRegs::addUses(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->readsReg() || O->isDebug())
       continue;
-    unsigned Reg = O->getReg();
+    Register Reg = O->getReg();
     if (!Register::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
@@ -86,7 +86,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
   // Remove killed registers from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg() && !O->isDebug()) {
-      unsigned Reg = O->getReg();
+      Register Reg = O->getReg();
       if (!Register::isPhysicalRegister(Reg))
         continue;
       if (O->isDef()) {
@@ -292,7 +292,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       if (!MO->isReg() || !MO->isDef() || MO->isDebug())
         continue;
 
-      unsigned Reg = MO->getReg();
+      Register Reg = MO->getReg();
       if (Reg == 0)
         continue;
       assert(Register::isPhysicalRegister(Reg));
@@ -309,7 +309,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       if (!MO->isReg() || !MO->readsReg() || MO->isDebug())
         continue;
 
-      unsigned Reg = MO->getReg();
+      Register Reg = MO->getReg();
       if (Reg == 0)
         continue;
       assert(Register::isPhysicalRegister(Reg));

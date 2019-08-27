@@ -51,7 +51,7 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
 
   // Pretend that we enter the "top-level" include file.
   PrepIncludeStack.push_back(
-      make_unique<std::vector<PreprocessorControlDesc>>());
+      std::make_unique<std::vector<PreprocessorControlDesc>>());
 
   // Put all macros defined in the command line into the DefinedMacros set.
   std::for_each(Macros.begin(), Macros.end(),
@@ -393,7 +393,7 @@ bool TGLexer::LexInclude() {
   CurPtr = CurBuf.begin();
 
   PrepIncludeStack.push_back(
-      make_unique<std::vector<PreprocessorControlDesc>>());
+      std::make_unique<std::vector<PreprocessorControlDesc>>());
   return false;
 }
 

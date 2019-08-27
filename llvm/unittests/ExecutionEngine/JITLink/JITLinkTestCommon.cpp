@@ -71,7 +71,7 @@ Error JITLinkTestCommon::TestResources::initializeTripleSpecifics(Triple &TT) {
   if (!STI)
     report_fatal_error("Could not build MCSubtargetInfo for triple");
 
-  DisCtx = llvm::make_unique<MCContext>(MAI.get(), MRI.get(), nullptr);
+  DisCtx = std::make_unique<MCContext>(MAI.get(), MRI.get(), nullptr);
   Dis.reset(TheTarget->createMCDisassembler(*STI, *DisCtx));
 
   if (!Dis)
@@ -83,7 +83,7 @@ Error JITLinkTestCommon::TestResources::initializeTripleSpecifics(Triple &TT) {
 void JITLinkTestCommon::TestResources::initializeTestSpecifics(
     StringRef AsmSrc, const Triple &TT, bool PIC, bool LargeCodeModel) {
   SrcMgr.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(AsmSrc), SMLoc());
-  AsCtx = llvm::make_unique<MCContext>(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
+  AsCtx = std::make_unique<MCContext>(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
   MOFI.InitMCObjectFileInfo(TT, PIC, *AsCtx, LargeCodeModel);
 
   std::unique_ptr<MCCodeEmitter> CE(
@@ -131,7 +131,7 @@ JITLinkTestCommon::TestJITLinkContext::setMemoryManager(
 JITLinkMemoryManager &
 JITLinkTestCommon::TestJITLinkContext::getMemoryManager() {
   if (!MemMgr)
-    MemMgr = llvm::make_unique<InProcessMemoryManager>();
+    MemMgr = std::make_unique<InProcessMemoryManager>();
   return *MemMgr;
 }
 

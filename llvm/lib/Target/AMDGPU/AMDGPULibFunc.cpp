@@ -55,7 +55,7 @@ enum EManglingParam {
 };
 
 struct ManglingRule {
-   StringRef const Name;
+   const char *Name;
    unsigned char Lead[2];
    unsigned char Param[5];
 
@@ -69,7 +69,7 @@ struct ManglingRule {
 
 // Information about library functions with unmangled names.
 class UnmangledFuncInfo {
-  StringRef const Name;
+  const char *Name;
   unsigned NumArgs;
 
   // Table for all lib functions with unmangled names.
@@ -82,7 +82,7 @@ class UnmangledFuncInfo {
 
 public:
   using ID = AMDGPULibFunc::EFuncId;
-  UnmangledFuncInfo(StringRef _Name, unsigned _NumArgs)
+  constexpr UnmangledFuncInfo(const char *_Name, unsigned _NumArgs)
       : Name(_Name), NumArgs(_NumArgs) {}
   // Get index to Table by function name.
   static bool lookup(StringRef Name, ID &Id);
@@ -133,8 +133,8 @@ unsigned ManglingRule::getNumArgs() const {
 //    E_ANY - use prev lead type, E_CONSTPTR_ANY - make const pointer out of
 //    prev lead type, etc. see ParamIterator::getNextParam() for details.
 
-static const ManglingRule manglingRules[] = {
-{ StringRef(), {0}, {0} },
+static constexpr ManglingRule manglingRules[] = {
+{ "", {0}, {0} },
 { "abs"                             , {1},   {E_ANY}},
 { "abs_diff"                        , {1},   {E_ANY,E_COPY}},
 { "acos"                            , {1},   {E_ANY}},
@@ -682,9 +682,9 @@ bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
   }
 
   if (eatTerm(FuncName, "_Z"))
-    F.Impl = make_unique<AMDGPUMangledLibFunc>();
+    F.Impl = std::make_unique<AMDGPUMangledLibFunc>();
   else
-    F.Impl = make_unique<AMDGPUUnmangledLibFunc>();
+    F.Impl = std::make_unique<AMDGPUUnmangledLibFunc>();
   if (F.Impl->parseFuncName(FuncName))
     return true;
 

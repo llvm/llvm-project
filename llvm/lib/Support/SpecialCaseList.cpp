@@ -53,7 +53,7 @@ bool SpecialCaseList::Matcher::insert(std::string Regexp,
     return false;
 
   RegExes.emplace_back(
-      std::make_pair(make_unique<Regex>(std::move(CheckRE)), LineNumber));
+      std::make_pair(std::make_unique<Regex>(std::move(CheckRE)), LineNumber));
   return true;
 }
 
@@ -175,7 +175,7 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
 
     // Create this section if it has not been seen before.
     if (SectionsMap.find(Section) == SectionsMap.end()) {
-      std::unique_ptr<Matcher> M = make_unique<Matcher>();
+      std::unique_ptr<Matcher> M = std::make_unique<Matcher>();
       std::string REError;
       if (!M->insert(Section, LineNo, REError)) {
         Error = (Twine("malformed section ") + Section + ": '" + REError).str();

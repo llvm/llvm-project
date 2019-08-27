@@ -107,10 +107,10 @@ TEST(PointeeIteratorTest, Basic) {
 
 TEST(PointeeIteratorTest, SmartPointer) {
   SmallVector<std::unique_ptr<int>, 4> V;
-  V.push_back(make_unique<int>(1));
-  V.push_back(make_unique<int>(2));
-  V.push_back(make_unique<int>(3));
-  V.push_back(make_unique<int>(4));
+  V.push_back(std::make_unique<int>(1));
+  V.push_back(std::make_unique<int>(2));
+  V.push_back(std::make_unique<int>(3));
+  V.push_back(std::make_unique<int>(4));
 
   typedef pointee_iterator<
       SmallVectorImpl<std::unique_ptr<int>>::const_iterator>
@@ -209,10 +209,10 @@ TEST(FilterIteratorTest, FunctionPointer) {
 
 TEST(FilterIteratorTest, Composition) {
   auto IsOdd = [](int N) { return N % 2 == 1; };
-  std::unique_ptr<int> A[] = {make_unique<int>(0), make_unique<int>(1),
-                              make_unique<int>(2), make_unique<int>(3),
-                              make_unique<int>(4), make_unique<int>(5),
-                              make_unique<int>(6)};
+  std::unique_ptr<int> A[] = {std::make_unique<int>(0), std::make_unique<int>(1),
+                              std::make_unique<int>(2), std::make_unique<int>(3),
+                              std::make_unique<int>(4), std::make_unique<int>(5),
+                              std::make_unique<int>(6)};
   using PointeeIterator = pointee_iterator<std::unique_ptr<int> *>;
   auto Range = make_filter_range(
       make_range(PointeeIterator(std::begin(A)), PointeeIterator(std::end(A))),

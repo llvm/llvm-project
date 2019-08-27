@@ -83,7 +83,7 @@ bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
   if (TargetMemOpcode != -1) {
     MI.setDesc(TII->get(TargetMemOpcode));
     MI.tieOperands(0, 1);
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     MachineOperand &SrcMO = MI.getOperand(1);
     if (DstReg != SrcMO.getReg()) {
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(SystemZ::COPY), DstReg)

@@ -84,7 +84,6 @@ def create_parser():
         metavar='filterspec',
         action='append',
         help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
-    X('-l', "Don't skip long running tests")
     group.add_argument(
         '-p',
         metavar='pattern',
@@ -125,6 +124,12 @@ def create_parser():
         dest='out_of_tree_debugserver',
         action='store_true',
         help='A flag to indicate an out-of-tree debug server is being used')
+    group.add_argument(
+        '--dwarf-version',
+        metavar='dwarf_version',
+        dest='dwarf_version',
+        type=int,
+        help='Override the DWARF version.')
     group.add_argument(
         '-s',
         metavar='name',

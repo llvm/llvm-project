@@ -735,8 +735,6 @@ public:
 
   PathPieces subPieces;
 
-  bool containsEvent() const;
-
   void flattenLocations() override {
     PathDiagnosticSpotPiece::flattenLocations();
     for (const auto &I : subPieces)

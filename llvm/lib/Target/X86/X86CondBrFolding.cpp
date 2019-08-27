@@ -564,7 +564,7 @@ X86CondBrFolding::analyzeMBB(MachineBasicBlock &MBB) {
     Modified = false;
     break;
   }
-  return llvm::make_unique<TargetMBBInfo>(TargetMBBInfo{
+  return std::make_unique<TargetMBBInfo>(TargetMBBInfo{
       TBB, FBB, BrInstr, CmpInstr, CC, SrcReg, CmpValue, Modified, CmpBrOnly});
 }
 

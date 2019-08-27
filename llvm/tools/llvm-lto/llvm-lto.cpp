@@ -315,8 +315,8 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
   error(BufferOrErr, "error loading file '" + Path + "'");
   Buffer = std::move(BufferOrErr.get());
   CurrentActivity = ("loading file '" + Path + "'").str();
-  std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
-  Context->setDiagnosticHandler(llvm::make_unique<LLVMLTODiagnosticHandler>(),
+  std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
+  Context->setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                 true);
   ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
       std::move(Context), Buffer->getBufferStart(), Buffer->getBufferSize(),
@@ -921,7 +921,7 @@ int main(int argc, char **argv) {
   unsigned BaseArg = 0;
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(llvm::make_unique<LLVMLTODiagnosticHandler>(),
+  Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
 
   LTOCodeGenerator CodeGen(Context);

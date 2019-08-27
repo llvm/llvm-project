@@ -1291,7 +1291,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         if (!TheModule->getModuleFlag("ThinLTO"))
           TheModule->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
         TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
-                                 CodeGenOpts.EnableSplitLTOUnit);
+                                 uint32_t(1));
       }
       MPM.addPass(
           BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists, EmitLTOSummary));

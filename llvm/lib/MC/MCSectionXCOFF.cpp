@@ -28,6 +28,16 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
+  if (getKind().isData()) {
+    assert(getMappingClass() == XCOFF::XMC_RW &&
+           "Unhandled storage-mapping class for data section.");
+
+    OS << "\t.csect " << getSectionName() << "["
+       << "RW"
+       << "]" << '\n';
+    return;
+  }
+
   if (getKind().isBSSLocal() || getKind().isCommon()) {
     assert((getMappingClass() == XCOFF::XMC_RW ||
             getMappingClass() == XCOFF::XMC_BS) &&

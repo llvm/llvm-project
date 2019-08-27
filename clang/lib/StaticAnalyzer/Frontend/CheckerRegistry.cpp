@@ -200,12 +200,12 @@ CheckerRegistry::CheckerRegistry(
 
   // Parse '-analyzer-checker' and '-analyzer-disable-checker' options from the
   // command line.
-  for (const std::pair<std::string, bool> &Opt : AnOpts.CheckersControlList) {
+  for (const std::pair<std::string, bool> &Opt : AnOpts.CheckersAndPackages) {
     CheckerInfoListRange CheckerForCmdLineArg =
         getMutableCheckersForCmdLineArg(Opt.first);
 
     if (CheckerForCmdLineArg.begin() == CheckerForCmdLineArg.end()) {
-      Diags.Report(diag::err_unknown_analyzer_checker) << Opt.first;
+      Diags.Report(diag::err_unknown_analyzer_checker_or_package) << Opt.first;
       Diags.Report(diag::note_suggest_disabling_all_checkers);
     }
 
@@ -468,9 +468,10 @@ isOptionContainedIn(const CheckerRegistry::CmdLineOptionList &OptionList,
 void CheckerRegistry::validateCheckerOptions() const {
   for (const auto &Config : AnOpts.Config) {
 
-    StringRef SuppliedChecker;
+    StringRef SuppliedCheckerOrPackage;
     StringRef SuppliedOption;
-    std::tie(SuppliedChecker, SuppliedOption) = Config.getKey().split(':');
+    std::tie(SuppliedCheckerOrPackage, SuppliedOption) =
+        Config.getKey().split(':');
 
     if (SuppliedOption.empty())
       continue;
@@ -483,21 +484,24 @@ void CheckerRegistry::validateCheckerOptions() const {
     // Since lower_bound would look for the first element *not less* than "cor",
     // it would return with an iterator to the first checker in the core, so we
     // we really have to use find here, which uses operator==.
-    auto CheckerIt = llvm::find(Checkers, CheckerInfo(SuppliedChecker));
+    auto CheckerIt =
+        llvm::find(Checkers, CheckerInfo(SuppliedCheckerOrPackage));
     if (CheckerIt != Checkers.end()) {
-      isOptionContainedIn(CheckerIt->CmdLineOptions, SuppliedChecker,
+      isOptionContainedIn(CheckerIt->CmdLineOptions, SuppliedCheckerOrPackage,
                           SuppliedOption, AnOpts, Diags);
       continue;
     }
 
-    auto PackageIt = llvm::find(Packages, PackageInfo(SuppliedChecker));
+    auto PackageIt =
+        llvm::find(Packages, PackageInfo(SuppliedCheckerOrPackage));
     if (PackageIt != Packages.end()) {
-      isOptionContainedIn(PackageIt->CmdLineOptions, SuppliedChecker,
+      isOptionContainedIn(PackageIt->CmdLineOptions, SuppliedCheckerOrPackage,
                           SuppliedOption, AnOpts, Diags);
       continue;
     }
 
-    Diags.Report(diag::err_unknown_analyzer_checker) << SuppliedChecker;
+    Diags.Report(diag::err_unknown_analyzer_checker_or_package)
+        << SuppliedCheckerOrPackage;
   }
 }
 

@@ -34,6 +34,13 @@ interface SemanticHighlightingToken {
   // The TextMate scope index to the clangd scope lookup table.
   scopeIndex: number;
 }
+// A line of decoded highlightings from the data clangd sent.
+export interface SemanticHighlightingLine {
+  // The zero-based line position in the text document.
+  line: number;
+  // All SemanticHighlightingTokens on the line.
+  tokens: SemanticHighlightingToken[];
+}
 
 // Language server push notification providing the semantic highlighting
 // information for a text document.
@@ -47,8 +54,8 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
   // The TextMate scope lookup table. A token with scope index i has the scopes
   // on index i in the lookup table.
   scopeLookupTable: string[][];
-  // The rules for the current theme.
-  themeRuleMatcher: ThemeRuleMatcher;
+  // The object that applies the highlightings clangd sends.
+  highlighter: Highlighter;
   fillClientCapabilities(capabilities: vscodelc.ClientCapabilities) {
     // Extend the ClientCapabilities type and add semantic highlighting
     // capability to the object.
@@ -61,9 +68,10 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
   }
 
   async loadCurrentTheme() {
-    this.themeRuleMatcher = new ThemeRuleMatcher(
+    const themeRuleMatcher = new ThemeRuleMatcher(
         await loadTheme(vscode.workspace.getConfiguration('workbench')
                             .get<string>('colorTheme')));
+    this.highlighter.initialize(themeRuleMatcher);
   }
 
   initialize(capabilities: vscodelc.ServerCapabilities,
@@ -76,10 +84,25 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
     if (!serverCapabilities.semanticHighlighting)
       return;
     this.scopeLookupTable = serverCapabilities.semanticHighlighting.scopes;
+    // Important that highlighter is created before the theme is loading as
+    // otherwise it could try to update the themeRuleMatcher without the
+    // highlighter being created.
+    this.highlighter = new Highlighter(this.scopeLookupTable);
     this.loadCurrentTheme();
+    // Event handling for handling with TextDocuments/Editors lifetimes.
+    vscode.window.onDidChangeVisibleTextEditors(
+        (editors: vscode.TextEditor[]) =>
+            editors.forEach((e) => this.highlighter.applyHighlights(
+                                e.document.uri.toString())));
+    vscode.workspace.onDidCloseTextDocument(
+        (doc) => this.highlighter.removeFileHighlightings(doc.uri.toString()));
   }
 
-  handleNotification(params: SemanticHighlightingParams) {}
+  handleNotification(params: SemanticHighlightingParams) {
+    const lines: SemanticHighlightingLine[] = params.lines.map(
+        (line) => ({line : line.line, tokens : decodeTokens(line.tokens)}));
+    this.highlighter.highlight(params.textDocument.uri, lines);
+  }
 }
 
 // Converts a string of base64 encoded tokens into the corresponding array of
@@ -99,6 +122,112 @@ export function decodeTokens(tokens: string): SemanticHighlightingToken[] {
   }
 
   return retTokens;
+}
+
+// The main class responsible for processing of highlightings that clangd
+// sends.
+export class Highlighter {
+  // Maps uris with currently open TextDocuments to the current highlightings.
+  private files: Map<string, Map<number, SemanticHighlightingLine>> = new Map();
+  // DecorationTypes for the current theme that are used when highlighting. A
+  // SemanticHighlightingToken with scopeIndex i should have the decoration at
+  // index i in this list.
+  private decorationTypes: vscode.TextEditorDecorationType[] = [];
+  // The clangd TextMate scope lookup table.
+  private scopeLookupTable: string[][];
+  constructor(scopeLookupTable: string[][]) {
+    this.scopeLookupTable = scopeLookupTable;
+  }
+  // This function must be called at least once or no highlightings will be
+  // done. Sets the theme that is used when highlighting. Also triggers a
+  // recolorization for all current highlighters. Should be called whenever the
+  // theme changes and has been loaded. Should also be called when the first
+  // theme is loaded.
+  public initialize(themeRuleMatcher: ThemeRuleMatcher) {
+    this.decorationTypes.forEach((t) => t.dispose());
+    this.decorationTypes = this.scopeLookupTable.map((scopes) => {
+      const options: vscode.DecorationRenderOptions = {
+        // If there exists no rule for this scope the matcher returns an empty
+        // color. That's ok because vscode does not do anything when applying
+        // empty decorations.
+        color : themeRuleMatcher.getBestThemeRule(scopes[0]).foreground,
+        // If the rangeBehavior is set to Open in any direction the
+        // highlighting becomes weird in certain cases.
+        rangeBehavior : vscode.DecorationRangeBehavior.ClosedClosed,
+      };
+      return vscode.window.createTextEditorDecorationType(options);
+    });
+    this.getVisibleTextEditorUris().forEach((fileUri) =>
+                                                this.applyHighlights(fileUri));
+  }
+
+  // Adds incremental highlightings to the current highlightings for the file
+  // with fileUri. Also applies the highlightings to any associated
+  // TextEditor(s).
+  public highlight(fileUri: string,
+                   highlightingLines: SemanticHighlightingLine[]) {
+    if (!this.files.has(fileUri)) {
+      this.files.set(fileUri, new Map());
+    }
+    const fileHighlightings = this.files.get(fileUri);
+    highlightingLines.forEach((line) => fileHighlightings.set(line.line, line));
+    this.applyHighlights(fileUri);
+  }
+
+  // Called when a text document is closed. Removes any highlighting entries for
+  // the text document that was closed.
+  public removeFileHighlightings(fileUri: string) {
+    // If there exists no entry the call to delete just returns false.
+    this.files.delete(fileUri);
+  }
+
+  // Gets the uris as strings for the currently visible text editors.
+  protected getVisibleTextEditorUris(): string[] {
+    return vscode.window.visibleTextEditors.map((e) =>
+                                                    e.document.uri.toString());
+  }
+
+  // Returns the ranges that should be used when decorating. Index i in the
+  // range array has the decoration type at index i of this.decorationTypes.
+  protected getDecorationRanges(fileUri: string): vscode.Range[][] {
+    if (!this.files.has(fileUri))
+      // this.files should always have an entry for fileUri if we are here. But
+      // if there isn't one we don't want to crash the extension. This is also
+      // useful for tests.
+      return [];
+    const lines: SemanticHighlightingLine[] =
+        Array.from(this.files.get(fileUri).values());
+    const decorations: vscode.Range[][] = this.decorationTypes.map(() => []);
+    lines.forEach((line) => {
+      line.tokens.forEach((token) => {
+        decorations[token.scopeIndex].push(new vscode.Range(
+            new vscode.Position(line.line, token.character),
+            new vscode.Position(line.line, token.character + token.length)));
+      });
+    });
+    return decorations;
+  }
+
+  // Applies all the highlightings currently stored for a file with fileUri.
+  public applyHighlights(fileUri: string) {
+    if (!this.files.has(fileUri))
+      // There are no highlightings for this file, must return early or will get
+      // out of bounds when applying the decorations below.
+      return;
+    if (!this.decorationTypes.length)
+      // Can't apply any decorations when there is no theme loaded.
+      return;
+    // This must always do a full re-highlighting due to the fact that
+    // TextEditorDecorationType are very expensive to create (which makes
+    // incremental updates infeasible). For this reason one
+    // TextEditorDecorationType is used per scope.
+    const ranges = this.getDecorationRanges(fileUri);
+    vscode.window.visibleTextEditors.forEach((e) => {
+      if (e.document.uri.toString() !== fileUri)
+        return;
+      this.decorationTypes.forEach((d, i) => e.setDecorations(d, ranges[i]));
+    });
+  }
 }
 
 // A rule for how to color TextMate scopes.

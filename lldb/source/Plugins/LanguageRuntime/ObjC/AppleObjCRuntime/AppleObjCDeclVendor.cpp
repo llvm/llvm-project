@@ -151,12 +151,13 @@ private:
 };
 
 AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
-    : DeclVendor(), m_runtime(runtime), m_ast_ctx(runtime.GetProcess()
-                                                      ->GetTarget()
-                                                      .GetArchitecture()
-                                                      .GetTriple()
-                                                      .getTriple()
-                                                      .c_str()),
+    : ClangDeclVendor(eAppleObjCDeclVendor), m_runtime(runtime),
+      m_ast_ctx(runtime.GetProcess()
+                    ->GetTarget()
+                    .GetArchitecture()
+                    .GetTriple()
+                    .getTriple()
+                    .c_str()),
       m_type_realizer_sp(m_runtime.GetEncodingToType()) {
   m_external_source = new AppleObjCExternalASTSource(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> external_source_owning_ptr(

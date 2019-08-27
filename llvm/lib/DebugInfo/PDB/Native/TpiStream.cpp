@@ -112,7 +112,7 @@ Error TpiStream::reload() {
     HashStream = std::move(*HS);
   }
 
-  Types = llvm::make_unique<LazyRandomTypeCollection>(
+  Types = std::make_unique<LazyRandomTypeCollection>(
       TypeRecords, getNumTypeRecords(), getTypeIndexOffsets());
   return Error::success();
 }

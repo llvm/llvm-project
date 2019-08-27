@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=7 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_async.ll but with a personality which
 ; indicates that the exception handler *cannot* catch asynchronous exceptions.
@@ -79,7 +79,7 @@ entry:
 ; CHECK-NOT:  nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* dereferenceable_or_null(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
+; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK-NEXT:   unreachable
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))

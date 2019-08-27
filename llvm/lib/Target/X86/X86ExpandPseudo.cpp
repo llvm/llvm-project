@@ -194,7 +194,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNmi64: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
-    MachineOperand &StackAdjust = MBBI->getOperand(isMem ? 5 : 1);
+    MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
+                                                         : 1);
     assert(StackAdjust.isImm() && "Expecting immediate value.");
 
     // Adjust stack pointer.
@@ -259,7 +260,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                         ? X86::TAILJMPm
                         : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
-      for (unsigned i = 0; i != 5; ++i)
+      for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
     } else if (Opcode == X86::TCRETURNri64) {
       JumpTarget.setIsKill();
@@ -287,7 +288,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     assert(DestAddr.isReg() && "Offset should be in register!");
     const bool Uses64BitFramePtr =
         STI->isTarget64BitLP64() || STI->isTargetNaCl64();
-    unsigned StackPtr = TRI->getStackRegister();
+    Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
@@ -347,7 +348,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // actualcmpxchg Addr
     // [E|R]BX = SaveRbx
     const MachineOperand &InArg = MBBI->getOperand(6);
-    unsigned SaveRbx = MBBI->getOperand(7).getReg();
+    Register SaveRbx = MBBI->getOperand(7).getReg();
 
     unsigned ActualInArg =
         Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;

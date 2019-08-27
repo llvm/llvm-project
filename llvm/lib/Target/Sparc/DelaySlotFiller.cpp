@@ -253,7 +253,7 @@ bool Filler::delayHasHazard(MachineBasicBlock::iterator candidate,
     if (!MO.isReg())
       continue; // skip
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
 
     if (MO.isDef()) {
       // check whether Reg is defined or used before delay slot.
@@ -324,7 +324,7 @@ void Filler::insertDefsUses(MachineBasicBlock::iterator MI,
     if (!MO.isReg())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0)
       continue;
     if (MO.isDef())
@@ -380,7 +380,7 @@ static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
-  unsigned reg = AddMI->getOperand(0).getReg();
+  Register reg = AddMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
 
@@ -408,7 +408,7 @@ static bool combineRestoreOR(MachineBasicBlock::iterator RestoreMI,
   //
   // After :  restore <op0>, <op1>, %o[0-7]
 
-  unsigned reg = OrMI->getOperand(0).getReg();
+  Register reg = OrMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
 
@@ -446,7 +446,7 @@ static bool combineRestoreSETHIi(MachineBasicBlock::iterator RestoreMI,
   //
   // After :  restore %g0, (imm3<<10), %o[0-7]
 
-  unsigned reg = SetHiMI->getOperand(0).getReg();
+  Register reg = SetHiMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
     return false;
 

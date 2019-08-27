@@ -42,10 +42,10 @@ private:
 public:
   KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
       : ObjectLayer(ES,
-                    []() { return llvm::make_unique<SectionMemoryManager>(); }),
+                    []() { return std::make_unique<SectionMemoryManager>(); }),
         CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
         DL(std::move(DL)), Mangle(ES, this->DL),
-        Ctx(llvm::make_unique<LLVMContext>()) {
+        Ctx(std::make_unique<LLVMContext>()) {
     ES.getMainJITDylib().addGenerator(
         cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
             DL.getGlobalPrefix())));
@@ -61,7 +61,7 @@ public:
     if (!DL)
       return DL.takeError();
 
-    return llvm::make_unique<KaleidoscopeJIT>(std::move(*JTMB), std::move(*DL));
+    return std::make_unique<KaleidoscopeJIT>(std::move(*JTMB), std::move(*DL));
   }
 
   const DataLayout &getDataLayout() const { return DL; }

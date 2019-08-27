@@ -267,10 +267,10 @@ LLVM_READONLY
 int getMUBUFBaseOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getMUBUFOpcode(unsigned BaseOpc, unsigned Dwords);
+int getMUBUFOpcode(unsigned BaseOpc, unsigned Elements);
 
 LLVM_READONLY
-int getMUBUFDwords(unsigned Opc);
+int getMUBUFElements(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFHasVAddr(unsigned Opc);

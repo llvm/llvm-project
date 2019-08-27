@@ -344,7 +344,7 @@ class TypePromotionTransaction;
     // Get the DominatorTree, building if necessary.
     DominatorTree &getDT(Function &F) {
       if (!DT)
-        DT = llvm::make_unique<DominatorTree>(F);
+        DT = std::make_unique<DominatorTree>(F);
       return *DT;
     }
 
@@ -1682,10 +1682,11 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
     TheUse = InsertedShift;
   }
 
-  // If we removed all uses, nuke the shift.
+  // If we removed all uses, or there are none, nuke the shift.
   if (ShiftI->use_empty()) {
     salvageDebugInfo(*ShiftI);
     ShiftI->eraseFromParent();
+    MadeChange = true;
   }
 
   return MadeChange;
@@ -2680,26 +2681,26 @@ private:
 
 void TypePromotionTransaction::setOperand(Instruction *Inst, unsigned Idx,
                                           Value *NewVal) {
-  Actions.push_back(llvm::make_unique<TypePromotionTransaction::OperandSetter>(
+  Actions.push_back(std::make_unique<TypePromotionTransaction::OperandSetter>(
       Inst, Idx, NewVal));
 }
 
 void TypePromotionTransaction::eraseInstruction(Instruction *Inst,
                                                 Value *NewVal) {
   Actions.push_back(
-      llvm::make_unique<TypePromotionTransaction::InstructionRemover>(
+      std::make_unique<TypePromotionTransaction::InstructionRemover>(
           Inst, RemovedInsts, NewVal));
 }
 
 void TypePromotionTransaction::replaceAllUsesWith(Instruction *Inst,
                                                   Value *New) {
   Actions.push_back(
-      llvm::make_unique<TypePromotionTransaction::UsesReplacer>(Inst, New));
+      std::make_unique<TypePromotionTransaction::UsesReplacer>(Inst, New));
 }
 
 void TypePromotionTransaction::mutateType(Instruction *Inst, Type *NewTy) {
   Actions.push_back(
-      llvm::make_unique<TypePromotionTransaction::TypeMutator>(Inst, NewTy));
+      std::make_unique<TypePromotionTransaction::TypeMutator>(Inst, NewTy));
 }
 
 Value *TypePromotionTransaction::createTrunc(Instruction *Opnd,
@@ -2729,7 +2730,7 @@ Value *TypePromotionTransaction::createZExt(Instruction *Inst,
 void TypePromotionTransaction::moveBefore(Instruction *Inst,
                                           Instruction *Before) {
   Actions.push_back(
-      llvm::make_unique<TypePromotionTransaction::InstructionMoveBefore>(
+      std::make_unique<TypePromotionTransaction::InstructionMoveBefore>(
           Inst, Before));
 }
 
@@ -7103,7 +7104,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
     for (auto &I : reverse(BB)) {
       if (makeBitReverse(I, *DL, *TLI)) {
         MadeBitReverse = MadeChange = true;
-        ModifiedDT = true;
         break;
       }
     }

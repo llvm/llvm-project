@@ -55,7 +55,7 @@
 
 #include <string>
 
-namespace lldb_utility {
+namespace lldb_private {
 
 namespace ansi {
 
@@ -137,4 +137,4 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
   return fmt;
 }
 }
-}
+} // namespace lldb_private

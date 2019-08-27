@@ -451,7 +451,7 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, to_address(V1));
 
   // Check fancy pointer overload for unique_ptr
-  std::unique_ptr<int> V2 = make_unique<int>(0);
+  std::unique_ptr<int> V2 = std::make_unique<int>(0);
   EXPECT_EQ(V2.get(), to_address(V2));
 
   V2.reset(V1);

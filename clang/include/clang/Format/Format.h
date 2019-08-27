@@ -1738,8 +1738,8 @@ struct FormatStyle {
   /// If ``false``, spaces will be removed before assignment operators.
   /// \code
   ///    true:                                  false:
-  ///    int a = 5;                     vs.     int a=5;
-  ///    a += 42                                a+=42;
+  ///    int a = 5;                     vs.     int a= 5;
+  ///    a += 42;                               a+= 42;
   /// \endcode
   bool SpaceBeforeAssignmentOperators;
 

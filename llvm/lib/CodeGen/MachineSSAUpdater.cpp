@@ -95,7 +95,7 @@ unsigned LookForIdenticalPHI(MachineBasicBlock *BB,
   while (I != BB->end() && I->isPHI()) {
     bool Same = true;
     for (unsigned i = 1, e = I->getNumOperands(); i != e; i += 2) {
-      unsigned SrcReg = I->getOperand(i).getReg();
+      Register SrcReg = I->getOperand(i).getReg();
       MachineBasicBlock *SrcBB = I->getOperand(i+1).getMBB();
       if (AVals[SrcBB] != SrcReg) {
         Same = false;
@@ -118,7 +118,7 @@ MachineInstrBuilder InsertNewDef(unsigned Opcode,
                            const TargetRegisterClass *RC,
                            MachineRegisterInfo *MRI,
                            const TargetInstrInfo *TII) {
-  unsigned NewVR = MRI->createVirtualRegister(RC);
+  Register NewVR = MRI->createVirtualRegister(RC);
   return BuildMI(*BB, I, DebugLoc(), TII->get(Opcode), NewVR);
 }
 

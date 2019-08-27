@@ -216,7 +216,7 @@ std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
       return nullptr;
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
-    return llvm::make_unique<Module>(Filename, Context);
+    return std::make_unique<Module>(Filename, Context);
   }
 
   std::unique_ptr<Module> M;
@@ -236,7 +236,7 @@ std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
       NoMIRDocuments = true;
   } else {
     // Create an new, empty module.
-    M = llvm::make_unique<Module>(Filename, Context);
+    M = std::make_unique<Module>(Filename, Context);
     NoLLVMIR = true;
   }
   return M;
@@ -357,8 +357,8 @@ bool MIRParserImpl::initializeCallSiteInfo(
                    Twine(" call instruction offset out of range.") +
                    "Unable to reference instruction at bb: " +
                    Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset));
-    auto CallI = std::next(CallB->begin(), MILoc.Offset);
-    if (!CallI->isCall())
+    auto CallI = std::next(CallB->instr_begin(), MILoc.Offset);
+    if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" call site info should reference call "
                          "instruction. Instruction at bb:") +
@@ -949,6 +949,6 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
             "Can't read MIR with a Context that discards named Values")));
     return nullptr;
   }
-  return llvm::make_unique<MIRParser>(
-      llvm::make_unique<MIRParserImpl>(std::move(Contents), Filename, Context));
+  return std::make_unique<MIRParser>(
+      std::make_unique<MIRParserImpl>(std::move(Contents), Filename, Context));
 }

@@ -79,6 +79,34 @@ public:
     VisitChildren(CE);
   }
 
+  void VisitLambdaExpr(LambdaExpr *LE) {
+    if (CXXMethodDecl *MD = LE->getCallOperator())
+      G->VisitFunctionDecl(MD);
+  }
+
+  void VisitCXXNewExpr(CXXNewExpr *E) {
+    if (FunctionDecl *FD = E->getOperatorNew())
+      addCalledDecl(FD);
+    VisitChildren(E);
+  }
+
+  void VisitCXXConstructExpr(CXXConstructExpr *E) {
+    CXXConstructorDecl *Ctor = E->getConstructor();
+    if (FunctionDecl *Def = Ctor->getDefinition())
+      addCalledDecl(Def);
+    VisitChildren(E);
+  }
+
+  // Include the evaluation of the default argument.
+  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
+    Visit(E->getExpr());
+  }
+
+  // Include the evaluation of the default initializers in a class.
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
+    Visit(E->getExpr());
+  }
+
   // Adds may-call edges for the ObjC message sends.
   void VisitObjCMessageExpr(ObjCMessageExpr *ME) {
     if (ObjCInterfaceDecl *IDecl = ME->getReceiverInterface()) {
@@ -143,13 +171,20 @@ bool CallGraph::includeInGraph(const Decl *D) {
 void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
   assert(D);
 
-  // Allocate a new node, mark it as root, and process it's calls.
+  // Allocate a new node, mark it as root, and process its calls.
   CallGraphNode *Node = getOrInsertNode(D);
 
   // Process all the calls by this function as well.
   CGBuilder builder(this, Node);
   if (Stmt *Body = D->getBody())
     builder.Visit(Body);
+
+  // Include C++ constructor member initializers.
+  if (auto constructor = dyn_cast<CXXConstructorDecl>(D)) {
+    for (CXXCtorInitializer *init : constructor->inits()) {
+      builder.Visit(init->getInit());
+    }
+  }
 }
 
 CallGraphNode *CallGraph::getNode(const Decl *F) const {

@@ -164,3 +164,14 @@ const int DefaultParmContext::I = 0;
 int DefaultParmContext::f() {
   return fDefaultParm();
 }
+
+class TestDelegateConstructor {
+public:
+  TestDelegateConstructor() : TestDelegateConstructor(2) {}
+  TestDelegateConstructor(int) {}
+};
+
+int testImportOfDelegateConstructor(int i) {
+  TestDelegateConstructor TDC;
+  return i;
+}

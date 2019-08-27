@@ -340,14 +340,14 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
   Values.clear();  // Free the old contents.
   Values.reserve(InputArgv.size());
   unsigned PtrSize = EE->getDataLayout().getPointerSize();
-  Array = make_unique<char[]>((InputArgv.size()+1)*PtrSize);
+  Array = std::make_unique<char[]>((InputArgv.size()+1)*PtrSize);
 
   LLVM_DEBUG(dbgs() << "JIT: ARGV = " << (void *)Array.get() << "\n");
   Type *SBytePtr = Type::getInt8PtrTy(C);
 
   for (unsigned i = 0; i != InputArgv.size(); ++i) {
     unsigned Size = InputArgv[i].size()+1;
-    auto Dest = make_unique<char[]>(Size);
+    auto Dest = std::make_unique<char[]>(Size);
     LLVM_DEBUG(dbgs() << "JIT: ARGV[" << i << "] = " << (void *)Dest.get()
                       << "\n");
 

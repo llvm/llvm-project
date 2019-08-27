@@ -21,7 +21,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 
 bool all_equal(int, int) { return false; } // everything is equal
 

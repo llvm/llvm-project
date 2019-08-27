@@ -570,7 +570,7 @@ UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
   }
 
   userValues.push_back(
-      llvm::make_unique<UserValue>(Var, Expr, DL, allocator));
+      std::make_unique<UserValue>(Var, Expr, DL, allocator));
   UserValue *UV = userValues.back().get();
   Leader = UserValue::merge(Leader, UV);
   return UV;
@@ -607,7 +607,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   bool Discard = false;
   if (MI.getOperand(0).isReg() &&
       Register::isVirtualRegister(MI.getOperand(0).getReg())) {
-    const unsigned Reg = MI.getOperand(0).getReg();
+    const Register Reg = MI.getOperand(0).getReg();
     if (!LIS->hasInterval(Reg)) {
       // The DBG_VALUE is described by a virtual register that does not have a
       // live interval. Discard the DBG_VALUE.
@@ -666,7 +666,7 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
     }
   }
   if (!Found)
-    userLabels.push_back(llvm::make_unique<UserLabel>(Label, DL, Idx));
+    userLabels.push_back(std::make_unique<UserLabel>(Label, DL, Idx));
 
   return true;
 }
@@ -768,7 +768,7 @@ void UserValue::addDefsFromCopies(
     // Copies of the full value.
     if (MO.getSubReg() || !MI->isCopy())
       continue;
-    unsigned DstReg = MI->getOperand(0).getReg();
+    Register DstReg = MI->getOperand(0).getReg();
 
     // Don't follow copies to physregs. These are usually setting up call
     // arguments, and the argument registers are always call clobbered. We are
@@ -1162,7 +1162,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     // Only virtual registers are rewritten.
     if (Loc.isReg() && Loc.getReg() &&
         Register::isVirtualRegister(Loc.getReg())) {
-      unsigned VirtReg = Loc.getReg();
+      Register VirtReg = Loc.getReg();
       if (VRM.isAssignedReg(VirtReg) &&
           Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {
         // This can create a %noreg operand in rare cases when the sub-register
@@ -1258,7 +1258,7 @@ findNextInsertLocation(MachineBasicBlock *MBB,
                        const TargetRegisterInfo &TRI) {
   if (!LocMO.isReg())
     return MBB->instr_end();
-  unsigned Reg = LocMO.getReg();
+  Register Reg = LocMO.getReg();
 
   // Find the next instruction in the MBB that define the register Reg.
   while (I != MBB->end() && !I->isTerminator()) {

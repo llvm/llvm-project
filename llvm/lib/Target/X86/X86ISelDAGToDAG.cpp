@@ -362,6 +362,11 @@ namespace {
         if (User->getNumOperands() != 2)
           continue;
 
+        // If this can match to INC/DEC, don't count it as a use.
+        if (User->getOpcode() == ISD::ADD &&
+            (isOneConstant(SDValue(N, 0)) || isAllOnesConstant(SDValue(N, 0))))
+          continue;
+
         // Immediates that are used for offsets as part of stack
         // manipulation should be left alone. These are typically
         // used to indicate SP offsets for argument passing and
@@ -3333,8 +3338,12 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   SDValue ImplDef = SDValue(
       CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
   insertDAGNode(*CurDAG, SDValue(Node, 0), ImplDef);
-  NBits = CurDAG->getTargetInsertSubreg(X86::sub_8bit, DL, MVT::i32, ImplDef,
-                                        NBits);
+
+  SDValue SRIdxVal = CurDAG->getTargetConstant(X86::sub_8bit, DL, MVT::i32);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), SRIdxVal);
+  NBits = SDValue(
+      CurDAG->getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::i32, ImplDef,
+                             NBits, SRIdxVal), 0);
   insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
 
   if (Subtarget->hasBMI2()) {
@@ -4363,6 +4372,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Make sure its an immediate that is considered foldable.
     // FIXME: Handle unsigned 32 bit immediates for 64-bit AND.
     if (!isInt<8>(Val) && !isInt<32>(Val))
+      break;
+
+    // If this can match to INC/DEC, let it go.
+    if (Opcode == ISD::ADD && (Val == 1 || Val == -1))
       break;
 
     // Check if we should avoid folding this immediate.

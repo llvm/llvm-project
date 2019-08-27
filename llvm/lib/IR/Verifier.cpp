@@ -673,7 +673,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         Assert(InitArray, "wrong initalizer for intrinsic global variable",
                Init);
         for (Value *Op : InitArray->operands()) {
-          Value *V = Op->stripPointerCastsNoFollowAliases();
+          Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
                  "invalid llvm.used member", V);
@@ -5067,7 +5067,7 @@ struct VerifierLegacyPass : public FunctionPass {
   }
 
   bool doInitialization(Module &M) override {
-    V = llvm::make_unique<Verifier>(
+    V = std::make_unique<Verifier>(
         &dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/false, M);
     return false;
   }

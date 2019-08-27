@@ -191,7 +191,7 @@ private:
   std::unique_ptr<ResourceOwner<ResourceT>>
   wrapOwnership(ResourcePtrT ResourcePtr) {
     using RO = ResourceOwnerImpl<ResourceT, ResourcePtrT>;
-    return llvm::make_unique<RO>(std::move(ResourcePtr));
+    return std::make_unique<RO>(std::move(ResourcePtr));
   }
 
   struct LogicalDylib {
@@ -444,7 +444,7 @@ private:
       return Error::success();
 
     // Create the GlobalValues module.
-    auto GVsM = llvm::make_unique<Module>((SrcM.getName() + ".globals").str(),
+    auto GVsM = std::make_unique<Module>((SrcM.getName() + ".globals").str(),
                                           SrcM.getContext());
     GVsM->setDataLayout(DL);
 
@@ -637,7 +637,7 @@ private:
       NewName += F->getName();
     }
 
-    auto M = llvm::make_unique<Module>(NewName, SrcM.getContext());
+    auto M = std::make_unique<Module>(NewName, SrcM.getContext());
     M->setDataLayout(SrcM.getDataLayout());
     ValueToValueMapTy VMap;
 

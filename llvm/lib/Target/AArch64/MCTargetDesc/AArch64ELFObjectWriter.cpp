@@ -57,7 +57,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 static bool isNonILP32reloc(const MCFixup &Fixup,
                             AArch64MCExpr::VariantKind RefKind,
                             MCContext &Ctx) {
-  if ((unsigned)Fixup.getKind() != AArch64::fixup_aarch64_movw)
+  if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
   case AArch64MCExpr::VK_ABS_G3:
@@ -120,7 +120,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
          "Should only be expression-level modifiers here");
 
   if (IsPCRel) {
-    switch ((unsigned)Fixup.getKind()) {
+    switch (Fixup.getTargetKind()) {
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
@@ -184,7 +184,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   } else {
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
       return ELF::R_AARCH64_NONE;
-    switch ((unsigned)Fixup.getKind()) {
+    switch (Fixup.getTargetKind()) {
     case FK_NONE:
       return ELF::R_AARCH64_NONE;
     case FK_Data_1:
@@ -448,5 +448,5 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createAArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32) {
-  return llvm::make_unique<AArch64ELFObjectWriter>(OSABI, IsILP32);
+  return std::make_unique<AArch64ELFObjectWriter>(OSABI, IsILP32);
 }

@@ -14,6 +14,14 @@
 #include <malloc.h>
 #include <unistd.h>
 
+extern "C" {
+void malloc_enable(void);
+void malloc_disable(void);
+int malloc_iterate(uintptr_t base, size_t size,
+                   void (*callback)(uintptr_t base, size_t size, void *arg),
+                   void *arg);
+}
+
 // Note that every C allocation function in the test binary will be fulfilled
 // by Scudo (this includes the gtest APIs, etc.), which is a test by itself.
 // But this might also lead to unexpected side-effects, since the allocation and
@@ -238,4 +246,37 @@ TEST(ScudoWrappersCTest, MallInfo) {
   free(P);
   MI = mallinfo();
   EXPECT_GE(static_cast<size_t>(MI.fordblks), Free + BypassQuarantineSize);
+}
+
+static uintptr_t BoundaryP;
+static size_t Count;
+
+static void callback(uintptr_t Base, size_t Size, void *Arg) {
+  if (Base == BoundaryP)
+    Count++;
+}
+
+// Verify that a block located on an iteration boundary is not mis-accounted.
+// To achieve this, we allocate a chunk for which the backing block will be
+// aligned on a page, then run the malloc_iterate on both the pages that the
+// block is a boundary for. It must only be seen once by the callback function.
+TEST(ScudoWrappersCTest, MallocIterateBoundary) {
+  const size_t PageSize = sysconf(_SC_PAGESIZE);
+  const size_t BlockDelta = FIRST_32_SECOND_64(8U, 16U);
+  const size_t SpecialSize = PageSize - BlockDelta;
+
+  void *P = malloc(SpecialSize);
+  EXPECT_NE(P, nullptr);
+  BoundaryP = reinterpret_cast<uintptr_t>(P);
+  const uintptr_t Block = BoundaryP - BlockDelta;
+  EXPECT_EQ((Block & (PageSize - 1)), 0U);
+
+  Count = 0U;
+  malloc_disable();
+  malloc_iterate(Block - PageSize, PageSize, callback, nullptr);
+  malloc_iterate(Block, PageSize, callback, nullptr);
+  malloc_enable();
+  EXPECT_EQ(Count, 1U);
+
+  free(P);
 }

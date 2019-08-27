@@ -104,14 +104,14 @@ std::unique_ptr<IPDBInjectedSource>
 NativeEnumInjectedSources::getChildAtIndex(uint32_t N) const {
   if (N >= getChildCount())
     return nullptr;
-  return make_unique<NativeInjectedSource>(std::next(Stream.begin(), N)->second,
+  return std::make_unique<NativeInjectedSource>(std::next(Stream.begin(), N)->second,
                                            File, Strings);
 }
 
 std::unique_ptr<IPDBInjectedSource> NativeEnumInjectedSources::getNext() {
   if (Cur == Stream.end())
     return nullptr;
-  return make_unique<NativeInjectedSource>((Cur++)->second, File, Strings);
+  return std::make_unique<NativeInjectedSource>((Cur++)->second, File, Strings);
 }
 
 void NativeEnumInjectedSources::reset() { Cur = Stream.begin(); }

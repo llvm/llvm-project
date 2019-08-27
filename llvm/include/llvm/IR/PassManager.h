@@ -418,7 +418,7 @@ template <typename PassT, typename IRUnitT, typename AnalysisManagerT,
 typename PassT::Result
 getAnalysisResultUnpackTuple(AnalysisManagerT &AM, IRUnitT &IR,
                              std::tuple<ArgTs...> Args,
-                             llvm::index_sequence<Ns...>) {
+                             std::index_sequence<Ns...>) {
   (void)Args;
   return AM.template getResult<PassT>(IR, std::get<Ns>(Args)...);
 }
@@ -435,7 +435,7 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
                   std::tuple<MainArgTs...> Args) {
   return (getAnalysisResultUnpackTuple<
           PassT, IRUnitT>)(AM, IR, Args,
-                           llvm::index_sequence_for<AnalysisArgTs...>{});
+                           std::index_sequence_for<AnalysisArgTs...>{});
 }
 
 } // namespace detail

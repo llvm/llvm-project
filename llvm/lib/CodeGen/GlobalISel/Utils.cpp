@@ -43,7 +43,7 @@ unsigned llvm::constrainOperandRegClass(
     const RegisterBankInfo &RBI, MachineInstr &InsertPt,
     const TargetRegisterClass &RegClass, const MachineOperand &RegMO,
     unsigned OpIdx) {
-  unsigned Reg = RegMO.getReg();
+  Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
 
@@ -72,7 +72,7 @@ unsigned llvm::constrainOperandRegClass(
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt, const MCInstrDesc &II,
     const MachineOperand &RegMO, unsigned OpIdx) {
-  unsigned Reg = RegMO.getReg();
+  Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
 
@@ -128,7 +128,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
     LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
     assert(MO.isReg() && "Unsupported non-reg operand");
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
     if (Register::isPhysicalRegister(Reg))
       continue;
@@ -168,7 +168,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
     if (!MO.isReg() || !MO.isDef())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Register::isPhysicalRegister(Reg) || !MRI.use_nodbg_empty(Reg))
       return false;
   }
@@ -288,7 +288,7 @@ llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
   if (!DstTy.isValid())
     return nullptr;
   while (DefMI->getOpcode() == TargetOpcode::COPY) {
-    unsigned SrcReg = DefMI->getOperand(1).getReg();
+    Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid() || SrcTy != DstTy)
       break;

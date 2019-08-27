@@ -28,6 +28,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -57,7 +58,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   ShouldDiscardValueNames = false;
 
   std::error_code EC;
-  ResolutionFile = llvm::make_unique<raw_fd_ostream>(
+  ResolutionFile = std::make_unique<raw_fd_ostream>(
       OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
     return errorCodeToError(EC);
@@ -165,7 +166,10 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                         PGOOptions::IRUse, PGOOptions::CSIRUse);
   }
 
-  PassBuilder PB(TM, PipelineTuningOptions(), PGOOpt);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI;
+  SI.registerCallbacks(PIC);
+  PassBuilder PB(TM, PipelineTuningOptions(),PGOOpt, &PIC);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
@@ -329,7 +333,7 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
   if (!DwoFile.empty()) {
     std::error_code EC;
-    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
+    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
       report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
   }

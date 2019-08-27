@@ -371,7 +371,7 @@ std::unique_ptr<MetaSerializer> BitstreamRemarkSerializer::metaSerializer(
          BitstreamRemarkContainerType::SeparateRemarksMeta);
   bool IsStandalone =
       Helper.ContainerType == BitstreamRemarkContainerType::Standalone;
-  return llvm::make_unique<BitstreamMetaSerializer>(
+  return std::make_unique<BitstreamMetaSerializer>(
       OS,
       IsStandalone ? BitstreamRemarkContainerType::Standalone
                    : BitstreamRemarkContainerType::SeparateRemarksMeta,

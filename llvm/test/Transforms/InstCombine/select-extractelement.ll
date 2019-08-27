@@ -146,8 +146,8 @@ entry:
 
 define <4 x i32> @extract_cond(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv) {
 ; CHECK-LABEL: @extract_cond(
-; CHECK-NEXT:    [[COND:%.*]] = extractelement <4 x i1> [[CONDV:%.*]], i32 3
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i1> [[CONDV:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[DOTSPLAT]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %cond = extractelement <4 x i1> %condv, i32 3
@@ -168,6 +168,8 @@ define <4 x i32> @splat_cond(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv) {
 
 declare void @extra_use(i1)
 
+; Negative test
+
 define <4 x i32> @extract_cond_extra_use(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv) {
 ; CHECK-LABEL: @extract_cond_extra_use(
 ; CHECK-NEXT:    [[COND:%.*]] = extractelement <4 x i1> [[CONDV:%.*]], i32 3
@@ -181,6 +183,8 @@ define <4 x i32> @extract_cond_extra_use(<4 x i32> %x, <4 x i32> %y, <4 x i1> %c
   ret <4 x i32> %r
 }
 
+; Negative test
+
 define <4 x i32> @extract_cond_variable_index(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv, i32 %index) {
 ; CHECK-LABEL: @extract_cond_variable_index(
 ; CHECK-NEXT:    [[COND:%.*]] = extractelement <4 x i1> [[CONDV:%.*]], i32 [[INDEX:%.*]]
@@ -192,10 +196,12 @@ define <4 x i32> @extract_cond_variable_index(<4 x i32> %x, <4 x i32> %y, <4 x i
   ret <4 x i32> %r
 }
 
+; IR shuffle can alter the number of elements in the vector, so this is ok.
+
 define <4 x i32> @extract_cond_type_mismatch(<4 x i32> %x, <4 x i32> %y, <5 x i1> %condv) {
 ; CHECK-LABEL: @extract_cond_type_mismatch(
-; CHECK-NEXT:    [[COND:%.*]] = extractelement <5 x i1> [[CONDV:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <5 x i1> [[CONDV:%.*]], <5 x i1> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[DOTSPLAT]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %cond = extractelement <5 x i1> %condv, i32 1

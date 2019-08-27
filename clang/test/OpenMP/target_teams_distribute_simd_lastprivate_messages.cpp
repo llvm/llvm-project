@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -240,7 +243,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd lastprivate(si) // OK
   for (i = 0; i < argc; ++i) si = i + 1;
 
-#pragma omp target teams distribute simd lastprivate(k) map(k) // expected-error {{lastprivate variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} expected-note {{defined as lastprivate}}
+#pragma omp target teams distribute simd lastprivate(k) map(k) // le45-error {{lastprivate variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} le45-note {{defined as lastprivate}}
   for (i = 0; i < argc; ++i) foo();
 
   return foomain<S4, S5>(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<S4, S5>' requested here}}

@@ -695,7 +695,7 @@ struct InstrProfRecord {
   InstrProfRecord(const InstrProfRecord &RHS)
       : Counts(RHS.Counts),
         ValueData(RHS.ValueData
-                      ? llvm::make_unique<ValueProfData>(*RHS.ValueData)
+                      ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
@@ -705,7 +705,7 @@ struct InstrProfRecord {
       return *this;
     }
     if (!ValueData)
-      ValueData = llvm::make_unique<ValueProfData>(*RHS.ValueData);
+      ValueData = std::make_unique<ValueProfData>(*RHS.ValueData);
     else
       *ValueData = *RHS.ValueData;
     return *this;
@@ -817,7 +817,7 @@ private:
   std::vector<InstrProfValueSiteRecord> &
   getOrCreateValueSitesForKind(uint32_t ValueKind) {
     if (!ValueData)
-      ValueData = llvm::make_unique<ValueProfData>();
+      ValueData = std::make_unique<ValueProfData>();
     switch (ValueKind) {
     case IPVK_IndirectCallTarget:
       return ValueData->IndirectCallSites;
@@ -897,7 +897,7 @@ InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site,
     return std::unique_ptr<InstrProfValueData[]>(nullptr);
   }
 
-  auto VD = llvm::make_unique<InstrProfValueData[]>(N);
+  auto VD = std::make_unique<InstrProfValueData[]>(N);
   TotalCount = getValueForSite(VD.get(), ValueKind, Site);
 
   return VD;

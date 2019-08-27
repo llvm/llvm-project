@@ -4,7 +4,7 @@ target triple = "armv7"
 ; CHECK-LABEL: func:
 ; CHECK: push {r11, lr}
 ; CHECK: vpush {d8}
-; CHECK: .LBB0_1: @ %tailrecurse
+; CHECK: b .LBB0_2
 define arm_aapcscc double @func() {
   br label %tailrecurse
 

@@ -130,9 +130,9 @@ define <4 x i32> @sel_0_or_minus1_vec(<4 x i1> %cond) {
 ; CHECK-LABEL: sel_0_or_minus1_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 3, 1
-; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    xxland 34, 34, 35
-; CHECK-NEXT:    vadduwm 2, 2, 4
+; CHECK-NEXT:    xxleqv 35, 35, 35
+; CHECK-NEXT:    vadduwm 2, 2, 3
 ; CHECK-NEXT:    blr
   %add = select <4 x i1> %cond, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %add

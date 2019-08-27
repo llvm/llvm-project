@@ -188,7 +188,7 @@ namespace {
       else {
         auto It = ValueCache.find_as(Val);
         if (It == ValueCache.end()) {
-          ValueCache[Val] = make_unique<ValueCacheEntryTy>(Val, this);
+          ValueCache[Val] = std::make_unique<ValueCacheEntryTy>(Val, this);
           It = ValueCache.find_as(Val);
           assert(It != ValueCache.end() && "Val was just added to the map!");
         }

@@ -380,11 +380,11 @@ parseRewriteFunctionDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
   // TODO see if there is a more elegant solution to selecting the rewrite
   // descriptor type
   if (!Target.empty())
-    DL->push_back(llvm::make_unique<ExplicitRewriteFunctionDescriptor>(
+    DL->push_back(std::make_unique<ExplicitRewriteFunctionDescriptor>(
         Source, Target, Naked));
   else
     DL->push_back(
-        llvm::make_unique<PatternRewriteFunctionDescriptor>(Source, Transform));
+        std::make_unique<PatternRewriteFunctionDescriptor>(Source, Transform));
 
   return true;
 }
@@ -442,11 +442,11 @@ parseRewriteGlobalVariableDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
   }
 
   if (!Target.empty())
-    DL->push_back(llvm::make_unique<ExplicitRewriteGlobalVariableDescriptor>(
+    DL->push_back(std::make_unique<ExplicitRewriteGlobalVariableDescriptor>(
         Source, Target,
         /*Naked*/ false));
   else
-    DL->push_back(llvm::make_unique<PatternRewriteGlobalVariableDescriptor>(
+    DL->push_back(std::make_unique<PatternRewriteGlobalVariableDescriptor>(
         Source, Transform));
 
   return true;
@@ -505,11 +505,11 @@ parseRewriteGlobalAliasDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
   }
 
   if (!Target.empty())
-    DL->push_back(llvm::make_unique<ExplicitRewriteNamedAliasDescriptor>(
+    DL->push_back(std::make_unique<ExplicitRewriteNamedAliasDescriptor>(
         Source, Target,
         /*Naked*/ false));
   else
-    DL->push_back(llvm::make_unique<PatternRewriteNamedAliasDescriptor>(
+    DL->push_back(std::make_unique<PatternRewriteNamedAliasDescriptor>(
         Source, Transform));
 
   return true;

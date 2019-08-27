@@ -861,7 +861,7 @@ private:
                                     Constant *RHSC);
   Instruction *foldICmpAddOpConst(Value *X, const APInt &C,
                                   ICmpInst::Predicate Pred);
-  Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
+  Instruction *foldICmpWithCastOp(ICmpInst &ICI);
 
   Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpWithDominatingICmp(ICmpInst &Cmp);

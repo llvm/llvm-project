@@ -127,7 +127,7 @@ TEST(TimePassesTest, CustomOut) {
 
   // Setup time-passes handler and redirect output to the stream.
   std::unique_ptr<TimePassesHandler> TimePasses =
-      llvm::make_unique<TimePassesHandler>(true);
+      std::make_unique<TimePassesHandler>(true);
   TimePasses->setOutStream(ReportStream);
   TimePasses->registerCallbacks(PIC);
 

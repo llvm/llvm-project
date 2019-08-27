@@ -184,11 +184,11 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
                        : TPC.isGISelCSEEnabled();
 
   if (EnableCSE) {
-    MIRBuilder = make_unique<CSEMIRBuilder>();
+    MIRBuilder = std::make_unique<CSEMIRBuilder>();
     CSEInfo = &Wrapper.get(TPC.getCSEConfig());
     MIRBuilder->setCSEInfo(CSEInfo);
   } else
-    MIRBuilder = make_unique<MachineIRBuilder>();
+    MIRBuilder = std::make_unique<MachineIRBuilder>();
   // This observer keeps the worklist updated.
   LegalizerWorkListManager WorkListObserver(InstList, ArtifactList);
   // We want both WorkListObserver as well as CSEInfo to observe all changes.
@@ -206,8 +206,16 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
     WrapperObserver.erasingInstr(*DeadMI);
   };
+  auto stopLegalizing = [&](MachineInstr &MI) {
+    Helper.MIRBuilder.stopObservingChanges();
+    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+                       "unable to legalize instruction", MI);
+  };
   bool Changed = false;
+  SmallVector<MachineInstr *, 128> RetryList;
   do {
+    assert(RetryList.empty() && "Expected no instructions in RetryList");
+    unsigned NumArtifacts = ArtifactList.size();
     while (!InstList.empty()) {
       MachineInstr &MI = *InstList.pop_back_val();
       assert(isPreISelGenericOpcode(MI.getOpcode()) && "Expecting generic opcode");
@@ -222,13 +230,30 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // Error out if we couldn't legalize this instruction. We may want to
       // fall back to DAG ISel instead in the future.
       if (Res == LegalizerHelper::UnableToLegalize) {
-        Helper.MIRBuilder.stopObservingChanges();
-        reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
-                           "unable to legalize instruction", MI);
+        // Move illegal artifacts to RetryList instead of aborting because
+        // legalizing InstList may generate artifacts that allow
+        // ArtifactCombiner to combine away them.
+        if (isArtifact(MI)) {
+          RetryList.push_back(&MI);
+          continue;
+        }
+        stopLegalizing(MI);
         return false;
       }
       WorkListObserver.printNewInstrs();
       Changed |= Res == LegalizerHelper::Legalized;
+    }
+    // Try to combine the instructions in RetryList again if there
+    // are new artifacts. If not, stop legalizing.
+    if (!RetryList.empty()) {
+      if (ArtifactList.size() > NumArtifacts) {
+        while (!RetryList.empty())
+          ArtifactList.insert(RetryList.pop_back_val());
+      } else {
+        MachineInstr *MI = *RetryList.begin();
+        stopLegalizing(*MI);
+        return false;
+      }
     }
     while (!ArtifactList.empty()) {
       MachineInstr &MI = *ArtifactList.pop_back_val();

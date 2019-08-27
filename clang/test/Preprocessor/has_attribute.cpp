@@ -31,6 +31,9 @@ __clang__::fallthrough: __has_cpp_attribute(__clang__::fallthrough)
 // CHECK: _Clang::fallthrough: 201603L
 CXX11(_Clang::fallthrough)
 
+// CHECK: __nodiscard__: 201907L
+CXX11(__nodiscard__)
+
 // CHECK: __gnu__::__const__: 1
 CXX11(__gnu__::__const__)
 

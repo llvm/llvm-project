@@ -372,7 +372,7 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
 
   if (Opcode == ARM::tADDframe) {
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
-    unsigned DestReg = MI.getOperand(0).getReg();
+    Register DestReg = MI.getOperand(0).getReg();
 
     emitThumbRegPlusImmediate(MBB, II, dl, DestReg, FrameReg, Offset, TII,
                               *this);
@@ -510,7 +510,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   if (MI.mayLoad()) {
     // Use the destination register to materialize sp + offset.
-    unsigned TmpReg = MI.getOperand(0).getReg();
+    Register TmpReg = MI.getOperand(0).getReg();
     bool UseRR = false;
     if (Opcode == ARM::tLDRspi) {
       if (FrameReg == ARM::SP || STI.genExecuteOnly())

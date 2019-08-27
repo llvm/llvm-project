@@ -53,17 +53,6 @@
 using namespace clang;
 using namespace ento;
 
-bool PathDiagnosticMacroPiece::containsEvent() const {
-  for (const auto &P : subPieces) {
-    if (isa<PathDiagnosticEventPiece>(*P))
-      return true;
-    if (const auto *MP = dyn_cast<PathDiagnosticMacroPiece>(P.get()))
-      if (MP->containsEvent())
-        return true;
-  }
-  return false;
-}
-
 static StringRef StripTrailingDots(StringRef s) {
   for (StringRef::size_type i = s.size(); i != 0; --i)
     if (s[i - 1] != '.')

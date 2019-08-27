@@ -68,11 +68,9 @@ lldb::OptionValueSP OptionValueArch::DeepCopy() const {
   return OptionValueSP(new OptionValueArch(*this));
 }
 
-size_t OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
-                                     CompletionRequest &request) {
-  request.SetWordComplete(false);
+void OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
+                                   CompletionRequest &request) {
   CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, CommandCompletions::eArchitectureCompletion, request,
       nullptr);
-  return request.GetNumberOfMatches();
 }

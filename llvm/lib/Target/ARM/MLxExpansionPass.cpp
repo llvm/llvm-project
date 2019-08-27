@@ -86,7 +86,7 @@ void MLxExpansion::pushStack(MachineInstr *MI) {
 MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
   // Look past COPY and INSERT_SUBREG instructions to find the
   // real definition MI. This is important for _sfp instructions.
-  unsigned Reg = MI->getOperand(1).getReg();
+  Register Reg = MI->getOperand(1).getReg();
   if (Register::isPhysicalRegister(Reg))
     return nullptr;
 
@@ -114,7 +114,7 @@ MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
 }
 
 unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
-  unsigned Reg = MI->getOperand(0).getReg();
+  Register Reg = MI->getOperand(0).getReg();
   if (Register::isPhysicalRegister(Reg) || !MRI->hasOneNonDBGUse(Reg))
     return Reg;
 
@@ -138,7 +138,7 @@ unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
 /// hasLoopHazard - Check whether an MLx instruction is chained to itself across
 /// a single-MBB loop.
 bool MLxExpansion::hasLoopHazard(MachineInstr *MI) const {
-  unsigned Reg = MI->getOperand(1).getReg();
+  Register Reg = MI->getOperand(1).getReg();
   if (Register::isPhysicalRegister(Reg))
     return false;
 
@@ -152,7 +152,7 @@ outer_continue:
     if (DefMI->isPHI()) {
       for (unsigned i = 1, e = DefMI->getNumOperands(); i < e; i += 2) {
         if (DefMI->getOperand(i + 1).getMBB() == MBB) {
-          unsigned SrcReg = DefMI->getOperand(i).getReg();
+          Register SrcReg = DefMI->getOperand(i).getReg();
           if (Register::isVirtualRegister(SrcReg)) {
             DefMI = MRI->getVRegDef(SrcReg);
             goto outer_continue;
@@ -269,23 +269,23 @@ void
 MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
                                      unsigned MulOpc, unsigned AddSubOpc,
                                      bool NegAcc, bool HasLane) {
-  unsigned DstReg = MI->getOperand(0).getReg();
+  Register DstReg = MI->getOperand(0).getReg();
   bool DstDead = MI->getOperand(0).isDead();
-  unsigned AccReg = MI->getOperand(1).getReg();
-  unsigned Src1Reg = MI->getOperand(2).getReg();
-  unsigned Src2Reg = MI->getOperand(3).getReg();
+  Register AccReg = MI->getOperand(1).getReg();
+  Register Src1Reg = MI->getOperand(2).getReg();
+  Register Src2Reg = MI->getOperand(3).getReg();
   bool Src1Kill = MI->getOperand(2).isKill();
   bool Src2Kill = MI->getOperand(3).isKill();
   unsigned LaneImm = HasLane ? MI->getOperand(4).getImm() : 0;
   unsigned NextOp = HasLane ? 5 : 4;
   ARMCC::CondCodes Pred = (ARMCC::CondCodes)MI->getOperand(NextOp).getImm();
-  unsigned PredReg = MI->getOperand(++NextOp).getReg();
+  Register PredReg = MI->getOperand(++NextOp).getReg();
 
   const MCInstrDesc &MCID1 = TII->get(MulOpc);
   const MCInstrDesc &MCID2 = TII->get(AddSubOpc);
   const MachineFunction &MF = *MI->getParent()->getParent();
-  unsigned TmpReg = MRI->createVirtualRegister(
-                      TII->getRegClass(MCID1, 0, TRI, MF));
+  Register TmpReg =
+      MRI->createVirtualRegister(TII->getRegClass(MCID1, 0, TRI, MF));
 
   MachineInstrBuilder MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID1, TmpReg)
     .addReg(Src1Reg, getKillRegState(Src1Kill))

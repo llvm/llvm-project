@@ -49,6 +49,18 @@ define double @pow_uitofp_double_const_base_fast(i31 %x) {
   ret double %pow
 }
 
+define double @pow_sitofp_double_const_base_2_fast(i32 %x) {
+; CHECK-LABEL: @pow_sitofp_double_const_base_2_fast(
+; CHECK-NEXT:    [[LDEXPF:%.*]] = call afn float @ldexpf(float 1.000000e+00, i32 [[X:%.*]]) #1
+; CHECK-NEXT:    [[RES:%.*]] = fpext float [[LDEXPF]] to double
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %subfp = sitofp i32 %x to float
+  %pow = tail call afn float @llvm.pow.f32(float 2.000000e+00, float %subfp)
+  %res = fpext float %pow to double
+  ret double %res
+}
+
 define double @pow_sitofp_double_const_base_power_of_2_fast(i32 %x) {
 ; CHECK-LABEL: @pow_sitofp_double_const_base_power_of_2_fast(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i32 [[X:%.*]] to float
@@ -59,6 +71,19 @@ define double @pow_sitofp_double_const_base_power_of_2_fast(i32 %x) {
 ;
   %subfp = sitofp i32 %x to float
   %pow = tail call afn float @llvm.pow.f32(float 16.000000e+00, float %subfp)
+  %res = fpext float %pow to double
+  ret double %res
+}
+
+define double @pow_uitofp_const_base_2_fast(i31 %x) {
+; CHECK-LABEL: @pow_uitofp_const_base_2_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i31 [[X:%.*]] to i32
+; CHECK-NEXT:    [[LDEXPF:%.*]] = call afn float @ldexpf(float 1.000000e+00, i32 [[TMP1]]) #1
+; CHECK-NEXT:    [[RES:%.*]] = fpext float [[LDEXPF]] to double
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %subfp = uitofp i31 %x to float
+  %pow = tail call afn float @llvm.pow.f32(float 2.000000e+00, float %subfp)
   %res = fpext float %pow to double
   ret double %res
 }
@@ -210,6 +235,19 @@ define double @pow_uitofp_const_base_fast_i32(i32 %x) {
   ret double %res
 }
 
+define double @pow_uitofp_const_base_2_fast_i32(i32 %x) {
+; CHECK-LABEL: @pow_uitofp_const_base_2_fast_i32(
+; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[SUBFP]])
+; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %subfp = uitofp i32 %x to float
+  %pow = tail call fast float @llvm.pow.f32(float 2.000000e+00, float %subfp)
+  %res = fpext float %pow to double
+  ret double %res
+}
+
 define double @pow_uitofp_const_base_power_of_2_fast_i32(i32 %x) {
 ; CHECK-LABEL: @pow_uitofp_const_base_power_of_2_fast_i32(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X:%.*]] to float
@@ -303,6 +341,18 @@ define double @pow_uitofp_const_base_no_fast(i32 %x) {
   ret double %res
 }
 
+define double @pow_sitofp_const_base_2_no_fast(i32 %x) {
+; CHECK-LABEL: @pow_sitofp_const_base_2_no_fast(
+; CHECK-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[X:%.*]]) #1
+; CHECK-NEXT:    [[RES:%.*]] = fpext float [[LDEXPF]] to double
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %subfp = sitofp i32 %x to float
+  %pow = tail call float @llvm.pow.f32(float 2.000000e+00, float %subfp)
+  %res = fpext float %pow to double
+  ret double %res
+}
+
 define double @pow_sitofp_const_base_power_of_2_no_fast(i32 %x) {
 ; CHECK-LABEL: @pow_sitofp_const_base_power_of_2_no_fast(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i32 [[X:%.*]] to float
@@ -313,6 +363,19 @@ define double @pow_sitofp_const_base_power_of_2_no_fast(i32 %x) {
 ;
   %subfp = sitofp i32 %x to float
   %pow = tail call float @llvm.pow.f32(float 16.000000e+00, float %subfp)
+  %res = fpext float %pow to double
+  ret double %res
+}
+
+define double @pow_uitofp_const_base_2_no_fast(i32 %x) {
+; CHECK-LABEL: @pow_uitofp_const_base_2_no_fast(
+; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.exp2.f32(float [[SUBFP]])
+; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %subfp = uitofp i32 %x to float
+  %pow = tail call float @llvm.pow.f32(float 2.000000e+00, float %subfp)
   %res = fpext float %pow to double
   ret double %res
 }

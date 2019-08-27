@@ -273,7 +273,7 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
     if (!Use.isReg() || !Use.isUse())
       continue;
 
-    unsigned Reg = Use.getReg();
+    Register Reg = Use.getReg();
 
     // Handle physical registers that we need to track; this is mostly relevant
     // for VCC, which can appear as the (implicit) input of a uniform branch,
@@ -361,7 +361,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           if (Inactive.isUndef()) {
             LowerToCopyInstrs.push_back(&MI);
           } else {
-            unsigned Reg = Inactive.getReg();
+            Register Reg = Inactive.getReg();
             if (Register::isVirtualRegister(Reg)) {
               for (MachineInstr &DefMI : MRI->def_instructions(Reg))
                 markInstruction(DefMI, StateWWM, Worklist);
@@ -390,7 +390,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             if (!MO.isReg())
               continue;
 
-            unsigned Reg = MO.getReg();
+            Register Reg = MO.getReg();
 
             if (!Register::isVirtualRegister(Reg) &&
                 TRI->hasVectorRegisters(TRI->getPhysRegClass(Reg))) {
@@ -556,7 +556,7 @@ bool SIWholeQuadMode::requiresCorrectState(const MachineInstr &MI) const {
 MachineBasicBlock::iterator
 SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator Before) {
-  unsigned SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   MachineInstr *Save =
       BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), SaveReg)
@@ -840,7 +840,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
 void SIWholeQuadMode::lowerLiveMaskQueries(unsigned LiveMaskReg) {
   for (MachineInstr *MI : LiveMaskQueries) {
     const DebugLoc &DL = MI->getDebugLoc();
-    unsigned Dest = MI->getOperand(0).getReg();
+    Register Dest = MI->getOperand(0).getReg();
     MachineInstr *Copy =
         BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
             .addReg(LiveMaskReg);
@@ -855,7 +855,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
     for (unsigned i = MI->getNumExplicitOperands() - 1; i > 1; i--)
       MI->RemoveOperand(i);
 
-    const unsigned Reg = MI->getOperand(0).getReg();
+    const Register Reg = MI->getOperand(0).getReg();
 
     if (TRI->isVGPR(*MRI, Reg)) {
       const TargetRegisterClass *regClass = Register::isVirtualRegister(Reg)

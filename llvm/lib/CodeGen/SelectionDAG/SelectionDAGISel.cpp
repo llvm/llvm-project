@@ -436,7 +436,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   RegInfo = &MF->getRegInfo();
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   GFI = Fn.hasGC() ? &getAnalysis<GCModuleInfo>().getFunctionInfo(Fn) : nullptr;
-  ORE = make_unique<OptimizationRemarkEmitter>(&Fn);
+  ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();

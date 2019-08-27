@@ -324,18 +324,18 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
       getLastArgIntValue(Args, OPT_analyzer_inline_max_stack_depth,
                          Opts.InlineMaxStackDepth, Diags);
 
-  Opts.CheckersControlList.clear();
+  Opts.CheckersAndPackages.clear();
   for (const Arg *A :
        Args.filtered(OPT_analyzer_checker, OPT_analyzer_disable_checker)) {
     A->claim();
-    bool enable = (A->getOption().getID() == OPT_analyzer_checker);
+    bool IsEnabled = A->getOption().getID() == OPT_analyzer_checker;
     // We can have a list of comma separated checker names, e.g:
     // '-analyzer-checker=cocoa,unix'
-    StringRef checkerList = A->getValue();
-    SmallVector<StringRef, 4> checkers;
-    checkerList.split(checkers, ",");
-    for (auto checker : checkers)
-      Opts.CheckersControlList.emplace_back(checker, enable);
+    StringRef CheckerAndPackageList = A->getValue();
+    SmallVector<StringRef, 16> CheckersAndPackages;
+    CheckerAndPackageList.split(CheckersAndPackages, ",");
+    for (const StringRef CheckerOrPackage : CheckersAndPackages)
+      Opts.CheckersAndPackages.emplace_back(CheckerOrPackage, IsEnabled);
   }
 
   // Go through the analyzer configuration options.
@@ -463,6 +463,35 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   // At this point, AnalyzerOptions is configured. Let's validate some options.
+
+  // FIXME: Here we try to validate the silenced checkers or packages are valid.
+  // The current approach only validates the registered checkers which does not
+  // contain the runtime enabled checkers and optimally we would validate both.
+  if (!AnOpts.RawSilencedCheckersAndPackages.empty()) {
+    std::vector<StringRef> Checkers =
+        AnOpts.getRegisteredCheckers(/*IncludeExperimental=*/true);
+    std::vector<StringRef> Packages =
+        AnOpts.getRegisteredPackages(/*IncludeExperimental=*/true);
+
+    SmallVector<StringRef, 16> CheckersAndPackages;
+    AnOpts.RawSilencedCheckersAndPackages.split(CheckersAndPackages, ";");
+
+    for (const StringRef CheckerOrPackage : CheckersAndPackages) {
+      if (Diags) {
+        bool IsChecker = CheckerOrPackage.contains('.');
+        bool IsValidName =
+            IsChecker
+                ? llvm::find(Checkers, CheckerOrPackage) != Checkers.end()
+                : llvm::find(Packages, CheckerOrPackage) != Packages.end();
+
+        if (!IsValidName)
+          Diags->Report(diag::err_unknown_analyzer_checker_or_package)
+              << CheckerOrPackage;
+      }
+
+      AnOpts.SilencedCheckersAndPackages.emplace_back(CheckerOrPackage);
+    }
+  }
 
   if (!Diags)
     return;
@@ -1702,22 +1731,28 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     case OPT_emit_pch:
       Opts.ProgramAction = frontend::GeneratePCH; break;
     case OPT_emit_iterface_stubs: {
+      StringRef ArgStr =
+          Args.hasArg(OPT_iterface_stub_version_EQ)
+              ? Args.getLastArgValue(OPT_iterface_stub_version_EQ)
+              : "";
       llvm::Optional<frontend::ActionKind> ProgramAction =
-          llvm::StringSwitch<llvm::Optional<frontend::ActionKind>>(
-              Args.hasArg(OPT_iterface_stub_version_EQ)
-                  ? Args.getLastArgValue(OPT_iterface_stub_version_EQ)
-                  : "")
-              .Case("experimental-yaml-elf-v1",
-                    frontend::GenerateInterfaceYAMLExpV1)
-              .Case("experimental-tapi-elf-v1",
-                    frontend::GenerateInterfaceTBEExpV1)
+          llvm::StringSwitch<llvm::Optional<frontend::ActionKind>>(ArgStr)
+              .Case("experimental-ifs-v1", frontend::GenerateInterfaceIfsExpV1)
               .Default(llvm::None);
-      if (!ProgramAction)
+      if (!ProgramAction) {
+        std::string ErrorMessage =
+            "Invalid interface stub format: " + ArgStr.str() +
+            ((ArgStr == "experimental-yaml-elf-v1" ||
+              ArgStr == "experimental-tapi-elf-v1")
+                 ? " is deprecated."
+                 : ".");
         Diags.Report(diag::err_drv_invalid_value)
-            << "Must specify a valid interface stub format type using "
-            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
-               "experimental-yaml-elf-v1>";
-      Opts.ProgramAction = *ProgramAction;
+            << "Must specify a valid interface stub format type, ie: "
+               "-interface-stub-version=experimental-ifs-v1"
+            << ErrorMessage;
+      } else {
+        Opts.ProgramAction = *ProgramAction;
+      }
       break;
     }
     case OPT_init_only:
@@ -3157,8 +3192,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateModuleInterface:
   case frontend::GenerateHeaderModule:
   case frontend::GeneratePCH:
-  case frontend::GenerateInterfaceYAMLExpV1:
-  case frontend::GenerateInterfaceTBEExpV1:
+  case frontend::GenerateInterfaceIfsExpV1:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
   case frontend::VerifyPCH:

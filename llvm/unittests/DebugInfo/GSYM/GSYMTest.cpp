@@ -8,12 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
+#include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
-#include "llvm/Testing/Support/Error.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Endian.h"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -378,4 +381,119 @@ TEST(GSYMTest, TestStringTable) {
   EXPECT_EQ(StrTab.getString(12), "");
   // Test pointing to past end gets empty string.
   EXPECT_EQ(StrTab.getString(13), "");
+}
+
+static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const int64_t MinSLEB = INT64_MIN;
+  const int64_t MaxSLEB = INT64_MAX;
+  const uint64_t MinULEB = 0;
+  const uint64_t MaxULEB = UINT64_MAX;
+  const uint8_t U8 = 0x10;
+  const uint16_t U16 = 0x1122;
+  const uint32_t U32 = 0x12345678;
+  const uint64_t U64 = 0x33445566778899aa;
+  const char *Hello = "hello";
+  FW.writeU8(U8);
+  FW.writeU16(U16);
+  FW.writeU32(U32);
+  FW.writeU64(U64);
+  FW.alignTo(16);
+  const off_t FixupOffset = FW.tell();
+  FW.writeU32(0);
+  FW.writeSLEB(MinSLEB);
+  FW.writeSLEB(MaxSLEB);
+  FW.writeULEB(MinULEB);
+  FW.writeULEB(MaxULEB);
+  FW.writeNullTerminated(Hello);
+  // Test Seek, Tell using Fixup32.
+  FW.fixup32(U32, FixupOffset);
+
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  uint64_t Offset = 0;
+  EXPECT_EQ(Data.getU8(&Offset), U8);
+  EXPECT_EQ(Data.getU16(&Offset), U16);
+  EXPECT_EQ(Data.getU32(&Offset), U32);
+  EXPECT_EQ(Data.getU64(&Offset), U64);
+  Offset = alignTo(Offset, 16);
+  EXPECT_EQ(Data.getU32(&Offset), U32);
+  EXPECT_EQ(Data.getSLEB128(&Offset), MinSLEB);
+  EXPECT_EQ(Data.getSLEB128(&Offset), MaxSLEB);
+  EXPECT_EQ(Data.getULEB128(&Offset), MinULEB);
+  EXPECT_EQ(Data.getULEB128(&Offset), MaxULEB);
+  EXPECT_EQ(Data.getCStrRef(&Offset), StringRef(Hello));
+}
+
+TEST(GSYMTest, TestFileWriter) {
+  TestFileWriterHelper(llvm::support::little);
+  TestFileWriterHelper(llvm::support::big);
+}
+
+TEST(GSYMTest, TestAddressRangeEncodeDecode) {
+  // Test encoding and decoding AddressRange objects. AddressRange objects
+  // are always stored as offsets from the a base address. The base address
+  // is the FunctionInfo's base address for function level ranges, and is
+  // the base address of the parent range for subranges.
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = 0x1000;
+  const AddressRange Range1(0x1000, 0x1010);
+  const AddressRange Range2(0x1020, 0x1030);
+  Range1.encode(FW, BaseAddr);
+  Range2.encode(FW, BaseAddr);
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+
+  AddressRange DecodedRange1, DecodedRange2;
+  uint64_t Offset = 0;
+  DecodedRange1.decode(Data, BaseAddr, Offset);
+  DecodedRange2.decode(Data, BaseAddr, Offset);
+  EXPECT_EQ(Range1, DecodedRange1);
+  EXPECT_EQ(Range2, DecodedRange2);
+}
+
+static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
+                                               const uint64_t BaseAddr) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  Ranges.encode(FW, BaseAddr);
+
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+
+  AddressRanges DecodedRanges;
+  uint64_t Offset = 0;
+  DecodedRanges.decode(Data, BaseAddr, Offset);
+  EXPECT_EQ(Ranges, DecodedRanges);
+}
+
+TEST(GSYMTest, TestAddressRangesEncodeDecode) {
+  // Test encoding and decoding AddressRanges. AddressRanges objects contain
+  // ranges that are stored as offsets from the a base address. The base address
+  // is the FunctionInfo's base address for function level ranges, and is the
+  // base address of the parent range for subranges.
+  const uint64_t BaseAddr = 0x1000;
+
+  // Test encoding and decoding with no ranges.
+  AddressRanges Ranges;
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
+
+  // Test encoding and decoding with 1 range.
+  Ranges.insert(AddressRange(0x1000, 0x1010));
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
+
+  // Test encoding and decoding with multiple ranges.
+  Ranges.insert(AddressRange(0x1020, 0x1030));
+  Ranges.insert(AddressRange(0x1050, 0x1070));
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
 }

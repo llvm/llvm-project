@@ -35,7 +35,7 @@ entry:
 define void @realign() {
 entry:
 ; CHECK-LABEL: realign:
-; CHECK:      add  x29, sp, #16
+; CHECK:      mov  x29, sp
 ; CHECK:      and  sp, x{{[0-9]*}}, #0xffffffffffffffc0
 ; CHECK:      irg  [[R:x[0-9]+]], sp{{$}}
 ; CHECK:      addg x0, [[R]], #0, #1

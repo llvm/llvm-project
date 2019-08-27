@@ -36,14 +36,9 @@ Error COFFReader::readExecutableHeaders(Object &Obj) const {
                                     DH->AddressOfNewExeHeader - sizeof(*DH));
 
   if (COFFObj.is64()) {
-    const pe32plus_header *PE32Plus = nullptr;
-    if (auto EC = COFFObj.getPE32PlusHeader(PE32Plus))
-      return errorCodeToError(EC);
-    Obj.PeHeader = *PE32Plus;
+    Obj.PeHeader = *COFFObj.getPE32PlusHeader();
   } else {
-    const pe32_header *PE32 = nullptr;
-    if (auto EC = COFFObj.getPE32Header(PE32))
-      return errorCodeToError(EC);
+    const pe32_header *PE32 = COFFObj.getPE32Header();
     copyPeHeader(Obj.PeHeader, *PE32);
     // The pe32plus_header (stored in Object) lacks the BaseOfData field.
     Obj.BaseOfData = PE32->BaseOfData;
@@ -196,16 +191,13 @@ Error COFFReader::setSymbolTargets(Object &Obj) const {
 }
 
 Expected<std::unique_ptr<Object>> COFFReader::create() const {
-  auto Obj = llvm::make_unique<Object>();
+  auto Obj = std::make_unique<Object>();
 
-  const coff_file_header *CFH = nullptr;
-  const coff_bigobj_file_header *CBFH = nullptr;
-  COFFObj.getCOFFHeader(CFH);
-  COFFObj.getCOFFBigObjHeader(CBFH);
   bool IsBigObj = false;
-  if (CFH) {
+  if (const coff_file_header *CFH = COFFObj.getCOFFHeader()) {
     Obj->CoffFileHeader = *CFH;
   } else {
+    const coff_bigobj_file_header *CBFH = COFFObj.getCOFFBigObjHeader();
     if (!CBFH)
       return createStringError(object_error::parse_failed,
                                "no COFF file header returned");

@@ -306,7 +306,7 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
-defm reproduce: Eq<"reproduce", "Dump linker invocation and input files for debugging">;
+defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
 
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 

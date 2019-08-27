@@ -349,7 +349,7 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 
       // If the operand uses a subregister, replace it with a new register
       // without subregisters, and generate a copy to the new register.
-      unsigned NewReg = MRI.createVirtualRegister(RC);
+      Register NewReg = MRI.createVirtualRegister(RC);
       MachineBasicBlock &PredB = *PI.getOperand(i+1).getMBB();
       MachineBasicBlock::iterator At = PredB.getFirstTerminator();
       const DebugLoc &DL = PredB.findDebugLoc(At);
@@ -730,7 +730,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
          MOI != MOE; ++MOI) {
       if (!MOI->isReg())
         continue;
-      unsigned Reg = MOI->getReg();
+      Register Reg = MOI->getReg();
       if (MOI->isDef()) {
         // If the register is used by a Phi, then create an anti dependence.
         for (MachineRegisterInfo::use_instr_iterator
@@ -809,7 +809,7 @@ void SwingSchedulerDAG::changeDependences() {
       continue;
 
     // Get the MI and SUnit for the instruction that defines the original base.
-    unsigned OrigBase = I.getInstr()->getOperand(BasePos).getReg();
+    Register OrigBase = I.getInstr()->getOperand(BasePos).getReg();
     MachineInstr *DefMI = MRI.getUniqueVRegDef(OrigBase);
     if (!DefMI)
       continue;
@@ -1514,7 +1514,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       continue;
     for (const MachineOperand &MO : MI->operands())
       if (MO.isReg() && MO.isUse()) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (Register::isVirtualRegister(Reg))
           Uses.insert(Reg);
         else if (MRI.isAllocatable(Reg))
@@ -1525,7 +1525,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   for (SUnit *SU : NS)
     for (const MachineOperand &MO : SU->getInstr()->operands())
       if (MO.isReg() && MO.isDef() && !MO.isDead()) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (Register::isVirtualRegister(Reg)) {
           if (!Uses.count(Reg))
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
@@ -2311,7 +2311,7 @@ void SwingSchedulerDAG::generateExistingPhis(
   for (MachineBasicBlock::iterator BBI = BB->instr_begin(),
                                    BBE = BB->getFirstNonPHI();
        BBI != BBE; ++BBI) {
-    unsigned Def = BBI->getOperand(0).getReg();
+    Register Def = BBI->getOperand(0).getReg();
 
     unsigned InitVal = 0;
     unsigned LoopVal = 0;
@@ -2558,7 +2558,7 @@ void SwingSchedulerDAG::generatePhis(
 
       int StageScheduled = Schedule.stageScheduled(getSUnit(&*BBI));
       assert(StageScheduled != -1 && "Expecting scheduled instruction.");
-      unsigned Def = MO.getReg();
+      Register Def = MO.getReg();
       unsigned NumPhis = Schedule.getStagesForReg(Def, CurStageNum);
       // An instruction scheduled in stage 0 and is used after the loop
       // requires a phi in the epilog for the last definition from either
@@ -2591,7 +2591,7 @@ void SwingSchedulerDAG::generatePhis(
           PhiOp2 = VRMap[PrevStage - np][Def];
 
         const TargetRegisterClass *RC = MRI.getRegClass(Def);
-        unsigned NewReg = MRI.createVirtualRegister(RC);
+        Register NewReg = MRI.createVirtualRegister(RC);
 
         MachineInstrBuilder NewPhi =
             BuildMI(*NewBB, NewBB->getFirstNonPHI(), DebugLoc(),
@@ -2656,7 +2656,7 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
            MOI != MOE; ++MOI) {
         if (!MOI->isReg() || !MOI->isDef())
           continue;
-        unsigned reg = MOI->getReg();
+        Register reg = MOI->getReg();
         // Assume physical registers are used, unless they are marked dead.
         if (Register::isPhysicalRegister(reg)) {
           used = !MOI->isDead();
@@ -2694,7 +2694,7 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
        BBI != BBE;) {
     MachineInstr *MI = &*BBI;
     ++BBI;
-    unsigned reg = MI->getOperand(0).getReg();
+    Register reg = MI->getOperand(0).getReg();
     if (MRI.use_begin(reg) == MRI.use_end()) {
       LIS.RemoveMachineInstrFromMaps(*MI);
       MI->eraseFromParent();
@@ -2717,7 +2717,7 @@ void SwingSchedulerDAG::splitLifetimes(MachineBasicBlock *KernelBB,
                                        SMSchedule &Schedule) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (auto &PHI : KernelBB->phis()) {
-    unsigned Def = PHI.getOperand(0).getReg();
+    Register Def = PHI.getOperand(0).getReg();
     // Check for any Phi definition that used as an operand of another Phi
     // in the same block.
     for (MachineRegisterInfo::use_instr_iterator I = MRI.use_instr_begin(Def),
@@ -2854,7 +2854,7 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
   if (!BaseOp->isReg())
     return false;
 
-  unsigned BaseReg = BaseOp->getReg();
+  Register BaseReg = BaseOp->getReg();
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Check if there is a Phi. If so, get the definition in the loop.
@@ -2964,11 +2964,11 @@ void SwingSchedulerDAG::updateInstruction(MachineInstr *NewMI, bool LastDef,
     MachineOperand &MO = NewMI->getOperand(i);
     if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
-    unsigned reg = MO.getReg();
+    Register reg = MO.getReg();
     if (MO.isDef()) {
       // Create a new virtual register for the definition.
       const TargetRegisterClass *RC = MRI.getRegClass(reg);
-      unsigned NewReg = MRI.createVirtualRegister(RC);
+      Register NewReg = MRI.createVirtualRegister(RC);
       MO.setReg(NewReg);
       VRMap[CurStageNum][reg] = NewReg;
       if (LastDef)
@@ -3051,7 +3051,7 @@ void SwingSchedulerDAG::rewritePhiValues(MachineBasicBlock *NewBB,
     unsigned InitVal = 0;
     unsigned LoopVal = 0;
     getPhiRegs(PHI, BB, InitVal, LoopVal);
-    unsigned PhiDef = PHI.getOperand(0).getReg();
+    Register PhiDef = PHI.getOperand(0).getReg();
 
     unsigned PhiStage =
         (unsigned)Schedule.stageScheduled(getSUnit(MRI.getVRegDef(PhiDef)));
@@ -3147,7 +3147,7 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   unsigned BasePosLd, OffsetPosLd;
   if (!TII->getBaseAndOffsetPosition(*MI, BasePosLd, OffsetPosLd))
     return false;
-  unsigned BaseReg = MI->getOperand(BasePosLd).getReg();
+  Register BaseReg = MI->getOperand(BasePosLd).getReg();
 
   // Look for the Phi instruction.
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
@@ -3202,7 +3202,7 @@ void SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
     unsigned BasePos, OffsetPos;
     if (!TII->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
       return;
-    unsigned BaseReg = MI->getOperand(BasePos).getReg();
+    Register BaseReg = MI->getOperand(BasePos).getReg();
     MachineInstr *LoopDef = findDefInLoop(BaseReg);
     int DefStageNum = Schedule.stageScheduled(getSUnit(LoopDef));
     int DefCycleNum = Schedule.cycleScheduled(getSUnit(LoopDef));
@@ -3502,7 +3502,7 @@ void SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
       if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
         continue;
 
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       unsigned BasePos, OffsetPos;
       if (ST.getInstrInfo()->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
         if (MI->getOperand(BasePos).getReg() == Reg)
@@ -3857,7 +3857,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
       if (!Op.isReg() || !Op.isDef())
         continue;
 
-      unsigned Reg = Op.getReg();
+      Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
       for (MachineRegisterInfo::use_iterator UI = MRI.use_begin(Reg),

@@ -87,7 +87,7 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
                                   bool HasRelocationAddend,
                                   uint8_t ABIVersion) {
-  return llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
+  return std::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
                                                   HasRelocationAddend,
                                                   ABIVersion);
 }

@@ -443,8 +443,8 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
   if (FoldOp.getSubReg() || LiveOp.getSubReg())
     return nullptr;
 
-  unsigned FoldReg = FoldOp.getReg();
-  unsigned LiveReg = LiveOp.getReg();
+  Register FoldReg = FoldOp.getReg();
+  Register LiveReg = LiveOp.getReg();
 
   assert(Register::isVirtualRegister(FoldReg) && "Cannot fold physregs");
 
@@ -805,11 +805,11 @@ void TargetInstrInfo::reassociateOps(
   MachineOperand &OpY = Root.getOperand(OpIdx[Row][3]);
   MachineOperand &OpC = Root.getOperand(0);
 
-  unsigned RegA = OpA.getReg();
-  unsigned RegB = OpB.getReg();
-  unsigned RegX = OpX.getReg();
-  unsigned RegY = OpY.getReg();
-  unsigned RegC = OpC.getReg();
+  Register RegA = OpA.getReg();
+  Register RegB = OpB.getReg();
+  Register RegX = OpX.getReg();
+  Register RegY = OpY.getReg();
+  Register RegC = OpC.getReg();
 
   if (Register::isVirtualRegister(RegA))
     MRI.constrainRegClass(RegA, RC);
@@ -825,7 +825,7 @@ void TargetInstrInfo::reassociateOps(
   // Create a new virtual register for the result of (X op Y) instead of
   // recycling RegB because the MachineCombiner's computation of the critical
   // path requires a new register definition rather than an existing one.
-  unsigned NewVR = MRI.createVirtualRegister(RC);
+  Register NewVR = MRI.createVirtualRegister(RC);
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
   unsigned Opcode = Root.getOpcode();
@@ -887,7 +887,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   // Remat clients assume operand 0 is the defined register.
   if (!MI.getNumOperands() || !MI.getOperand(0).isReg())
     return false;
-  unsigned DefReg = MI.getOperand(0).getReg();
+  Register DefReg = MI.getOperand(0).getReg();
 
   // A sub-register definition can only be rematerialized if the instruction
   // doesn't read the other parts of the register.  Otherwise it is really a
@@ -924,7 +924,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg()) continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg == 0)
       continue;
 

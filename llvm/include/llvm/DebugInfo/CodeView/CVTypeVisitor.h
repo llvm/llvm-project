@@ -11,7 +11,6 @@
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -30,9 +29,6 @@ enum VisitorDataSource {
 
 Error visitTypeRecord(CVType &Record, TypeIndex Index,
                       TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent);
-Error visitTypeRecord(CVType &Record, TypeIndex Index,
-                      TypeVisitorCallbackPipeline &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
 Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);

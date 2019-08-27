@@ -52,6 +52,10 @@ using namespace clang;
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
 
+static llvm::cl::opt<std::string>
+    ProjectName("project-name", llvm::cl::desc("Name of project."),
+                llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<bool> IgnoreMappingFailures(
     "ignore-map-errors",
     llvm::cl::desc("Continue if files are not mapped correctly."),
@@ -203,17 +207,12 @@ int main(int argc, const char **argv) {
                                   tooling::ArgumentInsertPosition::END),
         ArgAdjuster);
 
-  llvm::SmallString<128> SourceRootDir;
-  // Check if the --source-root flag has a value
-  if (SourceRoot.empty())
-    // If it's empty the current path is used as the default
-    llvm::sys::fs::current_path(SourceRootDir);
-
   clang::doc::ClangDocContext CDCtx = {
       Exec->get()->getExecutionContext(),
+      ProjectName,
       PublicOnly,
       OutDirectory,
-      SourceRootDir.str(),
+      SourceRoot,
       RepositoryUrl,
       {UserStylesheets.begin(), UserStylesheets.end()},
       {"index.js", "index_json.js"}};
@@ -327,8 +326,11 @@ int main(int argc, const char **argv) {
     return 1;
 
   llvm::outs() << "Generating assets for docs...\n";
-  if (!G->get()->createResources(CDCtx))
+  Err = G->get()->createResources(CDCtx);
+  if (Err) {
+    llvm::errs() << toString(std::move(Err)) << "\n";
     return 1;
+  }
 
   return 0;
 }

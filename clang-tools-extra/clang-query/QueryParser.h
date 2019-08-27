@@ -48,7 +48,7 @@ private:
 
   QueryRef endQuery(QueryRef Q);
 
-  /// \brief Parse [\p Begin,\p End).
+  /// Parse [\p Begin,\p End).
   ///
   /// \return A reference to the parsed query object, which may be an
   /// \c InvalidQuery if a parse error occurs.

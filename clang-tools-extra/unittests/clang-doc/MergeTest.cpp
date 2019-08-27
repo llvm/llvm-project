@@ -87,6 +87,8 @@ TEST(MergeTest, mergeRecordInfos) {
   One.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   One.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
+  One.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
+                         AccessSpecifier::AS_protected, true);
   One.ChildRecords.emplace_back(NonEmptySID, "SharedChildStruct",
                                 InfoType::IT_record);
   One.ChildFunctions.emplace_back();
@@ -126,6 +128,8 @@ TEST(MergeTest, mergeRecordInfos) {
   Expected->TagType = TagTypeKind::TTK_Class;
   Expected->Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   Expected->VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
+  Expected->Bases.emplace_back(EmptySID, "F", "path/to/F", true,
+                               AccessSpecifier::AS_protected, true);
 
   Expected->ChildRecords.emplace_back(NonEmptySID, "SharedChildStruct",
                                       InfoType::IT_record, "path");

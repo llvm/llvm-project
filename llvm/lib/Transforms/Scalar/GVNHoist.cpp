@@ -257,7 +257,7 @@ public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
            MemoryDependenceResults *MD, MemorySSA *MSSA)
       : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
-        MSSAUpdater(llvm::make_unique<MemorySSAUpdater>(MSSA)) {}
+        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
 
   bool run(Function &F) {
     NumFuncArgs = F.arg_size();

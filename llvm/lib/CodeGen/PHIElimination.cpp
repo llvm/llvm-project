@@ -168,7 +168,7 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
 
   // Remove dead IMPLICIT_DEF instructions.
   for (MachineInstr *DefMI : ImpDefs) {
-    unsigned DefReg = DefMI->getOperand(0).getReg();
+    Register DefReg = DefMI->getOperand(0).getReg();
     if (MRI->use_nodbg_empty(DefReg)) {
       if (LIS)
         LIS->RemoveMachineInstrFromMaps(*DefMI);
@@ -240,7 +240,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   MachineInstr *MPhi = MBB.remove(&*MBB.begin());
 
   unsigned NumSrcs = (MPhi->getNumOperands() - 1) / 2;
-  unsigned DestReg = MPhi->getOperand(0).getReg();
+  Register DestReg = MPhi->getOperand(0).getReg();
   assert(MPhi->getOperand(0).getSubReg() == 0 && "Can't handle sub-reg PHIs");
   bool isDead = MPhi->getOperand(0).isDead();
 
@@ -368,7 +368,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // IncomingReg register in the corresponding predecessor basic block.
   SmallPtrSet<MachineBasicBlock*, 8> MBBsInsertedInto;
   for (int i = NumSrcs - 1; i >= 0; --i) {
-    unsigned SrcReg = MPhi->getOperand(i*2+1).getReg();
+    Register SrcReg = MPhi->getOperand(i * 2 + 1).getReg();
     unsigned SrcSubReg = MPhi->getOperand(i*2+1).getSubReg();
     bool SrcUndef = MPhi->getOperand(i*2+1).isUndef() ||
       isImplicitlyDefined(SrcReg, *MRI);
@@ -567,7 +567,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
   for (MachineBasicBlock::iterator BBI = MBB.begin(), BBE = MBB.end();
        BBI != BBE && BBI->isPHI(); ++BBI) {
     for (unsigned i = 1, e = BBI->getNumOperands(); i != e; i += 2) {
-      unsigned Reg = BBI->getOperand(i).getReg();
+      Register Reg = BBI->getOperand(i).getReg();
       MachineBasicBlock *PreMBB = BBI->getOperand(i+1).getMBB();
       // Is there a critical edge from PreMBB to MBB?
       if (PreMBB->succ_size() == 1)

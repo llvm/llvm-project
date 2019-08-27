@@ -1108,8 +1108,8 @@ MCSymbol *TargetLoweringObjectFileMachO::getCFIPersonalitySymbol(
 }
 
 const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
-    const MCSymbol *Sym, const MCValue &MV, int64_t Offset,
-    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   // Although MachO 32-bit targets do not explicitly have a GOTPCREL relocation
   // as 64-bit do, we replace the GOT equivalent by accessing the final symbol
   // through a non_lazy_ptr stub instead. One advantage is that it allows the
@@ -1166,12 +1166,10 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);
 
   MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(Stub);
-  if (!StubSym.getPointer()) {
-    bool IsIndirectLocal = Sym->isDefined() && !Sym->isExternal();
-    // With the assumption that IsIndirectLocal == GV->hasLocalLinkage().
+
+  if (!StubSym.getPointer())
     StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
-                                                 !IsIndirectLocal);
-  }
+                                                 !GV->hasLocalLinkage());
 
   const MCExpr *BSymExpr =
     MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);
@@ -1520,7 +1518,8 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
     // internally, so we use ".CRT$XCA00001" for them.
     SmallString<24> Name;
     raw_svector_ostream OS(Name);
-    OS << ".CRT$XC" << (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
+    OS << ".CRT$X" << (IsCtor ? "C" : "T") <<
+        (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
         Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
         SectionKind::getReadOnly());
@@ -1596,7 +1595,8 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
 
 static std::string APIntToHexString(const APInt &AI) {
   unsigned Width = (AI.getBitWidth() / 8) * 2;
-  std::string HexString = utohexstr(AI.getLimitedValue(), /*LowerCase=*/true);
+  std::string HexString = AI.toString(16, /*Signed=*/false);
+  transform(HexString.begin(), HexString.end(), HexString.begin(), tolower);
   unsigned Size = HexString.size();
   assert(Width >= Size && "hex string is too large!");
   HexString.insert(HexString.begin(), Width - Size, '0');
@@ -1839,13 +1839,18 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   if (Kind.isBSSLocal() || Kind.isCommon()) {
     SmallString<128> Name;
     getNameWithPrefix(Name, GO, TM);
+    XCOFF::StorageClass SC =
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
     return getContext().getXCOFFSection(
         Name, Kind.isBSSLocal() ? XCOFF::XMC_BS : XCOFF::XMC_RW, XCOFF::XTY_CM,
-        Kind, /* BeginSymbolName */ nullptr);
+        SC, Kind, /* BeginSymbolName */ nullptr);
   }
 
   if (Kind.isText())
     return TextSection;
+
+  if (Kind.isData())
+    return DataSection;
 
   report_fatal_error("XCOFF other section types not yet implemented.");
 }
@@ -1877,4 +1882,20 @@ const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS,
     const TargetMachine &TM) const {
   report_fatal_error("XCOFF not yet implemented.");
+}
+
+XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
+    const GlobalObject *GO) {
+  switch (GO->getLinkage()) {
+  case GlobalValue::InternalLinkage:
+    return XCOFF::C_HIDEXT;
+  case GlobalValue::ExternalLinkage:
+  case GlobalValue::CommonLinkage:
+    return XCOFF::C_EXT;
+  case GlobalValue::ExternalWeakLinkage:
+    return XCOFF::C_WEAKEXT;
+  default:
+    report_fatal_error(
+        "Unhandled linkage when mapping linkage to StorageClass.");
+  }
 }

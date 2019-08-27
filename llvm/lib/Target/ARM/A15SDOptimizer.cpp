@@ -133,7 +133,7 @@ bool A15SDOptimizer::usesRegClass(MachineOperand &MO,
                                   const TargetRegisterClass *TRC) {
   if (!MO.isReg())
     return false;
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
 
   if (Register::isVirtualRegister(Reg))
     return MRI->getRegClass(Reg)->hasSuperClassEq(TRC);
@@ -191,7 +191,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
     for (MachineOperand &MO : MI->operands()) {
       if ((!MO.isReg()) || (!MO.isUse()))
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Register::isVirtualRegister(Reg))
         continue;
       MachineOperand *Op = MI->findRegisterDefOperand(Reg);
@@ -213,7 +213,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
       for (MachineOperand &MODef : Def->operands()) {
         if ((!MODef.isReg()) || (!MODef.isDef()))
           continue;
-        unsigned DefReg = MODef.getReg();
+        Register DefReg = MODef.getReg();
         if (!Register::isVirtualRegister(DefReg)) {
           IsDead = false;
           break;
@@ -245,8 +245,8 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
   }
 
   if (MI->isInsertSubreg()) {
-    unsigned DPRReg = MI->getOperand(1).getReg();
-    unsigned SPRReg = MI->getOperand(2).getReg();
+    Register DPRReg = MI->getOperand(1).getReg();
+    Register SPRReg = MI->getOperand(2).getReg();
 
     if (Register::isVirtualRegister(DPRReg) && Register::isVirtualRegister(SPRReg)) {
       MachineInstr *DPRMI = MRI->getVRegDef(MI->getOperand(1).getReg());
@@ -267,7 +267,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
 
             // Find the thing we're subreg copying out of - is it of the same
             // regclass as DPRMI? (i.e. a DPR or QPR).
-            unsigned FullReg = SPRMI->getOperand(1).getReg();
+            Register FullReg = SPRMI->getOperand(1).getReg();
             const TargetRegisterClass *TRC =
               MRI->getRegClass(MI->getOperand(1).getReg());
             if (TRC->hasSuperClassEq(MRI->getRegClass(FullReg))) {
@@ -296,7 +296,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
       if (!MI->getOperand(I).isReg())
         continue;
       ++NumTotal;
-      unsigned OpReg = MI->getOperand(I).getReg();
+      Register OpReg = MI->getOperand(I).getReg();
 
       if (!Register::isVirtualRegister(OpReg))
         break;
@@ -369,7 +369,7 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
      Reached.insert(MI);
      if (MI->isPHI()) {
        for (unsigned I = 1, E = MI->getNumOperands(); I != E; I += 2) {
-         unsigned Reg = MI->getOperand(I).getReg();
+         Register Reg = MI->getOperand(I).getReg();
          if (!Register::isVirtualRegister(Reg)) {
            continue;
          }
@@ -418,8 +418,8 @@ unsigned A15SDOptimizer::createDupLane(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator InsertBefore,
                                        const DebugLoc &DL, unsigned Reg,
                                        unsigned Lane, bool QPR) {
-  unsigned Out = MRI->createVirtualRegister(QPR ? &ARM::QPRRegClass :
-                                                  &ARM::DPRRegClass);
+  Register Out =
+      MRI->createVirtualRegister(QPR ? &ARM::QPRRegClass : &ARM::DPRRegClass);
   BuildMI(MBB, InsertBefore, DL,
           TII->get(QPR ? ARM::VDUPLN32q : ARM::VDUPLN32d), Out)
       .addReg(Reg)
@@ -434,7 +434,7 @@ unsigned A15SDOptimizer::createExtractSubreg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
-  unsigned Out = MRI->createVirtualRegister(TRC);
+  Register Out = MRI->createVirtualRegister(TRC);
   BuildMI(MBB,
           InsertBefore,
           DL,
@@ -448,7 +448,7 @@ unsigned A15SDOptimizer::createExtractSubreg(
 unsigned A15SDOptimizer::createRegSequence(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const DebugLoc &DL, unsigned Reg1, unsigned Reg2) {
-  unsigned Out = MRI->createVirtualRegister(&ARM::QPRRegClass);
+  Register Out = MRI->createVirtualRegister(&ARM::QPRRegClass);
   BuildMI(MBB,
           InsertBefore,
           DL,
@@ -466,7 +466,7 @@ unsigned A15SDOptimizer::createVExt(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
                                     const DebugLoc &DL, unsigned Ssub0,
                                     unsigned Ssub1) {
-  unsigned Out = MRI->createVirtualRegister(&ARM::DPRRegClass);
+  Register Out = MRI->createVirtualRegister(&ARM::DPRRegClass);
   BuildMI(MBB, InsertBefore, DL, TII->get(ARM::VEXTd32), Out)
       .addReg(Ssub0)
       .addReg(Ssub1)
@@ -478,7 +478,7 @@ unsigned A15SDOptimizer::createVExt(MachineBasicBlock &MBB,
 unsigned A15SDOptimizer::createInsertSubreg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const DebugLoc &DL, unsigned DReg, unsigned Lane, unsigned ToInsert) {
-  unsigned Out = MRI->createVirtualRegister(&ARM::DPR_VFP2RegClass);
+  Register Out = MRI->createVirtualRegister(&ARM::DPR_VFP2RegClass);
   BuildMI(MBB,
           InsertBefore,
           DL,
@@ -494,7 +494,7 @@ unsigned
 A15SDOptimizer::createImplicitDef(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator InsertBefore,
                                   const DebugLoc &DL) {
-  unsigned Out = MRI->createVirtualRegister(&ARM::DPRRegClass);
+  Register Out = MRI->createVirtualRegister(&ARM::DPRRegClass);
   BuildMI(MBB,
           InsertBefore,
           DL,
@@ -622,7 +622,7 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
 
       // Collect all the uses of this MI's DPR def for updating later.
       SmallVector<MachineOperand*, 8> Uses;
-      unsigned DPRDefReg = MI->getOperand(0).getReg();
+      Register DPRDefReg = MI->getOperand(0).getReg();
       for (MachineRegisterInfo::use_iterator I = MRI->use_begin(DPRDefReg),
              E = MRI->use_end(); I != E; ++I)
         Uses.push_back(&*I);

@@ -1,14 +1,14 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 # CHECK:      body:
 # CHECK:      bb.0.entry:
-# CHECK:        t2CMPri $lr, 0, 14
+# CHECK:        t2CMPri $r3, 0, 14
 # CHECK-NEXT:   t2Bcc %bb.3, 0, $cpsr
 # CHECK-NEXT:   tB %bb.1
 # CHECK:      bb.1.do.body.preheader:
 # CHECK:        $lr = tMOVr killed $r3
 # CHECK:      bb.2.do.body:
 # CHECK:        $lr = t2SUBri killed renamable $lr, 1, 14
-# CHECK-NEXT:   t2CMPri $lr, 0, 14, $cpsr
+# CHECK-NEXT:   t2CMPri $lr, 0, 14, $noreg, implicit-def $cpsr
 # CHECK-NEXT:   t2Bcc %bb.2, 1, $cpsr
 # CHECK-NEXT:   tB %bb.3, 14
 

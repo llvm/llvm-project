@@ -7,11 +7,11 @@
 ## R_PPC_ADDR32 is an absolute relocation type.
 ## In PIC mode, it creates a relative relocation if the symbol is non-preemptable.
 
-# NM: 00020004 d b
+# NM: 00030204 d b
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x20004 R_PPC_RELATIVE - 0x20004
-# RELOC-NEXT:   0x20000 R_PPC_ADDR32 a 0
+# RELOC-NEXT:   0x30204 R_PPC_RELATIVE - 0x30204
+# RELOC-NEXT:   0x30200 R_PPC_ADDR32 a 0
 # RELOC-NEXT: }
 
 .globl a, b

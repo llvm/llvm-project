@@ -294,7 +294,7 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
-  if (EnableMSSALoopDependency)
+  if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
 
   return PA;
@@ -346,7 +346,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
     CurAST = collectAliasInfoForLoop(L, LI, AA);
   } else {
     LLVM_DEBUG(dbgs() << "LICM: Using MemorySSA.\n");
-    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
     unsigned AccessCapCount = 0;
     for (auto *BB : L->getBlocks()) {
@@ -1392,7 +1392,7 @@ static Instruction *CloneInstructionInExitBlock(
         MSSAU->insertDef(MemDef, /*RenameUses=*/true);
       else {
         auto *MemUse = cast<MemoryUse>(NewMemAcc);
-        MSSAU->insertUse(MemUse);
+        MSSAU->insertUse(MemUse, /*RenameUses=*/true);
       }
     }
   }
@@ -2119,9 +2119,11 @@ bool llvm::promoteLoopAccessesToScalars(
     PreheaderLoadMemoryAccess = MSSAU->createMemoryAccessInBB(
         PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
     MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
-    MSSAU->insertUse(NewMemUse);
+    MSSAU->insertUse(NewMemUse, /*RenameUses=*/true);
   }
 
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
   // Rewrite all the loads in the loop and remember all the definitions from
   // stores in the loop.
   Promoter.run(LoopUses);
@@ -2168,7 +2170,7 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
     LoopToAliasSetMap.erase(MapI);
   }
   if (!CurAST)
-    CurAST = make_unique<AliasSetTracker>(*AA);
+    CurAST = std::make_unique<AliasSetTracker>(*AA);
 
   // Add everything from the sub loops that are no longer directly available.
   for (Loop *InnerL : RecomputeLoops)
@@ -2187,7 +2189,7 @@ std::unique_ptr<AliasSetTracker>
 LoopInvariantCodeMotion::collectAliasInfoForLoopWithMSSA(
     Loop *L, AliasAnalysis *AA, MemorySSAUpdater *MSSAU) {
   auto *MSSA = MSSAU->getMemorySSA();
-  auto CurAST = make_unique<AliasSetTracker>(*AA, MSSA, L);
+  auto CurAST = std::make_unique<AliasSetTracker>(*AA, MSSA, L);
   CurAST->addAllInstructionsInLoopUsingMSSA();
   return CurAST;
 }

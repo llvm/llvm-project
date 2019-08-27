@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/usr/bin/env bash
 #===-- merge-request.sh  ---------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -102,6 +102,9 @@ case $stable_version in
     ;;
   8.0)
     release_metabug="41221"
+    ;;
+  9.0)
+    release_metabug="42474"
     ;;
   *)
     echo "error: invalid stable version"

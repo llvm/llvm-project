@@ -15,13 +15,13 @@
 // RUN: %build -I%libcxx_src_root/src/filesystem
 // RUN: %run
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.hpp"
-#include "filesystem_test_helper.hpp"
+#include "rapid-cxx-test.h"
+#include "filesystem_test_helper.h"
 
 #include "filesystem_common.h"
 

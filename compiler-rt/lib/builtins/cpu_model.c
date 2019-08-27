@@ -415,8 +415,8 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
     default: // Unknown family 6 CPU.
       break;
-      break;
     }
+    break;
   default:
     break; // Unknown.
   }

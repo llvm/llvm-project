@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -20,8 +21,9 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
@@ -1511,6 +1513,49 @@ TEST_F(FileSystemTest, ReadWriteFileCanReadOrWrite) {
   FileDescriptorCloser Closer(FD);
   verifyRead(FD, "Fizz", true);
   verifyWrite(FD, "Buzz", true);
+}
+
+TEST_F(FileSystemTest, readNativeFile) {
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "01234");
+  FileRemover Cleanup(NonExistantFile);
+  const auto &Read = [&](size_t ToRead) -> Expected<std::string> {
+    std::string Buf(ToRead, '?');
+    Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
+    if (!FD)
+      return FD.takeError();
+    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    if (Expected<size_t> BytesRead = fs::readNativeFile(
+            *FD, makeMutableArrayRef(&*Buf.begin(), Buf.size())))
+      return Buf.substr(0, *BytesRead);
+    else
+      return BytesRead.takeError();
+  };
+  EXPECT_THAT_EXPECTED(Read(5), HasValue("01234"));
+  EXPECT_THAT_EXPECTED(Read(3), HasValue("012"));
+  EXPECT_THAT_EXPECTED(Read(6), HasValue("01234"));
+}
+
+TEST_F(FileSystemTest, readNativeFileSlice) {
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "01234");
+  FileRemover Cleanup(NonExistantFile);
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
+  ASSERT_THAT_EXPECTED(FD, Succeeded());
+  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  const auto &Read = [&](size_t Offset,
+                         size_t ToRead) -> Expected<std::string> {
+    std::string Buf(ToRead, '?');
+    if (Expected<size_t> BytesRead = fs::readNativeFileSlice(
+            *FD, makeMutableArrayRef(&*Buf.begin(), Buf.size()), Offset))
+      return Buf.substr(0, *BytesRead);
+    else
+      return BytesRead.takeError();
+  };
+  EXPECT_THAT_EXPECTED(Read(0, 5), HasValue("01234"));
+  EXPECT_THAT_EXPECTED(Read(0, 3), HasValue("012"));
+  EXPECT_THAT_EXPECTED(Read(2, 3), HasValue("234"));
+  EXPECT_THAT_EXPECTED(Read(0, 6), HasValue("01234"));
+  EXPECT_THAT_EXPECTED(Read(2, 6), HasValue("234"));
+  EXPECT_THAT_EXPECTED(Read(5, 5), HasValue(""));
 }
 
 TEST_F(FileSystemTest, is_local) {

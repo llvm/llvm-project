@@ -473,10 +473,11 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
     yaml::CallSiteInfo::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
-    CallLocation.Offset = std::distance(CallI->getParent()->begin(), CallI);
+    CallLocation.Offset =
+        std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
     // Construct call arguments and theirs forwarding register info.
     for (auto ArgReg : CSInfo.second) {

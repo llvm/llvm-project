@@ -417,7 +417,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       if (VA.needsCustom()) {
         assert(VA.getLocVT() == MVT::f64 || VA.getLocVT() == MVT::v2i32);
 
-        unsigned VRegHi = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+        Register VRegHi = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
         MF.getRegInfo().addLiveIn(VA.getLocReg(), VRegHi);
         SDValue HiVal = DAG.getCopyFromReg(Chain, dl, VRegHi, MVT::i32);
 
@@ -445,7 +445,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
         InVals.push_back(WholeValue);
         continue;
       }
-      unsigned VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+      Register VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
       MF.getRegInfo().addLiveIn(VA.getLocReg(), VReg);
       SDValue Arg = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
       if (VA.getLocVT() == MVT::f32)
@@ -552,7 +552,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     std::vector<SDValue> OutChains;
 
     for (; CurArgReg != ArgRegEnd; ++CurArgReg) {
-      unsigned VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
+      Register VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
       MF.getRegInfo().addLiveIn(*CurArgReg, VReg);
       SDValue Arg = DAG.getCopyFromReg(DAG.getRoot(), dl, VReg, MVT::i32);
 
@@ -2951,9 +2951,11 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
   SDValue HiRHS = DAG.getNode(ISD::SRA, dl, MVT::i64, RHS, ShiftAmt);
   SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
 
+  TargetLowering::MakeLibCallOptions CallOptions;
+  CallOptions.setSExt(isSigned);
   SDValue MulResult = TLI.makeLibCall(DAG,
                                       RTLIB::MUL_I128, WideVT,
-                                      Args, isSigned, dl).first;
+                                      Args, CallOptions, dl).first;
   SDValue BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,
                                    MulResult, DAG.getIntPtrConstant(0, dl));
   SDValue TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,

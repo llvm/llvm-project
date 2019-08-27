@@ -66,7 +66,7 @@ public:
                 std::unique_ptr<MCAsmBackend> asmbackend, bool showInst)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(printer),
-        Assembler(llvm::make_unique<MCAssembler>(
+        Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
                          : nullptr)),
@@ -1119,6 +1119,16 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
+  if (MAI->useDotAlignForAlignment()) {
+    if (!isPowerOf2_32(ByteAlignment))
+      report_fatal_error("Only power-of-two alignments are supported "
+                         "with .align.");
+    OS << "\t.align\t";
+    OS << Log2_32(ByteAlignment);
+    EmitEOL();
+    return;
+  }
+
   // Some assemblers don't support non-power of two alignments, so we always
   // emit alignments as a power of two if possible.
   if (isPowerOf2_32(ByteAlignment)) {

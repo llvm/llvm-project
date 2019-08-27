@@ -30,8 +30,15 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCValue &Target) {
   bool ShouldForce = false;
 
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getTargetKind()) {
   default:
+    break;
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+    if (Target.isAbsolute())
+      return false;
     break;
   case RISCV::fixup_riscv_got_hi20:
   case RISCV::fixup_riscv_tls_got_hi20:
@@ -48,7 +55,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
       return false;
     }
 
-    switch ((unsigned)T->getKind()) {
+    switch (T->getTargetKind()) {
     default:
       llvm_unreachable("Unexpected fixup kind for pcrel_lo12");
       break;
@@ -83,7 +90,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     return true;
 
   int64_t Offset = int64_t(Value);
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getTargetKind()) {
   default:
     return false;
   case RISCV::fixup_riscv_rvc_branch:
@@ -174,8 +181,7 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  unsigned Kind = Fixup.getKind();
-  switch (Kind) {
+  switch (Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case RISCV::fixup_riscv_got_hi20:

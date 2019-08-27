@@ -91,7 +91,7 @@ void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-/// \brief Obtain the original source code text from a SourceRange.
+/// Obtain the original source code text from a SourceRange.
 static StringRef getStringFromRange(SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {

@@ -136,16 +136,16 @@ static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
-    return llvm::make_unique<ELFWriter<ELF32LE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF32LE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF64LE:
-    return llvm::make_unique<ELFWriter<ELF64LE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF64LE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF32BE:
-    return llvm::make_unique<ELFWriter<ELF32BE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF32BE>>(Obj, Buf,
                                                  !Config.StripSections);
   case ELFT_ELF64BE:
-    return llvm::make_unique<ELFWriter<ELF64BE>>(Obj, Buf,
+    return std::make_unique<ELFWriter<ELF64BE>>(Obj, Buf,
                                                  !Config.StripSections);
   }
   llvm_unreachable("Invalid output format");
@@ -156,9 +156,9 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return llvm::make_unique<BinaryWriter>(Obj, Buf);
+    return std::make_unique<BinaryWriter>(Obj, Buf);
   case FileFormat::IHex:
-    return llvm::make_unique<IHexWriter>(Obj, Buf);
+    return std::make_unique<IHexWriter>(Obj, Buf);
   default:
     return createELFWriter(Config, Obj, Buf, OutputElfType);
   }
@@ -356,7 +356,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
         ((Config.LocalizeHidden &&
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-         is_contained(Config.SymbolsToLocalize, Sym.Name)))
+         Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
 
     // Note: these two globalize flags have very similar names but different
@@ -370,16 +370,15 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     // --keep-global-symbol. Because of that, make sure to check
     // --globalize-symbol second.
     if (!Config.SymbolsToKeepGlobal.empty() &&
-        !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
+        !Config.SymbolsToKeepGlobal.matches(Sym.Name) &&
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_LOCAL;
 
-    if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+    if (Config.SymbolsToGlobalize.matches(Sym.Name) &&
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_GLOBAL;
 
-    if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
-        Sym.Binding == STB_GLOBAL)
+    if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding == STB_GLOBAL)
       Sym.Binding = STB_WEAK;
 
     if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
@@ -404,7 +403,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   }
 
   auto RemoveSymbolsPred = [&](const Symbol &Sym) {
-    if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
+    if (Config.SymbolsToKeep.matches(Sym.Name) ||
         (Config.KeepFileSymbols && Sym.Type == STT_FILE))
       return false;
 
@@ -418,11 +417,11 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     if (Config.StripAll || Config.StripAllGNU)
       return true;
 
-    if (is_contained(Config.SymbolsToRemove, Sym.Name))
+    if (Config.SymbolsToRemove.matches(Sym.Name))
       return true;
 
     if ((Config.StripUnneeded ||
-         is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+         Config.UnneededSymbolsToRemove.matches(Sym.Name)) &&
         (!Obj.isRelocatable() || isUnneededSymbol(Sym)))
       return true;
 
@@ -443,7 +442,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   // Removes:
   if (!Config.ToRemove.empty()) {
     RemovePred = [&Config](const SectionBase &Sec) {
-      return is_contained(Config.ToRemove, Sec.Name);
+      return Config.ToRemove.matches(Sec.Name);
     };
   }
 
@@ -481,7 +480,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
     };
   }
 
-  if (Config.StripDebug) {
+  if (Config.StripDebug || Config.StripUnneeded) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || isDebugSection(Sec);
     };
@@ -523,7 +522,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   if (!Config.OnlySection.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (is_contained(Config.OnlySection, Sec.Name))
+      if (Config.OnlySection.matches(Sec.Name))
         return false;
 
       // Allow all implicit removes.
@@ -545,7 +544,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   if (!Config.KeepSection.empty()) {
     RemovePred = [&Config, RemovePred](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (is_contained(Config.KeepSection, Sec.Name))
+      if (Config.KeepSection.matches(Sec.Name))
         return false;
       // Otherwise defer to RemovePred.
       return RemovePred(Sec);

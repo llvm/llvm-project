@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 #include "any_helpers.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 int main(int, char**)
 {

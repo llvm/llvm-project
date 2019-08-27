@@ -136,7 +136,7 @@ private:
 };
 
 std::unique_ptr<BogusTargetMachine> createTargetMachine() {
-  return llvm::make_unique<BogusTargetMachine>();
+  return std::make_unique<BogusTargetMachine>();
 }
 
 std::unique_ptr<MachineFunction> createMachineFunction() {
@@ -150,7 +150,7 @@ std::unique_ptr<MachineFunction> createMachineFunction() {
   MachineModuleInfo MMI(TM.get());
   const TargetSubtargetInfo &STI = *TM->getSubtargetImpl(*F);
 
-  return llvm::make_unique<MachineFunction>(*F, *TM, STI, FunctionNum, MMI);
+  return std::make_unique<MachineFunction>(*F, *TM, STI, FunctionNum, MMI);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly

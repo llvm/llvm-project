@@ -131,20 +131,20 @@ static void fillMachineFunction(llvm::MachineFunction &MF,
 static std::unique_ptr<llvm::Module>
 createModule(const std::unique_ptr<llvm::LLVMContext> &Context,
              const llvm::DataLayout DL) {
-  auto Module = llvm::make_unique<llvm::Module>(ModuleID, *Context);
+  auto Module = std::make_unique<llvm::Module>(ModuleID, *Context);
   Module->setDataLayout(DL);
   return Module;
 }
 
 llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
   std::unique_ptr<llvm::LLVMContext> Context =
-      llvm::make_unique<llvm::LLVMContext>();
+      std::make_unique<llvm::LLVMContext>();
   std::unique_ptr<llvm::Module> Module =
       createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine&>(TM);
   std::unique_ptr<llvm::MachineModuleInfo> MMI =
-      llvm::make_unique<llvm::MachineModuleInfo>(&LLVMTM);
+      std::make_unique<llvm::MachineModuleInfo>(&LLVMTM);
   llvm::MachineFunction &MF =
       createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.
@@ -158,11 +158,11 @@ void assembleToStream(const ExegesisTarget &ET,
                       llvm::ArrayRef<llvm::MCInst> Instructions,
                       llvm::raw_pwrite_stream &AsmStream) {
   std::unique_ptr<llvm::LLVMContext> Context =
-      llvm::make_unique<llvm::LLVMContext>();
+      std::make_unique<llvm::LLVMContext>();
   std::unique_ptr<llvm::Module> Module =
       createModule(Context, TM->createDataLayout());
   std::unique_ptr<llvm::MachineModuleInfo> MMI =
-      llvm::make_unique<llvm::MachineModuleInfo>(TM.get());
+      std::make_unique<llvm::MachineModuleInfo>(TM.get());
   llvm::MachineFunction &MF =
       createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
 
@@ -268,7 +268,7 @@ private:
 ExecutableFunction::ExecutableFunction(
     std::unique_ptr<llvm::LLVMTargetMachine> TM,
     llvm::object::OwningBinary<llvm::object::ObjectFile> &&ObjectFileHolder)
-    : Context(llvm::make_unique<llvm::LLVMContext>()) {
+    : Context(std::make_unique<llvm::LLVMContext>()) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
   // Initializing the execution engine.
   // We need to use the JIT EngineKind to be able to add an object file.
@@ -281,7 +281,7 @@ ExecutableFunction::ExecutableFunction(
           .setMCPU(TM->getTargetCPU())
           .setEngineKind(llvm::EngineKind::JIT)
           .setMCJITMemoryManager(
-              llvm::make_unique<TrackingSectionMemoryManager>(&CodeSize))
+              std::make_unique<TrackingSectionMemoryManager>(&CodeSize))
           .create(TM.release()));
   if (!ExecEngine)
     llvm::report_fatal_error(Error);

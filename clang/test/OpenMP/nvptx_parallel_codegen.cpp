@@ -343,6 +343,7 @@ int bar(int n){
 
 // CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,
+// CHECK:  [[MASK:%.+]] = call i32 @__kmpc_warp_active_thread_mask()
 // CHECK:  [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 // CHECK:  [[NUM_THREADS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK:  store i32 0, i32* [[CC]],
@@ -362,7 +363,7 @@ int bar(int n){
 // CHECK:  store i32
 // CHECK:  call void @__kmpc_end_critical(
 
-// CHECK:  call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}})
+// CHECK:  call void @__kmpc_syncwarp(i32 [[MASK]])
 // CHECK:  [[NEW_CC_VAL:%.+]] = add nsw i32 [[CC_VAL]], 1
 // CHECK:  store i32 [[NEW_CC_VAL]], i32* [[CC]],
 // CHECK:  br label

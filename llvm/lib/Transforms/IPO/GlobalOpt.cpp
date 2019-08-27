@@ -2583,8 +2583,8 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
 }
 
 static int compareNames(Constant *const *A, Constant *const *B) {
-  Value *AStripped = (*A)->stripPointerCastsNoFollowAliases();
-  Value *BStripped = (*B)->stripPointerCastsNoFollowAliases();
+  Value *AStripped = (*A)->stripPointerCasts();
+  Value *BStripped = (*B)->stripPointerCasts();
   return AStripped->getName().compare(BStripped->getName());
 }
 

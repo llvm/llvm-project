@@ -376,7 +376,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   assert(VNI && VNI->def == Idx.getRegSlot() && "Not defined by copy");
 #endif
 
-  unsigned SrcReg = CopyMI.getOperand(1).getReg();
+  Register SrcReg = CopyMI.getOperand(1).getReg();
   LiveInterval &SrcLI = LIS.getInterval(SrcReg);
   VNInfo *SrcVNI = SrcLI.getVNInfoAt(Idx);
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
@@ -844,7 +844,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   for (MIBundleOperands MO(*MI); MO.isValid(); ++MO) {
     if (!MO->isReg())
       continue;
-    unsigned Reg = MO->getReg();
+    Register Reg = MO->getReg();
     if (!Reg || Register::isVirtualRegister(Reg) || MRI.isReserved(Reg)) {
       continue;
     }
@@ -1145,7 +1145,7 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
   // LiveInterval may be cleared after all its references are spilled.
   if (StackSlotToOrigLI.find(StackSlot) == StackSlotToOrigLI.end()) {
-    auto LI = llvm::make_unique<LiveInterval>(OrigLI.reg, OrigLI.weight);
+    auto LI = std::make_unique<LiveInterval>(OrigLI.reg, OrigLI.weight);
     LI->assign(OrigLI, Allocator);
     StackSlotToOrigLI[StackSlot] = std::move(LI);
   }

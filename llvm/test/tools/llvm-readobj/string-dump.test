@@ -51,14 +51,14 @@
 # CHECK-NEXT: [ 3] null{{$}}
 # CHECK-NOT:  {{.}}
 
-# RUN: llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=WARN1
-# RUN: llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=WARN2
+# RUN: llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck -DFILE=%t %s --check-prefix=WARN1
+# RUN: llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s  -DFILE=%t --check-prefix=WARN2
 
-# RUN: llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=WARN1
-# RUN: llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=WARN2
+# RUN: llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck -DFILE=%t %s --check-prefix=WARN1
+# RUN: llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s  -DFILE=%t --check-prefix=WARN2
 
-# WARN1: warning: could not find section 'does_not_exist'
-# WARN2: warning: could not find section 42
+# WARN1: warning: '[[FILE]]': could not find section 'does_not_exist'
+# WARN2: warning: '[[FILE]]': could not find section 42
 
 --- !ELF
 FileHeader:

@@ -58,7 +58,7 @@ private:
 
 #if LLVM_LIBXML2_ENABLED
 
-static const std::pair<StringRef, StringRef> MtNsHrefsPrefixes[] = {
+static constexpr std::pair<StringLiteral, StringLiteral> MtNsHrefsPrefixes[] = {
     {"urn:schemas-microsoft-com:asm.v1", "ms_asmv1"},
     {"urn:schemas-microsoft-com:asm.v2", "ms_asmv2"},
     {"urn:schemas-microsoft-com:asm.v3", "ms_asmv3"},
@@ -704,7 +704,7 @@ bool windows_manifest::isAvailable() { return false; }
 #endif
 
 WindowsManifestMerger::WindowsManifestMerger()
-    : Impl(make_unique<WindowsManifestMergerImpl>()) {}
+    : Impl(std::make_unique<WindowsManifestMergerImpl>()) {}
 
 WindowsManifestMerger::~WindowsManifestMerger() {}
 

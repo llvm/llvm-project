@@ -4571,12 +4571,15 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       break;
     }
 
-    case UPD_DECL_MARKED_OPENMP_DECLARETARGET:
+    case UPD_DECL_MARKED_OPENMP_DECLARETARGET: {
+      OMPDeclareTargetDeclAttr::MapTypeTy MapType =
+          static_cast<OMPDeclareTargetDeclAttr::MapTypeTy>(Record.readInt());
+      OMPDeclareTargetDeclAttr::DevTypeTy DevType =
+          static_cast<OMPDeclareTargetDeclAttr::DevTypeTy>(Record.readInt());
       D->addAttr(OMPDeclareTargetDeclAttr::CreateImplicit(
-          Reader.getContext(),
-          static_cast<OMPDeclareTargetDeclAttr::MapTypeTy>(Record.readInt()),
-          ReadSourceRange()));
+          Reader.getContext(), MapType, DevType, ReadSourceRange()));
       break;
+    }
 
     case UPD_ADDED_ATTR_TO_RECORD:
       AttrVec Attrs;

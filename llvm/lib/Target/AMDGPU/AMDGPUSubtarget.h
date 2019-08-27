@@ -368,6 +368,7 @@ protected:
   bool CaymanISA;
   bool CFALUBug;
   bool LDSMisalignedBug;
+  bool HasMFMAInlineLiteralBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
   bool ScalarizeGlobal;
@@ -949,6 +950,14 @@ public:
     return HasDPP;
   }
 
+  bool hasDPPBroadcasts() const {
+    return HasDPP && getGeneration() < GFX10;
+  }
+
+  bool hasDPPWavefrontShifts() const {
+    return HasDPP && getGeneration() < GFX10;
+  }
+
   bool hasDPP8() const {
     return HasDPP8;
   }
@@ -977,6 +986,10 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  bool hasMFMAInlineLiteralBug() const {
+    return HasMFMAInlineLiteralBug;
   }
 
   bool has12DWordStoreHazard() const {

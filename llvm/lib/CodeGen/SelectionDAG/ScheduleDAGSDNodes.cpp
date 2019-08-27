@@ -808,7 +808,7 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, unsigned> &VRBaseMap,
     } else {
       // Copy from physical register.
       assert(I->getReg() && "Unknown physical register!");
-      unsigned VRBase = MRI.createVirtualRegister(SU->CopyDstRC);
+      Register VRBase = MRI.createVirtualRegister(SU->CopyDstRC);
       bool isNew = VRBaseMap.insert(std::make_pair(SU, VRBase)).second;
       (void)isNew; // Silence compiler warning.
       assert(isNew && "Node emitted out of order - early");

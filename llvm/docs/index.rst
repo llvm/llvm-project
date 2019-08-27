@@ -206,6 +206,7 @@ For developers of applications which use LLVM as a library.
    FuzzingLLVM
    ScudoHardenedAllocator
    OptBisect
+   GwpAsan
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -257,6 +258,9 @@ For developers of applications which use LLVM as a library.
 
 :doc:`OptBisect`
   A command line option for debugging optimization-induced failures.
+
+:doc:`GwpAsan`
+  A sampled heap memory error detection toolkit designed for production use.
 
 .. _index-subsystem-docs:
 
@@ -612,6 +616,7 @@ can be better.
 
    CodeOfConduct
    Proposals/GitHubMove
+   Proposals/LLVMLibC
    Proposals/TestSuite
    Proposals/VariableNames
    Proposals/VectorizationPlan
@@ -622,6 +627,9 @@ can be better.
 
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
+
+:doc:`Proposals/LLVMLibC`
+   Proposal to add a libc implementation under the LLVM project.
 
 :doc:`Proposals/TestSuite`
    Proposals for additional benchmarks/programs for llvm's test-suite.

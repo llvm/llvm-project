@@ -134,7 +134,7 @@ private:
   CodeGenIntrinsic &getIntrinsic(Init *I) {
     std::unique_ptr<CodeGenIntrinsic> &Intr = Intrinsics[I];
     if (!Intr)
-      Intr = make_unique<CodeGenIntrinsic>(cast<DefInit>(I)->getDef());
+      Intr = std::make_unique<CodeGenIntrinsic>(cast<DefInit>(I)->getDef());
     return *Intr;
   }
 
@@ -496,7 +496,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   emitIfdef((Twine("GET_") + Table.PreprocessorGuard + "_IMPL").str(), OS);
 
   // The primary data table contains all the fields defined for this map.
-  OS << "const " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
+  OS << "constexpr " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
   for (unsigned i = 0; i < Table.Entries.size(); ++i) {
     Record *Entry = Table.Entries[i];
     OS << "  { ";
@@ -541,7 +541,7 @@ std::unique_ptr<SearchIndex>
 SearchableTableEmitter::parseSearchIndex(GenericTable &Table, StringRef Name,
                                          const std::vector<StringRef> &Key,
                                          bool EarlyOut) {
-  auto Index = llvm::make_unique<SearchIndex>();
+  auto Index = std::make_unique<SearchIndex>();
   Index->Name = Name;
   Index->EarlyOut = EarlyOut;
 
@@ -577,7 +577,7 @@ void SearchableTableEmitter::collectEnumEntries(
     if (!ValueField.empty())
       Value = getInt(EntryRec, ValueField);
 
-    Enum.Entries.push_back(llvm::make_unique<GenericEnum::Entry>(Name, Value));
+    Enum.Entries.push_back(std::make_unique<GenericEnum::Entry>(Name, Value));
     Enum.EntryMap.insert(std::make_pair(EntryRec, Enum.Entries.back().get()));
   }
 
@@ -647,7 +647,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     if (!EnumRec->isValueUnset("ValueField"))
       ValueField = EnumRec->getValueAsString("ValueField");
 
-    auto Enum = llvm::make_unique<GenericEnum>();
+    auto Enum = std::make_unique<GenericEnum>();
     Enum->Name = EnumRec->getName();
     Enum->PreprocessorGuard = EnumRec->getName();
 
@@ -664,7 +664,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   }
 
   for (auto TableRec : Records.getAllDerivedDefinitions("GenericTable")) {
-    auto Table = llvm::make_unique<GenericTable>();
+    auto Table = std::make_unique<GenericTable>();
     Table->Name = TableRec->getName();
     Table->PreprocessorGuard = TableRec->getName();
     Table->CppTypeName = TableRec->getValueAsString("CppTypeName");
@@ -733,7 +733,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
       if (!Class->isValueUnset("EnumValueField"))
         ValueField = Class->getValueAsString("EnumValueField");
 
-      auto Enum = llvm::make_unique<GenericEnum>();
+      auto Enum = std::make_unique<GenericEnum>();
       Enum->Name = (Twine(Class->getName()) + "Values").str();
       Enum->PreprocessorGuard = Class->getName().upper();
       Enum->Class = Class;
@@ -743,7 +743,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
       Enums.emplace_back(std::move(Enum));
     }
 
-    auto Table = llvm::make_unique<GenericTable>();
+    auto Table = std::make_unique<GenericTable>();
     Table->Name = (Twine(Class->getName()) + "sList").str();
     Table->PreprocessorGuard = Class->getName().upper();
     Table->CppTypeName = Class->getName();

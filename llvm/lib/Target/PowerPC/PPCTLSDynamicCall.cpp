@@ -74,8 +74,8 @@ protected:
 
         LLVM_DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
 
-        unsigned OutReg = MI.getOperand(0).getReg();
-        unsigned InReg = MI.getOperand(1).getReg();
+        Register OutReg = MI.getOperand(0).getReg();
+        Register InReg = MI.getOperand(1).getReg();
         DebugLoc DL = MI.getDebugLoc();
         unsigned GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         unsigned Opc1, Opc2;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVFixupKinds.h"
+#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
@@ -47,8 +48,9 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
+  const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
-  unsigned Kind = Fixup.getKind();
+  unsigned Kind = Fixup.getTargetKind();
   if (IsPCRel) {
     switch (Kind) {
     default:
@@ -87,6 +89,9 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_Data_4:
+    if (Expr->getKind() == MCExpr::Target &&
+        cast<RISCVMCExpr>(Expr)->getKind() == RISCVMCExpr::VK_RISCV_32_PCREL)
+      return ELF::R_RISCV_32_PCREL;
     return ELF::R_RISCV_32;
   case FK_Data_8:
     return ELF::R_RISCV_64;
@@ -133,5 +138,5 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createRISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
-  return llvm::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit);
+  return std::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit);
 }

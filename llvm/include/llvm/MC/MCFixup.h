@@ -78,25 +78,25 @@ class MCFixup {
   /// The value to put into the fixup location. The exact interpretation of the
   /// expression is target dependent, usually it will be one of the operands to
   /// an instruction or an assembler directive.
-  const MCExpr *Value;
+  const MCExpr *Value = nullptr;
 
   /// The byte index of start of the relocation inside the MCFragment.
-  uint32_t Offset;
+  uint32_t Offset = 0;
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  unsigned Kind;
+  MCFixupKind Kind = FK_NONE;
 
   /// The source location which gave rise to the fixup, if any.
   SMLoc Loc;
 public:
   static MCFixup create(uint32_t Offset, const MCExpr *Value,
                         MCFixupKind Kind, SMLoc Loc = SMLoc()) {
-    assert(unsigned(Kind) < MaxTargetFixupKind && "Kind out of range!");
+    assert(Kind < MaxTargetFixupKind && "Kind out of range!");
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;
-    FI.Kind = unsigned(Kind);
+    FI.Kind = Kind;
     FI.Loc = Loc;
     return FI;
   }
@@ -107,7 +107,7 @@ public:
     MCFixup FI;
     FI.Value = Fixup.getValue();
     FI.Offset = Fixup.getOffset();
-    FI.Kind = (unsigned)getAddKindForKind(Fixup.getKind());
+    FI.Kind = getAddKindForKind(Fixup.getKind());
     FI.Loc = Fixup.getLoc();
     return FI;
   }
@@ -118,12 +118,14 @@ public:
     MCFixup FI;
     FI.Value = Fixup.getValue();
     FI.Offset = Fixup.getOffset();
-    FI.Kind = (unsigned)getSubKindForKind(Fixup.getKind());
+    FI.Kind = getSubKindForKind(Fixup.getKind());
     FI.Loc = Fixup.getLoc();
     return FI;
   }
 
-  MCFixupKind getKind() const { return MCFixupKind(Kind); }
+  MCFixupKind getKind() const { return Kind; }
+
+  unsigned getTargetKind() const { return Kind; }
 
   uint32_t getOffset() const { return Offset; }
   void setOffset(uint32_t Value) { Offset = Value; }
@@ -168,7 +170,7 @@ public:
 
   /// Return the generic fixup kind for an addition with a given size. It
   /// is an error to pass an unsupported size.
-  static MCFixupKind getAddKindForKind(unsigned Kind) {
+  static MCFixupKind getAddKindForKind(MCFixupKind Kind) {
     switch (Kind) {
     default: llvm_unreachable("Unknown type to convert!");
     case FK_Data_1: return FK_Data_Add_1;
@@ -181,7 +183,7 @@ public:
 
   /// Return the generic fixup kind for an subtraction with a given size. It
   /// is an error to pass an unsupported size.
-  static MCFixupKind getSubKindForKind(unsigned Kind) {
+  static MCFixupKind getSubKindForKind(MCFixupKind Kind) {
     switch (Kind) {
     default: llvm_unreachable("Unknown type to convert!");
     case FK_Data_1: return FK_Data_Sub_1;

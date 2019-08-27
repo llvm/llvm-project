@@ -3,10 +3,10 @@
 
 ## Case 1: sh_link is set to 0.
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s --check-prefixes=LLVM,ERR
-# RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s --check-prefixes=GNU,ERR
+# RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefixes=LLVM,ERR
+# RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefixes=GNU,ERR
 
-# ERR: warning: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
+# ERR: warning: '[[FILE]]': invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 
 # LLVM:      Name: .dynsym
 # LLVM-NEXT:  Type: SHT_DYNSYM
@@ -36,10 +36,10 @@ Sections:
 ## Case 2: sh_link is set to 255, which is larger than the number of the sections.
 # RUN: yaml2obj --docnum=2 %s -o %t2
 
-# RUN: llvm-readobj -S %t2 2>&1 | FileCheck %s --check-prefixes=LLVM2,ERR2
-# RUN: llvm-readelf -S %t2 2>&1 | FileCheck %s --check-prefixes=GNU2,ERR2
+# RUN: llvm-readobj -S %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefixes=LLVM2,ERR2
+# RUN: llvm-readelf -S %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefixes=GNU2,ERR2
 
-# ERR2: warning: invalid section index
+# ERR2: warning: '[[FILE]]': invalid section index
 
 --- !ELF
 FileHeader:

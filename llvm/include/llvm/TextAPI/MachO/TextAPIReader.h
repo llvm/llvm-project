@@ -20,10 +20,7 @@ class InterfaceFile;
 class TextAPIReader {
 public:
   static Expected<std::unique_ptr<InterfaceFile>>
-  get(std::unique_ptr<MemoryBuffer> InputBuffer);
-
-  static Expected<std::unique_ptr<InterfaceFile>>
-  getUnmanaged(llvm::MemoryBuffer *InputBuffer);
+  get(MemoryBufferRef InputBuffer);
 
   TextAPIReader() = delete;
 };

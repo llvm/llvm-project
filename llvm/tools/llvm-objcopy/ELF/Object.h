@@ -884,7 +884,7 @@ protected:
 
 public:
   BasicELFBuilder(uint16_t EM)
-      : EMachine(EM), Obj(llvm::make_unique<Object>()) {}
+      : EMachine(EM), Obj(std::make_unique<Object>()) {}
 };
 
 class BinaryELFBuilder : public BasicELFBuilder {
@@ -1042,7 +1042,7 @@ public:
                        std::function<bool(const SectionBase &)> ToRemove);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   template <class T, class... Ts> T &addSection(Ts &&... Args) {
-    auto Sec = llvm::make_unique<T>(std::forward<Ts>(Args)...);
+    auto Sec = std::make_unique<T>(std::forward<Ts>(Args)...);
     auto Ptr = Sec.get();
     MustBeRelocatable |= isa<RelocationSection>(*Ptr);
     Sections.emplace_back(std::move(Sec));
@@ -1050,7 +1050,7 @@ public:
     return *Ptr;
   }
   Segment &addSegment(ArrayRef<uint8_t> Data) {
-    Segments.emplace_back(llvm::make_unique<Segment>(Data));
+    Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();
   }
   bool isRelocatable() const {

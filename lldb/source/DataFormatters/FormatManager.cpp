@@ -30,7 +30,7 @@ struct FormatInfo {
                            // current format
 };
 
-static FormatInfo g_format_infos[] = {
+static constexpr FormatInfo g_format_infos[] = {
     {eFormatDefault, '\0', "default"},
     {eFormatBoolean, 'B', "boolean"},
     {eFormatBinary, 'b', "binary"},
@@ -69,7 +69,13 @@ static FormatInfo g_format_infos[] = {
     {eFormatAddressInfo, 'A', "address"},
     {eFormatHexFloat, '\0', "hex float"},
     {eFormatInstruction, 'i', "instruction"},
-    {eFormatVoid, 'v', "void"}};
+    {eFormatVoid, 'v', "void"},
+    {eFormatUnicode8, 'u', "unicode8"},
+};
+
+static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
+                  kNumFormats,
+              "All formats must have a corresponding info entry.");
 
 static uint32_t g_num_format_infos = llvm::array_lengthof(g_format_infos);
 

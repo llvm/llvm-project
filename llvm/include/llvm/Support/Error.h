@@ -328,7 +328,7 @@ inline ErrorSuccess Error::success() { return ErrorSuccess(); }
 /// Make a Error instance representing failure using the given error info
 /// type.
 template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&... Args) {
-  return Error(llvm::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
+  return Error(std::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
 }
 
 /// Base class for user error types. Users should declare their error types
@@ -980,6 +980,20 @@ inline std::string toString(Error E) {
 /// might be more clearly refactored to return an Optional<T>.
 inline void consumeError(Error Err) {
   handleAllErrors(std::move(Err), [](const ErrorInfoBase &) {});
+}
+
+/// Convert an Expected to an Optional without doing anything. This method
+/// should be used only where an error can be considered a reasonable and
+/// expected return value.
+///
+/// Uses of this method are potentially indicative of problems: perhaps the
+/// error should be propagated further, or the error-producer should just
+/// return an Optional in the first place.
+template <typename T> Optional<T> expectedToOptional(Expected<T> &&E) {
+  if (E)
+    return std::move(*E);
+  consumeError(E.takeError());
+  return None;
 }
 
 /// Helper for converting an Error to a bool.

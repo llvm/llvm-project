@@ -16,161 +16,184 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Threading.h"
 #include <cassert>
+#include <mutex>
+#include <shared_mutex>
+
+// std::shared_timed_mutex is only availble on macOS 10.12 and later.
+#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
+#define LLVM_USE_RW_MUTEX_IMPL
+#endif
+#endif
 
 namespace llvm {
 namespace sys {
 
-    /// Platform agnostic RWMutex class.
-    class RWMutexImpl
-    {
-    /// @name Constructors
-    /// @{
-    public:
+#if defined(LLVM_USE_RW_MUTEX_IMPL)
+/// Platform agnostic RWMutex class.
+class RWMutexImpl {
+  /// @name Constructors
+  /// @{
+public:
+  /// Initializes the lock but doesn't acquire it.
+  /// Default Constructor.
+  explicit RWMutexImpl();
 
-      /// Initializes the lock but doesn't acquire it.
-      /// Default Constructor.
-      explicit RWMutexImpl();
+  /// @}
+  /// @name Do Not Implement
+  /// @{
+  RWMutexImpl(const RWMutexImpl &original) = delete;
+  RWMutexImpl &operator=(const RWMutexImpl &) = delete;
+  /// @}
 
-    /// @}
-    /// @name Do Not Implement
-    /// @{
-      RWMutexImpl(const RWMutexImpl & original) = delete;
-      RWMutexImpl &operator=(const RWMutexImpl &) = delete;
-    /// @}
+  /// Releases and removes the lock
+  /// Destructor
+  ~RWMutexImpl();
 
-      /// Releases and removes the lock
-      /// Destructor
-      ~RWMutexImpl();
+  /// @}
+  /// @name Methods
+  /// @{
+public:
+  /// Attempts to unconditionally acquire the lock in reader mode. If the
+  /// lock is held by a writer, this method will wait until it can acquire
+  /// the lock.
+  /// @returns false if any kind of error occurs, true otherwise.
+  /// Unconditionally acquire the lock in reader mode.
+  bool lock_shared();
 
-    /// @}
-    /// @name Methods
-    /// @{
-    public:
+  /// Attempts to release the lock in reader mode.
+  /// @returns false if any kind of error occurs, true otherwise.
+  /// Unconditionally release the lock in reader mode.
+  bool unlock_shared();
 
-      /// Attempts to unconditionally acquire the lock in reader mode. If the
-      /// lock is held by a writer, this method will wait until it can acquire
-      /// the lock.
-      /// @returns false if any kind of error occurs, true otherwise.
-      /// Unconditionally acquire the lock in reader mode.
-      bool reader_acquire();
+  /// Attempts to unconditionally acquire the lock in reader mode. If the
+  /// lock is held by any readers, this method will wait until it can
+  /// acquire the lock.
+  /// @returns false if any kind of error occurs, true otherwise.
+  /// Unconditionally acquire the lock in writer mode.
+  bool lock();
 
-      /// Attempts to release the lock in reader mode.
-      /// @returns false if any kind of error occurs, true otherwise.
-      /// Unconditionally release the lock in reader mode.
-      bool reader_release();
+  /// Attempts to release the lock in writer mode.
+  /// @returns false if any kind of error occurs, true otherwise.
+  /// Unconditionally release the lock in write mode.
+  bool unlock();
 
-      /// Attempts to unconditionally acquire the lock in reader mode. If the
-      /// lock is held by any readers, this method will wait until it can
-      /// acquire the lock.
-      /// @returns false if any kind of error occurs, true otherwise.
-      /// Unconditionally acquire the lock in writer mode.
-      bool writer_acquire();
-
-      /// Attempts to release the lock in writer mode.
-      /// @returns false if any kind of error occurs, true otherwise.
-      /// Unconditionally release the lock in write mode.
-      bool writer_release();
-
-    //@}
-    /// @name Platform Dependent Data
-    /// @{
-    private:
+  //@}
+  /// @name Platform Dependent Data
+  /// @{
+private:
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0
-      void* data_ = nullptr; ///< We don't know what the data will be
+  void *data_ = nullptr; ///< We don't know what the data will be
 #endif
-    };
+};
+#endif
 
-    /// SmartMutex - An R/W mutex with a compile time constant parameter that
-    /// indicates whether this mutex should become a no-op when we're not
-    /// running in multithreaded mode.
-    template<bool mt_only>
-    class SmartRWMutex {
-      RWMutexImpl impl;
-      unsigned readers = 0;
-      unsigned writers = 0;
+/// SmartMutex - An R/W mutex with a compile time constant parameter that
+/// indicates whether this mutex should become a no-op when we're not
+/// running in multithreaded mode.
+template <bool mt_only> class SmartRWMutex {
+  // shared_mutex (C++17) is more efficient than shared_timed_mutex (C++14)
+  // on Windows and always available on MSVC.
+#if defined(_MSC_VER) || __cplusplus > 201402L
+  std::shared_mutex impl;
+#else
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
+  std::shared_timed_mutex impl;
+#else
+  RWMutexImpl impl;
+#endif
+#endif
+  unsigned readers = 0;
+  unsigned writers = 0;
 
-    public:
-      explicit SmartRWMutex() = default;
-      SmartRWMutex(const SmartRWMutex<mt_only> & original) = delete;
-      SmartRWMutex<mt_only> &operator=(const SmartRWMutex<mt_only> &) = delete;
+public:
+  bool lock_shared() {
+    if (!mt_only || llvm_is_multithreaded()) {
+      impl.lock_shared();
+      return true;
+    }
 
-      bool lock_shared() {
-        if (!mt_only || llvm_is_multithreaded())
-          return impl.reader_acquire();
+    // Single-threaded debugging code.  This would be racy in multithreaded
+    // mode, but provides not sanity checks in single threaded mode.
+    ++readers;
+    return true;
+  }
 
-        // Single-threaded debugging code.  This would be racy in multithreaded
-        // mode, but provides not sanity checks in single threaded mode.
-        ++readers;
-        return true;
-      }
+  bool unlock_shared() {
+    if (!mt_only || llvm_is_multithreaded()) {
+      impl.unlock_shared();
+      return true;
+    }
 
-      bool unlock_shared() {
-        if (!mt_only || llvm_is_multithreaded())
-          return impl.reader_release();
+    // Single-threaded debugging code.  This would be racy in multithreaded
+    // mode, but provides not sanity checks in single threaded mode.
+    assert(readers > 0 && "Reader lock not acquired before release!");
+    --readers;
+    return true;
+  }
 
-        // Single-threaded debugging code.  This would be racy in multithreaded
-        // mode, but provides not sanity checks in single threaded mode.
-        assert(readers > 0 && "Reader lock not acquired before release!");
-        --readers;
-        return true;
-      }
+  bool lock() {
+    if (!mt_only || llvm_is_multithreaded()) {
+      impl.lock();
+      return true;
+    }
 
-      bool lock() {
-        if (!mt_only || llvm_is_multithreaded())
-          return impl.writer_acquire();
+    // Single-threaded debugging code.  This would be racy in multithreaded
+    // mode, but provides not sanity checks in single threaded mode.
+    assert(writers == 0 && "Writer lock already acquired!");
+    ++writers;
+    return true;
+  }
 
-        // Single-threaded debugging code.  This would be racy in multithreaded
-        // mode, but provides not sanity checks in single threaded mode.
-        assert(writers == 0 && "Writer lock already acquired!");
-        ++writers;
-        return true;
-      }
+  bool unlock() {
+    if (!mt_only || llvm_is_multithreaded()) {
+      impl.unlock();
+      return true;
+    }
 
-      bool unlock() {
-        if (!mt_only || llvm_is_multithreaded())
-          return impl.writer_release();
+    // Single-threaded debugging code.  This would be racy in multithreaded
+    // mode, but provides not sanity checks in single threaded mode.
+    assert(writers == 1 && "Writer lock not acquired before release!");
+    --writers;
+    return true;
+  }
+};
 
-        // Single-threaded debugging code.  This would be racy in multithreaded
-        // mode, but provides not sanity checks in single threaded mode.
-        assert(writers == 1 && "Writer lock not acquired before release!");
-        --writers;
-        return true;
-      }
-    };
+typedef SmartRWMutex<false> RWMutex;
 
-    typedef SmartRWMutex<false> RWMutex;
+/// ScopedReader - RAII acquisition of a reader lock
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
+template <bool mt_only>
+using SmartScopedReader = const std::shared_lock<SmartRWMutex<mt_only>>;
+#else
+template <bool mt_only> struct SmartScopedReader {
+  SmartRWMutex<mt_only> &mutex;
 
-    /// ScopedReader - RAII acquisition of a reader lock
-    template<bool mt_only>
-    struct SmartScopedReader {
-      SmartRWMutex<mt_only>& mutex;
+  explicit SmartScopedReader(SmartRWMutex<mt_only> &m) : mutex(m) {
+    mutex.lock_shared();
+  }
 
-      explicit SmartScopedReader(SmartRWMutex<mt_only>& m) : mutex(m) {
-        mutex.lock_shared();
-      }
+  ~SmartScopedReader() { mutex.unlock_shared(); }
+};
+#endif
+typedef SmartScopedReader<false> ScopedReader;
 
-      ~SmartScopedReader() {
-        mutex.unlock_shared();
-      }
-    };
+/// ScopedWriter - RAII acquisition of a writer lock
+#if !defined(LLVM_USE_RW_MUTEX_IMPL)
+template <bool mt_only>
+using SmartScopedWriter = std::lock_guard<SmartRWMutex<mt_only>>;
+#else
+template <bool mt_only> struct SmartScopedWriter {
+  SmartRWMutex<mt_only> &mutex;
 
-    typedef SmartScopedReader<false> ScopedReader;
+  explicit SmartScopedWriter(SmartRWMutex<mt_only> &m) : mutex(m) {
+    mutex.lock();
+  }
 
-    /// ScopedWriter - RAII acquisition of a writer lock
-    template<bool mt_only>
-    struct SmartScopedWriter {
-      SmartRWMutex<mt_only>& mutex;
-
-      explicit SmartScopedWriter(SmartRWMutex<mt_only>& m) : mutex(m) {
-        mutex.lock();
-      }
-
-      ~SmartScopedWriter() {
-        mutex.unlock();
-      }
-    };
-
-    typedef SmartScopedWriter<false> ScopedWriter;
+  ~SmartScopedWriter() { mutex.unlock(); }
+};
+#endif
+typedef SmartScopedWriter<false> ScopedWriter;
 
 } // end namespace sys
 } // end namespace llvm

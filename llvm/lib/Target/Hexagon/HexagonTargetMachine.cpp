@@ -111,10 +111,10 @@ int HexagonTargetMachineModule = 0;
 
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
-    new VLIWMachineScheduler(C, make_unique<ConvergingVLIWScheduler>());
-  DAG->addMutation(make_unique<HexagonSubtarget::UsrOverflowMutation>());
-  DAG->addMutation(make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
-  DAG->addMutation(make_unique<HexagonSubtarget::CallMutation>());
+    new VLIWMachineScheduler(C, std::make_unique<ConvergingVLIWScheduler>());
+  DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
+  DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
 }
@@ -218,7 +218,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small),
           (HexagonNoOpt ? CodeGenOpt::None : OL)),
-      TLOF(make_unique<HexagonTargetObjectFile>()) {
+      TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
@@ -244,7 +244,7 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
+    I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
   }
   return I.get();
 }

@@ -2841,19 +2841,19 @@ template <> struct PolymorphicTraits<std::unique_ptr<Poly>> {
 
   static Scalar &getAsScalar(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Scalar>(*N))
-      N = llvm::make_unique<Scalar>();
+      N = std::make_unique<Scalar>();
     return *cast<Scalar>(N.get());
   }
 
   static Seq &getAsSequence(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Seq>(*N))
-      N = llvm::make_unique<Seq>();
+      N = std::make_unique<Seq>();
     return *cast<Seq>(N.get());
   }
 
   static Map &getAsMap(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Map>(*N))
-      N = llvm::make_unique<Map>();
+      N = std::make_unique<Map>();
     return *cast<Map>(N.get());
   }
 };
@@ -2932,7 +2932,7 @@ template <> struct SequenceTraits<Seq> {
 
 TEST(YAMLIO, TestReadWritePolymorphicScalar) {
   std::string intermediate;
-  std::unique_ptr<Poly> node = llvm::make_unique<Scalar>(true);
+  std::unique_ptr<Poly> node = std::make_unique<Scalar>(true);
 
   llvm::raw_string_ostream ostr(intermediate);
   Output yout(ostr);
@@ -2946,9 +2946,9 @@ TEST(YAMLIO, TestReadWritePolymorphicScalar) {
 TEST(YAMLIO, TestReadWritePolymorphicSeq) {
   std::string intermediate;
   {
-    auto seq = llvm::make_unique<Seq>();
-    seq->push_back(llvm::make_unique<Scalar>(true));
-    seq->push_back(llvm::make_unique<Scalar>(1.0));
+    auto seq = std::make_unique<Seq>();
+    seq->push_back(std::make_unique<Scalar>(true));
+    seq->push_back(std::make_unique<Scalar>(1.0));
     auto node = llvm::unique_dyn_cast<Poly>(seq);
 
     llvm::raw_string_ostream ostr(intermediate);
@@ -2978,9 +2978,9 @@ TEST(YAMLIO, TestReadWritePolymorphicSeq) {
 TEST(YAMLIO, TestReadWritePolymorphicMap) {
   std::string intermediate;
   {
-    auto map = llvm::make_unique<Map>();
-    (*map)["foo"] = llvm::make_unique<Scalar>(false);
-    (*map)["bar"] = llvm::make_unique<Scalar>(2.0);
+    auto map = std::make_unique<Map>();
+    (*map)["foo"] = std::make_unique<Scalar>(false);
+    (*map)["bar"] = std::make_unique<Scalar>(2.0);
     std::unique_ptr<Poly> node = llvm::unique_dyn_cast<Poly>(map);
 
     llvm::raw_string_ostream ostr(intermediate);

@@ -115,17 +115,8 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; SSE-NEXT:    jne .LBB0_4
 ; SSE-NEXT:  # %bb.5: # %middle.block
 ; SSE-NEXT:    cmpq %rax, %rdx
-; SSE-NEXT:    jne .LBB0_6
-; SSE-NEXT:  .LBB0_9: # %for.cond.cleanup
-; SSE-NEXT:    retq
-; SSE-NEXT:    .p2align 4, 0x90
-; SSE-NEXT:  .LBB0_8: # %for.body
-; SSE-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
-; SSE-NEXT:    shll %cl, (%rdi,%rdx,4)
-; SSE-NEXT:    incq %rdx
-; SSE-NEXT:    cmpq %rdx, %rax
 ; SSE-NEXT:    je .LBB0_9
+; SSE-NEXT:    .p2align 4, 0x90
 ; SSE-NEXT:  .LBB0_6: # %for.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    cmpb $0, (%rsi,%rdx)
@@ -134,7 +125,15 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; SSE-NEXT:  # %bb.7: # %for.body
 ; SSE-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; SSE-NEXT:    movl %r8d, %ecx
-; SSE-NEXT:    jmp .LBB0_8
+; SSE-NEXT:  .LBB0_8: # %for.body
+; SSE-NEXT:    # in Loop: Header=BB0_6 Depth=1
+; SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SSE-NEXT:    shll %cl, (%rdi,%rdx,4)
+; SSE-NEXT:    incq %rdx
+; SSE-NEXT:    cmpq %rdx, %rax
+; SSE-NEXT:    jne .LBB0_6
+; SSE-NEXT:  .LBB0_9: # %for.cond.cleanup
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vector_variable_shift_left_loop:
 ; AVX1:       # %bb.0: # %entry
@@ -242,19 +241,8 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    jne .LBB0_4
 ; AVX1-NEXT:  # %bb.5: # %middle.block
 ; AVX1-NEXT:    cmpq %rax, %rdx
-; AVX1-NEXT:    jne .LBB0_6
-; AVX1-NEXT:  .LBB0_9: # %for.cond.cleanup
-; AVX1-NEXT:    addq $24, %rsp
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB0_8: # %for.body
-; AVX1-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; AVX1-NEXT:    # kill: def $cl killed $cl killed $ecx
-; AVX1-NEXT:    shll %cl, (%rdi,%rdx,4)
-; AVX1-NEXT:    incq %rdx
-; AVX1-NEXT:    cmpq %rdx, %rax
 ; AVX1-NEXT:    je .LBB0_9
+; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB0_6: # %for.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    cmpb $0, (%rsi,%rdx)
@@ -263,7 +251,17 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:  # %bb.7: # %for.body
 ; AVX1-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; AVX1-NEXT:    movl %r8d, %ecx
-; AVX1-NEXT:    jmp .LBB0_8
+; AVX1-NEXT:  .LBB0_8: # %for.body
+; AVX1-NEXT:    # in Loop: Header=BB0_6 Depth=1
+; AVX1-NEXT:    # kill: def $cl killed $cl killed $ecx
+; AVX1-NEXT:    shll %cl, (%rdi,%rdx,4)
+; AVX1-NEXT:    incq %rdx
+; AVX1-NEXT:    cmpq %rdx, %rax
+; AVX1-NEXT:    jne .LBB0_6
+; AVX1-NEXT:  .LBB0_9: # %for.cond.cleanup
+; AVX1-NEXT:    addq $24, %rsp
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vector_variable_shift_left_loop:
 ; AVX2:       # %bb.0: # %entry
@@ -318,18 +316,8 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX2-NEXT:    jne .LBB0_4
 ; AVX2-NEXT:  # %bb.5: # %middle.block
 ; AVX2-NEXT:    cmpq %rax, %rdx
-; AVX2-NEXT:    jne .LBB0_6
-; AVX2-NEXT:  .LBB0_9: # %for.cond.cleanup
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB0_8: # %for.body
-; AVX2-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; AVX2-NEXT:    shll %cl, (%rdi,%rdx,4)
-; AVX2-NEXT:    incq %rdx
-; AVX2-NEXT:    cmpq %rdx, %rax
 ; AVX2-NEXT:    je .LBB0_9
+; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB0_6: # %for.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    cmpb $0, (%rsi,%rdx)
@@ -338,7 +326,16 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX2-NEXT:  # %bb.7: # %for.body
 ; AVX2-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; AVX2-NEXT:    movl %r8d, %ecx
-; AVX2-NEXT:    jmp .LBB0_8
+; AVX2-NEXT:  .LBB0_8: # %for.body
+; AVX2-NEXT:    # in Loop: Header=BB0_6 Depth=1
+; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; AVX2-NEXT:    shll %cl, (%rdi,%rdx,4)
+; AVX2-NEXT:    incq %rdx
+; AVX2-NEXT:    cmpq %rdx, %rax
+; AVX2-NEXT:    jne .LBB0_6
+; AVX2-NEXT:  .LBB0_9: # %for.cond.cleanup
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 entry:
   %cmp12 = icmp sgt i32 %count, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup

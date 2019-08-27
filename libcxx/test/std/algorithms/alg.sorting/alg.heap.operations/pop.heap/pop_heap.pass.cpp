@@ -18,6 +18,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_iterators.h"
 
 std::mt19937 randomness;
 
@@ -34,6 +35,18 @@ void test(int N)
         assert(std::is_heap(ia, ia+i-1));
     }
     std::pop_heap(ia, ia);
+
+
+    typedef random_access_iterator<int *> RI;
+    std::shuffle(RI(ia), RI(ia+N), randomness);
+    std::make_heap(RI(ia), RI(ia+N));
+    for (int i = N; i > 0; --i)
+    {
+        std::pop_heap(RI(ia), RI(ia+i));
+        assert(std::is_heap(RI(ia), RI(ia+i-1)));
+    }
+    std::pop_heap(RI(ia), RI(ia));
+
     delete [] ia;
 }
 

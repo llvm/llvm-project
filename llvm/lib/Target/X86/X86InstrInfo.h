@@ -218,7 +218,7 @@ public:
   /// Reference parameters are set to indicate how caller should add this
   /// operand to the LEA instruction.
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
-                      unsigned LEAOpcode, bool AllowSP, unsigned &NewSrc,
+                      unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
                       bool &isKill, MachineOperand &ImplicitOp,
                       LiveVariables *LV) const;
 
@@ -526,6 +526,10 @@ public:
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
+
+  static bool hasLockPrefix(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & X86II::LOCK;
+  }
 
   Optional<ParamLoadedValue>
   describeLoadedValue(const MachineInstr &MI) const override;

@@ -241,7 +241,7 @@ void DerivedArgList::AddSynthesizedArg(Arg *A) {
 
 Arg *DerivedArgList::MakeFlagArg(const Arg *BaseArg, const Option Opt) const {
   SynthesizedArgs.push_back(
-      make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
+      std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
                        BaseArgs.MakeIndex(Opt.getName()), BaseArg));
   return SynthesizedArgs.back().get();
 }
@@ -250,7 +250,7 @@ Arg *DerivedArgList::MakePositionalArg(const Arg *BaseArg, const Option Opt,
                                        StringRef Value) const {
   unsigned Index = BaseArgs.MakeIndex(Value);
   SynthesizedArgs.push_back(
-      make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
+      std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
                        Index, BaseArgs.getArgString(Index), BaseArg));
   return SynthesizedArgs.back().get();
 }
@@ -259,7 +259,7 @@ Arg *DerivedArgList::MakeSeparateArg(const Arg *BaseArg, const Option Opt,
                                      StringRef Value) const {
   unsigned Index = BaseArgs.MakeIndex(Opt.getName(), Value);
   SynthesizedArgs.push_back(
-      make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
+      std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
                        Index, BaseArgs.getArgString(Index + 1), BaseArg));
   return SynthesizedArgs.back().get();
 }
@@ -267,7 +267,7 @@ Arg *DerivedArgList::MakeSeparateArg(const Arg *BaseArg, const Option Opt,
 Arg *DerivedArgList::MakeJoinedArg(const Arg *BaseArg, const Option Opt,
                                    StringRef Value) const {
   unsigned Index = BaseArgs.MakeIndex((Opt.getName() + Value).str());
-  SynthesizedArgs.push_back(make_unique<Arg>(
+  SynthesizedArgs.push_back(std::make_unique<Arg>(
       Opt, MakeArgString(Opt.getPrefix() + Opt.getName()), Index,
       BaseArgs.getArgString(Index) + Opt.getName().size(), BaseArg));
   return SynthesizedArgs.back().get();

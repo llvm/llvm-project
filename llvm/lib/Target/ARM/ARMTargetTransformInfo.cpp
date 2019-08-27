@@ -186,6 +186,21 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     if (const auto *Entry = ConvertCostTableLookup(
             LoadConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
+
+    static const TypeConversionCostTblEntry MVELoadConversionTbl[] = {
+        {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 0},
+        {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 0},
+        {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 0},
+        {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 0},
+        {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 0},
+        {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 0},
+    };
+    if (SrcTy.isVector() && ST->hasMVEIntegerOps()) {
+      if (const auto *Entry =
+              ConvertCostTableLookup(MVELoadConversionTbl, ISD,
+                                     DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+        return Entry->Cost;
+    }
   }
 
   // Some arithmetic, load and store operations have specific instructions
@@ -332,6 +347,31 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                                    ISD, DstTy.getSimpleVT(),
                                                    SrcTy.getSimpleVT()))
       return Entry->Cost;
+  }
+
+  // MVE extend costs, taken from codegen tests. i8->i16 or i16->i32 is one
+  // instruction, i8->i32 is two. i64 zexts are an VAND with a constant, sext
+  // are linearised so take more.
+  static const TypeConversionCostTblEntry MVEVectorConversionTbl[] = {
+    { ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 1 },
+    { ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 2 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i8, 10 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i8, 2 },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 1 },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 10 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 8 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 2 },
+  };
+
+  if (SrcTy.isVector() && ST->hasMVEIntegerOps()) {
+    if (const auto *Entry = ConvertCostTableLookup(MVEVectorConversionTbl,
+                                                   ISD, DstTy.getSimpleVT(),
+                                                   SrcTy.getSimpleVT()))
+      return Entry->Cost * ST->getMVEVectorCostFactor();
   }
 
   // Scalar integer conversion costs.
@@ -1003,4 +1043,29 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // taken cost of the backedge.
   if (Cost < 12)
     UP.Force = true;
+}
+
+bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const {
+  assert(isa<VectorType>(Ty) && "Expected Ty to be a vector type");
+  unsigned ScalarBits = Ty->getScalarSizeInBits();
+  if (!ST->hasMVEIntegerOps())
+    return false;
+
+  switch (Opcode) {
+  case Instruction::FAdd:
+  case Instruction::FMul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Mul:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return false;
+  case Instruction::Add:
+    return ScalarBits * Ty->getVectorNumElements() == 128;
+  default:
+    llvm_unreachable("Unhandled reduction opcode");
+  }
+  return false;
 }

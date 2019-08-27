@@ -211,7 +211,7 @@ static const Target *GetTarget(const char *ProgName) {
 
 static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
   std::error_code EC;
-  auto Out = llvm::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
+  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
 
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
-    auto FOut = llvm::make_unique<formatted_raw_ostream>(*OS);
+    auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
     Str.reset(
         TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
                                      /*useDwarfDirectory*/ true, IP,
@@ -474,7 +474,7 @@ int main(int argc, char **argv) {
     Ctx.setUseNamesOnTempLabels(false);
 
     if (!Out->os().supportsSeeking()) {
-      BOS = make_unique<buffer_ostream>(Out->os());
+      BOS = std::make_unique<buffer_ostream>(Out->os());
       OS = BOS.get();
     }
 

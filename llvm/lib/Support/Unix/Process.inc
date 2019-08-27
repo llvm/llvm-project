@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
 #include <mutex>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
@@ -327,13 +326,13 @@ extern "C" int tigetnum(char *capname);
 #endif
 
 #ifdef HAVE_TERMINFO
-static ManagedStatic<sys::Mutex> TermColorMutex;
+static ManagedStatic<std::mutex> TermColorMutex;
 #endif
 
 static bool terminalHasColors(int fd) {
 #ifdef HAVE_TERMINFO
   // First, acquire a global lock because these C routines are thread hostile.
-  std::lock_guard<sys::Mutex> G(*TermColorMutex);
+  std::lock_guard<std::mutex> G(*TermColorMutex);
 
   int errret = 0;
   if (setupterm(nullptr, fd, &errret) != 0)

@@ -158,7 +158,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
 void RISCVInstrInfo::movImm32(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
-                              const DebugLoc &DL, unsigned DstReg, uint64_t Val,
+                              const DebugLoc &DL, Register DstReg, uint64_t Val,
                               MachineInstr::MIFlag Flag) const {
   assert(isInt<32>(Val) && "Can only materialize 32-bit constants");
 

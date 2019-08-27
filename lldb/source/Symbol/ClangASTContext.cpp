@@ -82,7 +82,6 @@
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/VerifyDecl.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
@@ -107,6 +106,13 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
+#ifdef LLDB_CONFIGURATION_DEBUG
+static void VerifyDecl(clang::Decl *decl) {
+  assert(decl && "VerifyDecl called with nullptr?");
+  decl->getAccess();
+}
+#endif
+
 static inline bool
 ClangASTContextSupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeUnknown || // Clang is the default type system
@@ -728,32 +734,36 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
   return lldb::TypeSystemSP();
 }
 
-void ClangASTContext::EnumerateSupportedLanguages(
-    std::set<lldb::LanguageType> &languages_for_types,
-    std::set<lldb::LanguageType> &languages_for_expressions) {
-  static std::vector<lldb::LanguageType> s_supported_languages_for_types(
-      {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC11,
-       lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeC99,
-       lldb::eLanguageTypeObjC, lldb::eLanguageTypeObjC_plus_plus,
-       lldb::eLanguageTypeC_plus_plus_03, lldb::eLanguageTypeC_plus_plus_11,
-       lldb::eLanguageTypeC11, lldb::eLanguageTypeC_plus_plus_14});
+LanguageSet ClangASTContext::GetSupportedLanguagesForTypes() {
+  LanguageSet languages;
+  languages.Insert(lldb::eLanguageTypeC89);
+  languages.Insert(lldb::eLanguageTypeC);
+  languages.Insert(lldb::eLanguageTypeC11);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus);
+  languages.Insert(lldb::eLanguageTypeC99);
+  languages.Insert(lldb::eLanguageTypeObjC);
+  languages.Insert(lldb::eLanguageTypeObjC_plus_plus);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
+  languages.Insert(lldb::eLanguageTypeC11);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  return languages;
+}
 
-  static std::vector<lldb::LanguageType> s_supported_languages_for_expressions(
-      {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC_plus_plus,
-       lldb::eLanguageTypeC_plus_plus_03, lldb::eLanguageTypeC_plus_plus_11,
-       lldb::eLanguageTypeC_plus_plus_14});
-
-  languages_for_types.insert(s_supported_languages_for_types.begin(),
-                             s_supported_languages_for_types.end());
-  languages_for_expressions.insert(
-      s_supported_languages_for_expressions.begin(),
-      s_supported_languages_for_expressions.end());
+LanguageSet ClangASTContext::GetSupportedLanguagesForExpressions() {
+  LanguageSet languages;
+  languages.Insert(lldb::eLanguageTypeC_plus_plus);
+  languages.Insert(lldb::eLanguageTypeObjC_plus_plus);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  return languages;
 }
 
 void ClangASTContext::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                "clang base AST context plug-in",
-                                CreateInstance, EnumerateSupportedLanguages);
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
+      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
 }
 
 void ClangASTContext::Terminate() {
@@ -1378,11 +1388,12 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
     case DW_ATE_UTF:
       if (type_name) {
-        if (streq(type_name, "char16_t")) {
+        if (streq(type_name, "char16_t"))
           return CompilerType(this, ast->Char16Ty.getAsOpaquePtr());
-        } else if (streq(type_name, "char32_t")) {
+        if (streq(type_name, "char32_t"))
           return CompilerType(this, ast->Char32Ty.getAsOpaquePtr());
-        }
+        if (streq(type_name, "char8_t"))
+          return CompilerType(this, ast->Char8Ty.getAsOpaquePtr());
       }
       break;
     }
@@ -1460,6 +1471,16 @@ bool ClangASTContext::AreTypesSame(CompilerType type1, CompilerType type2,
   }
 
   return ast->getASTContext()->hasSameType(type1_qual, type2_qual);
+}
+
+CompilerType ClangASTContext::GetTypeForDecl(void *opaque_decl) {
+  if (!opaque_decl)
+    return CompilerType();
+
+  clang::Decl *decl = static_cast<clang::Decl *>(opaque_decl);
+  if (auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
+    return GetTypeForDecl(named_decl);
+  return CompilerType();
 }
 
 CompilerType ClangASTContext::GetTypeForDecl(clang::NamedDecl *decl) {
@@ -1553,9 +1574,8 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
     //
     // FIXME: An unnamed class within a class is also wrongly recognized as an
     // anonymous struct.
-    if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl_ctx)) {
+    if (isa<CXXRecordDecl>(decl_ctx))
       decl->setAnonymousStructOrUnion(true);
-    }
   }
 
   if (decl) {

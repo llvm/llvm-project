@@ -231,4 +231,4 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   }
 }
 
-} // end llvm namespace
+} // end namespace llvm

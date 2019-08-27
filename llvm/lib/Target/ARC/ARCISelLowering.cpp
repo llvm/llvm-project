@@ -716,7 +716,7 @@ SDValue ARCTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   assert(cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0 &&
          "Only support lowering frame addr of current frame.");
-  unsigned FrameReg = ARI.getFrameRegister(MF);
+  Register FrameReg = ARI.getFrameRegister(MF);
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
 }
 

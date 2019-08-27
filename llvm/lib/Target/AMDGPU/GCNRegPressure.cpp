@@ -406,7 +406,7 @@ void GCNDownwardRPTracker::advanceToNext() {
   for (const auto &MO : LastTrackedMI->defs()) {
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
     auto &LiveMask = LiveRegs[Reg];

@@ -565,6 +565,13 @@ let isCall = 1,
                   4, IIC_Br,
                   [(ARMcall_nolink tGPR:$func)]>,
             Requires<[IsThumb, IsThumb1Only]>, Sched<[WriteBr]>;
+
+  // Also used for Thumb2
+  // push lr before the call
+  def tBL_PUSHLR : tPseudoInst<(outs), (ins GPRlr:$ra, pred:$p, thumb_bl_target:$func),
+                  4, IIC_Br,
+                  []>,
+             Requires<[IsThumb]>, Sched<[WriteBr]>;
 }
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {

@@ -262,6 +262,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     AddNoCarryInsts(false),
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
+    HasMFMAInlineLiteralBug(false),
 
     ScalarizeGlobal(false),
 
@@ -881,8 +882,8 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(llvm::make_unique<MemOpClusterMutation>(&InstrInfo));
-  Mutations.push_back(llvm::make_unique<FillMFMAShadowMutation>(&InstrInfo));
+  Mutations.push_back(std::make_unique<MemOpClusterMutation>(&InstrInfo));
+  Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {

@@ -1437,22 +1437,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    // Let A, B and C being the components of Target and R be the location of
-    // the fixup. If the fixup is not pcrel, we want to compute (A - B + C).
-    // If it is pcrel, we want to compute (A - B + C - R).
-
-    // In general, ELF has no relocations for -B. It can only represent (A + C)
-    // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
-    // replace B to implement it: (A - R - K + C)
-    if (IsPCRel) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "No relocation available to represent this relative expression");
-      return;
-    }
-
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
-
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
@@ -1468,10 +1453,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
 
-    uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
-    uint64_t K = SymBOffset - FixupOffset;
+    assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    C -= K;
+    C += FixupOffset - Layout.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -1489,38 +1473,35 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     }
   }
 
-  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
-  uint64_t OriginalC = C;
-  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
-  if (!RelocateWithSymbol && SymA && !SymA->isUndefined())
-    C += Layout.getSymbolOffset(*SymA);
-
-  uint64_t Addend = 0;
-  if (hasRelocationAddend()) {
-    Addend = C;
-    C = 0;
-  }
-
-  FixedValue = C;
-
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
   if (!checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
     return;
 
+  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
+  uint64_t Addend = 0;
+
+  FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
+                   ? C + Layout.getSymbolOffset(*SymA)
+                   : C;
+  if (hasRelocationAddend()) {
+    Addend = FixedValue;
+    FixedValue = 0;
+  }
+
   if (!RelocateWithSymbol) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
       SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA,
-                           OriginalC);
+    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA, C);
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
 
-  const auto *RenamedSymA = SymA;
+  const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
     if (const MCSymbolELF *R = Renames.lookup(SymA))
       RenamedSymA = R;
@@ -1530,8 +1511,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     else
       RenamedSymA->setUsedInReloc();
   }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA,
-                         OriginalC);
+  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA, C);
   Relocations[&FixupSection].push_back(Rec);
 }
 
@@ -1551,7 +1531,7 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 std::unique_ptr<MCObjectWriter>
 llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return llvm::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
+  return std::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
                                                   IsLittleEndian);
 }
 
@@ -1559,6 +1539,6 @@ std::unique_ptr<MCObjectWriter>
 llvm::createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                                raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
                                bool IsLittleEndian) {
-  return llvm::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
+  return std::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
                                                IsLittleEndian);
 }

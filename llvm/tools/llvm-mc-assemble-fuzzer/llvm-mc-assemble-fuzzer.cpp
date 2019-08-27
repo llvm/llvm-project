@@ -197,7 +197,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   std::string OutputString;
   raw_string_ostream Out(OutputString);
-  auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
+  auto FOut = std::make_unique<formatted_raw_ostream>(Out);
 
   std::unique_ptr<MCStreamer> Str;
 
@@ -211,7 +211,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     std::error_code EC;
     const std::string OutputFilename = "-";
     auto Out =
-        llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
+        std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
     if (EC) {
       errs() << EC.message() << '\n';
       abort();
@@ -223,7 +223,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     std::unique_ptr<buffer_ostream> BOS;
     raw_pwrite_stream *OS = &Out->os();
     if (!Out->os().supportsSeeking()) {
-      BOS = make_unique<buffer_ostream>(Out->os());
+      BOS = std::make_unique<buffer_ostream>(Out->os());
       OS = BOS.get();
     }
 

@@ -189,6 +189,12 @@ def G_JUMP_TABLE : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_DYN_STACKALLOC : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins type1:$size, i32imm:$align);
+  let hasSideEffects = 1;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------

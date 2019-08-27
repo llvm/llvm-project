@@ -2122,6 +2122,10 @@ void CodeGenModule::EmitDeferred() {
     if (!GV->isDeclaration())
       continue;
 
+    // If this is OpenMP, check if it is legal to emit this global normally.
+    if (LangOpts.OpenMP && OpenMPRuntime && OpenMPRuntime->emitTargetGlobal(D))
+      continue;
+
     // Otherwise, emit the definition and move on to the next one.
     EmitGlobalDefinition(D, GV);
 
@@ -2318,11 +2322,20 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
-  if (const auto *FD = dyn_cast<FunctionDecl>(Global))
+  if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       // Implicit template instantiations may change linkage if they are later
       // explicitly instantiated, so they should not be emitted eagerly.
       return false;
+    // In OpenMP 5.0 function may be marked as device_type(nohost) and we should
+    // not emit them eagerly unless we sure that the function must be emitted on
+    // the host.
+    if (LangOpts.OpenMP >= 50 && !LangOpts.OpenMPSimd &&
+        !LangOpts.OpenMPIsDevice &&
+        !OMPDeclareTargetDeclAttr::getDeviceType(FD) &&
+        !FD->isUsed(/*CheckUsedAttr=*/false) && !FD->isReferenced())
+      return false;
+  }
   if (const auto *VD = dyn_cast<VarDecl>(Global))
     if (Context.getInlineVariableDefinitionKind(VD) ==
         ASTContext::InlineVariableDefinitionKind::WeakUnknown)
@@ -2445,8 +2458,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   }
 
   if (LangOpts.OpenMP) {
-    // If this is OpenMP device, check if it is legal to emit this global
-    // normally.
+    // If this is OpenMP, check if it is legal to emit this global normally.
     if (OpenMPRuntime && OpenMPRuntime->emitTargetGlobal(GD))
       return;
     if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Global)) {
@@ -4363,17 +4375,22 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
   // Create a reference to the named value.  This ensures that it is emitted
   // if a deferred decl.
   llvm::Constant *Aliasee;
-  if (isa<llvm::FunctionType>(DeclTy))
+  llvm::GlobalValue::LinkageTypes LT;
+  if (isa<llvm::FunctionType>(DeclTy)) {
     Aliasee = GetOrCreateLLVMFunction(AA->getAliasee(), DeclTy, GD,
                                       /*ForVTable=*/false);
-  else
+    LT = getFunctionLinkage(GD);
+  } else {
     Aliasee = GetOrCreateLLVMGlobal(AA->getAliasee(),
                                     llvm::PointerType::getUnqual(DeclTy),
                                     /*D=*/nullptr);
+    LT = getLLVMLinkageVarDefinition(cast<VarDecl>(GD.getDecl()),
+                                     D->getType().isConstQualified());
+  }
 
   // Create the new alias itself, but don't set a name yet.
-  auto *GA = llvm::GlobalAlias::create(
-      DeclTy, 0, llvm::Function::ExternalLinkage, "", Aliasee, &getModule());
+  auto *GA =
+      llvm::GlobalAlias::create(DeclTy, 0, LT, "", Aliasee, &getModule());
 
   if (Entry) {
     if (GA->getAliasee() == Entry) {

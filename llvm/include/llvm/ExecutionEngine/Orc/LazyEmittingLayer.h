@@ -171,7 +171,7 @@ private:
                                            bool ExportedSymbolsOnly) const {
       assert(!MangledSymbols && "Mangled symbols map already exists?");
 
-      auto Symbols = llvm::make_unique<StringMap<const GlobalValue*>>();
+      auto Symbols = std::make_unique<StringMap<const GlobalValue*>>();
 
       Mangler Mang;
 
@@ -209,7 +209,7 @@ public:
   Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
     assert(!ModuleMap.count(K) && "VModuleKey K already in use");
     ModuleMap[K] =
-        llvm::make_unique<EmissionDeferredModule>(std::move(K), std::move(M));
+        std::make_unique<EmissionDeferredModule>(std::move(K), std::move(M));
     return Error::success();
   }
 

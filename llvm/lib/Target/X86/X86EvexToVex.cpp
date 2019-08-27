@@ -131,7 +131,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
     if (!MO.isReg())
       continue;
 
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
 
     assert(!(Reg >= X86::ZMM0 && Reg <= X86::ZMM31) &&
            "ZMM instructions should not be in the EVEX->VEX tables");

@@ -235,8 +235,8 @@ bool TailDuplicator::tailDuplicateAndUpdate(
     MachineInstr *Copy = Copies[i];
     if (!Copy->isCopy())
       continue;
-    unsigned Dst = Copy->getOperand(0).getReg();
-    unsigned Src = Copy->getOperand(1).getReg();
+    Register Dst = Copy->getOperand(0).getReg();
+    Register Src = Copy->getOperand(1).getReg();
     if (MRI->hasOneNonDBGUse(Src) &&
         MRI->constrainRegClass(Src, MRI->getRegClass(Dst))) {
       // Copy is the only use. Do trivial copy propagation here.
@@ -312,7 +312,7 @@ static void getRegsUsedByPHIs(const MachineBasicBlock &BB,
     if (!MI.isPHI())
       break;
     for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
-      unsigned SrcReg = MI.getOperand(i).getReg();
+      Register SrcReg = MI.getOperand(i).getReg();
       UsedByPhi->insert(SrcReg);
     }
   }
@@ -340,17 +340,17 @@ void TailDuplicator::processPHI(
     DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
     SmallVectorImpl<std::pair<unsigned, RegSubRegPair>> &Copies,
     const DenseSet<unsigned> &RegsUsedByPhi, bool Remove) {
-  unsigned DefReg = MI->getOperand(0).getReg();
+  Register DefReg = MI->getOperand(0).getReg();
   unsigned SrcOpIdx = getPHISrcRegOpIdx(MI, PredBB);
   assert(SrcOpIdx && "Unable to find matching PHI source?");
-  unsigned SrcReg = MI->getOperand(SrcOpIdx).getReg();
+  Register SrcReg = MI->getOperand(SrcOpIdx).getReg();
   unsigned SrcSubReg = MI->getOperand(SrcOpIdx).getSubReg();
   const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
   LocalVRMap.insert(std::make_pair(DefReg, RegSubRegPair(SrcReg, SrcSubReg)));
 
   // Insert a copy from source to the end of the block. The def register is the
   // available value liveout of the block.
-  unsigned NewDef = MRI->createVirtualRegister(RC);
+  Register NewDef = MRI->createVirtualRegister(RC);
   Copies.push_back(std::make_pair(NewDef, RegSubRegPair(SrcReg, SrcSubReg)));
   if (isDefLiveOut(DefReg, TailBB, MRI) || RegsUsedByPhi.count(DefReg))
     addSSAUpdateEntry(DefReg, NewDef, PredBB);
@@ -384,12 +384,12 @@ void TailDuplicator::duplicateInstruction(
       MachineOperand &MO = NewMI.getOperand(i);
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Register::isVirtualRegister(Reg))
         continue;
       if (MO.isDef()) {
         const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-        unsigned NewReg = MRI->createVirtualRegister(RC);
+        Register NewReg = MRI->createVirtualRegister(RC);
         MO.setReg(NewReg);
         LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
         if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
@@ -433,7 +433,7 @@ void TailDuplicator::duplicateInstruction(
             auto *NewRC = MI->getRegClassConstraint(i, TII, TRI);
             if (NewRC == nullptr)
               NewRC = OrigRC;
-            unsigned NewReg = MRI->createVirtualRegister(NewRC);
+            Register NewReg = MRI->createVirtualRegister(NewRC);
             BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(),
                     TII->get(TargetOpcode::COPY), NewReg)
                 .addReg(VI->second.Reg, 0, VI->second.SubReg);
@@ -477,7 +477,7 @@ void TailDuplicator::updateSuccessorsPHIs(
 
       assert(Idx != 0);
       MachineOperand &MO0 = MI.getOperand(Idx);
-      unsigned Reg = MO0.getReg();
+      Register Reg = MO0.getReg();
       if (isDead) {
         // Folded into the previous BB.
         // There could be duplicate phi source entries. FIXME: Should sdisel

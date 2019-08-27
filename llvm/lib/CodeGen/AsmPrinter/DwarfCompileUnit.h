@@ -227,12 +227,14 @@ public:
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
-  /// This takes the official DWARF 5 tag and returns the appropriate
-  /// GNU tag if needed.
-  dwarf::Tag getDwarf5OrGNUCallSiteTag(dwarf::Tag Tag) const;
-  /// This takes the official DWARF 5 attribute and returns the appropriate
-  /// GNU attribute if needed.
-  dwarf::Attribute getDwarf5OrGNUCallSiteAttr(dwarf::Attribute Attr) const;
+  /// This takes a DWARF 5 tag and returns it or a GNU analog.
+  dwarf::Tag getDwarf5OrGNUTag(dwarf::Tag Tag) const;
+
+  /// This takes a DWARF 5 attribute and returns it or a GNU analog.
+  dwarf::Attribute getDwarf5OrGNUAttr(dwarf::Attribute Attr) const;
+
+  /// This takes a DWARF 5 location atom and either returns it or a GNU analog.
+  dwarf::LocationAtom getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const;
 
   /// Construct a call site entry DIE describing a call within \p Scope to a
   /// callee described by \p CalleeSP.

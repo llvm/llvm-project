@@ -1,5 +1,5 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
-; RUN: opt < %s -attributor -attributor-disable=false -S | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt < %s -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=12 -S | FileCheck %s --check-prefix=ATTRIBUTOR
 
 ; TEST 1
 ; CHECK: Function Attrs: norecurse nounwind readnone
@@ -91,6 +91,15 @@ define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality
   tail call void @__cxa_end_catch()
   ret i32 -1
 }
+
+define i32 @catch_thing_user() {
+; ATTRIBUTOR:     define i32 @catch_thing_user
+; ATTRIBUTOR-NEXT: %catch_thing_call = call
+; ATTRIBUTOR-NEXT: ret i32 -1
+  %catch_thing_call = call i32 @catch_thing()
+  ret i32 %catch_thing_call
+}
+
 
 declare i32 @__gxx_personality_v0(...)
 

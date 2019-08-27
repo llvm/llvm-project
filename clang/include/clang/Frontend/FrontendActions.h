@@ -126,14 +126,7 @@ protected:
   bool hasASTFileSupport() const override { return false; }
 };
 
-// Support different interface stub formats this way:
-class GenerateInterfaceYAMLExpV1Action : public GenerateInterfaceStubAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-};
-
-class GenerateInterfaceTBEExpV1Action : public GenerateInterfaceStubAction {
+class GenerateInterfaceIfsExpV1Action : public GenerateInterfaceStubAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;

@@ -11,10 +11,10 @@
 
 # TCB size = 0x16 and foo is first element from TLS register.
 # CHECK-LABEL: _start:
-# CHECK-NEXT:    210000: movz    x0, #0, lsl #16
-# CHECK-NEXT:    210004: movk    x0, #16
-# CHECK-NEXT:    210008: nop
-# CHECK-NEXT:    21000c: nop
+# CHECK-NEXT:    2101c8: movz    x0, #0, lsl #16
+# CHECK-NEXT:    2101cc: movk    x0, #16
+# CHECK-NEXT:    2101d0: nop
+# CHECK-NEXT:    2101d4: nop
 
 .globl _start
 _start:

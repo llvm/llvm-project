@@ -1,5 +1,3 @@
-def SDTVecLeaf:
-  SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecBinOp:
   SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>]>;
 
@@ -258,6 +256,21 @@ class Vneg1<ValueType VecTy>
 
 class Vnot<ValueType VecTy>
   : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;
+
+let Predicates = [UseHVX] in {
+  let AddedComplexity = 220 in {
+    defm: MinMax_pats<V6_vminb,  V6_vmaxb,  vselect,  setgt,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminb,  V6_vmaxb,  vselect,  setge,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminub, V6_vmaxub, vselect, setugt,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminub, V6_vmaxub, vselect, setuge,  VecQ8,  HVI8>;
+    defm: MinMax_pats<V6_vminh,  V6_vmaxh,  vselect,  setgt, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminh,  V6_vmaxh,  vselect,  setge, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminuh, V6_vmaxuh, vselect, setugt, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminuh, V6_vmaxuh, vselect, setuge, VecQ16, HVI16>;
+    defm: MinMax_pats<V6_vminw,  V6_vmaxw,  vselect,  setgt, VecQ32, HVI32>;
+    defm: MinMax_pats<V6_vminw,  V6_vmaxw,  vselect,  setge, VecQ32, HVI32>;
+  }
+}
 
 let Predicates = [UseHVX] in {
   let AddedComplexity = 200 in {

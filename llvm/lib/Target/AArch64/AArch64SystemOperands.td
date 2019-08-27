@@ -1452,11 +1452,11 @@ let Requires = [{ {AArch64::FeatureMTE} }] in {
 def : RWSysReg<"TCO",              0b11, 0b011, 0b0100, 0b0010, 0b111>;
 def : RWSysReg<"GCR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b110>;
 def : RWSysReg<"RGSR_EL1",         0b11, 0b000, 0b0001, 0b0000, 0b101>;
-def : RWSysReg<"TFSR_EL1",         0b11, 0b000, 0b0110, 0b0101, 0b000>;
-def : RWSysReg<"TFSR_EL2",         0b11, 0b100, 0b0110, 0b0101, 0b000>;
-def : RWSysReg<"TFSR_EL3",         0b11, 0b110, 0b0110, 0b0110, 0b000>;
-def : RWSysReg<"TFSR_EL12",        0b11, 0b101, 0b0110, 0b0110, 0b000>;
-def : RWSysReg<"TFSRE0_EL1",       0b11, 0b000, 0b0110, 0b0110, 0b001>;
+def : RWSysReg<"TFSR_EL1",         0b11, 0b000, 0b0101, 0b0110, 0b000>;
+def : RWSysReg<"TFSR_EL2",         0b11, 0b100, 0b0101, 0b0110, 0b000>;
+def : RWSysReg<"TFSR_EL3",         0b11, 0b110, 0b0101, 0b0110, 0b000>;
+def : RWSysReg<"TFSR_EL12",        0b11, 0b101, 0b0101, 0b0110, 0b000>;
+def : RWSysReg<"TFSRE0_EL1",       0b11, 0b000, 0b0101, 0b0110, 0b001>;
 def : ROSysReg<"GMID_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b100>;
 } // HasMTE
 

@@ -541,7 +541,7 @@ MachineInstr *PPCReduceCRLogicals::lookThroughCRCopy(unsigned Reg,
   CpDef = Copy;
   if (!Copy->isCopy())
     return Copy;
-  unsigned CopySrc = Copy->getOperand(1).getReg();
+  Register CopySrc = Copy->getOperand(1).getReg();
   Subreg = Copy->getOperand(1).getSubReg();
   if (!Register::isVirtualRegister(CopySrc)) {
     const TargetRegisterInfo *TRI = &TII->getRegisterInfo();

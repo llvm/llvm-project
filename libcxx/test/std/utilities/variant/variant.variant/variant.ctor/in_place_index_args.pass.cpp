@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <variant>
 
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 #include "test_macros.h"
 
 void test_ctor_sfinae() {

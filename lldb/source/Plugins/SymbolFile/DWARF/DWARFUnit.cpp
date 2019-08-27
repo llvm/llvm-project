@@ -540,19 +540,15 @@ void DWARFUnit::ParseProducerInfo() {
       } else if (strstr(producer_cstr, "clang")) {
         static RegularExpression g_clang_version_regex(
             llvm::StringRef("clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)"));
-        RegularExpression::Match regex_match(3);
+        llvm::SmallVector<llvm::StringRef, 4> matches;
         if (g_clang_version_regex.Execute(llvm::StringRef(producer_cstr),
-                                          &regex_match)) {
-          std::string str;
-          if (regex_match.GetMatchAtIndex(producer_cstr, 1, str))
-            m_producer_version_major =
-                StringConvert::ToUInt32(str.c_str(), UINT32_MAX, 10);
-          if (regex_match.GetMatchAtIndex(producer_cstr, 2, str))
-            m_producer_version_minor =
-                StringConvert::ToUInt32(str.c_str(), UINT32_MAX, 10);
-          if (regex_match.GetMatchAtIndex(producer_cstr, 3, str))
-            m_producer_version_update =
-                StringConvert::ToUInt32(str.c_str(), UINT32_MAX, 10);
+                                          &matches)) {
+          m_producer_version_major =
+              StringConvert::ToUInt32(matches[1].str().c_str(), UINT32_MAX, 10);
+          m_producer_version_minor =
+              StringConvert::ToUInt32(matches[2].str().c_str(), UINT32_MAX, 10);
+          m_producer_version_update =
+              StringConvert::ToUInt32(matches[3].str().c_str(), UINT32_MAX, 10);
         }
         m_producer = eProducerClang;
       } else if (strstr(producer_cstr, "GNU"))

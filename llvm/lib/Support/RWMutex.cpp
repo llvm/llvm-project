@@ -14,24 +14,20 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Config/config.h"
 
-//===----------------------------------------------------------------------===//
-//=== WARNING: Implementation here must contain only TRULY operating system
-//===          independent code.
-//===----------------------------------------------------------------------===//
+#if defined(LLVM_USE_RW_MUTEX_IMPL)
+using namespace llvm;
+using namespace sys;
 
 #if !defined(LLVM_ENABLE_THREADS) || LLVM_ENABLE_THREADS == 0
 // Define all methods as no-ops if threading is explicitly disabled
 
-using namespace llvm;
-using namespace sys;
-
 RWMutexImpl::RWMutexImpl() = default;
 RWMutexImpl::~RWMutexImpl() = default;
 
-bool RWMutexImpl::reader_acquire() { return true; }
-bool RWMutexImpl::reader_release() { return true; }
-bool RWMutexImpl::writer_acquire() { return true; }
-bool RWMutexImpl::writer_release() { return true; }
+bool RWMutexImpl::lock_shared() { return true; }
+bool RWMutexImpl::unlock_shared() { return true; }
+bool RWMutexImpl::lock() { return true; }
+bool RWMutexImpl::unlock() { return true; }
 
 #else
 
@@ -40,9 +36,6 @@ bool RWMutexImpl::writer_release() { return true; }
 #include <cassert>
 #include <cstdlib>
 #include <pthread.h>
-
-using namespace llvm;
-using namespace sys;
 
 // Construct a RWMutex using pthread calls
 RWMutexImpl::RWMutexImpl()
@@ -75,7 +68,7 @@ RWMutexImpl::~RWMutexImpl()
 }
 
 bool
-RWMutexImpl::reader_acquire()
+RWMutexImpl::lock_shared()
 {
   pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
   assert(rwlock != nullptr);
@@ -85,7 +78,7 @@ RWMutexImpl::reader_acquire()
 }
 
 bool
-RWMutexImpl::reader_release()
+RWMutexImpl::unlock_shared()
 {
   pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
   assert(rwlock != nullptr);
@@ -95,7 +88,7 @@ RWMutexImpl::reader_release()
 }
 
 bool
-RWMutexImpl::writer_acquire()
+RWMutexImpl::lock()
 {
   pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
   assert(rwlock != nullptr);
@@ -105,7 +98,7 @@ RWMutexImpl::writer_acquire()
 }
 
 bool
-RWMutexImpl::writer_release()
+RWMutexImpl::unlock()
 {
   pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
   assert(rwlock != nullptr);
@@ -114,11 +107,30 @@ RWMutexImpl::writer_release()
   return errorcode == 0;
 }
 
-#elif defined(LLVM_ON_UNIX)
-#include "Unix/RWMutex.inc"
-#elif defined( _WIN32)
-#include "Windows/RWMutex.inc"
 #else
-#warning Neither LLVM_ON_UNIX nor _WIN32 was set in Support/Mutex.cpp
+
+RWMutexImpl::RWMutexImpl() : data_(new MutexImpl(false)) { }
+
+RWMutexImpl::~RWMutexImpl() {
+  delete static_cast<MutexImpl *>(data_);
+}
+
+bool RWMutexImpl::lock_shared() {
+  return static_cast<MutexImpl *>(data_)->acquire();
+}
+
+bool RWMutexImpl::unlock_shared() {
+  return static_cast<MutexImpl *>(data_)->release();
+}
+
+bool RWMutexImpl::lock() {
+  return static_cast<MutexImpl *>(data_)->acquire();
+}
+
+bool RWMutexImpl::unlock() {
+  return static_cast<MutexImpl *>(data_)->release();
+}
+
+#endif
 #endif
 #endif

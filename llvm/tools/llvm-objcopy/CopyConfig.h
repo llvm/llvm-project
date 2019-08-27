@@ -98,6 +98,19 @@ public:
   bool operator!=(StringRef S) const { return !operator==(S); }
 };
 
+// Matcher that checks symbol or section names against the command line flags
+// provided for that option.
+class NameMatcher {
+  std::vector<NameOrRegex> Matchers;
+
+public:
+  void addMatcher(NameOrRegex Matcher) {
+    Matchers.push_back(std::move(Matcher));
+  }
+  bool matches(StringRef S) const { return is_contained(Matchers, S); }
+  bool empty() const { return Matchers.empty(); }
+};
+
 struct NewSymbolInfo {
   StringRef SymbolName;
   StringRef SectionName;
@@ -137,16 +150,20 @@ struct CopyConfig {
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
   std::vector<NewSymbolInfo> SymbolsToAdd;
-  std::vector<NameOrRegex> KeepSection;
-  std::vector<NameOrRegex> OnlySection;
-  std::vector<NameOrRegex> SymbolsToGlobalize;
-  std::vector<NameOrRegex> SymbolsToKeep;
-  std::vector<NameOrRegex> SymbolsToLocalize;
-  std::vector<NameOrRegex> SymbolsToRemove;
-  std::vector<NameOrRegex> UnneededSymbolsToRemove;
-  std::vector<NameOrRegex> SymbolsToWeaken;
-  std::vector<NameOrRegex> ToRemove;
-  std::vector<NameOrRegex> SymbolsToKeepGlobal;
+
+  // Section matchers
+  NameMatcher KeepSection;
+  NameMatcher OnlySection;
+  NameMatcher ToRemove;
+
+  // Symbol matchers
+  NameMatcher SymbolsToGlobalize;
+  NameMatcher SymbolsToKeep;
+  NameMatcher SymbolsToLocalize;
+  NameMatcher SymbolsToRemove;
+  NameMatcher UnneededSymbolsToRemove;
+  NameMatcher SymbolsToWeaken;
+  NameMatcher SymbolsToKeepGlobal;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;

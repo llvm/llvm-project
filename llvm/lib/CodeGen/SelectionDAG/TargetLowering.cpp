@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -80,7 +79,7 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
     const CCValAssign &ArgLoc = ArgLocs[I];
     if (!ArgLoc.isRegLoc())
       continue;
-    unsigned Reg = ArgLoc.getLocReg();
+    Register Reg = ArgLoc.getLocReg();
     // Only look at callee saved registers.
     if (MachineOperand::clobbersPhysReg(CallerPreservedMask, Reg))
       continue;
@@ -121,10 +120,9 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
 TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
-                            ArrayRef<SDValue> Ops, bool isSigned,
-                            const SDLoc &dl, bool doesNotReturn,
-                            bool isReturnValueUsed,
-                            bool isPostTypeLegalization) const {
+                            ArrayRef<SDValue> Ops,
+                            MakeLibCallOptions CallOptions,
+                            const SDLoc &dl) const {
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
@@ -132,8 +130,9 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   for (SDValue Op : Ops) {
     Entry.Node = Op;
     Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(), isSigned);
-    Entry.IsZExt = !shouldSignExtendTypeInLibCall(Op.getValueType(), isSigned);
+    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(),
+                                                 CallOptions.IsSExt);
+    Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
 
@@ -144,13 +143,13 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = shouldSignExtendTypeInLibCall(RetVT, isSigned);
+  bool signExtend = shouldSignExtendTypeInLibCall(RetVT, CallOptions.IsSExt);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
       .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
-      .setNoReturn(doesNotReturn)
-      .setDiscardResult(!isReturnValueUsed)
-      .setIsPostTypeLegalization(isPostTypeLegalization)
+      .setNoReturn(CallOptions.DoesNotReturn)
+      .setDiscardResult(!CallOptions.IsReturnValueUsed)
+      .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
       .setSExtResult(signExtend)
       .setZExtResult(!signExtend);
   return LowerCallTo(CLI);
@@ -365,8 +364,8 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   // Use the target specific return value for comparions lib calls.
   EVT RetVT = getCmpLibcallReturnType();
   SDValue Ops[2] = {NewLHS, NewRHS};
-  NewLHS = makeLibCall(DAG, LC1, RetVT, Ops, false /*sign irrelevant*/,
-                       dl).first;
+  TargetLowering::MakeLibCallOptions CallOptions;
+  NewLHS = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl).first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
   CCCode = getCmpLibcallCC(LC1);
@@ -378,8 +377,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
         ISD::SETCC, dl,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
         NewLHS, NewRHS, DAG.getCondCode(CCCode));
-    NewLHS = makeLibCall(DAG, LC2, RetVT, Ops, false/*sign irrelevant*/,
-                         dl).first;
+    NewLHS = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl).first;
     NewLHS = DAG.getNode(
         ISD::SETCC, dl,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
@@ -1821,9 +1819,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // Bitcast from a vector using SimplifyDemanded Bits/VectorElts.
     // Demand the elt/bit if any of the original elts/bits are demanded.
     // TODO - bigendian once we have test coverage.
-    // TODO - bool vectors once SimplifyDemandedVectorElts has SETCC support.
-    if (SrcVT.isVector() && NumSrcEltBits > 1 &&
-        (BitWidth % NumSrcEltBits) == 0 &&
+    if (SrcVT.isVector() && (BitWidth % NumSrcEltBits) == 0 &&
         TLO.DAG.getDataLayout().isLittleEndian()) {
       unsigned Scale = BitWidth / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
@@ -5020,9 +5016,10 @@ SDValue TargetLowering::buildSREMEqFold(EVT SETCCVT, SDValue REMNode,
                                         ISD::CondCode Cond,
                                         DAGCombinerInfo &DCI,
                                         const SDLoc &DL) const {
-  SmallVector<SDNode *, 3> Built;
+  SmallVector<SDNode *, 7> Built;
   if (SDValue Folded = prepareSREMEqFold(SETCCVT, REMNode, CompTargetNode, Cond,
                                          DCI, DL, Built)) {
+    assert(Built.size() <= 7 && "Max size prediction failed.");
     for (SDNode *N : Built)
       DCI.AddToWorklist(N);
     return Folded;
@@ -5065,6 +5062,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   if (!CompTarget || !CompTarget->isNullValue())
     return SDValue();
 
+  bool HadIntMinDivisor = false;
   bool HadOneDivisor = false;
   bool AllDivisorsAreOnes = true;
   bool HadEvenDivisor = false;
@@ -5081,12 +5079,10 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     // WARNING: this fold is only valid for positive divisors!
     APInt D = C->getAPIntValue();
-    if (D.isMinSignedValue())
-      return false; // We can't negate INT_MIN.
     if (D.isNegative())
       D.negate(); //  `rem %X, -C` is equivalent to `rem %X, C`
 
-    assert(!D.isNegative() && "The fold is only valid for positive divisors!");
+    HadIntMinDivisor |= D.isMinSignedValue();
 
     // If all divisors are ones, we will prefer to avoid the fold.
     HadOneDivisor |= D.isOneValue();
@@ -5097,9 +5093,13 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     assert((!D.isOneValue() || (K == 0)) && "For divisor '1' we won't rotate.");
     APInt D0 = D.lshr(K);
 
-    // D is even if it has trailing zeros.
-    HadEvenDivisor |= (K != 0);
-    // D is a power-of-two if D0 is one.
+    if (!D.isMinSignedValue()) {
+      // D is even if it has trailing zeros; unless it's INT_MIN, in which case
+      // we don't care about this lane in this fold, we'll special-handle it.
+      HadEvenDivisor |= (K != 0);
+    }
+
+    // D is a power-of-two if D0 is one. This includes INT_MIN.
     // If all divisors are power-of-two, we will prefer to avoid the fold.
     AllDivisorsArePowerOfTwo &= D0.isOneValue();
 
@@ -5116,7 +5116,11 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);
     A.clearLowBits(K);
 
-    NeedToApplyOffset |= A != 0;
+    if (!D.isMinSignedValue()) {
+      // If divisor INT_MIN, then we don't care about this lane in this fold,
+      // we'll special-handle it.
+      NeedToApplyOffset |= A != 0;
+    }
 
     // Q = floor((2 * A) / (2^K))
     APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
@@ -5126,7 +5130,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     assert(APInt::getAllOnesValue(ShSVT.getSizeInBits()).ugt(K) &&
            "We are expecting that K is always less than all-ones for ShSVT");
 
-    // If the divisor is 1 the result can be constant-folded.
+    // If the divisor is 1 the result can be constant-folded. Likewise, we
+    // don't care about INT_MIN lanes, those can be set to undef if appropriate.
     if (D.isOneValue()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
@@ -5156,8 +5161,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   if (AllDivisorsAreOnes)
     return SDValue();
 
-  // If this is a srem by a powers-of-two, avoid the fold since it can be
-  // best implemented as a bit test.
+  // If this is a srem by a powers-of-two (including INT_MIN), avoid the fold
+  // since it can be best implemented as a bit test.
   if (AllDivisorsArePowerOfTwo)
     return SDValue();
 
@@ -5216,8 +5221,52 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   }
 
   // SREM: (setule/setugt (rotr (add (mul N, P), A), K), Q)
-  return DAG.getSetCC(DL, SETCCVT, Op0, QVal,
-                      ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+  SDValue Fold =
+      DAG.getSetCC(DL, SETCCVT, Op0, QVal,
+                   ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+
+  // If we didn't have lanes with INT_MIN divisor, then we're done.
+  if (!HadIntMinDivisor)
+    return Fold;
+
+  // That fold is only valid for positive divisors. Which effectively means,
+  // it is invalid for INT_MIN divisors. So if we have such a lane,
+  // we must fix-up results for said lanes.
+  assert(VT.isVector() && "Can/should only get here for vectors.");
+
+  if (!isOperationLegalOrCustom(ISD::SETEQ, VT) ||
+      !isOperationLegalOrCustom(ISD::AND, VT) ||
+      !isOperationLegalOrCustom(Cond, VT) ||
+      !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return SDValue();
+
+  Created.push_back(Fold.getNode());
+
+  SDValue IntMin = DAG.getConstant(
+      APInt::getSignedMinValue(SVT.getScalarSizeInBits()), DL, VT);
+  SDValue IntMax = DAG.getConstant(
+      APInt::getSignedMaxValue(SVT.getScalarSizeInBits()), DL, VT);
+  SDValue Zero =
+      DAG.getConstant(APInt::getNullValue(SVT.getScalarSizeInBits()), DL, VT);
+
+  // Which lanes had INT_MIN divisors? Divisor is constant, so const-folded.
+  SDValue DivisorIsIntMin = DAG.getSetCC(DL, SETCCVT, D, IntMin, ISD::SETEQ);
+  Created.push_back(DivisorIsIntMin.getNode());
+
+  // (N s% INT_MIN) ==/!= 0  <-->  (N & INT_MAX) ==/!= 0
+  SDValue Masked = DAG.getNode(ISD::AND, DL, VT, N, IntMax);
+  Created.push_back(Masked.getNode());
+  SDValue MaskedIsZero = DAG.getSetCC(DL, SETCCVT, Masked, Zero, Cond);
+  Created.push_back(MaskedIsZero.getNode());
+
+  // To produce final result we need to blend 2 vectors: 'SetCC' and
+  // 'MaskedIsZero'. If the divisor for channel was *NOT* INT_MIN, we pick
+  // from 'Fold', else pick from 'MaskedIsZero'. Since 'DivisorIsIntMin' is
+  // constant-folded, select can get lowered to a shuffle with constant mask.
+  SDValue Blended =
+      DAG.getNode(ISD::VSELECT, DL, VT, DivisorIsIntMin, MaskedIsZero, Fold);
+
+  return Blended;
 }
 
 bool TargetLowering::
@@ -6843,20 +6892,19 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     // being a legal type for the architecture and thus has to be split to
     // two arguments.
     SDValue Ret;
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setSExt(isSigned);
+    CallOptions.setIsPostTypeLegalization(true);
     if (shouldSplitFunctionArgumentsAsLittleEndian(DAG.getDataLayout())) {
       // Halves of WideVT are packed into registers in different order
       // depending on platform endianness. This is usually handled by
       // the C calling convention, but we can't defer to it in
       // the legalizer.
       SDValue Args[] = { LHS, HiLHS, RHS, HiRHS };
-      Ret = makeLibCall(DAG, LC, WideVT, Args, isSigned, dl,
-          /* doesNotReturn */ false, /* isReturnValueUsed */ true,
-          /* isPostTypeLegalization */ true).first;
+      Ret = makeLibCall(DAG, LC, WideVT, Args, CallOptions, dl).first;
     } else {
       SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
-      Ret = makeLibCall(DAG, LC, WideVT, Args, isSigned, dl,
-          /* doesNotReturn */ false, /* isReturnValueUsed */ true,
-          /* isPostTypeLegalization */ true).first;
+      Ret = makeLibCall(DAG, LC, WideVT, Args, CallOptions, dl).first;
     }
     assert(Ret.getOpcode() == ISD::MERGE_VALUES &&
            "Ret value is a collection of constituent nodes holding result.");

@@ -261,7 +261,7 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   // Remember how big this blob of stack space is
   MFI.setLocalFrameSize(Offset);
-  MFI.setLocalFrameMaxAlign(MaxAlign);
+  MFI.setLocalFrameMaxAlign(assumeAligned(MaxAlign));
 }
 
 static inline bool

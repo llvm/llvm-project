@@ -9,6 +9,7 @@ StdcallFunction@4
 @FastcallFunction@4
 StdcallAlias@4==StdcallFunction@4
 ??_7exception@@6B@
+StdcallExportName@4=StdcallInternalFunction@4
 
 ; CHECK: Name type: noprefix
 ; CHECK: Symbol: __imp__CdeclFunction
@@ -24,3 +25,5 @@ StdcallAlias@4==StdcallFunction@4
 ; CHECK: Symbol: ??_7exception@@6B@
 ; CHECK-NM: W _StdcallAlias@4
 ; CHECK-NM: U _StdcallFunction@4
+; CHECK: Symbol: __imp__StdcallExportName@4{{$}}
+; CHECK: Symbol: _StdcallExportName@4{{$}}

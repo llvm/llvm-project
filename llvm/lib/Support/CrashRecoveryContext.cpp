@@ -10,8 +10,8 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/ThreadLocal.h"
+#include <mutex>
 #include <setjmp.h>
 using namespace llvm;
 
@@ -71,7 +71,7 @@ public:
 
 }
 
-static ManagedStatic<sys::Mutex> gCrashRecoveryContextMutex;
+static ManagedStatic<std::mutex> gCrashRecoveryContextMutex;
 static bool gCrashRecoveryEnabled = false;
 
 static ManagedStatic<sys::ThreadLocal<const CrashRecoveryContext>>
@@ -116,7 +116,7 @@ CrashRecoveryContext *CrashRecoveryContext::GetCurrent() {
 }
 
 void CrashRecoveryContext::Enable() {
-  sys::ScopedLock L(*gCrashRecoveryContextMutex);
+  std::lock_guard<std::mutex> L(*gCrashRecoveryContextMutex);
   // FIXME: Shouldn't this be a refcount or something?
   if (gCrashRecoveryEnabled)
     return;
@@ -125,7 +125,7 @@ void CrashRecoveryContext::Enable() {
 }
 
 void CrashRecoveryContext::Disable() {
-  sys::ScopedLock L(*gCrashRecoveryContextMutex);
+  std::lock_guard<std::mutex> L(*gCrashRecoveryContextMutex);
   if (!gCrashRecoveryEnabled)
     return;
   gCrashRecoveryEnabled = false;

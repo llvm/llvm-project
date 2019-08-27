@@ -54,19 +54,19 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
 /// respective name & index
 static unsigned countFunctions(Module *Program) {
   // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  outs() << "Function Index Reference:\n";
+  errs() << "----------------------------\n";
+  errs() << "Function Index Reference:\n";
   unsigned FunctionCount = 0;
   for (auto &F : *Program)
-    outs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
+    errs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
 
-  outs() << "----------------------------\n";
+  errs() << "----------------------------\n";
   return FunctionCount;
 }
 
 void llvm::reduceFunctionsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Functions...\n";
+  errs() << "*** Reducing Functions...\n";
   unsigned Functions = countFunctions(Test.getProgram());
   runDeltaPass(Test, Functions, extractFunctionsFromModule);
-  outs() << "----------------------------\n";
+  errs() << "----------------------------\n";
 }

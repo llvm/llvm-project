@@ -40,6 +40,27 @@ namespace dr2353 { // dr2353: 9
 #pragma clang __debug dump not_use_2
 }
 
+#if __cplusplus >= 201707L
+// Otherwise, if the qualified-id std::tuple_size<E> names a complete class
+// type **with a member value**, the expression std::tuple_size<E>::value shall
+// be a well-formed integral constant expression
+namespace dr2386 { // dr2386: 9
+struct Bad1 { int a, b; };
+struct Bad2 { int a, b; };
+} // namespace dr2386
+namespace std {
+template <typename T> struct tuple_size;
+template <> struct std::tuple_size<dr2386::Bad1> {};
+template <> struct std::tuple_size<dr2386::Bad2> {
+  static const int value = 42;
+};
+} // namespace std
+namespace dr2386 {
+void no_value() { auto [x, y] = Bad1(); }
+void wrong_value() { auto [x, y] = Bad2(); } // expected-error {{decomposes into 42 elements}}
+} // namespace dr2386
+#endif
+
 namespace dr2387 { // dr2387: 9
 #if __cplusplus >= 201402L
   template<int> int a = 0;

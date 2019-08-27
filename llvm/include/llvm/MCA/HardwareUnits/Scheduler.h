@@ -159,7 +159,7 @@ public:
 
   Scheduler(const MCSchedModel &Model, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : Scheduler(make_unique<ResourceManager>(Model), Lsu,
+      : Scheduler(std::make_unique<ResourceManager>(Model), Lsu,
                   std::move(SelectStrategy)) {}
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
@@ -228,6 +228,9 @@ public:
                   SmallVectorImpl<InstRef> &Ready);
 
   /// Convert a resource mask into a valid llvm processor resource identifier.
+  ///
+  /// Only the most significant bit of the Mask is used by this method to
+  /// identify the processor resource.
   unsigned getResourceID(uint64_t Mask) const {
     return Resources->resolveResourceMask(Mask);
   }

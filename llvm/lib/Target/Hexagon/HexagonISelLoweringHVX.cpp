@@ -193,6 +193,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::OR,                 BoolV, Legal);
     setOperationAction(ISD::XOR,                BoolV, Legal);
   }
+
+  setTargetDAGCombine(ISD::VSELECT);
 }
 
 SDValue
@@ -1578,6 +1580,28 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   Op.dumpr(&DAG);
 #endif
   llvm_unreachable("Unhandled HVX operation");
+}
+
+SDValue
+HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
+      const {
+  const SDLoc &dl(N);
+  SDValue Op(N, 0);
+
+  unsigned Opc = Op.getOpcode();
+  if (Opc == ISD::VSELECT) {
+    // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
+    SDValue Cond = Op.getOperand(0);
+    if (Cond->getOpcode() == ISD::XOR) {
+      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+      if (C1->getOpcode() == HexagonISD::QTRUE) {
+        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                                       Op.getOperand(2), Op.getOperand(1));
+        return VSel;
+      }
+    }
+  }
+  return SDValue();
 }
 
 bool

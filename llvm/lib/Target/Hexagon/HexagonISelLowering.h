@@ -68,6 +68,8 @@ namespace HexagonISD {
       EH_RETURN,
       DCFETCH,
       READCYCLE,
+      PTRUE,
+      PFALSE,
       D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
       P2D,         // Convert 8-bit predicate register to 8-byte value. [*]
       V2Q,         // Convert HVX vector to a vector predicate reg. [*]
@@ -223,6 +225,8 @@ namespace HexagonISD {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
+    SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
     unsigned getRegisterByName(const char* RegName, EVT VT,
@@ -301,7 +305,8 @@ namespace HexagonISD {
         const AttributeList &FuncAttributes) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
-        unsigned Align, MachineMemOperand::Flags Flags, bool *Fast) const override;
+        unsigned Align, MachineMemOperand::Flags Flags, bool *Fast)
+        const override;
 
     /// Returns relocation base for the given PIC jumptable.
     SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
@@ -458,6 +463,8 @@ namespace HexagonISD {
 
     bool isHvxOperation(SDValue Op) const;
     SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   };
 
 } // end namespace llvm

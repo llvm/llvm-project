@@ -1945,6 +1945,11 @@ uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   return SectSize;
 }
 
+ArrayRef<uint8_t> MachOObjectFile::getSectionContents(uint32_t Offset,
+                                                      uint64_t Size) const {
+  return arrayRefFromStringRef(getData().substr(Offset, Size));
+}
+
 Expected<ArrayRef<uint8_t>>
 MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
   uint32_t Offset;
@@ -1960,7 +1965,7 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
     Size = Sect.size;
   }
 
-  return arrayRefFromStringRef(getData().substr(Offset, Size));
+  return getSectionContents(Offset, Size);
 }
 
 uint64_t MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -3428,7 +3433,7 @@ iterator_range<rebase_iterator>
 MachOObjectFile::rebaseTable(Error &Err, MachOObjectFile *O,
                              ArrayRef<uint8_t> Opcodes, bool is64) {
   if (O->BindRebaseSectionTable == nullptr)
-    O->BindRebaseSectionTable = llvm::make_unique<BindRebaseSegInfo>(O);
+    O->BindRebaseSectionTable = std::make_unique<BindRebaseSegInfo>(O);
   MachORebaseEntry Start(&Err, O, Opcodes, is64);
   Start.moveToFirst();
 
@@ -4099,7 +4104,7 @@ MachOObjectFile::bindTable(Error &Err, MachOObjectFile *O,
                            ArrayRef<uint8_t> Opcodes, bool is64,
                            MachOBindEntry::Kind BKind) {
   if (O->BindRebaseSectionTable == nullptr)
-    O->BindRebaseSectionTable = llvm::make_unique<BindRebaseSegInfo>(O);
+    O->BindRebaseSectionTable = std::make_unique<BindRebaseSegInfo>(O);
   MachOBindEntry Start(&Err, O, Opcodes, is64, BKind);
   Start.moveToFirst();
 

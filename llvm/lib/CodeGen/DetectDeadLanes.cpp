@@ -154,7 +154,7 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
                         const TargetRegisterClass *DstRC,
                         const MachineOperand &MO) {
   assert(lowersToCopies(MI));
-  unsigned SrcReg = MO.getReg();
+  Register SrcReg = MO.getReg();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
   if (DstRC == SrcRC)
     return false;
@@ -194,7 +194,7 @@ void DetectDeadLanes::addUsedLanesOnOperand(const MachineOperand &MO,
                                             LaneBitmask UsedLanes) {
   if (!MO.readsReg())
     return;
-  unsigned MOReg = MO.getReg();
+  Register MOReg = MO.getReg();
   if (!Register::isVirtualRegister(MOReg))
     return;
 
@@ -250,7 +250,7 @@ LaneBitmask DetectDeadLanes::transferUsedLanes(const MachineInstr &MI,
       return MO2UsedLanes;
 
     const MachineOperand &Def = MI.getOperand(0);
-    unsigned DefReg = Def.getReg();
+    Register DefReg = Def.getReg();
     const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
     LaneBitmask MO1UsedLanes;
     if (RC->CoveredBySubRegs)
@@ -285,7 +285,7 @@ void DetectDeadLanes::transferDefinedLanesStep(const MachineOperand &Use,
   if (MI.getOpcode() == TargetOpcode::PATCHPOINT)
     return;
   const MachineOperand &Def = *MI.defs().begin();
-  unsigned DefReg = Def.getReg();
+  Register DefReg = Def.getReg();
   if (!Register::isVirtualRegister(DefReg))
     return;
   unsigned DefRegIdx = Register::virtReg2Index(DefReg);
@@ -377,7 +377,7 @@ LaneBitmask DetectDeadLanes::determineInitialDefinedLanes(unsigned Reg) {
     for (const MachineOperand &MO : DefMI.uses()) {
       if (!MO.isReg() || !MO.readsReg())
         continue;
-      unsigned MOReg = MO.getReg();
+      Register MOReg = MO.getReg();
       if (!MOReg)
         continue;
 
@@ -428,7 +428,7 @@ LaneBitmask DetectDeadLanes::determineInitialUsedLanes(unsigned Reg) {
     if (lowersToCopies(UseMI)) {
       assert(UseMI.getDesc().getNumDefs() == 1);
       const MachineOperand &Def = *UseMI.defs().begin();
-      unsigned DefReg = Def.getReg();
+      Register DefReg = Def.getReg();
       // The used lanes of COPY-like instruction operands are determined by the
       // following dataflow analysis.
       if (Register::isVirtualRegister(DefReg)) {
@@ -470,7 +470,7 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
   if (!lowersToCopies(MI))
     return false;
   const MachineOperand &Def = MI.getOperand(0);
-  unsigned DefReg = Def.getReg();
+  Register DefReg = Def.getReg();
   if (!Register::isVirtualRegister(DefReg))
     return false;
   unsigned DefRegIdx = Register::virtReg2Index(DefReg);
@@ -482,7 +482,7 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
   if (UsedLanes.any())
     return false;
 
-  unsigned MOReg = MO.getReg();
+  Register MOReg = MO.getReg();
   if (Register::isVirtualRegister(MOReg)) {
     const TargetRegisterClass *DstRC = MRI->getRegClass(DefReg);
     *CrossCopy = isCrossCopy(*MRI, MI, DstRC, MO);
@@ -536,7 +536,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (!Register::isVirtualRegister(Reg))
           continue;
         unsigned RegIdx = Register::virtReg2Index(Reg);

@@ -43,6 +43,9 @@ count = 1
 arch = None        # Must be initialized after option parsing
 compiler = None    # Must be initialized after option parsing
 
+# The overriden dwarf verison.
+dwarf_version = 0
+
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
 
@@ -53,9 +56,6 @@ cflags_extras = ''
 
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
-
-# By default, we skip long running test case.  Use '-l' option to override.
-skip_long_running_test = True
 
 # Parsable mode silences headers, and any other output this script might generate, and instead
 # prints machine-readable output similar to what clang tests produce.

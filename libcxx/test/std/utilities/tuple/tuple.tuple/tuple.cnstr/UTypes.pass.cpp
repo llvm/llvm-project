@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 #include "MoveOnly.h"
 
 #if TEST_STD_VER > 11

@@ -46,7 +46,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
                                 'ARCH': arch })
         exe_path = self.getBuildArtifact(exe_name)
-        sim_launcher = subprocess.Popen(['xcrun', 'simctl', 'spawn',
+        sim_launcher = subprocess.Popen(['xcrun', 'simctl', 'spawn', '-s',
                                          deviceUDID, exe_path,
                                          'print-pid', 'sleep:10'],
                                         stderr=subprocess.PIPE)

@@ -18,6 +18,7 @@ namespace clang {
       extern const char * const MemoryRefCount;
       extern const char * const MemoryError;
       extern const char * const UnixAPI;
+      extern const char * const CXXObjectLifecycle;
     }
   }
 }

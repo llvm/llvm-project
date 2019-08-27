@@ -45,9 +45,7 @@ public:
 
   void SkipSpaces();
 
-  std::string &GetStringRef() { return m_packet; }
-
-  const std::string &GetStringRef() const { return m_packet; }
+  llvm::StringRef GetStringRef() const { return m_packet; }
 
   bool Empty() { return m_packet.empty(); }
 
@@ -91,9 +89,6 @@ public:
 
   size_t GetHexBytesAvail(llvm::MutableArrayRef<uint8_t> dest);
 
-  uint64_t GetHexWithFixedSize(uint32_t byte_size, bool little_endian,
-                               uint64_t fail_value);
-
   size_t GetHexByteString(std::string &str);
 
   size_t GetHexByteStringFixedLength(std::string &str, uint32_t nibble_length);
@@ -113,12 +108,14 @@ protected:
     m_index = UINT64_MAX;
     return false;
   }
-  // For StringExtractor only
-  std::string m_packet; // The string in which to extract data.
-  uint64_t m_index;     // When extracting data from a packet, this index
-                        // will march along as things get extracted. If set to
-                        // UINT64_MAX the end of the packet data was reached
-                        // when decoding information
+
+  /// The string in which to extract data.
+  std::string m_packet;
+
+  /// When extracting data from a packet, this index will march along as things
+  /// get extracted. If set to UINT64_MAX the end of the packet data was
+  /// reached when decoding information.
+  uint64_t m_index;
 };
 
 #endif // utility_StringExtractor_h_

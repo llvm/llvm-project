@@ -38,7 +38,7 @@ public:
 
   const char *GetName() const;
 
-  size_t GetNameLength() const;
+  llvm::StringRef GetNameAsStringRef() const;
 
   FileSpec &GetExecutableFile() { return m_executable; }
 
@@ -165,12 +165,8 @@ public:
 
   void Append(const ProcessInstanceInfo &info) { m_infos.push_back(info); }
 
-  const char *GetProcessNameAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetName() : nullptr);
-  }
-
-  size_t GetProcessNameLengthAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetNameLength() : 0);
+  llvm::StringRef GetProcessNameAtIndex(size_t idx) {
+    return ((idx < m_infos.size()) ? m_infos[idx].GetNameAsStringRef() : "");
   }
 
   lldb::pid_t GetProcessIDAtIndex(size_t idx) {

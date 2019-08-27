@@ -2667,6 +2667,17 @@ void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
   }
 }
 
+std::string cstring_to_asciihex_string(const char *str) {
+  std::string hex_str;
+  hex_str.reserve (strlen (str) * 2);
+  while (str && *str) {
+    char hexbuf[5];
+    snprintf (hexbuf, sizeof(hexbuf), "%02x", *str++);
+    hex_str += hexbuf;
+  }
+  return hex_str;
+}
+
 void append_hexified_string(std::ostream &ostrm, const std::string &string) {
   size_t string_size = string.size();
   const char *string_buf = string.c_str();
@@ -3818,8 +3829,13 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             }
           }
           if (attach_failed_due_to_sip) {
-            SendPacket("E87"); // E87 is the magic value which says that we are
-                               // not allowed to attach
+            std::string return_message = "E96;";
+            return_message += cstring_to_asciihex_string(
+                "Process attach denied, possibly because "
+                "System Integrity Protection is enabled and "
+                "process does not allow attaching.");
+
+            SendPacket(return_message.c_str());
             DNBLogError("Attach failed because process does not allow "
                         "attaching: \"%s\".",
                         err_str);

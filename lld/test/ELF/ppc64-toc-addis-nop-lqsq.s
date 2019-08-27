@@ -1,4 +1,5 @@
 # REQUIRES: ppc
+# XFAIL: *
 
 # RUN: llvm-readelf -relocations --wide  %p/Inputs/ppc64le-quadword-ldst.o | FileCheck --check-prefix=QuadInputRelocs %s
 
