@@ -636,15 +636,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
   SSAUpdater SSA;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      SSA.Initialize(I.getType(), I.getName());
+      SSA.AddAvailableValue(&BB, &I);
       for (auto UI = I.use_begin(), UE = I.use_end(); UI != UE;) {
         Use &U = *UI;
         ++UI;
-        SSA.Initialize(I.getType(), I.getName());
-        SSA.AddAvailableValue(&BB, &I);
         auto *User = cast<Instruction>(U.getUser());
-        if (User->getParent() == &BB)
-          continue;
-
         if (auto *UserPN = dyn_cast<PHINode>(User))
           if (UserPN->getIncomingBlock(U) == &BB)
             continue;

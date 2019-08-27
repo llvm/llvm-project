@@ -99,6 +99,8 @@ public:
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
 
+  int getWin64EHFrameIndexRef(const MachineFunction &MF,
+                              int FI, unsigned &SPReg) const;
   int getFrameIndexReferenceSP(const MachineFunction &MF,
                                int FI, unsigned &SPReg, int Adjustment) const;
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,

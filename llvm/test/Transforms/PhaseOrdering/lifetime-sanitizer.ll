@@ -1,4 +1,11 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -O0 -S | FileCheck %s
+; RUN: opt < %s -O1 -S | FileCheck %s
+; RUN: opt < %s -O2 -S | FileCheck %s
+; RUN: opt < %s -O3 -S | FileCheck %s
+; RUN: opt < %s -passes='default<O0>' -S | FileCheck %s
+; RUN: opt < %s -passes='default<O1>' -S | FileCheck %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -passes='default<O3>' -S | FileCheck %s
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

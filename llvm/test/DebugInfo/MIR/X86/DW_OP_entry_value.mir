@@ -1,17 +1,15 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s| FileCheck %s
+# RUN: llc -debug-entry-values -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llvm-dwarfdump %t | FileCheck %s
 #
-#int global;
-#int foo(int p, int q, int r) {
-#  global = p + 1;
-#  asm __volatile("" : : : "edi", "esi", "edx");
-#  return 123;
-#}
-#
-# Verify that DW_OP_entry_values are generated for parameters with multiple
-# DBG_VALUEs at entry block.
-# CHECK: DBG_VALUE $edi, $noreg, !{{.*}}, !DIExpression(DW_OP_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $esi, $noreg, !{{.*}}, !DIExpression(DW_OP_entry_value, 1), debug-location {{.*}}
+# int global;
+# int foo(int p, int q, int r) {
+#   global = p + 1;
+#   asm __volatile("" : : : "edi", "esi", "edx");
+#   return 123;
+# }
+
+# CHECK: DW_TAG_formal_parameter
+# CHECK:   DW_OP_entry_value
 
 --- |
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'

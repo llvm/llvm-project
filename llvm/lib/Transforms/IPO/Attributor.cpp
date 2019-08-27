@@ -107,6 +107,10 @@ static cl::opt<unsigned>
     MaxFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
+static cl::opt<bool> VerifyMaxFixpointIterations(
+    "attributor-max-iterations-verify", cl::Hidden,
+    cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
+    cl::init(false));
 
 static cl::opt<bool> DisableAttributor(
     "attributor-disable", cl::Hidden,
@@ -2509,6 +2513,10 @@ ChangeStatus Attributor::run() {
       Worklist.insert(QuerriedAAs.begin(), QuerriedAAs.end());
     }
 
+    LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
+                      << ", Worklist+Dependent size: " << Worklist.size()
+                      << "\n");
+
     // Reset the changed set.
     ChangedAAs.clear();
 
@@ -2529,13 +2537,17 @@ ChangeStatus Attributor::run() {
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
 
-  } while (!Worklist.empty() && ++IterationCounter < MaxFixpointIterations);
+  } while (!Worklist.empty() && IterationCounter++ < MaxFixpointIterations);
 
   size_t NumFinalAAs = AllAbstractAttributes.size();
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
                     << IterationCounter << "/" << MaxFixpointIterations
                     << " iterations\n");
+
+  if (VerifyMaxFixpointIterations && IterationCounter != MaxFixpointIterations)
+    llvm_unreachable("The fixpoint was not reached with exactly the number of "
+                     "specified iterations!");
 
   bool FinishedAtFixpoint = Worklist.empty();
 
@@ -2629,6 +2641,26 @@ ChangeStatus Attributor::run() {
   assert(
       NumFinalAAs == AllAbstractAttributes.size() &&
       "Expected the final number of abstract attributes to remain unchanged!");
+
+  // Delete stuff at the end to avoid invalid references and a nice order.
+  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete " << ToBeDeletedFunctions.size()
+                    << " functions and " << ToBeDeletedBlocks.size()
+                    << " blocks and " << ToBeDeletedInsts.size()
+                    << " instructions\n");
+  for (Instruction *I : ToBeDeletedInsts) {
+    if (I->hasNUsesOrMore(1))
+      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->eraseFromParent();
+  }
+  for (BasicBlock *BB : ToBeDeletedBlocks) {
+    // TODO: Check if we need to replace users (PHIs, indirect branches?)
+    BB->eraseFromParent();
+  }
+  for (Function *Fn : ToBeDeletedFunctions) {
+    Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
+    Fn->eraseFromParent();
+  }
+
   return ManifestChange;
 }
 

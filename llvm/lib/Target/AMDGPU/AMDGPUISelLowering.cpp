@@ -506,6 +506,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FABS);
   setTargetDAGCombine(ISD::AssertZext);
   setTargetDAGCombine(ISD::AssertSext);
+  setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2771,8 +2772,16 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
 static SDValue simplifyI24(SDNode *Node24,
                            TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
-  SDValue LHS = Node24->getOperand(0);
-  SDValue RHS = Node24->getOperand(1);
+  bool IsIntrin = Node24->getOpcode() == ISD::INTRINSIC_WO_CHAIN;
+
+  SDValue LHS = IsIntrin ? Node24->getOperand(1) : Node24->getOperand(0);
+  SDValue RHS = IsIntrin ? Node24->getOperand(2) : Node24->getOperand(1);
+  unsigned NewOpcode = Node24->getOpcode();
+  if (IsIntrin) {
+    unsigned IID = cast<ConstantSDNode>(Node24->getOperand(0))->getZExtValue();
+    NewOpcode = IID == Intrinsic::amdgcn_mul_i24 ?
+      AMDGPUISD::MUL_I24 : AMDGPUISD::MUL_U24;
+  }
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
@@ -2782,7 +2791,7 @@ static SDValue simplifyI24(SDNode *Node24,
   SDValue DemandedLHS = DAG.GetDemandedBits(LHS, Demanded);
   SDValue DemandedRHS = DAG.GetDemandedBits(RHS, Demanded);
   if (DemandedLHS || DemandedRHS)
-    return DAG.getNode(Node24->getOpcode(), SDLoc(Node24), Node24->getVTList(),
+    return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
                        DemandedRHS ? DemandedRHS : RHS);
 
@@ -3020,6 +3029,19 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
 
   return SDValue();
 }
+
+SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
+  SDNode *N, DAGCombinerInfo &DCI) const {
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  switch (IID) {
+  case Intrinsic::amdgcn_mul_i24:
+  case Intrinsic::amdgcn_mul_u24:
+    return simplifyI24(N, DCI);
+  default:
+    return SDValue();
+  }
+}
+
 /// Split the 64-bit value \p LHS into two 32-bit components, and perform the
 /// binary operation \p Opc to it with the corresponding constant operands.
 SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
@@ -4108,6 +4130,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AssertZext:
   case ISD::AssertSext:
     return performAssertSZExtCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return performIntrinsicWOChainCombine(N, DCI);
   }
   return SDValue();
 }

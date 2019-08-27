@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations=19 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=18 -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-capture" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.

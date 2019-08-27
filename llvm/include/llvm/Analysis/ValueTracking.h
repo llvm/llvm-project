@@ -242,19 +242,21 @@ class Value;
   /// This is a wrapper around Value::stripAndAccumulateConstantOffsets that
   /// creates and later unpacks the required APInt.
   inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
-                                                 const DataLayout &DL) {
+                                                 const DataLayout &DL,
+                                                 bool AllowNonInbounds = true) {
     APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
     Value *Base =
-        Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt,
-                                               /* AllowNonInbounds */ true);
+        Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
+
     Offset = OffsetAPInt.getSExtValue();
     return Base;
   }
-  inline const Value *GetPointerBaseWithConstantOffset(const Value *Ptr,
-                                                       int64_t &Offset,
-                                                       const DataLayout &DL) {
-    return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset,
-                                            DL);
+  inline const Value *
+  GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
+                                   const DataLayout &DL,
+                                   bool AllowNonInbounds = true) {
+    return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset, DL,
+                                            AllowNonInbounds);
   }
 
   /// Returns true if the GEP is based on a pointer to a string (array of

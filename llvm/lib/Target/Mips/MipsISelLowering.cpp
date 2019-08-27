@@ -1967,10 +1967,10 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
-                                 // %hi/%lo relocation
+                                // %hi/%lo relocation
     return Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
-                                 // %highest/%higher/%hi/%lo relocation
-                                 : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+                                // %highest/%higher/%hi/%lo relocation
+                                : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
   }
 
   // Every other architecture would use shouldAssumeDSOLocal in here, but

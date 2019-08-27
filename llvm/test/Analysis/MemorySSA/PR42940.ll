@@ -125,3 +125,65 @@ cleanup1270:
   ret void
 }
 
+@g_1504 = external dso_local local_unnamed_addr global i16****, align 8
+
+define void @f5() {
+bb:
+  tail call fastcc void @f21()
+  br label %bb12.outer
+
+bb12.outer.loopexit:                              ; No predecessors!
+  br label %bb12.outer
+
+bb12.outer:                                       ; preds = %bb12.outer.loopexit, %bb
+  br i1 undef, label %bb12.outer.split.us, label %bb12.preheader
+
+bb12.preheader:                                   ; preds = %bb12.outer
+  br label %bb12
+
+bb12.outer.split.us:                              ; preds = %bb12.outer
+  br label %bb16.us.us
+
+bb16.us.us:                                       ; preds = %bb16.us.us, %bb12.outer.split.us
+  br label %bb16.us.us
+
+bb12:                                             ; preds = %bb77.1, %bb12.preheader
+  br i1 undef, label %bb25.preheader, label %bb77
+
+bb25.preheader:                                   ; preds = %bb12.1, %bb12
+  br label %bb25
+
+bb25:                                             ; preds = %l0, %bb25.preheader
+  br i1 undef, label %bb62, label %bb71.thread
+
+bb62:                                             ; preds = %bb25
+  br i1 undef, label %bb92.loopexit, label %l0
+
+l0:                                                ; preds = %bb62
+  br label %bb25
+
+bb71.thread:                                      ; preds = %bb25
+  br label %bb92
+
+bb77:                                             ; preds = %bb12
+  %tmp78 = load i16****, i16***** @g_1504, align 8
+  %tmp79 = load volatile i16***, i16**** %tmp78, align 8
+  br i1 undef, label %bb91, label %bb12.1
+
+bb91:                                             ; preds = %bb77.1, %bb77
+  unreachable
+
+bb92.loopexit:                                    ; preds = %bb62
+  br label %bb92
+
+bb92:                                             ; preds = %bb92.loopexit, %bb71.thread
+  ret void
+
+bb12.1:                                           ; preds = %bb77
+  br i1 undef, label %bb25.preheader, label %bb77.1
+
+bb77.1:                                           ; preds = %bb12.1
+  br i1 undef, label %bb91, label %bb12
+}
+
+declare void @f21()

@@ -446,14 +446,16 @@ regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: low32_addr_access_rbp, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: low32_addr_access_rbp, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
 # ALL:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr16 = COPY %0.sub_16bit
-# ALL-NEXT:     %2:gr32 = SUBREG_TO_REG 0, %1, %subreg.sub_16bit
+# ALL-NEXT:     %3:low32_addr_access_rbp = IMPLICIT_DEF
+# ALL-NEXT:     %2:low32_addr_access_rbp = INSERT_SUBREG %3, %1, %subreg.sub_16bit
 # ALL-NEXT:     $eax = COPY %2
 # ALL-NEXT:     RET 0, implicit $eax
 body:             |

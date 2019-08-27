@@ -311,10 +311,7 @@ void DwarfExpression::addEntryValueExpression(DIExpressionCursor &ExprCursor) {
   assert(!isMemoryLocation() &&
          "We don't support entry values of memory locations yet");
 
-  if (DwarfVersion >= 5)
-    emitOp(dwarf::DW_OP_entry_value);
-  else
-    emitOp(dwarf::DW_OP_GNU_entry_value);
+  emitOp(CU.getDwarf5OrGNULocationAtom(dwarf::DW_OP_entry_value));
   emitUnsigned(Op->getArg(0));
 }
 

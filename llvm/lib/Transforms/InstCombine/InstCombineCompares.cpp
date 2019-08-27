@@ -895,7 +895,6 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
                         Constant::getNullValue(Offset->getType()));
   } else if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-             GEPLHS->getType()->isPointerTy() && // TODO: extend to vector geps
              isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
              !NullPointerIsDefined(I.getFunction(),
                                    RHS->getType()->getPointerAddressSpace())) {
@@ -914,7 +913,13 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     // In general, we're allowed to make values less poison (i.e. remove
     //   sources of full UB), so in this case, we just select between the two
     //   non-poison cases (1 and 4 above).
+    //
+    // For vectors, we apply the same reasoning on a per-lane basis.
     auto *Base = GEPLHS->getPointerOperand();
+    if (GEPLHS->getType()->isVectorTy() && Base->getType()->isPointerTy()) {
+      int NumElts = GEPLHS->getType()->getVectorNumElements();
+      Base = Builder.CreateVectorSplat(NumElts, Base);
+    }
     return new ICmpInst(Cond, Base,
                         ConstantExpr::getBitCast(cast<Constant>(RHS),
                                                  Base->getType()));

@@ -1,5 +1,5 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
-; RUN: opt < %s -attributor -attributor-disable=false -attributor-max-iterations=9 -S | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt < %s -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=12 -S | FileCheck %s --check-prefix=ATTRIBUTOR
 
 ; TEST 1
 ; CHECK: Function Attrs: norecurse nounwind readnone

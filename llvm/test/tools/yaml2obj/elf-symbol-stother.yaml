@@ -77,3 +77,32 @@ Symbols:
     StOther: 4
   - Name:    bar
     StOther: 0xff
+
+## Check we can't set StOther for a symbol if Visibility or Other is also specified.
+
+# RUN: not yaml2obj --docnum=5 2>&1 %s | FileCheck %s --check-prefix=ERR2
+# RUN: not yaml2obj --docnum=6 2>&1 %s | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: StOther cannot be specified for Symbol with either Visibility or Other
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Symbols:
+  - Name:    foo
+    StOther: 0
+    Other: [ STO_MIPS_OPTIONAL ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Symbols:
+  - Name:    foo
+    StOther: 0
+    Visibility: STV_DEFAULT

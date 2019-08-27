@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations=5 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=4 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_sync.ll but with a personality which
 ; indicates that the exception handler *can* catch asynchronous exceptions. As

@@ -51,10 +51,7 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
       // Handle a struct index, which adds its field offset to the pointer.
       if (StructType *STy = GTI.getStructTypeOrNull()) {
-        if (OpC->getType()->isVectorTy())
-          OpC = OpC->getSplatValue();
-
-        uint64_t OpValue = cast<ConstantInt>(OpC)->getZExtValue();
+        uint64_t OpValue = OpC->getUniqueInteger().getZExtValue();
         Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
 
         if (Size)
