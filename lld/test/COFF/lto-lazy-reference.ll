@@ -6,7 +6,7 @@
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: lld-link /out:%t.exe /entry:main /subsystem:console %t.obj %t.lib
 
-target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
+target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
 ; Define fltused, since we don't link against the MS C runtime but are

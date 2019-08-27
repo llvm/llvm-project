@@ -214,13 +214,18 @@ createChainedIncludesSource(CompilerInstance &CI,
 /// createInvocationFromCommandLine - Construct a compiler invocation object for
 /// a command line argument vector.
 ///
+/// \param ShouldRecoverOnErrors - whether we should attempt to return a
+/// non-null (and possibly incorrect) CompilerInvocation if any errors were
+/// encountered. When this flag is false, always return null on errors.
+///
 /// \return A CompilerInvocation, or 0 if none was built for the given
 /// argument vector.
 std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
     ArrayRef<const char *> Args,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         IntrusiveRefCntPtr<DiagnosticsEngine>(),
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
+    bool ShouldRecoverOnErrors = false);
 
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.

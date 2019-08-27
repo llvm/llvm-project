@@ -151,6 +151,11 @@ public:
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
+  /// \returns false if an error was encountered while parsing the arguments
+  /// and attempts to recover and continue parsing the rest of the arguments.
+  /// The recovery is best-effort and only guarantees that \p Res will end up in
+  /// one of the vaild-to-access (albeit arbitrary) states.
+  ///
   /// \param [out] Res - The resulting invocation.
   /// \param ArgBegin - The first element in the argument vector.
   /// \param ArgEnd - The last element in the argument vector.

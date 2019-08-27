@@ -3663,7 +3663,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
     case tok::kw__Noreturn:
       if (!getLangOpts().C11)
-        Diag(Loc, diag::ext_c11_noreturn);
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
 

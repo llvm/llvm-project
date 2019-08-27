@@ -17,7 +17,15 @@
 
 namespace lldb_private {
 enum class CompletionMode {
+  // The current token has been completed.
   Normal,
+  // The current token has been partially completed. This means that we found
+  // a completion, but that the completed token is still incomplete. Examples
+  // for this are file paths, where we want to complete "/bi" to "/bin/", but
+  // the file path token is still incomplete after the completion. Clients
+  // should not indicate to the user that this is a full completion (e.g. by
+  // not inserting the usual trailing space after a successful completion).
+  Partial,
   // The full line has been rewritten by the completion.
   RewriteLine,
 };

@@ -26,9 +26,9 @@ from ..event_builder import EventBuilder
 class Curses(results_formatter.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""
 
-    def __init__(self, out_file, options, file_is_stream):
+    def __init__(self, out_file, options):
         # Initialize the parent
-        super(Curses, self).__init__(out_file, options, file_is_stream)
+        super(Curses, self).__init__(out_file, options)
         self.using_terminal = True
         self.have_curses = True
         self.initialize_event = None

@@ -17,11 +17,15 @@
 #include "gmock/gmock.h"
 
 #include "clang/AST/ASTImporter.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/AST/ASTImporterSharedState.h"
+#include "clang/Frontend/ASTUnit.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include "DeclMatcher.h"
 #include "Language.h"
+
+#include <sstream>
 
 namespace clang {
 
@@ -82,6 +86,9 @@ public:
       const std::shared_ptr<ASTImporterSharedState> &SharedState)>
       ImporterConstructor;
 
+  // ODR handling type for the AST importer.
+  ASTImporter::ODRHandlingType ODRHandling;
+
   // The lambda that constructs the ASTImporter we use in this test.
   ImporterConstructor Creator;
 
@@ -99,9 +106,12 @@ private:
     TranslationUnitDecl *TUDecl = nullptr;
     std::unique_ptr<ASTImporter> Importer;
     ImporterConstructor Creator;
+    ASTImporter::ODRHandlingType ODRHandling;
 
     TU(StringRef Code, StringRef FileName, ArgVector Args,
-       ImporterConstructor C = ImporterConstructor());
+       ImporterConstructor C = ImporterConstructor(),
+       ASTImporter::ODRHandlingType ODRHandling =
+           ASTImporter::ODRHandlingType::Conservative);
     ~TU();
 
     void
@@ -109,6 +119,9 @@ private:
                      ASTUnit *ToAST);
     Decl *import(const std::shared_ptr<ASTImporterSharedState> &SharedState,
                  ASTUnit *ToAST, Decl *FromDecl);
+    llvm::Expected<Decl *>
+    importOrError(const std::shared_ptr<ASTImporterSharedState> &SharedState,
+                  ASTUnit *ToAST, Decl *FromDecl);
     QualType import(const std::shared_ptr<ASTImporterSharedState> &SharedState,
                     ASTUnit *ToAST, QualType FromType);
   };
@@ -162,8 +175,14 @@ public:
     return cast_or_null<DeclT>(Import(cast<Decl>(From), Lang));
   }
 
+  // Import the given Decl into the ToCtx.
+  // Same as Import but returns the result of the import which can be an error.
+  llvm::Expected<Decl *> importOrError(Decl *From, Language ToLang);
+
   QualType ImportType(QualType FromType, Decl *TUDecl, Language ToLang);
 
+  ASTImporterTestBase()
+      : ODRHandling(ASTImporter::ODRHandlingType::Conservative) {}
   ~ASTImporterTestBase();
 };
 
@@ -173,6 +192,46 @@ class ASTImporterOptionSpecificTestBase
 protected:
   ArgVector getExtraArgs() const override { return GetParam(); }
 };
+
+template <class T>
+::testing::AssertionResult isSuccess(llvm::Expected<T> &ValOrErr) {
+  if (ValOrErr)
+    return ::testing::AssertionSuccess() << "Expected<> contains no error.";
+  else
+    return ::testing::AssertionFailure()
+           << "Expected<> contains error: " << toString(ValOrErr.takeError());
+}
+
+template <class T>
+::testing::AssertionResult isImportError(llvm::Expected<T> &ValOrErr,
+                                         ImportError::ErrorKind Kind) {
+  if (ValOrErr) {
+    return ::testing::AssertionFailure() << "Expected<> is expected to contain "
+                                            "error but does contain value \""
+                                         << (*ValOrErr) << "\"";
+  } else {
+    std::ostringstream OS;
+    bool Result = false;
+    auto Err = llvm::handleErrors(
+        ValOrErr.takeError(), [&OS, &Result, Kind](clang::ImportError &IE) {
+          if (IE.Error == Kind) {
+            Result = true;
+            OS << "Expected<> contains an ImportError " << IE.toString();
+          } else {
+            OS << "Expected<> contains an ImportError " << IE.toString()
+               << " instead of kind " << Kind;
+          }
+        });
+    if (Err) {
+      OS << "Expected<> contains unexpected error: "
+         << toString(std::move(Err));
+    }
+    if (Result)
+      return ::testing::AssertionSuccess() << OS.str();
+    else
+      return ::testing::AssertionFailure() << OS.str();
+  }
+}
 
 } // end namespace ast_matchers
 } // end namespace clang

@@ -117,7 +117,6 @@ exclusive_test_subdir = None
 
 # Test results handling globals
 results_filename = None
-results_port = None
 results_formatter_name = None
 results_formatter_object = None
 results_formatter_options = None

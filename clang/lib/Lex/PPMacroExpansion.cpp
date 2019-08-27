@@ -1219,8 +1219,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     if (File)
       FileType =
           PP.getHeaderSearchInfo().getFileDirFlavor(&File->getFileEntry());
-    Callbacks->HasInclude(FilenameLoc, Filename, isAngled,
-                          File ? &File->getFileEntry() : nullptr, FileType);
+    Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
   }
 
   // Get the result value.  A result of true means the file exists.

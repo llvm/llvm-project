@@ -1,8 +1,8 @@
 // REQUIRES: arm
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %p/Inputs/arm-tls-get-addr.s -o %t1
-// RUN: ld.lld %t1 --shared -o %t1.so
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %p/Inputs/arm-tls-get-addr.s -o %t1.o
+// RUN: ld.lld %t1.o --shared -soname=t1.so -o %t1.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
-// RUN: ld.lld --hash-style=sysv %t1.so %t.o -o %t
+// RUN: ld.lld %t1.so %t.o -o %t
 // RUN: llvm-objdump -s %t | FileCheck %s
 
 // This tls global-dynamic sequence is with respect to a non-preemptible
@@ -33,7 +33,7 @@ x:
 
 // CHECK:       Contents of section .got:
 // Module index is always 1 for executable
-// CHECK-NEXT:  12060 01000000 00000000
+// CHECK-NEXT:  12268 01000000 00000000
 
 
 // Without any definition of __tls_get_addr we get an error

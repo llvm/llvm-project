@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -triple i386-pc-elfiamcu -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: target datalayout = "e-m:e-p:32:32-i64:32-f64:32-f128:32-n8:16:32-a:0:32-S32"
+// CHECK: target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-f64:32-f128:32-n8:16:32-a:0:32-S32"
 // CHECK: target triple = "i386-pc-elfiamcu"
-
 
 void food(double *d);
 void fooll(long long *ll);

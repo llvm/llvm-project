@@ -13,9 +13,24 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <type_traits>
 
 namespace clang {
 namespace comments {
+
+// Check that no comment class has a non-trival destructor. They are allocated
+// with a BumpPtrAllocator and therefore their destructor is not executed.
+#define ABSTRACT_COMMENT(COMMENT)
+#define COMMENT(CLASS, PARENT)                                                 \
+  static_assert(std::is_trivially_destructible<CLASS>::value,                  \
+                #CLASS " should be trivially destructible!");
+#include "clang/AST/CommentNodes.inc"
+#undef COMMENT
+#undef ABSTRACT_COMMENT
+
+// DeclInfo is also allocated with a BumpPtrAllocator.
+static_assert(std::is_trivially_destructible<DeclInfo>::value,
+              "DeclInfo should be trivially destructible!");
 
 const char *Comment::getCommentKindName() const {
   switch (getCommentKind()) {

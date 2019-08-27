@@ -3,7 +3,9 @@ Test some target commands: create, list, select, variable.
 """
 
 from __future__ import print_function
-
+import os
+import stat
+import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -293,3 +295,145 @@ class targetCommandTestCase(TestBase):
 
         self.expect("target stop-hook delete 1", error=True, substrs=['unknown stop hook id: "1"'])
         self.expect("target stop-hook delete blub", error=True, substrs=['invalid stop hook id: "blub"'])
+
+    @no_debug_info_test
+    def test_target_list_args(self):
+        self.expect("target list blub", error=True,
+                    substrs=["the 'target list' command takes no arguments"])
+
+    @no_debug_info_test
+    def test_target_select_no_index(self):
+        self.expect("target select", error=True,
+                    substrs=["'target select' takes a single argument: a target index"])
+
+    @no_debug_info_test
+    def test_target_select_invalid_index(self):
+        self.runCmd("target delete --all")
+        self.expect("target select 0", error=True,
+                    substrs=["index 0 is out of range since there are no active targets"])
+        self.buildB()
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.expect("target select 1", error=True,
+                    substrs=["index 1 is out of range, valid target indexes are 0 - 0"])
+
+
+    @no_debug_info_test
+    def test_target_create_multiple_args(self):
+        self.expect("target create a b", error=True,
+                    substrs=["'target create' takes exactly one executable path"])
+
+    @no_debug_info_test
+    def test_target_create_nonexistent_core_file(self):
+        self.expect("target create -c doesntexist", error=True,
+                    substrs=["core file 'doesntexist' doesn't exist"])
+
+    # Write only files don't seem to be supported on Windows.
+    @skipIfWindows
+    @no_debug_info_test
+    def test_target_create_unreadable_core_file(self):
+        tf = tempfile.NamedTemporaryFile()
+        os.chmod(tf.name, stat.S_IWRITE)
+        self.expect("target create -c '" + tf.name + "'", error=True,
+                    substrs=["core file '", "' is not readable"])
+
+    @no_debug_info_test
+    def test_target_create_nonexistent_sym_file(self):
+        self.expect("target create -s doesntexist doesntexisteither", error=True,
+                    substrs=["invalid symbol file path 'doesntexist'"])
+
+    @no_debug_info_test
+    def test_target_create_invalid_core_file(self):
+        invalid_core_path = os.path.join(self.getSourceDir(), "invalid_core_file")
+        self.expect("target create -c '" + invalid_core_path + "'", error=True,
+                    substrs=["Unable to find process plug-in for core file '"])
+
+
+    # Write only files don't seem to be supported on Windows.
+    @skipIfWindows
+    @no_debug_info_test
+    def test_target_create_unreadable_sym_file(self):
+        tf = tempfile.NamedTemporaryFile()
+        os.chmod(tf.name, stat.S_IWRITE)
+        self.expect("target create -s '" + tf.name + "' no_exe", error=True,
+                    substrs=["symbol file '", "' is not readable"])
+
+    @no_debug_info_test
+    def test_target_delete_all(self):
+        self.buildAll()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.expect("target delete --all")
+        self.expect("target list", substrs=["No targets."])
+
+    @no_debug_info_test
+    def test_target_delete_by_index(self):
+        self.buildAll()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("c.out"), CURRENT_EXECUTABLE_SET)
+        self.expect("target delete 3", error=True,
+                    substrs=["target index 3 is out of range, valid target indexes are 0 - 2"])
+
+        self.runCmd("target delete 1")
+        self.expect("target list", matching=False, substrs=["b.out"])
+        self.runCmd("target delete 1")
+        self.expect("target list", matching=False, substrs=["c.out"])
+
+        self.expect("target delete 1", error=True,
+                    substrs=["target index 1 is out of range, the only valid index is 0"])
+
+        self.runCmd("target delete 0")
+        self.expect("target list", matching=False, substrs=["a.out"])
+
+        self.expect("target delete 0", error=True, substrs=["no targets to delete"])
+        self.expect("target delete 1", error=True, substrs=["no targets to delete"])
+
+    @no_debug_info_test
+    def test_target_delete_by_index_multiple(self):
+        self.buildAll()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("c.out"), CURRENT_EXECUTABLE_SET)
+
+        self.expect("target delete 0 1 2 3", error=True,
+                    substrs=["target index 3 is out of range, valid target indexes are 0 - 2"])
+        self.expect("target list", substrs=["a.out", "b.out", "c.out"])
+
+        self.runCmd("target delete 0 1 2")
+        self.expect("target list", matching=False, substrs=["a.out", "c.out"])
+
+    @no_debug_info_test
+    def test_target_delete_selected(self):
+        self.buildAll()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("c.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("target select 1")
+        self.runCmd("target delete")
+        self.expect("target list", matching=False, substrs=["b.out"])
+        self.runCmd("target delete")
+        self.runCmd("target delete")
+        self.expect("target list", substrs=["No targets."])
+        self.expect("target delete", error=True, substrs=["no target is currently selected"])
+
+    @no_debug_info_test
+    def test_target_modules_search_paths_clear(self):
+        self.buildB()
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("target modules search-paths add foo bar")
+        self.runCmd("target modules search-paths add foz baz")
+        self.runCmd("target modules search-paths clear")
+        self.expect("target list", matching=False, substrs=["bar", "baz"])
+
+    @no_debug_info_test
+    def test_target_modules_search_paths_query(self):
+        self.buildB()
+        self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("target modules search-paths add foo bar")
+        self.expect("target modules search-paths query foo", substrs=["bar"])
+        # Query something that doesn't exist.
+        self.expect("target modules search-paths query faz", substrs=["faz"])
+
+        # Invalid arguments.
+        self.expect("target modules search-paths query faz baz", error=True,
+                    substrs=["query requires one argument"])

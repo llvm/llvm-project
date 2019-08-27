@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
-// RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -S --dyn-relocations %t.so | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t.so | FileCheck %s
 
@@ -73,25 +73,25 @@ x:
 // SEC-NEXT:    SHF_ALLOC
 // SEC-NEXT:    SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x204C
+// SEC-NEXT: Address: 0x2254
 // SEC:      Size: 12
 
 
 // SEC: Dynamic Relocations {
-// SEC:  0x2054 R_ARM_TLS_TPOFF32
-// SEC:  0x204C R_ARM_TLS_TPOFF32 x
-// SEC:  0x2050 R_ARM_TLS_TPOFF32 y
+// SEC:  0x225C R_ARM_TLS_TPOFF32
+// SEC:  0x2254 R_ARM_TLS_TPOFF32 x
+// SEC:  0x2258 R_ARM_TLS_TPOFF32 y
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: func:
-// CHECK-NEXT:    1000: 00 f0 20 e3     nop
-// CHECK-NEXT:    1004: 00 f0 20 e3     nop
-// CHECK-NEXT:    1008: 00 f0 20 e3     nop
+// CHECK-NEXT:    11e8: 00 f0 20 e3     nop
+// CHECK-NEXT:    11ec: 00 f0 20 e3     nop
+// CHECK-NEXT:    11f0: 00 f0 20 e3     nop
 
-// (0x204c - 0x100c) + (0x100c - 0x1000 - 8) = 0x1044
-// CHECK:         100c: 44 10 00 00
-// (0x2050 - 0x1010) + (0x1010 - 0x1004 - 8) = 0x1044
-// CHECK-NEXT:    1010: 44 10 00 00
-// (0x2054 - 0x1014) + (0x1014 - 0x1008 - 8) = 0x1044
-// CHECK-NEXT:    1014: 44 10 00 00
+// (0x2254 - 0x11f4) + (0x11f4 - 0x11e8 - 8) = 0x1064
+// CHECK:         11f4: 64 10 00 00
+// (0x2258 - 0x11f8) + (0x11f8 - 0x11ec - 8) = 0x1064
+// CHECK-NEXT:    11f8: 64 10 00 00
+// (0x225c - 0x11f8) + (0x11f8 - 0x11f0 - 8) = 0x1064
+// CHECK-NEXT:    11fc: 64 10 00 00

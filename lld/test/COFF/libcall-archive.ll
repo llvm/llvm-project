@@ -10,7 +10,7 @@
 ; CHECK: _start
 ; CHECK: _memcpy
 
-target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
+target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-unknown-windows"
 
 define void @start(i8* %a, i8* %b) {

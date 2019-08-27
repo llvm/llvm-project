@@ -105,6 +105,10 @@ typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 typedef __WCHAR_TYPE__ wchar_t;
+typedef __WINT_TYPE__ wint_t;
+
+
+// Check Alignments
 
 // CHECK: @align_c = dso_local global i32 1
 int align_c = __alignof(char);
@@ -117,6 +121,9 @@ int align_i = __alignof(int);
 
 // CHECK: @align_wc = dso_local global i32 4
 int align_wc = __alignof(wchar_t);
+
+// CHECK: @align_wi = dso_local global i32 4
+int align_wi = __alignof(wint_t);
 
 // CHECK: @align_l = dso_local global i32 8
 int align_l = __alignof(long);
@@ -138,6 +145,88 @@ int align_ld = __alignof(long double);
 
 // CHECK: @align_vl = dso_local global i32 8
 int align_vl = __alignof(va_list);
+
+// CHECK: @align_a_c = dso_local global i32 1
+int align_a_c = __alignof(_Atomic(char));
+
+// CHECK: @align_a_s = dso_local global i32 2
+int align_a_s = __alignof(_Atomic(short));
+
+// CHECK: @align_a_i = dso_local global i32 4
+int align_a_i = __alignof(_Atomic(int));
+
+// CHECK: @align_a_wc = dso_local global i32 4
+int align_a_wc = __alignof(_Atomic(wchar_t));
+
+// CHECK: @align_a_wi = dso_local global i32 4
+int align_a_wi = __alignof(_Atomic(wint_t));
+
+// CHECK: @align_a_l = dso_local global i32 8
+int align_a_l = __alignof(_Atomic(long));
+
+// CHECK: @align_a_ll = dso_local global i32 8
+int align_a_ll = __alignof(_Atomic(long long));
+
+// CHECK: @align_a_p = dso_local global i32 8
+int align_a_p = __alignof(_Atomic(void*));
+
+// CHECK @align_a_f = dso_local global i32 4
+int align_a_f = __alignof(_Atomic(float));
+
+// CHECK: @align_a_d = dso_local global i32 8
+int align_a_d = __alignof(_Atomic(double));
+
+// CHECK: @align_a_ld = dso_local global i32 16
+int align_a_ld = __alignof(_Atomic(long double));
+
+// CHECK: @align_a_s4 = dso_local global i32 4
+int align_a_s4 = __alignof(_Atomic(struct { char _[4]; }));
+
+// CHECK: @align_a_s8 = dso_local global i32 8
+int align_a_s8 = __alignof(_Atomic(struct { char _[8]; }));
+
+// CHECK: @align_a_s16 = dso_local global i32 16
+int align_a_s16 = __alignof(_Atomic(struct { char _[16]; }));
+
+// CHECK: @align_a_s32 = dso_local global i32 1
+int align_a_s32 = __alignof(_Atomic(struct { char _[32]; }));
+
+
+// Check Sizes
+
+// CHECK: @size_a_c = dso_local global i32 1
+int size_a_c = sizeof(_Atomic(char));
+
+// CHECK: @size_a_s = dso_local global i32 2
+int size_a_s = sizeof(_Atomic(short));
+
+// CHECK: @size_a_i = dso_local global i32 4
+int size_a_i = sizeof(_Atomic(int));
+
+// CHECK: @size_a_wc = dso_local global i32 4
+int size_a_wc = sizeof(_Atomic(wchar_t));
+
+// CHECK: @size_a_wi = dso_local global i32 4
+int size_a_wi = sizeof(_Atomic(wint_t));
+
+// CHECK: @size_a_l = dso_local global i32 8
+int size_a_l = sizeof(_Atomic(long));
+
+// CHECK: @size_a_ll = dso_local global i32 8
+int size_a_ll = sizeof(_Atomic(long long));
+
+// CHECK: @size_a_p = dso_local global i32 8
+int size_a_p = sizeof(_Atomic(void*));
+
+// CHECK: @size_a_f = dso_local global i32 4
+int size_a_f = sizeof(_Atomic(float));
+
+// CHECK: @size_a_d = dso_local global i32 8
+int size_a_d = sizeof(_Atomic(double));
+
+// CHECK: @size_a_ld = dso_local global i32 16
+int size_a_ld = sizeof(_Atomic(long double));
+
 
 // Check types
 

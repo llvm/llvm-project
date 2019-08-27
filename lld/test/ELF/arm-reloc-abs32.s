@@ -13,10 +13,10 @@ _start:
 // S + A = 0x124
 // CHECK: Disassembly of section .R_ARM_ABS32POS:
 // CHECK-EMPTY:
-// CHECK: 11000: 24 01 00 00
+// CHECK: 24 01 00 00
  .section .R_ARM_ABS32NEG, "ax",%progbits
  .word foo - 0x24
 // S = 0x100, A = -0x24
 // CHECK: Disassembly of section .R_ARM_ABS32NEG:
 // CHECK-EMPTY:
-// CHECK: 11004: dc 00 00 00
+// CHECK: dc 00 00 00

@@ -6,7 +6,7 @@
 ; Test that we produce R_X86_64_REX_GOTPCRELX instead of R_X86_64_GOTPCREL
 ; CHECK: R_X86_64_REX_GOTPCRELX foo
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @foo = external global i32

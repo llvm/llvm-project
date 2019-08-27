@@ -16,40 +16,40 @@ sym1:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: sym1:
-// CHECK-NEXT: 1000: 00 f0 02 b8 b.w #4 <__ThumbV7PILongThunk_elsewhere>
-// CHECK-NEXT: 1004: 00 f0 06 b8 b.w #12 <__ThumbV7PILongThunk_weakref>
+// CHECK-NEXT: 11e0: 00 f0 02 b8 b.w #4 <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT: 11e4: 00 f0 06 b8 b.w #12 <__ThumbV7PILongThunk_weakref>
 // CHECK: __ThumbV7PILongThunk_elsewhere:
-// CHECK-NEXT:     1008:       40 f2 2c 0c     movw    r12, #44
-// CHECK-NEXT:     100c:       c0 f2 00 0c     movt    r12, #0
-// CHECK-NEXT:     1010:       fc 44   add     r12, pc
-// CHECK-NEXT:     1012:       60 47   bx      r12
+// CHECK-NEXT:     11e8:       40 f2 2c 0c     movw    r12, #44
+// CHECK-NEXT:     11ec:       c0 f2 00 0c     movt    r12, #0
+// CHECK-NEXT:     11f0:       fc 44   add     r12, pc
+// CHECK-NEXT:     11f2:       60 47   bx      r12
 // CHECK: __ThumbV7PILongThunk_weakref:
-// CHECK-NEXT:     1014:       40 f2 30 0c     movw    r12, #48
-// CHECK-NEXT:     1018:       c0 f2 00 0c     movt    r12, #0
-// CHECK-NEXT:     101c:       fc 44   add     r12, pc
-// CHECK-NEXT:     101e:       60 47   bx      r12
+// CHECK-NEXT:     11f4:       40 f2 30 0c     movw    r12, #48
+// CHECK-NEXT:     11f8:       c0 f2 00 0c     movt    r12, #0
+// CHECK-NEXT:     11fc:       fc 44   add     r12, pc
+// CHECK-NEXT:     11fe:       60 47   bx      r12
 
 // CHECK: Disassembly of section .plt:
 // CHECK-EMPTY:
 // CHECK-NEXT: $a:
-// CHECK-NEXT:     1020:  04 e0 2d e5     str     lr, [sp, #-4]!
-// CHECK-NEXT:     1024:  00 e6 8f e2     add     lr, pc, #0, #12
-// CHECK-NEXT:     1028:  01 ea 8e e2     add     lr, lr, #4096
-// CHECK-NEXT:     102c:  dc ff be e5     ldr     pc, [lr, #4060]!
+// CHECK-NEXT:     1200:  04 e0 2d e5     str     lr, [sp, #-4]!
+// CHECK-NEXT:     1204:  00 e6 8f e2     add     lr, pc, #0, #12
+// CHECK-NEXT:     1208:  02 ea 8e e2     add     lr, lr, #8192
+// CHECK-NEXT:     120c:  94 f0 be e5     ldr     pc, [lr, #148]!
 // CHECK: $d:
-// CHECK-NEXT:     1030:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-NEXT:     1034:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-NEXT:     1038:  d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-NEXT:     103c:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     1210:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     1214:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     1218:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     121c:  d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK: $a:
-// CHECK-NEXT:     1040:  00 c6 8f e2     add     r12, pc, #0, #12
-// CHECK-NEXT:     1044:  01 ca 8c e2     add     r12, r12, #4096
-// CHECK-NEXT:     1048:  c4 ff bc e5     ldr     pc, [r12, #4036]!
+// CHECK-NEXT:     1220:  00 c6 8f e2     add     r12, pc, #0, #12
+// CHECK-NEXT:     1224:  02 ca 8c e2     add     r12, r12, #8192
+// CHECK-NEXT:     1228:  7c f0 bc e5     ldr     pc, [r12, #124]!
 // CHECK: $d:
-// CHECK-NEXT:     104c:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     122c:  d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK: $a:
-// CHECK-NEXT:     1050:  00 c6 8f e2     add     r12, pc, #0, #12
-// CHECK-NEXT:     1054:  01 ca 8c e2     add     r12, r12, #4096
-// CHECK-NEXT:     1058:  b8 ff bc e5     ldr     pc, [r12, #4024]!
+// CHECK-NEXT:     1230:  00 c6 8f e2     add     r12, pc, #0, #12
+// CHECK-NEXT:     1234:  02 ca 8c e2     add     r12, r12, #8192
+// CHECK-NEXT:     1238:  70 f0 bc e5     ldr     pc, [r12, #112]!
 // CHECK: $d:
-// CHECK-NEXT:     105c:  d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-NEXT:     123c:  d4 d4 d4 d4     .word   0xd4d4d4d4
