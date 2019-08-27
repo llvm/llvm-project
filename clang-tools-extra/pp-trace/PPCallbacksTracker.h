@@ -89,7 +89,7 @@ public:
   void FileChanged(SourceLocation Loc, PPCallbacks::FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID = FileID()) override;
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
   bool FileNotFound(llvm::StringRef FileName,
                     llvm::SmallVectorImpl<char> &RecoveryPath) override;
