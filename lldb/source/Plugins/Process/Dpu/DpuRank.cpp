@@ -46,6 +46,28 @@ const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
 
 DpuRank::DpuRank() : nr_threads(0), nr_dpus(0), m_lock() { m_rank = NULL; }
 
+#define DPU_DIAG_BUFFER_SIZE (1024)
+static dpu_type_t GetTypeFromDpuDiagnostic() {
+  FILE *fp;
+  char buffer[DPU_DIAG_BUFFER_SIZE];
+  dpu_type_t result = FUNCTIONAL_SIMULATOR;
+  fp = popen("dpudiagnostic", "r");
+  if (fp == NULL) {
+    return result;
+  }
+  while (fgets(buffer, DPU_DIAG_BUFFER_SIZE, fp) != NULL) {
+    if (sscanf(buffer, "test.BACKEND = %s", buffer) == 1) {
+      if (strcmp(buffer, "fpga") == 0) {
+        result = HW;
+      }
+      break;
+    }
+  }
+
+  pclose(fp);
+  return result;
+}
+
 bool DpuRank::Open(llvm::StringRef profile) {
   std::lock_guard<std::mutex> guard(m_lock);
 
@@ -53,8 +75,10 @@ bool DpuRank::Open(llvm::StringRef profile) {
   m_profile = strdup(args_split.second.str().c_str());
   if (args_split.first.equals("fpga")) {
     m_type = HW;
-  } else {
+  } else if (args_split.first.equals("simulator")) {
     m_type = FUNCTIONAL_SIMULATOR;
+  } else {
+    m_type = GetTypeFromDpuDiagnostic();
   }
 
   int ret = dpu_get_rank_of_type(m_type, m_profile, &m_rank);
