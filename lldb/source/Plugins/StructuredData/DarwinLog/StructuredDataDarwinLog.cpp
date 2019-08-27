@@ -787,15 +787,10 @@ protected:
 
     // Now check if we have a running process.  If so, we should instruct the
     // process monitor to enable/disable DarwinLog support now.
-    Target *target = GetSelectedOrDummyTarget();
-    if (!target) {
-      // No target, so there is nothing more to do right now.
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
-    }
+    Target &target = GetSelectedOrDummyTarget();
 
     // Grab the active process.
-    auto process_sp = target->GetProcessSP();
+    auto process_sp = target.GetProcessSP();
     if (!process_sp) {
       // No active process, so there is nothing more to do right now.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -877,9 +872,9 @@ protected:
 
     // Figure out if we've got a process.  If so, we can tell if DarwinLog is
     // available for that process.
-    Target *target = GetSelectedOrDummyTarget();
-    auto process_sp = target ? target->GetProcessSP() : ProcessSP();
-    if (!target || !process_sp) {
+    Target &target = GetSelectedOrDummyTarget();
+    auto process_sp = target.GetProcessSP();
+    if (!process_sp) {
       stream.PutCString("Availability: unknown (requires process)\n");
       stream.PutCString("Enabled: not applicable "
                         "(requires process)\n");

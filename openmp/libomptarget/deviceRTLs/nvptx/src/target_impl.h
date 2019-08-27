@@ -38,4 +38,6 @@ INLINE int __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
 
 INLINE int __kmpc_impl_popc(uint32_t x) { return __popc(x); }
 
+INLINE void __kmpc_impl_syncwarp(int32_t Mask) { __SYNCWARP(Mask); }
+
 #endif
