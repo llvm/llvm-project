@@ -10,7 +10,7 @@ import os
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
-
+from lldbsuite.test.decorators import *
 
 class StdCXXDisassembleTestCase(TestBase):
 

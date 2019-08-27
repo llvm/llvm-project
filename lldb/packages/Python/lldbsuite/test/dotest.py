@@ -436,15 +436,6 @@ def parseOptionsAndInitTestdirs():
     if args.results_file:
         configuration.results_filename = args.results_file
 
-    if args.results_port:
-        configuration.results_port = args.results_port
-
-    if args.results_file and args.results_port:
-        sys.stderr.write(
-            "only one of --results-file and --results-port should "
-            "be specified\n")
-        usage(args)
-
     if args.results_formatter:
         configuration.results_formatter_name = args.results_formatter
     if args.results_formatter_options:
@@ -526,7 +517,6 @@ def setupTestResults():
     formatter_config.formatter_name = configuration.results_formatter_name
     formatter_config.formatter_options = (
         configuration.results_formatter_options)
-    formatter_config.port = configuration.results_port
 
     # Create the results formatter.
     formatter_spec = formatter.create_results_formatter(

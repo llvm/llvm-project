@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_WIN64)
+#if defined(__x86_64__) || defined(_M_X64)
 
 #include "NativeRegisterContextWindows_WoW64.h"
 
@@ -265,9 +265,9 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
-    // directly queried.
+    // directly written.
     error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
+                                   "register, cannot write directly",
                                    reg_info->name);
     return error;
   }
@@ -359,4 +359,4 @@ uint32_t NativeRegisterContextWindows_WoW64::NumSupportedHardwareWatchpoints() {
   return 0;
 }
 
-#endif // defined(_WIN64)
+#endif // defined(__x86_64__) || defined(_M_X64)
