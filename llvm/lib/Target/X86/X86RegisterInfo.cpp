@@ -692,12 +692,27 @@ static bool tryOptimizeLEAtoMOV(MachineBasicBlock::iterator II) {
   return true;
 }
 
+static bool isFuncletReturnInstr(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case X86::CATCHRET:
+  case X86::CLEANUPRET:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("impossible");
+}
+
 void
 X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                      int SPAdj, unsigned FIOperandNum,
                                      RegScavenger *RS) const {
   MachineInstr &MI = *II;
-  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  bool IsEHFuncletEpilogue = MBBI == MBB.end() ? false
+                                               : isFuncletReturnInstr(*MBBI);
   const X86FrameLowering *TFI = getFrameLowering(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
@@ -709,6 +724,8 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
            MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&
            "Return instruction can only reference SP relative frame objects");
     FIOffset = TFI->getFrameIndexReferenceSP(MF, FrameIndex, BasePtr, 0);
+  } else if (TFI->Is64Bit && (MBB.isEHFuncletEntry() || IsEHFuncletEpilogue)) {
+    FIOffset = TFI->getWin64EHFrameIndexRef(MF, FrameIndex, BasePtr);
   } else {
     FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, BasePtr);
   }
