@@ -33,26 +33,13 @@ class TestSwiftMacroConflict(TestBase):
         if os.path.isdir(mod_cache):
           shutil.rmtree(mod_cache)
 
+        self.runCmd('settings set symbols.use-swift-dwarfimporter false')
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        bar_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Bar.swift'))
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, bar_breakpoint)
-        frame = threads[0].GetFrameAtIndex(0)
-        bar_value = frame.EvaluateExpression("bar")
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('Bar.swift'))
+        bar_value = self.frame().EvaluateExpression("bar")
         self.expect("fr var bar", "correct bar", substrs=["23"])
 
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
@@ -68,7 +55,34 @@ class TestSwiftMacroConflict(TestBase):
                         bar_value.GetError().Success())
 
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+        lldb.SBDebugger.MemoryPressureDetected()
 
+    @skipUnlessDarwin
+    @swiftTest
+    @add_test_categories(["swiftpr"])
+    def test_with_dwarfimporter(self):
+        """
+        With DWARFImporter installed, both variables should be visible.
+        """
+        # To ensure we hit the rebuild problem remove the cache to avoid caching.
+        mod_cache = self.getBuildArtifact("my-clang-modules-cache")
+        if os.path.isdir(mod_cache):
+          shutil.rmtree(mod_cache)
+
+        self.runCmd('settings set symbols.use-swift-dwarfimporter true')
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
+                    % mod_cache)
+        self.build()
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('Bar.swift'))
+        self.expect("v bar", substrs=["23"])
+        foo_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', lldb.SBFileSpec('Foo.swift'))
+        process.Continue()
+        self.expect("v foo", substrs=["42"])
+        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+        lldb.SBDebugger.MemoryPressureDetected()
+        
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()

@@ -35,8 +35,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.assertTrue(os.path.isdir(include))
         shutil.rmtree(include)
 
-    @skipIf(archs=['ppc64le'])
-    # SR-10214
+    @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['linux', 'windows'])
@@ -67,8 +66,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
 
-    @skipIf(archs=['ppc64le'])
-    # SR-10214
+    @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()
@@ -82,12 +80,17 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
                                 typename="Point", num_children=2)
+        # This works as a Clang type.
         self.expect("ta v point", substrs=["x = 1", "y = 2"])
+        # This can't be resolved.
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("swiftStructCMember"),
+                                num_children=0)
 
         found = False
         logfile = open(log, "r")
         for line in logfile:
-            if "missing required module":
+            if "missing required module" in line:
                 found = True
         self.assertTrue(found)
 
