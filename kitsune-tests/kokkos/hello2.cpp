@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <iostream>
 using namespace std;
 
 #include <Kokkos_Core.hpp>

@@ -341,6 +341,81 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return OpenCLUnrollHintAttr::CreateImplicit(S.Context, UnrollFactor);
 }
 
+// +===== Handle kitsune-centric attributes 
+// 
+static Attr *handleKitsuneTargetAttr(Sema &S, Stmt *St, 
+				     const ParsedAttr &A,
+				     SourceRange Range)
+{
+  if (! isa<ForallStmt>(St) && ! isa<CXXForallRangeStmt>(St)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_target_attr_unsupported_stmt);
+    return nullptr;
+  }
+
+  if (A.getNumArgs() != 1) {
+    S.Diag(A.getLoc(), diag::err_kitsune_target_attr_wrong_nargs);
+    return nullptr;
+  }
+
+  StringRef      targetStr;
+  SourceLocation argLoc;
+
+  if (!S.checkStringLiteralArgumentAttr(A, 0, targetStr, &argLoc)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_target_unknown);
+    return nullptr;
+  }
+
+  KitsuneTargetAttr::KitsuneTargetTy   targetKind;
+  if(!KitsuneTargetAttr::ConvertStrToKitsuneTargetTy(targetStr, targetKind)) {
+    // FIXME: Is this redundant w/ CheckString call above???
+    S.Diag(A.getLoc(), diag::err_kitsune_target_unknown)
+      << A.getName() << targetStr << argLoc;
+    return nullptr;
+  }
+
+  unsigned Index = A.getAttributeSpellingListIndex();
+  return ::new(S.Context)
+    KitsuneTargetAttr(A.getLoc(), S.Context, targetKind, Index);
+}
+
+
+static Attr *handleKitsuneStrategyAttr(Sema &S, Stmt *St, 
+				       const ParsedAttr &A,
+				       SourceRange Range) 
+{
+  if (! isa<ForallStmt>(St) || ! isa<CXXForallRangeStmt>(St)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_attr_unsupported_stmt);
+    return nullptr;
+  }
+
+  if (A.getNumArgs() != 1) {
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_attr_wrong_nargs);
+    return nullptr;
+  }
+
+  StringRef      strategyStr;
+  SourceLocation argLoc;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, strategyStr, &argLoc)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_unknown);
+    return nullptr;
+  }
+
+  KitsuneStrategyAttr::KitsuneStrategyTy strategyKind;
+  if (!KitsuneStrategyAttr::ConvertStrToKitsuneStrategyTy(strategyStr, strategyKind)) {
+    // FIXME: Is this redundant w/ CheckString call above???
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_unknown)
+      << A.getName() << strategyStr << argLoc;
+    return nullptr;
+  }
+
+  unsigned Index = A.getAttributeSpellingListIndex();
+  return ::new (S.Context)
+    KitsuneStrategyAttr(A.getLoc(), S.Context, strategyKind, Index);
+}
+
+// =====+
+
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   switch (A.getKind()) {
@@ -358,6 +433,14 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
     return handleSuppressAttr(S, St, A, Range);
+  // +==== kitsune attr support 
+  case ParsedAttr::AT_KitsuneTarget:
+    return handleKitsuneTargetAttr(S, St, A, Range);
+    break;
+  case ParsedAttr::AT_KitsuneStrategy:
+    return handleKitsuneStrategyAttr(S, St, A, Range);
+    break;
+  // =====+
   default:
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute

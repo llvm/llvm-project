@@ -215,6 +215,11 @@ if(LLVM_ENABLE_LIBXML2)
   endif()
 endif()
 
+find_package(Kokkos QUIET) 
+find_package(CilkRTS QUIET) 
+find_package(Qthreads QUIET) 
+find_package(Realm QUIET)
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 

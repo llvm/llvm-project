@@ -469,4 +469,24 @@ def warn_drv_libstdcxx_not_found : Warning<
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
+
+// +----- kitsune 
+def warn_kokkos_missing_build_params : Warning<
+  "'-fkokkos' mode enabled but build configuration missing details for "
+  "automatic argument generation. Include and linking arguments must be "
+  "provided on command line.">; 
+def warn_cilkrts_missing_build_params : Warning<
+  "'-ftapir=cilk' enabled but build configuration missing details for "
+  "automatic argument generation. Include and linking arguments must be "
+  "provided on command line.">; 
+def warn_qthreads_missing_build_params : Warning<
+  "'-ftapir=qthreads' enabled but build configuration missing details for "
+  "automatic argument generation. Include and linking arguments must be"
+  "provided on command line.">; 
+def warn_realm_missing_build_params : Warning<
+  "'-ftapir=realm' enabled but build configuration missing details for "
+  "automatic argument generation. Include and linking arguments must be "
+  "provided on command line.">; 
+// -----+
+
 }

@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.13.5)
 
+#    "-lkokkos -ldl -lrt" 
 set(KOKKOS_LINK_LIBRARIES 
-    "-lkokkos -ldl -lrt" 
+    "" 
     CACHE STRING "Required link libraries for kokkos.")
 
 set(KOKKOS_INSTALL_PREFIX 

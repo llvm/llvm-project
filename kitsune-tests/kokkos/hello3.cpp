@@ -1,6 +1,8 @@
+#include <limits>
 #include <cstdio>
-#include <iostream>
-using namespace std;
+#include <cstdlib>
+#include <cstring>
+#include <sys/time.h>
 
 #include <Kokkos_Core.hpp>
 
@@ -15,8 +17,8 @@ int main (int argc, char* argv[]) {
   Kokkos::initialize (argc, argv);
   {
     Kokkos::parallel_for(SIZE_1 + value(), KOKKOS_LAMBDA(const int i) {
-	printf("hello from %i\n", i);
-      });
+      std::printf("hello from %i\n", i);
+    });
   }
   Kokkos::finalize ();
   return 0;
