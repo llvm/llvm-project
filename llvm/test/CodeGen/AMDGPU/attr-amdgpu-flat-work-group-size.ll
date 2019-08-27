@@ -34,13 +34,13 @@ entry:
 }
 attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
-; CHECK-LABEL: {{^}}min_1024_max_2048
-; CHECK: SGPRBlocks: 1
-; CHECK: VGPRBlocks: 7
-; CHECK: NumSGPRsForWavesPerEU: 12
-; CHECK: NumVGPRsForWavesPerEU: 32
+; CHECK-LABEL: {{^}}min_1024_max_1024
+; CHECK: SGPRBlocks: 0
+; CHECK: VGPRBlocks: 10
+; CHECK: NumSGPRsForWavesPerEU: 2{{$}}
+; CHECK: NumVGPRsForWavesPerEU: 43
 @var = addrspace(1) global float 0.0
-define amdgpu_kernel void @min_1024_max_2048() #3 {
+define amdgpu_kernel void @min_1024_max_1024() #3 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var
   %val2 = load volatile float, float addrspace(1)* @var
@@ -127,7 +127,7 @@ define amdgpu_kernel void @min_1024_max_2048() #3 {
 
   ret void
 }
-attributes #3 = {"amdgpu-flat-work-group-size"="1024,2048"}
+attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
 ; HSAMD: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 ; HSAMD: Version: [ 1, 0 ]
@@ -138,5 +138,5 @@ attributes #3 = {"amdgpu-flat-work-group-size"="1024,2048"}
 ; HSAMD:   MaxFlatWorkGroupSize: 128
 ; HSAMD: - Name:                 min_128_max_128
 ; HSAMD:   MaxFlatWorkGroupSize: 128
-; HSAMD: - Name:                 min_1024_max_2048
-; HSAMD:   MaxFlatWorkGroupSize: 2048
+; HSAMD: - Name:                 min_1024_max_1024
+; HSAMD:   MaxFlatWorkGroupSize: 1024
