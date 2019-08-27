@@ -451,11 +451,13 @@ static Error deregisterFrameWrapper(const void *P) {
 
 template <typename HandleFDEFn>
 Error walkAppleEHFrameSection(const char *const SectionStart,
+                              size_t SectionSize,
                               HandleFDEFn HandleFDE) {
   const char *CurCFIRecord = SectionStart;
+  const char *End = SectionStart + SectionSize;
   uint64_t Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
 
-  while (Size != 0) {
+  while (CurCFIRecord != End && Size != 0) {
     const char *OffsetField = CurCFIRecord + (Size == 0xffffffff ? 12 : 4);
     if (Size == 0xffffffff)
       Size = *reinterpret_cast<const uint64_t *>(CurCFIRecord + 4) + 12;
@@ -484,10 +486,12 @@ Error walkAppleEHFrameSection(const char *const SectionStart,
 
 #endif // __APPLE__
 
-Error registerEHFrameSection(const void *EHFrameSectionAddr) {
+Error registerEHFrameSection(const void *EHFrameSectionAddr,
+                             size_t EHFrameSectionSize) {
 #ifdef __APPLE__
   // On Darwin __register_frame has to be called for each FDE entry.
   return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
+                                 EHFrameSectionSize,
                                  registerFrameWrapper);
 #else
   // On Linux __register_frame takes a single argument:
@@ -499,9 +503,11 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr) {
 #endif
 }
 
-Error deregisterEHFrameSection(const void *EHFrameSectionAddr) {
+Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
+                               size_t EHFrameSectionSize) {
 #ifdef __APPLE__
   return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
+                                 EHFrameSectionSize,
                                  deregisterFrameWrapper);
 #else
   return deregisterFrameWrapper(EHFrameSectionAddr);
@@ -519,21 +525,29 @@ InProcessEHFrameRegistrar::InProcessEHFrameRegistrar() {}
 
 AtomGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,
-                          StoreFrameAddressFunction StoreFrameAddress) {
+                          StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
   if (TT.getObjectFormat() == Triple::MachO)
     EHFrameSectionName = "__eh_frame";
   else
     EHFrameSectionName = ".eh_frame";
 
-  auto RecordEHFrame = [EHFrameSectionName,
-                        StoreFrameAddress](AtomGraph &G) -> Error {
+  auto RecordEHFrame =
+    [EHFrameSectionName,
+     StoreFrameRange = std::move(StoreRangeAddress)](AtomGraph &G) -> Error {
     // Search for a non-empty eh-frame and record the address of the first atom
     // in it.
     JITTargetAddress Addr = 0;
-    if (auto *S = G.findSectionByName(EHFrameSectionName))
-      Addr = S->getRange().getStart();
-    StoreFrameAddress(Addr);
+    size_t Size = 0;
+    if (auto *S = G.findSectionByName(EHFrameSectionName)) {
+      auto R = S->getRange();
+      Addr = R.getStart();
+      Size = R.getSize();
+    }
+    if (Addr == 0 && Size != 0)
+      return make_error<JITLinkError>("__eh_frame section can not have zero "
+                                      "address with non-zero size");
+    StoreFrameRange(Addr, Size);
     return Error::success();
   };
 

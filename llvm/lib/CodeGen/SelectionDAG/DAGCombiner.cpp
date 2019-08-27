@@ -516,6 +516,7 @@ namespace {
     bool isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
                            SDValue &CC) const;
     bool isOneUseSetCC(SDValue N) const;
+    bool isCheaperToUseNegatedFPOps(SDValue X, SDValue Y);
 
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
@@ -1664,8 +1665,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
       for (SDNode *LN : UpdatedNodes) {
-        AddToWorklist(LN);
         AddUsersToWorklist(LN);
+        AddToWorklist(LN);
       }
       if (!NIsValid)
         continue;
@@ -12110,6 +12111,22 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   return SDValue();
 }
 
+/// Return true if both inputs are at least as cheap in negated form and at
+/// least one input is strictly cheaper in negated form.
+bool DAGCombiner::isCheaperToUseNegatedFPOps(SDValue X, SDValue Y) {
+  const TargetOptions &Options = DAG.getTarget().Options;
+  if (char LHSNeg = isNegatibleForFree(X, LegalOperations, TLI, &Options,
+                                   ForCodeSize))
+    if (char RHSNeg = isNegatibleForFree(Y, LegalOperations, TLI, &Options,
+                                         ForCodeSize))
+      // Both negated operands are at least as cheap as their counterparts.
+      // Check to see if at least one is cheaper negated.
+      if (LHSNeg == 2 || RHSNeg == 2)
+        return true;
+
+  return false;
+}
+
 SDValue DAGCombiner::visitFMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -12180,21 +12197,11 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
       return DAG.getNode(ISD::FNEG, DL, VT, N0);
 
-  // fold (fmul (fneg X), (fneg Y)) -> (fmul X, Y)
-  if (char LHSNeg = isNegatibleForFree(N0, LegalOperations, TLI, &Options,
-                                       ForCodeSize)) {
-    if (char RHSNeg = isNegatibleForFree(N1, LegalOperations, TLI, &Options,
-                                         ForCodeSize)) {
-      // Both can be negated for free, check to see if at least one is cheaper
-      // negated.
-      if (LHSNeg == 2 || RHSNeg == 2)
-        return DAG.getNode(ISD::FMUL, DL, VT,
-                           GetNegatedExpression(N0, DAG, LegalOperations,
-                                                ForCodeSize),
-                           GetNegatedExpression(N1, DAG, LegalOperations,
-                                                ForCodeSize),
-                           Flags);
-    }
+  // -N0 * -N1 --> N0 * N1
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FMUL, DL, VT, NegN0, NegN1, Flags);
   }
 
   // fold (fmul X, (select (fcmp X > 0.0), -1.0, 1.0)) -> (fneg (fabs X))
@@ -12271,6 +12278,13 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
       isa<ConstantFPSDNode>(N1) &&
       isa<ConstantFPSDNode>(N2)) {
     return DAG.getNode(ISD::FMA, DL, VT, N0, N1, N2);
+  }
+
+  // (-N0 * -N1) + N2 --> (N0 * N1) + N2
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2, Flags);
   }
 
   if (UnsafeFPMath) {
@@ -20707,11 +20721,11 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   SDValue TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
   CombineTo(St, TF);
 
-  AddToWorklist(STChain);
-  // Add TF operands worklist in reverse order.
-  for (auto I = TF->getNumOperands(); I;)
-    AddToWorklist(TF->getOperand(--I).getNode());
+  // Add TF and its operands to the worklist.
   AddToWorklist(TF.getNode());
+  for (const SDValue &Op : TF->ops())
+    AddToWorklist(Op.getNode());
+  AddToWorklist(STChain);
   return true;
 }
 

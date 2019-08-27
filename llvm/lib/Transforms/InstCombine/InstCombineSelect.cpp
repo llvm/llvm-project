@@ -785,6 +785,41 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+/// Fold the following code sequence:
+/// \code
+///   int a = ctlz(x & -x);
+//    x ? 31 - a : a;
+/// \code
+///
+/// into:
+///   cttz(x)
+static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
+                                         Value *FalseVal,
+                                         InstCombiner::BuilderTy &Builder) {
+  unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
+  if (!ICI->isEquality() || !match(ICI->getOperand(1), m_Zero()))
+    return nullptr;
+
+  if (ICI->getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  if (!match(FalseVal,
+             m_Xor(m_Deferred(TrueVal), m_SpecificInt(BitWidth - 1))))
+    return nullptr;
+
+  if (!match(TrueVal, m_Intrinsic<Intrinsic::ctlz>()))
+    return nullptr;
+
+  Value *X = ICI->getOperand(0);
+  auto *II = cast<IntrinsicInst>(TrueVal);
+  if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
+    return nullptr;
+
+  Function *F = Intrinsic::getDeclaration(II->getModule(), Intrinsic::cttz,
+                                          II->getType());
+  return CallInst::Create(F, {X, II->getArgOperand(1)});
+}
+
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
 /// call to cttz/ctlz with flag 'is_zero_undef' cleared.
 ///
@@ -1430,6 +1465,9 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
+    return V;
+
+  if (Instruction *V = foldSelectCtlzToCttz(ICI, TrueVal, FalseVal, Builder))
     return V;
 
   if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))

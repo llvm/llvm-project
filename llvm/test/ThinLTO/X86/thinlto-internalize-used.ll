@@ -4,7 +4,7 @@
 ; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t-index.bc %t.bc -o %t.promote.bc
 ; RUN: llvm-dis %t.promote.bc -o - | FileCheck %s
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"
 
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @foo to i8*)], section "llvm.metadata"

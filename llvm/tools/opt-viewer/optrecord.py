@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_BASENAME@
+#!/usr/bin/env python
 
 from __future__ import print_function
 

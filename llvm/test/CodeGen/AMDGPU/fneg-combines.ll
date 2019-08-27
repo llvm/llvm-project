@@ -1205,7 +1205,7 @@ define amdgpu_kernel void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, flo
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
 
-; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], -[[A]], -[[B]], [[C]]
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], [[C]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[[0-9]+}}, 0x80000000, [[FMA]]
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], -[[C]]

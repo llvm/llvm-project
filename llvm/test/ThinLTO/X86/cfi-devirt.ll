@@ -61,7 +61,7 @@
 ; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=ERROR
 ; ERROR: failed: inconsistent LTO Unit splitting (recompile with -fsplit-lto-unit)
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
 %struct.A = type { i32 (...)** }

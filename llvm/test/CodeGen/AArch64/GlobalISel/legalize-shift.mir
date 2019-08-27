@@ -112,10 +112,10 @@ body:             |
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
     ; CHECK: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[TRUNC]](s64), [[C1]]
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[TRUNC]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[TRUNC]](s64)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[TRUNC]](s64)
     ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[SUB1]](s64)
-    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL1]], [[LSHR]]
+    ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[TRUNC]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL1]]
     ; CHECK: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[SUB]](s64)
     ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[SHL]], [[C1]]
     ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[OR]], [[SHL2]]
@@ -182,8 +182,8 @@ body:             |
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
     ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[UV1]], [[TRUNC]](s64)
     ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[TRUNC]](s64)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[SUB1]](s64)
-    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[LSHR1]]
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[SUB1]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[UV1]], [[C2]](s64)
     ; CHECK: [[ASHR2:%[0-9]+]]:_(s64) = G_ASHR [[UV1]], [[SUB]](s64)

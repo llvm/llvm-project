@@ -20,8 +20,7 @@ declare float @llvm.fmuladd.f32(float, float, float) #4
 define float @fma_fneg_fneg(float %x, float %y, float %z) {
 ; CHECK-LABEL: fma_fneg_fneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fneg f0, f2
-; CHECK-NEXT:    fnmsubs f1, f1, f0, f3
+; CHECK-NEXT:    fmadds f1, f1, f2, f3
 ; CHECK-NEXT:    blr
   %negx = fneg float %x
   %negy = fneg float %y
@@ -32,8 +31,8 @@ define float @fma_fneg_fneg(float %x, float %y, float %z) {
 define float @fma_fneg_fsub(float %x, float %y0, float %y1, float %z) {
 ; CHECK-LABEL: fma_fneg_fsub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsubs f0, f2, f3
-; CHECK-NEXT:    fnmsubs f1, f1, f0, f4
+; CHECK-NEXT:    fsubs f0, f3, f2
+; CHECK-NEXT:    fmadds f1, f1, f0, f4
 ; CHECK-NEXT:    blr
   %negx = fneg float %x
   %negy = fsub nsz float %y0, %y1

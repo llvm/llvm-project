@@ -19,7 +19,7 @@
 ; RUN: llvm-readelf --symbols %t2.o.1 | FileCheck %s --check-prefix=UND
 ; UND: NOTYPE  GLOBAL DEFAULT UND var2
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @var1 = global i32 10, align 4

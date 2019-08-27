@@ -486,6 +486,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
     MemoryBound(MFI.isMemoryBound()),
     WaveLimiter(MFI.needsWaveLimiter()),
+    HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
     ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
     ScratchWaveOffsetReg(regToString(MFI.getScratchWaveOffsetReg(), TRI)),
     FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
@@ -502,6 +503,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
   MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
   LDSSize = YamlMFI.LDSSize;
+  HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   IsEntryFunction = YamlMFI.IsEntryFunction;
   NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;

@@ -36,6 +36,9 @@ public:
   bool operator==(const ElementCount& RHS) const {
     return Min == RHS.Min && Scalable == RHS.Scalable;
   }
+  bool operator!=(const ElementCount& RHS) const {
+    return !(*this == RHS);
+  }
 };
 
 } // end namespace llvm

@@ -265,6 +265,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
+  uint32_t HighBitsOf32BitAddress = 0;
 
   StringValue ScratchRSrcReg = "$private_rsrc_reg";
   StringValue ScratchWaveOffsetReg = "$scratch_wave_offset_reg";
@@ -302,6 +303,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue("$sp_reg"));
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
+    YamlIO.mapOptional("highBitsOf32BitAddress",
+                       MFI.HighBitsOf32BitAddress, 0u);
   }
 };
 
@@ -670,7 +673,7 @@ public:
     return GITPtrHigh;
   }
 
-  unsigned get32BitAddressHighBits() const {
+  uint32_t get32BitAddressHighBits() const {
     return HighBitsOf32BitAddress;
   }
 

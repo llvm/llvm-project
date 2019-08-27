@@ -153,10 +153,16 @@ public:
   Error notifyRemovingAllModules() override;
 
 private:
+
+  struct EHFrameRange {
+    JITTargetAddress Addr = 0;
+    size_t Size;
+  };
+
   jitlink::EHFrameRegistrar &Registrar;
-  DenseMap<MaterializationResponsibility *, JITTargetAddress> InProcessLinks;
-  DenseMap<VModuleKey, JITTargetAddress> TrackedEHFrameAddrs;
-  std::vector<JITTargetAddress> UntrackedEHFrameAddrs;
+  DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
+  DenseMap<VModuleKey, EHFrameRange> TrackedEHFrameRanges;
+  std::vector<EHFrameRange> UntrackedEHFrameRanges;
 };
 
 } // end namespace orc

@@ -117,6 +117,9 @@ static std::string computeDataLayout(const Triple &TT) {
       !TT.isArch64Bit())
     Ret += "-p:32:32";
 
+  // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
+  Ret += "-p270:32:32-p271:32:32-p272:64:64";
+
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
   if (TT.isArch64Bit() || TT.isOSWindows() || TT.isOSNaCl())
     Ret += "-i64:64";

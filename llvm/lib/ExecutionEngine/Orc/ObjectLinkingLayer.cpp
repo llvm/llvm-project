@@ -58,7 +58,8 @@ public:
     auto SharedLookupContinuation =
         std::make_shared<JITLinkAsyncLookupContinuation>(
             std::move(LookupContinuation));
-    auto OnResolve = [SharedLookupContinuation](Expected<SymbolMap> Result) {
+    auto OnResolve = [this, SharedLookupContinuation](Expected<SymbolMap> Result) {
+      auto Main = Layer.getExecutionSession().intern("_main");
       if (!Result)
         (*SharedLookupContinuation)(Result.takeError());
       else {
@@ -126,19 +127,16 @@ public:
     if (!ExtraSymbolsToClaim.empty())
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
-
     if (auto Err = MR.notifyResolved(InternedResult)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
       return;
     }
-
     Layer.notifyLoaded(MR);
   }
 
   void notifyFinalized(
       std::unique_ptr<JITLinkMemoryManager::Allocation> A) override {
-
     if (auto Err = Layer.notifyEmitted(MR, std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
@@ -425,61 +423,66 @@ void EHFrameRegistrationPlugin::modifyPassConfig(
   assert(!InProcessLinks.count(&MR) && "Link for MR already being tracked?");
 
   PassConfig.PostFixupPasses.push_back(
-      createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr) {
+      createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr,
+                                                size_t Size) {
         if (Addr)
-          InProcessLinks[&MR] = Addr;
+          InProcessLinks[&MR] = { Addr, Size };
       }));
 }
 
 Error EHFrameRegistrationPlugin::notifyEmitted(
     MaterializationResponsibility &MR) {
 
-  auto EHFrameAddrItr = InProcessLinks.find(&MR);
-  if (EHFrameAddrItr == InProcessLinks.end())
+  auto EHFrameRangeItr = InProcessLinks.find(&MR);
+  if (EHFrameRangeItr == InProcessLinks.end())
     return Error::success();
 
-  auto EHFrameAddr = EHFrameAddrItr->second;
-  assert(EHFrameAddr && "eh-frame addr to register can not be null");
+  auto EHFrameRange = EHFrameRangeItr->second;
+  assert(EHFrameRange.Addr &&
+         "eh-frame addr to register can not be null");
 
-  InProcessLinks.erase(EHFrameAddrItr);
+  InProcessLinks.erase(EHFrameRangeItr);
   if (auto Key = MR.getVModuleKey())
-    TrackedEHFrameAddrs[Key] = EHFrameAddr;
+    TrackedEHFrameRanges[Key] = EHFrameRange;
   else
-    UntrackedEHFrameAddrs.push_back(EHFrameAddr);
+    UntrackedEHFrameRanges.push_back(EHFrameRange);
 
-  return Registrar.registerEHFrames(EHFrameAddr);
+  return Registrar.registerEHFrames(EHFrameRange.Addr, EHFrameRange.Size);
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
-  auto EHFrameAddrItr = TrackedEHFrameAddrs.find(K);
-  if (EHFrameAddrItr == TrackedEHFrameAddrs.end())
+  auto EHFrameRangeItr = TrackedEHFrameRanges.find(K);
+  if (EHFrameRangeItr == TrackedEHFrameRanges.end())
     return Error::success();
 
-  auto EHFrameAddr = EHFrameAddrItr->second;
-  assert(EHFrameAddr && "Tracked eh-frame addr must not be null");
+  auto EHFrameRange = EHFrameRangeItr->second;
+  assert(EHFrameRange.Addr && "Tracked eh-frame range must not be null");
 
-  TrackedEHFrameAddrs.erase(EHFrameAddrItr);
+  TrackedEHFrameRanges.erase(EHFrameRangeItr);
 
-  return Registrar.deregisterEHFrames(EHFrameAddr);
+  return Registrar.deregisterEHFrames(EHFrameRange.Addr, EHFrameRange.Size);
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingAllModules() {
 
-  std::vector<JITTargetAddress> EHFrameAddrs = std::move(UntrackedEHFrameAddrs);
-  EHFrameAddrs.reserve(EHFrameAddrs.size() + TrackedEHFrameAddrs.size());
+  std::vector<EHFrameRange> EHFrameRanges =
+    std::move(UntrackedEHFrameRanges);
+  EHFrameRanges.reserve(EHFrameRanges.size() + TrackedEHFrameRanges.size());
 
-  for (auto &KV : TrackedEHFrameAddrs)
-    EHFrameAddrs.push_back(KV.second);
+  for (auto &KV : TrackedEHFrameRanges)
+    EHFrameRanges.push_back(KV.second);
 
-  TrackedEHFrameAddrs.clear();
+  TrackedEHFrameRanges.clear();
 
   Error Err = Error::success();
 
-  while (!EHFrameAddrs.empty()) {
-    auto EHFrameAddr = EHFrameAddrs.back();
-    assert(EHFrameAddr && "Untracked eh-frame addr must not be null");
-    EHFrameAddrs.pop_back();
-    Err = joinErrors(std::move(Err), Registrar.deregisterEHFrames(EHFrameAddr));
+  while (!EHFrameRanges.empty()) {
+    auto EHFrameRange = EHFrameRanges.back();
+    assert(EHFrameRange.Addr && "Untracked eh-frame range must not be null");
+    EHFrameRanges.pop_back();
+    Err = joinErrors(std::move(Err),
+                     Registrar.deregisterEHFrames(EHFrameRange.Addr,
+                                                  EHFrameRange.Size));
   }
 
   return Err;

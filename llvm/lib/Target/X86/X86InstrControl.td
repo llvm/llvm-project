@@ -145,6 +145,17 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                      [(brind (loadi64 addr:$dst))]>, Requires<[In64BitMode]>,
                      Sched<[WriteJumpLd]>;
 
+  // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
+  // These are switched from TAILJMPr/m64_REX in MCInstLower.
+  let isCodeGenOnly = 1, hasREX_WPrefix = 1 in {
+    def JMP64r_REX : I<0xFF, MRM4r, (outs), (ins GR64:$dst),
+                       "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
+    let mayLoad = 1 in
+    def JMP64m_REX : I<0xFF, MRM4m, (outs), (ins i64mem:$dst),
+                       "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJumpLd]>;
+
+  }
+
   // Non-tracking jumps for IBT, use with caution.
   let isCodeGenOnly = 1 in {
     def JMP16r_NT : I<0xFF, MRM4r, (outs), (ins GR16 : $dst), "jmp{w}\t{*}$dst",
@@ -282,16 +293,14 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TCRETURNmi : PseudoI<(outs), (ins i32mem_TC:$dst, i32imm:$offset),
                            []>, Sched<[WriteJumpLd]>;
 
-  // FIXME: The should be pseudo instructions that are lowered when going to
-  // mcinst.
-  def TAILJMPd : Ii32PCRel<0xE9, RawFrm, (outs), (ins i32imm_pcrel:$dst),
-                           "jmp\t$dst", []>, Sched<[WriteJump]>;
+  def TAILJMPd : PseudoI<(outs), (ins i32imm_pcrel:$dst),
+                         []>, Sched<[WriteJump]>;
 
-  def TAILJMPr : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
-                   "", []>, Sched<[WriteJump]>;  // FIXME: Remove encoding when JIT is dead.
+  def TAILJMPr : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
+                         []>, Sched<[WriteJump]>;
   let mayLoad = 1 in
-  def TAILJMPm : I<0xFF, MRM4m, (outs), (ins i32mem_TC:$dst),
-                   "jmp{l}\t{*}$dst", []>, Sched<[WriteJumpLd]>;
+  def TAILJMPm : PseudoI<(outs), (ins i32mem_TC:$dst),
+                         []>, Sched<[WriteJumpLd]>;
 }
 
 // Conditional tail calls are similar to the above, but they are branches
@@ -303,8 +312,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
                      (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
 
   // This gets substituted to a conditional jump instruction in MC lowering.
-  def TAILJMPd_CC : Ii32PCRel<0x80, RawFrm, (outs),
-                           (ins i32imm_pcrel:$dst, i32imm:$cond), "", []>;
+  def TAILJMPd_CC : PseudoI<(outs), (ins i32imm_pcrel:$dst, i32imm:$cond), []>;
 }
 
 
@@ -359,24 +367,24 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                                (ins i64mem_TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>, NotMemoryFoldable;
 
-  def TAILJMPd64 : Ii32PCRel<0xE9, RawFrm, (outs), (ins i64i32imm_pcrel:$dst),
-                   "jmp\t$dst", []>, Sched<[WriteJump]>;
+  def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_pcrel:$dst),
+                           []>, Sched<[WriteJump]>;
 
-  def TAILJMPr64 : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
-                     "jmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
+  def TAILJMPr64 : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
+                           []>, Sched<[WriteJump]>;
 
   let mayLoad = 1 in
-  def TAILJMPm64 : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
-                     "jmp{q}\t{*}$dst", []>, Sched<[WriteJumpLd]>;
+  def TAILJMPm64 : PseudoI<(outs), (ins i64mem_TC:$dst),
+                           []>, Sched<[WriteJumpLd]>;
 
   // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
   let hasREX_WPrefix = 1 in {
-    def TAILJMPr64_REX : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
-                           "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
+    def TAILJMPr64_REX : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
+                                 []>, Sched<[WriteJump]>;
 
     let mayLoad = 1 in
-    def TAILJMPm64_REX : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
-                           "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJumpLd]>;
+    def TAILJMPm64_REX : PseudoI<(outs), (ins i64mem_TC:$dst),
+                                 []>, Sched<[WriteJumpLd]>;
   }
 }
 
@@ -411,6 +419,6 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
                             i32imm:$cond), []>;
 
   // This gets substituted to a conditional jump instruction in MC lowering.
-  def TAILJMPd64_CC : Ii32PCRel<0x80, RawFrm, (outs),
-                           (ins i64i32imm_pcrel:$dst, i32imm:$cond), "", []>;
+  def TAILJMPd64_CC : PseudoI<(outs),
+                              (ins i64i32imm_pcrel:$dst, i32imm:$cond), []>;
 }
