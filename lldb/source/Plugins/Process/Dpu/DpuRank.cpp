@@ -150,7 +150,12 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
 }
 
 bool Dpu::Boot() {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  dpuinstruction_t first_instruction;
+  ReadIRAM(0, (void *)(&first_instruction), sizeof(dpuinstruction_t));
+
+  const dpuinstruction_t breakpoint_instruction = 0x00007e6320000000;
+  WriteIRAM(0, (const void *)(&breakpoint_instruction),
+            sizeof(dpuinstruction_t));
 
   int res = dpu_custom_for_dpu(m_dpu, DPU_COMMAND_DPU_PREEXECUTION, NULL);
   if (res != DPU_API_SUCCESS)
@@ -161,10 +166,25 @@ bool Dpu::Boot() {
   if (res != DPU_API_SUCCESS)
     return false;
 
-  return true;
+  dpu_is_running = true;
+  while (1) {
+    unsigned int exit_status;
+    switch (PollStatus(&exit_status)) {
+    case StateType::eStateStopped:
+      WriteIRAM(0, (const void *)(&first_instruction),
+                sizeof(dpuinstruction_t));
+      return true;
+    case StateType::eStateRunning:
+      break;
+    default:
+      return false;
+    }
+  }
 }
 
-bool Dpu::StopThreadsUnlock() {
+bool Dpu::StopThreadsUnlock(bool force) {
+  if (!dpu_is_running && !force)
+    return true;
   dpu_is_running = false;
 
   for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
@@ -203,8 +223,11 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
     return StateType::eStateRunning;
   }
 
-  if (!StopThreadsUnlock())
+  if (!StopThreadsUnlock(true)) {
     return StateType::eStateCrashed;
+  }
+  // Needs to be after StopThreadsUnlock to make sure that context is up to
+  // date.
   SetExitStatus(exit_status, &m_context);
 
   return result_state;
@@ -213,7 +236,7 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
 bool Dpu::StopThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  return StopThreadsUnlock();
+  return StopThreadsUnlock(false);
 }
 
 static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
