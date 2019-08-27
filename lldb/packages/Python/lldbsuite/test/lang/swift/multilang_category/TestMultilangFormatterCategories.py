@@ -51,7 +51,7 @@ class TestMultilangFormatterCategories(TestBase):
             self,
             id1child0,
             use_dynamic=True,
-            typename="NSURL *",
+            typename="Swift.Optional<Foundation.NSURL>",
             summary='"http://www.google.com"')
 
 if __name__ == '__main__':
