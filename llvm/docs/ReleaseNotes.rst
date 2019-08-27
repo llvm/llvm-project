@@ -55,6 +55,8 @@ Non-comprehensive list of changes in this release
 * The CMake parameter ``CLANG_ANALYZER_ENABLE_Z3_SOLVER`` has been replaced by
   ``LLVM_ENABLE_Z3_SOLVER``.
 
+* The RISCV target is no longer "experimental" (see below for more details).
+
 
 .. NOTE
    If you would like to document a larger change, then you can add a
@@ -215,6 +217,18 @@ Changes to the WebAssembly Target
 ---------------------------------
 
  During this release ...
+
+Changes to the RISCV Target
+---------------------------------
+
+The RISCV target is no longer "experimental"! It's now built by default,
+rather than needing to be enabled with ``LLVM_EXPERIMENTAL_TARGETS_TO_BUILD``.
+
+The backend has full codegen support for the RV32I and RV64I base RISC-V
+instruction set variants, with the MAFDC standard extensions. We support the
+hard and soft-float ABIs for these targets. Testing has been performed with
+both Linux and bare-metal targets, including the compilation of a large corpus
+of Linux applications (through buildroot).
 
 
 Changes to the OCaml bindings
