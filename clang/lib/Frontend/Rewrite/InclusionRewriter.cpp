@@ -70,7 +70,7 @@ private:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -169,8 +169,8 @@ void InclusionRewriter::FileChanged(SourceLocation Loc,
 
 /// Called whenever an inclusion is skipped due to canonical header protection
 /// macros.
-void InclusionRewriter::FileSkipped(const FileEntry &/*SkippedFile*/,
-                                    const Token &/*FilenameTok*/,
+void InclusionRewriter::FileSkipped(const FileEntryRef & /*SkippedFile*/,
+                                    const Token & /*FilenameTok*/,
                                     SrcMgr::CharacteristicKind /*FileType*/) {
   assert(LastInclusionLocation.isValid() &&
          "A file, that wasn't found via an inclusion directive, was skipped");

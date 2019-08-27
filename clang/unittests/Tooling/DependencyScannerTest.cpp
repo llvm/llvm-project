@@ -37,7 +37,8 @@ public:
       : DependencyFileGenerator(Opts), Deps(Deps) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
-    Deps = getDependencies();
+    auto NewDeps = getDependencies();
+    Deps.insert(Deps.end(), NewDeps.begin(), NewDeps.end());
   }
 
 private:
@@ -119,6 +120,45 @@ TEST(DependencyScanner, ScanDepsReuseFilemanager) {
   EXPECT_EQ(convert_to_slash(Deps[2]), "/root/header.h");
 
   EXPECT_EQ(Files.getNumUniqueRealFiles(), 2u);
+}
+
+TEST(DependencyScanner, ScanDepsReuseFilemanagerSkippedFile) {
+  std::vector<std::string> Compilation = {"-c", "-E", "-MT", "test.cpp.o"};
+  StringRef CWD = "/root";
+  FixedCompilationDatabase CDB(CWD, Compilation);
+
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->setCurrentWorkingDirectory(CWD);
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath = llvm::formatv("{0}root{0}header.h", Sept);
+  std::string SymlinkPath = llvm::formatv("{0}root{0}symlink.h", Sept);
+  std::string TestPath = llvm::formatv("{0}root{0}test.cpp", Sept);
+  std::string Test2Path = llvm::formatv("{0}root{0}test2.cpp", Sept);
+
+  VFS->addFile(HeaderPath, 0,
+               llvm::MemoryBuffer::getMemBuffer("#pragma once\n"));
+  VFS->addHardLink(SymlinkPath, HeaderPath);
+  VFS->addFile(TestPath, 0,
+               llvm::MemoryBuffer::getMemBuffer(
+                   "#include \"header.h\"\n#include \"symlink.h\"\n"));
+  VFS->addFile(Test2Path, 0,
+               llvm::MemoryBuffer::getMemBuffer(
+                   "#include \"symlink.h\"\n#include \"header.h\"\n"));
+
+  ClangTool Tool(CDB, {"test.cpp", "test2.cpp"},
+                 std::make_shared<PCHContainerOperations>(), VFS);
+  Tool.clearArgumentsAdjusters();
+  std::vector<std::string> Deps;
+  TestDependencyScanningAction Action(Deps);
+  Tool.run(&Action);
+  using llvm::sys::path::convert_to_slash;
+  ASSERT_EQ(Deps.size(), 6u);
+  EXPECT_EQ(convert_to_slash(Deps[0]), "/root/test.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/header.h");
+  EXPECT_EQ(convert_to_slash(Deps[2]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[3]), "/root/test2.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[4]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[5]), "/root/header.h");
 }
 
 } // end namespace tooling
