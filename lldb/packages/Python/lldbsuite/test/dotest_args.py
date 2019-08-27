@@ -84,7 +84,6 @@ def create_parser():
         metavar='filterspec',
         action='append',
         help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
-    X('-l', "Don't skip long running tests")
     group.add_argument(
         '-p',
         metavar='pattern',
