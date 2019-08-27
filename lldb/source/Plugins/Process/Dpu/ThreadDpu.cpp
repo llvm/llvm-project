@@ -41,8 +41,6 @@ lldb::StateType ThreadDpu::GetState() { return m_state; }
 
 bool ThreadDpu::GetStopReason(ThreadStopInfo &stop_info,
                               std::string &description) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-
   description.clear();
   stop_info.details.signal.signo = 0;
   m_state = GetProcess().GetThreadState(m_thread_index, description,

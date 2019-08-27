@@ -66,8 +66,8 @@ private:
   // Member Variables
   // ---------------------------------------------------------------------
   int m_thread_index;
-  std::unique_ptr<RegisterContextDpu> m_reg_context_up;
   lldb::StateType m_state;
+  std::unique_ptr<RegisterContextDpu> m_reg_context_up;
 
   bool m_stepping;
 };
