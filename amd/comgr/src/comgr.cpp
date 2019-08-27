@@ -443,6 +443,14 @@ amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
     return AMD_COMGR_METADATA_KIND_NULL;
 }
 
+std::string DataMeta::convertDocNodeToString(msgpack::DocNode DocNode) {
+  assert(DocNode.isScalar() && "cannot convert non-scalar DocNode to string");
+  if (MetaDoc->EmitIntegerBooleans &&
+      DocNode.getKind() == msgpack::Type::Boolean)
+    return DocNode.getBool() ? "1" : "0";
+  return DocNode.toString();
+}
+
 DataSymbol::DataSymbol(SymbolContext *DataSym) : DataSym(DataSym) {}
 DataSymbol::~DataSymbol() { delete DataSym; }
 
@@ -1223,12 +1231,7 @@ amd_comgr_status_t AMD_API
   if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_STRING || !Size)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  std::string Str;
-  if (MetaP->MetaDoc->EmitIntegerBooleans &&
-      MetaP->DocNode.getKind() == msgpack::Type::Boolean)
-    Str = MetaP->DocNode.getBool() ? "1" : "0";
-  else
-    Str = MetaP->DocNode.toString();
+  std::string Str = MetaP->convertDocNodeToString(MetaP->DocNode);
 
   if (String)
     memcpy(String, Str.c_str(), *Size);
@@ -1297,21 +1300,23 @@ amd_comgr_status_t AMD_API
   if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Key || !Value)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  auto Map = MetaP->DocNode.getMap();
+  for (auto Iter : MetaP->DocNode.getMap()) {
+    if (!Iter.first.isScalar() ||
+        StringRef(Key) != MetaP->convertDocNodeToString(Iter.first))
+      continue;
 
-  auto Iter = Map.find(Key);
-  if (Iter == Map.end())
-    return AMD_COMGR_STATUS_ERROR;
+    DataMeta *NewMetaP = new (std::nothrow) DataMeta();
+    if (!NewMetaP)
+      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-  if (!NewMetaP)
-    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    NewMetaP->MetaDoc = MetaP->MetaDoc;
+    NewMetaP->DocNode = Iter.second;
+    *Value = DataMeta::convert(NewMetaP);
 
-  NewMetaP->MetaDoc = MetaP->MetaDoc;
-  NewMetaP->DocNode = Iter->second;
-  *Value = DataMeta::convert(NewMetaP);
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
 
-  return AMD_COMGR_STATUS_SUCCESS;
+  return AMD_COMGR_STATUS_ERROR;
 }
 
 amd_comgr_status_t AMD_API
