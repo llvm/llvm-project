@@ -268,7 +268,9 @@ private:
                                         FilenameTok.getEndLoc()),
           File, "SearchPath", "RelPath", /*Imported=*/nullptr, Inc.FileKind);
       if (File)
-        Delegate->FileSkipped(*File, FilenameTok, Inc.FileKind);
+        // FIXME: Use correctly named FileEntryRef.
+        Delegate->FileSkipped(FileEntryRef(File->getName(), *File), FilenameTok,
+                              Inc.FileKind);
       else {
         llvm::SmallString<1> UnusedRecovery;
         Delegate->FileNotFound(WrittenFilename, UnusedRecovery);
