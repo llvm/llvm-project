@@ -374,9 +374,6 @@ def parseOptionsAndInitTestdirs():
             usage(parser)
         configuration.filters.extend(args.f)
 
-    if args.l:
-        configuration.skip_long_running_test = False
-
     if args.framework:
         configuration.lldbFrameworkPath = args.framework
 
@@ -438,15 +435,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.results_file:
         configuration.results_filename = args.results_file
-
-    if args.results_port:
-        configuration.results_port = args.results_port
-
-    if args.results_file and args.results_port:
-        sys.stderr.write(
-            "only one of --results-file and --results-port should "
-            "be specified\n")
-        usage(args)
 
     if args.results_formatter:
         configuration.results_formatter_name = args.results_formatter
@@ -529,7 +517,6 @@ def setupTestResults():
     formatter_config.formatter_name = configuration.results_formatter_name
     formatter_config.formatter_options = (
         configuration.results_formatter_options)
-    formatter_config.port = configuration.results_port
 
     # Create the results formatter.
     formatter_spec = formatter.create_results_formatter(
@@ -1179,10 +1166,6 @@ def run_suite():
 
     setupSysPath()
 
-    #
-    # If '-l' is specified, do not skip the long running tests.
-    if not configuration.skip_long_running_test:
-        os.environ["LLDB_SKIP_LONG_RUNNING_TEST"] = "NO"
 
     # For the time being, let's bracket the test runner within the
     # lldb.SBDebugger.Initialize()/Terminate() pair.

@@ -3,7 +3,7 @@
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S %t | FileCheck %s
 // RUN: llvm-readobj -S --symbols %t | FileCheck -check-prefix=SYMBOLS %s
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t | FileCheck -check-prefix=CODE %s
+// RUN: llvm-objdump -d --no-show-raw-insn -triple=armv7a-none-linux-gnueabi %t | FileCheck -check-prefix=CODE %s
 
 // Test the R_ARM_GOT_PREL relocation
  .syntax unified
@@ -36,7 +36,7 @@ val:
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x12000
+// CHECK-NEXT:    Address: 0x12128
 // CHECK-NEXT:    Offset:
 // CHECK-NEXT:    Size: 4
 // CHECK-NEXT:    Link:
@@ -45,7 +45,7 @@ val:
 // CHECK-NEXT:    EntrySize:
 
 // SYMBOLS:    Name: val
-// SYMBOLS-NEXT:    Value: 0x13000
+// SYMBOLS-NEXT:    Value: 0x1312C
 // SYMBOLS-NEXT:    Size: 4
 // SYMBOLS-NEXT:    Binding: Global
 // SYMBOLS-NEXT:    Type: Object
@@ -55,10 +55,10 @@ val:
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
 // CODE-NEXT: _start:
-// CODE-NEXT:   11000:  08 00 9f e5     ldr     r0, [pc, #8]
-// CODE-NEXT:   11004:  00 00 9f e7     ldr     r0, [pc, r0]
-// CODE-NEXT:   11008:  00 00 90 e5     ldr     r0, [r0]
-// CODE-NEXT:   1100c:  1e ff 2f e1     bx      lr
+// CODE-NEXT:   11114:       ldr     r0, [pc, #8]
+// CODE-NEXT:   11118:       ldr     r0, [pc, r0]
+// CODE-NEXT:   1111c:       ldr     r0, [r0]
+// CODE-NEXT:   11120:       bx      lr
 // CODE: $d.1:
-// 0x11004 + 0x0ff4 + 8 = 0x12000 = .got
-// CODE-NEXT:   11010:  f4 0f 00 00
+// 0x11124 + 0x1008 + 8 = 0x12128 = .got
+// CODE-NEXT:   11124:       08 10 00 00

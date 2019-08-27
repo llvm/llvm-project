@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_WIN32) && !defined(_WIN64)
+#if defined(__i386__) || defined(_M_IX86)
 
 #include "NativeRegisterContextWindows_i386.h"
 
@@ -242,7 +242,6 @@ Status
 NativeRegisterContextWindows_i386::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &reg_value) {
   Status error;
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -267,7 +266,6 @@ NativeRegisterContextWindows_i386::ReadRegister(const RegisterInfo *reg_info,
 
 Status NativeRegisterContextWindows_i386::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
   Status error;
 
   if (!reg_info) {
@@ -278,20 +276,20 @@ Status NativeRegisterContextWindows_i386::WriteRegister(
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
-    // directly queried.
+    // directly written.
     error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
+                                   "register, cannot write directly",
                                    reg_info->name);
     return error;
   }
 
   if (IsGPR(reg))
-    return GPRRead(reg, reg_value);
+    return GPRWrite(reg, reg_value);
 
   return Status("unimplemented");
 }
 
-Status NativeRegisterContextWindows_x86_64::ReadAllRegisterValues(
+Status NativeRegisterContextWindows_i386::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);

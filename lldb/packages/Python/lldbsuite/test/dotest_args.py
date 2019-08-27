@@ -92,7 +92,6 @@ def create_parser():
         metavar='filterspec',
         action='append',
         help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
-    X('-l', "Don't skip long running tests")
     group.add_argument(
         '-p',
         metavar='pattern',
@@ -239,12 +238,6 @@ def create_parser():
         action='store',
         help=('Specifies the file where test results will be written '
               'according to the results-formatter class used'))
-    group.add_argument(
-        '--results-port',
-        action='store',
-        type=int,
-        help=('Specifies the localhost port to which the results '
-              'formatted output should be sent'))
     group.add_argument(
         '--results-formatter',
         action='store',
