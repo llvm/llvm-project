@@ -57,6 +57,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SwiftASTContext.h"
@@ -2315,6 +2316,80 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
     return Value::eValueTypeScalar;
 }
 
+bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &address,
+    Value::ValueType &value_type) {
+  AppleObjCRuntime *objc_runtime = GetObjCRuntime();
+  if (!objc_runtime)
+    return false;
+
+  // This is a Clang type, which means it must have been an
+  // Objective-C protocol. Protocols are not represented in DWARF and
+  // LLDB's ObjC runtime implementation doesn't know how to deal with
+  // them either.  Use the Objective-C runtime to perform dynamic type
+  // resolution first, and then map the dynamic Objective-C type back
+  // into Swift.
+  TypeAndOrName dyn_class_type_or_name = class_type_or_name;
+  if (!objc_runtime->GetDynamicTypeAndAddress(
+          in_value, use_dynamic, dyn_class_type_or_name, address, value_type))
+    return false;
+
+  StringRef dyn_name = dyn_class_type_or_name.GetName().GetStringRef();
+  // If this is an Objective-C runtime value, skip; this is handled elsewhere.
+  if (swift::Demangle::isOldFunctionTypeMangling(dyn_name) ||
+      dyn_name.startswith("__NS"))
+    return false;
+
+  std::string remangled;
+  {
+    // Create a mangle tree for __C.dyn_name?.
+    using namespace swift::Demangle;
+    NodeFactory factory;
+    NodePointer global = factory.createNode(Node::Kind::Global);
+    NodePointer tm = factory.createNode(Node::Kind::TypeMangling);
+    global->addChild(tm, factory);
+    NodePointer bge = factory.createNode(Node::Kind::BoundGenericEnum);
+    tm->addChild(bge, factory);
+    NodePointer ety = factory.createNode(Node::Kind::Type);
+    bge->addChild(ety, factory);
+    NodePointer e = factory.createNode(Node::Kind::Enum);
+    e->addChild(factory.createNode(Node::Kind::Module, "Swift"), factory);
+    e->addChild(factory.createNode(Node::Kind::Identifier, "Optional"), factory);
+    ety->addChild(e, factory);
+    NodePointer list = factory.createNode(Node::Kind::TypeList);
+    bge->addChild(list, factory);
+    NodePointer cty = factory.createNode(Node::Kind::Type);
+    list->addChild(cty, factory);
+    NodePointer c = factory.createNode(Node::Kind::Class);
+    c->addChild(factory.createNode(Node::Kind::Module, "__C"), factory);
+    c->addChild(factory.createNode(Node::Kind::Identifier, dyn_name), factory);
+    cty->addChild(c, factory);
+
+    remangled = mangleNode(global);
+  }
+
+  // Import the remangled dynamic name into the scratch context.
+  Status error;
+  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
+         "Swift scratch context not locked ahead of dynamic type resolution");
+  auto scratch_ctx = in_value.GetScratchSwiftASTContext();
+  if (!scratch_ctx)
+    return false;
+  CompilerType swift_type =
+      scratch_ctx->GetTypeFromMangledTypename(ConstString(remangled), error);
+
+  // Roll back the ObjC dynamic type resolution.
+  if (!swift_type)
+    return false;
+  class_type_or_name = dyn_class_type_or_name;
+  class_type_or_name.SetCompilerType(swift_type);
+  value_type = GetValueType(in_value.GetValue().GetValueType(),
+                            in_value.GetCompilerType(),
+                            class_type_or_name.GetCompilerType(), false);
+  return true;
+}
+
 static bool IsIndirectEnumCase(ValueObject &valobj) {
   return (valobj.GetLanguageFlags() &
           SwiftASTContext::LanguageFlags::eIsIndirectEnumCase) ==
@@ -2326,7 +2401,15 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     TypeAndOrName &class_type_or_name, Address &address,
     Value::ValueType &value_type) {
   class_type_or_name.Clear();
-  if (use_dynamic == lldb::eNoDynamicValues || !CouldHaveDynamicValue(in_value))
+  if (use_dynamic == lldb::eNoDynamicValues)
+    return false;
+
+  // Try to import a Clang type into Swift.
+  if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
+    return GetDynamicTypeAndAddress_ClangType(
+        in_value, use_dynamic, class_type_or_name, address, value_type);
+
+  if (!CouldHaveDynamicValue(in_value))
     return false;
 
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
@@ -2415,16 +2498,22 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
 TypeAndOrName
 SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                        ValueObject &static_value) {
-  TypeAndOrName ret(type_and_or_name);
+  CompilerType static_type = static_value.GetCompilerType();
+  CompilerType dynamic_type = type_and_or_name.GetCompilerType();
+  // The logic in this function only applies to static/dynamic Swift types.
+  if (llvm::isa<ClangASTContext>(static_type.GetTypeSystem()))
+    return type_and_or_name;
+
   bool should_be_made_into_ref = false;
   bool should_be_made_into_ptr = false;
-  Flags type_flags(static_value.GetCompilerType().GetTypeInfo());
-  Flags type_andor_name_flags(type_and_or_name.GetCompilerType().GetTypeInfo());
+  Flags type_flags = static_type.GetTypeInfo();
+  Flags type_andor_name_flags = dynamic_type.GetTypeInfo();
 
-  // if the static type is a pointer or reference, so should the dynamic type
-  // caveat: if the static type is a Swift class instance, the dynamic type
-  // could either be a Swift type (no need to change anything), or an ObjC type
-  // in which case it needs to be made into a pointer
+  // if the static type is a pointer or reference, so should the
+  // dynamic type caveat: if the static type is a Swift class
+  // instance, the dynamic type could either be a Swift type (no need
+  // to change anything), or an ObjC type in which case it needs to be
+  // made into a pointer
   if (type_flags.AnySet(eTypeIsPointer))
     should_be_made_into_ptr =
         (type_flags.AllClear(eTypeIsGenericTypeParam | eTypeIsBuiltIn) &&
@@ -2435,24 +2524,24 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     should_be_made_into_ref = true;
   else if (type_flags.AllSet(eTypeIsSwift | eTypeIsProtocol))
     should_be_made_into_ptr =
-        type_and_or_name.GetCompilerType().IsRuntimeGeneratedType() &&
-        !type_and_or_name.GetCompilerType().IsPointerType();
+        dynamic_type.IsRuntimeGeneratedType() &&
+        !dynamic_type.IsPointerType();
 
   if (type_and_or_name.HasType()) {
-    // The type will always be the type of the dynamic object.  If our parent's
-    // type was a pointer,
-    // then our type should be a pointer to the type of the dynamic object.  If
-    // a reference, then the original type
-    // should be okay...
-    CompilerType orig_type = type_and_or_name.GetCompilerType();
-    CompilerType corrected_type = orig_type;
+    // The type will always be the type of the dynamic object.  If our
+    // parent's type was a pointer, then our type should be a pointer
+    // to the type of the dynamic object.  If a reference, then the
+    // original type should be okay...
+    CompilerType corrected_type = dynamic_type;
     if (should_be_made_into_ptr)
-      corrected_type = orig_type.GetPointerType();
+      corrected_type = dynamic_type.GetPointerType();
     else if (should_be_made_into_ref)
-      corrected_type = orig_type.GetLValueReferenceType();
-    ret.SetCompilerType(corrected_type);
+      corrected_type = dynamic_type.GetLValueReferenceType();
+    TypeAndOrName result = type_and_or_name;
+    result.SetCompilerType(corrected_type);
+    return result;
   }
-  return ret;
+  return type_and_or_name;
 }
 
 bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,

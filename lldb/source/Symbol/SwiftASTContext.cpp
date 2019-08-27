@@ -3227,7 +3227,6 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     }
   }
 
-
 public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
       : m_swift_ast_ctx(swift_ast_ctx) {}
@@ -3237,9 +3236,6 @@ public:
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();
     if (!clang_importer)
-      return;
-    Module *module = m_swift_ast_ctx.GetModule();
-    if (!module)
       return;
 
     // Find the type in the debug info.
@@ -3253,9 +3249,20 @@ public:
     // Swift doesn't keep track of submodules.
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
     decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
-    module->FindTypes(decl_context,
-                      ClangASTContext::GetSupportedLanguagesForTypes(), true,
-                      clang_types);
+    auto search = [&](Module &module) {
+      return module.FindTypes(decl_context,
+                              ClangASTContext::GetSupportedLanguagesForTypes(),
+                              true, clang_types);
+    };
+    if (Module *module = m_swift_ast_ctx.GetModule())
+      search(*module);
+    else if (TargetSP target_sp = m_swift_ast_ctx.GetTarget().lock()) {
+      // In a scratch context, search everywhere.
+      auto images = target_sp->GetImages();
+      for (size_t i = 0; i != images.GetSize(); ++i)
+        if (search(*images.GetModuleAtIndex(i)))
+          break;
+    }
 
     clang::FileSystemOptions file_system_options;
     clang::FileManager file_manager(file_system_options);
@@ -3334,13 +3341,11 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
-      if (!m_is_scratch_context) {
-        // Create the DWARFImporterDelegate.
-        auto props = ModuleList::GetGlobalModuleListProperties();
-        if (props.GetUseDWARFImporter())
-          m_dwarf_importer_delegate_up =
-              std::make_unique<SwiftDWARFImporterDelegate>(*this);
-      }
+      // Create the DWARFImporterDelegate.
+      auto props = ModuleList::GetGlobalModuleListProperties();
+      if (props.GetUseDWARFImporter())
+        m_dwarf_importer_delegate_up =
+            std::make_unique<SwiftDWARFImporterDelegate>(*this);
       clang_importer_ap = swift::ClangImporter::create(
           *m_ast_context_ap, clang_importer_options, "", m_dependency_tracker.get(),
           m_dwarf_importer_delegate_up.get());
@@ -3805,7 +3810,6 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     }
 
     SwiftLanguageRuntime *runtime = SwiftLanguageRuntime::Get(process);
-
     if (runtime && runtime->IsInLibraryNegativeCache(library_name))
       return;
 

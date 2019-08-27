@@ -73,6 +73,7 @@ class TestMainExecutable(TestBase):
         """
 
         self.build()
+        self.runCmd("settings set symbols.use-swift-dwarfimporter false")
         os.remove(self.getBuildArtifact("SomeLibrary.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibrary.swiftinterface"))
         def cleanup():
@@ -94,6 +95,8 @@ class TestMainExecutable(TestBase):
         self.expect("e value", error=True)
         self.expect("e container", error=True)
         self.expect("e TwoInts(4, 5)", error=True)
+        lldb.SBDebugger.MemoryPressureDetected()
+        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
 
     @swiftTest
     @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
