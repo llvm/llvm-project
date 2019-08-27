@@ -3231,6 +3231,60 @@ public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
       : m_swift_ast_ctx(swift_ast_ctx) {}
 
+  /// Look up a clang::Decl by name.
+  ///
+  /// There are two primary ways that this delegate method is called:
+  ///
+  ///    1. When resolving a type from a mangled name. In this case \p
+  ///       kind will be known, but the owning module of a Clang type
+  ///       in a mangled name is always __ObjC or __C.
+  ///
+  ///    2. When resolving a type from a serialized module
+  ///       cross reference. In this case \c kind will be unspecified,
+  ///       but the (top-level) module that the type is defined in
+  ///       will be known.
+  ///
+  /// The following diagram shows how the various components
+  /// interact. All paths lead to a call to the function
+  /// \c ClangImporter::Implementation::importDeclReal(), which turns
+  /// a \c clang::Decl into a \c swift::Decl.  The return paths leading
+  /// back from \c importDeclReal() are omitted from the diagram. Also
+  /// some auxiliary intermediate function calls are be omitted for
+  /// brevity.
+  ///
+  /// \verbatim
+  /// ╔═LLDB═════════════════════════════════════════════════════════════════╗
+  /// ║                                                                      ║
+  /// ║  ┌─DWARFASTParserSwift──────────┐   ┌─DWARFImporterDelegate──────┐   ║
+  /// ║  │                              │   │                            │   ║
+  /// ║  │ GetTypeFromMangledTypename() │ ┌─├→lookupValue()─────┐        │   ║
+  /// ║  │             │                │ │ │                   │        │   ║
+  /// ║  └─────────────┬────────────────┘ │ └───────────────────┬────────┘   ║
+  /// ║                │                  │                     │            ║
+  /// ╚════════════════╤══════════════════╧═════════════════════╤════════════╝
+  ///                  │                  │                     │
+  /// ╔═Swift Compiler═╤══════════════════╧═════════════════════╤════════════╗
+  /// ║                │                  │                     │            ║
+  /// ║  ┌─ASTDemangler┬─────────────┐    │ ┌─ClangImporter─────┬────┐       ║
+  /// ║  │             ↓             │    │ │                   │    │       ║
+  /// ║  │ findForeignTypeDecl()─────├──────├→lookupTypeDecl()  │    │       ║
+  /// ║  │                           │    │ │      ⇣            ↓    │       ║
+  /// ║  └───────────────────────────┘    └─┤─lookupTypeDeclDWARF()  │       ║
+  /// ║                                     │      ↓                 │       ║
+  /// ║                                     │ *importDeclReal()*     │       ║
+  /// ║                                     │      ↑                 │       ║
+  /// ║                                     │ lookupValueDWARF()     │       ║
+  /// ║                                     │      ↑                 │       ║
+  /// ║                                     └──────┴─────────────────┘       ║
+  /// ║                                            │                         ║
+  /// ║  ┌─Deserialization─────────┐               └──────────────────────┐  ║
+  /// ║  │ loadAllMembers()        │                                      │  ║
+  /// ║  │        ↓                │  ┌─ModuleDecl────┐ ┌─DWARFModuleUnit─┴┐ ║
+  /// ║  │ resolveCrossReference()─├──├→lookupValue()─├─├→lookupValue()───┘│ ║
+  /// ║  │                         │  └───────────────┘ └──────────────────┘ ║
+  /// ║  └─────────────────────────┘                                         ║
+  /// ╚══════════════════════════════════════════════════════════════════════╝
+  /// \endverbatim
   void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
                    StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
