@@ -37,5 +37,4 @@ class DmaFaultTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = process.GetThreadAtIndex(0)
-        print(thread.GetStopReason())
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonException)
