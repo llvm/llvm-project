@@ -18,14 +18,24 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
+#if defined(__linux__)
 #include <sys/syscall.h>
+#elif defined(__FreeBSD__)
+#include <sys/thr.h>
+#endif
 
 //modified from sanitizer
 
 static uintptr_t syscall_gettid() {
   uint64_t retval;
+#ifdef __linux__
   asm volatile("syscall" : "=a"(retval) : "a"(__NR_gettid) : "rcx", "r11",
                "memory", "cc");
+#else
+  long t;
+  thr_self(&t);
+  retval = static_cast<uint64_t>(t);
+#endif
   return retval;
 }
 
