@@ -48,6 +48,9 @@ from . import test_result
 from lldbsuite.test_event.event_builder import EventBuilder
 from ..support import seven
 
+def get_dotest_invocation():
+    return ' '.join(sys.argv)
+
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
@@ -228,9 +231,9 @@ def parseOptionsAndInitTestdirs():
 
     try:
         parser = dotest_args.create_parser()
-        args = dotest_args.parse_args(parser, sys.argv[1:])
+        args = parser.parse_args()
     except:
-        print(' '.join(sys.argv))
+        print(get_dotest_invocation())
         raise
 
     if args.unset_env_varnames:
@@ -255,7 +258,7 @@ def parseOptionsAndInitTestdirs():
 
     # Only print the args if being verbose.
     if args.v and not args.q:
-        print(sys.argv)
+        print(get_dotest_invocation())
 
     if args.h:
         do_help = True
@@ -824,9 +827,6 @@ def lldbLoggings():
                 'log enable failed (check GDB_REMOTE_LOG env variable)')
 
 
-def getMyCommandLine():
-    return ' '.join(sys.argv)
-
 # ======================================== #
 #                                          #
 # Execution of the test driver starts here #
@@ -1113,7 +1113,7 @@ def run_suite():
         "\nSession logs for test failures/errors/unexpected successes"
         " will go into directory '%s'\n" %
         configuration.sdir_name)
-    sys.stderr.write("Command invoked: %s\n" % getMyCommandLine())
+    sys.stderr.write("Command invoked: %s\n" % get_dotest_invocation())
 
     #
     # Invoke the default TextTestRunner to run the test suite

@@ -7,30 +7,8 @@ import sys
 import os
 import textwrap
 
-# Third-party modules
-
 # LLDB modules
 from . import configuration
-
-
-class ArgParseNamespace(object):
-    pass
-
-
-def parse_args(parser, argv):
-    """ Returns an argument object. LLDB_TEST_ARGUMENTS environment variable can
-        be used to pass additional arguments.
-    """
-    args = ArgParseNamespace()
-
-    if ('LLDB_TEST_ARGUMENTS' in os.environ):
-        print(
-            "Arguments passed through environment: '%s'" %
-            os.environ['LLDB_TEST_ARGUMENTS'])
-        args = parser.parse_args([sys.argv[0]].__add__(
-            os.environ['LLDB_TEST_ARGUMENTS'].split()), namespace=args)
-
-    return parser.parse_args(args=argv, namespace=args)
 
 
 def create_parser():
