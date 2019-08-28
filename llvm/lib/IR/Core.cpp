@@ -140,7 +140,16 @@ unsigned LLVMGetLastEnumAttributeKind(void) {
 
 LLVMAttributeRef LLVMCreateEnumAttribute(LLVMContextRef C, unsigned KindID,
                                          uint64_t Val) {
-  return wrap(Attribute::get(*unwrap(C), (Attribute::AttrKind)KindID, Val));
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+
+  if (AttrKind == Attribute::AttrKind::ByVal) {
+    // After r362128, byval attributes need to have a type attribute. Provide a
+    // NULL one until a proper API is added for this.
+    return wrap(Attribute::getWithByValType(Ctx, NULL));
+  } else {
+    return wrap(Attribute::get(Ctx, AttrKind, Val));
+  }
 }
 
 unsigned LLVMGetEnumAttributeKind(LLVMAttributeRef A) {
