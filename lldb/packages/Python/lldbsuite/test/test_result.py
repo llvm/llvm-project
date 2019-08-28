@@ -180,10 +180,9 @@ class LLDBTestResult(unittest2.TextTestResult):
             return
 
         super(LLDBTestResult, self).addSuccess(test)
-        if configuration.parsable:
-            self.stream.write(
-                "PASS: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "PASS: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_success(test))
@@ -220,10 +219,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markError", None)
         if method:
             method()
-        if configuration.parsable:
-            self.stream.write(
-                "FAIL: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "FAIL: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if self.results_formatter:
             # Handle build errors as a separate event type
             if self._isBuildError(err):
@@ -238,10 +236,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markCleanupError", None)
         if method:
             method()
-        if configuration.parsable:
-            self.stream.write(
-                "CLEANUP ERROR: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "CLEANUP ERROR: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_cleanup_error(
@@ -258,10 +255,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markFailure", None)
         if method:
             method()
-        if configuration.parsable:
-            self.stream.write(
-                "FAIL: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "FAIL: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if configuration.useCategories:
             test_categories = self.getCategoriesForTest(test)
             for category in test_categories:
@@ -280,10 +276,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markExpectedFailure", None)
         if method:
             method(err, bugnumber)
-        if configuration.parsable:
-            self.stream.write(
-                "XFAIL: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "XFAIL: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_expected_failure(
@@ -295,10 +290,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markSkippedTest", None)
         if method:
             method()
-        if configuration.parsable:
-            self.stream.write(
-                "UNSUPPORTED: LLDB (%s) :: %s (%s) \n" %
-                (self._config_string(test), str(test), reason))
+        self.stream.write(
+            "UNSUPPORTED: LLDB (%s) :: %s (%s) \n" %
+            (self._config_string(test), str(test), reason))
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_skip(test, reason))
@@ -309,10 +303,9 @@ class LLDBTestResult(unittest2.TextTestResult):
         method = getattr(test, "markUnexpectedSuccess", None)
         if method:
             method(bugnumber)
-        if configuration.parsable:
-            self.stream.write(
-                "XPASS: LLDB (%s) :: %s\n" %
-                (self._config_string(test), str(test)))
+        self.stream.write(
+            "XPASS: LLDB (%s) :: %s\n" %
+            (self._config_string(test), str(test)))
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_unexpected_success(
