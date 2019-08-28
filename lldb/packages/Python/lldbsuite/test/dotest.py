@@ -295,13 +295,6 @@ def parseOptionsAndInitTestdirs():
         # target. However, when invoking dotest.py directly, a valid --filecheck
         # option needs to be given.
         configuration.filecheck = os.path.abspath(args.filecheck)
-    else:
-        outputPaths = get_llvm_bin_dirs()
-        for outputPath in outputPaths:
-            candidatePath = os.path.join(outputPath, 'FileCheck')
-            if is_exe(candidatePath):
-                configuration.filecheck = candidatePath
-                break
 
     if not configuration.get_filecheck_path():
         logging.warning('No valid FileCheck executable; some tests may fail...')
@@ -588,34 +581,6 @@ def getOutputPaths(lldbRootDirectory):
 
     return result
 
-def get_llvm_bin_dirs():
-    """
-    Returns an array of paths that may have the llvm/clang/etc binaries
-    in them, relative to this current file.
-    Returns an empty array if none are found.
-    """
-    result = []
-
-    lldb_root_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "..")
-    paths_to_try = [
-        "llvm-build/Release+Asserts/x86_64/bin",
-        "llvm-build/Debug+Asserts/x86_64/bin",
-        "llvm-build/Release/x86_64/bin",
-        "llvm-build/Debug/x86_64/bin",
-        "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-DebugAssert+asan/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-ReleaseAssert+asan/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-RelWithDebInfoAssert+asan/llvm-macosx-x86_64/bin",
-    ]
-    for p in paths_to_try:
-        path = os.path.join(lldb_root_path, p)
-        if os.path.exists(path):
-            result.append(path)
-
-    return result
 
 def setupSysPath():
     """
@@ -1313,14 +1278,6 @@ def run_suite():
         os.environ["USERSWIFTLIBRARY"] = configuration.swiftLibrary
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
-
-    # Translate ' ' to '-' for pathname component.
-    if six.PY2:
-        import string
-        tbl = string.maketrans(' ', '-')
-    else:
-        tbl = str.maketrans(' ', '-')
-    configPostfix = configString.translate(tbl)
 
     # Output the configuration.
     if configuration.verbose:
