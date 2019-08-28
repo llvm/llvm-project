@@ -57,7 +57,7 @@ static dpu_type_t GetTypeFromDpuDiagnostic() {
   }
   while (fgets(buffer, DPU_DIAG_BUFFER_SIZE, fp) != NULL) {
     if (sscanf(buffer, "test.BACKEND = %s", buffer) == 1) {
-      if (strcmp(buffer, "fpga") == 0) {
+      if (strcmp(buffer, "hw") == 0) {
         result = HW;
       }
       break;
