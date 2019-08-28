@@ -711,7 +711,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   auto setDest = [LoopExit, ContinueOnTrue](BasicBlock *Src, BasicBlock *Dest,
                                             ArrayRef<BasicBlock *> NextBlocks,
-                                            BasicBlock *CurrentHeader,
+                                            BasicBlock *BlockInLoop,
                                             bool NeedConditional) {
     auto *Term = cast<BranchInst>(Src->getTerminator());
     if (NeedConditional) {
@@ -723,7 +723,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (Dest != LoopExit) {
         BasicBlock *BB = Src;
         for (BasicBlock *Succ : successors(BB)) {
-          if (Succ == CurrentHeader)
+          // Preserve the incoming value from BB if we are jumping to the block
+          // in the current loop.
+          if (Succ == BlockInLoop)
             continue;
           for (PHINode &Phi : Succ->phis())
             Phi.removeIncomingValue(BB, false);
@@ -794,7 +796,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         // unconditional branch for some iterations.
         NeedConditional = false;
 
-      setDest(Headers[i], Dest, Headers, Headers[i], NeedConditional);
+      setDest(Headers[i], Dest, Headers, HeaderSucc[i], NeedConditional);
     }
 
     // Set up latches to branch to the new header in the unrolled iterations or
