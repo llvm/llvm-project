@@ -45,6 +45,9 @@ struct C {
 
   int operator[](int) { return 91; }
   int operator()(int) { return 92; }
+
+  operator int() { return 11; }
+  operator long() { return 12; }
 };
 
 int main(int argc, char **argv) {
@@ -93,6 +96,10 @@ int main(int argc, char **argv) {
 
   result += c(1);
   result += c[1];
+
+  result += static_cast<int>(c);
+  result += static_cast<long>(c);
+
   //% self.expect("expr c->dummy", endstr=" 2324\n")
   //% self.expect("expr c->*2", endstr=" 2\n")
   //% self.expect("expr c + 44", endstr=" 44\n")
@@ -138,5 +145,7 @@ int main(int argc, char **argv) {
 
   //% self.expect("expr c(1)", endstr=" 91\n")
   //% self.expect("expr c[1]", endstr=" 92\n")
+  //% self.expect("expr static_cast<int>", endstr=" 11\n")
+  //% self.expect("expr static_cast<long>", endstr=" 12\n")
   return 0;
 }
