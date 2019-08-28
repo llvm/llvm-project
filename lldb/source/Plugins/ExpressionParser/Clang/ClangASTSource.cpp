@@ -599,13 +599,10 @@ void ClangASTSource::FindExternalLexicalDecls(
   }
 
   if (TagDecl *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
-    if (original_tag_decl->hasExternalLexicalStorage() ||
-        original_tag_decl->hasExternalVisibleStorage()) {
-      ExternalASTSource *external_source = original_ctx->getExternalSource();
+    ExternalASTSource *external_source = original_ctx->getExternalSource();
 
-      if (external_source)
-        external_source->CompleteType(original_tag_decl);
-    }
+    if (external_source)
+      external_source->CompleteType(original_tag_decl);
   }
 
   const DeclContext *original_decl_context =
