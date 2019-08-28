@@ -467,28 +467,6 @@ def parseOptionsAndInitTestdirs():
     lldbtest_config.codesign_identity = args.codesign_identity
 
 
-def getXcodeOutputPaths(lldbRootDirectory):
-    result = []
-
-    # These are for xcode build directories.
-    xcode3_build_dir = ['build']
-    xcode4_build_dir = ['build', 'lldb', 'Build', 'Products']
-
-    configurations = [
-        ['Debug'],
-        ['DebugClang'],
-        ['Release'],
-        ['BuildAndIntegration']]
-    xcode_build_dirs = [xcode3_build_dir, xcode4_build_dir]
-    for configuration in configurations:
-        for xcode_build_dir in xcode_build_dirs:
-            outputPath = os.path.join(
-                lldbRootDirectory, *(xcode_build_dir + configuration))
-            result.append(outputPath)
-
-    return result
-
-
 def setupTestResults():
     """Sets up test results-related objects based on arg settings."""
     # Setup the results formatter configuration.
@@ -513,37 +491,6 @@ def setupTestResults():
         # Make sure we clean up the formatter on shutdown.
         if formatter_spec.cleanup_func is not None:
             atexit.register(formatter_spec.cleanup_func)
-
-
-def getOutputPaths(lldbRootDirectory):
-    """
-    Returns typical build output paths for the lldb executable
-
-    lldbDirectory - path to the root of the lldb svn/git repo
-    """
-    result = []
-
-    if sys.platform == 'darwin':
-        result.extend(getXcodeOutputPaths(lldbRootDirectory))
-
-    # cmake builds?  look for build or build/host folder next to llvm directory
-    # lldb is located in llvm/tools/lldb so we need to go up three levels
-    llvmParentDir = os.path.abspath(
-        os.path.join(
-            lldbRootDirectory,
-            os.pardir,
-            os.pardir,
-            os.pardir))
-    result.append(os.path.join(llvmParentDir, 'build', 'bin'))
-    result.append(os.path.join(llvmParentDir, 'build', 'host', 'bin'))
-
-    # some cmake developers keep their build directory beside their lldb
-    # directory
-    lldbParentDir = os.path.abspath(os.path.join(lldbRootDirectory, os.pardir))
-    result.append(os.path.join(lldbParentDir, 'build', 'bin'))
-    result.append(os.path.join(lldbParentDir, 'build', 'host', 'bin'))
-
-    return result
 
 
 def setupSysPath():
@@ -602,14 +549,6 @@ def setupSysPath():
         # full pathname of the lldb executable.
         if "LLDB_EXEC" in os.environ:
             lldbtest_config.lldbExec = os.environ["LLDB_EXEC"]
-
-    if not lldbtest_config.lldbExec:
-        outputPaths = getOutputPaths(lldbRootDirectory)
-        for outputPath in outputPaths:
-            candidatePath = os.path.join(outputPath, 'lldb')
-            if is_exe(candidatePath):
-                lldbtest_config.lldbExec = candidatePath
-                break
 
     if not lldbtest_config.lldbExec:
         # Last, check the path
@@ -696,39 +635,23 @@ def setupSysPath():
                         lldbPythonDir, '..', '..')
 
         if not lldbPythonDir:
-            if platform.system() == "Darwin":
-                python_resource_dir = ['LLDB.framework', 'Resources', 'Python']
-                outputPaths = getXcodeOutputPaths(lldbRootDirectory)
-                for outputPath in outputPaths:
-                    candidatePath = os.path.join(
-                        outputPath, *python_resource_dir)
-                    if os.path.isfile(
-                        os.path.join(
-                            candidatePath,
-                            init_in_python_dir)):
-                        lldbPythonDir = candidatePath
-                        break
-
-                if not lldbPythonDir:
-                    print("lldb.py is not found, some tests may fail.")
-            else:
-                print(
-                    "Unable to load lldb extension module.  Possible reasons for this include:")
-                print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")
-                print(
-                    "  2) PYTHONPATH and PYTHONHOME are not set correctly.  PYTHONHOME should refer to")
-                print(
-                    "     the version of Python that LLDB built and linked against, and PYTHONPATH")
-                print(
-                    "     should contain the Lib directory for the same python distro, as well as the")
-                print("     location of LLDB\'s site-packages folder.")
-                print(
-                    "  3) A different version of Python than that which was built against is exported in")
-                print("     the system\'s PATH environment variable, causing conflicts.")
-                print(
-                    "  4) The executable '%s' could not be found.  Please check " %
-                    lldbtest_config.lldbExec)
-                print("     that it exists and is executable.")
+            print(
+                "Unable to load lldb extension module.  Possible reasons for this include:")
+            print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")
+            print(
+                "  2) PYTHONPATH and PYTHONHOME are not set correctly.  PYTHONHOME should refer to")
+            print(
+                "     the version of Python that LLDB built and linked against, and PYTHONPATH")
+            print(
+                "     should contain the Lib directory for the same python distro, as well as the")
+            print("     location of LLDB\'s site-packages folder.")
+            print(
+                "  3) A different version of Python than that which was built against is exported in")
+            print("     the system\'s PATH environment variable, causing conflicts.")
+            print(
+                "  4) The executable '%s' could not be found.  Please check " %
+                lldbtest_config.lldbExec)
+            print("     that it exists and is executable.")
 
     if lldbPythonDir:
         lldbPythonDir = os.path.normpath(lldbPythonDir)
