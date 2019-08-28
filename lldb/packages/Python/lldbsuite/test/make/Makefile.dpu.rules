@@ -34,9 +34,14 @@ THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 OBJECTS =
-EXE ?= a.out
+EXE = a.out
 LDFLAGS =
 CFLAGS ?= -g -O0
+
+HOST_OBJECT =
+HOST_EXE =
+HOST_LDFLAGS = -L$(UPMEM_HOME)/usr/lib -ldpu
+HOST_CFLAGS ?= -g -O2
 
 #----------------------------------------------------------------------
 # Check if we have any C source files
@@ -46,10 +51,24 @@ ifneq "$(strip $(C_SOURCES))" ""
 endif
 
 #----------------------------------------------------------------------
+# Check if we have any Host C source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(HOST_C_SOURCES))" ""
+	HOST_OBJECTS +=$(strip $(HOST_C_SOURCES:.c=.o.host))
+	HOST_EXE = host.out
+endif
+
+#----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
-$(EXE) : $(OBJECTS)
-	dpu-upmem-dpurte-clang $(OBJECTS) $(LDFLAGS) -o "$(EXE)"
+$(EXE) : $(OBJECTS) $(HOST_EXE)
+	dpu-upmem-dpurte-clang $(OBJECTS) $(LDFLAGS) -o $@
 
 %.o: %.c
 	dpu-upmem-dpurte-clang $(CFLAGS) $< -c -o $@
+
+$(HOST_EXE) : $(HOST_OBJECTS)
+	gcc $(HOST_LDFLAGS) $^ -o $@
+
+%.o.host: %.c
+	gcc -DDPU_EXE="\"$(CURDIR)/$(EXE)\"" $(HOST_CFLAGS) -I$(UPMEM_HOME)/usr/share/upmem/include/host/ $^ -c -o $@
