@@ -730,8 +730,7 @@ static void PrivateAutoComplete(
               continue;
 
             const char *variable_name = variable->GetName().AsCString();
-            if (variable_name &&
-                strstr(variable_name, token.c_str()) == variable_name) {
+            if (strstr(variable_name, token.c_str()) == variable_name) {
               if (strcmp(variable_name, token.c_str()) == 0) {
                 Type *variable_type = variable->GetType();
                 if (variable_type) {
