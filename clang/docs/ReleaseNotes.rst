@@ -325,10 +325,57 @@ libclang
 Static Analyzer
 ---------------
 
+- Fixed a bug where an incorrect checker name would be displayed for a bug
+  report.`
+
+- New checker: 'security.insecureAPI.DeprecatedOrUnsafeBufferHandling' to detect
+  uses of unsafe/deprecated buffer handling functions for C code using the C11
+  standard or newer.
+
+- New checker: 'osx.MIGChecker' to find violations of the Mach Interface
+  Generator calling convention
+
+- New checker: 'optin.osx.OSObjectCStyleCast' to find C-style casts of of XNU
+  libkern OSObjects
+
+- New package: 'apiModeling.llvm' contains modeling checkers to improve the
+  accuracy of reports on LLVM's own codebase.
+
+- The Static Analyzer received a
+  :ref:`developer documentation <clang-static-analyzer-docs>`.
+
 - The UninitializedObject checker is now considered as stable.
   (moved from the 'alpha.cplusplus' to the 'optin.cplusplus' package)
 
-...
+- New frontend flags: The list of available checkers are now split into 3
+  different frontend flags:
+
+  - ``-analyzer-checker-help``: The list of user-facing, stable checkers.
+
+  - ``-analyzer-checker-help-alpha``: The list of in-development
+    checkers not yet advised to be turned on.
+
+  - ``-analyzer-checker-help-developer``: Checkers never meant to be
+    enabled/disabled by hand + development checkers.
+
+- New frontend flags: While they have always been around, for the first time,
+  checker and package options are listable:
+
+  - ``-analyzer-checker-option-help``: The list of user-facing, stable checker
+    and package options.
+
+  - ``-analyzer-checker-option-help-alpha``: The list of in-development checker
+    options not yet advised to be used.
+
+  - ``-analyzer-checker-option-help-developer``: Options never meant to be
+    enabled/disabled by hand + development options.
+
+- New frontend flag: ``-analyzer-werror`` to turn analyzer warnings into errors.
+
+- Numerous fixes to increase the stability of the experimental cross translation
+  unit analysis (CTU).
+
+- CTU now handles virtual functions as well.
 
 .. _release-notes-ubsan:
 

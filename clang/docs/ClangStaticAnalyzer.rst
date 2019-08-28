@@ -2,6 +2,8 @@
 Clang Static Analyzer
 =====================
 
+.. _clang-static-analyzer-docs:
+
 The Clang Static Analyzer is a source code analysis tool that finds bugs in C, C++, and Objective-C programs.
 It implements *path-sensitive*, *inter-procedural analysis* based on *symbolic execution* technique.
 
