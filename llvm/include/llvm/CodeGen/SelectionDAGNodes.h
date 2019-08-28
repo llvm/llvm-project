@@ -709,6 +709,8 @@ public:
       case ISD::STRICT_FFLOOR:
       case ISD::STRICT_FROUND:
       case ISD::STRICT_FTRUNC:
+      case ISD::STRICT_FP_TO_SINT:
+      case ISD::STRICT_FP_TO_UINT:
       case ISD::STRICT_FP_ROUND:
       case ISD::STRICT_FP_EXTEND:
         return true;

@@ -112,6 +112,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:  Res = PromoteIntRes_INT_EXTEND(N); break;
 
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:  Res = PromoteIntRes_FP_TO_XINT(N); break;
 
@@ -494,7 +496,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NVT))
     NewOpc = ISD::FP_TO_SINT;
 
-  SDValue Res = DAG.getNode(NewOpc, dl, NVT, N->getOperand(0));
+  if (N->getOpcode() == ISD::STRICT_FP_TO_UINT &&
+      !TLI.isOperationLegal(ISD::STRICT_FP_TO_UINT, NVT) &&
+      TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
+    NewOpc = ISD::STRICT_FP_TO_SINT;
+
+  SDValue Res;
+  if (N->isStrictFPOpcode()) {
+    Res = DAG.getNode(NewOpc, dl, { NVT, MVT::Other }, 
+                      { N->getOperand(0), N->getOperand(1) });
+    // Legalize the chain result - switch anything that used the old chain to
+    // use the new one.
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  } else
+    Res = DAG.getNode(NewOpc, dl, NVT, N->getOperand(0));
 
   // Assert that the converted value fits in the original type.  If it doesn't
   // (eg: because the value being converted is too big), then the result of the
@@ -503,7 +518,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
   // NOTE: fp-to-uint to fp-to-sint promotion guarantees zero extend. For example:
   //   before legalization: fp-to-uint16, 65534. -> 0xfffe
   //   after legalization: fp-to-sint32, 65534. -> 0x0000fffe
-  return DAG.getNode(N->getOpcode() == ISD::FP_TO_UINT ?
+  return DAG.getNode((N->getOpcode() == ISD::FP_TO_UINT ||
+                      N->getOpcode() == ISD::STRICT_FP_TO_UINT) ?
                      ISD::AssertZext : ISD::AssertSext, dl, NVT, Res,
                      DAG.getValueType(N->getValueType(0).getScalarType()));
 }

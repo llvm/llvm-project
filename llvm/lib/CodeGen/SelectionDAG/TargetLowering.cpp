@@ -2382,11 +2382,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // Update legal shuffle masks based on demanded elements if it won't reduce
     // to Identity which can cause premature removal of the shuffle mask.
-    if (Updated && !IdentityLHS && !IdentityRHS && !TLO.LegalOps &&
-        isShuffleMaskLegal(NewMask, VT))
-      return TLO.CombineTo(Op,
-                           TLO.DAG.getVectorShuffle(VT, DL, Op.getOperand(0),
-                                                    Op.getOperand(1), NewMask));
+    if (Updated && !IdentityLHS && !IdentityRHS && !TLO.LegalOps) {
+      SDValue LegalShuffle =
+          buildLegalVectorShuffle(VT, DL, Op.getOperand(0), Op.getOperand(1),
+                                  NewMask, TLO.DAG);
+      if (LegalShuffle)
+        return TLO.CombineTo(Op, LegalShuffle);
+    }
 
     // Propagate undef/zero elements from LHS/RHS.
     for (unsigned i = 0; i != NumElts; ++i) {
@@ -2622,6 +2624,23 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       "Should use SimplifyMultipleUseDemandedBits if you don't know whether Op"
       " is a target node!");
   return SDValue();
+}
+
+SDValue
+TargetLowering::buildLegalVectorShuffle(EVT VT, const SDLoc &DL, SDValue N0,
+                                        SDValue N1, MutableArrayRef<int> Mask,
+                                        SelectionDAG &DAG) const {
+  bool LegalMask = isShuffleMaskLegal(Mask, VT);
+  if (!LegalMask) {
+    std::swap(N0, N1);
+    ShuffleVectorSDNode::commuteMask(Mask);
+    LegalMask = isShuffleMaskLegal(Mask, VT);
+  }
+
+  if (!LegalMask)
+    return SDValue();
+
+  return DAG.getVectorShuffle(VT, DL, N0, N1, Mask);
 }
 
 const Constant *TargetLowering::getTargetConstantFromLoad(LoadSDNode*) const {
@@ -5578,13 +5597,21 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
 
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
                                       SelectionDAG &DAG) const {
-  SDValue Src = Node->getOperand(0);
+  unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
+  SDValue Src = Node->getOperand(OpNo);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
   SDLoc dl(SDValue(Node, 0));
 
   // FIXME: Only f32 to i64 conversions are supported.
   if (SrcVT != MVT::f32 || DstVT != MVT::i64)
+    return false;
+
+  if (Node->isStrictFPOpcode())
+    // When a NaN is converted to an integer a trap is allowed. We can't
+    // use this expansion here because it would eliminate that trap. Other
+    // traps are also allowed and cannot be eliminated. See 
+    // IEEE 754-2008 sec 5.8.
     return false;
 
   // Expand f32 -> i64 conversion
@@ -5640,9 +5667,11 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
 }
 
 bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
+                                      SDValue &Chain,
                                       SelectionDAG &DAG) const {
   SDLoc dl(SDValue(Node, 0));
-  SDValue Src = Node->getOperand(0);
+  unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
+  SDValue Src = Node->getOperand(OpNo);
 
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
@@ -5650,7 +5679,9 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
 
   // Only expand vector types if we have the appropriate vector bit operations.
-  if (DstVT.isVector() && (!isOperationLegalOrCustom(ISD::FP_TO_SINT, DstVT) ||
+  unsigned SIntOpcode = Node->isStrictFPOpcode() ? ISD::STRICT_FP_TO_SINT : 
+                                                   ISD::FP_TO_SINT;
+  if (DstVT.isVector() && (!isOperationLegalOrCustom(SIntOpcode, DstVT) ||
                            !isOperationLegalOrCustomOrPromote(ISD::XOR, SrcVT)))
     return false;
 
@@ -5662,14 +5693,21 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   APInt SignMask = APInt::getSignMask(DstVT.getScalarSizeInBits());
   if (APFloat::opOverflow &
       APF.convertFromAPInt(SignMask, false, APFloat::rmNearestTiesToEven)) {
-    Result = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
+    if (Node->isStrictFPOpcode()) {
+      Result = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl, { DstVT, MVT::Other }, 
+                           { Node->getOperand(0), Src }); 
+      Chain = Result.getValue(1);
+    } else
+      Result = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
     return true;
   }
 
   SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
   SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
 
-  bool Strict = shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
+  bool Strict = Node->isStrictFPOpcode() ||
+                shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
+
   if (Strict) {
     // Expand based on maximum range of FP_TO_SINT, if the value exceeds the
     // signmask then offset (the result of which should be fully representable).
@@ -5679,12 +5717,23 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
     // Result = fp_to_sint(Val) ^ Ofs
 
     // TODO: Should any fast-math-flags be set for the FSUB?
-    SDValue Val = DAG.getSelect(dl, SrcVT, Sel, Src,
-                                DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst));
+    SDValue SrcBiased;
+    if (Node->isStrictFPOpcode())
+      SrcBiased = DAG.getNode(ISD::STRICT_FSUB, dl, { SrcVT, MVT::Other }, 
+                              { Node->getOperand(0), Src, Cst });
+    else
+      SrcBiased = DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst);
+    SDValue Val = DAG.getSelect(dl, SrcVT, Sel, Src, SrcBiased);
     SDValue Ofs = DAG.getSelect(dl, DstVT, Sel, DAG.getConstant(0, dl, DstVT),
                                 DAG.getConstant(SignMask, dl, DstVT));
-    Result = DAG.getNode(ISD::XOR, dl, DstVT,
-                         DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Val), Ofs);
+    SDValue SInt;
+    if (Node->isStrictFPOpcode()) {
+      SInt = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl, { DstVT, MVT::Other }, 
+                         { SrcBiased.getValue(1), Val });
+      Chain = SInt.getValue(1);
+    } else
+      SInt = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Val);
+    Result = DAG.getNode(ISD::XOR, dl, DstVT, SInt, Ofs);
   } else {
     // Expand based on maximum range of FP_TO_SINT:
     // True = fp_to_sint(Src)

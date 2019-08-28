@@ -1,5 +1,5 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=26 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=22 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 ; RUN: opt -attributor -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Test cases specifically designed for the "returned" argument attribute.

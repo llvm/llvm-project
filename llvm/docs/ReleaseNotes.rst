@@ -85,6 +85,11 @@ Changes to the X86 Target
 
  During this release ...
 
+* Less than 128 bit vector types, v2i32, v4i16, v2i16, v8i8, v4i8, and v2i8, are
+  now stored in the lower bits of an xmm register and the upper bits are
+  undefined. Previously the elements were spread apart with undefined bits in
+  between them.
+
 Changes to the AMDGPU Target
 -----------------------------
 

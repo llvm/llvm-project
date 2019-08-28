@@ -7778,6 +7778,8 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   case ISD::STRICT_FTRUNC:     NewOpc = ISD::FTRUNC;     break;
   case ISD::STRICT_FP_ROUND:   NewOpc = ISD::FP_ROUND;   break;
   case ISD::STRICT_FP_EXTEND:  NewOpc = ISD::FP_EXTEND;  break;
+  case ISD::STRICT_FP_TO_SINT: NewOpc = ISD::FP_TO_SINT; break;
+  case ISD::STRICT_FP_TO_UINT: NewOpc = ISD::FP_TO_UINT; break;
   }
 
   assert(Node->getNumValues() == 2 && "Unexpected number of results!");

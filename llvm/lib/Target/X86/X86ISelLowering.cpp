@@ -5104,6 +5104,14 @@ bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   return true;
 }
 
+bool X86TargetLowering::shouldExpandShift(SelectionDAG &DAG,
+                                          SDNode *N) const {
+  if (DAG.getMachineFunction().getFunction().hasMinSize() &&
+      !Subtarget.isOSWindows())
+    return false;
+  return true;
+}
+
 bool X86TargetLowering::shouldSplatInsEltVarIndex(EVT VT) const {
   // Any legal vector type can be splatted more efficiently than
   // loading/spilling from memory.

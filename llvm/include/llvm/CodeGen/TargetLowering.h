@@ -960,6 +960,8 @@ public:
       case ISD::STRICT_FFLOOR: EqOpc = ISD::FFLOOR; break;
       case ISD::STRICT_FROUND: EqOpc = ISD::FROUND; break;
       case ISD::STRICT_FTRUNC: EqOpc = ISD::FTRUNC; break;
+      case ISD::STRICT_FP_TO_SINT: EqOpc = ISD::FP_TO_SINT; break;
+      case ISD::STRICT_FP_TO_UINT: EqOpc = ISD::FP_TO_UINT; break;
       case ISD::STRICT_FP_ROUND: EqOpc = ISD::FP_ROUND; break;
       case ISD::STRICT_FP_EXTEND: EqOpc = ISD::FP_EXTEND; break;
     }
@@ -3192,6 +3194,14 @@ public:
       SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
       SelectionDAG &DAG, unsigned Depth) const;
 
+  /// Tries to build a legal vector shuffle using the provided parameters
+  /// or equivalent variations. The Mask argument maybe be modified as the
+  /// function tries different variations.
+  /// Returns an empty SDValue if the operation fails.
+  SDValue buildLegalVectorShuffle(EVT VT, const SDLoc &DL, SDValue N0,
+                                  SDValue N1, MutableArrayRef<int> Mask,
+                                  SelectionDAG &DAG) const;
+
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
   virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
@@ -3991,7 +4001,7 @@ public:
   /// \param N Node to expand
   /// \param Result output after conversion
   /// \returns True, if the expansion was successful, false otherwise
-  bool expandFP_TO_UINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  bool expandFP_TO_UINT(SDNode *N, SDValue &Result, SDValue &Chain, SelectionDAG &DAG) const;
 
   /// Expand UINT(i64) to double(f64) conversion
   /// \param N Node to expand

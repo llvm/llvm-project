@@ -774,20 +774,6 @@ Metadata *MDNodeMapper::mapTopLevelUniquedNode(const MDNode &FirstN) {
   return *getMappedOp(&FirstN);
 }
 
-namespace {
-
-struct MapMetadataDisabler {
-  ValueToValueMapTy &VM;
-
-  MapMetadataDisabler(ValueToValueMapTy &VM) : VM(VM) {
-    VM.disableMapMetadata();
-  }
-
-  ~MapMetadataDisabler() { VM.enableMapMetadata(); }
-};
-
-} // end anonymous namespace
-
 Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
   if (Optional<Metadata *> NewMD = getVM().getMappedMD(MD))
@@ -802,9 +788,6 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return const_cast<Metadata *>(MD);
 
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
-    // Disallow recursion into metadata mapping through mapValue.
-    MapMetadataDisabler MMD(getVM());
-
     // Don't memoize ConstantAsMetadata.  Instead of lasting until the
     // LLVMContext is destroyed, they can be deleted when the GlobalValue they
     // reference is destructed.  These aren't super common, so the extra

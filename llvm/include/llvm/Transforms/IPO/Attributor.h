@@ -568,7 +568,15 @@ private:
 /// NOTE: The mechanics of adding a new "concrete" abstract attribute are
 ///       described in the file comment.
 struct Attributor {
-  Attributor(InformationCache &InfoCache) : InfoCache(InfoCache) {}
+  /// Constructor
+  ///
+  /// \param InformationCache Cache to hold various information accessible for
+  ///                         the abstract attributes.
+  /// \param DepRecomputeInterval Number of iterations until the dependences
+  ///                             between abstract attributes are recomputed.
+  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval)
+      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval) {}
+
   ~Attributor() { DeleteContainerPointers(AllAbstractAttributes); }
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
@@ -774,6 +782,10 @@ private:
 
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
+
+  /// Number of iterations until the dependences between abstract attributes are
+  /// recomputed.
+  const unsigned DepRecomputeInterval;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///

@@ -123,6 +123,11 @@ static cl::opt<bool> VerifyAttributor(
              "manifestation of attributes -- may issue false-positive errors"),
     cl::init(false));
 
+static cl::opt<unsigned> DepRecInterval(
+    "attributor-dependence-recompute-interval", cl::Hidden,
+    cl::desc("Number of iterations until dependences are recomputed."),
+    cl::init(4));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -971,8 +976,16 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     if (!CB || UnresolvedCalls.count(CB))
       continue;
 
-    const auto &RetValAA =
-        A.getAAFor<AAReturnedValues>(*this, IRPosition::callsite_function(*CB));
+    if (!CB->getCalledFunction()) {
+      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
+                        << "\n");
+      UnresolvedCalls.insert(CB);
+      continue;
+    }
+
+    // TODO: use the function scope once we have call site AAReturnedValues.
+    const auto &RetValAA = A.getAAFor<AAReturnedValues>(
+        *this, IRPosition::function(*CB->getCalledFunction()));
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
                       << static_cast<const AbstractAttribute &>(RetValAA)
                       << "\n");
@@ -1070,7 +1083,27 @@ struct AAReturnedValuesFunction final : public AAReturnedValuesImpl {
 };
 
 /// Returned values information for a call sites.
-using AAReturnedValuesCallSite = AAReturnedValuesFunction;
+struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
+  AAReturnedValuesCallSite(const IRPosition &IRP) : AAReturnedValuesImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites instead of
+    //       redirecting requests to the callee.
+    llvm_unreachable("Abstract attributes for returned values are not "
+                     "supported for call sites yet!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
 
 /// ------------------------ NoSync Function Attribute -------------------------
 
@@ -1929,12 +1962,27 @@ ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A) {
 }
 
 /// Liveness information for a call sites.
-//
-// TODO: Once we have call site specific value information we can provide call
-//       site specific liveness liveness information and then it makes sense to
-//       specialize attributes for call sites instead of redirecting requests to
-//       the callee.
-using AAIsDeadCallSite = AAIsDeadFunction;
+struct AAIsDeadCallSite final : AAIsDeadImpl {
+  AAIsDeadCallSite(const IRPosition &IRP) : AAIsDeadImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites instead of
+    //       redirecting requests to the callee.
+    llvm_unreachable("Abstract attributes for liveness are not "
+                     "supported for call sites yet!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
 
 /// -------------------- Dereferenceable Argument Attribute --------------------
 
@@ -2385,7 +2433,8 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
 
   // If this is a call site query we use the call site specific return values
   // and liveness information.
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
   if (!AARetVal.getState().isValidState())
     return false;
@@ -2402,7 +2451,8 @@ bool Attributor::checkForAllReturnedValues(
   if (!AssociatedFunction || !AssociatedFunction->hasExactDefinition())
     return false;
 
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
   if (!AARetVal.getState().isValidState())
     return false;
@@ -2423,7 +2473,8 @@ bool Attributor::checkForAllInstructions(
   if (!AssociatedFunction || !AssociatedFunction->hasExactDefinition())
     return false;
 
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &LivenessAA =
       getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
   bool AnyDead = false;
@@ -2459,8 +2510,10 @@ bool Attributor::checkForAllReadWriteInstructions(
   if (!AssociatedFunction)
     return false;
 
-  const auto &LivenessAA = getAAFor<AAIsDead>(
-      QueryingAA, QueryingAA.getIRPosition(), /* TrackDependence */ false);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
+  const auto &LivenessAA =
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
   bool AnyDead = false;
 
   for (Instruction *I :
@@ -2500,11 +2553,24 @@ ChangeStatus Attributor::run() {
   SetVector<AbstractAttribute *> Worklist;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
+  bool RecomputeDependences = false;
+
   do {
     // Remember the size to determine new attributes.
     size_t NumAAs = AllAbstractAttributes.size();
     LLVM_DEBUG(dbgs() << "\n\n[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist size: " << Worklist.size() << "\n");
+
+    // If dependences (=QueryMap) are recomputed we have to look at all abstract
+    // attributes again, regardless of what changed in the last iteration.
+    if (RecomputeDependences) {
+      LLVM_DEBUG(
+          dbgs() << "[Attributor] Run all AAs to recompute dependences\n");
+      QueryMap.clear();
+      ChangedAAs.clear();
+      Worklist.insert(AllAbstractAttributes.begin(),
+                      AllAbstractAttributes.end());
+    }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
@@ -2527,6 +2593,10 @@ ChangeStatus Attributor::run() {
         if (AA->update(*this) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
 
+    // Check if we recompute the dependences in the next iteration.
+    RecomputeDependences = (DepRecomputeInterval > 0 &&
+                            IterationCounter % DepRecomputeInterval == 0);
+
     // Add attributes to the changed set if they have been created in the last
     // iteration.
     ChangedAAs.append(AllAbstractAttributes.begin() + NumAAs,
@@ -2541,13 +2611,18 @@ ChangeStatus Attributor::run() {
 
   size_t NumFinalAAs = AllAbstractAttributes.size();
 
+  if (VerifyMaxFixpointIterations && IterationCounter != MaxFixpointIterations) {
+    errs() << "\n[Attributor] Fixpoint iteration done after: "
+           << IterationCounter << "/" << MaxFixpointIterations
+           << " iterations\n";
+    llvm_unreachable("The fixpoint was not reached with exactly the number of "
+                     "specified iterations!");
+  }
+
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
                     << IterationCounter << "/" << MaxFixpointIterations
                     << " iterations\n");
 
-  if (VerifyMaxFixpointIterations && IterationCounter != MaxFixpointIterations)
-    llvm_unreachable("The fixpoint was not reached with exactly the number of "
-                     "specified iterations!");
 
   bool FinishedAtFixpoint = Worklist.empty();
 
@@ -2882,7 +2957,7 @@ static bool runAttributorOnModule(Module &M) {
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
   InformationCache InfoCache(M.getDataLayout());
-  Attributor A(InfoCache);
+  Attributor A(InfoCache, DepRecInterval);
 
   for (Function &F : M) {
     // TODO: Not all attributes require an exact definition. Find a way to

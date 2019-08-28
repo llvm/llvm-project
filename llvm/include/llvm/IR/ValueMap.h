@@ -93,7 +93,6 @@ class ValueMap {
   MapT Map;
   Optional<MDMapT> MDMap;
   ExtraData Data;
-  bool MayMapMetadata = true;
 
 public:
   using key_type = KeyT;
@@ -119,10 +118,6 @@ public:
     return *MDMap;
   }
   Optional<MDMapT> &getMDMap() { return MDMap; }
-
-  bool mayMapMetadata() const { return MayMapMetadata; }
-  void enableMapMetadata() { MayMapMetadata = true; }
-  void disableMapMetadata() { MayMapMetadata = false; }
 
   /// Get the mapped metadata, if it's in the map.
   Optional<Metadata *> getMappedMD(const Metadata *MD) const {

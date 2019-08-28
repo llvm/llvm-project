@@ -715,6 +715,7 @@ private:
   bool ScalarizeVectorOperand(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_BITCAST(SDNode *N);
   SDValue ScalarizeVecOp_UnaryOp(SDNode *N);
+  SDValue ScalarizeVecOp_UnaryOp_StrictFP(SDNode *N);
   SDValue ScalarizeVecOp_CONCAT_VECTORS(SDNode *N);
   SDValue ScalarizeVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecOp_VSELECT(SDNode *N);

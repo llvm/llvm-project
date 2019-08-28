@@ -1346,8 +1346,12 @@ let Predicates = [HasMVEInt] in {
 
   def : Pat<(insertelt (v8f16 MQPR:$src1), HPR:$src2, imm:$lane),
             (MVE_VMOV_to_lane_16 MQPR:$src1, (COPY_TO_REGCLASS HPR:$src2, rGPR), imm:$lane)>;
-  def : Pat<(extractelt (v8f16 MQPR:$src), imm:$lane),
-            (COPY_TO_REGCLASS (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane), HPR)>;
+  def : Pat<(extractelt (v8f16 MQPR:$src), imm_even:$lane),
+            (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_even:$lane))>;
+  def : Pat<(extractelt (v8f16 MQPR:$src), imm_odd:$lane),
+            (COPY_TO_REGCLASS
+              (VMOVH (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_odd:$lane))),
+              HPR)>;
 
   def : Pat<(v4f32 (scalar_to_vector SPR:$src)),
             (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), SPR:$src, ssub_0)>;

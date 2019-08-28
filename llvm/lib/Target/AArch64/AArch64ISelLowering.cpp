@@ -12123,6 +12123,14 @@ bool AArch64TargetLowering::
   return X.getValueType().isScalarInteger() || NewShiftOpcode == ISD::SHL;
 }
 
+bool AArch64TargetLowering::shouldExpandShift(SelectionDAG &DAG,
+                                              SDNode *N) const {
+  if (DAG.getMachineFunction().getFunction().hasMinSize() &&
+      !Subtarget->isTargetWindows())
+    return false;
+  return true;
+}
+
 void AArch64TargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
   // Update IsSplitCSR in AArch64unctionInfo.
   AArch64FunctionInfo *AFI = Entry->getParent()->getInfo<AArch64FunctionInfo>();

@@ -6106,6 +6106,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
   case Intrinsic::experimental_constrained_fma:
+  case Intrinsic::experimental_constrained_fptosi:
+  case Intrinsic::experimental_constrained_fptoui:
   case Intrinsic::experimental_constrained_fptrunc:
   case Intrinsic::experimental_constrained_fpext:
   case Intrinsic::experimental_constrained_sqrt:
@@ -6898,6 +6900,12 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     break;
   case Intrinsic::experimental_constrained_fma:
     Opcode = ISD::STRICT_FMA;
+    break;
+  case Intrinsic::experimental_constrained_fptosi:
+    Opcode = ISD::STRICT_FP_TO_SINT;
+    break;
+  case Intrinsic::experimental_constrained_fptoui:
+    Opcode = ISD::STRICT_FP_TO_UINT;
     break;
   case Intrinsic::experimental_constrained_fptrunc:
     Opcode = ISD::STRICT_FP_ROUND;

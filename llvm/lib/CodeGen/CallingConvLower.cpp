@@ -89,13 +89,8 @@ CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Ins[i].VT;
     ISD::ArgFlagsTy ArgFlags = Ins[i].Flags;
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
-#ifndef NDEBUG
-      dbgs() << "Formal argument #" << i << " has unhandled type "
-             << EVT(ArgVT).getEVTString() << '\n';
-#endif
-      llvm_unreachable(nullptr);
-    }
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this))
+      report_fatal_error("unable to allocate function argument #" + Twine(i));
   }
 }
 
@@ -121,13 +116,8 @@ void CCState::AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this)) {
-#ifndef NDEBUG
-      dbgs() << "Return operand #" << i << " has unhandled type "
-             << EVT(VT).getEVTString() << '\n';
-#endif
-      llvm_unreachable(nullptr);
-    }
+    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this))
+      report_fatal_error("unable to allocate function return #" + Twine(i));
   }
 }
 

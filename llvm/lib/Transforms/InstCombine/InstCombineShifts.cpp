@@ -761,7 +761,6 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   const APInt *ShAmtAPInt;
   if (match(Op1, m_APInt(ShAmtAPInt))) {
     unsigned ShAmt = ShAmtAPInt->getZExtValue();
-    unsigned BitWidth = Ty->getScalarSizeInBits();
 
     // shl (zext X), ShAmt --> zext (shl X, ShAmt)
     // This is only valid if X would have zeros shifted out.

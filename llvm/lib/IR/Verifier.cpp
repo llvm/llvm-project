@@ -4282,6 +4282,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
   case Intrinsic::experimental_constrained_fma:
+  case Intrinsic::experimental_constrained_fptosi:
+  case Intrinsic::experimental_constrained_fptoui:
   case Intrinsic::experimental_constrained_fptrunc:
   case Intrinsic::experimental_constrained_fpext:
   case Intrinsic::experimental_constrained_sqrt:
@@ -4771,6 +4773,33 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
            &FPI);
     HasExceptionMD = true;
     HasRoundingMD = true;
+    break;
+
+  case Intrinsic::experimental_constrained_fptosi:
+  case Intrinsic::experimental_constrained_fptoui: { 
+    Assert((NumOperands == 2),
+           "invalid arguments for constrained FP intrinsic", &FPI);
+    HasExceptionMD = true;
+
+    Value *Operand = FPI.getArgOperand(0);
+    uint64_t NumSrcElem = 0;
+    Assert(Operand->getType()->isFPOrFPVectorTy(),
+           "Intrinsic first argument must be floating point", &FPI);
+    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
+      NumSrcElem = OperandT->getNumElements();
+    }
+
+    Operand = &FPI;
+    Assert((NumSrcElem > 0) == Operand->getType()->isVectorTy(),
+           "Intrinsic first argument and result disagree on vector use", &FPI);
+    Assert(Operand->getType()->isIntOrIntVectorTy(),
+           "Intrinsic result must be an integer", &FPI);
+    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
+      Assert(NumSrcElem == OperandT->getNumElements(),
+             "Intrinsic first argument and result vector lengths must be equal",
+             &FPI);
+    }
+  }
     break;
 
   case Intrinsic::experimental_constrained_fptrunc:

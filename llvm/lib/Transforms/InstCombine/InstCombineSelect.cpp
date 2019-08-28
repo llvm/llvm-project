@@ -2371,16 +2371,17 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
           (LHS->getType()->isFPOrFPVectorTy() &&
            ((CmpLHS != LHS && CmpLHS != RHS) ||
             (CmpRHS != LHS && CmpRHS != RHS)))) {
-        CmpInst::Predicate Pred = getMinMaxPred(SPF, SPR.Ordered);
+        CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(Pred)) {
-          Cmp = Builder.CreateICmp(Pred, LHS, RHS);
+        if (CmpInst::isIntPredicate(MinMaxPred)) {
+          Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
         } else {
           IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-          auto FMF = cast<FPMathOperator>(SI.getCondition())->getFastMathFlags();
+          auto FMF =
+              cast<FPMathOperator>(SI.getCondition())->getFastMathFlags();
           Builder.setFastMathFlags(FMF);
-          Cmp = Builder.CreateFCmp(Pred, LHS, RHS);
+          Cmp = Builder.CreateFCmp(MinMaxPred, LHS, RHS);
         }
 
         Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);

@@ -134,6 +134,24 @@ define noalias i8* @calloc_constant_zero_size3(i64 %n) {
   ret i8* %call
 }
 
+define noalias i8* @calloc_constant_zero_size4(i64 %n) {
+; CHECK-LABEL: @calloc_constant_zero_size4(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 0, i64 1)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call noalias i8* @calloc(i64 0, i64 1)
+  ret i8* %call
+}
+
+define noalias i8* @calloc_constant_zero_size5(i64 %n) {
+; CHECK-LABEL: @calloc_constant_zero_size5(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 1, i64 0)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call noalias i8* @calloc(i64 1, i64 0)
+  ret i8* %call
+}
+
 define noalias i8* @calloc_constant_size() {
 ; CHECK-LABEL: @calloc_constant_size(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) i8* @calloc(i64 16, i64 8)

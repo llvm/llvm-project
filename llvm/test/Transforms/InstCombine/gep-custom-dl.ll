@@ -110,6 +110,18 @@ define <2 x i1> @test6(<2 x i32> %X, <2 x %S*> %P) nounwind {
   ret <2 x i1> %C
 }
 
+; Same as above, but indices scalarized.
+define <2 x i1> @test6b(<2 x i32> %X, <2 x %S*> %P) nounwind {
+; CHECK-LABEL: @test6b(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %A = getelementptr inbounds %S, <2 x %S*> %P, i32 0, i32 1, <2 x i32> %X
+  %B = getelementptr inbounds %S, <2 x %S*> %P, i32 0, i32 0
+  %C = icmp eq <2 x i32*> %A, %B
+  ret <2 x i1> %C
+}
+
 @G = external global [3 x i8]
 define i8* @test7(i16 %Idx) {
 ; CHECK-LABEL: @test7(
