@@ -144,8 +144,6 @@ A quick guide to getting started with PTVS is as follows:
 
 ::
 
-   # quiet mode
-   -q
    --arch=i686
    # Path to debug lldb.exe
    --executable D:/src/llvmbuild/ninja/bin/lldb.exe
@@ -163,7 +161,7 @@ A quick guide to getting started with PTVS is as follows:
 
 ::
 
-   -q --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
+   --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
 
 
 

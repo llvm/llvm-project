@@ -56,14 +56,6 @@
 #define __ACTIVEMASK() __ballot(1)
 #endif // CUDA_VERSION
 
-#define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
-// Use original __syncthreads if compiled by nvcc or clang >= 9.0.
-#if !defined(__clang__) || __clang_major__ >= 9
-#define __SYNCTHREADS() __syncthreads()
-#else
-#define __SYNCTHREADS() __SYNCTHREADS_N(0)
-#endif
-
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
 public:

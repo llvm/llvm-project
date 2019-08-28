@@ -199,7 +199,6 @@ def create_parser():
     # Test-suite behaviour
     group = parser.add_argument_group('Runtime behaviour options')
     X('-d', 'Suspend the process after launch to wait indefinitely for a debugger to attach')
-    X('-q', "Don't print extra output from this script.")
     X('-t', 'Turn on tracing of lldb command and other detailed test executions')
     group.add_argument(
         '-u',
