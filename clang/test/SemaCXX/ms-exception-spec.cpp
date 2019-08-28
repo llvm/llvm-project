@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 %s -fsyntax-only -verify -fms-compatibility -fexceptions -fcxx-exceptions
 
 void f() throw(...) { }
 

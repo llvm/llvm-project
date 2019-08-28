@@ -427,6 +427,41 @@ X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
   }
 }
 
+// Replace TAILJMP opcodes with their equivalent opcodes that have encoding
+// information.
+static unsigned convertTailJumpOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::TAILJMPr:
+    Opcode = X86::JMP32r;
+    break;
+  case X86::TAILJMPm:
+    Opcode = X86::JMP32m;
+    break;
+  case X86::TAILJMPr64:
+    Opcode = X86::JMP64r;
+    break;
+  case X86::TAILJMPm64:
+    Opcode = X86::JMP64m;
+    break;
+  case X86::TAILJMPr64_REX:
+    Opcode = X86::JMP64r_REX;
+    break;
+  case X86::TAILJMPm64_REX:
+    Opcode = X86::JMP64m_REX;
+    break;
+  case X86::TAILJMPd:
+  case X86::TAILJMPd64:
+    Opcode = X86::JMP_1;
+    break;
+  case X86::TAILJMPd_CC:
+  case X86::TAILJMPd64_CC:
+    Opcode = X86::JCC_1;
+    break;
+  }
+
+  return Opcode;
+}
+
 void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
@@ -500,12 +535,10 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions used to have
+  // CALL64r, CALL64pcrel32 - These instructions used to have
   // register inputs modeled as normal uses instead of implicit uses.  As such,
   // they we used to truncate off all but the first operand (the callee). This
   // issue seems to have been fixed at some point. This assert verifies that.
-  case X86::TAILJMPr64:
-  case X86::TAILJMPr64_REX:
   case X86::CALL64r:
   case X86::CALL64pcrel32:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
@@ -535,30 +568,30 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-    // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
-    // instruction.
-    {
-      unsigned Opcode;
-    case X86::TAILJMPr:
-      Opcode = X86::JMP32r;
-      goto SetTailJmpOpcode;
-    case X86::TAILJMPd:
-    case X86::TAILJMPd64:
-      Opcode = X86::JMP_1;
-      goto SetTailJmpOpcode;
-
-    SetTailJmpOpcode:
-      assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
-      OutMI.setOpcode(Opcode);
-      break;
-    }
+  // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
+  // instruction.
+  case X86::TAILJMPr:
+  case X86::TAILJMPr64:
+  case X86::TAILJMPr64_REX:
+  case X86::TAILJMPd:
+  case X86::TAILJMPd64:
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
+    break;
 
   case X86::TAILJMPd_CC:
-  case X86::TAILJMPd64_CC: {
+  case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
-    OutMI.setOpcode(X86::JCC_1);
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-  }
+
+  case X86::TAILJMPm:
+  case X86::TAILJMPm64:
+  case X86::TAILJMPm64_REX:
+    assert(OutMI.getNumOperands() == X86::AddrNumOperands &&
+           "Unexpected number of operands!");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
+    break;
 
   case X86::DEC16r:
   case X86::DEC32r:
@@ -1359,6 +1392,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   recordSled(CurSled, MI, SledKind::TAIL_CALL);
 
   unsigned OpCode = MI.getOperand(0).getImm();
+  OpCode = convertTailJumpOpcode(OpCode);
   MCInst TC;
   TC.setOpcode(OpCode);
 

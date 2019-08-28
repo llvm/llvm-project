@@ -225,8 +225,9 @@ private:
       addToken(Loc, HighlightingKind::Parameter);
       return;
     }
-    if (isa<VarDecl>(D)) {
-      addToken(Loc, HighlightingKind::Variable);
+    if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      addToken(Loc, VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
+                                         : HighlightingKind::Variable);
       return;
     }
     if (isa<FunctionDecl>(D)) {
@@ -256,7 +257,7 @@ private:
   }
 
   void addToken(SourceLocation Loc, HighlightingKind Kind) {
-    if(Loc.isMacroID()) {
+    if (Loc.isMacroID()) {
       // Only intereseted in highlighting arguments in macros (DEF_X(arg)).
       if (!SM.isMacroArgExpansion(Loc))
         return;
@@ -266,8 +267,8 @@ private:
     // Non top level decls that are included from a header are not filtered by
     // topLevelDecls. (example: method declarations being included from another
     // file for a class from another file)
-    // There are also cases with macros where the spelling loc will not be in the
-    // main file and the highlighting would be incorrect.
+    // There are also cases with macros where the spelling loc will not be in
+    // the main file and the highlighting would be incorrect.
     if (!isInsideMainFile(Loc, SM))
       return;
 
@@ -367,9 +368,9 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
   auto OldEnd = Old.end();
   auto NextLineNumber = [&]() {
     int NextNew = NewLine.end() != NewEnd ? NewLine.end()->R.start.line
-                                             : std::numeric_limits<int>::max();
+                                          : std::numeric_limits<int>::max();
     int NextOld = OldLine.end() != OldEnd ? OldLine.end()->R.start.line
-                                             : std::numeric_limits<int>::max();
+                                          : std::numeric_limits<int>::max();
     return std::min(NextNew, NextOld);
   };
 
@@ -436,6 +437,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.function.method.cpp";
   case HighlightingKind::Variable:
     return "variable.other.cpp";
+  case HighlightingKind::LocalVariable:
+    return "variable.other.local.cpp";
   case HighlightingKind::Parameter:
     return "variable.parameter.cpp";
   case HighlightingKind::Field:

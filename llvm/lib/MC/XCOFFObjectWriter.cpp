@@ -235,6 +235,13 @@ void XCOFFObjectWriter::executePostLayoutBinding(
         break;
       }
       report_fatal_error("Unhandled mapping of read-write csect to section.");
+    case XCOFF::XMC_BS:
+      assert(XCOFF::XTY_CM == MCSec->getCSectType() &&
+             "Mapping invalid csect. CSECT with bss storage class must be "
+             "common type.");
+      BSSCsects.emplace_back(MCSec);
+      WrapperMap[MCSec] = &BSSCsects.back();
+      break;
     default:
       report_fatal_error("Unhandled mapping of csect to section.");
     }

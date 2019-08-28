@@ -42,15 +42,20 @@ static llvm::Regex ConsumeGlob(StringRef &GlobList) {
   return llvm::Regex(RegexText);
 }
 
-GlobList::GlobList(StringRef Globs)
-    : Positive(!ConsumeNegativeIndicator(Globs)), Regex(ConsumeGlob(Globs)),
-      NextGlob(Globs.empty() ? nullptr : new GlobList(Globs)) {}
+GlobList::GlobList(StringRef Globs) {
+  do {
+    GlobListItem Item;
+    Item.IsPositive = !ConsumeNegativeIndicator(Globs);
+    Item.Regex = ConsumeGlob(Globs);
+    Items.push_back(std::move(Item));
+  } while (!Globs.empty());
+}
 
-bool GlobList::contains(StringRef S, bool Contains) {
-  if (Regex.match(S))
-    Contains = Positive;
-
-  if (NextGlob)
-    Contains = NextGlob->contains(S, Contains);
+bool GlobList::contains(StringRef S) {
+  bool Contains = false;
+  for (const GlobListItem &Item : Items) {
+    if (Item.Regex.match(S))
+      Contains = Item.IsPositive;
+  }
   return Contains;
 }

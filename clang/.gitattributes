@@ -1,0 +1,4 @@
+# Windows line ending tests
+test/Lexer/minimize_source_to_dependency_directives_invalid_error.c text eol=crlf
+test/FixIt/fixit-newline-style.c text eol=crlf
+test/Frontend/system-header-line-directive-ms-lineendings.c text eol=crlf

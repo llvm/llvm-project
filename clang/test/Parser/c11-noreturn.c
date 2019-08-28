@@ -15,4 +15,4 @@ _Noreturn int; // expected-error {{'_Noreturn' can only appear on functions}} ex
 _Noreturn struct S; // expected-error {{'_Noreturn' can only appear on functions}}
 _Noreturn enum E { e }; // expected-error {{'_Noreturn' can only appear on functions}}
 
-// CHECK-EXT: _Noreturn functions are a C11-specific feature
+// CHECK-EXT: '_Noreturn' is a C11 extension

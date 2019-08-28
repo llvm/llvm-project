@@ -3370,8 +3370,7 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
-                                        const char *const *ArgBegin,
-                                        const char *const *ArgEnd,
+                                        ArrayRef<const char *> CommandLineArgs,
                                         DiagnosticsEngine &Diags) {
   bool Success = true;
 
@@ -3379,9 +3378,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   std::unique_ptr<OptTable> Opts = createDriverOptTable();
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args =
-      Opts->ParseArgs(llvm::makeArrayRef(ArgBegin, ArgEnd), MissingArgIndex,
-                      MissingArgCount, IncludedFlagsBitmask);
+  InputArgList Args = Opts->ParseArgs(CommandLineArgs, MissingArgIndex,
+                                      MissingArgCount, IncludedFlagsBitmask);
   LangOptions &LangOpts = *Res.getLangOpts();
 
   // Check for missing argument error.

@@ -29,12 +29,12 @@ LSUnitBase::LSUnitBase(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
     if (!LQSize && EPI.LoadQueueID) {
       const MCProcResourceDesc &LdQDesc = *SM.getProcResource(EPI.LoadQueueID);
-      LQSize = LdQDesc.BufferSize;
+      LQSize = std::max(0, LdQDesc.BufferSize);
     }
 
     if (!SQSize && EPI.StoreQueueID) {
       const MCProcResourceDesc &StQDesc = *SM.getProcResource(EPI.StoreQueueID);
-      SQSize = StQDesc.BufferSize;
+      SQSize = std::max(0, StQDesc.BufferSize);
     }
   }
 }

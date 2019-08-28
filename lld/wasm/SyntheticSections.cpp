@@ -216,7 +216,11 @@ void TableSection::writeBody() {
 
   raw_ostream &os = bodyOutputStream;
   writeUleb128(os, 1, "table count");
-  WasmLimits limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
+  WasmLimits limits;
+  if (config->growableTable)
+    limits = {0, tableSize, 0};
+  else
+    limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
   writeTableType(os, WasmTable{WASM_TYPE_FUNCREF, limits});
 }
 

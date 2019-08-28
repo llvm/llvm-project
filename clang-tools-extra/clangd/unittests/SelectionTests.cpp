@@ -346,6 +346,25 @@ TEST(SelectionTest, Selected) {
   }
 }
 
+TEST(SelectionTest, PathologicalPreprocessor) {
+  const char *Case = R"cpp(
+#define MACRO while(1)
+    void test() {
+#include "Expand.inc"
+        br^eak;
+    }
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty());
+  auto T = makeSelectionTree(Case, AST);
+
+  EXPECT_EQ("BreakStmt", T.commonAncestor()->kind());
+  EXPECT_EQ("WhileStmt", T.commonAncestor()->Parent->kind());
+}
+
 TEST(SelectionTest, Implicit) {
   const char* Test = R"cpp(
     struct S { S(const char*); };

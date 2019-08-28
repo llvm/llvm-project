@@ -52,7 +52,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     } else if (Triple.isOSFreeBSD() ||
                Triple.isOSOpenBSD() ||
                Triple.isOSNetBSD() ||
-               Triple.getOS() == llvm::Triple::Darwin) {
+               Triple.isMacOSX()) {
       if (Triple.getArch() != llvm::Triple::x86_64) {
         D.Diag(diag::err_drv_clang_unsupported)
             << (std::string(XRayInstrumentOption) + " on " + Triple.str());

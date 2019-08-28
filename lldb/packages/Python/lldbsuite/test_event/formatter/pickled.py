@@ -46,18 +46,14 @@ class RawPickledFormatter(ResultsFormatter):
         def serialize(test_event, out_file):
             cPickle.dump(test_event, out_file)
 
-    def __init__(self, out_file, options, file_is_stream):
+    def __init__(self, out_file, options):
         super(
             RawPickledFormatter,
             self).__init__(
             out_file,
-            options,
-            file_is_stream)
+            options)
         self.pid = os.getpid()
-        if file_is_stream:
-            self.serializer = self.StreamSerializer()
-        else:
-            self.serializer = self.BlockSerializer()
+        self.serializer = self.BlockSerializer()
 
     def handle_event(self, test_event):
         super(RawPickledFormatter, self).handle_event(test_event)

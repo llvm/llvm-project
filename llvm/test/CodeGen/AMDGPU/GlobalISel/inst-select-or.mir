@@ -54,14 +54,14 @@ body: |
     ; WAVE64: liveins: $sgpr0, $sgpr1
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B32_]]
     ; WAVE32-LABEL: name: or_s1_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0, $sgpr1
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -119,14 +119,14 @@ body: |
     ; WAVE64: liveins: $sgpr0, $sgpr1
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B32_]]
     ; WAVE32-LABEL: name: or_s16_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0, $sgpr1
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -182,16 +182,16 @@ body: |
     liveins: $sgpr0, $sgpr1
     ; WAVE64-LABEL: name: or_s32_sgpr_sgpr_sgpr
     ; WAVE64: liveins: $sgpr0, $sgpr1
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B32_]]
     ; WAVE32-LABEL: name: or_s32_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0, $sgpr1
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -211,16 +211,16 @@ body: |
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE64-LABEL: name: or_s64_sgpr_sgpr_sgpr
     ; WAVE64: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B64_]]
     ; WAVE32-LABEL: name: or_s64_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = COPY $sgpr2_sgpr3
@@ -240,16 +240,16 @@ body: |
     liveins: $sgpr0, $sgpr1
     ; WAVE64-LABEL: name: or_v2s16_sgpr_sgpr_sgpr
     ; WAVE64: liveins: $sgpr0, $sgpr1
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B32_]]
     ; WAVE32-LABEL: name: or_v2s16_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0, $sgpr1
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY]], [[COPY1]]
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
@@ -269,16 +269,16 @@ body: |
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE64-LABEL: name: or_v2s32_sgpr_sgpr_sgpr
     ; WAVE64: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B64_]]
     ; WAVE32-LABEL: name: or_v2s32_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B64_]]
     %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
@@ -298,16 +298,16 @@ body: |
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE64-LABEL: name: or_v4s16_sgpr_sgpr_sgpr
     ; WAVE64: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE64: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B64_]]
     ; WAVE32-LABEL: name: or_v4s16_sgpr_sgpr_sgpr
     ; WAVE32: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[COPY]], [[COPY1]]
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE32: [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY]], [[COPY1]]
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B64_]]
     %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
     %1:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
@@ -432,11 +432,11 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; WAVE64-LABEL: name: or_s1_sgpr_undef_sgpr_undef_sgpr
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 undef %1:sreg_32_xm0, undef %2:sreg_32_xm0
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 undef %1:sreg_32, undef %2:sreg_32
     ; WAVE64: S_ENDPGM 0, implicit [[S_OR_B32_]]
     ; WAVE32-LABEL: name: or_s1_sgpr_undef_sgpr_undef_sgpr
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 undef %1:sreg_32_xm0, undef %2:sreg_32_xm0
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 undef %1:sreg_32, undef %2:sreg_32
     ; WAVE32: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %2:sgpr(s1) = G_OR undef %0:sgpr(s1), undef %1:sgpr(s1)
     S_ENDPGM 0, implicit %2
@@ -513,16 +513,14 @@ body:             |
 
     ; WAVE64-LABEL: name: copy_select_constrain_vcc_result_reg_wave32
     ; WAVE64: liveins: $vgpr0
-    ; WAVE64: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE64: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; WAVE64: [[C:%[0-9]+]]:sgpr(s1) = G_CONSTANT i1 true
-    ; WAVE64: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; WAVE64: [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-    ; WAVE64: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; WAVE64: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[C]](s1)
-    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_64_xexec(s1) = S_OR_B32 [[COPY1]](s1), [[COPY2]](s1)
-    ; WAVE64: [[COPY3:%[0-9]+]]:sreg_32_xm0(s1) = COPY [[S_OR_B32_]](s1)
-    ; WAVE64: S_ENDPGM 0, implicit [[COPY3]](s1)
+    ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1
+    ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]]
+    ; WAVE64: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B32_]]
+    ; WAVE64: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY1]], [[COPY2]]
+    ; WAVE64: [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_OR_B32_]]
+    ; WAVE64: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY3]]
+    ; WAVE64: S_ENDPGM 0, implicit [[COPY4]]
     ; WAVE32-LABEL: name: copy_select_constrain_vcc_result_reg_wave32
     ; WAVE32: liveins: $vgpr0
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
@@ -566,16 +564,14 @@ body:             |
     ; WAVE64: S_ENDPGM 0, implicit [[COPY1]]
     ; WAVE32-LABEL: name: copy_select_constrain_vcc_result_reg_wave64
     ; WAVE32: liveins: $vgpr0
-    ; WAVE32: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE32: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; WAVE32: [[C:%[0-9]+]]:sgpr(s1) = G_CONSTANT i1 true
-    ; WAVE32: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; WAVE32: [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-    ; WAVE32: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; WAVE32: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[C]](s1)
-    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[COPY1]](s1), [[COPY2]](s1)
-    ; WAVE32: [[COPY3:%[0-9]+]]:sreg_64_xexec(s1) = COPY [[S_OR_B32_]](s1)
-    ; WAVE32: S_ENDPGM 0, implicit [[COPY3]](s1)
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1
+    ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]]
+    ; WAVE32: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B32_]]
+    ; WAVE32: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_OR_B32 [[COPY1]], [[COPY2]]
+    ; WAVE32: [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_OR_B32_]]
+    ; WAVE32: S_ENDPGM 0, implicit [[COPY3]]
     %1:vgpr(s32) = COPY $vgpr0
     %0:vgpr(s1) = G_TRUNC %1(s32)
     %2:sgpr(s1) = G_CONSTANT i1 true

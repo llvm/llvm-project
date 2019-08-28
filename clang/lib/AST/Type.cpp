@@ -50,6 +50,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 using namespace clang;
 
@@ -297,6 +298,18 @@ QualType QualType::getSingleStepDesugaredTypeImpl(QualType type,
 #define TYPE(CLASS, BASE) \
   static_assert(!std::is_polymorphic<CLASS##Type>::value, \
                 #CLASS "Type should not be polymorphic!");
+#include "clang/AST/TypeNodes.def"
+
+// Check that no type class has a non-trival destructor. Types are
+// allocated with the BumpPtrAllocator from ASTContext and therefore
+// their destructor is not executed.
+//
+// FIXME: ConstantArrayType is not trivially destructible because of its
+// APInt member. It should be replaced in favor of ASTContext allocation.
+#define TYPE(CLASS, BASE)                                                      \
+  static_assert(std::is_trivially_destructible<CLASS##Type>::value ||          \
+                    std::is_same<CLASS##Type, ConstantArrayType>::value,       \
+                #CLASS "Type should be trivially destructible!");
 #include "clang/AST/TypeNodes.def"
 
 QualType Type::getLocallyUnqualifiedSingleStepDesugaredType() const {

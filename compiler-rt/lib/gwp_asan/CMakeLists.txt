@@ -98,29 +98,6 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       SOURCES optional/backtrace_sanitizer_common.cpp
       ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
       CFLAGS ${GWP_ASAN_CFLAGS} ${SANITIZER_COMMON_CFLAGS})
-
-  # Build the stack trace compressor fuzzer. Note that clang versions 4.* did
-  # not have -fsanitize=fuzzer, and Clang versions 5.* didn't have
-  # -fsanitize=fuzzer-no-link. In general, the way we build fuzz targets in LLVM
-  # core is to link it against a dummy main when DLLVM_USE_SANITIZE_COVERAGE
-  # isn't specified. Instead, here we only build fuzz targets if clang version
-  # is >= 6.0.
-  if (COMPILER_RT_BUILD_LIBFUZZER AND
-      "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
-      NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
-    add_executable(stack_trace_compressor_fuzzer
-        stack_trace_compressor_fuzzer.cpp
-        ${GWP_ASAN_SOURCES}
-        ${GWP_ASAN_HEADERS})
-    set_target_properties(
-        stack_trace_compressor_fuzzer PROPERTIES FOLDER "Fuzzers")
-    target_compile_options(
-        stack_trace_compressor_fuzzer PRIVATE -fsanitize=fuzzer-no-link)
-    set_target_properties(
-        stack_trace_compressor_fuzzer PROPERTIES LINK_FLAGS -fsanitize=fuzzer)
-    add_dependencies(stack_trace_compressor_fuzzer fuzzer)
-    add_dependencies(gwp_asan stack_trace_compressor_fuzzer)
-  endif()
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)

@@ -142,6 +142,9 @@ public:
   /// compiler invocation and its buffers will be reused.
   bool RetainRemappedFileBuffers = false;
 
+  /// When enabled, excluded conditional blocks retain in the main file.
+  bool RetainExcludedConditionalBlocks = false;
+
   /// The Objective-C++ ARC standard library that we should support,
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
@@ -201,6 +204,7 @@ public:
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = false;
+    RetainExcludedConditionalBlocks = false;
   }
 };
 

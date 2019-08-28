@@ -82,14 +82,12 @@ RegisterContext::UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
   DataExtractor dwarf_data(dwarf_opcode_ptr, dwarf_opcode_len,
                            arch.GetByteOrder(), addr_size);
   ModuleSP opcode_ctx;
-  DWARFExpression dwarf_expr(opcode_ctx, dwarf_data, nullptr, 0,
-                             dwarf_opcode_len);
+  DWARFExpression dwarf_expr(opcode_ctx, dwarf_data, nullptr);
   Value result;
   Status error;
-  const lldb::offset_t offset = 0;
   if (dwarf_expr.Evaluate(&exe_ctx, this, opcode_ctx, dwarf_data, nullptr,
-                          offset, dwarf_opcode_len, eRegisterKindDWARF, nullptr,
-                          nullptr, result, &error)) {
+                          eRegisterKindDWARF, nullptr, nullptr, result,
+                          &error)) {
     expr_result = result.GetScalar().SInt(-1);
     switch (expr_result) {
     case 0:

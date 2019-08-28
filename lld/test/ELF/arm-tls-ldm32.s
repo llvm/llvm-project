@@ -1,8 +1,10 @@
 // REQUIRES: arm
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
-// RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -S --dyn-relocations %t.so | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t.so | FileCheck %s
+// RUN: ld.lld %t.o -o %t
+// RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t | FileCheck --check-prefix=CHECK-EXE %s
 
 // Test the handling of the local-dynamic TLS model. Dynamic loader finds
 // module index R_ARM_TLS_DTPMOD32. The offset in the next GOT slot is 0
@@ -40,7 +42,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x2000
+// SEC-NEXT: Address: 0x21D0
 // SEC:    Size: 4
 // SEC:    Name: .tbss
 // SEC-NEXT: Type: SHT_NOBITS (0x8)
@@ -49,27 +51,24 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x2004
+// SEC-NEXT: Address: 0x21D4
 // SEC:      Size: 4
 
 // SEC: Dynamic Relocations {
-// SEC-NEXT:  0x204C R_ARM_TLS_DTPMOD32 - 0x0
+// SEC-NEXT:  0x2224 R_ARM_TLS_DTPMOD32 - 0x0
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT: 1000:       00 f0 20 e3     nop
+// CHECK-NEXT: 11c0:       00 f0 20 e3     nop
 
-// (0x204c - 0x1004) + (0x1004 - 0x1000 - 8) = 0x1044
-// CHECK:      1004:       44 10 00 00
-// CHECK-NEXT: 1008:       00 00 00 00
-// CHECK-NEXT: 100c:       04 00 00 00
+// (0x2224 - 0x11c4) + (0x11c4 - 0x11c0 - 8) = 0x105c
+// CHECK:      11c4:       5c 10 00 00
+// CHECK-NEXT: 11c8:       00 00 00 00
+// CHECK-NEXT: 11cc:       04 00 00 00
 
-// CHECK-EXE: Disassembly of section .text:
-// CHECK-EXE-EMPTY:
-// CHECK-NEXT-EXE: _start:
-// CHECK-NEXT-EXE:   11000:       00 f0 20 e3     nop
-
-// CHECK-EXE:   11004:       fc 0f 00 00
-// CHECK-EXE:   11008:       00 00 00 00
-// CHECK-EXE:   1100c:       04 00 00 00
+// CHECK-EXE:      _start:
+// CHECK-EXE-NEXT:   11114:       00 f0 20 e3     nop
+// CHECK-EXE:        11118:       0c 10 00 00
+// CHECK-EXE-NEXT:   1111c:       00 00 00 00
+// CHECK-EXE-NEXT:   11120:       04 00 00 00

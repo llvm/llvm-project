@@ -118,6 +118,12 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
                                               const DataLayout &DL,
                                               const Instruction *CtxI,
                                               const DominatorTree *DT) {
+  assert(Align != 0 && "expected explicitly set alignment");
+  // Note: At the moment, Size can be zero.  This ends up being interpreted as
+  // a query of whether [Base, V] is dereferenceable and V is aligned (since
+  // that's what the implementation happened to do).  It's unclear if this is
+  // the desired semantic, but at least SelectionDAG does exercise this case.  
+  
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(V, Align, Size, DL, CtxI, DT,
                                               Visited);
@@ -139,12 +145,11 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 
   if (!Ty->isSized())
     return false;
-
-  SmallPtrSet<const Value *, 32> Visited;
-  return ::isDereferenceableAndAlignedPointer(
-      V, Align,
-      APInt(DL.getIndexTypeSizeInBits(V->getType()), DL.getTypeStoreSize(Ty)),
-      DL, CtxI, DT, Visited);
+  
+  APInt AccessSize(DL.getIndexTypeSizeInBits(V->getType()),
+                   DL.getTypeStoreSize(Ty));
+  return isDereferenceableAndAlignedPointer(V, Align, AccessSize,
+                                            DL, CtxI, DT);
 }
 
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
@@ -210,50 +215,12 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align, APInt &Size,
   if (isDereferenceableAndAlignedPointer(V, Align, Size, DL, CtxI, DT))
     return true;
 
-  int64_t ByteOffset = 0;
-  Value *Base = V;
-  Base = GetPointerBaseWithConstantOffset(V, ByteOffset, DL);
-
-  if (ByteOffset < 0) // out of bounds
-    return false;
-
-  Type *BaseType = nullptr;
-  unsigned BaseAlign = 0;
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
-    // An alloca is safe to load from as load as it is suitably aligned.
-    BaseType = AI->getAllocatedType();
-    BaseAlign = AI->getAlignment();
-  } else if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
-    // Global variables are not necessarily safe to load from if they are
-    // interposed arbitrarily. Their size may change or they may be weak and
-    // require a test to determine if they were in fact provided.
-    if (!GV->isInterposable()) {
-      BaseType = GV->getType()->getElementType();
-      BaseAlign = GV->getAlignment();
-    }
-  }
-
-  PointerType *AddrTy = cast<PointerType>(V->getType());
-  uint64_t LoadSize = DL.getTypeStoreSize(AddrTy->getElementType());
-
-  // If we found a base allocated type from either an alloca or global variable,
-  // try to see if we are definitively within the allocated region. We need to
-  // know the size of the base type and the loaded type to do anything in this
-  // case.
-  if (BaseType && BaseType->isSized()) {
-    if (BaseAlign == 0)
-      BaseAlign = DL.getPrefTypeAlignment(BaseType);
-
-    if (Align <= BaseAlign) {
-      // Check if the load is within the bounds of the underlying object.
-      if (ByteOffset + LoadSize <= DL.getTypeAllocSize(BaseType) &&
-          ((ByteOffset % Align) == 0))
-        return true;
-    }
-  }
-
   if (!ScanFrom)
     return false;
+
+  if (Size.getBitWidth() > 64)
+    return false;
+  const uint64_t LoadSize = Size.getZExtValue();
 
   // Otherwise, be a little bit aggressive by scanning the local block where we
   // want to check to see if the pointer is already being loaded or stored
@@ -302,7 +269,8 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align, APInt &Size,
       continue;
 
     // Handle trivial cases.
-    if (AccessedPtr == V)
+    if (AccessedPtr == V &&
+        LoadSize <= DL.getTypeStoreSize(AccessedTy))
       return true;
 
     if (AreEquivalentAddressValues(AccessedPtr->stripPointerCasts(), V) &&

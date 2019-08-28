@@ -314,6 +314,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->entry = getEntry(args);
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
+  config->growableTable = args.hasArg(OPT_growable_table);
   errorHandler().fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   config->importMemory = args.hasArg(OPT_import_memory);

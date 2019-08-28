@@ -153,9 +153,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,12,13,u,u,8,9,6,7,14,15,14,15,0,1,22,23,28,29,18,19,26,27,22,23,u,u,30,31,16,17]
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
-; AVX256VL-NEXT:    kshiftrw $8, %k1, %k1
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm3 {%k1} {z}
-; AVX256VL-NEXT:    vpmovdw %ymm3, %xmm3
+; AVX256VL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; AVX256VL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
 ; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[1,1,2,1]
 ; AVX256VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,255,255,255,255]

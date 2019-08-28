@@ -134,6 +134,9 @@ def export_all: F<"export-all">,
 def export_table: F<"export-table">,
   HelpText<"Export function table to the environment">;
 
+def growable_table: F<"growable-table">,
+  HelpText<"Remove maximum size from function table, allowing table to grow">;
+
 def global_base: J<"global-base=">,
   HelpText<"Where to start to place global data">;
 

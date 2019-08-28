@@ -83,7 +83,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   }
 
   void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
-                  const FileEntry *File,
+                  Optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;

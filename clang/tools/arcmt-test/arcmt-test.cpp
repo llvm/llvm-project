@@ -121,7 +121,7 @@ static bool checkForMigration(StringRef resourcesPath,
   }
 
   CompilerInvocation CI;
-  if (!CompilerInvocation::CreateFromArgs(CI, Args.begin(), Args.end(), *Diags))
+  if (!CompilerInvocation::CreateFromArgs(CI, Args, *Diags))
     return true;
 
   if (CI.getFrontendOpts().Inputs.empty()) {
@@ -160,8 +160,7 @@ static bool performTransformations(StringRef resourcesPath,
       new DiagnosticsEngine(DiagID, &*DiagOpts, &*DiagClient));
 
   CompilerInvocation origCI;
-  if (!CompilerInvocation::CreateFromArgs(origCI, Args.begin(), Args.end(),
-                                     *TopDiags))
+  if (!CompilerInvocation::CreateFromArgs(origCI, Args, *TopDiags))
     return true;
 
   if (origCI.getFrontendOpts().Inputs.empty()) {

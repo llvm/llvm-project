@@ -1,5 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.security.taint,debug.TaintTest %s -verify -analyzer-output=sarif -o - | %normalize_sarif | diff -U1 -b %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif -
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.security.taint,debug.TaintTest,unix.Malloc %s -verify -analyzer-output=sarif -o - | %normalize_sarif | diff -U1 -b %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif -
 #include "../Inputs/system-header-simulator.h"
+#include "../Inputs/system-header-simulator-for-malloc.h"
+#define ERR -1
 
 int atoi(const char *nptr);
 
@@ -20,10 +22,19 @@ int h(int i) {
   return 0;
 }
 
+int leak(int i) {
+  void *mem = malloc(8);
+  if (i < 4)
+    return ERR; // expected-warning {{Potential leak of memory pointed to by 'mem'}}
+  free(mem);
+  return 0;
+}
+
 int main(void) {
   f();
   g();
   h(0);
+  leak(0);
   return 0;
 }
 

@@ -56,29 +56,29 @@ f3:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK: _start:
-// CHECK-NEXT:    11000:       bx      lr
+// CHECK-NEXT:    11124:       bx      lr
 // CHECK: f1:
-// CHECK-NEXT:    11004:       bx      lr
+// CHECK-NEXT:    11128:       bx      lr
 // CHECK: f2:
-// CHECK-NEXT:    11008:       bx      lr
+// CHECK-NEXT:    1112c:       bx      lr
 // CHECK: f3:
-// CHECK-NEXT:    1100c:       bx      lr
+// CHECK-NEXT:    11130:       bx      lr
 // CHECK: func4:
-// CHECK-NEXT:    11010:       bx      lr
+// CHECK-NEXT:    11134:       bx      lr
 // CHECK: func5:
-// CHECK-NEXT:    11014:       bx      lr
+// CHECK-NEXT:    11138:       bx      lr
 // CHECK: Disassembly of section .func1:
 // CHECK-EMPTY:
 // CHECK-NEXT: func1:
-// CHECK-NEXT:    11018:       bx      lr
+// CHECK-NEXT:    1113c:       bx      lr
 // CHECK: Disassembly of section .func2:
 // CHECK-EMPTY:
 // CHECK-NEXT: func2:
-// CHECK-NEXT:    1101c:       bx      lr
+// CHECK-NEXT:    11140:       bx      lr
 // CHECK: Disassembly of section .func3:
 // CHECK-EMPTY:
 // CHECK-NEXT: func3:
-// CHECK-NEXT:    11020:       bx      lr
+// CHECK-NEXT:    11144:       bx      lr
 
 // Each .ARM.exidx section has two 4 byte fields
 // Field 1 is the 31-bit offset to the function. The top bit is used to
@@ -88,20 +88,20 @@ f3:
 // We expect to see the entries in the same order as the functions
 
 // CHECK-EXIDX: Contents of section .ARM.exidx:
-// 100d4 + f2c = 11000 = _start
-// 100dc + f28 = 11004 = f1
-// CHECK-EXIDX-NEXT:       100d4 2c0f0000 01000000 280f0000 01000000
-// 100e4 + f24 = 11008 = f2
-// 100ec + f20 = 1100c = f3
-// CHECK-EXIDX-NEXT:  100e4 240f0000 01000000 200f0000 01000000
-// 100f4 + f1c = 11010 = func4
-// 100fc + f18 = 11014 = func5
-// CHECK-EXIDX-NEXT:  100f4 1c0f0000 01000000 180f0000 01000000
-// 10104 + f14 = 11018 = func1
-// 1010c + f10 = 1101c = func2
-// CHECK-EXIDX-NEXT:  10104 140f0000 01000000 100f0000 01000000
-// 10114 + f0c = 11020 = func3
-// CHECK-EXIDX-NEXT:  10114 0c0f0000 01000000
+// 100d4 + 1050 = 11124 = _start
+// 100dc + 104c = 11128 = f1
+// CHECK-EXIDX-NEXT:       100d4 50100000 01000000 4c100000 01000000
+// 100e4 + 1048 = 1112c = f2
+// 100ec + 1044 = 11130 = f3
+// CHECK-EXIDX-NEXT:  100e4 48100000 01000000 44100000 01000000
+// 100f4 + 1040 = 11134 = func4
+// 100fc + 103c = 11138 = func5
+// CHECK-EXIDX-NEXT:  100f4 40100000 01000000 3c100000 01000000
+// 10104 + 1038 = 1113c = func1
+// 1010c + 1034 = 11140 = func2
+// CHECK-EXIDX-NEXT:  10104 38100000 01000000 34100000 01000000
+// 10114 + 1030 = 11144 = func3
+// CHECK-EXIDX-NEXT:  10114 30100000 01000000
 
 // Check that PT_ARM_EXIDX program header has been generated that describes
 // the .ARM.exidx output section

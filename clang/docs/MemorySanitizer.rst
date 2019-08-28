@@ -204,6 +204,9 @@ Limitations
   non-position-independent executables, and could fail on some Linux
   kernel versions with disabled ASLR. Refer to documentation for older versions
   for more details.
+* MemorySanitizer might be incompatible with position-independent executables
+  from FreeBSD 13 but there is a check done at runtime and throws a warning
+  in this case.
 
 Current Status
 ==============

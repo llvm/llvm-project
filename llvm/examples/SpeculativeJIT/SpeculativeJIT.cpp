@@ -119,10 +119,7 @@ private:
           auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
           CompileThreads.async(std::move(Work));
         });
-    JITEvaluatedSymbol SpeculatorSymbol(JITTargetAddress(&S),
-                                        JITSymbolFlags::Exported);
-    ExitOnErr(this->ES->getMainJITDylib().define(
-        absoluteSymbols({{Mangle("__orc_speculator"), SpeculatorSymbol}})));
+    ExitOnErr(S.addSpeculationRuntime(this->ES->getMainJITDylib(), Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;
     ExitOnErr(CXXRuntimeoverrides.enable(this->ES->getMainJITDylib(), Mangle));
   }

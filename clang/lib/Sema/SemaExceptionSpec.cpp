@@ -149,7 +149,7 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
   // In Microsoft mode, downgrade this to a warning.
   unsigned DiagID = diag::err_incomplete_in_exception_spec;
   bool ReturnValueOnError = true;
-  if (getLangOpts().MicrosoftExt) {
+  if (getLangOpts().MSVCCompat) {
     DiagID = diag::ext_incomplete_in_exception_spec;
     ReturnValueOnError = false;
   }
@@ -282,7 +282,7 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
 
   unsigned DiagID = diag::err_mismatched_exception_spec;
   bool ReturnValueOnError = true;
-  if (getLangOpts().MicrosoftExt) {
+  if (getLangOpts().MSVCCompat) {
     DiagID = diag::ext_mismatched_exception_spec;
     ReturnValueOnError = false;
   }
@@ -371,7 +371,7 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
         NewProto->getExtProtoInfo().withExceptionSpec(ESI)));
   }
 
-  if (getLangOpts().MicrosoftExt && ESI.Type != EST_DependentNoexcept) {
+  if (getLangOpts().MSVCCompat && ESI.Type != EST_DependentNoexcept) {
     // Allow missing exception specifications in redeclarations as an extension.
     DiagID = diag::ext_ms_missing_exception_specification;
     ReturnValueOnError = false;
@@ -473,14 +473,14 @@ bool Sema::CheckEquivalentExceptionSpec(
     return false;
 
   unsigned DiagID = diag::err_mismatched_exception_spec;
-  if (getLangOpts().MicrosoftExt)
+  if (getLangOpts().MSVCCompat)
     DiagID = diag::ext_mismatched_exception_spec;
   bool Result = CheckEquivalentExceptionSpecImpl(
       *this, PDiag(DiagID), PDiag(diag::note_previous_declaration),
       Old, OldLoc, New, NewLoc);
 
   // In Microsoft mode, mismatching exception specifications just cause a warning.
-  if (getLangOpts().MicrosoftExt)
+  if (getLangOpts().MSVCCompat)
     return false;
   return Result;
 }
@@ -959,7 +959,7 @@ bool Sema::CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
   }
 
   unsigned DiagID = diag::err_override_exception_spec;
-  if (getLangOpts().MicrosoftExt)
+  if (getLangOpts().MSVCCompat)
     DiagID = diag::ext_override_exception_spec;
   return CheckExceptionSpecSubset(PDiag(DiagID),
                                   PDiag(diag::err_deep_exception_specs_differ),

@@ -10694,7 +10694,7 @@ static SDValue performPostLD1Combine(SDNode *N,
     // are predecessors to each other or the Vector.
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 16> Worklist;
-    Visited.insert(N);
+    Visited.insert(Addr.getNode());
     Worklist.push_back(User);
     Worklist.push_back(LD);
     Worklist.push_back(Vector.getNode());

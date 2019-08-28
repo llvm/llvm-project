@@ -24,18 +24,18 @@ bar:
 // RUN: llvm-readelf -x .data %t.so | FileCheck --check-prefix=HEX %s
 
 // CHECK:      Dynamic Relocations {
-// CHECK-NEXT:   0x2004 R_ARM_RELATIVE
-// CHECK-NEXT:   0x2008 R_ARM_RELATIVE
-// CHECK-NEXT:   0x2000 R_ARM_ABS32 foo 0x0
+// CHECK-NEXT:   0x3204 R_ARM_RELATIVE
+// CHECK-NEXT:   0x3208 R_ARM_RELATIVE
+// CHECK-NEXT:   0x3200 R_ARM_ABS32 foo 0x0
 // CHECK-NEXT: }
 
 // CHECK:      Symbols [
 // CHECK:        Symbol {
 // CHECK:          Name: bar
-// CHECK-NEXT:     Value: 0x1000
+// CHECK-NEXT:     Value: 0x11A8
 
 // CHECK:        Symbol {
 // CHECK:          Name: foo
-// CHECK-NEXT:     Value: 0x1000
+// CHECK-NEXT:     Value: 0x11A8
 
-// HEX: 0x00002000 00000000 00100000 00100000
+// HEX: 0x00003200 00000000 a8110000 a8110000

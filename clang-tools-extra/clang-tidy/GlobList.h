@@ -12,30 +12,36 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
-#include <memory>
+#include <vector>
 
 namespace clang {
 namespace tidy {
 
-/// Read-only set of strings represented as a list of positive and
-/// negative globs. Positive globs add all matched strings to the set, negative
-/// globs remove them in the order of appearance in the list.
+/// Read-only set of strings represented as a list of positive and negative
+/// globs.
+///
+/// Positive globs add all matched strings to the set, negative globs remove
+/// them in the order of appearance in the list.
 class GlobList {
 public:
-  /// \p GlobList is a comma-separated list of globs (only '*'
-  /// metacharacter is supported) with optional '-' prefix to denote exclusion.
+  /// \p Globs is a comma-separated list of globs (only the '*' metacharacter is
+  /// supported) with an optional '-' prefix to denote exclusion.
+  ///
+  /// An empty \p Globs string is interpreted as one glob that matches an empty
+  /// string.
   GlobList(StringRef Globs);
 
   /// Returns \c true if the pattern matches \p S. The result is the last
   /// matching glob's Positive flag.
-  bool contains(StringRef S) { return contains(S, false); }
+  bool contains(StringRef S);
 
 private:
-  bool contains(StringRef S, bool Contains);
 
-  bool Positive;
-  llvm::Regex Regex;
-  std::unique_ptr<GlobList> NextGlob;
+  struct GlobListItem {
+    bool IsPositive;
+    mutable llvm::Regex Regex;
+  };
+  std::vector<GlobListItem> Items;
 };
 
 } // end namespace tidy

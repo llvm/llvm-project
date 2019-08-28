@@ -940,6 +940,13 @@ struct IntegerState : public AbstractState {
     return *this;
   }
 
+  /// "Clamp" this state with \p R. The result is the maximum of the known
+  /// information but not more than what was assumed before.
+  IntegerState operator+=(const IntegerState &R) {
+    takeKnownMaximum(R.Known);
+    return *this;
+  }
+
   /// Make this the minimum, known and assumed, of this state and \p R.
   IntegerState operator&=(const IntegerState &R) {
     Known = std::min(Known, R.Known);
@@ -1442,6 +1449,13 @@ struct DerefState : AbstractState {
   DerefState operator^=(const DerefState &R) {
     DerefBytesState ^= R.DerefBytesState;
     GlobalState ^= R.GlobalState;
+    return *this;
+  }
+
+  /// See IntegerState::operator+=
+  DerefState operator+=(const DerefState &R) {
+    DerefBytesState += R.DerefBytesState;
+    GlobalState += R.GlobalState;
     return *this;
   }
 

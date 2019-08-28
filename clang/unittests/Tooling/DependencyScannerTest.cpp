@@ -161,5 +161,40 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerSkippedFile) {
   EXPECT_EQ(convert_to_slash(Deps[5]), "/root/header.h");
 }
 
+TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
+  std::vector<std::string> Compilation = {"-c", "-E", "-MT", "test.cpp.o"};
+  StringRef CWD = "/root";
+  FixedCompilationDatabase CDB(CWD, Compilation);
+
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->setCurrentWorkingDirectory(CWD);
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath = llvm::formatv("{0}root{0}header.h", Sept);
+  std::string SymlinkPath = llvm::formatv("{0}root{0}symlink.h", Sept);
+  std::string TestPath = llvm::formatv("{0}root{0}test.cpp", Sept);
+
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer("\n"));
+  VFS->addHardLink(SymlinkPath, HeaderPath);
+  VFS->addFile(
+      TestPath, 0,
+      llvm::MemoryBuffer::getMemBuffer("#if __has_include(\"header.h\") && "
+                                       "__has_include(\"symlink.h\")\n#endif"));
+
+  ClangTool Tool(CDB, {"test.cpp", "test.cpp"},
+                 std::make_shared<PCHContainerOperations>(), VFS);
+  Tool.clearArgumentsAdjusters();
+  std::vector<std::string> Deps;
+  TestDependencyScanningAction Action(Deps);
+  Tool.run(&Action);
+  using llvm::sys::path::convert_to_slash;
+  ASSERT_EQ(Deps.size(), 6u);
+  EXPECT_EQ(convert_to_slash(Deps[0]), "/root/test.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/header.h");
+  EXPECT_EQ(convert_to_slash(Deps[2]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[3]), "/root/test.cpp");
+  EXPECT_EQ(convert_to_slash(Deps[4]), "/root/header.h");
+  EXPECT_EQ(convert_to_slash(Deps[5]), "/root/symlink.h");
+}
+
 } // end namespace tooling
 } // end namespace clang

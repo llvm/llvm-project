@@ -24,14 +24,9 @@
 using namespace clang;
 using namespace llvm::opt;
 
-/// createInvocationFromCommandLine - Construct a compiler invocation object for
-/// a command line argument vector.
-///
-/// \return A CompilerInvocation, or 0 if none was built for the given
-/// argument vector.
 std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
     ArrayRef<const char *> ArgList, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErorrs) {
   if (!Diags.get()) {
     // No diagnostics engine was provided, so create our own diagnostics object
     // with the default options.
@@ -95,11 +90,8 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
 
   const ArgStringList &CCArgs = Cmd.getArguments();
   auto CI = std::make_unique<CompilerInvocation>();
-  if (!CompilerInvocation::CreateFromArgs(*CI,
-                                     const_cast<const char **>(CCArgs.data()),
-                                     const_cast<const char **>(CCArgs.data()) +
-                                     CCArgs.size(),
-                                     *Diags))
+  if (!CompilerInvocation::CreateFromArgs(*CI, CCArgs, *Diags) &&
+      !ShouldRecoverOnErorrs)
     return nullptr;
   return CI;
 }

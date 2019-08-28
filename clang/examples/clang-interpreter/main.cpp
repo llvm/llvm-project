@@ -173,11 +173,7 @@ int main(int argc, const char **argv) {
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
   const llvm::opt::ArgStringList &CCArgs = Cmd.getArguments();
   std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
-  CompilerInvocation::CreateFromArgs(*CI,
-                                     const_cast<const char **>(CCArgs.data()),
-                                     const_cast<const char **>(CCArgs.data()) +
-                                       CCArgs.size(),
-                                     Diags);
+  CompilerInvocation::CreateFromArgs(*CI, CCArgs, Diags);
 
   // Show the invocation, with -v.
   if (CI->getHeaderSearchOpts().Verbose) {

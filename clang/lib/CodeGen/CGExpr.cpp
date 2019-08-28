@@ -4056,7 +4056,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
     // For unions, there is no pointer adjustment.
-    assert(!FieldType->isReferenceType() && "union has reference member");
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
@@ -4073,27 +4072,30 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
               addr.getPointer(), getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo),
           addr.getAlignment());
     }
-  } else {
 
+    if (FieldType->isReferenceType())
+      addr = Builder.CreateElementBitCast(
+          addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
+  } else {
     if (!IsInPreservedAIRegion)
       // For structs, we GEP to the field that the record layout suggests.
       addr = emitAddrOfFieldStorage(*this, addr, field);
     else
       // Remember the original struct field index
       addr = emitPreserveStructAccess(*this, addr, field);
+  }
 
-    // If this is a reference field, load the reference right now.
-    if (FieldType->isReferenceType()) {
-      LValue RefLVal = MakeAddrLValue(addr, FieldType, FieldBaseInfo,
-                                      FieldTBAAInfo);
-      if (RecordCVR & Qualifiers::Volatile)
-        RefLVal.getQuals().addVolatile();
-      addr = EmitLoadOfReference(RefLVal, &FieldBaseInfo, &FieldTBAAInfo);
+  // If this is a reference field, load the reference right now.
+  if (FieldType->isReferenceType()) {
+    LValue RefLVal =
+        MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
+    if (RecordCVR & Qualifiers::Volatile)
+      RefLVal.getQuals().addVolatile();
+    addr = EmitLoadOfReference(RefLVal, &FieldBaseInfo, &FieldTBAAInfo);
 
-      // Qualifiers on the struct don't apply to the referencee.
-      RecordCVR = 0;
-      FieldType = FieldType->getPointeeType();
-    }
+    // Qualifiers on the struct don't apply to the referencee.
+    RecordCVR = 0;
+    FieldType = FieldType->getPointeeType();
   }
 
   // Make sure that the address is pointing to the right type.  This is critical
