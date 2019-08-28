@@ -444,24 +444,6 @@ def parseOptionsAndInitTestdirs():
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
 
-    if args.event_add_entries and len(args.event_add_entries) > 0:
-        entries = {}
-        # Parse out key=val pairs, separated by comma
-        for keyval in args.event_add_entries.split(","):
-            key_val_entry = keyval.split("=")
-            if len(key_val_entry) == 2:
-                (key, val) = key_val_entry
-                val_parts = val.split(':')
-                if len(val_parts) > 1:
-                    (val, val_type) = val_parts
-                    if val_type == 'int':
-                        val = int(val)
-                entries[key] = val
-        # Tell the event builder to create all events with these
-        # key/val pairs in them.
-        if len(entries) > 0:
-            EventBuilder.add_entries_to_all_events(entries)
-
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
