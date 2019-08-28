@@ -1274,14 +1274,6 @@ def run_suite():
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 
-    # Translate ' ' to '-' for pathname component.
-    if six.PY2:
-        import string
-        tbl = string.maketrans(' ', '-')
-    else:
-        tbl = str.maketrans(' ', '-')
-    configPostfix = configString.translate(tbl)
-
     # Output the configuration.
     if configuration.verbose:
         sys.stderr.write("\nConfiguration: " + configString + "\n")
