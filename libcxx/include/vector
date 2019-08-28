@@ -297,7 +297,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <bool>
-class __vector_base_common
+class _LIBCPP_TEMPLATE_VIS __vector_base_common
 {
 protected:
     _LIBCPP_INLINE_VISIBILITY __vector_base_common() {}
