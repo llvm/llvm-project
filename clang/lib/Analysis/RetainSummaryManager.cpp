@@ -504,7 +504,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   FName = FName.substr(FName.find_first_not_of('_'));
 
   // Inspect the result type. Strip away any typedefs.
-  const auto *FT = FD->getType()->getAs<FunctionType>();
+  const auto *FT = FD->getType()->castAs<FunctionType>();
   QualType RetTy = FT->getReturnType();
 
   if (TrackOSObjects)

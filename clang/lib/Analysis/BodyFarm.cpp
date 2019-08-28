@@ -408,8 +408,8 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   // reference.
   for (unsigned int ParamIdx = 2; ParamIdx < D->getNumParams(); ParamIdx++) {
     const ParmVarDecl *PDecl = D->getParamDecl(ParamIdx);
-    if (PDecl &&
-        CallbackFunctionType->getParamType(ParamIdx - 2)
+    assert(PDecl);
+    if (CallbackFunctionType->getParamType(ParamIdx - 2)
                 .getNonReferenceType()
                 .getCanonicalType() !=
             PDecl->getType().getNonReferenceType().getCanonicalType()) {
