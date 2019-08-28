@@ -252,7 +252,7 @@ def parseOptionsAndInitTestdirs():
     if args.set_inferior_env_vars:
         lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
 
-    # only print the args if being verbose (and parsable is off)
+    # Only print the args if being verbose.
     if args.v and not args.q:
         print(sys.argv)
 
@@ -392,9 +392,6 @@ def parseOptionsAndInitTestdirs():
         if args.p.startswith('-'):
             usage(parser)
         configuration.regexp = args.p
-
-    if args.q:
-        configuration.parsable = True
 
     if args.s:
         if args.s.startswith('-'):
@@ -1268,7 +1265,7 @@ def run_suite():
     #
     checkCompiler()
 
-    if not configuration.parsable:
+    if configuration.verbose:
         print("compiler=%s" % configuration.compiler)
 
     # Iterating over all possible architecture and compiler combinations.
@@ -1286,27 +1283,22 @@ def run_suite():
     configPostfix = configString.translate(tbl)
 
     # Output the configuration.
-    if not configuration.parsable:
+    if configuration.verbose:
         sys.stderr.write("\nConfiguration: " + configString + "\n")
 
     # First, write out the number of collected test cases.
-    if not configuration.parsable:
+    if configuration.verbose:
         sys.stderr.write(configuration.separator + "\n")
         sys.stderr.write(
             "Collected %d test%s\n\n" %
             (configuration.suite.countTestCases(),
              configuration.suite.countTestCases() != 1 and "s" or ""))
 
-    if configuration.parsable:
-        v = 0
-    else:
-        v = configuration.verbose
-
     # Invoke the test runner.
     if configuration.count == 1:
         result = unittest2.TextTestRunner(
             stream=sys.stderr,
-            verbosity=v,
+            verbosity=configuration.verbose,
             resultclass=test_result.LLDBTestResult).run(
             configuration.suite)
     else:
@@ -1318,13 +1310,13 @@ def run_suite():
 
             result = unittest2.TextTestRunner(
                 stream=sys.stderr,
-                verbosity=v,
+                verbosity=configuration.verbose,
                 resultclass=test_result.LLDBTestResult).run(
                 configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
 
-    if configuration.sdir_has_content and not configuration.parsable:
+    if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(
             "Session logs for test failures/errors/unexpected successes"
             " can be found in directory '%s'\n" %

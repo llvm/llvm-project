@@ -23,28 +23,28 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=LE,LE64 %s
 
 # IE32-REL:      .rela.dyn {
-# IE32-REL-NEXT:   0x205C R_RISCV_TLS_TPREL32 - 0xC
-# IE32-REL-NEXT:   0x2058 R_RISCV_TLS_TPREL32 a 0x0
+# IE32-REL-NEXT:   0x2218 R_RISCV_TLS_TPREL32 - 0xC
+# IE32-REL-NEXT:   0x2214 R_RISCV_TLS_TPREL32 a 0x0
 # IE32-REL-NEXT: }
 # IE32-REL:      FLAGS STATIC_TLS
 
 # IE64-REL:      .rela.dyn {
-# IE64-REL-NEXT:   0x20B8 R_RISCV_TLS_TPREL64 - 0xC
-# IE64-REL-NEXT:   0x20B0 R_RISCV_TLS_TPREL64 a 0x0
+# IE64-REL-NEXT:   0x2370 R_RISCV_TLS_TPREL64 - 0xC
+# IE64-REL-NEXT:   0x2368 R_RISCV_TLS_TPREL64 a 0x0
 # IE64-REL-NEXT: }
 # IE64-REL:      FLAGS STATIC_TLS
 
-## rv32: &.got[1] - . = 0x2058 - . = 4096*1+88
-## rv64: &.got[1] - . = 0x20B0 - . = 4096*1+176
-# IE:        1000: auipc a4, 1
-# IE32-NEXT:       lw a4, 88(a4)
-# IE64-NEXT:       ld a4, 176(a4)
+## rv32: &.got[0] - . = 0x2214 - . = 4096*1+112
+## rv64: &.got[0] - . = 0x2368 - . = 4096*1+200
+# IE:              auipc a4, 1
+# IE32-NEXT:       lw a4, 112(a4)
+# IE64-NEXT:       ld a4, 200(a4)
 # IE-NEXT:         add a4, a4, tp
-## rv32: &.got[0] - . = 0x205C - . = 4096*1+80
-## rv64: &.got[0] - . = 0x20B8 - . = 4096*1+172
-# IE:        100c: auipc a5, 1
-# IE32-NEXT:       lw a5, 80(a5)
-# IE64-NEXT:       ld a5, 172(a5)
+## rv32: &.got[1] - . = 0x2218 - . = 4096*1+104
+## rv64: &.got[1] - . = 0x2370 - . = 4096*1+196
+# IE:              auipc a5, 1
+# IE32-NEXT:       lw a5, 104(a5)
+# IE64-NEXT:       ld a5, 196(a5)
 # IE-NEXT:         add a5, a5, tp
 
 # NOREL: no relocations
@@ -52,21 +52,23 @@
 # a@tprel = st_value(a) = 0x8
 # b@tprel = st_value(a) = 0xc
 # LE32-GOT: section '.got':
-# LE32-GOT-NEXT: 0x00012000 08000000 0c000000
+# LE32-GOT-NEXT: 0x0001212c 08000000 0c000000
 # LE64-GOT: section '.got':
-# LE64-GOT-NEXT: 0x00012000 08000000 00000000 0c000000 00000000
+# LE64-GOT-NEXT: 0x000121e0 08000000 00000000 0c000000 00000000
 
-## rv32: &.got[0] - . = 0x12000 - 0x11000 = 4096*1+0
-## rv64: &.got[0] - . = 0x12000 - 0x11000 = 4096*1+0
-# LE:        11000: auipc a4, 1
-# LE32-NEXT:        lw a4, 0(a4)
-# LE64-NEXT:        ld a4, 0(a4)
+## rv32: &.got[0] - . = 0x1212c - 0x11114 = 4096*1+24
+## rv64: &.got[0] - . = 0x121e0 - 0x111c8 = 4096*1+24
+# LE32:      11114: auipc a4, 1
+# LE32-NEXT:        lw a4, 24(a4)
+# LE64:      111c8: auipc a4, 1
+# LE64-NEXT:        ld a4, 24(a4)
 # LE-NEXT:          add a4, a4, tp
-## rv32: &.got[1] - . = 0x12004 - 0x1100c = 4096*1-8
-## rv64: &.got[1] - . = 0x12008 - 0x1100c = 4096*1-4
-# LE:        1100c: auipc a5, 1
-# LE32-NEXT:        lw a5, -8(a5)
-# LE64-NEXT:        ld a5, -4(a5)
+## rv32: &.got[1] - . = 0x12130 - 0x11120 = 4096*1+16
+## rv64: &.got[1] - . = 0x121e8 - 0x111d4 = 4096*1+20
+# LE32:      11120: auipc a5, 1
+# LE32-NEXT:        lw a5, 16(a5)
+# LE64:      111d4: auipc a5, 1
+# LE64-NEXT:        ld a5, 20(a5)
 # LE-NEXT:          add a5, a5, tp
 
 la.tls.ie a4,a

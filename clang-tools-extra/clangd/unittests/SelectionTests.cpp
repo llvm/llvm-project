@@ -261,6 +261,22 @@ TEST(SelectionTest, CommonAncestor) {
              struct Foo<U<int>*> {};
           )cpp",
           "TemplateTemplateParmDecl"},
+
+      // Foreach has a weird AST, ensure we can select parts of the range init.
+      // This used to fail, because the DeclStmt for C claimed the whole range.
+      {
+          R"cpp(
+            struct Str {
+              const char *begin();
+              const char *end();
+            };
+            Str makeStr(const char*);
+            void loop() {
+              for (const char* C : [[mak^eStr("foo"^)]])
+                ;
+            }
+          )cpp",
+          "CallExpr"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);

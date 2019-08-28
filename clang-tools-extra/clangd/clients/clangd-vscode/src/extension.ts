@@ -111,15 +111,9 @@ export function activate(context: vscode.ExtensionContext) {
                                                 serverOptions, clientOptions);
   const semanticHighlightingFeature =
       new semanticHighlighting.SemanticHighlightingFeature();
+  context.subscriptions.push(
+      vscode.Disposable.from(semanticHighlightingFeature));
   clangdClient.registerFeature(semanticHighlightingFeature);
-  // The notification handler must be registered after the client is ready or
-  // the client will crash.
-  clangdClient.onReady().then(
-      () => clangdClient.onNotification(
-          semanticHighlighting.NotificationType,
-          semanticHighlightingFeature.handleNotification.bind(
-              semanticHighlightingFeature)));
-
   console.log('Clang Language Server is now active!');
   context.subscriptions.push(clangdClient.start());
   context.subscriptions.push(vscode.commands.registerCommand(
@@ -141,19 +135,25 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showTextDocument(doc);
       }));
   const status = new FileStatus();
+  context.subscriptions.push(vscode.Disposable.from(status));
   context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(
       () => { status.updateStatus(); }));
-  clangdClient.onDidChangeState(({newState}) => {
+  context.subscriptions.push(clangdClient.onDidChangeState(({newState}) => {
     if (newState == vscodelc.State.Running) {
       // clangd starts or restarts after crash.
       clangdClient.onNotification(
           'textDocument/clangd.fileStatus',
           (fileStatus) => { status.onFileUpdated(fileStatus); });
+      clangdClient.onNotification(
+          semanticHighlighting.NotificationType,
+          semanticHighlightingFeature.handleNotification.bind(
+              semanticHighlightingFeature));
     } else if (newState == vscodelc.State.Stopped) {
       // Clear all cached statuses when clangd crashes.
       status.clear();
+      semanticHighlightingFeature.dispose();
     }
-  })
+  }));
   // An empty place holder for the activate command, otherwise we'll get an
   // "command is not registered" error.
   context.subscriptions.push(vscode.commands.registerCommand(

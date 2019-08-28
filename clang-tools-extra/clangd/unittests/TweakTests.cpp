@@ -23,8 +23,6 @@
 #include "gtest/gtest.h"
 #include <cassert>
 
-using llvm::Failed;
-using llvm::Succeeded;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::StartsWith;
@@ -32,100 +30,6 @@ using ::testing::StartsWith;
 namespace clang {
 namespace clangd {
 namespace {
-
-// FIXME(sammccall): migrate the rest of the tests to use TweakTesting.h and
-// remove these helpers.
-std::string markRange(llvm::StringRef Code, Range R) {
-  size_t Begin = llvm::cantFail(positionToOffset(Code, R.start));
-  size_t End = llvm::cantFail(positionToOffset(Code, R.end));
-  assert(Begin <= End);
-  if (Begin == End) // Mark a single point.
-    return (Code.substr(0, Begin) + "^" + Code.substr(Begin)).str();
-  // Mark a range.
-  return (Code.substr(0, Begin) + "[[" + Code.substr(Begin, End - Begin) +
-          "]]" + Code.substr(End))
-      .str();
-}
-
-void checkAvailable(StringRef ID, llvm::StringRef Input, bool Available) {
-  Annotations Code(Input);
-  ASSERT_TRUE(0 < Code.points().size() || 0 < Code.ranges().size())
-      << "no points of interest specified";
-  TestTU TU;
-  TU.Filename = "foo.cpp";
-  TU.Code = Code.code();
-
-  ParsedAST AST = TU.build();
-
-  auto CheckOver = [&](Range Selection) {
-    unsigned Begin = cantFail(positionToOffset(Code.code(), Selection.start));
-    unsigned End = cantFail(positionToOffset(Code.code(), Selection.end));
-    auto T = prepareTweak(ID, Tweak::Selection(AST, Begin, End));
-    if (Available)
-      EXPECT_THAT_EXPECTED(T, Succeeded())
-          << "code is " << markRange(Code.code(), Selection);
-    else
-      EXPECT_THAT_EXPECTED(T, Failed())
-          << "code is " << markRange(Code.code(), Selection);
-  };
-  for (auto P : Code.points())
-    CheckOver(Range{P, P});
-  for (auto R : Code.ranges())
-    CheckOver(R);
-}
-
-/// Checks action is available at every point and range marked in \p Input.
-void checkAvailable(StringRef ID, llvm::StringRef Input) {
-  return checkAvailable(ID, Input, /*Available=*/true);
-}
-
-/// Same as checkAvailable, but checks the action is not available.
-void checkNotAvailable(StringRef ID, llvm::StringRef Input) {
-  return checkAvailable(ID, Input, /*Available=*/false);
-}
-
-llvm::Expected<Tweak::Effect> apply(StringRef ID, llvm::StringRef Input) {
-  Annotations Code(Input);
-  Range SelectionRng;
-  if (Code.points().size() != 0) {
-    assert(Code.ranges().size() == 0 &&
-           "both a cursor point and a selection range were specified");
-    SelectionRng = Range{Code.point(), Code.point()};
-  } else {
-    SelectionRng = Code.range();
-  }
-  TestTU TU;
-  TU.Filename = "foo.cpp";
-  TU.Code = Code.code();
-
-  ParsedAST AST = TU.build();
-  unsigned Begin = cantFail(positionToOffset(Code.code(), SelectionRng.start));
-  unsigned End = cantFail(positionToOffset(Code.code(), SelectionRng.end));
-  Tweak::Selection S(AST, Begin, End);
-
-  auto T = prepareTweak(ID, S);
-  if (!T)
-    return T.takeError();
-  return (*T)->apply(S);
-}
-
-llvm::Expected<std::string> applyEdit(StringRef ID, llvm::StringRef Input) {
-  auto Effect = apply(ID, Input);
-  if (!Effect)
-    return Effect.takeError();
-  if (!Effect->ApplyEdit)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "No replacements");
-  Annotations Code(Input);
-  return applyAllReplacements(Code.code(), *Effect->ApplyEdit);
-}
-
-void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
-                    std::string Output) {
-  auto Result = applyEdit(ID, Input);
-  ASSERT_TRUE(bool(Result)) << llvm::toString(Result.takeError()) << Input;
-  EXPECT_EQ(Output, std::string(*Result)) << Input;
-}
 
 TWEAK_TEST(SwapIfBranches);
 TEST_F(SwapIfBranchesTest, Test) {
@@ -215,9 +119,9 @@ TEST_F(DumpRecordLayoutTest, Test) {
               AllOf(StartsWith("message:"), HasSubstr("0 |   int x")));
 }
 
-TEST(TweaksTest, ExtractVariable) {
-  llvm::StringLiteral ID = "ExtractVariable";
-  checkAvailable(ID, R"cpp(
+TWEAK_TEST(ExtractVariable);
+TEST_F(ExtractVariableTest, Test) {
+  EXPECT_AVAILABLE(R"cpp(
     int xyz(int a = 1) {
       struct T {
         int bar(int a = 1);
@@ -257,14 +161,14 @@ TEST(TweaksTest, ExtractVariable) {
     }
   )cpp");
   // Should not crash.
-  checkNotAvailable(ID, R"cpp(
+  EXPECT_UNAVAILABLE(R"cpp(
     template<typename T, typename ...Args>
     struct Test<T, Args...> {
     Test(const T &v) :val[[(^]]) {}
       T val;
     };
   )cpp");
-  checkNotAvailable(ID, R"cpp(
+  EXPECT_UNAVAILABLE(R"cpp(
     int xyz(int a = [[1]]) {
       struct T {
         int bar(int a = [[1]]);
@@ -482,38 +386,35 @@ TEST(TweaksTest, ExtractVariable) {
                  })cpp"},
       };
   for (const auto &IO : InputOutputs) {
-    checkTransform(ID, IO.first, IO.second);
+    EXPECT_EQ(IO.second, apply(IO.first)) << IO.first;
   }
 }
 
-TEST(TweaksTest, AnnotateHighlightings) {
-  llvm::StringLiteral ID = "AnnotateHighlightings";
-  checkAvailable(ID, "^vo^id^ ^f(^) {^}^"); // available everywhere.
-  checkAvailable(ID, "[[int a; int b;]]");
-  const char *Input = "void ^f() {}";
-  const char *Output = "/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f() {}";
-  checkTransform(ID, Input, Output);
+TWEAK_TEST(AnnotateHighlightings);
+TEST_F(AnnotateHighlightingsTest, Test) {
+  EXPECT_AVAILABLE("^vo^id^ ^f(^) {^}^"); // available everywhere.
+  EXPECT_AVAILABLE("[[int a; int b;]]");
+  EXPECT_EQ("/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f() {}",
+            apply("void ^f() {}"));
 
-  checkTransform(ID,
-  R"cpp(
-[[void f1();
-void f2();]]
-)cpp",
-  R"cpp(
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f1();
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2();
-)cpp");
+  EXPECT_EQ(apply(R"cpp(
+      [[void f1();
+      void f2();]]
+  )cpp"),
+            R"cpp(
+      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f1();
+      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2();
+  )cpp");
 
-   checkTransform(ID,
-  R"cpp(
-void f1();
-void f2() {^};
-)cpp",
-
-  R"cpp(
-void f1();
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2() {};
-)cpp");
+  EXPECT_EQ(apply(R"cpp(
+      void f1();
+      void f2() {^};
+  )cpp"),
+            R"cpp(
+      void f1();
+      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2() {};
+  )cpp");
 }
 
 TWEAK_TEST(ExpandMacro);

@@ -262,6 +262,32 @@ void InstantiateClassMethods() {
   CMyWellNamedClass2<int> x5(42, nullptr);
 }
 
+class AOverridden {
+public:
+  virtual ~AOverridden() = default;
+  virtual void BadBaseMethod() = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+};
+
+class COverriding : public AOverridden {
+public:
+  // Overriding a badly-named base isn't a new violation.
+  void BadBaseMethod() override {}
+};
+
+template <typename derived_t>
+class CRTPBase {
+public:
+  void BadBaseMethod(int) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for method 'BadBaseMethod'
+};
+
+class CRTPDerived : CRTPBase<CRTPDerived> {
+public:
+  // Hiding a badly-named base isn't a new violation.
+  double BadBaseMethod(double) { return 0; }
+};
+
 template<typename T>
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: invalid case style for type template parameter 'T'
 // CHECK-FIXES: {{^}}template<typename t_t>{{$}}
