@@ -83,11 +83,7 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
 // Destructor
 SBThreadPlan::~SBThreadPlan() {}
 
-lldb_private::ThreadPlan *SBThreadPlan::get() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::ThreadPlan *, SBThreadPlan, get);
-
-  return LLDB_RECORD_RESULT(m_opaque_sp.get());
-}
+lldb_private::ThreadPlan *SBThreadPlan::get() { return m_opaque_sp.get(); }
 
 bool SBThreadPlan::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, IsValid);

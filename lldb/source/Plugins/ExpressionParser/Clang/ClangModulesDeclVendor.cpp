@@ -670,7 +670,7 @@ ClangModulesDeclVendor::Create(Target &target) {
                                                     source_buffer.release());
 
   std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance());
+      new clang::CompilerInstance);
 
   // When capturing a reproducer, hook up the file collector with clang to
   // collector modules and headers.

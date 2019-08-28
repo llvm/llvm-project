@@ -167,7 +167,7 @@ protected:
 // destructor chain is run, and trying to make sure no destructors touch
 // ConstStrings is difficult.  So we leak the pool instead.
 static Pool &StringPool() {
-  static std::once_flag g_pool_initialization_flag;
+  static llvm::once_flag g_pool_initialization_flag;
   static Pool *g_string_pool = nullptr;
 
   llvm::call_once(g_pool_initialization_flag,
