@@ -1,5 +1,10 @@
+#include <cstdlib>
+
 struct B { int dummy = 2324; };
 struct C {
+  void *operator new(size_t size) { C* r = ::new C; r->custom_new = true; return r; }
+
+  bool custom_new = false;
   B b;
   B* operator->() { return &b; }
   int operator->*(int) { return 2; }
@@ -48,6 +53,11 @@ struct C {
 
   operator int() { return 11; }
   operator long() { return 12; }
+
+  // Make sure this doesn't collide with
+  // the real operator int.
+  int operatorint() { return 13; }
+  int operatornew() { return 14; }
 };
 
 int main(int argc, char **argv) {
@@ -99,6 +109,10 @@ int main(int argc, char **argv) {
 
   result += static_cast<int>(c);
   result += static_cast<long>(c);
+  result += c.operatorint();
+  result += c.operatornew();
+
+  C *c2 = new C();
 
   //% self.expect("expr c->dummy", endstr=" 2324\n")
   //% self.expect("expr c->*2", endstr=" 2\n")
@@ -141,5 +155,9 @@ int main(int argc, char **argv) {
   //% self.expect("expr c[1]", endstr=" 92\n")
   //% self.expect("expr static_cast<int>(c)", endstr=" 11\n")
   //% self.expect("expr static_cast<long>(c)", endstr=" 12\n")
+  //% self.expect("expr c.operatorint()", endstr=" 13\n")
+  //% self.expect("expr c.operatornew()", endstr=" 14\n")
+  //% self.expect("expr (new C)->custom_new", endstr=" true\n")
+  delete c2;
   return 0;
 }
