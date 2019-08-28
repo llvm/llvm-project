@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/posix/HostProcessPosix.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/posix/HostProcessPosix.h"
 
 #include "llvm/ADT/STLExtras.h"
 

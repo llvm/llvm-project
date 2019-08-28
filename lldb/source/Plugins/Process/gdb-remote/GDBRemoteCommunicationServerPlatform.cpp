@@ -510,7 +510,7 @@ bool GDBRemoteCommunicationServerPlatform::FreePortForProcess(lldb::pid_t pid) {
 
 const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {
   static FileSpec g_domainsocket_dir;
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
 
   llvm::call_once(g_once_flag, []() {
     const char *domainsocket_dir_env =
