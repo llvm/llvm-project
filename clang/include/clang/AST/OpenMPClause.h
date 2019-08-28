@@ -5025,11 +5025,16 @@ public:
   }
 
   child_range used_children() {
+    if (MapType == OMPC_MAP_to || MapType == OMPC_MAP_tofrom)
+      return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                         reinterpret_cast<Stmt **>(varlist_end()));
     return child_range(child_iterator(), child_iterator());
   }
   const_child_range used_children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
+    auto Children = const_cast<OMPMapClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
   }
+
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_map;

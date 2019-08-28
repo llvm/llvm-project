@@ -394,11 +394,11 @@ static const ObjCObjectPointerType *getMostInformativeDerivedClassImpl(
   }
 
   const auto *SuperOfTo =
-      To->getObjectType()->getSuperClassType()->getAs<ObjCObjectType>();
+      To->getObjectType()->getSuperClassType()->castAs<ObjCObjectType>();
   assert(SuperOfTo);
   QualType SuperPtrOfToQual =
       C.getObjCObjectPointerType(QualType(SuperOfTo, 0));
-  const auto *SuperPtrOfTo = SuperPtrOfToQual->getAs<ObjCObjectPointerType>();
+  const auto *SuperPtrOfTo = SuperPtrOfToQual->castAs<ObjCObjectPointerType>();
   if (To->isUnspecialized())
     return getMostInformativeDerivedClassImpl(From, SuperPtrOfTo, SuperPtrOfTo,
                                               C);
@@ -827,16 +827,15 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
   if (MessageExpr->getReceiverKind() == ObjCMessageExpr::Class &&
       Sel.getAsString() == "class") {
     QualType ReceiverType = MessageExpr->getClassReceiver();
-    const auto *ReceiverClassType = ReceiverType->getAs<ObjCObjectType>();
+    const auto *ReceiverClassType = ReceiverType->castAs<ObjCObjectType>();
+    if (!ReceiverClassType->isSpecialized())
+      return;
+
     QualType ReceiverClassPointerType =
         C.getASTContext().getObjCObjectPointerType(
             QualType(ReceiverClassType, 0));
-
-    if (!ReceiverClassType->isSpecialized())
-      return;
     const auto *InferredType =
-        ReceiverClassPointerType->getAs<ObjCObjectPointerType>();
-    assert(InferredType);
+        ReceiverClassPointerType->castAs<ObjCObjectPointerType>();
 
     State = State->set<MostSpecializedTypeArgsMap>(RetSym, InferredType);
     C.addTransition(State);

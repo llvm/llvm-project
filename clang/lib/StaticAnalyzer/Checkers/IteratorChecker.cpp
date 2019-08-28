@@ -567,7 +567,8 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
   if (Func->isOverloadedOperator()) {
     const auto Op = Func->getOverloadedOperator();
     if (isAssignmentOperator(Op)) {
-      const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
+      // Overloaded 'operator=' must be a non-static member function.
+      const auto *InstCall = cast<CXXInstanceCall>(&Call);
       if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssign(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
                      Call.getArgSVal(0));

@@ -108,6 +108,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::ObjCStringLiteralClass:
   case Stmt::StringLiteralClass:
   case Stmt::TypeTraitExprClass:
+  case Stmt::SizeOfPackExprClass:
     // Known constants; defer to SValBuilder.
     return svalBuilder.getConstantVal(cast<Expr>(S)).getValue();
 

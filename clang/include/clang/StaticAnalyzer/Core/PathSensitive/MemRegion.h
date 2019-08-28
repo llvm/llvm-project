@@ -169,6 +169,7 @@ public:
   Kind getKind() const { return kind; }
 
   template<typename RegionTy> const RegionTy* getAs() const;
+  template<typename RegionTy> const RegionTy* castAs() const;
 
   virtual bool isBoundable() const { return false; }
 
@@ -1229,6 +1230,11 @@ const RegionTy* MemRegion::getAs() const {
     return RT;
 
   return nullptr;
+}
+
+template<typename RegionTy>
+const RegionTy* MemRegion::castAs() const {
+  return cast<RegionTy>(this);
 }
 
 //===----------------------------------------------------------------------===//

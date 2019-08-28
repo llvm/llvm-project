@@ -850,8 +850,7 @@ VisitOffsetOfExpr(const OffsetOfExpr *OOE,
   if (OOE->EvaluateAsInt(Result, getContext())) {
     APSInt IV = Result.Val.getInt();
     assert(IV.getBitWidth() == getContext().getTypeSize(OOE->getType()));
-    assert(OOE->getType()->isBuiltinType());
-    assert(OOE->getType()->getAs<BuiltinType>()->isInteger());
+    assert(OOE->getType()->castAs<BuiltinType>()->isInteger());
     assert(IV.isSigned() == OOE->getType()->isSignedIntegerType());
     SVal X = svalBuilder.makeIntVal(IV);
     B.generateNode(OOE, Pred,

@@ -104,7 +104,8 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
     return;
 
   ProgramStateRef State = C.getState();
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  // Member calls are always represented by a call-expression.
+  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
   if (!isVirtualCall(CE))
     return;
 

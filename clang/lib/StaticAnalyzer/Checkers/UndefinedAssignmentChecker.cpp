@@ -85,7 +85,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     }
 
     if (const DeclStmt *DS = dyn_cast<DeclStmt>(StoreE)) {
-      const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
+      const VarDecl *VD = cast<VarDecl>(DS->getSingleDecl());
       ex = VD->getInit();
     }
 

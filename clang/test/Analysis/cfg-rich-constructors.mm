@@ -59,8 +59,7 @@ void passArgumentIntoMessage(E *e) {
 // CXX17-NEXT:     3: {{\[}}[B1.2] bar] (CXXRecordTypedCall, [B1.5], [B1.4])
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // CXX17-NEXT:     5: D d = [e bar];
-// CXX17-NEXT:     6: ~D() (Temporary object destructor)
-// CXX17-NEXT:     7: [B1.5].~D() (Implicit destructor)
+// CXX17-NEXT:     6: [B1.5].~D() (Implicit destructor)
 void returnObjectFromMessage(E *e) {
   D d = [e bar];
 }

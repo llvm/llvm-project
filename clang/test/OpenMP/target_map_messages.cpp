@@ -20,6 +20,14 @@ void foo(int arg) {
 }
 #else
 
+void xxx(int argc) {
+  int map; // expected-note {{initialize the variable 'map' to silence this warning}}
+#pragma omp target map(tofrom: map) // expected-warning {{variable 'map' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
+
 struct SREF {
   int &a;
   int b;

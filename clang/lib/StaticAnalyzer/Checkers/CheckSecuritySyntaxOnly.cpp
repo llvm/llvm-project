@@ -204,6 +204,8 @@ void WalkAST::VisitForStmt(ForStmt *FS) {
 // Implements: CERT security coding advisory FLP-30.
 //===----------------------------------------------------------------------===//
 
+// Returns either 'x' or 'y', depending on which one of them is incremented
+// in 'expr', or nullptr if none of them is incremented.
 static const DeclRefExpr*
 getIncrementedVar(const Expr *expr, const VarDecl *x, const VarDecl *y) {
   expr = expr->IgnoreParenCasts();
@@ -289,14 +291,15 @@ void WalkAST::checkLoopConditionForFloat(const ForStmt *FS) {
 
   // Does either variable appear in increment?
   const DeclRefExpr *drInc = getIncrementedVar(increment, vdLHS, vdRHS);
-
   if (!drInc)
     return;
 
+  const VarDecl *vdInc = cast<VarDecl>(drInc->getDecl());
+  assert(vdInc && (vdInc == vdLHS || vdInc == vdRHS));
+
   // Emit the error.  First figure out which DeclRefExpr in the condition
   // referenced the compared variable.
-  assert(drInc->getDecl());
-  const DeclRefExpr *drCond = vdLHS == drInc->getDecl() ? drLHS : drRHS;
+  const DeclRefExpr *drCond = vdLHS == vdInc ? drLHS : drRHS;
 
   SmallVector<SourceRange, 2> ranges;
   SmallString<256> sbuf;

@@ -1132,14 +1132,13 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
     // Store the extent size for the (symbolic)region
     // containing the elements.
     Region = Target.getAsRegion()
-                 ->getAs<SubRegion>()
+                 ->castAs<SubRegion>()
                  ->StripCasts()
-                 ->getAs<SubRegion>();
+                 ->castAs<SubRegion>();
   } else {
     ElementCount = svalBuilder.makeIntVal(1, true);
-    Region = Target.getAsRegion()->getAs<SubRegion>();
+    Region = Target.getAsRegion()->castAs<SubRegion>();
   }
-  assert(Region);
 
   // Set the region's extent equal to the Size in Bytes.
   QualType ElementType = NE->getAllocatedType();
@@ -3066,8 +3065,12 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
     }
   }
 
-  if (Msg.empty())
+  if (Msg.empty()) {
+    // Silence a memory leak warning by MallocChecker in MallocChecker.cpp :)
+    assert(!StackHint && "Memory leak!");
     return nullptr;
+  }
+
   assert(StackHint);
 
   // Generate the extra diagnostic.

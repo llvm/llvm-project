@@ -91,7 +91,7 @@ parseAssignment(const Stmt *S) {
   } else if (auto PD = dyn_cast_or_null<DeclStmt>(S)) {
     // Initialization
     assert(PD->isSingleDecl() && "We process decls one by one");
-    VD = dyn_cast_or_null<VarDecl>(PD->getSingleDecl());
+    VD = cast<VarDecl>(PD->getSingleDecl());
     RHS = VD->getAnyInitializer();
   }
 

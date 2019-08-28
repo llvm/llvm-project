@@ -1,7 +1,18 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
-// RUN: %clang_analyze_cc1 -triple armv7-a15-linux -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
-// RUN: %clang_analyze_cc1 -triple aarch64_be-none-linux-gnu -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
+// RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
+// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
+// RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
+// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
+// RUN:                    -triple armv7-a15-linux
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
+// RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
+// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
+// RUN:                    -triple aarch64_be-none-linux-gnu
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
+// RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
+// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
+// RUN:                    -triple i386-apple-darwin10
 
 typedef __SIZE_TYPE__ size_t;
 char  *strncat(char *, const char *, size_t);

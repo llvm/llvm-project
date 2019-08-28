@@ -803,9 +803,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   if (CNE->isArray()) {
     // FIXME: allocating an array requires simulating the constructors.
     // For now, just return a symbolicated region.
-    if (const SubRegion *NewReg =
-            dyn_cast_or_null<SubRegion>(symVal.getAsRegion())) {
-      QualType ObjTy = CNE->getType()->getAs<PointerType>()->getPointeeType();
+    if (const auto *NewReg = cast_or_null<SubRegion>(symVal.getAsRegion())) {
+      QualType ObjTy = CNE->getType()->getPointeeType();
       const ElementRegion *EleReg =
           getStoreManager().GetElementZeroRegion(NewReg, ObjTy);
       Result = loc::MemRegionVal(EleReg);
