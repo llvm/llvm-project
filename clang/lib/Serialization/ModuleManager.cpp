@@ -204,13 +204,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Read the signature eagerly now so that we can check it.  Avoid calling
   // ReadSignature unless there's something to check though.
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
-                                          ExpectedSignature, ErrorStr)) {
-    // Try to remove the buffer.  If it can't be removed, then it was already
-    // validated by this process.
-    if (!getModuleCache().tryToDropPCM(NewModule->FileName))
-      FileMgr.invalidateCache(NewModule->File);
+                                          ExpectedSignature, ErrorStr))
     return OutOfDate;
-  }
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[Entry] = NewModule.get();
