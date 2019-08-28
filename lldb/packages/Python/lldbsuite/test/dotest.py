@@ -434,7 +434,6 @@ def parseOptionsAndInitTestdirs():
 
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
-    configuration.rerun_max_file_threshold = args.rerun_max_file_threshold
 
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name

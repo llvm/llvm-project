@@ -260,15 +260,6 @@ def create_parser():
               'irrespective of the test method\'s marking as flakey. '
               'Default behavior is to apply re-runs only to flakey '
               'tests that generate issues.'))
-    group.add_argument(
-        '--rerun-max-file-threshold',
-        action='store',
-        type=int,
-        default=50,
-        help=('Maximum number of files requiring a rerun beyond '
-              'which the rerun will not occur.  This is meant to '
-              'stop a catastrophically failing test suite from forcing '
-              'all tests to be rerun in the single-worker phase.'))
 
     # Remove the reference to our helper function
     del X
