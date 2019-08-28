@@ -3293,9 +3293,9 @@ def KitsuneTarget : StmtAttr {
     let Spellings = [CXX11<"kitsune","target">];
     let Args = [ 
     	EnumArgument<"KitsuneTargetType", "KitsuneTargetTy", 
-	["qthreads", "realm", "omp", "ptx", "rocm"],
+	["qthreads", "realm", "omp", "cuda", "rocm"],
 	["KitsuneTargetQthreads", "KitsuneTargetRealm", "KitsuneTargetOMP", 
-         "KitsuneTargetPTX", "KitsuneTargetROCm"], 0>
+         "KitsuneTargetCuda", "KitsuneTargetROCm"], 0>
     ];
     // FIXME -- how do we document this?
     let Documentation = [Undocumented];

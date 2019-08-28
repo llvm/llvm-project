@@ -470,22 +470,26 @@ def warn_drv_libstdcxx_not_found : Warning<
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
-// +----- kitsune 
+// +----- kitsune  FIXME: should probably use kitsune-centric naming here.
 def warn_kokkos_missing_build_params : Warning<
   "'-fkokkos' mode enabled but build configuration missing details for "
-  "automatic argument generation. Include and linking arguments must be "
+  "automatic argument generation. Target-centric link arguments must be"
   "provided on command line.">; 
 def warn_cilkrts_missing_build_params : Warning<
   "'-ftapir=cilk' enabled but build configuration missing details for "
-  "automatic argument generation. Include and linking arguments must be "
+  "automatic argument generation. Target-centric link arguments must be"
   "provided on command line.">; 
 def warn_qthreads_missing_build_params : Warning<
   "'-ftapir=qthreads' enabled but build configuration missing details for "
-  "automatic argument generation. Include and linking arguments must be"
+  "automatic argument generation. Target-centric link arguments must be"
   "provided on command line.">; 
 def warn_realm_missing_build_params : Warning<
   "'-ftapir=realm' enabled but build configuration missing details for "
-  "automatic argument generation. Include and linking arguments must be "
+  "automatic argument generation. Target-centric link arguments must be"
+  "provided on command line.">; 
+def warn_cuda_missing_build_params : Warning<
+  "'-ftapir=cuda' enabled but build configuration missing details for "
+  "automatic argument generation. Target-centric link arguments must be"
   "provided on command line.">; 
 // -----+
 

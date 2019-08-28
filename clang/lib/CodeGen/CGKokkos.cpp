@@ -121,16 +121,20 @@ namespace {
     //
     // FIXME: All kokkos examples we have seen use a literal string
     // value here.  We are essentailly hard-coded to deal with this
-    // form -- the code is not very robust in a situation where this
-    // is not the case and ripe for a bug if encountered.
-    const Expr *SE = SimplifyExpr(CE->getArg(curArgIndex));
+    // form -- the code is not robust in a situation where this
+    // is not the case. 
+
+    const Expr *OE = CE->getArg(curArgIndex);   // Original expression 
+    const Expr *SE = SimplifyExpr(OE);          // Simplified expression. 
+
     if (SE->getStmtClass() == Expr::CXXConstructExprClass) {
       const CXXConstructExpr *CXXCE = dyn_cast<CXXConstructExpr>(SE);
       SE = CXXCE->getArg(0)->IgnoreImplicit();
       if (SE->getStmtClass() == Expr::StringLiteralClass) {
 	CN = dyn_cast<StringLiteral>(SE)->getString().str();
 	curArgIndex++;
-	SE = SimplifyExpr(CE->getArg(curArgIndex));
+	OE = CE->getArg(curArgIndex);
+	SE = SimplifyExpr(OE);
       } 
     } 
 
@@ -146,18 +150,27 @@ namespace {
     // "SimplifyExpr()" so it doesn't bite us in terms of disabling an
     // expected type converstion).
     if (SE->getStmtClass() == Expr::IntegerLiteralClass) {
-      BE = SE;
+      BE = OE;
       curArgIndex++;
-      SE = SimplifyExpr(CE->getArg(curArgIndex));
+      OE = CE->getArg(curArgIndex);
+      SE = SimplifyExpr(OE);
     } else if (SE->getStmtClass() == Expr::BinaryOperatorClass) {
-      BE = SE;
+      BE = OE;
       curArgIndex++;
-      SE = SimplifyExpr(CE->getArg(curArgIndex));
+      OE = CE->getArg(curArgIndex);
+      SE = SimplifyExpr(OE);
     } else if (SE->getStmtClass() == Expr::DeclRefExprClass) {
-      BE = SE;
+      BE = OE;
       curArgIndex++;
-      SE = SimplifyExpr(CE->getArg(curArgIndex));
+      OE = CE->getArg(curArgIndex);
+      SE = SimplifyExpr(OE);
+    } else if (SE->getStmtClass() == Expr::CallExprClass) { 
+      BE = OE;
+      curArgIndex++;
+      OE = CE->getArg(curArgIndex);
+      SE = SimplifyExpr(OE);
     } else {
+      SE->dump();
       BE = nullptr;
       LE = nullptr;
       return;
@@ -254,17 +267,25 @@ bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
 
   std::string      PFName; 
   const Expr       *BE = nullptr; // "bounds" expression
-  const LambdaExpr *LE = nullptr; // the lambda  
-
-  ExtractParallelForComponents(CE, PFName, BE, LE);
+  const LambdaExpr *Lambda = nullptr; // the lambda  
+  ExtractParallelForComponents(CE, PFName, BE, Lambda);
   
-  if (LE == nullptr) { 
+  if (Lambda == nullptr) { 
+    // If we didn't get a lambda expression back it is likely that we're 
+    // looking at a functor-based parallel_for.  Given the challenges 
+    // of separate compilation units we punt on lowering this into 
+    // tapir and instead return control (back upstream) to the stanard 
+    // C++ code gen path(s). 
     DiagnosticsEngine &Diags = CGM.getDiags();
     Diags.Report(CE->getExprLoc(), diag::warn_kokkos_no_functor);
     return false;
   }
 
   if (BE == nullptr) {
+    // We didn't get a "nice" bounds expression back -- this is most likely 
+    // due to some type of expression that we have yet to deal with in a 
+    // code base.  Our default response in this case it return back to the 
+    // standard C++ codegen path and skip lowering to tapir. 
     DiagnosticsEngine &Diags = CGM.getDiags();
     Diags.Report(CE->getExprLoc(), diag::warn_kokkos_unknown_bounds_expr);
     return false;
@@ -287,7 +308,7 @@ bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
   //   - the iterator can be assigned a value of zero. 
   //   - the details of what is captured in the lambda seems to be mostly 
   //     ignored... 
-  const CXXMethodDecl *MD = LE->getCallOperator();
+  const CXXMethodDecl *MD = Lambda->getCallOperator();
   assert(MD && "EmitKokkosParallelFor() -- bad method decl!");
 
   const ParmVarDecl *LoopVar = MD->getParamDecl(0);
@@ -299,9 +320,8 @@ bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
 
   // Next, work towards determining the end of the loop range.
   llvm::Value *LoopEnd = nullptr;
-
   if (BE->getStmtClass() == Expr::BinaryOperatorClass) {
-    RValue RV = EmitAnyExprToTemp(BE);
+    RValue RV = EmitAnyExpr(BE);
     LoopEnd = RV.getScalarVal();
   } else { 
     LoopEnd = EmitScalarExpr(BE);
@@ -418,7 +438,7 @@ bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
     // AST for handling captured variables -- to address this we 
     // have to flag it so we handle it as a special case... 
     InKokkosConstruct = true;
-    EmitStmt(LE->getBody());
+    EmitStmt(Lambda->getBody());
     InKokkosConstruct = false;
     Builder.CreateBr(Preattach.getBlock());
   }
@@ -429,7 +449,7 @@ bool CodeGenFunction::EmitKokkosParallelFor(const CallExpr *CE) {
     Builder.CreateReattach(Continue.getBlock(), SRStart);
   }
 
-    {
+  {
     llvm::Instruction *Ptr = AllocaInsertPt;
     AllocaInsertPt = OldAllocaInsertPt;
     Ptr->eraseFromParent();

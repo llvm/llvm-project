@@ -1581,7 +1581,7 @@ def ftapir : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,openmp,qthreads,serial,none">;
 // kitsune: Tapir, Kokkos and FleCSI support.
 def ftapir : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
-    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,openmp,qthreads,serial,none">;
+    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,openmp,qthreads,serial,cuda,none">;
 def fkokkos : Flag<["-"], "fkokkos">, Group<f_Group>, 
   Flags<[CC1Option, NoArgumentUnused]>, 
   HelpText<"Enable Kokkos extensions: recognition and code generation">;
