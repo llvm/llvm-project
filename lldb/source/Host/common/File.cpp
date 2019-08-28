@@ -680,7 +680,6 @@ void File::CalculateInteractiveAndTerminal() {
   if (fd >= 0) {
     m_is_interactive = eLazyBoolNo;
     m_is_real_terminal = eLazyBoolNo;
-    m_supports_colors = eLazyBoolNo;
 #if defined(_WIN32)
     if (_isatty(fd)) {
       m_is_interactive = eLazyBoolYes;
