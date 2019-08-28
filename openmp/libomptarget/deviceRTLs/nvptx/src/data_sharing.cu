@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 #include <stdio.h>
 
 // Warp ID in the CUDA block
@@ -430,9 +431,10 @@ INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
     }
   }
   // Get address from lane 0.
-  ((int *)&FrameP)[0] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[0], 0);
+  int *FP = (int *)&FrameP;
+  FP[0] = __kmpc_impl_shfl_sync(CurActive, FP[0], 0);
   if (sizeof(FrameP) == 8)
-    ((int *)&FrameP)[1] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[1], 0);
+    FP[1] = __kmpc_impl_shfl_sync(CurActive, FP[1], 0);
 
   return FrameP;
 }

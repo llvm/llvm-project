@@ -228,25 +228,15 @@ public:
   ///
   /// \param[in/out] request
   ///    The completion request that needs to be answered.
-  ///
-  /// FIXME: This is the wrong return value, since we also need to make a
-  /// distinction between
-  /// total number of matches, and the window the user wants returned.
   virtual void HandleCompletion(CompletionRequest &request);
 
-  /// The input array contains a parsed version of the line.  The insertion
-  /// point is given by cursor_index (the index in input of the word containing
-  /// the cursor) and cursor_char_position (the position of the cursor in that
-  /// word.)
+  /// The input array contains a parsed version of the line.
+  ///
   /// We've constructed the map of options and their arguments as well if that
   /// is helpful for the completion.
   ///
   /// \param[in/out] request
   ///    The completion request that needs to be answered.
-  ///
-  /// FIXME: This is the wrong return value, since we also need to make a
-  /// distinction between
-  /// total number of matches, and the window the user wants returned.
   virtual void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) {}

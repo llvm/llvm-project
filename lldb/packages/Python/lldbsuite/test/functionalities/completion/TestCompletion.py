@@ -91,6 +91,13 @@ class CommandLineCompletionTestCase(TestBase):
                                'arm64'])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_ambiguous_long_opt(self):
+        self.completions_match('breakpoint modify --th',
+                               ['--thread-id',
+                                '--thread-index',
+                                '--thread-name'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_plugin_load(self):
         self.complete_from_to('plugin load ', [])
 

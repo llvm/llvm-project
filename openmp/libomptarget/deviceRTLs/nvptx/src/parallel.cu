@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 typedef struct ConvergentSimdJob {
   omptarget_nvptx_TaskDescr taskDescr;
@@ -64,7 +65,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
       omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(threadId);
   job->slimForNextSimd = SimdLimit;
 
-  int32_t SimdLimitSource = __SHFL_SYNC(Mask, SimdLimit, *LaneSource);
+  int32_t SimdLimitSource = __kmpc_impl_shfl_sync(Mask, SimdLimit, *LaneSource);
   // reset simdlimit to avoid propagating to successive #simd
   if (SimdLimitSource > 0 && threadId == sourceThreadId)
     omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(threadId) = 0;
@@ -138,7 +139,8 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
   job->tnumForNextPar = NumThreadsClause;
 
-  int32_t NumThreadsSource = __SHFL_SYNC(Mask, NumThreadsClause, *LaneSource);
+  int32_t NumThreadsSource =
+      __kmpc_impl_shfl_sync(Mask, NumThreadsClause, *LaneSource);
   // reset numthreads to avoid propagating to successive #parallel
   if (NumThreadsSource > 0 && threadId == sourceThreadId)
     omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId) =

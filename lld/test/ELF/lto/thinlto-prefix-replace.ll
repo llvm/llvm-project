@@ -14,7 +14,7 @@
 ; RUN: not ld.lld --plugin-opt=thinlto-index-only --plugin-opt=thinlto-prefix-replace=abc:def -shared %t/oldpath/thinlto_prefix_replace.o -o %t/thinlto_prefix_replace 2>&1 | FileCheck %s --check-prefix=ERR
 ; ERR: --plugin-opt=thinlto-prefix-replace= expects 'old;new' format, but got abc:def
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @f() {
