@@ -2194,6 +2194,16 @@ class TestBase(Base):
                     compare_string, msg=COMPLETION_MSG(
                         str_input, p, match_strings), exe=False, patterns=[p])
 
+    def completions_match(self, command, completions):
+        """Checks that the completions for the given command are equal to the
+        given list of completions"""
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        # match_strings is a 1-indexed list, so we have to slice...
+        self.assertItemsEqual(completions, list(match_strings)[1:],
+                              "List of returned completion is wrong")
+
     def filecheck(
             self,
             command,

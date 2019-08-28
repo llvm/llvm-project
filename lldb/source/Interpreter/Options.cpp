@@ -706,17 +706,11 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // elements
         // that are not unique up to this point.  getopt_long_only does
         // shortest unique match for long options already.
-
-        if (cur_opt_str.startswith("--")) {
+        if (cur_opt_str.consume_front("--")) {
           for (auto &def : opt_defs) {
-            if (!def.long_option)
-              continue;
-
-            if (cur_opt_str.startswith(def.long_option)) {
-              std::string full_name("--");
-              full_name.append(def.long_option);
-              request.AddCompletion(full_name);
-            }
+            llvm::StringRef long_option(def.long_option);
+            if (long_option.startswith(cur_opt_str))
+              request.AddCompletion("--" + long_option.str());
           }
         }
         return true;
