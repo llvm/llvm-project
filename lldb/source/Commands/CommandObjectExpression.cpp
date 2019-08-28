@@ -191,9 +191,6 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   try_all_threads = true;
   timeout = 0;
   debug = false;
-#ifdef LLDB_CONFIGURATION_DEBUG
-  playground = false;
-#endif
   language = eLanguageTypeUnknown;
   m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityCompact;
   auto_apply_fixits = eLazyBoolCalculate;
@@ -217,11 +214,6 @@ CommandObjectExpression::CommandObjectExpression(
       m_option_group(), m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL",
                     false, true),
-#ifdef LLDB_CONFIGURATION_DEBUG
-      m_playground_option(LLDB_OPT_SET_1, false, "playground", 'z',
-                          "Execute the expresssion as a playground expression",
-                          false, true),
-#endif
       m_command_options(), m_expr_line_count(0), m_expr_lines() {
   SetHelpLong(
       R"(
@@ -296,9 +288,6 @@ Examples:
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL,
                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
   m_option_group.Append(&m_repl_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_3);
-#ifdef LLDB_CONFIGURATION_DEBUG
-  m_option_group.Append(&m_playground_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
-#endif
   m_option_group.Finalize();
 }
 
@@ -631,11 +620,6 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
   if (args.HasArgs()) {
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group, exe_ctx))
       return false;
-
-#ifdef LLDB_CONFIGURATION_DEBUG
-    m_command_options.playground =
-        m_playground_option.GetOptionValue().GetCurrentValue();
-#endif
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
       Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
