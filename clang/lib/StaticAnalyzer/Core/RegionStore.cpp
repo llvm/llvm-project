@@ -2291,8 +2291,7 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
                                                  const TypedValueRegion* R,
                                                  SVal V) {
   QualType T = R->getValueType();
-  assert(T->isVectorType());
-  const VectorType *VT = T->getAs<VectorType>(); // Use getAs for typedefs.
+  const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
   // Handle lazy compound values and symbolic values.
   if (V.getAs<nonloc::LazyCompoundVal>() || V.getAs<nonloc::SymbolVal>())
@@ -2377,7 +2376,7 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const RecordType* RT = T->getAs<RecordType>();
+  const RecordType* RT = T->castAs<RecordType>();
   const RecordDecl *RD = RT->getDecl();
 
   if (!RD->isCompleteDefinition())

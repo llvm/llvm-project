@@ -119,12 +119,12 @@ const MemRegion *PointerArithChecker::getArrayRegion(const MemRegion *Region,
                                                      AllocKind &AKind,
                                                      CheckerContext &C) const {
   assert(Region);
-  while (Region->getKind() == MemRegion::Kind::CXXBaseObjectRegionKind) {
-    Region = Region->getAs<CXXBaseObjectRegion>()->getSuperRegion();
+  while (const auto *BaseRegion = dyn_cast<CXXBaseObjectRegion>(Region)) {
+    Region = BaseRegion->getSuperRegion();
     Polymorphic = true;
   }
-  if (Region->getKind() == MemRegion::Kind::ElementRegionKind) {
-    Region = Region->getAs<ElementRegion>()->getSuperRegion();
+  if (const auto *ElemRegion = dyn_cast<ElementRegion>(Region)) {
+    Region = ElemRegion->getSuperRegion();
   }
 
   ProgramStateRef State = C.getState();
@@ -137,7 +137,7 @@ const MemRegion *PointerArithChecker::getArrayRegion(const MemRegion *Region,
   }
   // When the region is symbolic and we do not have any information about it,
   // assume that this is an array to avoid false positives.
-  if (Region->getKind() == MemRegion::Kind::SymbolicRegionKind)
+  if (isa<SymbolicRegion>(Region))
     return Region;
 
   // No AllocKind stored and not symbolic, assume that it points to a single
