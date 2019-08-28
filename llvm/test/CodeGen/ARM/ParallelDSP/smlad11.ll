@@ -12,8 +12,8 @@
 ; CHECK:  [[V9:%[0-9]+]] = load i32, i32* [[V8]], align 2
 ; CHECK:  [[V13:%[0-9]+]] = bitcast i16* %arrayidx17 to i32*
 ; CHECK:  [[V14:%[0-9]+]] = load i32, i32* [[V13]], align 2
-; CHECK:  [[V12:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V9]], i32 [[V11]], i32 %mac1{{\.}}054)
-; CHECK:  [[V17:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V14]], i32 [[V16]], i32 [[V12]])
+; CHECK:  [[V12:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V14]], i32 [[V16]], i32 %mac1{{\.}}054)
+; CHECK:  [[V17:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V9]], i32 [[V11]], i32 [[V12]])
 ;
 ; And we don't want to see a 3rd smlad:
 ; CHECK-NOT: call i32 @llvm.arm.smlad

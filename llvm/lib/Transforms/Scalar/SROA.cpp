@@ -1218,7 +1218,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
       if (BBI->mayWriteToMemory())
         return false;
 
-    uint64_t Size = DL.getTypeStoreSizeInBits(LI->getType());
+    uint64_t Size = DL.getTypeStoreSize(LI->getType());
     MaxAlign = std::max(MaxAlign, LI->getAlignment());
     MaxSize = MaxSize.ult(Size) ? APInt(APWidth, Size) : MaxSize;
     HaveLoad = true;

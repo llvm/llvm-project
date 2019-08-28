@@ -276,6 +276,13 @@ bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).hasValue();
 }
 
+/// Tests if a value is a call or invoke to a library function that
+/// allocates memory and throws if an allocation failed (e.g., new).
+bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                     bool LookThroughBitCast) {
+  return getAllocationData(V, OpNewLike, TLI, LookThroughBitCast).hasValue();
+}
+
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.

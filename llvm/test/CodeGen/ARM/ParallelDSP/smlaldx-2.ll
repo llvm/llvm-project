@@ -195,8 +195,8 @@ for.cond.cleanup:
 ; CHECK: [[PIN1_CAST:%[^ ]+]] = bitcast i16* [[PIN1]] to i32*
 ; CHECK: [[IN1:%[^ ]+]] = load i32, i32* [[PIN1_CAST]], align 2
 
-; CHECK: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN2]], i32 [[IN1_2]], i64 [[ACC0]])
-; CHECK: [[ACC2]] = call i64 @llvm.arm.smlaldx(i32 [[IN1]], i32 [[IN2_2]], i64 [[ACC1]])
+; CHECK: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN2_2]], i32 [[IN1]], i64 [[ACC0]])
+; CHECK: [[ACC2]] = call i64 @llvm.arm.smlaldx(i32 [[IN2]], i32 [[IN1_2]], i64 [[ACC1]])
 
 ; CHECK: [[PIN1_NEXT]] = getelementptr i16, i16* [[PIN1]], i32 4
 ; CHECK: [[PIN2_NEXT]] = getelementptr i16, i16* [[PIN2]], i32 -4

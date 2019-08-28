@@ -161,7 +161,7 @@ entry:
 define i8* @test5(i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias i8* @malloc(i32 20) #0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(20) i8* @malloc(i32 20) #0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @s, align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(10) [[TMP0]], i8* align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false)
 ; CHECK-NEXT:    ret i8* [[TMP0]]
@@ -177,7 +177,7 @@ entry:
 define void @test6(i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias i8* @malloc(i32 20) #0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(20) i8* @malloc(i32 20) #0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @s, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8* @__memcpy_chk(i8* [[TMP0]], i8* [[TMP1]], i32 30, i32 20) #0
 ; CHECK-NEXT:    ret void
@@ -196,7 +196,7 @@ declare noalias i8* @malloc(i32) nounwind
 
 define i32 @test7(i8** %esc) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias i8* @malloc(i32 48) #0
+; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias dereferenceable_or_null(48) i8* @malloc(i32 48) #0
 ; CHECK-NEXT:    store i8* [[ALLOC]], i8** [[ESC:%.*]], align 4
 ; CHECK-NEXT:    ret i32 32
 ;
@@ -211,7 +211,7 @@ declare noalias i8* @calloc(i32, i32) nounwind
 
 define i32 @test8(i8** %esc) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias i8* @calloc(i32 5, i32 7) #0
+; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias dereferenceable_or_null(35) i8* @calloc(i32 5, i32 7) #0
 ; CHECK-NEXT:    store i8* [[ALLOC]], i8** [[ESC:%.*]], align 4
 ; CHECK-NEXT:    ret i32 30
 ;
