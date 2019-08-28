@@ -14,6 +14,9 @@
 #include "Path.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
+#include "Threading.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "gmock/gmock.h"
@@ -28,6 +31,9 @@ namespace {
 using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::Field;
+using ::testing::IsEmpty;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
@@ -60,12 +66,22 @@ protected:
   /// in updateWithDiags.
   static std::unique_ptr<ParsingCallbacks> captureDiags() {
     class CaptureDiags : public ParsingCallbacks {
+    public:
       void onMainAST(PathRef File, ParsedAST &AST, PublishFn Publish) override {
-        auto Diags = AST.getDiagnostics();
+        reportDiagnostics(File, AST.getDiagnostics(), Publish);
+      }
+
+      void onFailedAST(PathRef File, std::vector<Diag> Diags,
+                       PublishFn Publish) override {
+        reportDiagnostics(File, Diags, Publish);
+      }
+
+    private:
+      void reportDiagnostics(PathRef File, llvm::ArrayRef<Diag> Diags,
+                             PublishFn Publish) {
         auto D = Context::current().get(DiagsCallbackKey);
         if (!D)
           return;
-
         Publish([&]() {
           const_cast<
               llvm::unique_function<void(PathRef, std::vector<Diag>)> &> (*D)(
@@ -718,6 +734,53 @@ TEST_F(TUSchedulerTests, TUStatus) {
                   // Statuses of "Definitions" action
                   TUState(TUAction::RunningAction, "Definitions"),
                   TUState(TUAction::Idle, /*No action*/ "")));
+}
+
+TEST_F(TUSchedulerTests, CommandLineErrors) {
+  // We should see errors from command-line parsing inside the main file.
+  CDB.ExtraClangFlags = {"-fsome-unknown-flag"};
+
+  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
+
+  Notification Ready;
+  std::vector<Diag> Diagnostics;
+  updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
+                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
+                    Diagnostics = std::move(D);
+                    Ready.notify();
+                  });
+  Ready.wait();
+
+  EXPECT_THAT(
+      Diagnostics,
+      ElementsAre(AllOf(
+          Field(&Diag::ID, Eq(diag::err_drv_unknown_argument)),
+          Field(&Diag::Name, Eq("drv_unknown_argument")),
+          Field(&Diag::Message, "unknown argument: '-fsome-unknown-flag'"))));
+}
+
+TEST_F(TUSchedulerTests, CommandLineWarnings) {
+  // We should not see warnings from command-line parsing.
+  CDB.ExtraClangFlags = {"-Wsome-unknown-warning"};
+
+  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
+
+  Notification Ready;
+  std::vector<Diag> Diagnostics;
+  updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
+                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
+                    Diagnostics = std::move(D);
+                    Ready.notify();
+                  });
+  Ready.wait();
+
+  EXPECT_THAT(Diagnostics, IsEmpty());
 }
 
 } // namespace

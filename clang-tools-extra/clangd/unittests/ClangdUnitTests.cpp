@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "ClangdUnit.h"
 #include "Compiler.h"
+#include "Diagnostics.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -252,12 +253,13 @@ TEST(ClangdUnitTest, CanBuildInvocationWithUnknownArgs) {
   Inputs.FS = buildTestFS({{testPath("foo.cpp"), "void test() {}"}});
   Inputs.CompileCommand.CommandLine = {"clang", "-fsome-unknown-flag",
                                        testPath("foo.cpp")};
-  EXPECT_NE(buildCompilerInvocation(Inputs), nullptr);
+  IgnoreDiagnostics IgnoreDiags;
+  EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
 
   // Unknown forwarded to -cc1 should not a failure either.
   Inputs.CompileCommand.CommandLine = {
       "clang", "-Xclang", "-fsome-unknown-flag", testPath("foo.cpp")};
-  EXPECT_NE(buildCompilerInvocation(Inputs), nullptr);
+  EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
 }
 
 } // namespace

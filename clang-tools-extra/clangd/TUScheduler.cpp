@@ -44,6 +44,7 @@
 #include "TUScheduler.h"
 #include "Cancellation.h"
 #include "Compiler.h"
+#include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "Logger.h"
 #include "Trace.h"
@@ -365,6 +366,14 @@ ASTWorker::~ASTWorker() {
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
   llvm::StringRef TaskName = "Update";
   auto Task = [=]() mutable {
+    auto RunPublish = [&](llvm::function_ref<void()> Publish) {
+      // Ensure we only publish results from the worker if the file was not
+      // removed, making sure there are not race conditions.
+      std::lock_guard<std::mutex> Lock(PublishMu);
+      if (CanPublishResults)
+        Publish();
+    };
+
     // Get the actual command as `Inputs` does not have a command.
     // FIXME: some build systems like Bazel will take time to preparing
     // environment to build the file, it would be nice if we could emit a
@@ -394,8 +403,11 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         Inputs.CompileCommand.Directory,
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.
+    StoreDiags CompilerInvocationDiagConsumer;
     std::unique_ptr<CompilerInvocation> Invocation =
-        buildCompilerInvocation(Inputs);
+        buildCompilerInvocation(Inputs, CompilerInvocationDiagConsumer);
+    std::vector<Diag> CompilerInvocationDiags =
+        CompilerInvocationDiagConsumer.take();
     if (!Invocation) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
       // Remove the old AST if it's still in cache.
@@ -403,6 +415,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       TUStatus::BuildDetails Details;
       Details.BuildFailed = true;
       emitTUStatus({TUAction::BuildingPreamble, TaskName}, &Details);
+      // Report the diagnostics we collected when parsing the command line.
+      Callbacks.onFailedAST(FileName, std::move(CompilerInvocationDiags),
+                            RunPublish);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -468,7 +483,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     if (!AST) {
       llvm::Optional<ParsedAST> NewAST =
-          buildAST(FileName, std::move(Invocation), Inputs, NewPreamble);
+          buildAST(FileName, std::move(Invocation), CompilerInvocationDiags,
+                   Inputs, NewPreamble);
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
       if (!(*AST)) { // buildAST fails.
         TUStatus::BuildDetails Details;
@@ -481,22 +497,22 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       Details.ReuseAST = true;
       emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
     }
+
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
     // Note *AST can still be null if buildAST fails.
     if (*AST) {
       trace::Span Span("Running main AST callback");
-      auto RunPublish = [&](llvm::function_ref<void()> Publish) {
-        // Ensure we only publish results from the worker if the file was not
-        // removed, making sure there are not race conditions.
-        std::lock_guard<std::mutex> Lock(PublishMu);
-        if (CanPublishResults)
-          Publish();
-      };
 
       Callbacks.onMainAST(FileName, **AST, RunPublish);
       RanASTCallback = true;
+    } else {
+      // Failed to build the AST, at least report diagnostics from the command
+      // line if there were any.
+      // FIXME: we might have got more errors while trying to build the AST,
+      //        surface them too.
+      Callbacks.onFailedAST(FileName, CompilerInvocationDiags, RunPublish);
     }
     // Stash the AST in the cache for further use.
     IdleASTs.put(this, std::move(*AST));
@@ -513,14 +529,16 @@ void ASTWorker::runWithAST(
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     auto CurrentInputs = getCurrentFileInputs();
     if (!AST) {
-      std::unique_ptr<CompilerInvocation> Invocation =
-          buildCompilerInvocation(*CurrentInputs);
+      StoreDiags CompilerInvocationDiagConsumer;
+      std::unique_ptr<CompilerInvocation> Invocation = buildCompilerInvocation(
+          *CurrentInputs, CompilerInvocationDiagConsumer);
       // Try rebuilding the AST.
       llvm::Optional<ParsedAST> NewAST =
           Invocation
               ? buildAST(FileName,
                          std::make_unique<CompilerInvocation>(*Invocation),
-                         *CurrentInputs, getPossiblyStalePreamble())
+                         CompilerInvocationDiagConsumer.take(), *CurrentInputs,
+                         getPossiblyStalePreamble())
               : None;
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }

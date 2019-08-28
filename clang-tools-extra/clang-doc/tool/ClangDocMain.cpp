@@ -172,8 +172,8 @@ llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
   llvm::sys::path::native(Root, Path);
   llvm::sys::path::append(Path, RelativePath);
   if (CreateDirectory(Path))
-    return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "failed to create directory");
   llvm::sys::path::append(Path, Name + Ext);
   return Path;
 }

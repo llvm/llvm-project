@@ -856,8 +856,8 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
         genHTML(*static_cast<clang::doc::FunctionInfo *>(I), CDCtx, "");
     break;
   case InfoType::IT_default:
-    return llvm::make_error<llvm::StringError>("Unexpected info type.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "unexpected info type");
   }
 
   HTMLFile F =
@@ -891,9 +891,9 @@ static llvm::Error SerializeIndex(ClangDocContext &CDCtx) {
   llvm::sys::path::append(FilePath, "index_json.js");
   llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::F_None);
   if (FileErr != OK) {
-    return llvm::make_error<llvm::StringError>(
-        "Error creating index file: " + FileErr.message() + "\n",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error creating index file: " +
+                                       FileErr.message());
   }
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
@@ -940,9 +940,9 @@ static llvm::Error GenIndex(const ClangDocContext &CDCtx) {
   llvm::sys::path::append(IndexPath, "index.html");
   llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::F_None);
   if (FileErr != OK) {
-    return llvm::make_error<llvm::StringError>(
-        "Error creating main index: " + FileErr.message() + "\n",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error creating main index: " +
+                                       FileErr.message());
   }
 
   HTMLFile F;
@@ -972,10 +972,10 @@ static llvm::Error CopyFile(StringRef FilePath, StringRef OutDirectory) {
   std::error_code OK;
   std::error_code FileErr = llvm::sys::fs::copy_file(PathRead, PathWrite);
   if (FileErr != OK) {
-    return llvm::make_error<llvm::StringError>(
-        "Error creating file " + llvm::sys::path::filename(FilePath) + ": " +
-            FileErr.message() + "\n",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error creating file " +
+                                       llvm::sys::path::filename(FilePath) +
+                                       ": " + FileErr.message() + "\n");
   }
   return llvm::Error::success();
 }

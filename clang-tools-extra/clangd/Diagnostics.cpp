@@ -16,11 +16,13 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Capacity.h"
@@ -393,6 +395,9 @@ int getSeverity(DiagnosticsEngine::Level L) {
 }
 
 std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
+  // Do not forget to emit a pending diagnostic if there is one.
+  flushLastDiag();
+
   // Fill in name/source now that we have all the context needed to map them.
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
@@ -448,7 +453,6 @@ void StoreDiags::BeginSourceFile(const LangOptions &Opts,
 }
 
 void StoreDiags::EndSourceFile() {
-  flushLastDiag();
   LangOpts = None;
 }
 
@@ -467,9 +471,45 @@ static void writeCodeToFixMessage(llvm::raw_ostream &OS, llvm::StringRef Code) {
     OS << "…";
 }
 
+/// Fills \p D with all information, except the location-related bits.
+/// Also note that ID and Name are not part of clangd::DiagBase and should be
+/// set elsewhere.
+static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
+                                const clang::Diagnostic &Info,
+                                clangd::DiagBase &D) {
+  llvm::SmallString<64> Message;
+  Info.FormatDiagnostic(Message);
+
+  D.Message = Message.str();
+  D.Severity = DiagLevel;
+  D.Category = DiagnosticIDs::getCategoryNameFromID(
+                   DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
+                   .str();
+}
+
 void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
   DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
+
+  if (Info.getLocation().isInvalid()) {
+    // Handle diagnostics coming from command-line arguments. The source manager
+    // is *not* available at this point, so we cannot use it.
+    if (DiagLevel < DiagnosticsEngine::Level::Error) {
+      IgnoreDiagnostics::log(DiagLevel, Info);
+      return; // non-errors add too much noise, do not show them.
+    }
+
+    flushLastDiag();
+
+    LastDiag = Diag();
+    LastDiag->ID = Info.getID();
+    fillNonLocationData(DiagLevel, Info, *LastDiag);
+    LastDiag->InsideMainFile = true;
+    // Put it at the start of the main file, for a lack of a better place.
+    LastDiag->Range.start = Position{0, 0};
+    LastDiag->Range.end = Position{0, 0};
+    return;
+  }
 
   if (!LangOpts || !Info.hasSourceManager()) {
     IgnoreDiagnostics::log(DiagLevel, Info);
@@ -480,18 +520,13 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   SourceManager &SM = Info.getSourceManager();
 
   auto FillDiagBase = [&](DiagBase &D) {
-    D.Range = diagnosticRange(Info, *LangOpts);
-    llvm::SmallString<64> Message;
-    Info.FormatDiagnostic(Message);
-    D.Message = Message.str();
+    fillNonLocationData(DiagLevel, Info, D);
+
     D.InsideMainFile = InsideMainFile;
+    D.Range = diagnosticRange(Info, *LangOpts);
     D.File = SM.getFilename(Info.getLocation());
     D.AbsFile = getCanonicalPath(
         SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
-    D.Severity = DiagLevel;
-    D.Category = DiagnosticIDs::getCategoryNameFromID(
-                     DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
-                     .str();
     return D;
   };
 
@@ -564,7 +599,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     LastDiag = Diag();
     LastDiag->ID = Info.getID();
     FillDiagBase(*LastDiag);
-    LastDiagWasAdjusted = false;
     if (!InsideMainFile)
       LastDiagWasAdjusted = adjustDiagFromHeader(*LastDiag, Info, *LangOpts);
 
@@ -617,6 +651,7 @@ void StoreDiags::flushLastDiag() {
     vlog("Dropped diagnostic: {0}: {1}", LastDiag->File, LastDiag->Message);
   }
   LastDiag.reset();
+  LastDiagWasAdjusted = false;
 }
 
 } // namespace clangd
