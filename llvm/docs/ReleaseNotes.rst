@@ -57,6 +57,8 @@ Non-comprehensive list of changes in this release
 
 * The RISCV target is no longer "experimental" (see below for more details).
 
+* The ORCv1 JIT API has been deprecated. Please see
+  `Transitioning from ORCv1 to ORCv2 <ORCv2.html#transitioning-from-orcv1-to-orcv2>`_.
 
 .. NOTE
    If you would like to document a larger change, then you can add a
