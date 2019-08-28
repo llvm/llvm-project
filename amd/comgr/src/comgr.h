@@ -265,6 +265,9 @@ struct DataMeta {
   }
 
   amd_comgr_metadata_kind_t getMetadataKind();
+  // Get the canonical string representation of @p DocNode, assuming
+  // it is a scalar node.
+  std::string convertDocNodeToString(llvm::msgpack::DocNode DocNode);
 
   // This DataMeta's "meta document", shared by all instances derived from the
   // same metadata.
