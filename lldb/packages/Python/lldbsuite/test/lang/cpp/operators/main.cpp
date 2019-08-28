@@ -43,8 +43,8 @@ struct C {
   int operator>=(int) { return 87; }
   int operator>>=(int) { return 88; }
 
-  int operator[](int) { return 91; }
-  int operator()(int) { return 92; }
+  int operator()(int) { return 91; }
+  int operator[](int) { return 92; }
 
   operator int() { return 11; }
   operator long() { return 12; }
@@ -106,12 +106,10 @@ int main(int argc, char **argv) {
   //% self.expect("expr c += 42", endstr=" 42\n")
   //% self.expect("expr c++", endstr=" 123\n")
   //% self.expect("expr ++c", endstr=" 1234\n")
-
   //% self.expect("expr c - 34", endstr=" 34\n")
   //% self.expect("expr c -= 32", endstr=" 32\n")
-  //% self.expect("expr c--", endstr=" 321\n")
-  //% self.expect("expr --c", endstr=" 4321\n")
-
+  //% self.expect("expr c--", endstr=" 4321\n")
+  //% self.expect("expr --c", endstr=" 321\n")
   //% self.expect("expr c * 3", endstr=" 51\n")
   //% self.expect("expr c *= 3", endstr=" 52\n")
   //% self.expect("expr c % 3", endstr=" 53\n")
@@ -120,20 +118,17 @@ int main(int argc, char **argv) {
   //% self.expect("expr c /= 3", endstr=" 56\n")
   //% self.expect("expr c ^ 3", endstr=" 57\n")
   //% self.expect("expr c ^= 3", endstr=" 58\n")
-
   //% self.expect("expr c | 3", endstr=" 61\n")
   //% self.expect("expr c |= 3", endstr=" 62\n")
   //% self.expect("expr c || 3", endstr=" 63\n")
   //% self.expect("expr c & 3", endstr=" 64\n")
   //% self.expect("expr c &= 3", endstr=" 65\n")
   //% self.expect("expr c && 3", endstr=" 66\n")
-
   //% self.expect("expr ~c", endstr=" 71\n")
   //% self.expect("expr !c", endstr=" 72\n")
   //% self.expect("expr c!=1", endstr=" 73\n")
   //% self.expect("expr c=1", endstr=" 74\n")
   //% self.expect("expr c==1", endstr=" 75\n")
-
   //% self.expect("expr c<1", endstr=" 81\n")
   //% self.expect("expr c<<1", endstr=" 82\n")
   //% self.expect("expr c<=1", endstr=" 83\n")
@@ -142,10 +137,9 @@ int main(int argc, char **argv) {
   //% self.expect("expr c>>1", endstr=" 86\n")
   //% self.expect("expr c>=1", endstr=" 87\n")
   //% self.expect("expr c>>=1", endstr=" 88\n")
-
   //% self.expect("expr c(1)", endstr=" 91\n")
   //% self.expect("expr c[1]", endstr=" 92\n")
-  //% self.expect("expr static_cast<int>", endstr=" 11\n")
-  //% self.expect("expr static_cast<long>", endstr=" 12\n")
+  //% self.expect("expr static_cast<int>(c)", endstr=" 11\n")
+  //% self.expect("expr static_cast<long>(c)", endstr=" 12\n")
   return 0;
 }
