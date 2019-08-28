@@ -3726,10 +3726,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                      DiagID);
       break;
     case tok::kw__Complex:
+      if (!getLangOpts().C99)
+        Diag(Tok, diag::ext_c99_feature) << Tok.getName();
       isInvalid = DS.SetTypeSpecComplex(DeclSpec::TSC_complex, Loc, PrevSpec,
                                         DiagID);
       break;
     case tok::kw__Imaginary:
+      if (!getLangOpts().C99)
+        Diag(Tok, diag::ext_c99_feature) << Tok.getName();
       isInvalid = DS.SetTypeSpecComplex(DeclSpec::TSC_imaginary, Loc, PrevSpec,
                                         DiagID);
       break;
@@ -3810,6 +3814,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       break;
     case tok::kw_bool:
     case tok::kw__Bool:
+      if (Tok.is(tok::kw__Bool) && !getLangOpts().C99)
+        Diag(Tok, diag::ext_c99_feature) << Tok.getName();
+
       if (Tok.is(tok::kw_bool) &&
           DS.getTypeSpecType() != DeclSpec::TST_unspecified &&
           DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {

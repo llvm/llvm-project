@@ -90,9 +90,7 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
 
   const ArgStringList &CCArgs = Cmd.getArguments();
   auto CI = std::make_unique<CompilerInvocation>();
-  if (!CompilerInvocation::CreateFromArgs(
-          *CI, const_cast<const char **>(CCArgs.data()),
-          const_cast<const char **>(CCArgs.data()) + CCArgs.size(), *Diags) &&
+  if (!CompilerInvocation::CreateFromArgs(*CI, CCArgs, *Diags) &&
       !ShouldRecoverOnErorrs)
     return nullptr;
   return CI;

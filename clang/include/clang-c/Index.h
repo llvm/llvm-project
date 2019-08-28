@@ -1356,7 +1356,12 @@ enum CXTranslationUnit_Flags {
    * the case where these warnings are not of interest, as for an IDE for
    * example, which typically shows only the diagnostics in the main file.
    */
-  CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 0x4000
+  CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 0x4000,
+
+  /**
+   * Tells the preprocessor not to skip excluded conditional blocks.
+   */
+  CXTranslationUnit_RetainExcludedConditionalBlocks = 0x8000
 };
 
 /**

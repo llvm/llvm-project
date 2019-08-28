@@ -22,6 +22,7 @@
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
 
@@ -157,12 +158,8 @@ public:
   /// one of the vaild-to-access (albeit arbitrary) states.
   ///
   /// \param [out] Res - The resulting invocation.
-  /// \param ArgBegin - The first element in the argument vector.
-  /// \param ArgEnd - The last element in the argument vector.
-  /// \param Diags - The diagnostic engine to use for errors.
   static bool CreateFromArgs(CompilerInvocation &Res,
-                             const char* const *ArgBegin,
-                             const char* const *ArgEnd,
+                             ArrayRef<const char *> CommandLineArgs,
                              DiagnosticsEngine &Diags);
 
   /// Get the directory where the compiler headers

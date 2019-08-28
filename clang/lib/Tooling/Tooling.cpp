@@ -118,9 +118,7 @@ CompilerInvocation *newInvocation(
     DiagnosticsEngine *Diagnostics, const llvm::opt::ArgStringList &CC1Args) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");
   CompilerInvocation *Invocation = new CompilerInvocation;
-  CompilerInvocation::CreateFromArgs(
-      *Invocation, CC1Args.data() + 1, CC1Args.data() + CC1Args.size(),
-      *Diagnostics);
+  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
   return Invocation;
