@@ -59,7 +59,6 @@ class TestSwiftMacroConflict(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_with_dwarfimporter(self):
         """
         With DWARFImporter installed, both variables should be visible.
@@ -82,7 +81,7 @@ class TestSwiftMacroConflict(TestBase):
         self.expect("v foo", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         lldb.SBDebugger.MemoryPressureDetected()
-        
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()
