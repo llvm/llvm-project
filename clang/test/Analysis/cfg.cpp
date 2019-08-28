@@ -203,7 +203,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-LABEL: int test1(int *x)
 // CHECK: 1: 1
 // CHECK-NEXT: 2: return
-// CHECK-NEXT: ~B() (Implicit destructor)
+// CHECK-NEXT: ~NoReturnSingleSuccessor::B() (Implicit destructor)
 // CHECK-NEXT: Preds (1)
 // CHECK-NEXT: Succs (1): B0
   int test1(int *x) {
@@ -477,7 +477,7 @@ void test_lifetime_extended_temporaries() {
 // WARNINGS-NEXT:    1:  (CXXConstructExpr, struct pr37688_deleted_union_destructor::A)
 // ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], struct pr37688_deleted_union_destructor::A)
 // CHECK-NEXT:    2: pr37688_deleted_union_destructor::A a;
-// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B1.2].~pr37688_deleted_union_destructor::A() (Implicit destructor)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B0 (EXIT)]
