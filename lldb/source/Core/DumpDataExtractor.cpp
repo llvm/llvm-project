@@ -567,11 +567,13 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             size_t item_bit_size = item_byte_size * 8;
 
             if (item_bit_size == ast->getTypeSize(ast->FloatTy)) {
-              llvm::APInt apint(item_bit_size,
-                                DE.GetMaxU64(&offset, item_byte_size));
-              llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->FloatTy),
-                                    apint);
-              apfloat.toString(sv, format_precision, format_max_padding);
+              llvm::Optional<llvm::APInt> apint =
+                  GetAPInt(DE, &offset, item_byte_size);
+              if (apint.hasValue()) {
+                llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->FloatTy),
+                                      apint.getValue());
+                apfloat.toString(sv, format_precision, format_max_padding);
+              }
             } else if (item_bit_size == ast->getTypeSize(ast->DoubleTy)) {
               llvm::Optional<llvm::APInt> apint =
                   GetAPInt(DE, &offset, item_byte_size);
@@ -595,10 +597,13 @@ lldb::offset_t lldb_private::DumpDataExtractor(
                 apfloat.toString(sv, format_precision, format_max_padding);
               }
             } else if (item_bit_size == ast->getTypeSize(ast->HalfTy)) {
-              llvm::APInt apint(item_bit_size, DE.GetU16(&offset));
-              llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->HalfTy),
-                                    apint);
-              apfloat.toString(sv, format_precision, format_max_padding);
+              llvm::Optional<llvm::APInt> apint =
+                  GetAPInt(DE, &offset, item_byte_size);
+              if (apint.hasValue()) {
+                llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->HalfTy),
+                                      apint.getValue());
+                apfloat.toString(sv, format_precision, format_max_padding);
+              }
             }
 
             if (!sv.empty()) {
