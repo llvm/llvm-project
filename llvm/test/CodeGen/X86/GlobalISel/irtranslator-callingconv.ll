@@ -10,21 +10,21 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
   ; X32-LABEL: name: test_i8_args_8
   ; X32: bb.1.entry:
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; X32:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.7)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.7, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.6)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.6, align 4)
   ; X32:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; X32:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 1 from %fixed-stack.5)
+  ; X32:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 1 from %fixed-stack.5, align 8)
   ; X32:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; X32:   [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 1 from %fixed-stack.4)
+  ; X32:   [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 1 from %fixed-stack.4, align 4)
   ; X32:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; X32:   [[LOAD4:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 1 from %fixed-stack.3)
+  ; X32:   [[LOAD4:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 1 from %fixed-stack.3, align 16)
   ; X32:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; X32:   [[LOAD5:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 1 from %fixed-stack.2)
+  ; X32:   [[LOAD5:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 1 from %fixed-stack.2, align 4)
   ; X32:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD6:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 1 from %fixed-stack.1)
+  ; X32:   [[LOAD6:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 1 from %fixed-stack.1, align 8)
   ; X32:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD7:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 1 from %fixed-stack.0)
+  ; X32:   [[LOAD7:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 1 from %fixed-stack.0, align 4)
   ; X32:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_8bit
   ; X32:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_8bit
   ; X32:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_8bit
@@ -49,9 +49,9 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
   ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r9d
   ; X64:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X64:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1)
+  ; X64:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1, align 16)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X64:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.0)
+  ; X64:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.0, align 8)
   ; X64:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_8bit
   ; X64:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_8bit
   ; X64:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_8bit
@@ -76,21 +76,21 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
   ; X32-LABEL: name: test_i32_args_8
   ; X32: bb.1.entry:
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.7, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.7, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.6, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.6)
   ; X32:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; X32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.5, align 1)
+  ; X32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.5, align 8)
   ; X32:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.4, align 1)
+  ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.4)
   ; X32:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; X32:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.3, align 1)
+  ; X32:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.3, align 16)
   ; X32:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; X32:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.2, align 1)
+  ; X32:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.2)
   ; X32:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.1, align 8)
   ; X32:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_32bit
   ; X32:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_32bit
   ; X32:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_32bit
@@ -109,9 +109,9 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
   ; X64:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r8d
   ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r9d
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X64:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X64:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X64:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X64:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 8)
   ; X64:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_32bit
   ; X64:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_32bit
   ; X64:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_32bit
@@ -136,37 +136,37 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
   ; X32-LABEL: name: test_i64_args_8
   ; X32: bb.1.entry:
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.15
-  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.15, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.15, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.14, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.14)
   ; X32:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
-  ; X32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.13, align 1)
+  ; X32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.13, align 8)
   ; X32:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
-  ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.12, align 1)
+  ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.12)
   ; X32:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
-  ; X32:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.11, align 1)
+  ; X32:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.11, align 16)
   ; X32:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
-  ; X32:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.10, align 1)
+  ; X32:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.10)
   ; X32:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
-  ; X32:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.9, align 1)
+  ; X32:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.9, align 8)
   ; X32:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
-  ; X32:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.8, align 1)
+  ; X32:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.8)
   ; X32:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; X32:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (invariant load 4 from %fixed-stack.7, align 1)
+  ; X32:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (invariant load 4 from %fixed-stack.7, align 16)
   ; X32:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; X32:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (invariant load 4 from %fixed-stack.6, align 1)
+  ; X32:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (invariant load 4 from %fixed-stack.6)
   ; X32:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; X32:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (invariant load 4 from %fixed-stack.5, align 1)
+  ; X32:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (invariant load 4 from %fixed-stack.5, align 8)
   ; X32:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; X32:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (invariant load 4 from %fixed-stack.4, align 1)
+  ; X32:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (invariant load 4 from %fixed-stack.4)
   ; X32:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; X32:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (invariant load 4 from %fixed-stack.3, align 1)
+  ; X32:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (invariant load 4 from %fixed-stack.3, align 16)
   ; X32:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; X32:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (invariant load 4 from %fixed-stack.2, align 1)
+  ; X32:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (invariant load 4 from %fixed-stack.2)
   ; X32:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (invariant load 4 from %fixed-stack.1, align 8)
   ; X32:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
   ; X32:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
   ; X32:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
@@ -195,9 +195,9 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
   ; X64:   [[COPY4:%[0-9]+]]:_(s64) = COPY $r8
   ; X64:   [[COPY5:%[0-9]+]]:_(s64) = COPY $r9
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X64:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 1)
+  ; X64:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 16)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X64:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0, align 1)
+  ; X64:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0)
   ; X64:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_64bit
   ; X64:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_64bit
   ; X64:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_64bit
@@ -219,9 +219,9 @@ define float @test_float_args(float %arg1, float %arg2) {
   ; X32-LABEL: name: test_float_args
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s32)
   ; X32:   $fp0 = COPY [[ANYEXT]](s80)
   ; X32:   RET 0, implicit $fp0
@@ -242,9 +242,9 @@ define double @test_double_args(double %arg1, double %arg2) {
   ; X32-LABEL: name: test_double_args
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0)
   ; X32:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s64)
   ; X32:   $fp0 = COPY [[ANYEXT]](s80)
   ; X32:   RET 0, implicit $fp0
@@ -319,7 +319,7 @@ define i32 * @test_memop_i32(i32 * %p1) {
   ; X32-LABEL: name: test_memop_i32
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
   ; X32:   $eax = COPY [[LOAD]](p0)
   ; X32:   RET 0, implicit $eax
   ; X64-LABEL: name: test_memop_i32
@@ -354,9 +354,9 @@ define void @test_simple_arg(i32 %in0, i32 %in1) {
   ; X32-LABEL: name: test_simple_arg
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -389,7 +389,7 @@ define void @test_simple_arg8_call(i32 %in0) {
   ; X32-LABEL: name: test_simple_arg8_call
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
   ; X32:   ADJCALLSTACKDOWN32 32, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -493,7 +493,7 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X32:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0)
   ; X32:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X32:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
   ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
@@ -542,7 +542,7 @@ define void @test_indirect_call(void()* %func) {
   ; X32-LABEL: name: test_indirect_call
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD:%[0-9]+]]:gr32(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:gr32(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
   ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   CALL32r [[LOAD]](p0), csr_32, implicit $esp, implicit $ssp
   ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
@@ -565,7 +565,7 @@ define void @test_abi_exts_call(i8* %addr) {
   ; X32-LABEL: name: test_abi_exts_call
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
   ; X32:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p0) :: (load 1 from %ir.addr)
   ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
@@ -623,9 +623,9 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
   ; X32-LABEL: name: test_variadic_call_1
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.addr_ptr)
   ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[LOAD1]](p0) :: (load 4 from %ir.val_ptr)
   ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
@@ -664,9 +664,9 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
   ; X32-LABEL: name: test_variadic_call_2
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 1)
+  ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 1)
+  ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
   ; X32:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.addr_ptr)
   ; X32:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[LOAD1]](p0) :: (load 8 from %ir.val_ptr, align 4)
   ; X32:   ADJCALLSTACKDOWN32 12, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
