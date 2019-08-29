@@ -238,10 +238,6 @@ public:
                               lldb::addr_t loclist_base_load_addr,
                               lldb::addr_t address, ABI *abi);
 
-  static size_t LocationListSize(const DWARFUnit *dwarf_cu,
-                                 const DataExtractor &debug_loc_data,
-                                 lldb::offset_t offset);
-
   static bool PrintDWARFExpression(Stream &s, const DataExtractor &data,
                                    int address_size, int dwarf_ref_size,
                                    bool location_expression);
