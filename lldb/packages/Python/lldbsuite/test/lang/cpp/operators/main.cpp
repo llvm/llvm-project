@@ -1,8 +1,13 @@
 #include <cstdlib>
 
+int side_effect = 0;
+
 struct B { int dummy = 2324; };
 struct C {
   void *operator new(size_t size) { C* r = ::new C; r->custom_new = true; return r; }
+  void *operator new[](size_t size) { C* r = static_cast<C*>(std::malloc(size)); r->custom_new = true; return r; }
+  void operator delete(void *p) { std::free(p); side_effect = 1; }
+  void operator delete[](void *p) { std::free(p); side_effect = 2; }
 
   bool custom_new = false;
   B b;
@@ -47,6 +52,9 @@ struct C {
   int operator>>(int) { return 86; }
   int operator>=(int) { return 87; }
   int operator>>=(int) { return 88; }
+
+  int operator,(int) { return 2012; }
+  int operator&() { return 2013; }
 
   int operator()(int) { return 91; }
   int operator[](int) { return 92; }
@@ -104,6 +112,9 @@ int main(int argc, char **argv) {
   result += c>=2;
   result += c>>=2;
 
+  result += (c , 2);
+  result += &c;
+
   result += c(1);
   result += c[1];
 
@@ -113,6 +124,7 @@ int main(int argc, char **argv) {
   result += c.operatornew();
 
   C *c2 = new C();
+  C *c3 = new C[3];
 
   //% self.expect("expr c->dummy", endstr=" 2324\n")
   //% self.expect("expr c->*2", endstr=" 2\n")
@@ -151,6 +163,8 @@ int main(int argc, char **argv) {
   //% self.expect("expr c>>1", endstr=" 86\n")
   //% self.expect("expr c>=1", endstr=" 87\n")
   //% self.expect("expr c>>=1", endstr=" 88\n")
+  //% self.expect("expr c,1", endstr=" 2012\n")
+  //% self.expect("expr &c", endstr=" 2013\n")
   //% self.expect("expr c(1)", endstr=" 91\n")
   //% self.expect("expr c[1]", endstr=" 92\n")
   //% self.expect("expr static_cast<int>(c)", endstr=" 11\n")
@@ -158,6 +172,10 @@ int main(int argc, char **argv) {
   //% self.expect("expr c.operatorint()", endstr=" 13\n")
   //% self.expect("expr c.operatornew()", endstr=" 14\n")
   //% self.expect("expr (new C)->custom_new", endstr=" true\n")
+  //% self.expect("expr (new struct C[1])->custom_new", endstr=" true\n")
+  //% self.expect("expr delete c2; side_effect", endstr=" = 1\n")
+  //% self.expect("expr delete[] c3; side_effect", endstr=" = 2\n")
   delete c2;
+  delete[] c3;
   return 0;
 }
