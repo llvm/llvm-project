@@ -2,9 +2,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Guess path to LLVM_CHECKOUT if not provided
-if [ "${LLVM_CHECKOUT}" = "" ]; then
-  LLVM_CHECKOUT="${SCRIPT_DIR}/../../../../../"
+if [ "${COMPILER_RT}" = "" ]; then
+  COMPILER_RT=$(readlink -f $SCRIPT_DIR/../../..)
 fi
 
 # python tools setup
@@ -40,8 +39,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cd ${LLVM_CHECKOUT}
-
 EXITSTATUS=0
 ERROR_LOG=$(${MKTEMP})
 
@@ -60,9 +57,6 @@ run_lint() {
   ${LITLINT} "$@" 2>>$ERROR_LOG
 }
 
-if [ "${COMPILER_RT}" = "" ]; then
-  COMPILER_RT=projects/compiler-rt
-fi
 LIT_TESTS=${COMPILER_RT}/test
 # Headers
 SANITIZER_INCLUDES=${COMPILER_RT}/include/sanitizer

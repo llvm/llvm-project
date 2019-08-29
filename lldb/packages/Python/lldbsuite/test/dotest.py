@@ -23,9 +23,10 @@ from __future__ import print_function
 
 # System modules
 import atexit
-import os
+import datetime
 import errno
 import logging
+import os
 import platform
 import re
 import signal
@@ -46,6 +47,9 @@ from lldbsuite.test_event import formatter
 from . import test_result
 from lldbsuite.test_event.event_builder import EventBuilder
 from ..support import seven
+
+def get_dotest_invocation():
+    return ' '.join(sys.argv)
 
 
 def is_exe(fpath):
@@ -227,9 +231,9 @@ def parseOptionsAndInitTestdirs():
 
     try:
         parser = dotest_args.create_parser()
-        args = dotest_args.parse_args(parser, sys.argv[1:])
+        args = parser.parse_args()
     except:
-        print(' '.join(sys.argv))
+        print(get_dotest_invocation())
         raise
 
     if args.unset_env_varnames:
@@ -254,7 +258,7 @@ def parseOptionsAndInitTestdirs():
 
     # Only print the args if being verbose.
     if args.v and not args.q:
-        print(sys.argv)
+        print(get_dotest_invocation())
 
     if args.h:
         do_help = True
@@ -387,9 +391,11 @@ def parseOptionsAndInitTestdirs():
         configuration.regexp = args.p
 
     if args.s:
-        if args.s.startswith('-'):
-            usage(parser)
         configuration.sdir_name = args.s
+    else:
+        timestamp_started = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
+        configuration.sdir_name = os.path.join(os.getcwd(), timestamp_started)
+
     configuration.session_file_format = args.session_file_format
 
     if args.t:
@@ -431,7 +437,6 @@ def parseOptionsAndInitTestdirs():
 
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
-    configuration.rerun_max_file_threshold = args.rerun_max_file_threshold
 
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
@@ -441,24 +446,6 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
-
-    if args.event_add_entries and len(args.event_add_entries) > 0:
-        entries = {}
-        # Parse out key=val pairs, separated by comma
-        for keyval in args.event_add_entries.split(","):
-            key_val_entry = keyval.split("=")
-            if len(key_val_entry) == 2:
-                (key, val) = key_val_entry
-                val_parts = val.split(':')
-                if len(val_parts) > 1:
-                    (val, val_type) = val_parts
-                    if val_type == 'int':
-                        val = int(val)
-                entries[key] = val
-        # Tell the event builder to create all events with these
-        # key/val pairs in them.
-        if len(entries) > 0:
-            EventBuilder.add_entries_to_all_events(entries)
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -840,9 +827,6 @@ def lldbLoggings():
                 'log enable failed (check GDB_REMOTE_LOG env variable)')
 
 
-def getMyCommandLine():
-    return ' '.join(sys.argv)
-
 # ======================================== #
 #                                          #
 # Execution of the test driver starts here #
@@ -1019,6 +1003,9 @@ def run_suite():
     # lldb.SBDebugger.Initialize()/Terminate() pair.
     import lldb
 
+    # Now we can also import lldbutil
+    from lldbsuite.test import lldbutil
+
     # Create a singleton SBDebugger in the lldb namespace.
     lldb.DBG = lldb.SBDebugger.Create()
 
@@ -1078,7 +1065,6 @@ def run_suite():
 
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
-    import lldbsuite.test.lldbutil as lldbutil
     build_dir = configuration.test_build_dir
     lldbutil.mkdir_p(build_dir)
 
@@ -1120,32 +1106,14 @@ def run_suite():
     # Install the control-c handler.
     unittest2.signals.installHandler()
 
-    # If sdir_name is not specified through the '-s sdir_name' option, get a
-    # timestamp string and export it as LLDB_SESSION_DIR environment var.  This will
-    # be used when/if we want to dump the session info of individual test cases
-    # later on.
-    #
-    # See also TestBase.dumpSessionInfo() in lldbtest.py.
-    import datetime
-    # The windows platforms don't like ':' in the pathname.
-    timestamp_started = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
-    if not configuration.sdir_name:
-        configuration.sdir_name = timestamp_started
-    os.environ["LLDB_SESSION_DIRNAME"] = os.path.join(
-        os.getcwd(), configuration.sdir_name)
+    lldbutil.mkdir_p(configuration.sdir_name)
+    os.environ["LLDB_SESSION_DIRNAME"] = configuration.sdir_name
 
     sys.stderr.write(
         "\nSession logs for test failures/errors/unexpected successes"
         " will go into directory '%s'\n" %
         configuration.sdir_name)
-    sys.stderr.write("Command invoked: %s\n" % getMyCommandLine())
-
-    if not os.path.isdir(configuration.sdir_name):
-        try:
-            os.mkdir(configuration.sdir_name)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
+    sys.stderr.write("Command invoked: %s\n" % get_dotest_invocation())
 
     #
     # Invoke the default TextTestRunner to run the test suite
