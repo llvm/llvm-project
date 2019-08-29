@@ -1416,30 +1416,6 @@ ClangASTContext::GetTranslationUnitDecl(clang::ASTContext *ast) {
   return ast->getTranslationUnitDecl();
 }
 
-CompilerType ClangASTContext::CopyType(const CompilerType &src) {
-  clang::ASTContext *dst_clang_ast = getASTContext();
-  if (dst_clang_ast) {
-    FileSystemOptions file_system_options;
-    ClangASTContext *src_ast =
-        llvm::dyn_cast_or_null<ClangASTContext>(src.GetTypeSystem());
-    if (src_ast) {
-      clang::ASTContext *src_clang_ast = src_ast->getASTContext();
-      if (src_clang_ast) {
-        if (src_clang_ast == dst_clang_ast)
-          return src; // We already are in the right AST, no need to copy
-        else {
-          FileManager file_manager(file_system_options);
-          ASTImporter importer(*dst_clang_ast, file_manager, *src_clang_ast,
-                               file_manager, false);
-          QualType dst_qual_type(importer.Import(ClangUtil::GetQualType(src)));
-          return CompilerType(this, dst_qual_type.getAsOpaquePtr());
-        }
-      }
-    }
-  }
-  return CompilerType();
-}
-
 clang::Decl *ClangASTContext::CopyDecl(ASTContext *dst_ast, ASTContext *src_ast,
                                        clang::Decl *source_decl) {
   FileSystemOptions file_system_options;
@@ -5067,15 +5043,6 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 CompilerType
 ClangASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return CompilerType(getASTContext(), GetQualType(type));
-}
-
-CompilerType ClangASTContext::RemoveFastQualifiers(const CompilerType &type) {
-  if (ClangUtil::IsClangType(type)) {
-    clang::QualType qual_type(ClangUtil::GetQualType(type));
-    qual_type.getQualifiers().removeFastQualifiers();
-    return CompilerType(type.GetTypeSystem(), qual_type.getAsOpaquePtr());
-  }
-  return type;
 }
 
 //----------------------------------------------------------------------
