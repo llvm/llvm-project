@@ -19,8 +19,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "UnwindDPU.h"
 #include "RegisterContextDPU.h"
+#include "UnwindDPU.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -29,8 +29,16 @@ UnwindDPU::UnwindDPU(Thread &thread) : Unwind(thread), m_frames() {}
 
 void UnwindDPU::DoClear() { m_frames.clear(); }
 
-void UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
+#define FORMAT_PC(pc) (0x80000000 | ((pc)*8))
+static bool PCIsValid(lldb::addr_t pc) {
+  return pc >= FORMAT_PC(0) && pc < FORMAT_PC(4 * 1024);
+}
+
+bool UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
                          lldb::addr_t pc) {
+  if (!PCIsValid(pc))
+    return false;
+
   CursorSP new_frame(new Cursor());
   RegisterContextDPUSP prev_reg_ctx_sp =
       *prev_frame != NULL ? (*prev_frame)->reg_ctx_sp : NULL;
@@ -41,14 +49,14 @@ void UnwindDPU::SetFrame(CursorSP *prev_frame, lldb::addr_t cfa,
   new_frame->reg_ctx_sp = new_reg_ctx_sp;
   m_frames.push_back(new_frame);
   *prev_frame = new_frame;
+
+  return true;
 }
 
 #define NB_FRAME_MAX (8 * 1024)
 #define WRAM_SIZE (64 * 1024)
 #define NB_INSTRUCTION_MAX (4 * 1024)
 #define STACK_BACKTRACE_STOP_VALUE (0xdb9)
-
-#define FORMAT_PC(pc) (0x80000000 | ((pc) * 8))
 
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
@@ -63,7 +71,9 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   CursorSP prev_frame = NULL;
   lldb::addr_t first_pc_addr = reg_pc.GetAsUInt32();
   lldb::addr_t first_r22_value = reg_r22.GetAsUInt32();
-  SetFrame(&prev_frame, first_r22_value, first_pc_addr);
+
+  if (!SetFrame(&prev_frame, first_r22_value, first_pc_addr))
+    return m_frames.size();
 
   Function *fct = NULL;
   lldb::addr_t start_addr = 0;
@@ -71,6 +81,11 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   prev_frame->reg_ctx_sp->GetFunction(&fct, first_pc_addr);
   if (fct != NULL) {
     start_addr = fct->GetAddressRange().GetBaseAddress().GetFileAddress();
+
+    // If the current function is __bootstrap, we can stop the unwinding
+    if (start_addr == FORMAT_PC(0))
+      return m_frames.size();
+
     // Check if we have the stack size save in the cfi information.
     // If we have it, use it to set the cfa in order to have it set to the right
     // value from the beginning so that comparison between frame always give the
@@ -97,7 +112,9 @@ uint32_t UnwindDPU::DoGetFrameCount() {
     RegisterValue reg_r23;
     reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r23"), reg_r23);
     prev_frame->cfa += (cfa_offset == 0 ? 1 : cfa_offset);
-    SetFrame(&prev_frame, first_r22_value, FORMAT_PC(reg_r23.GetAsUInt32()));
+    if (!SetFrame(&prev_frame, first_r22_value,
+                  FORMAT_PC(reg_r23.GetAsUInt32())))
+      return m_frames.size();
   }
 
   while (true) {
@@ -112,7 +129,8 @@ uint32_t UnwindDPU::DoGetFrameCount() {
         m_frames.size() > NB_FRAME_MAX)
       break;
 
-    SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr));
+    if (!SetFrame(&prev_frame, cfa_addr, FORMAT_PC(pc_addr)))
+      return m_frames.size();
   }
 
   return m_frames.size();

@@ -60,7 +60,7 @@ private:
   typedef std::shared_ptr<Cursor> CursorSP;
   std::vector<CursorSP> m_frames;
 
-  void SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc);
+  bool SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc);
 };
 } // namespace lldb_private
 #endif /* dpu_UnwindDPU_h_ */
