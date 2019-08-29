@@ -200,7 +200,7 @@ public:
                            CommentHandler *PragmaHandler)
       : COpts(std::move(COpts)), PragmaHandler(PragmaHandler) {}
 
-  clang::FrontendAction *create() override {
+  std::unique_ptr<FrontendAction> create() override {
     class IndexAction : public ASTFrontendAction {
     public:
       IndexAction(std::shared_ptr<index::IndexDataConsumer> DataConsumer,
@@ -232,7 +232,8 @@ public:
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
     Collector = std::make_shared<SymbolCollector>(COpts);
-    return new IndexAction(Collector, std::move(IndexOpts), PragmaHandler);
+    return std::make_unique<IndexAction>(Collector, std::move(IndexOpts),
+                                         PragmaHandler);
   }
 
   std::shared_ptr<SymbolCollector> Collector;
