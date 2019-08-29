@@ -1,6 +1,6 @@
-=======================================
-Clang 9.0.0 (In-Progress) Release Notes
-=======================================
+=========================
+Clang 9.0.0 Release Notes
+=========================
 
 .. contents::
    :local:
@@ -8,11 +8,6 @@ Clang 9.0.0 (In-Progress) Release Notes
 
 Written by the `LLVM Team <https://llvm.org/>`_
 
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 9 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -30,10 +25,6 @@ For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 `LLVM Web Site <https://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <https://llvm.org/releases/>`_.
 
 What's New in Clang 9.0.0?
 ==========================
@@ -48,12 +39,7 @@ Major New Features
 
 - Experimental support for :ref:`C++ for OpenCL <openclcpp>` has been
   added.
-- ...
 
-Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- ...
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -63,8 +49,6 @@ Non-comprehensive list of changes in this release
   compatibility with GCC 4.2.1, but that should no longer be necessary.
   However, to retrieve Clang's version, please favor the one of the macro
   defined in :ref:`clang namespaced version macros <languageextensions-builtin-macros>`.
-
-- ...
 
 
 New Compiler Flags
@@ -77,30 +61,12 @@ New Compiler Flags
   activities (file parsing, template instantiation) and backend activities
   (modules and functions being optimized, optimization passes).
 
-Deprecated Compiler Flags
--------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
-
-- ...
 
 Modified Compiler Flags
 -----------------------
 
 - ``clang -dumpversion`` now returns the version of Clang itself.
 
-- ...
-
-New Pragmas in Clang
---------------------
-
-- ...
-
-Attribute Changes in Clang
---------------------------
-
-- ...
 
 Windows Support
 ---------------
@@ -133,12 +99,6 @@ C Language Changes in Clang
   still a few unsupported corner cases in Clang's integrated assembler and
   IfConverter. Please file bugs for any issues you run into.
 
-- ...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------
@@ -151,12 +111,6 @@ C++ Language Changes in Clang
 
   (2) There is no address space deduction.
 
-- ...
-
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -252,10 +206,6 @@ Implemented features are:
 - Overloads with generic address space are added to all atomic
   builtin functions, including the ones prior to OpenCL v2.0.
 
-ABI Changes in Clang
---------------------
-
-- ...
 
 OpenMP Support in Clang
 -----------------------
@@ -295,12 +245,6 @@ release of Clang. Users of the build system should adjust accordingly.
   library instead of statically linking clang's components. This option will
   reduce the size of binary distributions at the expense of compiler performance.
 
-- ...
-
-AST Matchers
-------------
-
-- ...
 
 clang-format
 ------------
@@ -377,32 +321,6 @@ Static Analyzer
 
 - CTU now handles virtual functions as well.
 
-.. _release-notes-ubsan:
-
-Undefined Behavior Sanitizer (UBSan)
-------------------------------------
-
-- ...
-
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Linux Kernel
 ============
