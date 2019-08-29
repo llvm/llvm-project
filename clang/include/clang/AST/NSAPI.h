@@ -55,9 +55,6 @@ public:
   /// The Objective-C NSString selectors.
   Selector getNSStringSelector(NSStringMethodKind MK) const;
 
-  /// Return NSStringMethodKind if \param Sel is such a selector.
-  Optional<NSStringMethodKind> getNSStringMethodKind(Selector Sel) const;
-
   /// Returns true if the expression \param E is a reference of
   /// "NSUTF8StringEncoding" enum constant.
   bool isNSUTF8StringEncodingConstant(const Expr *E) const {

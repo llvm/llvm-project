@@ -24,6 +24,7 @@ void simple_good_end_negated(const std::vector<int> &v) {
 void simple_bad_end(const std::vector<int> &v) {
   auto i = v.end();
   *i; // expected-warning{{Past-the-end iterator dereferenced}}
+  clang_analyzer_warnIfReached();
 }
 
 void copy(const std::vector<int> &v) {

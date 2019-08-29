@@ -2480,10 +2480,8 @@ CFGBlock *CFGBuilder::VisitBreakStmt(BreakStmt *B) {
 
 static bool CanThrow(Expr *E, ASTContext &Ctx) {
   QualType Ty = E->getType();
-  if (Ty->isFunctionPointerType())
-    Ty = Ty->getAs<PointerType>()->getPointeeType();
-  else if (Ty->isBlockPointerType())
-    Ty = Ty->getAs<BlockPointerType>()->getPointeeType();
+  if (Ty->isFunctionPointerType() || Ty->isBlockPointerType())
+    Ty = Ty->getPointeeType();
 
   const FunctionType *FT = Ty->getAs<FunctionType>();
   if (FT) {
@@ -4906,9 +4904,13 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       while (const ArrayType *arrayType = astContext.getAsArrayType(ty)) {
         ty = arrayType->getElementType();
       }
-      const RecordType *recordType = ty->getAs<RecordType>();
-      const CXXRecordDecl *classDecl =
-      cast<CXXRecordDecl>(recordType->getDecl());
+
+      // The situation when the type of the lifetime-extending reference
+      // does not correspond to the type of the object is supposed
+      // to be handled by now. In particular, 'ty' is now the unwrapped
+      // record type.
+      const CXXRecordDecl *classDecl = ty->getAsCXXRecordDecl();
+      assert(classDecl);
       return classDecl->getDestructor();
     }
     case CFGElement::DeleteDtor: {
@@ -4931,12 +4933,6 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       return nullptr;
   }
   llvm_unreachable("getKind() returned bogus value");
-}
-
-bool CFGImplicitDtor::isNoReturn(ASTContext &astContext) const {
-  if (const CXXDestructorDecl *DD = getDestructorDecl(astContext))
-    return DD->isNoReturn();
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
