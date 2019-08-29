@@ -3448,17 +3448,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                   module, DataExtractor(data, block_offset, block_length),
                   die.GetCU());
             } else {
-              const DWARFDataExtractor &debug_loc_data = DebugLocData();
-              const dw_offset_t debug_loc_offset = form_value.Unsigned();
-
-              size_t loc_list_length = DWARFExpression::LocationListSize(
-                  die.GetCU(), debug_loc_data, debug_loc_offset);
-              if (loc_list_length > 0) {
-                location = DWARFExpression(module,
-                                           DataExtractor(debug_loc_data,
-                                                         debug_loc_offset,
-                                                         loc_list_length),
-                                           die.GetCU());
+              DataExtractor data = DebugLocData();
+              const dw_offset_t offset = form_value.Unsigned();
+              if (data.ValidOffset(offset)) {
+                data = DataExtractor(data, offset, data.GetByteSize() - offset);
+                location = DWARFExpression(module, data, die.GetCU());
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
                 location.SetLocationListSlide(
                     func_low_pc -
