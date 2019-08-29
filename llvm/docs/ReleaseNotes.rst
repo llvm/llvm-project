@@ -115,6 +115,26 @@ Noteworthy optimizations
            jmp     qword ptr [8*rax + .LJTI0_0]
 
 
+* LLVM can now sink similar instructions to a common successor block also when
+  the instructions have no uses, such as calls to void functions. This allows
+  code such as
+
+  .. code-block:: c
+
+   void g(int);
+   enum e { A, B, C, D };
+   void f(e x, int y, int z) {
+       switch(x) {
+           case A: g(6); break;
+           case B: g(3); break;
+           case C: g(9); break;
+           case D: g(2); break;
+       }
+   }
+
+  to be optimized to a single call to ``g``, with the argument loaded from a
+  lookup table.
+
 
 Changes to the LLVM IR
 ----------------------
