@@ -59,6 +59,12 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
+static cl::opt<bool> EnableSpillCFISavedRegs(
+  "amdgpu-spill-cfi-saved-regs",
+  cl::desc("Enable spilling the registers required for CFI emission"),
+  cl::ReallyHidden,
+  cl::init(false));
+
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   AMDGPURegisterInfo(),
   ST(ST),
@@ -115,6 +121,10 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   assert(SGPRSetID < NumRegPressureSets &&
          VGPRSetID < NumRegPressureSets &&
          AGPRSetID < NumRegPressureSets);
+}
+
+bool SIRegisterInfo::isCFISavedRegsSpillEnabled() const {
+    return EnableSpillCFISavedRegs;
 }
 
 unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
@@ -347,7 +357,7 @@ int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 }
 
 bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
-  if (!MI->mayLoadOrStore())
+  if (!SIInstrInfo::isMUBUF(*MI))
     return false;
 
   int64_t FullOffset = Offset + getMUBUFInstrOffset(MI);
@@ -1892,6 +1902,15 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
 unsigned SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
   // Not a callee saved register.
   return AMDGPU::SGPR30_SGPR31;
+}
+
+const unsigned *
+SIRegisterInfo::getCFISavedRegisters(const MachineFunction &MF) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  static const unsigned CFISavedRegisters[] = {
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, getReturnAddressReg(MF),
+      AMDGPU::NoRegister};
+  return CFISavedRegisters;
 }
 
 const TargetRegisterClass *

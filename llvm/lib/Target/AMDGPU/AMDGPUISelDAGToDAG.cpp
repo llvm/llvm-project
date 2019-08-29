@@ -151,6 +151,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void PreprocessISelDAG() override;
+  void EmitFunctionEntryCode() override;
   void Select(SDNode *N) override;
   StringRef getPassName() const override;
   void PostprocessISelDAG() override;
@@ -498,6 +499,37 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     LLVM_DEBUG(dbgs() << "After PreProcess:\n";
                CurDAG->dump(););
   }
+}
+
+void AMDGPUDAGToDAGISel::EmitFunctionEntryCode() {
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  // Spill the registers needed for efficient CFI emission.
+  // Only store them to the stack slots in the entry block
+  // and no need for restores.
+  if (TRI->isCFISavedRegsSpillEnabled() && !MFI->isEntryFunction()) {
+    const unsigned *CFISavedRegs = TRI->getCFISavedRegisters(*MF);
+    MachineBasicBlock &EntryBB = MF->front();
+    MachineBasicBlock::iterator MBBI = EntryBB.begin();
+    for (unsigned I = 0; CFISavedRegs[I]; ++I) {
+      Register Reg = CFISavedRegs[I];
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      int NewFI = MF->getFrameInfo().CreateStackObject(
+          TRI->getSpillSize(*RC), TRI->getSpillAlignment(*RC), true);
+      TII->storeRegToStackSlot(EntryBB, MBBI, Reg, false, NewFI, RC, TRI);
+
+      MachineInstr *Inst = &EntryBB.back();
+      Inst->setFlags(MachineInstr::FrameSetup);
+      // Mark the store as volatile to avoid further optimizations removing it.
+      MachineMemOperand *CurrentMemOp = *(Inst->memoperands_begin());
+      CurrentMemOp->setFlags(MachineMemOperand::MOVolatile);
+    }
+  }
+
+  return;
 }
 
 bool AMDGPUDAGToDAGISel::isNoNanSrc(SDValue N) const {
