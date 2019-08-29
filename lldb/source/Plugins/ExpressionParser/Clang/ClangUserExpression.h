@@ -105,6 +105,9 @@ public:
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   ///
+  /// \param[in] options
+  ///     Additional options for the expression.
+  ///
   /// \param[in] ctx_obj
   ///     The object (if any) in which context the expression
   ///     must be evaluated. For details see the comment to
