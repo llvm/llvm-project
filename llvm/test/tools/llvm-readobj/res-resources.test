@@ -5,7 +5,7 @@
 
 // RUN: llvm-readobj %p/Inputs/resources/test_resource.res | FileCheck %s
 
-// CHECK:  Resource type (int): 9
+// CHECK:  Resource type (int): ACCELERATOR (ID 9)
 // CHECK-NEXT:  Resource name (string): MYACCELERATORS
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x30
@@ -19,7 +19,7 @@
 // CHECK-NEXT:    0010: 82001200 BC010000                    |........|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 2
+// CHECK-DAG:  Resource type (int): BITMAP (ID 2)
 // CHECK-NEXT:  Resource name (string): CURSOR
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x30
@@ -82,7 +82,7 @@
 // CHECK-NEXT:    0320: FFFFFFFF FFFFFFFF                    |........|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 2
+// CHECK-DAG:  Resource type (int): BITMAP (ID 2)
 // CHECK-NEXT:  Resource name (string): OKAY
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x30
@@ -99,7 +99,7 @@
 // CHECK-NEXT:    0320: FFFFFFFF FFFFFFFF                    |........|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 4
+// CHECK-DAG:  Resource type (int): MENU (ID 4)
 // CHECK-NEXT:  Resource name (int): 14432
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x1030
@@ -114,7 +114,7 @@
 // CHECK-NEXT:    0020: 66006B00 61006F00 79006100 0000      |f.k.a.o.y.a...|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 5
+// CHECK-DAG:  Resource type (int): DIALOG (ID 5)
 // CHECK-NEXT:  Resource name (string): TESTDIALOG
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x1030
@@ -133,7 +133,7 @@
 // CHECK-NEXT:    0060: 80002600 4F004B00 00000000           |..&.O.K.....|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 9
+// CHECK-DAG:  Resource type (int): ACCELERATOR (ID 9)
 // CHECK-NEXT:  Resource name (int): 12
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x30
@@ -147,7 +147,7 @@
 // CHECK-NEXT:    0010: 82001200 BC010000                    |........|
 // CHECK-NEXT:  )
 
-// CHECK-DAG:  Resource type (int): 4
+// CHECK-DAG:  Resource type (int): MENU (ID 4)
 // CHECK-NEXT:  Resource name (string): "EAT"
 // CHECK-NEXT:  Data version: 0
 // CHECK-NEXT:  Memory flags: 0x1030

@@ -963,6 +963,12 @@ public:
                                     const DebugLoc &DL,
                                     unsigned DestReg) const;
 
+  MachineInstrBuilder getAddNoCarry(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I,
+                                    const DebugLoc &DL,
+                                    Register DestReg,
+                                    RegScavenger &RS) const;
+
   static bool isKillTerminator(unsigned Opcode);
   const MCInstrDesc &getKillTerminatorFromPseudo(unsigned Opcode) const;
 

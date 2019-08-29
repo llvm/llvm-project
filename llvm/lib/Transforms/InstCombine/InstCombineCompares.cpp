@@ -4981,9 +4981,9 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   // For scalars, SimplifyICmpInst should have already handled
   // the edge cases for us, so we just assert on them.
   // For vectors, we must handle the edge cases.
-  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+  if (isa<ConstantInt>(C)) {
     // A <= MAX -> TRUE ; A >= MIN -> TRUE
-    assert(ConstantIsOk(CI));
+    assert(ConstantIsOk(cast<ConstantInt>(C)));
   } else if (Type->isVectorTy()) {
     // TODO? If the edge cases for vectors were guaranteed to be handled as they
     // are for scalar, we could remove the min/max checks. However, to do that,

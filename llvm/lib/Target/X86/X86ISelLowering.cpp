@@ -33550,46 +33550,57 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // Attempt to merge insertps Op0 with an inner target shuffle node.
     SmallVector<int, 8> TargetMask0;
     SmallVector<SDValue, 2> Ops0;
-    if (!setTargetShuffleZeroElements(Op0, TargetMask0, Ops0))
-      return SDValue();
+    if (setTargetShuffleZeroElements(Op0, TargetMask0, Ops0)) {
+      bool Updated = false;
+      bool UseInput00 = false;
+      bool UseInput01 = false;
+      for (int i = 0; i != 4; ++i) {
+        int M = TargetMask0[i];
+        if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
+          // No change if element is already zero or the inserted element.
+          continue;
+        } else if (isUndefOrZero(M)) {
+          // If the target mask is undef/zero then we must zero the element.
+          InsertPSMask |= (1u << i);
+          Updated = true;
+          continue;
+        }
 
-    bool Updated = false;
-    bool UseInput00 = false;
-    bool UseInput01 = false;
-    for (int i = 0; i != 4; ++i) {
-      int M = TargetMask0[i];
-      if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
-        // No change if element is already zero or the inserted element.
-        continue;
-      } else if (isUndefOrZero(M)) {
-        // If the target mask is undef/zero then we must zero the element.
-        InsertPSMask |= (1u << i);
-        Updated = true;
-        continue;
+        // The input vector element must be inline.
+        if (M != i && M != (i + 4))
+          return SDValue();
+
+        // Determine which inputs of the target shuffle we're using.
+        UseInput00 |= (0 <= M && M < 4);
+        UseInput01 |= (4 <= M);
       }
 
-      // The input vector element must be inline.
-      if (M != i && M != (i + 4))
-        return SDValue();
+      // If we're not using both inputs of the target shuffle then use the
+      // referenced input directly.
+      if (UseInput00 && !UseInput01) {
+        Updated = true;
+        Op0 = Ops0[0];
+      } else if (!UseInput00 && UseInput01) {
+        Updated = true;
+        Op0 = Ops0[1];
+      }
 
-      // Determine which inputs of the target shuffle we're using.
-      UseInput00 |= (0 <= M && M < 4);
-      UseInput01 |= (4 <= M);
+      if (Updated)
+        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
+                           DAG.getConstant(InsertPSMask, DL, MVT::i8));
     }
 
-    // If we're not using both inputs of the target shuffle then use the
-    // referenced input directly.
-    if (UseInput00 && !UseInput01) {
-      Updated = true;
-      Op0 = Ops0[0];
-    } else if (!UseInput00 && UseInput01) {
-      Updated = true;
-      Op0 = Ops0[1];
-    }
-
-    if (Updated)
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
-                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+    // If we're inserting an element from a vbroadcast of a load, fold the
+    // load into the X86insertps instruction. We need to convert the scalar
+    // load to a vector and clear the source lane of the INSERTPS control.
+    if (Op1.getOpcode() == X86ISD::VBROADCAST && Op1.hasOneUse() &&
+        Op1.getOperand(0).hasOneUse() &&
+        !Op1.getOperand(0).getValueType().isVector() &&
+        ISD::isNormalLoad(Op1.getOperand(0).getNode()))
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0,
+                         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
+                                     Op1.getOperand(0)),
+                         DAG.getConstant(InsertPSMask & 0x3f, DL, MVT::i8));
 
     return SDValue();
   }
@@ -45784,8 +45795,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::FR64XRegClass);
         return std::make_pair(0U, &X86::FR64RegClass);
-      // TODO: Handle f128 and i128 in FR128RegClass after it is tested well.
-      // Vector types.
+      // TODO: Handle i128 in FR128RegClass after it is tested well.
+      // Vector types and fp128.
+      case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
       case MVT::v4i32:

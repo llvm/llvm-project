@@ -27,7 +27,7 @@
 ; RUN: llvm-rc /FO %t.nested-include.res -- %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
 
-FOUND:      Resource type (int): 2
+FOUND:      Resource type (int): BITMAP (ID 2)
 FOUND-NEXT: Resource name (string): FOO
 FOUND-NEXT: Data version: 0
 FOUND-NEXT: Memory flags: 0x30

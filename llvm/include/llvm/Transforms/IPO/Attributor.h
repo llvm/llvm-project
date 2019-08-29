@@ -643,8 +643,7 @@ struct Attributor {
   /// `getAAFor` to explicitly record true dependences through this method.
   void recordDependence(const AbstractAttribute &FromAA,
                         const AbstractAttribute &ToAA) {
-    QueryMap[const_cast<AbstractAttribute *>(&FromAA)].insert(
-        const_cast<AbstractAttribute *>(&ToAA));
+    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
   }
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
@@ -776,7 +775,7 @@ private:
   /// to the getAAFor<...>(...) method.
   ///{
   using QueryMapTy =
-      MapVector<AbstractAttribute *, SetVector<AbstractAttribute *>>;
+      MapVector<const AbstractAttribute *, SetVector<AbstractAttribute *>>;
   QueryMapTy QueryMap;
   ///}
 

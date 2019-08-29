@@ -1,4 +1,5 @@
 ; RUN: not llc %s -mtriple aarch64-unknown-unknown -debug-only=aarch64-call-lowering -global-isel -o - 2>&1 | FileCheck %s
+; REQUIRES: asserts
 
 ; CHECK: Cannot lower musttail calls yet.
 ; CHECK-NEXT: LLVM ERROR: unable to translate instruction: call (in function: foo)

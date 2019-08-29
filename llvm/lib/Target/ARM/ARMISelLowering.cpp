@@ -4818,7 +4818,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl);
+        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.
@@ -5062,7 +5062,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     DAG.getTargetLoweringInfo().softenSetCCOperands(
-        DAG, LHS.getValueType(), LHS, RHS, CC, dl);
+        DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
     // If softenSetCCOperands only returned one value, we should compare it to
     // zero.

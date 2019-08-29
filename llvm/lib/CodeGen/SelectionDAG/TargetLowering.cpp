@@ -127,12 +127,19 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   Args.reserve(Ops.size());
 
   TargetLowering::ArgListEntry Entry;
-  for (SDValue Op : Ops) {
-    Entry.Node = Op;
+  SDNode *N = CallOptions.NodeBeforeSoften;
+  for (unsigned i = 0; i < Ops.size(); ++i) {
+    SDValue NewOp = Ops[i];
+    Entry.Node = NewOp;
     Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(),
+    Entry.IsSExt = shouldSignExtendTypeInLibCall(NewOp.getValueType(),
                                                  CallOptions.IsSExt);
     Entry.IsZExt = !Entry.IsSExt;
+
+    SDValue OldOp = N ? N->getOperand(i) : NewOp;
+    if (!shouldExtendTypeInLibCall(OldOp.getValueType())) {
+      Entry.IsSExt = Entry.IsZExt = false;
+    }
     Args.push_back(Entry);
   }
 
@@ -144,6 +151,13 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
   bool signExtend = shouldSignExtendTypeInLibCall(RetVT, CallOptions.IsSExt);
+  bool zeroExtend = !signExtend;
+
+  RetVT = N ? N->getValueType(0) : RetVT;
+  if (!shouldExtendTypeInLibCall(RetVT)) {
+    signExtend = zeroExtend = false;
+  }
+
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
       .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
@@ -151,7 +165,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
       .setSExtResult(signExtend)
-      .setZExtResult(!signExtend);
+      .setZExtResult(zeroExtend);
   return LowerCallTo(CLI);
 }
 
@@ -262,7 +276,8 @@ TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
-                                         const SDLoc &dl) const {
+                                         const SDLoc &dl, const SDValue OldLHS,
+                                         const SDValue OldRHS) const {
   assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 || VT == MVT::ppcf128)
          && "Unsupported setcc type!");
 
@@ -364,7 +379,12 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   // Use the target specific return value for comparions lib calls.
   EVT RetVT = getCmpLibcallReturnType();
   SDValue Ops[2] = {NewLHS, NewRHS};
+  SDValue OldSETCC = DAG.getNode(
+      ISD::SETCC, dl,
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
+      OldLHS, OldRHS, DAG.getCondCode(CCCode));
   TargetLowering::MakeLibCallOptions CallOptions;
+  CallOptions.setNodeBeforeSoften(OldSETCC.getNode());
   NewLHS = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl).first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 

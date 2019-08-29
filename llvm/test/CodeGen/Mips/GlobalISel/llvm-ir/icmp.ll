@@ -164,8 +164,6 @@ define i1 @eq_i64(i64 %a, i64 %b){
 ; MIPS32-NEXT:    xor $1, $4, $6
 ; MIPS32-NEXT:    xor $2, $5, $7
 ; MIPS32-NEXT:    or $1, $1, $2
-; MIPS32-NEXT:    ori $2, $zero, 0
-; MIPS32-NEXT:    xor $1, $1, $2
 ; MIPS32-NEXT:    sltiu $2, $1, 1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -180,8 +178,6 @@ define i1 @ne_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    xor $1, $4, $6
 ; MIPS32-NEXT:    xor $2, $5, $7
 ; MIPS32-NEXT:    or $1, $1, $2
-; MIPS32-NEXT:    ori $2, $zero, 0
-; MIPS32-NEXT:    xor $1, $1, $2
 ; MIPS32-NEXT:    sltu $2, $zero, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

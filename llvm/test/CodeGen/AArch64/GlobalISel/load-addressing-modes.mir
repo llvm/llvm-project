@@ -286,8 +286,9 @@ body:             |
     ; CHECK-LABEL: name: mul_not_pow_2
     ; CHECK: liveins: $x0, $x1, $d2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 7
-    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[MOVi64imm]], [[COPY]], $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 7
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
     ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load 8 from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
@@ -317,8 +318,9 @@ body:             |
     ; CHECK-LABEL: name: mul_wrong_pow_2
     ; CHECK: liveins: $x0, $x1, $d2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 16
-    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[MOVi64imm]], [[COPY]], $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 16
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
     ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load 8 from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]

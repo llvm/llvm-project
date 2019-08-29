@@ -527,6 +527,7 @@ public:
 
   /// Load the coverage mapping from the given object files and profile. If
   /// \p Arches is non-empty, it must specify an architecture for each object.
+  /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
        ArrayRef<StringRef> Arches = None);
