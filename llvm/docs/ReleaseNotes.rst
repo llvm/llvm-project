@@ -5,12 +5,6 @@ LLVM 9.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 9 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
-
 Introduction
 ============
 
@@ -26,19 +20,9 @@ have questions or comments, the `LLVM Developer's Mailing List
 <https://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
-Note that if you are reading this file from a Subversion checkout or the main
-LLVM web page, this document applies to the *next* release, not the current
-one.  To see the release notes for a specific release, please see the `releases
-page <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
 
 * The optimizer will now convert calls to ``memcmp`` into a calls to ``bcmp`` in
   some circumstances. Users who are building freestanding code (not depending on
@@ -63,15 +47,6 @@ Non-comprehensive list of changes in this release
 * Support for target-independent hardware loops in IR has been added, with
   PowerPC and Arm implementations.
 
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
 
 Noteworthy optimizations
 ------------------------
@@ -83,7 +58,7 @@ Noteworthy optimizations
   behavior, but up until now had not been actively utilized for optimization
   purposes in this exact way.  For more information, please see:
   `bug 42763 <https://bugs.llvm.org/show_bug.cgi?id=42763>_` and
-  `post commit discussion <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20190422/646945.html>_`.  
+  `post commit discussion <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20190422/646945.html>_`.
 
 * LLVM will now pattern match wide scalar values stored by a succession of
   narrow stores. For example, Clang will compile the following function that
@@ -279,7 +254,7 @@ Changes to the X86 Target
 * Fixed a bug in generating DWARF unwind information for 32 bit MinGW
 
 Changes to the AMDGPU Target
------------------------------
+----------------------------
 
 * Function call support is now enabled by default
 
@@ -289,18 +264,9 @@ Changes to the AMDGPU Target
 
 * Support for gfx10
 
-Changes to the AVR Target
------------------------------
-
- During this release ...
-
-Changes to the WebAssembly Target
----------------------------------
-
- During this release ...
 
 Changes to the RISCV Target
----------------------------------
+---------------------------
 
 The RISCV target is no longer "experimental"! It's now built by default,
 rather than needing to be enabled with ``LLVM_EXPERIMENTAL_TARGETS_TO_BUILD``.
@@ -311,18 +277,6 @@ hard and soft-float ABIs for these targets. Testing has been performed with
 both Linux and bare-metal targets, including the compilation of a large corpus
 of Linux applications (through buildroot).
 
-
-Changes to the OCaml bindings
------------------------------
-
-
-
-Changes to the C API
---------------------
-
-
-Changes to the DAG infrastructure
----------------------------------
 
 Changes to LLDB
 ===============
