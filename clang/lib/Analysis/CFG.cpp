@@ -2988,9 +2988,8 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
 
   // Visit children
   if (ReturnStmt *RS = dyn_cast<ReturnStmt>(S)) {
-    Expr *O = RS->getRetValue();
-    if (O)
-      Visit(O, AddStmtChoice::AlwaysAdd, /*ExternallyDestructed=*/true);
+    if (Expr *O = RS->getRetValue())
+      return Visit(O, AddStmtChoice::AlwaysAdd, /*ExternallyDestructed=*/true);
     return Block;
   } else { // co_return
     return VisitChildren(S);

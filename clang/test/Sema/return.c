@@ -328,3 +328,14 @@ int sizeof_long() {
   if (sizeof(long) == 8)
     return 2;
 } // no-warning
+
+int return_statement_expression() {
+  if (unknown())
+    return ({
+      while (0)
+        ;
+      0;
+    });
+  else
+    return 0;
+} // no-warning (used to be "control may reach end of non-void function")
