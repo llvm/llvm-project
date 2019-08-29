@@ -2708,29 +2708,6 @@ bool DWARFExpression::Evaluate(
   return true; // Return true on success
 }
 
-size_t DWARFExpression::LocationListSize(const DWARFUnit *dwarf_cu,
-                                         const DataExtractor &debug_loc_data,
-                                         lldb::offset_t offset) {
-  const lldb::offset_t debug_loc_offset = offset;
-  while (debug_loc_data.ValidOffset(offset)) {
-    lldb::addr_t start_addr = LLDB_INVALID_ADDRESS;
-    lldb::addr_t end_addr = LLDB_INVALID_ADDRESS;
-    if (!AddressRangeForLocationListEntry(dwarf_cu, debug_loc_data, &offset,
-                                          start_addr, end_addr))
-      break;
-
-    if (start_addr == 0 && end_addr == 0)
-      break;
-
-    uint16_t loc_length = debug_loc_data.GetU16(&offset);
-    offset += loc_length;
-  }
-
-  if (offset > debug_loc_offset)
-    return offset - debug_loc_offset;
-  return 0;
-}
-
 bool DWARFExpression::AddressRangeForLocationListEntry(
     const DWARFUnit *dwarf_cu, const DataExtractor &debug_loc_data,
     lldb::offset_t *offset_ptr, lldb::addr_t &low_pc, lldb::addr_t &high_pc) {

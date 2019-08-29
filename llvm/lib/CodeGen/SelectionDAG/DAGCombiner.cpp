@@ -7067,25 +7067,25 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are setcc
   if (isOneConstant(N1) && VT == MVT::i1 && N0.hasOneUse() &&
       (N0Opcode == ISD::OR || N0Opcode == ISD::AND)) {
-    SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
-    if (isOneUseSetCC(RHS) || isOneUseSetCC(LHS)) {
+    SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
+    if (isOneUseSetCC(N01) || isOneUseSetCC(N00)) {
       unsigned NewOpcode = N0Opcode == ISD::AND ? ISD::OR : ISD::AND;
-      LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
-      RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
-      AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
-      return DAG.getNode(NewOpcode, DL, VT, LHS, RHS);
+      N00 = DAG.getNode(ISD::XOR, SDLoc(N00), VT, N00, N1); // N00 = ~N00
+      N01 = DAG.getNode(ISD::XOR, SDLoc(N01), VT, N01, N1); // N01 = ~N01
+      AddToWorklist(N00.getNode()); AddToWorklist(N01.getNode());
+      return DAG.getNode(NewOpcode, DL, VT, N00, N01);
     }
   }
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are constants
   if (isAllOnesConstant(N1) && N0.hasOneUse() &&
       (N0Opcode == ISD::OR || N0Opcode == ISD::AND)) {
-    SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
-    if (isa<ConstantSDNode>(RHS) || isa<ConstantSDNode>(LHS)) {
+    SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
+    if (isa<ConstantSDNode>(N01) || isa<ConstantSDNode>(N00)) {
       unsigned NewOpcode = N0Opcode == ISD::AND ? ISD::OR : ISD::AND;
-      LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
-      RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
-      AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
-      return DAG.getNode(NewOpcode, DL, VT, LHS, RHS);
+      N00 = DAG.getNode(ISD::XOR, SDLoc(N00), VT, N00, N1); // N00 = ~N00
+      N01 = DAG.getNode(ISD::XOR, SDLoc(N01), VT, N01, N1); // N01 = ~N01
+      AddToWorklist(N00.getNode()); AddToWorklist(N01.getNode());
+      return DAG.getNode(NewOpcode, DL, VT, N00, N01);
     }
   }
 
@@ -16430,12 +16430,52 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
 }
 
 /// Convert a disguised subvector insertion into a shuffle:
-/// insert_vector_elt V, (bitcast X from vector type), IdxC -->
-/// bitcast(shuffle (bitcast V), (extended X), Mask)
-/// Note: We do not use an insert_subvector node because that requires a legal
-/// subvector type.
 SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
   SDValue InsertVal = N->getOperand(1);
+  SDValue Vec = N->getOperand(0);
+
+  // (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N), InsIndex)
+  //   --> (vector_shuffle X, Y)
+  if (Vec.getOpcode() == ISD::VECTOR_SHUFFLE && Vec.hasOneUse() &&
+      InsertVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isa<ConstantSDNode>(InsertVal.getOperand(1))) {
+    ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Vec.getNode());
+    ArrayRef<int> Mask = SVN->getMask();
+
+    SDValue X = Vec.getOperand(0);
+    SDValue Y = Vec.getOperand(1);
+
+    // Vec's operand 0 is using indices from 0 to N-1 and
+    // operand 1 from N to 2N - 1, where N is the number of
+    // elements in the vectors.
+    int XOffset = -1;
+    if (InsertVal.getOperand(0) == X) {
+      XOffset = 0;
+    } else if (InsertVal.getOperand(0) == Y) {
+      XOffset = X.getValueType().getVectorNumElements();
+    }
+
+    if (XOffset != -1) {
+      SmallVector<int, 16> NewMask(Mask.begin(), Mask.end());
+
+      auto *ExtrIndex = cast<ConstantSDNode>(InsertVal.getOperand(1));
+      NewMask[InsIndex] = XOffset + ExtrIndex->getZExtValue();
+      assert(NewMask[InsIndex] <
+                 (int)(2 * Vec.getValueType().getVectorNumElements()) &&
+             NewMask[InsIndex] >= 0 && "NewMask[InsIndex] is out of bound");
+
+      SDValue LegalShuffle =
+              TLI.buildLegalVectorShuffle(Vec.getValueType(), SDLoc(N), X,
+                                          Y, NewMask, DAG);
+      if (LegalShuffle)
+        return LegalShuffle;
+    }
+  }
+
+  // insert_vector_elt V, (bitcast X from vector type), IdxC -->
+  // bitcast(shuffle (bitcast V), (extended X), Mask)
+  // Note: We do not use an insert_subvector node because that requires a
+  // legal subvector type.
   if (InsertVal.getOpcode() != ISD::BITCAST || !InsertVal.hasOneUse() ||
       !InsertVal.getOperand(0).getValueType().isVector())
     return SDValue();

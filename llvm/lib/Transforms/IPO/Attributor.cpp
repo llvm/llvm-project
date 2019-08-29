@@ -428,16 +428,16 @@ void IRPosition::verify() {
     assert(KindOrArgNo >= 0 && "Expected argument or call site argument!");
     assert((isa<CallBase>(AnchorVal) || isa<Argument>(AnchorVal)) &&
            "Expected call base or argument for positive attribute index!");
-    if (auto *Arg = dyn_cast<Argument>(AnchorVal)) {
-      assert(Arg->getArgNo() == unsigned(getArgNo()) &&
+    if (isa<Argument>(AnchorVal)) {
+      assert(cast<Argument>(AnchorVal)->getArgNo() == unsigned(getArgNo()) &&
              "Argument number mismatch!");
-      assert(Arg == &getAssociatedValue() && "Associated value mismatch!");
+      assert(cast<Argument>(AnchorVal) == &getAssociatedValue() &&
+             "Associated value mismatch!");
     } else {
-      auto &CB = cast<CallBase>(*AnchorVal);
-      (void)CB;
-      assert(CB.arg_size() > unsigned(getArgNo()) &&
+      assert(cast<CallBase>(*AnchorVal).arg_size() > unsigned(getArgNo()) &&
              "Call site argument number mismatch!");
-      assert(CB.getArgOperand(getArgNo()) == &getAssociatedValue() &&
+      assert(cast<CallBase>(*AnchorVal).getArgOperand(getArgNo()) ==
+                 &getAssociatedValue() &&
              "Associated value mismatch!");
     }
     break;

@@ -1898,9 +1898,7 @@ define <4 x i32> @larger_mul(<16 x i16> %A, <16 x i16> %B) {
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX512-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrd $3, %xmm2, %eax

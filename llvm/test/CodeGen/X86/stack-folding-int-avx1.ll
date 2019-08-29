@@ -540,8 +540,8 @@ define <16 x i8> @stack_fold_pandn(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
