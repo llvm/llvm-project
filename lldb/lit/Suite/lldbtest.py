@@ -104,8 +104,8 @@ class LLDBTest(TestFormat):
 
         passing_test_line = 'RESULT: PASSED'
         if passing_test_line not in out and passing_test_line not in err:
-            msg = ('Unable to find %r in dotest output:\n\n%s%s' %
-                   (passing_test_line, out, err))
+            msg = ('Unable to find %r in dotest output (exit code %d):\n\n%s%s'
+                   % (passing_test_line, exitCode, out, err))
             return lit.Test.UNRESOLVED, msg
 
         return lit.Test.PASS, ''
