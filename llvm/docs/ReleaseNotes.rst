@@ -85,6 +85,36 @@ Noteworthy optimizations
   `bug 42763 <https://bugs.llvm.org/show_bug.cgi?id=42763>_` and
   `post commit discussion <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20190422/646945.html>_`.  
 
+* LLVM will now omit range checks for jump tables when lowering switches with
+  unreachable default destination. For example, the switch dispatch in the C++
+  code below
+
+  .. code-block:: c
+
+     int g(int);
+     enum e { A, B, C, D, E };
+     int f(e x, int y, int z) {
+         switch(x) {
+             case A: return g(y);
+             case B: return g(z);
+             case C: return g(y+z);
+             case D: return g(x-z);
+             case E: return g(x+z);
+         }
+     }
+
+  will result in the following x86_64 machine code when compiled with Clang.
+  This is because falling off the end of a non-void function is undefined
+  behaviour in C++, and the end of the function therefore being treated as
+  unreachable:
+
+  .. code-block:: asm
+
+   _Z1f1eii:
+           mov     eax, edi
+           jmp     qword ptr [8*rax + .LJTI0_0]
+
+
 
 Changes to the LLVM IR
 ----------------------
