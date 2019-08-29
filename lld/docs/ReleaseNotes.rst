@@ -5,11 +5,6 @@ lld 9.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 9.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -36,8 +31,6 @@ ELF Improvements
 * Put MIPS-specific .reginfo, .MIPS.options, and .MIPS.abiflags sections
   into corresponding PT_MIPS_REGINFO, PT_MIPS_OPTIONS, and PT_MIPS_ABIFLAGS
   segments.
-
-* ...
 
 COFF Improvements
 -----------------
@@ -76,8 +69,6 @@ COFF Improvements
 * The generated thunks for delayimports now share the majority of code
   among thunks, significantly reducing the overhead of using delayimport
 
-* ...
-
 MinGW Improvements
 ------------------
 
@@ -95,13 +86,3 @@ MinGW Improvements
   name, with the new option ``-pdb=`` with an empty value to the option.
   (The old existing syntax ``-pdb <filename>`` was more cumbersome to use
   with an empty parameter value.)
-
-MachO Improvements
-------------------
-
-* Item 1.
-
-WebAssembly Improvements
-------------------------
-
-* ...
