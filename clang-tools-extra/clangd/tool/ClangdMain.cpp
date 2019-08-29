@@ -122,8 +122,7 @@ opt<bool> ShowOrigins{
 opt<bool> EnableBackgroundIndex{
     "background-index",
     cat(Features),
-    desc("Index project code in the background and persist index on disk. "
-         "Experimental"),
+    desc("Index project code in the background and persist index on disk."),
     init(true),
 };
 
