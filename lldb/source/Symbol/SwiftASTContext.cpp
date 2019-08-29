@@ -27,6 +27,7 @@
 #include "swift/AST/DiagnosticsSema.h"
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/GenericSignature.h"
+#include "swift/AST/ImportCache.h"
 #include "swift/AST/IRGenOptions.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
@@ -4010,11 +4011,9 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
         all_dlopen_errors.GetData());
   };
 
-  swift_module->forAllVisibleModules(
-      {}, [&](swift::ModuleDecl::ImportedModule import) {
-        import.second->collectLinkLibraries(addLinkLibrary);
-        return true;
-      });
+  for (auto import : swift::namelookup::getAllImports(swift_module)) {
+    import.second->collectLinkLibraries(addLinkLibrary);
+  }
   error = current_error;
 }
 

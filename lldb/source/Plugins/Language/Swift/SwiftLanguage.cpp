@@ -35,6 +35,7 @@
 #include <functional>
 #include <mutex>
 
+#include "swift/AST/ImportCache.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
@@ -1270,59 +1271,53 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
 
                 swift::ModuleDecl::AccessPathTy access_path;
 
-                module->forAllVisibleModules(
-                    access_path,
-                    [&ast_ctx, input, name_parts, &results](
-                        swift::ModuleDecl::ImportedModule imported_module)
-                        -> bool {
-                      auto module = imported_module.second;
-                      TypesOrDecls local_results;
-                      ast_ctx->FindTypesOrDecls(input, module, local_results,
-                                                false);
-                      llvm::Optional<TypeOrDecl> candidate;
-                      if (local_results.empty() && name_parts.size() > 1) {
-                        size_t idx_of_deeper = 1;
-                        // if you're looking for Swift.Int in module Swift, try
-                        // looking for Int
-                        if (name_parts.front() == module->getName().str()) {
-                          candidate = ast_ctx->FindTypeOrDecl(
-                              name_parts[1].str().c_str(), module);
-                          idx_of_deeper = 2;
+                for (auto imported_module : swift::namelookup::getAllImports(module)) {
+                  auto module = imported_module.second;
+                  TypesOrDecls local_results;
+                  ast_ctx->FindTypesOrDecls(input, module, local_results,
+                                            false);
+                  llvm::Optional<TypeOrDecl> candidate;
+                  if (local_results.empty() && name_parts.size() > 1) {
+                    size_t idx_of_deeper = 1;
+                    // if you're looking for Swift.Int in module Swift, try
+                    // looking for Int
+                    if (name_parts.front() == module->getName().str()) {
+                      candidate = ast_ctx->FindTypeOrDecl(
+                          name_parts[1].str().c_str(), module);
+                      idx_of_deeper = 2;
+                    }
+                    // this is probably the top-level name of a nested type
+                    // String.UTF8View
+                    else {
+                      candidate = ast_ctx->FindTypeOrDecl(
+                          name_parts[0].str().c_str(), module);
+                    }
+                    if (candidate.hasValue()) {
+                      TypesOrDecls candidates{candidate.getValue()};
+                      for (; idx_of_deeper < name_parts.size();
+                           idx_of_deeper++) {
+                        TypesOrDecls new_candidates;
+                        for (auto candidate : candidates) {
+                          ast_ctx->FindContainedTypeOrDecl(
+                              name_parts[idx_of_deeper], candidate,
+                              new_candidates);
                         }
-                        // this is probably the top-level name of a nested type
-                        // String.UTF8View
-                        else {
-                          candidate = ast_ctx->FindTypeOrDecl(
-                              name_parts[0].str().c_str(), module);
-                        }
-                        if (candidate.hasValue()) {
-                          TypesOrDecls candidates{candidate.getValue()};
-                          for (; idx_of_deeper < name_parts.size();
-                               idx_of_deeper++) {
-                            TypesOrDecls new_candidates;
-                            for (auto candidate : candidates) {
-                              ast_ctx->FindContainedTypeOrDecl(
-                                  name_parts[idx_of_deeper], candidate,
-                                  new_candidates);
-                            }
-                            candidates = new_candidates;
-                          }
-                          for (auto candidate : candidates) {
-                            if (candidate)
-                              results.insert(candidate);
-                          }
-                        }
-                      } else if (local_results.size() > 0) {
-                        for (const auto &result : local_results)
-                          results.insert(result);
-                      } else if (local_results.empty() && module &&
-                                 name_parts.size() == 1 &&
-                                 name_parts.front() == module->getName().str())
-                        results.insert(
-                            CompilerType(swift::ModuleType::get(module)));
-                      return true;
-                    });
-
+                        candidates = new_candidates;
+                      }
+                      for (auto candidate : candidates) {
+                        if (candidate)
+                          results.insert(candidate);
+                      }
+                    }
+                  } else if (local_results.size() > 0) {
+                    for (const auto &result : local_results)
+                      results.insert(result);
+                  } else if (local_results.empty() && module &&
+                             name_parts.size() == 1 &&
+                             name_parts.front() == module->getName().str())
+                    results.insert(
+                        CompilerType(swift::ModuleType::get(module)));
+                }
               };
 
               for (; iter != end; iter++)
