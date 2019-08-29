@@ -150,8 +150,13 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero = KnownZeroOut;
     break;
   }
-  // G_GEP is like G_ADD. FIXME: Is this true for all targets?
-  case TargetOpcode::G_GEP:
+  case TargetOpcode::G_GEP: {
+    // G_GEP is like G_ADD. FIXME: Is this true for all targets?
+    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+    if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case TargetOpcode::G_ADD: {
     // Output known-0 bits are known if clear or set in both the low clear bits
     // common to both LHS & RHS.  For example, 8+(X<<3) is known to have the

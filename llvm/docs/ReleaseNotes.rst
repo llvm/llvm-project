@@ -98,6 +98,10 @@ Changes to the AVR Target
 
  During this release ...
 
+* Deprecated the mpx feature flag for the Intel MPX instructions. There were no
+  intrinsics for this feature. This change only this effects the results
+  returned by getHostCPUFeatures on CPUs that implement the MPX instructions.
+
 Changes to the WebAssembly Target
 ---------------------------------
 
