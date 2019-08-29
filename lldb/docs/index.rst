@@ -15,7 +15,7 @@ Objective-C and C++ on the desktop and iOS devices and simulator.
 All of the code in the LLDB project is available under the
 `"Apache 2.0 License with LLVM exceptions"`_.
 
-.. _"Apache 2.0 License with LLVM exceptions": http://llvm.org/docs/DeveloperPolicy.html#new-llvm-project-license-framework
+.. _"Apache 2.0 License with LLVM exceptions": https://llvm.org/docs/DeveloperPolicy.html#new-llvm-project-license-framework
 
 Why a New Debugger?
 -------------------
@@ -159,6 +159,6 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: External Links
 
-   Source Code <http://llvm.org/viewvc/llvm-project/lldb/trunk/>
+   Source Code <https://llvm.org/viewvc/llvm-project/lldb/trunk/>
    Code Reviews <https://reviews.llvm.org>
    Bug Reports <https://bugs.llvm.org/>
