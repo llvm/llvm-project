@@ -8,6 +8,7 @@ def dpu_attach(debugger, command, result, internal_dict):
   '''
   target = debugger.GetSelectedTarget()
   dpu = target.GetProcess().GetSelectedThread().GetSelectedFrame().FindVariable(command)
+  assert dpu.IsValid()
 
   slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
   dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
@@ -35,9 +36,11 @@ def dpu_attach(debugger, command, result, internal_dict):
   subprocess.Popen(['lldb-server-dpu', 'gdbserver', '--attach', str(pid), ':2066'], env=lldb_server_dpu_env)
 
   target_dpu = debugger.CreateTargetWithFileAndTargetTriple(program_path, "dpu-upmem-dpurte")
+  assert dpu.IsValid()
 
   listener = debugger.GetListener()
   error = lldb.SBError()
-  target_dpu.ConnectRemote(listener, "connect://localhost:2066", "gdb-remote", error)
+  process_dpu = target_dpu.ConnectRemote(listener, "connect://localhost:2066", "gdb-remote", error)
+  assert process_dpu.IsValid()
 
   debugger.SetSelectedTarget(target_dpu)
