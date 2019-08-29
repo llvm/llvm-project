@@ -201,30 +201,30 @@ public:
       : COpts(std::move(COpts)), PragmaHandler(PragmaHandler) {}
 
   clang::FrontendAction *create() override {
-    class WrappedIndexAction : public WrapperFrontendAction {
+    class IndexAction : public ASTFrontendAction {
     public:
-      WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
-                         const index::IndexingOptions &Opts,
-                         CommentHandler *PragmaHandler)
-          : WrapperFrontendAction(
-                index::createIndexingAction(C, Opts, nullptr)),
+      IndexAction(std::shared_ptr<index::IndexDataConsumer> DataConsumer,
+                  const index::IndexingOptions &Opts,
+                  CommentHandler *PragmaHandler)
+          : DataConsumer(std::move(DataConsumer)), Opts(Opts),
             PragmaHandler(PragmaHandler) {}
 
       std::unique_ptr<ASTConsumer>
       CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
         if (PragmaHandler)
           CI.getPreprocessor().addCommentHandler(PragmaHandler);
-        return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
+        return createIndexingASTConsumer(DataConsumer, Opts, CI.getPreprocessorPtr());
       }
 
       bool BeginInvocation(CompilerInstance &CI) override {
         // Make the compiler parse all comments.
         CI.getLangOpts().CommentOpts.ParseAllComments = true;
-        return WrapperFrontendAction::BeginInvocation(CI);
+        return true;
       }
 
     private:
-      index::IndexingOptions IndexOpts;
+      std::shared_ptr<index::IndexDataConsumer> DataConsumer;
+      index::IndexingOptions Opts;
       CommentHandler *PragmaHandler;
     };
     index::IndexingOptions IndexOpts;
@@ -232,8 +232,7 @@ public:
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
     Collector = std::make_shared<SymbolCollector>(COpts);
-    return new WrappedIndexAction(Collector, std::move(IndexOpts),
-                                  PragmaHandler);
+    return new IndexAction(Collector, std::move(IndexOpts), PragmaHandler);
   }
 
   std::shared_ptr<SymbolCollector> Collector;
