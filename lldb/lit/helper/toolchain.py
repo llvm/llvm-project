@@ -104,6 +104,9 @@ def use_support_substitutions(config):
         flags += ['-L' + config.llvm_libs_dir,
                   '-Wl,-rpath,' + config.llvm_libs_dir]
 
+    # The clang module cache is used for building inferiors.
+    flags += ['-fmodules-cache-path={}'.format(config.clang_module_cache)]
+
     additional_tool_dirs=[]
     if config.lldb_lit_tools_dir:
         additional_tool_dirs.append(config.lldb_lit_tools_dir)
