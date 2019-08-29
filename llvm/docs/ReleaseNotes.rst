@@ -60,6 +60,9 @@ Non-comprehensive list of changes in this release
 * The ORCv1 JIT API has been deprecated. Please see
   `Transitioning from ORCv1 to ORCv2 <ORCv2.html#transitioning-from-orcv1-to-orcv2>`_.
 
+* Support for target-independent hardware loops in IR has been added, with
+  PowerPC and Arm implementations.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -125,6 +128,8 @@ Changes to the ARM Backend
 * A pipeline model was added for Cortex-M4. This pipeline model is also used to
   tune for cores where this gives a benefit too: Cortex-M3, SC300, Cortex-M33
   and Cortex-M35P.
+
+* Code generation support for M-profile low-overhead loops.
 
 
 Changes to the MIPS Target
