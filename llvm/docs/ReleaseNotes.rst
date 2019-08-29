@@ -24,22 +24,18 @@ them.
 Non-comprehensive list of changes in this release
 =================================================
 
-* The optimizer will now convert calls to ``memcmp`` into a calls to ``bcmp`` in
-  some circumstances. Users who are building freestanding code (not depending on
-  the platform's libc) without specifying ``-ffreestanding`` may need to either
-  pass ``-fno-builtin-bcmp``, or provide a ``bcmp`` function.
-
 * Two new extension points, namely ``EP_FullLinkTimeOptimizationEarly`` and
   ``EP_FullLinkTimeOptimizationLast`` are available for plugins to specialize
   the legacy pass manager full LTO pipeline.
 
-* **llvm-objcopy/llvm-strip** got support for COFF object files/executables,
+* ``llvm-objcopy/llvm-strip`` got support for COFF object files/executables,
   supporting the most common copying/stripping options.
 
 * The CMake parameter ``CLANG_ANALYZER_ENABLE_Z3_SOLVER`` has been replaced by
   ``LLVM_ENABLE_Z3_SOLVER``.
 
-* The RISCV target is no longer "experimental" (see below for more details).
+* The RISCV target is no longer "experimental" (see
+  `Changes to the RISCV Target`_ below for more details).
 
 * The ORCv1 JIT API has been deprecated. Please see
   `Transitioning from ORCv1 to ORCv2 <ORCv2.html#transitioning-from-orcv1-to-orcv2>`_.
@@ -57,8 +53,13 @@ Noteworthy optimizations
   able to cast away 'const'.  This is (and has always been) undefined
   behavior, but up until now had not been actively utilized for optimization
   purposes in this exact way.  For more information, please see:
-  `bug 42763 <https://bugs.llvm.org/show_bug.cgi?id=42763>_` and
-  `post commit discussion <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20190422/646945.html>_`.
+  `bug 42763 <https://bugs.llvm.org/show_bug.cgi?id=42763>`_ and
+  `post commit discussion <http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20190422/646945.html>`_.
+
+* The optimizer will now convert calls to ``memcmp`` into a calls to ``bcmp`` in
+  some circumstances. Users who are building freestanding code (not depending on
+  the platform's libc) without specifying ``-ffreestanding`` may need to either
+  pass ``-fno-builtin-bcmp``, or provide a ``bcmp`` function.
 
 * LLVM will now pattern match wide scalar values stored by a succession of
   narrow stores. For example, Clang will compile the following function that
@@ -206,7 +207,7 @@ Changes to the PowerPC Target
 
 * Improve precision of square root reciprocal estimate
 
-* Enabled MachinePipeliner support for P9 with -ppc-enable-pipeliner.
+* Enabled MachinePipeliner support for P9 with ``-ppc-enable-pipeliner``.
 
 * MMX/SSE/SSE2 intrinsics headers have been ported to PowerPC using Altivec.
 
@@ -220,11 +221,11 @@ Changes to the PowerPC Target
 
 * Enhancements of hardware loops interaction with LSR.
 
-* New builtins added, eg: __builtin_setrnd.
+* New builtins added, eg: ``__builtin_setrnd``.
 
 * Various codegen improvements for both scalar and vector code
 
-* Various new exploitations and bug fixes, eg: exploited P9 maddld.
+* Various new exploitations and bug fixes, e.g: exploited P9 ``maddld``.
 
 
 Changes to the SystemZ Target
@@ -295,7 +296,7 @@ External Open Source Projects Using LLVM 9
 Mull - Mutation Testing tool for C and C++
 ------------------------------------------
 
-`Mull <https://github.com/mull-project/mull>`_ is a LLVM-based tool for
+`Mull <https://github.com/mull-project/mull>`_ is an LLVM-based tool for
 mutation testing with a strong focus on C and C++ languages.
 
 Zig Programming Language
