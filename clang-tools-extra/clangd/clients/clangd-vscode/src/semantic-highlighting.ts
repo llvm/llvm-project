@@ -91,6 +91,13 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
     // highlighter being created.
     this.highlighter = new Highlighter(this.scopeLookupTable);
     this.subscriptions.push(vscode.Disposable.from(this.highlighter));
+    // Adds a listener to reload the theme when it changes.
+    this.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((conf) => {
+          if (!conf.affectsConfiguration('workbench.colorTheme'))
+            return;
+          this.loadCurrentTheme();
+        }));
     this.loadCurrentTheme();
     // Event handling for handling with TextDocuments/Editors lifetimes.
     this.subscriptions.push(vscode.window.onDidChangeVisibleTextEditors(

@@ -121,7 +121,7 @@ TEST_F(DumpRecordLayoutTest, Test) {
 
 TWEAK_TEST(ExtractVariable);
 TEST_F(ExtractVariableTest, Test) {
-  EXPECT_AVAILABLE(R"cpp(
+  const char *AvailableCases = R"cpp(
     int xyz(int a = 1) {
       struct T {
         int bar(int a = 1);
@@ -159,16 +159,19 @@ TEST_F(ExtractVariableTest, Test) {
         a = [[1]];
       while(a < [[3]]);
     }
-  )cpp");
-  // Should not crash.
-  EXPECT_UNAVAILABLE(R"cpp(
+  )cpp";
+  EXPECT_AVAILABLE(AvailableCases);
+
+  const char *NoCrashCases = R"cpp(
     template<typename T, typename ...Args>
     struct Test<T, Args...> {
     Test(const T &v) :val[[(^]]) {}
       T val;
     };
-  )cpp");
-  EXPECT_UNAVAILABLE(R"cpp(
+  )cpp";
+  EXPECT_UNAVAILABLE(NoCrashCases);
+
+  const char *UnavailableCases = R"cpp(
     int xyz(int a = [[1]]) {
       struct T {
         int bar(int a = [[1]]);
@@ -210,7 +213,9 @@ TEST_F(ExtractVariableTest, Test) {
       label:
         a = [[1]];
     }
-  )cpp");
+  )cpp";
+  EXPECT_UNAVAILABLE(UnavailableCases);
+
   // vector of pairs of input and output strings
   const std::vector<std::pair<llvm::StringLiteral, llvm::StringLiteral>>
       InputOutputs = {
@@ -398,23 +403,16 @@ TEST_F(AnnotateHighlightingsTest, Test) {
             "/* entity.name.function.cpp */f() {}",
             apply("void ^f() {}"));
 
-  EXPECT_EQ(apply(R"cpp(
-      [[void f1();
-      void f2();]]
-  )cpp"),
-            R"cpp(
-      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f1();
-      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2();
-  )cpp");
+  EXPECT_EQ(apply("[[void f1(); void f2();]]"),
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f1(); "
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f2();");
 
-  EXPECT_EQ(apply(R"cpp(
-      void f1();
-      void f2() {^};
-  )cpp"),
-            R"cpp(
-      void f1();
-      /* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2() {};
-  )cpp");
+  EXPECT_EQ(apply("void f1(); void f2() {^}"),
+            "void f1(); "
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f2() {}");
 }
 
 TWEAK_TEST(ExpandMacro);
@@ -498,6 +496,112 @@ TEST_F(ExpandAutoTypeTest, Test) {
   // replace array types
   EXPECT_EQ(apply(R"cpp(au^to x = "test")cpp"),
             R"cpp(const char * x = "test")cpp");
+}
+
+TWEAK_TEST(ExtractFunction);
+TEST_F(ExtractFunctionTest, FunctionTest) {
+  Context = Function;
+
+  // Root statements should have common parent.
+  EXPECT_EQ(apply("for(;;) [[1+2; 1+2;]]"), "unavailable");
+  // Expressions aren't extracted.
+  EXPECT_EQ(apply("int x = 0; [[x++;]]"), "unavailable");
+  // We don't support extraction from lambdas.
+  EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
+
+  // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
+  // lead to break being included in the extraction zone.
+  EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
+  // FIXME: This should be unavailable since partially selected but
+  // selectionTree doesn't always work correctly for VarDecls.
+  EXPECT_THAT(apply("int [[x = 0]];"), HasSubstr("extracted"));
+  // FIXME: ExtractFunction should be unavailable inside loop construct
+  // initalizer/condition.
+  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // Don't extract because needs hoisting.
+  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));
+  // Don't extract return
+  EXPECT_THAT(apply(" if(true) [[return;]] "), StartsWith("fail"));
+  // Don't extract break and continue.
+  // FIXME: We should be able to extract this since it's non broken.
+  EXPECT_THAT(apply(" [[for(;;) break;]] "), StartsWith("fail"));
+  EXPECT_THAT(apply(" for(;;) [[continue;]] "), StartsWith("fail"));
+}
+
+TEST_F(ExtractFunctionTest, FileTest) {
+  // Check all parameters are in order
+  std::string ParameterCheckInput = R"cpp(
+struct Foo {
+  int x;
+};
+void f(int a) {
+  int b;
+  int *ptr = &a;
+  Foo foo;
+  [[a += foo.x + b;
+  *ptr++;]]
+})cpp";
+  std::string ParameterCheckOutput = R"cpp(
+struct Foo {
+  int x;
+};
+void extracted(int &a, int &b, int * &ptr, Foo &foo) {
+a += foo.x + b;
+  *ptr++;
+}
+void f(int a) {
+  int b;
+  int *ptr = &a;
+  Foo foo;
+  extracted(a, b, ptr, foo);
+})cpp";
+  EXPECT_EQ(apply(ParameterCheckInput), ParameterCheckOutput);
+
+  // Check const qualifier
+  std::string ConstCheckInput = R"cpp(
+void f(const int c) {
+  [[while(c) {}]]
+})cpp";
+  std::string ConstCheckOutput = R"cpp(
+void extracted(const int &c) {
+while(c) {}
+}
+void f(const int c) {
+  extracted(c);
+})cpp";
+  EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
+
+  // Don't extract when we need to make a function as a parameter.
+  EXPECT_THAT(apply("void f() { [[int a; f();]] }"), StartsWith("fail"));
+
+  // We don't extract from methods for now since they may involve multi-file
+  // edits
+  std::string MethodFailInput = R"cpp(
+    class T {
+      void f() {
+        [[int x;]]
+      }
+    };
+  )cpp";
+  EXPECT_EQ(apply(MethodFailInput), "unavailable");
+
+  // We don't extract from templated functions for now as templates are hard
+  // to deal with.
+  std::string TemplateFailInput = R"cpp(
+    template<typename T>
+    void f() {
+      [[int x;]]
+    }
+  )cpp";
+  EXPECT_EQ(apply(TemplateFailInput), "unavailable");
+
+  // FIXME: This should be extractable after selectionTree works correctly for
+  // macros (currently it doesn't select anything for the following case)
+  std::string MacroFailInput = R"cpp(
+    #define F(BODY) void f() { BODY }
+    F ([[int x = 0;]])
+  )cpp";
+  EXPECT_EQ(apply(MacroFailInput), "unavailable");
 }
 
 } // namespace
