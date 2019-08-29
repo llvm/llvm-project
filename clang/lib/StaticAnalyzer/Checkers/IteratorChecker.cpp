@@ -356,14 +356,12 @@ bool isZero(ProgramStateRef State, const NonLoc &Val);
 
 IteratorChecker::IteratorChecker() {
   OutOfRangeBugType.reset(
-      new BugType(this, "Iterator out of range", "Misuse of STL APIs",
-                  /*SuppressOnSink=*/true));
+      new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
   MismatchedBugType.reset(
       new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs",
                   /*SuppressOnSink=*/true));
   InvalidatedBugType.reset(
-      new BugType(this, "Iterator invalidated", "Misuse of STL APIs",
-                  /*SuppressOnSink=*/true));
+      new BugType(this, "Iterator invalidated", "Misuse of STL APIs"));
 }
 
 void IteratorChecker::checkPreCall(const CallEvent &Call,
@@ -928,7 +926,7 @@ void IteratorChecker::verifyDereference(CheckerContext &C,
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && isPastTheEnd(State, *Pos)) {
-    auto *N = C.generateNonFatalErrorNode(State);
+    auto *N = C.generateErrorNode(State);
     if (!N)
       return;
     reportOutOfRangeBug("Past-the-end iterator dereferenced.", Val, C, N);
@@ -940,7 +938,7 @@ void IteratorChecker::verifyAccess(CheckerContext &C, const SVal &Val) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && !Pos->isValid()) {
-    auto *N = C.generateNonFatalErrorNode(State);
+    auto *N = C.generateErrorNode(State);
     if (!N) {
       return;
     }
@@ -1048,14 +1046,14 @@ void IteratorChecker::verifyRandomIncrOrDecr(CheckerContext &C,
   // The result may be the past-end iterator of the container, but any other
   // out of range position is undefined behaviour
   if (isAheadOfRange(State, advancePosition(C, Op, *Pos, Value))) {
-    auto *N = C.generateNonFatalErrorNode(State);
+    auto *N = C.generateErrorNode(State);
     if (!N)
       return;
     reportOutOfRangeBug("Iterator decremented ahead of its valid range.", LHS,
                         C, N);
   }
   if (isBehindPastTheEnd(State, advancePosition(C, Op, *Pos, Value))) {
-    auto *N = C.generateNonFatalErrorNode(State);
+    auto *N = C.generateErrorNode(State);
     if (!N)
       return;
     reportOutOfRangeBug("Iterator incremented behind the past-the-end "
