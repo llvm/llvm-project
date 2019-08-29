@@ -314,12 +314,15 @@ public:
   /// clang modules.
   /// \param BaseFS VFS used for all underlying file accesses when running the
   /// tool.
+  /// \param Files The file manager to use for underlying file operations when
+  /// running the tool.
   ClangTool(const CompilationDatabase &Compilations,
             ArrayRef<std::string> SourcePaths,
             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                 std::make_shared<PCHContainerOperations>(),
             IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
-                llvm::vfs::getRealFileSystem());
+                llvm::vfs::getRealFileSystem(),
+            IntrusiveRefCntPtr<FileManager> Files = nullptr);
 
   ~ClangTool();
 

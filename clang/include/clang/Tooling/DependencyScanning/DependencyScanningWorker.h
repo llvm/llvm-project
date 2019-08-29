@@ -54,6 +54,9 @@ private:
   /// dependencies. This filesystem persists accross multiple compiler
   /// invocations.
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// The file manager that is reused accross multiple invocations by this
+  /// worker. If null, the file manager will not be reused.
+  llvm::IntrusiveRefCntPtr<FileManager> Files;
 };
 
 } // end namespace dependencies

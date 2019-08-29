@@ -148,6 +148,8 @@ DependencyScanningWorker::DependencyScanningWorker(
   if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
     DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
                                                    RealFS);
+  if (Service.canReuseFileManager())
+    Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
 llvm::Expected<std::string>
@@ -164,7 +166,7 @@ DependencyScanningWorker::getDependencyFile(const std::string &Input,
   /// Create the tool that uses the underlying file system to ensure that any
   /// file system requests that are made by the driver do not go through the
   /// dependency scanning filesystem.
-  tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS);
+  tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS, Files);
   Tool.clearArgumentsAdjusters();
   Tool.setRestoreWorkingDir(false);
   Tool.setPrintErrorMessage(false);

@@ -107,6 +107,11 @@ llvm::cl::opt<std::string>
                   llvm::cl::desc("Compilation database"), llvm::cl::Required,
                   llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<bool> ReuseFileManager(
+    "reuse-filemanager",
+    llvm::cl::desc("Reuse the file manager and its cache between invocations."),
+    llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
+
 } // end anonymous namespace
 
 int main(int argc, const char **argv) {
@@ -153,7 +158,7 @@ int main(int argc, const char **argv) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode);
+  DependencyScanningService Service(ScanMode, ReuseFileManager);
 #if LLVM_ENABLE_THREADS
   unsigned NumWorkers =
       NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
