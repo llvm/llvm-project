@@ -89,7 +89,7 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
-- ``__FILE_NAME__`` macro has been added as a Clang specific extension supported
+- The ``__FILE_NAME__`` macro has been added as a Clang specific extension supported
   in all C-family languages. This macro is similar to ``__FILE__`` except it
   will always provide the last path component when possible.
 
@@ -117,7 +117,7 @@ Objective-C Language Changes in Clang
 
 - Fixed encoding of ObjC pointer types that are pointers to typedefs.
 
-.. code-block:: objc
+  .. code-block:: objc
 
       typedef NSArray<NSObject *> MyArray;
 
@@ -251,15 +251,15 @@ clang-format
 
 - Add language support for clang-formatting C# files.
 - Add Microsoft coding style to encapsulate default C# formatting style.
-- Added new option `PPDIS_BeforeHash` (in configuration: `BeforeHash`) to
-  `IndentPPDirectives` which indents preprocessor directives before the hash.
-- Added new option `AlignConsecutiveMacros` to align the C/C++ preprocessor
+- Added new option ``PPDIS_BeforeHash`` (in configuration: ``BeforeHash``) to
+  ``IndentPPDirectives`` which indents preprocessor directives before the hash.
+- Added new option ``AlignConsecutiveMacros`` to align the C/C++ preprocessor
   macros of consecutive lines.
 
 libclang
 --------
 
-- When `CINDEXTEST_INCLUDE_ATTRIBUTED_TYPES` is not provided when making a
+- When ``CINDEXTEST_INCLUDE_ATTRIBUTED_TYPES`` is not provided when making a
   CXType, the equivalent type of the AttributedType is returned instead of the
   modified type if the user does not want attribute sugar. The equivalent type
   represents the minimally-desugared type which the AttributedType is
@@ -270,26 +270,26 @@ Static Analyzer
 ---------------
 
 - Fixed a bug where an incorrect checker name would be displayed for a bug
-  report.`
+  report.
 
-- New checker: 'security.insecureAPI.DeprecatedOrUnsafeBufferHandling' to detect
+- New checker: ``security.insecureAPI.DeprecatedOrUnsafeBufferHandling`` to detect
   uses of unsafe/deprecated buffer handling functions for C code using the C11
   standard or newer.
 
-- New checker: 'osx.MIGChecker' to find violations of the Mach Interface
+- New checker: ``osx.MIGChecker`` to find violations of the Mach Interface
   Generator calling convention
 
-- New checker: 'optin.osx.OSObjectCStyleCast' to find C-style casts of of XNU
+- New checker: ``optin.osx.OSObjectCStyleCast`` to find C-style casts of of XNU
   libkern OSObjects
 
-- New package: 'apiModeling.llvm' contains modeling checkers to improve the
+- New package: ``apiModeling.llvm`` contains modeling checkers to improve the
   accuracy of reports on LLVM's own codebase.
 
-- The Static Analyzer received a
+- The Static Analyzer received
   :ref:`developer documentation <clang-static-analyzer-docs>`.
 
 - The UninitializedObject checker is now considered as stable.
-  (moved from the 'alpha.cplusplus' to the 'optin.cplusplus' package)
+  (moved from the ``alpha.cplusplus`` to the ``optin.cplusplus`` package)
 
 - New frontend flags: The list of available checkers are now split into 3
   different frontend flags:
