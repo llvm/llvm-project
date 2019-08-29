@@ -167,20 +167,6 @@ to create reference logs for debugging.
 
 $ ./dotest.py --log-success
 
-Option 2: (DEPRECATED)
-
-The following options can only enable logs from the host lldb process.
-Only categories from the "lldb" or "gdb-remote" channels can be enabled
-They also do not automatically enable logs in locally running debug servers.
-Also, logs from all test case are written into each log file
-
-o LLDB_LOG: if defined, specifies the log file pathname for the 'lldb' subsystem
-  with a default option of 'event process' if LLDB_LOG_OPTION is not defined.
-
-o GDB_REMOTE_LOG: if defined, specifies the log file pathname for the
-  'process.gdb-remote' subsystem with a default option of 'packets' if
-  GDB_REMOTE_LOG_OPTION is not defined.
-
 """)
     sys.exit(0)
 
@@ -415,12 +401,6 @@ def parseOptionsAndInitTestdirs():
 
     if do_help:
         usage(parser)
-
-    # Capture test results-related args.
-    if args.curses:
-        # Act as if the following args were set.
-        args.results_formatter = "lldbsuite.test_event.formatter.curses.Curses"
-        args.results_file = "stdout"
 
     if args.results_file:
         configuration.results_filename = args.results_file
@@ -772,61 +752,6 @@ def disabledynamics():
         raise Exception('disabling dynamic type support failed')
 
 
-def lldbLoggings():
-    import lldb
-    """Check and do lldb loggings if necessary."""
-
-    # Turn on logging for debugging purposes if ${LLDB_LOG} environment variable is
-    # defined.  Use ${LLDB_LOG} to specify the log file.
-    ci = lldb.DBG.GetCommandInterpreter()
-    res = lldb.SBCommandReturnObject()
-    if ("LLDB_LOG" in os.environ):
-        open(os.environ["LLDB_LOG"], 'w').close()
-        if ("LLDB_LOG_OPTION" in os.environ):
-            lldb_log_option = os.environ["LLDB_LOG_OPTION"]
-        else:
-            lldb_log_option = "event process expr state api"
-        ci.HandleCommand(
-            "log enable -n -f " +
-            os.environ["LLDB_LOG"] +
-            " lldb " +
-            lldb_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception('log enable failed (check LLDB_LOG env variable)')
-
-    if ("LLDB_LINUX_LOG" in os.environ):
-        open(os.environ["LLDB_LINUX_LOG"], 'w').close()
-        if ("LLDB_LINUX_LOG_OPTION" in os.environ):
-            lldb_log_option = os.environ["LLDB_LINUX_LOG_OPTION"]
-        else:
-            lldb_log_option = "event process expr state api"
-        ci.HandleCommand(
-            "log enable -n -f " +
-            os.environ["LLDB_LINUX_LOG"] +
-            " linux " +
-            lldb_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception(
-                'log enable failed (check LLDB_LINUX_LOG env variable)')
-
-    # Ditto for gdb-remote logging if ${GDB_REMOTE_LOG} environment variable is defined.
-    # Use ${GDB_REMOTE_LOG} to specify the log file.
-    if ("GDB_REMOTE_LOG" in os.environ):
-        if ("GDB_REMOTE_LOG_OPTION" in os.environ):
-            gdb_remote_log_option = os.environ["GDB_REMOTE_LOG_OPTION"]
-        else:
-            gdb_remote_log_option = "packets process"
-        ci.HandleCommand(
-            "log enable -n -f " + os.environ["GDB_REMOTE_LOG"] + " gdb-remote "
-            + gdb_remote_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception(
-                'log enable failed (check GDB_REMOTE_LOG env variable)')
-
-
 # ======================================== #
 #                                          #
 # Execution of the test driver starts here #
@@ -1096,9 +1021,6 @@ def run_suite():
     #
     # Now that we have loaded all the test cases, run the whole test suite.
     #
-
-    # Turn on lldb loggings if necessary.
-    lldbLoggings()
 
     # Disable default dynamic types for testing purposes
     disabledynamics()

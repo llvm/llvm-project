@@ -75,6 +75,12 @@ KnownBits GISelKnownBits::getKnownBits(Register R) {
   return Known;
 }
 
+bool GISelKnownBits::signBitIsZero(Register R) {
+  LLT Ty = MRI.getType(R);
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+  return maskedValueIsZero(R, APInt::getSignMask(BitWidth));
+}
+
 APInt GISelKnownBits::getKnownZeroes(Register R) {
   return getKnownBits(R).Zero;
 }
