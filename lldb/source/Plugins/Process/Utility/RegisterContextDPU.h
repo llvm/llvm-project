@@ -66,10 +66,10 @@ private:
 
   bool PCInPrologue(lldb::addr_t start_addr, uint32_t nb_callee_saved_regs);
 
+  Thread &m_thread;
   lldb::RegisterContextSP reg_ctx_sp;
   uint32_t m_frame_number;
-  lldb::addr_t m_pc, m_cfa;
-  Thread &m_thread;
+  lldb::addr_t m_cfa, m_pc;
   RegisterContextDPUSP m_prev_frame;
 };
 }
