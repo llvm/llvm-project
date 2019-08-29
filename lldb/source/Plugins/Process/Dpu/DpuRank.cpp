@@ -109,22 +109,28 @@ bool DpuRank::Reset() {
   return dpu_reset_rank(m_rank) == DPU_API_SUCCESS;
 }
 
-Dpu *DpuRank::GetDpuFromSliceIdAndDpuIdAndStopTheOthers(unsigned int slice_id,
-                                                        unsigned int dpu_id) {
-  Dpu *ret_dpu;
+Dpu *DpuRank::GetDpuFromSliceIdAndDpuId(unsigned int slice_id,
+                                        unsigned int dpu_id) {
   for (Dpu *dpu : m_dpus) {
     if (dpu->GetSliceID() == slice_id && dpu->GetDpuID() == dpu_id) {
-      ret_dpu = dpu;
-    } else {
-      dpu->StopThreads();
+      return dpu;
     }
   }
-  return ret_dpu;
+  return nullptr;
+}
+
+bool DpuRank::StopDpus() {
+  for (Dpu *dpu : m_dpus) {
+    bool success = dpu->StopThreadsUnlock(true);
+    if (!success)
+      return false;
+  }
+  return true;
 }
 
 bool DpuRank::ResumeDpus() {
   for (Dpu *dpu : m_dpus) {
-    bool success = dpu->ResumeThreads();
+    bool success = dpu->ResumeThreads(false);
     if (!success)
       return false;
   }
@@ -260,7 +266,7 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
 bool Dpu::StopThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  return StopThreadsUnlock(false);
+  return StopThreadsUnlock();
 }
 
 static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
@@ -268,7 +274,7 @@ static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
   return !(context->dma_fault || context->mem_fault);
 }
 
-bool Dpu::ResumeThreads() {
+bool Dpu::ResumeThreads(bool allowed_polling) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
   if (!IsContextReadyForResumeOrStep(&m_context))
@@ -277,7 +283,9 @@ bool Dpu::ResumeThreads() {
   int ret = DPU_API_SUCCESS;
   ret |= dpu_finalize_fault_process_for_dpu(m_dpu, &m_context);
 
-  dpu_is_running = true;
+  if (allowed_polling)
+    dpu_is_running = true;
+
   return ret == DPU_API_SUCCESS;
 }
 

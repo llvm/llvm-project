@@ -129,7 +129,7 @@ ProcessDpu::Factory::Attach(
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
-  Dpu *dpu = rank->GetDpuFromSliceIdAndDpuIdAndStopTheOthers(slice_id, dpu_id);
+  Dpu *dpu = rank->GetDpuFromSliceIdAndDpuId(slice_id, dpu_id);
   if (dpu == nullptr)
     return Status("Cannot find the DPU in the rank ").ToError();
 
@@ -142,6 +142,9 @@ ProcessDpu::Factory::Attach(
   success = dpu->SaveSliceContext(structure_value, slice_target);
   if (!success)
     return Status("Cannot save the DPU slice context ").ToError();
+  success = rank->StopDpus();
+  if (!success)
+    return Status("Cannot stop all DPUs of the rank").ToError();
 
   dpu->SetAttachSession();
 
@@ -181,16 +184,9 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
     m_threads.push_back(
         llvm::make_unique<ThreadDpu>(*this, pid | thread_id, thread_id));
   }
-  SetCurrentThreadID(pid);
 
-  LLDB_LOG(log, "Stopping threads of dpu");
-  if (!m_dpu->StopThreads()) {
-    LLDB_LOG(log, "Stopping threads failed");
-    SetState(StateType::eStateCrashed, true);
-  } else {
-    // Let our process instance know the thread has stopped.
-    SetState(StateType::eStateStopped, false);
-  }
+  SetCurrentThreadID(pid);
+  SetState(StateType::eStateStopped, false);
 }
 
 void ProcessDpu::InterfaceTimerCallback() {

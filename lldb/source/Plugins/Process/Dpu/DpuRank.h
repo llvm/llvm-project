@@ -46,9 +46,9 @@ public:
   int GetNrThreads() { return nr_threads; }
   std::mutex &GetLock() { return m_lock; }
 
-  Dpu *GetDpuFromSliceIdAndDpuIdAndStopTheOthers(unsigned int slice_id,
-                                                 unsigned int dpu_id);
+  Dpu *GetDpuFromSliceIdAndDpuId(unsigned int slice_id, unsigned int dpu_id);
 
+  bool StopDpus();
   bool ResumeDpus();
 
   void SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
@@ -73,9 +73,9 @@ public:
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();
   lldb::StateType PollStatus(unsigned int *exit_status);
-  bool ResumeThreads();
+  bool ResumeThreads(bool allowed_polling = true);
   bool StopThreads();
-  bool StopThreadsUnlock(bool force);
+  bool StopThreadsUnlock(bool force = false);
 
   lldb::StateType StepThread(uint32_t thread_index, unsigned int *exit_status);
 
