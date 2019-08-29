@@ -594,9 +594,10 @@ CXErrorCode performIndexedFileRename(
         : Symbols(Symbols), IndexedSymbols(IndexedSymbols), Lock(Lock),
           Options(Options), Result(nullptr), Err(CXError_Success) {}
 
-    clang::FrontendAction *create() override {
-      return new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this,
-                                                       Lock, Options);
+    std::unique_ptr<FrontendAction> create() override {
+      return std::unique_ptr<FrontendAction>(
+          new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this, Lock,
+                                                    Options));
     }
 
     void handleOccurrence(const rename::OldSymbolOccurrence &Occurrence,
@@ -706,9 +707,10 @@ CXErrorCode performIndexedSymbolSearch(
         : IndexedSymbols(IndexedSymbols), Lock(Lock), Options(Options),
           Result(nullptr) {}
 
-    clang::FrontendAction *create() override {
-      return new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this,
-                                                       Lock, Options);
+    std::unique_ptr<clang::FrontendAction> create() override {
+      return std::unique_ptr<clang::FrontendAction>(
+          new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this, Lock,
+                                                    Options));
     }
 
     void handleOccurrence(const rename::OldSymbolOccurrence &Occurrence,
