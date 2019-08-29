@@ -2186,9 +2186,10 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 std::vector<DWARFDIE> DWARFASTParserClang::GetDIEForDeclContext(
     lldb_private::CompilerDeclContext decl_context) {
   std::vector<DWARFDIE> result;
-  for (auto it = m_decl_ctx_to_die.find(
-           (clang::DeclContext *)decl_context.GetOpaqueDeclContext());
-       it != m_decl_ctx_to_die.end(); it++)
+  auto opaque_decl_ctx =
+      (clang::DeclContext *)decl_context.GetOpaqueDeclContext();
+  for (auto it = m_decl_ctx_to_die.find(opaque_decl_ctx);
+       it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx; it++)
     result.push_back(it->second);
   return result;
 }
