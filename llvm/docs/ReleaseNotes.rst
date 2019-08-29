@@ -94,13 +94,13 @@ Noteworthy optimizations
      int g(int);
      enum e { A, B, C, D, E };
      int f(e x, int y, int z) {
-         switch(x) {
-             case A: return g(y);
-             case B: return g(z);
-             case C: return g(y+z);
-             case D: return g(x-z);
-             case E: return g(x+z);
-         }
+       switch(x) {
+         case A: return g(y);
+         case B: return g(z);
+         case C: return g(y+z);
+         case D: return g(x-z);
+         case E: return g(x+z);
+       }
      }
 
   will result in the following x86_64 machine code when compiled with Clang.
@@ -124,12 +124,12 @@ Noteworthy optimizations
    void g(int);
    enum e { A, B, C, D };
    void f(e x, int y, int z) {
-       switch(x) {
-           case A: g(6); break;
-           case B: g(3); break;
-           case C: g(9); break;
-           case D: g(2); break;
-       }
+     switch(x) {
+       case A: g(6); break;
+       case B: g(3); break;
+       case C: g(9); break;
+       case D: g(2); break;
+     }
    }
 
   to be optimized to a single call to ``g``, with the argument loaded from a
