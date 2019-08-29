@@ -211,6 +211,10 @@ def clang_ignored_legacy_options_Group : OptionGroup<"<clang legacy flags>">,
 def : Flag<["-"], "fslp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
 def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
 
+// Retired with clang-10.0. Previously controlled X86 MPX ISA.
+def mmpx : Flag<["-"], "mmpx">, Group<clang_ignored_legacy_options_Group>;
+def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
+
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
@@ -3024,8 +3028,6 @@ def mmovdiri : Flag<["-"], "mmovdiri">, Group<m_x86_Features_Group>;
 def mno_movdiri : Flag<["-"], "mno-movdiri">, Group<m_x86_Features_Group>;
 def mmovdir64b : Flag<["-"], "mmovdir64b">, Group<m_x86_Features_Group>;
 def mno_movdir64b : Flag<["-"], "mno-movdir64b">, Group<m_x86_Features_Group>;
-def mmpx : Flag<["-"], "mmpx">, Group<m_x86_Features_Group>;
-def mno_mpx : Flag<["-"], "mno-mpx">, Group<m_x86_Features_Group>;
 def mmwaitx : Flag<["-"], "mmwaitx">, Group<m_x86_Features_Group>;
 def mno_mwaitx : Flag<["-"], "mno-mwaitx">, Group<m_x86_Features_Group>;
 def mpku : Flag<["-"], "mpku">, Group<m_x86_Features_Group>;

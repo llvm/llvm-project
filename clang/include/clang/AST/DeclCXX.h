@@ -73,52 +73,6 @@ class TemplateDecl;
 class TemplateParameterList;
 class UsingDecl;
 
-/// Represents any kind of function declaration, whether it is a
-/// concrete function or a function template.
-class AnyFunctionDecl {
-  NamedDecl *Function;
-
-  AnyFunctionDecl(NamedDecl *ND) : Function(ND) {}
-
-public:
-  AnyFunctionDecl(FunctionDecl *FD) : Function(FD) {}
-  AnyFunctionDecl(FunctionTemplateDecl *FTD);
-
-  /// Implicily converts any function or function template into a
-  /// named declaration.
-  operator NamedDecl *() const { return Function; }
-
-  /// Retrieve the underlying function or function template.
-  NamedDecl *get() const { return Function; }
-
-  static AnyFunctionDecl getFromNamedDecl(NamedDecl *ND) {
-    return AnyFunctionDecl(ND);
-  }
-};
-
-} // namespace clang
-
-namespace llvm {
-
-  // Provide PointerLikeTypeTraits for non-cvr pointers.
-  template<>
-  struct PointerLikeTypeTraits< ::clang::AnyFunctionDecl> {
-    static void *getAsVoidPointer(::clang::AnyFunctionDecl F) {
-      return F.get();
-    }
-
-    static ::clang::AnyFunctionDecl getFromVoidPointer(void *P) {
-      return ::clang::AnyFunctionDecl::getFromNamedDecl(
-                                      static_cast< ::clang::NamedDecl*>(P));
-    }
-
-    enum { NumLowBitsAvailable = 2 };
-  };
-
-} // namespace llvm
-
-namespace clang {
-
 /// Represents an access specifier followed by colon ':'.
 ///
 /// An objects of this class represents sugar for the syntactic occurrence
@@ -3468,12 +3422,6 @@ public:
   bool constructsVirtualBase() const {
     return IsVirtual;
   }
-
-  /// Get the constructor or constructor template in the derived class
-  /// correspnding to this using shadow declaration, if it has been implicitly
-  /// declared already.
-  CXXConstructorDecl *getConstructor() const;
-  void setConstructor(NamedDecl *Ctor);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ConstructorUsingShadow; }

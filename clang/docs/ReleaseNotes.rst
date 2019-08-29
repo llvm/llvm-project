@@ -70,6 +70,10 @@ Deprecated Compiler Flags
 The following options are deprecated and ignored. They will be removed in
 future versions of Clang.
 
+- -mmpx used to enable the __MPX__ preprocessor define for the Intel MPX
+  instructions. There were no MPX intrinsics.
+- -mno-mpx used to disable -mmpx and is the default behavior.
+
 - ...
 
 Modified Compiler Flags
