@@ -208,6 +208,9 @@ void RegisterContextDPU::GetFunction(Function **fct, lldb::addr_t pc) {
 
   SymbolContext sc;
   ModuleSP module_sp(resolved_addr.GetModule());
+  if (!module_sp) {
+    return;
+  }
   module_sp->ResolveSymbolContextForAddress(resolved_addr,
                                             eSymbolContextFunction, sc);
   *fct = sc.function;
