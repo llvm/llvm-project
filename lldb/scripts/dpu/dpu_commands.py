@@ -26,7 +26,7 @@ def dpu_attach(debugger, command, result, internal_dict):
   region_id = int(re.search('dpu_region(.+)/', rank_path).group(1))
   rank_id = int(re.search('dpu_rank(.+)"', rank_path).group(1))
 
-  pid = dpu_id + (slice_id << 16) + (rank_id << 32) + (region_id << 48)
+  pid = dpu_id + (slice_id << 16) + (rank_id << 32) + (region_id << 48) + 0x80000000
 
   program_path = re.search('"(.+)"', str(dpu.GetChildMemberWithName("runtime_context").GetChildMemberWithName("program_path"))).group(1)
 

@@ -117,7 +117,7 @@ ProcessDpu::Factory::Attach(
   unsigned int region_id, rank_id, slice_id, dpu_id;
   region_id = (pid >> 48) & 0xffff;
   rank_id = (pid >> 32) & 0xffff;
-  slice_id = (pid >> 16) & 0xffff;
+  slice_id = (pid >> 16) & 0x7fff;
   dpu_id = pid & 0xffff;
 
   char profile[256];
