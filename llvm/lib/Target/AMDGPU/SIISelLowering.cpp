@@ -7094,13 +7094,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VT = Op.getOperand(3).getValueType();
 
     auto *M = cast<MemSDNode>(Op);
-    unsigned Opcode = VT.isVector() ? AMDGPUISD::ATOMIC_PK_FADD
-                                    : AMDGPUISD::ATOMIC_FADD;
+    if (VT.isVector()) {
+      return DAG.getMemIntrinsicNode(
+        AMDGPUISD::ATOMIC_PK_FADD, DL, Op->getVTList(), Ops, VT,
+        M->getMemOperand());
+    }
 
-    return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT,
-                                   M->getMemOperand());
+    return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
+                         DAG.getVTList(VT, MVT::Other), Ops,
+                         M->getMemOperand()).getValue(1);
   }
-
   case Intrinsic::amdgcn_end_cf:
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain), 0);
@@ -10936,6 +10939,12 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     // TODO: Do have these for flat. Older targets also had them for buffers.
     unsigned AS = RMW->getPointerAddressSpace();
+
+    if (AS == AMDGPUAS::GLOBAL_ADDRESS && Subtarget->hasAtomicFaddInsts()) {
+      return RMW->use_empty() ? AtomicExpansionKind::None :
+                                AtomicExpansionKind::CmpXChg;
+    }
+
     return (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) ?
       AtomicExpansionKind::None : AtomicExpansionKind::CmpXChg;
   }

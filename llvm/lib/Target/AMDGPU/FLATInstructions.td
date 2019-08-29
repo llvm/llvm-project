@@ -364,11 +364,12 @@ multiclass FLAT_Global_Atomic_Pseudo<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
-  SDPatternOperator atomic = null_frag,
+  SDPatternOperator atomic_rtn = null_frag,
+  SDPatternOperator atomic_no_rtn = null_frag,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc> :
-    FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, atomic, data_vt, data_rc>,
-    FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, atomic, data_vt, data_rc>;
+    FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, atomic_no_rtn, data_vt, data_rc>,
+    FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, atomic_rtn, data_vt, data_rc>;
 
 
 //===----------------------------------------------------------------------===//
@@ -535,11 +536,12 @@ defm GLOBAL_STORE_SHORT_D16_HI : FLAT_Global_Store_Pseudo <"global_store_short_d
 
 let is_flat_global = 1 in {
 defm GLOBAL_ATOMIC_CMPSWAP : FLAT_Global_Atomic_Pseudo <"global_atomic_cmpswap",
-                               VGPR_32, i32, AMDGPUatomic_cmp_swap_global_32,
+                               VGPR_32, i32, AMDGPUatomic_cmp_swap_global_32, null_frag,
                                v2i32, VReg_64>;
 
 defm GLOBAL_ATOMIC_CMPSWAP_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_cmpswap_x2",
                                   VReg_64, i64, AMDGPUatomic_cmp_swap_global_64,
+                                  null_frag,
                                   v2i64, VReg_128>;
 
 defm GLOBAL_ATOMIC_SWAP : FLAT_Global_Atomic_Pseudo <"global_atomic_swap",

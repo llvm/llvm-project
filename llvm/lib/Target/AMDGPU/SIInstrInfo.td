@@ -225,7 +225,6 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
-def SIglobal_atomic_fadd    : SDGlobalAtomicNoRtn <"AMDGPUISD::ATOMIC_FADD", f32>;
 def SIglobal_atomic_pk_fadd : SDGlobalAtomicNoRtn <"AMDGPUISD::ATOMIC_PK_FADD", v2f16>;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
@@ -324,7 +323,7 @@ defm atomic_load_fmax_#as : binary_atomic_op<SIatomic_fmax, 0>;
 
 def atomic_fadd_global_noret : PatFrag<
   (ops node:$ptr, node:$value),
-  (SIglobal_atomic_fadd node:$ptr, node:$value)> {
+  (atomic_load_fadd node:$ptr, node:$value)> {
   // FIXME: Move this
   let MemoryVT = f32;
   let IsAtomic = 1;
