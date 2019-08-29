@@ -840,6 +840,9 @@ public:
     if (isa<PHINode>(U))
       return TTI::TCC_Free; // Model all PHI nodes as free.
 
+    if (isa<ExtractValueInst>(U))
+      return TTI::TCC_Free; // Model all ExtractValue nodes as free.
+
     // Static alloca doesn't generate target instructions.
     if (auto *A = dyn_cast<AllocaInst>(U))
       if (A->isStaticAlloca())

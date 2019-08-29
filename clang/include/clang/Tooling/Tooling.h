@@ -99,9 +99,7 @@ public:
                      DiagnosticConsumer *DiagConsumer) override;
 
   /// Returns a new clang::FrontendAction.
-  ///
-  /// The caller takes ownership of the returned action.
-  virtual FrontendAction *create() = 0;
+  virtual std::unique_ptr<FrontendAction> create() = 0;
 };
 
 /// Returns a new FrontendActionFactory for a given type.
@@ -161,6 +159,14 @@ bool runToolOnCode(FrontendAction *ToolAction, const Twine &Code,
                    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                        std::make_shared<PCHContainerOperations>());
 
+inline bool
+runToolOnCode(std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
+              const Twine &FileName = "input.cc",
+              std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+                  std::make_shared<PCHContainerOperations>()) {
+  return runToolOnCode(ToolAction.release(), Code, FileName, PCHContainerOps);
+}
+
 /// The first part of the pair is the filename, the second part the
 /// file-content.
 using FileContentMappings = std::vector<std::pair<std::string, std::string>>;
@@ -186,6 +192,17 @@ bool runToolOnCodeWithArgs(
         std::make_shared<PCHContainerOperations>(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings());
 
+inline bool runToolOnCodeWithArgs(
+    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
+    const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
+    const Twine &ToolName = "clang-tool",
+    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+        std::make_shared<PCHContainerOperations>(),
+    const FileContentMappings &VirtualMappedFiles = FileContentMappings()) {
+  return runToolOnCodeWithArgs(ToolAction.release(), Code, Args, FileName,
+                               ToolName, PCHContainerOps, VirtualMappedFiles);
+}
+
 // Similar to the overload except this takes a VFS.
 bool runToolOnCodeWithArgs(
     FrontendAction *ToolAction, const Twine &Code,
@@ -194,6 +211,17 @@ bool runToolOnCodeWithArgs(
     const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>());
+
+inline bool runToolOnCodeWithArgs(
+    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
+    const Twine &ToolName = "clang-tool",
+    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+        std::make_shared<PCHContainerOperations>()) {
+  return runToolOnCodeWithArgs(ToolAction.release(), Code, VFS, Args, FileName,
+                               ToolName, PCHContainerOps);
+}
 
 /// Builds an AST for 'Code'.
 ///
@@ -246,6 +274,13 @@ public:
                  FileManager *Files,
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                      std::make_shared<PCHContainerOperations>());
+
+  ToolInvocation(std::vector<std::string> CommandLine,
+                 std::unique_ptr<FrontendAction> FAction, FileManager *Files,
+                 std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+                     std::make_shared<PCHContainerOperations>())
+      : ToolInvocation(std::move(CommandLine), FAction.release(), Files,
+                       PCHContainerOps) {}
 
   /// Create a tool invocation.
   ///
@@ -397,7 +432,9 @@ template <typename T>
 std::unique_ptr<FrontendActionFactory> newFrontendActionFactory() {
   class SimpleFrontendActionFactory : public FrontendActionFactory {
   public:
-    FrontendAction *create() override { return new T; }
+    std::unique_ptr<FrontendAction> create() override {
+      return std::make_unique<T>();
+    }
   };
 
   return std::unique_ptr<FrontendActionFactory>(
@@ -413,8 +450,9 @@ inline std::unique_ptr<FrontendActionFactory> newFrontendActionFactory(
                                           SourceFileCallbacks *Callbacks)
         : ConsumerFactory(ConsumerFactory), Callbacks(Callbacks) {}
 
-    FrontendAction *create() override {
-      return new ConsumerFactoryAdaptor(ConsumerFactory, Callbacks);
+    std::unique_ptr<FrontendAction> create() override {
+      return std::make_unique<ConsumerFactoryAdaptor>(ConsumerFactory,
+                                                      Callbacks);
     }
 
   private:

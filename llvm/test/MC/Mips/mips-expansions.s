@@ -112,13 +112,13 @@
   lw $10, symbol($4)
 # CHECK-LE: lw      $10, %got(symbol)($gp)    # encoding: [A,A,0x8a,0x8f]
 # CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE-FIXME: addu    $10, $10, $4        # encoding: [0x21,0x50,0x44,0x01]
+# CHECK-LE: addu    $10, $10, $4              # encoding: [0x21,0x50,0x44,0x01]
 # CHECK-LE: lw      $10, 0($10)               # encoding: [0x00,0x00,0x4a,0x8d]
   .set at
   sw $10, symbol($9)
 # CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
 # CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE-FIXME: addu    $1, $1, $9          # encoding: [0x21,0x08,0x29,0x00]
+# CHECK-LE: addu    $1, $1, $9                # encoding: [0x21,0x08,0x29,0x00]
 # CHECK-LE: sw      $10, 0($1)                # encoding: [0x00,0x00,0x2a,0xac]
 
   lw $8, 1f+8

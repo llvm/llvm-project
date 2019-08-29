@@ -824,11 +824,8 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
   // FIXME: Retain the TypeSourceInfo from buildLambdaInitCaptureInitialization
   // rather than reconstructing it here.
   TypeSourceInfo *TSI = Context.getTrivialTypeSourceInfo(InitCaptureType, Loc);
-  bool IsInitCapturePack = false;
-  if (auto PETL = TSI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
+  if (auto PETL = TSI->getTypeLoc().getAs<PackExpansionTypeLoc>())
     PETL.setEllipsisLoc(EllipsisLoc);
-    IsInitCapturePack = true;
-  }
 
   // Create a dummy variable representing the init-capture. This is not actually
   // used as a variable, and only exists as a way to name and refer to the

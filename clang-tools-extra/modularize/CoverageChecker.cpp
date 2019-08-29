@@ -58,6 +58,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -129,8 +130,8 @@ public:
   CoverageCheckerFrontendActionFactory(CoverageChecker &Checker)
     : Checker(Checker) {}
 
-  CoverageCheckerAction *create() override {
-    return new CoverageCheckerAction(Checker);
+  std::unique_ptr<FrontendAction> create() override {
+    return std::make_unique<CoverageCheckerAction>(Checker);
   }
 
 private:

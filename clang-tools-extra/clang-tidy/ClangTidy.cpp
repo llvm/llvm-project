@@ -530,7 +530,9 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     ActionFactory(ClangTidyContext &Context,
                   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS)
         : ConsumerFactory(Context, BaseFS) {}
-    FrontendAction *create() override { return new Action(&ConsumerFactory); }
+    std::unique_ptr<FrontendAction> create() override {
+      return std::make_unique<Action>(&ConsumerFactory);
+    }
 
     bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                        FileManager *Files,

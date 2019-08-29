@@ -6,8 +6,8 @@
 ; we should move shifts to the same hand of 'and', i.e. e.g. rewrite as
 ;   icmp eq/ne (and (((x shift Q) shift K), y)), 0
 ; We are only interested in opposite logical shifts here.
-; We still can handle the case where there is a truncation between a shift
-; and an 'and', but for now only if it's 'shl' - simpler legality check.
+; We still can handle the case where there is a truncation between a shift and
+; an 'and'. If it's trunc-of-shl - no extra legality check is needed.
 
 ;-------------------------------------------------------------------------------
 ; Basic scalar tests

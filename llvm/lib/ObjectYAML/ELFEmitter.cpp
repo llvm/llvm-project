@@ -995,24 +995,12 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
 }
 
 static bool buildSymbolsMap(ArrayRef<ELFYAML::Symbol> V, NameToIdxMap &Map) {
-  bool GlobalSymbolSeen = false;
-  std::size_t I = 0;
-  for (const ELFYAML::Symbol &Sym : V) {
-    ++I;
-
-    StringRef Name = Sym.Name;
-    if (Sym.Binding.value == ELF::STB_LOCAL && GlobalSymbolSeen) {
-      WithColor::error() << "Local symbol '" + Name +
-                                "' after global in Symbols list.\n";
-      return false;
-    }
-    if (Sym.Binding.value != ELF::STB_LOCAL)
-      GlobalSymbolSeen = true;
-
-    if (!Name.empty() && !Map.addName(Name, I)) {
-      WithColor::error() << "Repeated symbol name: '" << Name << "'.\n";
-      return false;
-    }
+  for (size_t I = 0, S = V.size(); I < S; ++I) {
+    const ELFYAML::Symbol &Sym = V[I];
+    if (Sym.Name.empty() || Map.addName(Sym.Name, I + 1))
+      continue;
+    WithColor::error() << "Repeated symbol name: '" << Sym.Name << "'.\n";
+    return false;
   }
   return true;
 }

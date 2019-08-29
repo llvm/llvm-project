@@ -19,6 +19,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -296,53 +297,19 @@ public:
 
 class IndexingConsumer : public ASTConsumer {
   CXIndexDataConsumer &DataConsumer;
-  ParsedSrcLocationsTracker *ParsedLocsTracker;
 
 public:
   IndexingConsumer(CXIndexDataConsumer &dataConsumer,
                    ParsedSrcLocationsTracker *parsedLocsTracker)
-      : DataConsumer(dataConsumer), ParsedLocsTracker(parsedLocsTracker) {}
-
-  // ASTConsumer Implementation
+      : DataConsumer(dataConsumer) {}
 
   void Initialize(ASTContext &Context) override {
     DataConsumer.setASTContext(Context);
     DataConsumer.startedTranslationUnit();
   }
 
-  void HandleTranslationUnit(ASTContext &Ctx) override {
-    if (ParsedLocsTracker)
-      ParsedLocsTracker->syncWithStorage();
-  }
-
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     return !DataConsumer.shouldAbort();
-  }
-
-  bool shouldSkipFunctionBody(Decl *D) override {
-    if (!ParsedLocsTracker) {
-      // Always skip bodies.
-      return true;
-    }
-
-    const SourceManager &SM = DataConsumer.getASTContext().getSourceManager();
-    SourceLocation Loc = D->getLocation();
-    if (Loc.isMacroID())
-      return false;
-    if (SM.isInSystemHeader(Loc))
-      return true; // always skip bodies from system headers.
-
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
-    // Don't skip bodies from main files; this may be revisited.
-    if (SM.getMainFileID() == FID)
-      return false;
-    const FileEntry *FE = SM.getFileEntryForID(FID);
-    if (!FE)
-      return false;
-
-    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, FE);
   }
 };
 
@@ -367,14 +334,16 @@ public:
 
 class IndexingFrontendAction : public ASTFrontendAction {
   std::shared_ptr<CXIndexDataConsumer> DataConsumer;
+  IndexingOptions Opts;
 
   SharedParsedRegionsStorage *SKData;
   std::unique_ptr<ParsedSrcLocationsTracker> ParsedLocsTracker;
 
 public:
   IndexingFrontendAction(std::shared_ptr<CXIndexDataConsumer> dataConsumer,
+                         const IndexingOptions &Opts,
                          SharedParsedRegionsStorage *skData)
-      : DataConsumer(std::move(dataConsumer)), SKData(skData) {}
+      : DataConsumer(std::move(dataConsumer)), Opts(Opts), SKData(skData) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
@@ -398,8 +367,39 @@ public:
           std::make_unique<ParsedSrcLocationsTracker>(*SKData, *PPRec, PP);
     }
 
-    return std::make_unique<IndexingConsumer>(*DataConsumer,
-                                              ParsedLocsTracker.get());
+    std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+    Consumers.push_back(std::make_unique<IndexingConsumer>(
+        *DataConsumer, ParsedLocsTracker.get()));
+    Consumers.push_back(createIndexingASTConsumer(
+        DataConsumer, Opts, CI.getPreprocessorPtr(),
+        [this](const Decl *D) { return this->shouldSkipFunctionBody(D); }));
+    return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+  }
+
+  bool shouldSkipFunctionBody(const Decl *D) {
+    if (!ParsedLocsTracker) {
+      // Always skip bodies.
+      return true;
+    }
+
+    const SourceManager &SM = D->getASTContext().getSourceManager();
+    SourceLocation Loc = D->getLocation();
+    if (Loc.isMacroID())
+      return false;
+    if (SM.isInSystemHeader(Loc))
+      return true; // always skip bodies from system headers.
+
+    FileID FID;
+    unsigned Offset;
+    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+    // Don't skip bodies from main files; this may be revisited.
+    if (SM.getMainFileID() == FID)
+      return false;
+    const FileEntry *FE = SM.getFileEntryForID(FID);
+    if (!FE)
+      return false;
+
+    return ParsedLocsTracker->hasAlredyBeenParsed(Loc, FID, FE);
   }
 
   TranslationUnitKind getTranslationUnitKind() override {
@@ -409,6 +409,11 @@ public:
       return TU_Prefix;
   }
   bool hasCodeCompletionSupport() const override { return false; }
+
+  void EndSourceFileAction() override {
+    if (ParsedLocsTracker)
+      ParsedLocsTracker->syncWithStorage();
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -569,12 +574,9 @@ static CXErrorCode clang_indexSourceFile_Impl(
   auto DataConsumer =
     std::make_shared<CXIndexDataConsumer>(client_data, CB, index_options,
                                           CXTU->getTU());
-  auto InterAction = std::make_unique<IndexingFrontendAction>(DataConsumer,
-                         SkipBodies ? IdxSession->SkipBodyData.get() : nullptr);
-  std::unique_ptr<FrontendAction> IndexAction;
-  IndexAction = createIndexingAction(DataConsumer,
-                                getIndexingOptionsFromCXOptions(index_options),
-                                     std::move(InterAction));
+  auto IndexAction = std::make_unique<IndexingFrontendAction>(
+      DataConsumer, getIndexingOptionsFromCXOptions(index_options),
+      SkipBodies ? IdxSession->SkipBodyData.get() : nullptr);
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<FrontendAction>
@@ -995,4 +997,3 @@ CXSourceLocation clang_indexLoc_getCXSourceLocation(CXIdxLoc location) {
       *static_cast<CXIndexDataConsumer*>(location.ptr_data[0]);
   return cxloc::translateSourceLocation(DataConsumer.getASTContext(), Loc);
 }
-

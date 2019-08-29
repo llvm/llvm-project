@@ -886,6 +886,33 @@ return:
 ; CHECK: ret
 }
 
+; CHECK-LABEL: @test_not_sink_lifetime_marker
+; CHECK-NOT: select
+; CHECK: call void @llvm.lifetime.end
+; CHECK: call void @llvm.lifetime.end
+define i32 @test_not_sink_lifetime_marker(i1 zeroext %flag, i32 %x) {
+entry:
+  %y = alloca i32
+  %z = alloca i32
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %y.cast = bitcast i32* %y to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %y.cast)
+  br label %if.end
+
+if.else:
+  %z.cast = bitcast i32* %z to i8*
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %z.cast)
+  br label %if.end
+
+if.end:
+  ret i32 1
+}
+
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+
 
 ; CHECK: ![[$TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
 ; CHECK: ![[TYPE]] = !{!"float", ![[TEXT:[0-9]]]}

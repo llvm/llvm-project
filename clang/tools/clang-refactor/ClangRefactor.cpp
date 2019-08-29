@@ -461,7 +461,9 @@ public:
       ToolActionFactory(TUCallbackType Callback)
           : Callback(std::move(Callback)) {}
 
-      FrontendAction *create() override { return new ToolASTAction(Callback); }
+      std::unique_ptr<FrontendAction> create() override {
+        return std::make_unique<ToolASTAction>(Callback);
+      }
 
     private:
       TUCallbackType Callback;

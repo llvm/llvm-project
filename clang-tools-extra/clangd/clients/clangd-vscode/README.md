@@ -9,7 +9,7 @@ Protocol](https://github.com/Microsoft/language-server-protocol), such as
 code completion, code formatting and goto definition.
 
 **Note**: `clangd` is under heavy development, not all LSP features are
-implemented. See [Current Status](https://clang.llvm.org/extra/clangd.html#current-status)
+implemented. See [Current Status](https://clang.llvm.org/extra/clangd/Features.html#complete-list-of-features)
 for details.
 
 To use `vscode-clangd` extension in VS Code, you need to install `vscode-clangd`
@@ -25,7 +25,7 @@ Alternatively, the `clangd` executable can be specified in your VS Code
 }
 ```
 
-To obtain `clangd` binary, please see the [installing Clangd](https://clang.llvm.org/extra/clangd.html#installing-clangd).
+To obtain `clangd` binary, please see the [installing Clangd](https://clang.llvm.org/extra/clangd/Installation.html#installing-clangd).
 
 ## Development
 
@@ -68,7 +68,7 @@ to the marketplace.
 
 The extension is published under `llvm-vs-code-extensions` account, which is
 currently maintained by clangd developers. If you want to make a new release,
-please contact cfe-dev@lists.llvm.org.
+please contact clangd-dev@lists.llvm.org.
 
 ### Steps
 
