@@ -416,12 +416,6 @@ def parseOptionsAndInitTestdirs():
     if do_help:
         usage(parser)
 
-    # Capture test results-related args.
-    if args.curses:
-        # Act as if the following args were set.
-        args.results_formatter = "lldbsuite.test_event.formatter.curses.Curses"
-        args.results_file = "stdout"
-
     if args.results_file:
         configuration.results_filename = args.results_file
 
