@@ -10,8 +10,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 
 #include "ClangdUnit.h"
+#include "Diagnostics.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
+#include "Path.h"
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
 #include "llvm/ADT/Optional.h"
@@ -124,6 +126,11 @@ public:
   /// the file is concurrently closed and/or reopened. (The lambda passed to
   /// Publish() may never run in this case).
   virtual void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) {}
+
+  /// Called whenever the AST fails to build. \p Diags will have the diagnostics
+  /// that led to failure.
+  virtual void onFailedAST(PathRef Path, std::vector<Diag> Diags,
+                           PublishFn Publish) {}
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}

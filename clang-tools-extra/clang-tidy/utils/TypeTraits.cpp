@@ -54,6 +54,10 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
   // Non-C++ records are always trivially constructible.
   if (!ClassDecl)
     return true;
+  // It is impossible to detemine whether an ill-formed decl is trivially
+  // constructible.
+  if (RecordDecl.isInvalidDecl())
+    return false;
   // A class with a user-provided default constructor is not trivially
   // constructible.
   if (ClassDecl->hasUserProvidedDefaultConstructor())

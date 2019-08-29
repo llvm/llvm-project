@@ -390,7 +390,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=19 -o %t19
 # RUN: not llvm-readobj --symbols %t19 2>&1 | FileCheck -DFILE=%t19 --check-prefix=INVALID-SYM-NAME %s
 
-# INVALID-SYM-NAME: error: '[[FILE]]': Invalid data was encountered while parsing the file
+# INVALID-SYM-NAME: error: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x1
 
 --- !ELF
 FileHeader:

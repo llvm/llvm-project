@@ -33,6 +33,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Timer.h"
 
 #include <list>
 #include <string>
@@ -93,6 +94,10 @@ static cl::opt<bool> ShowSizes(
     "show-sizes",
     cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
     cl::init(false));
+
+static cl::opt<bool> ShowTimes("show-times",
+                               cl::desc("Show times for llvm-jitlink phases"),
+                               cl::init(false));
 
 static cl::opt<bool> ShowRelocatedSectionContents(
     "show-relocated-section-contents",
@@ -622,9 +627,24 @@ int main(int argc, char *argv[]) {
     ExitOnErr(loadProcessSymbols(S));
   ExitOnErr(loadDylibs());
 
-  ExitOnErr(loadObjects(S));
+  TimerGroup JITLinkTimers("llvm-jitlink timers",
+                           "timers for llvm-jitlink phases");
 
-  auto EntryPoint = ExitOnErr(getMainEntryPoint(S));
+  {
+    Timer LoadObjectsTimer(
+        "load", "time to load/add object files to llvm-jitlink", JITLinkTimers);
+    LoadObjectsTimer.startTimer();
+    ExitOnErr(loadObjects(S));
+    LoadObjectsTimer.stopTimer();
+  }
+
+  JITEvaluatedSymbol EntryPoint = 0;
+  {
+    Timer LinkTimer("link", "time to link object files", JITLinkTimers);
+    LinkTimer.startTimer();
+    EntryPoint = ExitOnErr(getMainEntryPoint(S));
+    LinkTimer.stopTimer();
+  }
 
   if (ShowAddrs)
     S.dumpSessionInfo(outs());
@@ -636,5 +656,16 @@ int main(int argc, char *argv[]) {
   if (NoExec)
     return 0;
 
-  return ExitOnErr(runEntryPoint(S, EntryPoint));
+  int Result = 0;
+  {
+    Timer RunTimer("run", "time to execute jitlink'd code", JITLinkTimers);
+    RunTimer.startTimer();
+    Result = ExitOnErr(runEntryPoint(S, EntryPoint));
+    RunTimer.stopTimer();
+  }
+
+  if (ShowTimes)
+    JITLinkTimers.print(dbgs());
+
+  return Result;
 }

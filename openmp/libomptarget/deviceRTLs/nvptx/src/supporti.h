@@ -14,6 +14,8 @@
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "target_impl.h"
+
 INLINE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
   execution_param = EMode;
   execution_param |= RMode;
@@ -203,30 +205,28 @@ INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 
 INLINE void IncParallelLevel(bool ActiveParallel) {
   unsigned Active = __ACTIVEMASK();
-  __SYNCWARP(Active);
-  unsigned LaneMaskLt;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
-  unsigned Rank = __popc(Active & LaneMaskLt);
+  __kmpc_impl_syncwarp(Active);
+  unsigned LaneMaskLt = __kmpc_impl_lanemask_lt();
+  unsigned Rank = __kmpc_impl_popc(Active & LaneMaskLt);
   if (Rank == 0) {
     parallelLevel[GetWarpId()] +=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
     __threadfence();
   }
-  __SYNCWARP(Active);
+  __kmpc_impl_syncwarp(Active);
 }
 
 INLINE void DecParallelLevel(bool ActiveParallel) {
   unsigned Active = __ACTIVEMASK();
-  __SYNCWARP(Active);
-  unsigned LaneMaskLt;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
-  unsigned Rank = __popc(Active & LaneMaskLt);
+  __kmpc_impl_syncwarp(Active);
+  unsigned LaneMaskLt = __kmpc_impl_lanemask_lt();
+  unsigned Rank = __kmpc_impl_popc(Active & LaneMaskLt);
   if (Rank == 0) {
     parallelLevel[GetWarpId()] -=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
     __threadfence();
   }
-  __SYNCWARP(Active);
+  __kmpc_impl_syncwarp(Active);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -210,6 +210,21 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       RemapInstruction(&II, VMap,
                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                        TypeMapper, Materializer);
+
+  // Register all DICompileUnits of the old parent module in the new parent module
+  auto* OldModule = OldFunc->getParent();
+  auto* NewModule = NewFunc->getParent();
+  if (OldModule && NewModule && OldModule != NewModule && DIFinder.compile_unit_count()) {
+    auto* NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
+    // Avoid multiple insertions of the same DICompileUnit to NMD.
+    SmallPtrSet<const void*, 8> Visited;
+    for (auto* Operand : NMD->operands())
+      Visited.insert(Operand);
+    for (auto* Unit : DIFinder.compile_units())
+      // VMap.MD()[Unit] == Unit
+      if (Visited.insert(Unit).second)
+        NMD->addOperand(Unit);
+  }
 }
 
 /// Return a copy of the specified function and add it to that function's

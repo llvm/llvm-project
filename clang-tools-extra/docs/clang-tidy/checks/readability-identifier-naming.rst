@@ -26,6 +26,10 @@ Many configuration options are available, in order to be able to create
 different rules for different kinds of identifiers. In general, the rules are
 falling back to a more generic rule if the specific case is not configured.
 
+The naming of virtual methods is reported where they occur in the base class,
+but not where they are overridden, as it can't be fixed locally there.
+This also applies for pseudo-override patterns like CRTP.
+
 Options
 -------
 

@@ -332,23 +332,6 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
   emitRRI(Opcode, SrcReg, ATReg, LoOffset, IDLoc, STI);
 }
 
-/// Emit a store instruction with an symbol offset. Symbols are assumed to be
-/// out of range for a simm16 will be expanded to appropriate instructions.
-void MipsTargetStreamer::emitStoreWithSymOffset(
-    unsigned Opcode, unsigned SrcReg, unsigned BaseReg, MCOperand &HiOperand,
-    MCOperand &LoOperand, unsigned ATReg, SMLoc IDLoc,
-    const MCSubtargetInfo *STI) {
-  // sw $8, sym => lui $at, %hi(sym)
-  //               sw $8, %lo(sym)($at)
-
-  // Generate the base address in ATReg.
-  emitRX(Mips::LUi, ATReg, HiOperand, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
-    emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
-  // Emit the store with the adjusted base and offset.
-  emitRRX(Opcode, SrcReg, ATReg, LoOperand, IDLoc, STI);
-}
-
 /// Emit a store instruction with an symbol offset.
 void MipsTargetStreamer::emitSCWithSymOffset(unsigned Opcode, unsigned SrcReg,
                                              unsigned BaseReg,
@@ -413,30 +396,6 @@ void MipsTargetStreamer::emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg,
     emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
   // Emit the load with the adjusted base and offset.
   emitRRI(Opcode, DstReg, TmpReg, LoOffset, IDLoc, STI);
-}
-
-/// Emit a load instruction with an symbol offset. Symbols are assumed to be
-/// out of range for a simm16 will be expanded to appropriate instructions.
-/// DstReg and TmpReg are permitted to be the same register iff DstReg is a
-/// GPR. It is the callers responsibility to identify such cases and pass the
-/// appropriate register in TmpReg.
-void MipsTargetStreamer::emitLoadWithSymOffset(unsigned Opcode, unsigned DstReg,
-                                               unsigned BaseReg,
-                                               MCOperand &HiOperand,
-                                               MCOperand &LoOperand,
-                                               unsigned TmpReg, SMLoc IDLoc,
-                                               const MCSubtargetInfo *STI) {
-  // 1) lw $8, sym        => lui $8, %hi(sym)
-  //                         lw $8, %lo(sym)($8)
-  // 2) ldc1 $f0, sym     => lui $at, %hi(sym)
-  //                         ldc1 $f0, %lo(sym)($at)
-
-  // Generate the base address in TmpReg.
-  emitRX(Mips::LUi, TmpReg, HiOperand, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
-    emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
-  // Emit the load with the adjusted base and offset.
-  emitRRX(Opcode, DstReg, TmpReg, LoOperand, IDLoc, STI);
 }
 
 MipsTargetAsmStreamer::MipsTargetAsmStreamer(MCStreamer &S,

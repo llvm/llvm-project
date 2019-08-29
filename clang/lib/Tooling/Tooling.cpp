@@ -118,9 +118,7 @@ CompilerInvocation *newInvocation(
     DiagnosticsEngine *Diagnostics, const llvm::opt::ArgStringList &CC1Args) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");
   CompilerInvocation *Invocation = new CompilerInvocation;
-  CompilerInvocation::CreateFromArgs(
-      *Invocation, CC1Args.data() + 1, CC1Args.data() + CC1Args.size(),
-      *Diagnostics);
+  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
   return Invocation;
@@ -249,12 +247,15 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
 namespace {
 
 class SingleFrontendActionFactory : public FrontendActionFactory {
-  FrontendAction *Action;
+  std::unique_ptr<FrontendAction> Action;
 
 public:
-  SingleFrontendActionFactory(FrontendAction *Action) : Action(Action) {}
+  SingleFrontendActionFactory(std::unique_ptr<FrontendAction> Action)
+      : Action(std::move(Action)) {}
 
-  FrontendAction *create() override { return Action; }
+  std::unique_ptr<FrontendAction> create() override {
+    return std::move(Action);
+  }
 };
 
 } // namespace
@@ -269,8 +270,10 @@ ToolInvocation::ToolInvocation(
     std::vector<std::string> CommandLine, FrontendAction *FAction,
     FileManager *Files, std::shared_ptr<PCHContainerOperations> PCHContainerOps)
     : CommandLine(std::move(CommandLine)),
-      Action(new SingleFrontendActionFactory(FAction)), OwnsAction(true),
-      Files(Files), PCHContainerOps(std::move(PCHContainerOps)) {}
+      Action(new SingleFrontendActionFactory(
+          std::unique_ptr<FrontendAction>(FAction))),
+      OwnsAction(true), Files(Files),
+      PCHContainerOps(std::move(PCHContainerOps)) {}
 
 ToolInvocation::~ToolInvocation() {
   if (OwnsAction)

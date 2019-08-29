@@ -31,7 +31,7 @@ B *test_dynamic_cast(B *p) {
 // Test storage class qualifiers.
 __constant _Thread_local int a = 1;
 // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the '_Thread_local' storage class specifier}}
-// expected-warning@-2 {{_Thread_local is a C11 extension}}
+// expected-warning@-2 {{'_Thread_local' is a C11 extension}}
 
 __constant __thread int b = 2;
 // expected-error@-1 {{C++ for OpenCL version 1.0 does not support the '__thread' storage class specifier}}

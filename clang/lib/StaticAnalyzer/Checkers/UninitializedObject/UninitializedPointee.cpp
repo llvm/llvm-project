@@ -260,12 +260,13 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
       break;
   }
 
-  while (R->getAs<CXXBaseObjectRegion>()) {
+  while (isa<CXXBaseObjectRegion>(R)) {
     NeedsCastBack = true;
-
-    if (!isa<TypedValueRegion>(R->getSuperRegion()))
+    const auto *SuperR = dyn_cast<TypedValueRegion>(R->getSuperRegion());
+    if (!SuperR)
       break;
-    R = R->getSuperRegion()->getAs<TypedValueRegion>();
+
+    R = SuperR;
   }
 
   return DereferenceInfo{R, NeedsCastBack, /*IsCyclic*/ false};

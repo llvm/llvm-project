@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fcxx-exceptions -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fcxx-exceptions -fms-compatibility -emit-llvm -o - | FileCheck %s
 
 extern "C" {
   void f();

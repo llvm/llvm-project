@@ -31,7 +31,7 @@ TEST(GlobList, Everything) {
   EXPECT_TRUE(Filter.contains("*"));
 }
 
-TEST(GlobList, Simple) {
+TEST(GlobList, OneSimplePattern) {
   GlobList Filter("aaa");
 
   EXPECT_TRUE(Filter.contains("aaa"));
@@ -39,6 +39,40 @@ TEST(GlobList, Simple) {
   EXPECT_FALSE(Filter.contains("aa"));
   EXPECT_FALSE(Filter.contains("aaaa"));
   EXPECT_FALSE(Filter.contains("bbb"));
+}
+
+TEST(GlobList, TwoSimplePatterns) {
+  GlobList Filter("aaa,bbb");
+
+  EXPECT_TRUE(Filter.contains("aaa"));
+  EXPECT_TRUE(Filter.contains("bbb"));
+  EXPECT_FALSE(Filter.contains(""));
+  EXPECT_FALSE(Filter.contains("aa"));
+  EXPECT_FALSE(Filter.contains("aaaa"));
+  EXPECT_FALSE(Filter.contains("bbbb"));
+}
+
+TEST(GlobList, PatternPriority) {
+  // The last glob that matches the string decides whether that string is
+  // included or excluded.
+  {
+    GlobList Filter("a*,-aaa");
+
+    EXPECT_FALSE(Filter.contains(""));
+    EXPECT_TRUE(Filter.contains("a"));
+    EXPECT_TRUE(Filter.contains("aa"));
+    EXPECT_FALSE(Filter.contains("aaa"));
+    EXPECT_TRUE(Filter.contains("aaaa"));
+  }
+  {
+    GlobList Filter("-aaa,a*");
+
+    EXPECT_FALSE(Filter.contains(""));
+    EXPECT_TRUE(Filter.contains("a"));
+    EXPECT_TRUE(Filter.contains("aa"));
+    EXPECT_TRUE(Filter.contains("aaa"));
+    EXPECT_TRUE(Filter.contains("aaaa"));
+  }
 }
 
 TEST(GlobList, WhitespacesAtBegin) {

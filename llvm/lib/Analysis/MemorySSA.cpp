@@ -84,7 +84,7 @@ bool llvm::VerifyMemorySSA = false;
 #endif
 /// Enables memory ssa as a dependency for loop passes in legacy pass manager.
 cl::opt<bool> llvm::EnableMSSALoopDependency(
-    "enable-mssa-loop-dependency", cl::Hidden, cl::init(false),
+    "enable-mssa-loop-dependency", cl::Hidden, cl::init(true),
     cl::desc("Enable MemorySSA dependency for loop pass manager"));
 
 static cl::opt<bool, true>

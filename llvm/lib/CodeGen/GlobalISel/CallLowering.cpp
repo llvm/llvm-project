@@ -62,6 +62,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
       CS.getInstruction()->getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CS.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
+  Info.IsMustTailCall = CS.isMustTailCall();
 
   return lowerCall(MIRBuilder, Info);
 }

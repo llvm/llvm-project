@@ -1,7 +1,7 @@
 ; RUN: llvm-rc /FO %t -- %p/Inputs/tag-accelerators.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=ACCELERATORS
 
-; ACCELERATORS: Resource type (int): 9
+; ACCELERATORS: Resource type (int): ACCELERATOR (ID 9)
 ; ACCELERATORS-NEXT: Resource name (int): 1
 ; ACCELERATORS-NEXT: Data version: 0
 ; ACCELERATORS-NEXT: Memory flags: 0x30
@@ -29,7 +29,7 @@
 ; ACCELERATORS-NEXT:   00F0: 810031D4 47000000                    |..1.G...|
 ; ACCELERATORS-NEXT: )
 
-; ACCELERATORS-DAG: Resource type (int): 9
+; ACCELERATORS-DAG: Resource type (int): ACCELERATOR (ID 9)
 ; ACCELERATORS-NEXT: Resource name (int): 2
 ; ACCELERATORS-NEXT: Data version: 0
 ; ACCELERATORS-NEXT: Memory flags: 0x30

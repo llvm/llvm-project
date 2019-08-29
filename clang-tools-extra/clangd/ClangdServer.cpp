@@ -80,6 +80,11 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     });
   }
 
+  void onFailedAST(PathRef Path, std::vector<Diag> Diags,
+                   PublishFn Publish) override {
+    Publish([&]() { DiagConsumer.onDiagnosticsReady(Path, Diags); });
+  }
+
   void onFileUpdated(PathRef File, const TUStatus &Status) override {
     DiagConsumer.onFileUpdated(File, Status);
   }

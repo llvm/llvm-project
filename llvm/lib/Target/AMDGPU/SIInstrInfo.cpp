@@ -6087,6 +6087,23 @@ SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
            .addReg(UnusedCarry, RegState::Define | RegState::Dead);
 }
 
+MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
+                                               MachineBasicBlock::iterator I,
+                                               const DebugLoc &DL,
+                                               Register DestReg,
+                                               RegScavenger &RS) const {
+  if (ST.hasAddNoCarry())
+    return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e64), DestReg);
+
+  Register UnusedCarry = RS.scavengeRegister(RI.getBoolRC(), I, 0, false);
+  // TODO: Users need to deal with this.
+  if (!UnusedCarry.isValid())
+    report_fatal_error("failed to scavenge unused carry-out SGPR");
+
+  return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
+           .addReg(UnusedCarry, RegState::Define | RegState::Dead);
+}
+
 bool SIInstrInfo::isKillTerminator(unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:

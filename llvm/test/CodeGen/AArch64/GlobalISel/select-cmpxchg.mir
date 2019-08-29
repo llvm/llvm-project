@@ -19,10 +19,10 @@ body:             |
 
     ; CHECK-LABEL: name: cmpxchg_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[CMP:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[CST:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr32 = CASW [[CMP]], [[CST]], [[COPY]] :: (load store monotonic 4 on %ir.addr)
-    ; CHECK: $w0 = COPY [[RES]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[CASW:%[0-9]+]]:gpr32 = CASW [[COPY1]], [[MOVi32imm]], [[COPY]] :: (load store monotonic 4 on %ir.addr)
+    ; CHECK: $w0 = COPY [[CASW]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s32) = G_CONSTANT i32 1
@@ -41,10 +41,11 @@ body:             |
 
     ; CHECK-LABEL: name: cmpxchg_i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[CMP:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[CST:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: [[RES:%[0-9]+]]:gpr64 = CASX [[CMP]], [[CST]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
-    ; CHECK: $x0 = COPY [[RES]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[CASX:%[0-9]+]]:gpr64 = CASX [[COPY1]], [[SUBREG_TO_REG]], [[COPY]] :: (load store monotonic 8 on %ir.addr)
+    ; CHECK: $x0 = COPY [[CASX]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 0
     %2:gpr(s64) = G_CONSTANT i64 1

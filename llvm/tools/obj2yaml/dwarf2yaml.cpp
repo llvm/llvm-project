@@ -287,7 +287,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       const uint64_t LineEnd =
           LineTableLength + *StmtOffset + SizeOfPrologueLength;
       while (Offset < LineEnd) {
-        DWARFYAML::LineTableOpcode NewOp;
+        DWARFYAML::LineTableOpcode NewOp = {};
         NewOp.Opcode = (dwarf::LineNumberOps)LineData.getU8(&Offset);
         if (NewOp.Opcode == 0) {
           auto StartExt = Offset;

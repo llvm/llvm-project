@@ -1,7 +1,7 @@
 ; RUN: llvm-rc /FO %t -- %p/Inputs/versioninfo-padding.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
-; CHECK:      Resource type (int): 16
+; CHECK:      Resource type (int): VERSIONINFO (ID 16)
 ; CHECK-NEXT: Resource name (int): 1
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x30

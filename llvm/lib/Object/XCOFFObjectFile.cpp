@@ -17,6 +17,11 @@
 namespace llvm {
 namespace object {
 
+enum {
+  FUNCTION_SYM = 0x20,
+  SYM_TYPE_MASK = 0x07
+};
+
 // Checks that [Ptr, Ptr + Size) bytes fall inside the memory buffer
 // 'M'. Returns a pointer to the underlying object on success.
 template <typename T>
@@ -37,7 +42,7 @@ template <typename T> static const T *viewAs(uintptr_t in) {
   return reinterpret_cast<const T *>(in);
 }
 
-static StringRef generateStringRef(const char *Name) {
+static StringRef generateXCOFFFixedNameStringRef(const char *Name) {
   auto NulCharPtr =
       static_cast<const char *>(memchr(Name, '\0', XCOFF::NameSize));
   return NulCharPtr ? StringRef(Name, NulCharPtr - Name)
@@ -79,6 +84,9 @@ XCOFFObjectFile::toSection64(DataRefImpl Ref) const {
 const XCOFFSymbolEntry *XCOFFObjectFile::toSymbolEntry(DataRefImpl Ref) const {
   assert(!is64Bit() && "Symbol table support not implemented for 64-bit.");
   assert(Ref.p != 0 && "Symbol table pointer can not be nullptr!");
+#ifndef NDEBUG
+  checkSymbolEntryPointer(Ref.p);
+#endif
   auto SymEntPtr = viewAs<XCOFFSymbolEntry>(Ref.p);
   return SymEntPtr;
 }
@@ -108,23 +116,19 @@ XCOFFObjectFile::sectionHeaderTable64() const {
 void XCOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
   SymEntPtr += SymEntPtr->NumberOfAuxEntries + 1;
+#ifndef NDEBUG
+  // This function is used by basic_symbol_iterator, which allows to
+  // point to the end-of-symbol-table address.
+  if (reinterpret_cast<uintptr_t>(SymEntPtr) != getEndOfSymbolTableAddress())
+    checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(SymEntPtr));
+#endif
   Symb.p = reinterpret_cast<uintptr_t>(SymEntPtr);
 }
 
-Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
-  const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
-
-  if (SymEntPtr->NameInStrTbl.Magic != XCOFFSymbolEntry::NAME_IN_STR_TBL_MAGIC)
-    return generateStringRef(SymEntPtr->SymbolName);
-
-  // A storage class value with the high-order bit on indicates that the name is
-  // a symbolic debugger stabstring.
-  if (SymEntPtr->StorageClass & 0x80)
-    return StringRef("Unimplemented Debug Name");
-
-  uint32_t Offset = SymEntPtr->NameInStrTbl.Offset;
-  // The byte offset is relative to the start of the string table
-  // or .debug section. A byte offset value of 0 is a null or zero-length symbol
+Expected<StringRef>
+XCOFFObjectFile::getStringTableEntry(uint32_t Offset) const {
+  // The byte offset is relative to the start of the string table.
+  // A byte offset value of 0 is a null or zero-length symbol
   // name. A byte offset in the range 1 to 3 (inclusive) points into the length
   // field; as a soft-error recovery mechanism, we treat such cases as having an
   // offset of 0.
@@ -134,8 +138,30 @@ Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
   if (StringTable.Data != nullptr && StringTable.Size > Offset)
     return (StringTable.Data + Offset);
 
-  return make_error<GenericBinaryError>("Symbol Name parse failed",
+  return make_error<GenericBinaryError>("Bad offset for string table entry",
                                         object_error::parse_failed);
+}
+
+Expected<StringRef>
+XCOFFObjectFile::getCFileName(const XCOFFFileAuxEnt *CFileEntPtr) const {
+  if (CFileEntPtr->NameInStrTbl.Magic !=
+      XCOFFSymbolEntry::NAME_IN_STR_TBL_MAGIC)
+    return generateXCOFFFixedNameStringRef(CFileEntPtr->Name);
+  return getStringTableEntry(CFileEntPtr->NameInStrTbl.Offset);
+}
+
+Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
+  const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
+
+  // A storage class value with the high-order bit on indicates that the name is
+  // a symbolic debugger stabstring.
+  if (SymEntPtr->StorageClass & 0x80)
+    return StringRef("Unimplemented Debug Name");
+
+  if (SymEntPtr->NameInStrTbl.Magic != XCOFFSymbolEntry::NAME_IN_STR_TBL_MAGIC)
+    return generateXCOFFFixedNameStringRef(SymEntPtr->SymbolName);
+
+  return getStringTableEntry(SymEntPtr->NameInStrTbl.Offset);
 }
 
 Expected<uint64_t> XCOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
@@ -145,6 +171,7 @@ Expected<uint64_t> XCOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
 }
 
 uint64_t XCOFFObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
+  assert(!is64Bit() && "Symbol table support not implemented for 64-bit.");
   return toSymbolEntry(Symb)->Value;
 }
 
@@ -181,7 +208,7 @@ void XCOFFObjectFile::moveSectionNext(DataRefImpl &Sec) const {
 }
 
 Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
-  return generateStringRef(getSectionNameInternal(Sec));
+  return generateXCOFFFixedNameStringRef(getSectionNameInternal(Sec));
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
@@ -389,7 +416,8 @@ XCOFFObjectFile::getSymbolSectionName(const XCOFFSymbolEntry *SymEntPtr) const {
   default:
     Expected<DataRefImpl> SecRef = getSectionByNum(SectionNum);
     if (SecRef)
-      return generateStringRef(getSectionNameInternal(SecRef.get()));
+      return generateXCOFFFixedNameStringRef(
+          getSectionNameInternal(SecRef.get()));
     return SecRef.takeError();
   }
 }
@@ -435,6 +463,35 @@ uint64_t XCOFFObjectFile::getSymbolTableOffset64() const {
 
 uint32_t XCOFFObjectFile::getNumberOfSymbolTableEntries64() const {
   return fileHeader64()->NumberOfSymTableEntries;
+}
+
+uintptr_t XCOFFObjectFile::getEndOfSymbolTableAddress() const {
+  uint32_t NumberOfSymTableEntries =
+      is64Bit() ? getNumberOfSymbolTableEntries64()
+                : getLogicalNumberOfSymbolTableEntries32();
+  return getWithOffset(reinterpret_cast<uintptr_t>(SymbolTblPtr),
+                       XCOFF::SymbolTableEntrySize * NumberOfSymTableEntries);
+}
+
+void XCOFFObjectFile::checkSymbolEntryPointer(uintptr_t SymbolEntPtr) const {
+  if (SymbolEntPtr < reinterpret_cast<uintptr_t>(SymbolTblPtr))
+    report_fatal_error("Symbol table entry is outside of symbol table.");
+
+  if (SymbolEntPtr >= getEndOfSymbolTableAddress())
+    report_fatal_error("Symbol table entry is outside of symbol table.");
+
+  ptrdiff_t Offset = reinterpret_cast<const char *>(SymbolEntPtr) -
+                     reinterpret_cast<const char *>(SymbolTblPtr);
+
+  if (Offset % XCOFF::SymbolTableEntrySize != 0)
+    report_fatal_error(
+        "Symbol table entry position is not valid inside of symbol table.");
+}
+
+uint32_t XCOFFObjectFile::getSymbolIndex(uintptr_t SymbolEntPtr) const {
+  return (reinterpret_cast<const char *>(SymbolEntPtr) -
+          reinterpret_cast<const char *>(SymbolTblPtr)) /
+         XCOFF::SymbolTableEntrySize;
 }
 
 uint16_t XCOFFObjectFile::getFlags() const {
@@ -568,11 +625,77 @@ ObjectFile::createXCOFFObjectFile(MemoryBufferRef MemBufRef,
 }
 
 StringRef XCOFFSectionHeader32::getName() const {
-  return generateStringRef(Name);
+  return generateXCOFFFixedNameStringRef(Name);
 }
 
 StringRef XCOFFSectionHeader64::getName() const {
-  return generateStringRef(Name);
+  return generateXCOFFFixedNameStringRef(Name);
+}
+
+XCOFF::StorageClass XCOFFSymbolRef::getStorageClass() const {
+  return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->StorageClass;
+}
+
+uint8_t XCOFFSymbolRef::getNumberOfAuxEntries() const {
+  return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->NumberOfAuxEntries;
+}
+
+const XCOFFCsectAuxEnt32 *XCOFFSymbolRef::getXCOFFCsectAuxEnt32() const {
+  assert(!OwningObjectPtr->is64Bit() &&
+         "32-bit interface called on 64-bit object file.");
+  assert(hasCsectAuxEnt() && "No Csect Auxiliary Entry is found.");
+
+  // In XCOFF32, the csect auxilliary entry is always the last auxiliary
+  // entry for the symbol.
+  uintptr_t AuxAddr = getWithOffset(
+      SymEntDataRef.p, XCOFF::SymbolTableEntrySize * getNumberOfAuxEntries());
+
+#ifndef NDEBUG
+  OwningObjectPtr->checkSymbolEntryPointer(AuxAddr);
+#endif
+
+  return reinterpret_cast<const XCOFFCsectAuxEnt32 *>(AuxAddr);
+}
+
+uint16_t XCOFFSymbolRef::getType() const {
+  return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->SymbolType;
+}
+
+int16_t XCOFFSymbolRef::getSectionNumber() const {
+  return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->SectionNumber;
+}
+
+bool XCOFFSymbolRef::hasCsectAuxEnt() const {
+  XCOFF::StorageClass SC = getStorageClass();
+  return (SC == XCOFF::C_EXT || SC == XCOFF::C_WEAKEXT ||
+          SC == XCOFF::C_HIDEXT);
+}
+
+bool XCOFFSymbolRef::isFunction() const {
+  if (OwningObjectPtr->is64Bit())
+    report_fatal_error("64-bit support is unimplemented yet.");
+
+  if (getType() & FUNCTION_SYM)
+    return true;
+
+  if (!hasCsectAuxEnt())
+    return false;
+
+  const XCOFFCsectAuxEnt32 *CsectAuxEnt = getXCOFFCsectAuxEnt32();
+
+  // A function definition should be a label definition.
+  if ((CsectAuxEnt->SymbolAlignmentAndType & SYM_TYPE_MASK) != XCOFF::XTY_LD)
+    return false;
+
+  if (CsectAuxEnt->StorageMappingClass != XCOFF::XMC_PR)
+    return false;
+
+  int16_t SectNum = getSectionNumber();
+  Expected<DataRefImpl> SI = OwningObjectPtr->getSectionByNum(SectNum);
+  if (!SI)
+    return false;
+
+  return (OwningObjectPtr->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
 }
 
 } // namespace object

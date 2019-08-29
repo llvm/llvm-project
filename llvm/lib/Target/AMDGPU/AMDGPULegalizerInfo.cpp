@@ -499,11 +499,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
       });
 
-  if (ST.hasFlatAddressSpace()) {
-    getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-      .scalarize(0)
-      .custom();
-  }
+  getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
+    .scalarize(0)
+    .custom();
 
   // TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
   // handle some operations by just promoting the register during
@@ -903,6 +901,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   MIRBuilder.setInstr(MI);
 
+  const LLT S32 = LLT::scalar(32);
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
 
@@ -921,6 +920,27 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (ST.getTargetLowering()->isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_BITCAST));
+    return true;
+  }
+
+  if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+    // Truncate.
+    MIRBuilder.buildExtract(Dst, Src, 0);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (SrcAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+    const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    uint32_t AddrHiVal = Info->get32BitAddressHighBits();
+
+    // FIXME: This is a bit ugly due to creating a merge of 2 pointers to
+    // another. Merge operands are required to be the same type, but creating an
+    // extra ptrtoint would be kind of pointless.
+    auto HighAddr = MIRBuilder.buildConstant(
+      LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
+    MIRBuilder.buildMerge(Dst, {Src, HighAddr.getReg(0)});
+    MI.eraseFromParent();
     return true;
   }
 
@@ -945,8 +965,11 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  assert(SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-         SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
+  if (SrcAS != AMDGPUAS::LOCAL_ADDRESS && SrcAS != AMDGPUAS::PRIVATE_ADDRESS)
+    return false;
+
+  if (!ST.hasFlatAddressSpace())
+    return false;
 
   auto SegmentNull =
       MIRBuilder.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
@@ -961,7 +984,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   Register BuildPtr = MRI.createGenericVirtualRegister(DstTy);
 
   // Coerce the type of the low half of the result so we can use merge_values.
-  Register SrcAsInt = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register SrcAsInt = MRI.createGenericVirtualRegister(S32);
   MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
     .addDef(SrcAsInt)
     .addUse(Src);

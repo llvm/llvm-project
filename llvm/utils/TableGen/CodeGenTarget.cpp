@@ -327,10 +327,17 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
     return None;
 
   // Find and return the largest of our candidate classes.
-  llvm::sort(Candidates,
-             [&](const CodeGenRegisterClass *A, const CodeGenRegisterClass *B) {
-               return A->getMembers().size() > B->getMembers().size();
-             });
+  llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
+                                    const CodeGenRegisterClass *B) {
+    if (A->getMembers().size() > B->getMembers().size())
+      return true;
+
+    if (A->getMembers().size() < B->getMembers().size())
+      return false;
+
+    // Order by name as a tie-breaker.
+    return StringRef(A->getName()) < B->getName();
+  });
 
   return Candidates[0];
 }

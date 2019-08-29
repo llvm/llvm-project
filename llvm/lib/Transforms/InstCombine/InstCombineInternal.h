@@ -739,7 +739,7 @@ public:
       Value *LHS, Value *RHS, Instruction *CxtI) const;
 
   /// Maximum size of array considered when transforming.
-  uint64_t MaxArraySizeForCombine;
+  uint64_t MaxArraySizeForCombine = 0;
 
 private:
   /// Performs a few simplifications for operators which are associative
@@ -872,6 +872,8 @@ private:
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldICmpWithZero(ICmpInst &Cmp);
+
+  Value *foldUnsignedMultiplicationOverflowCheck(ICmpInst &Cmp);
 
   Instruction *foldICmpSelectConstant(ICmpInst &Cmp, SelectInst *Select,
                                       ConstantInt *C);

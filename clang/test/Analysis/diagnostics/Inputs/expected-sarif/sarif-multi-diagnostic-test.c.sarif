@@ -1,51 +1,18 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-11-28",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
-      "files": [      
+      "artifacts": [
         {
-          "fileLocation": {
+          "length": 951,
+          "location": {
           },
-          "length": 686,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
           ]
         }
       ],
-      "resources": {
-        "rules": [
-          {
-            "fullDescription": {
-              "text": "Mark tainted symbols as such."
-            },
-            "id": "debug.TaintTest",
-            "name": {
-              "text": "debug.TaintTest"
-            }
-          },        
-          {
-            "fullDescription": {
-              "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
-            },
-            "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.CallAndMessage",
-            "id": "core.CallAndMessage",
-            "name": {
-              "text": "core.CallAndMessage"
-            }
-          },
-          {
-            "fullDescription": {
-              "text": "Check for division by zero"
-            },
-            "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.DivideZero",
-            "id": "core.DivideZero",
-            "name": {
-              "text": "core.DivideZero"
-            }
-          }
-        ]
-      },
       "results": [
         {
           "codeFlows": [
@@ -60,14 +27,14 @@
                           "text": "Calling 'f'"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 5,
-                            "endLine": 24,
+                            "endColumn": 6,
+                            "endLine": 34,
                             "startColumn": 3,
-                            "startLine": 24
+                            "startLine": 34
                           }
                         }
                       }
@@ -79,14 +46,14 @@
                           "text": "tainted"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 17,
-                            "endLine": 9,
+                            "endColumn": 18,
+                            "endLine": 11,
                             "startColumn": 11,
-                            "startLine": 9
+                            "startLine": 11
                           }
                         }
                       }
@@ -99,14 +66,14 @@
           "locations": [
             {
               "physicalLocation": {
-                "fileLocation": {
-                  "fileIndex": 0,
+                "artifactLocation": {
+                  "index": 0,
                 },
                 "region": {
-                  "endColumn": 17,
-                  "endLine": 9,
+                  "endColumn": 18,
+                  "endLine": 11,
                   "startColumn": 11,
-                  "startLine": 9
+                  "startLine": 11
                 }
               }
             }
@@ -130,14 +97,14 @@
                           "text": "Calling 'g'"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 5,
-                            "endLine": 25,
+                            "endColumn": 6,
+                            "endLine": 35,
                             "startColumn": 3,
-                            "startLine": 25
+                            "startLine": 35
                           }
                         }
                       }
@@ -149,14 +116,14 @@
                           "text": "'fp' declared without an initial value"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 10,
-                            "endLine": 13,
+                            "endColumn": 11,
+                            "endLine": 15,
                             "startColumn": 3,
-                            "startLine": 13
+                            "startLine": 15
                           }
                         }
                       }
@@ -168,14 +135,14 @@
                           "text": "Called function pointer is an uninitialized pointer value"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 8,
-                            "endLine": 14,
+                            "endColumn": 9,
+                            "endLine": 16,
                             "startColumn": 3,
-                            "startLine": 14
+                            "startLine": 16
                           }
                         }
                       }
@@ -188,14 +155,14 @@
           "locations": [
             {
               "physicalLocation": {
-                "fileLocation": {
-                  "fileIndex": 0,
+                "artifactLocation": {
+                  "index": 0,
                 },
                 "region": {
-                  "endColumn": 8,
-                  "endLine": 14,
+                  "endColumn": 9,
+                  "endLine": 16,
                   "startColumn": 3,
-                  "startLine": 14
+                  "startLine": 16
                 }
               }
             }
@@ -219,14 +186,14 @@
                           "text": "Assuming 'i' is equal to 0"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
-                            "endColumn": 12,
-                            "endLine": 18,
+                            "endColumn": 13,
+                            "endLine": 20,
                             "startColumn": 7,
-                            "startLine": 18
+                            "startLine": 20
                           }
                         }
                       }
@@ -238,14 +205,13 @@
                           "text": "Taking true branch"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
                             "endColumn": 3,
-                            "endLine": 18,
                             "startColumn": 3,
-                            "startLine": 18
+                            "startLine": 20
                           }
                         }
                       }
@@ -257,14 +223,13 @@
                           "text": "Division by zero"
                         },
                         "physicalLocation": {
-                          "fileLocation": {
-                            "fileIndex": 0,
+                          "artifactLocation": {
+                            "index": 0,
                           },
                           "region": {
                             "endColumn": 14,
-                            "endLine": 19,
                             "startColumn": 14,
-                            "startLine": 19
+                            "startLine": 21
                           }
                         }
                       }
@@ -277,14 +242,13 @@
           "locations": [
             {
               "physicalLocation": {
-                "fileLocation": {
-                  "fileIndex": 0,
+                "artifactLocation": {
+                  "index": 0,
                 },
                 "region": {
                   "endColumn": 14,
-                  "endLine": 19,
                   "startColumn": 14,
-                  "startLine": 19
+                  "startLine": 21
                 }
               }
             }
@@ -294,12 +258,152 @@
           },
           "ruleId": "core.DivideZero",
           "ruleIndex": 2
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Memory is allocated"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 24,
+                            "endLine": 26,
+                            "startColumn": 15,
+                            "startLine": 26
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "important",
+                      "location": {
+                        "message": {
+                          "text": "Assuming 'i' is < 4"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 27,
+                            "startColumn": 7,
+                            "startLine": 27
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking true branch"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 3,
+                            "startColumn": 3,
+                            "startLine": 27
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Potential leak of memory pointed to by 'mem'"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "startColumn": 12,
+                            "startLine": 28
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 12,
+                  "startColumn": 12,
+                  "startLine": 28
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Potential leak of memory pointed to by 'mem'"
+          },
+          "ruleId": "unix.Malloc",
+          "ruleIndex": 3
         }
       ],
       "tool": {
-        "fullName": "clang static analyzer",
-        "language": "en-US",
-        "name": "clang",
+        "driver": {
+          "fullName": "clang static analyzer",
+          "language": "en-US",
+          "name": "clang",
+          "rules": [
+            {
+              "fullDescription": {
+                "text": "Mark tainted symbols as such."
+              },
+              "id": "debug.TaintTest",
+              "name": "debug.TaintTest"
+            },
+            {
+              "fullDescription": {
+                "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
+              },
+              "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.CallAndMessage",
+              "id": "core.CallAndMessage",
+              "name": "core.CallAndMessage"
+            },
+            {
+              "fullDescription": {
+                "text": "Check for division by zero"
+              },
+              "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.DivideZero",
+              "id": "core.DivideZero",
+              "name": "core.DivideZero"
+            },
+            {
+              "fullDescription": {
+                "text": "Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free()."
+              },
+              "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#unix.Malloc",
+              "id": "unix.Malloc",
+              "name": "unix.Malloc"
+            }
+          ],
+        }
       }
     }
   ],

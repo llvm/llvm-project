@@ -31,11 +31,7 @@ define float @float_test(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
 ; RV64IF-NEXT:    sd s0, 0(sp)
-; RV64IF-NEXT:    slli a0, a0, 32
-; RV64IF-NEXT:    srli a0, a0, 32
-; RV64IF-NEXT:    slli a1, a1, 32
-; RV64IF-NEXT:    srli s0, a1, 32
-; RV64IF-NEXT:    mv a1, s0
+; RV64IF-NEXT:    mv s0, a1
 ; RV64IF-NEXT:    call __addsf3
 ; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __divsf3

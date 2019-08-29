@@ -52,7 +52,8 @@ struct ParseInputs {
 
 /// Builds compiler invocation that could be used to build AST or preamble.
 std::unique_ptr<CompilerInvocation>
-buildCompilerInvocation(const ParseInputs &Inputs);
+buildCompilerInvocation(const ParseInputs &Inputs,
+                        clang::DiagnosticConsumer &D);
 
 /// Creates a compiler instance, configured so that:
 ///   - Contents of the parsed file are remapped to \p MainFile.

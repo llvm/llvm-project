@@ -53,5 +53,8 @@ int main(int, char**) {
     assert(!std::regex_match("abZcd", std::regex("^ab\\dcd")));
     assert(!std::regex_match("ab5cd", std::regex("^ab\\Dcd")));
 
+    assert(std::regex_match("_xyz_", std::regex("_(\\s|\\S)+_")));
+    assert(std::regex_match("_xyz_", std::regex("_[\\s\\S]+_")));
+
     return 0;
 }

@@ -38,8 +38,8 @@ bool cocoa::isRefType(QualType RetTy, StringRef Prefix,
     return false;
 
   // Is the type void*?
-  const PointerType* PT = RetTy->getAs<PointerType>();
-  if (!(PT->getPointeeType().getUnqualifiedType()->isVoidType()))
+  const PointerType* PT = RetTy->castAs<PointerType>();
+  if (!PT || !PT->getPointeeType().getUnqualifiedType()->isVoidType())
     return false;
 
   // Does the name start with the prefix?

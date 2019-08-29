@@ -9659,6 +9659,23 @@ _mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __V) {
 }
 #undef _mm512_mask_reduce_operator
 
+/// Moves the least significant 32 bits of a vector of [16 x i32] to a
+///    32-bit signed integer value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
+///
+/// \param __A
+///    A vector of [16 x i32]. The least significant 32 bits are moved to the
+///    destination.
+/// \returns A 32-bit signed integer containing the moved value.
+static __inline__ int __DEFAULT_FN_ATTRS512
+_mm512_cvtsi512_si32(__m512i __A) {
+  __v16si __b = (__v16si)__A;
+  return __b[0];
+}
+
 #undef __DEFAULT_FN_ATTRS512
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS

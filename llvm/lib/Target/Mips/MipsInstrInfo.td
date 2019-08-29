@@ -211,9 +211,9 @@ def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
                       AssemblerPredicate<"!FeatureCnMips">;
-def IsSym32     :     Predicate<"Subtarget->HasSym32()">,
+def IsSym32     :     Predicate<"Subtarget->hasSym32()">,
                       AssemblerPredicate<"FeatureSym32">;
-def IsSym64     :     Predicate<"!Subtarget->HasSym32()">,
+def IsSym64     :     Predicate<"!Subtarget->hasSym32()">,
                       AssemblerPredicate<"!FeatureSym32">;
 def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
@@ -3165,6 +3165,8 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
                 (Addiu GPROpnd:$hi, tconstpool:$lo)>;
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tglobaltlsaddr:$lo)),
                 (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo texternalsym:$lo)),
+                (Addiu GPROpnd:$hi, texternalsym:$lo)>;
 }
 
 // wrapper_pic

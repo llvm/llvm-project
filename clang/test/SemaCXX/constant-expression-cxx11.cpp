@@ -1287,13 +1287,13 @@ namespace ExternConstexpr {
 }
 
 namespace ComplexConstexpr {
-  constexpr _Complex float test1 = {};
-  constexpr _Complex float test2 = {1};
-  constexpr _Complex double test3 = {1,2};
-  constexpr _Complex int test4 = {4};
-  constexpr _Complex int test5 = 4;
-  constexpr _Complex int test6 = {5,6};
-  typedef _Complex float fcomplex;
+  constexpr _Complex float test1 = {}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex float test2 = {1}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex double test3 = {1,2}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test4 = {4}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test5 = 4; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test6 = {5,6}; // expected-warning {{'_Complex' is a C99 extension}}
+  typedef _Complex float fcomplex; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr fcomplex test7 = fcomplex();
 
   constexpr const double &t2r = __real test3;
@@ -1307,10 +1307,10 @@ namespace ComplexConstexpr {
   static_assert(t2p[1] == 2.0, "");
   static_assert(t2p[2] == 0.0, ""); // expected-error {{constant expr}} expected-note {{one-past-the-end pointer}}
   static_assert(t2p[3] == 0.0, ""); // expected-error {{constant expr}} expected-note {{cannot refer to element 3 of array of 2 elements}}
-  constexpr _Complex float *p = 0;
+  constexpr _Complex float *p = 0; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{cannot access real component of null}}
   constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of null}}
-  constexpr const _Complex double *q = &test3 + 1;
+  constexpr const _Complex double *q = &test3 + 1; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr double qr = __real *q; // expected-error {{constant expr}} expected-note {{cannot access real component of pointer past the end}}
   constexpr double qi = __imag *q; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of pointer past the end}}
 

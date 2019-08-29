@@ -282,7 +282,9 @@ define void @select_addrspacecast_const_op(i1 %a, i1 %b) {
   ret void
 }
 
-@gv = external addrspace(1) global i64
+;; If this was external, we wouldn't be able to prove dereferenceability
+;; of the location.
+@gv = addrspace(1) global i64 zeroinitializer
 
 define void @select_addrspacecast_gv(i1 %a, i1 %b) {
 ; CHECK-LABEL: @select_addrspacecast_gv(
@@ -299,10 +301,11 @@ define void @select_addrspacecast_gv(i1 %a, i1 %b) {
   ret void
 }
 
-; CHECK-LABEL: @select_addrspacecast_i8(
-; CHECK: [[SEL:%.*]] = select i1 undef, i8 undef, i8 undef
-; CHECK-NEXT: ret i8 [[SEL]]
 define i8 @select_addrspacecast_i8() {
+; CHECK-LABEL: @select_addrspacecast_i8(
+; CHECK-NEXT:    [[RET_SROA_SPECULATED:%.*]] = select i1 undef, i8 undef, i8 undef
+; CHECK-NEXT:    ret i8 [[RET_SROA_SPECULATED]]
+;
   %a = alloca i8
   %b = alloca i8
 

@@ -264,6 +264,29 @@ bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
   return L == R.getEnd() || halfOpenRangeContains(Mgr, R, L);
 }
 
+SourceLocation includeHashLoc(FileID IncludedFile, const SourceManager &SM) {
+  assert(SM.getLocForEndOfFile(IncludedFile).isFileID());
+  FileID IncludingFile;
+  unsigned Offset;
+  std::tie(IncludingFile, Offset) =
+      SM.getDecomposedExpansionLoc(SM.getIncludeLoc(IncludedFile));
+  bool Invalid = false;
+  llvm::StringRef Buf = SM.getBufferData(IncludingFile, &Invalid);
+  if (Invalid)
+    return SourceLocation();
+  // Now buf is "...\n#include <foo>\n..."
+  // and Offset points here:   ^
+  // Rewind to the preceding # on the line.
+  assert(Offset < Buf.size());
+  for (;; --Offset) {
+    if (Buf[Offset] == '#')
+      return SM.getComposedLoc(IncludingFile, Offset);
+    if (Buf[Offset] == '\n' || Offset == 0) // no hash, what's going on?
+      return SourceLocation();
+  }
+}
+
+
 static unsigned getTokenLengthAtLoc(SourceLocation Loc, const SourceManager &SM,
                                     const LangOptions &LangOpts) {
   Token TheTok;
@@ -308,16 +331,49 @@ static SourceRange toTokenRange(CharSourceRange Range, const SourceManager &SM,
 static SourceRange unionTokenRange(SourceRange R1, SourceRange R2,
                                    const SourceManager &SM,
                                    const LangOptions &LangOpts) {
-  SourceLocation E1 = getLocForTokenEnd(R1.getEnd(), SM, LangOpts);
-  SourceLocation E2 = getLocForTokenEnd(R2.getEnd(), SM, LangOpts);
-  return SourceRange(std::min(R1.getBegin(), R2.getBegin()),
-                     E1 < E2 ? R2.getEnd() : R1.getEnd());
+  SourceLocation Begin =
+      SM.isBeforeInTranslationUnit(R1.getBegin(), R2.getBegin())
+          ? R1.getBegin()
+          : R2.getBegin();
+  SourceLocation End =
+      SM.isBeforeInTranslationUnit(getLocForTokenEnd(R1.getEnd(), SM, LangOpts),
+                                   getLocForTokenEnd(R2.getEnd(), SM, LangOpts))
+          ? R2.getEnd()
+          : R1.getEnd();
+  return SourceRange(Begin, End);
 }
 
-// Check if two locations have the same file id.
-static bool inSameFile(SourceLocation Loc1, SourceLocation Loc2,
-                       const SourceManager &SM) {
-  return SM.getFileID(Loc1) == SM.getFileID(Loc2);
+// Given a range whose endpoints may be in different expansions or files,
+// tries to find a range within a common file by following up the expansion and
+// include location in each.
+static SourceRange rangeInCommonFile(SourceRange R, const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  // Fast path for most common cases.
+  if (SM.isWrittenInSameFile(R.getBegin(), R.getEnd()))
+    return R;
+  // Record the stack of expansion locations for the beginning, keyed by FileID.
+  llvm::DenseMap<FileID, SourceLocation> BeginExpansions;
+  for (SourceLocation Begin = R.getBegin(); Begin.isValid();
+       Begin = Begin.isFileID()
+                   ? includeHashLoc(SM.getFileID(Begin), SM)
+                   : SM.getImmediateExpansionRange(Begin).getBegin()) {
+    BeginExpansions[SM.getFileID(Begin)] = Begin;
+  }
+  // Move up the stack of expansion locations for the end until we find the
+  // location in BeginExpansions with that has the same file id.
+  for (SourceLocation End = R.getEnd(); End.isValid();
+       End = End.isFileID() ? includeHashLoc(SM.getFileID(End), SM)
+                            : toTokenRange(SM.getImmediateExpansionRange(End),
+                                           SM, LangOpts)
+                                  .getEnd()) {
+    auto It = BeginExpansions.find(SM.getFileID(End));
+    if (It != BeginExpansions.end()) {
+      if (SM.getFileOffset(It->second) > SM.getFileOffset(End))
+        return SourceLocation();
+      return {It->second, End};
+    }
+  }
+  return SourceRange();
 }
 
 // Find an expansion range (not necessarily immediate) the ends of which are in
@@ -325,33 +381,11 @@ static bool inSameFile(SourceLocation Loc1, SourceLocation Loc2,
 static SourceRange
 getExpansionTokenRangeInSameFile(SourceLocation Loc, const SourceManager &SM,
                                  const LangOptions &LangOpts) {
-  SourceRange ExpansionRange =
-      toTokenRange(SM.getImmediateExpansionRange(Loc), SM, LangOpts);
-  // Fast path for most common cases.
-  if (inSameFile(ExpansionRange.getBegin(), ExpansionRange.getEnd(), SM))
-    return ExpansionRange;
-  // Record the stack of expansion locations for the beginning, keyed by FileID.
-  llvm::DenseMap<FileID, SourceLocation> BeginExpansions;
-  for (SourceLocation Begin = ExpansionRange.getBegin(); Begin.isValid();
-       Begin = Begin.isFileID()
-                   ? SourceLocation()
-                   : SM.getImmediateExpansionRange(Begin).getBegin()) {
-    BeginExpansions[SM.getFileID(Begin)] = Begin;
-  }
-  // Move up the stack of expansion locations for the end until we find the
-  // location in BeginExpansions with that has the same file id.
-  for (SourceLocation End = ExpansionRange.getEnd(); End.isValid();
-       End = End.isFileID() ? SourceLocation()
-                            : toTokenRange(SM.getImmediateExpansionRange(End),
-                                           SM, LangOpts)
-                                  .getEnd()) {
-    auto It = BeginExpansions.find(SM.getFileID(End));
-    if (It != BeginExpansions.end())
-      return {It->second, End};
-  }
-  llvm_unreachable(
-      "We should able to find a common ancestor in the expansion tree.");
+  return rangeInCommonFile(
+      toTokenRange(SM.getImmediateExpansionRange(Loc), SM, LangOpts), SM,
+      LangOpts);
 }
+
 // Returns the file range for a given Location as a Token Range
 // This is quite similar to getFileLoc in SourceManager as both use
 // getImmediateExpansionRange and getImmediateSpellingLoc (for macro IDs).
@@ -371,14 +405,17 @@ static SourceRange getTokenFileRange(SourceLocation Loc,
       FileRange = unionTokenRange(
           SM.getImmediateSpellingLoc(FileRange.getBegin()),
           SM.getImmediateSpellingLoc(FileRange.getEnd()), SM, LangOpts);
-      assert(inSameFile(FileRange.getBegin(), FileRange.getEnd(), SM));
+      assert(SM.isWrittenInSameFile(FileRange.getBegin(), FileRange.getEnd()));
     } else {
       SourceRange ExpansionRangeForBegin =
           getExpansionTokenRangeInSameFile(FileRange.getBegin(), SM, LangOpts);
       SourceRange ExpansionRangeForEnd =
           getExpansionTokenRangeInSameFile(FileRange.getEnd(), SM, LangOpts);
-      assert(inSameFile(ExpansionRangeForBegin.getBegin(),
-                        ExpansionRangeForEnd.getBegin(), SM) &&
+      if (ExpansionRangeForBegin.isInvalid() ||
+          ExpansionRangeForEnd.isInvalid())
+        return SourceRange();
+      assert(SM.isWrittenInSameFile(ExpansionRangeForBegin.getBegin(),
+                                    ExpansionRangeForEnd.getBegin()) &&
              "Both Expansion ranges should be in same file.");
       FileRange = unionTokenRange(ExpansionRangeForBegin, ExpansionRangeForEnd,
                                   SM, LangOpts);
@@ -402,7 +439,8 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
   if (!isValidFileRange(SM, R2))
     return llvm::None;
 
-  SourceRange Result = unionTokenRange(R1, R2, SM, LangOpts);
+  SourceRange Result =
+      rangeInCommonFile(unionTokenRange(R1, R2, SM, LangOpts), SM, LangOpts);
   unsigned TokLen = getTokenLengthAtLoc(Result.getEnd(), SM, LangOpts);
   // Convert from closed token range to half-open (char) range
   Result.setEnd(Result.getEnd().getLocWithOffset(TokLen));

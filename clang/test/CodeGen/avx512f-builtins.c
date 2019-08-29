@@ -4762,6 +4762,12 @@ unsigned test_mm_cvtsd_u32(__m128d __A) {
   return _mm_cvtsd_u32(__A); 
 }
 
+int test_mm512_cvtsi512_si32(__m512i a) {
+  // CHECK-LABEL: test_mm512_cvtsi512_si32
+  // CHECK: %{{.*}} = extractelement <16 x i32> %{{.*}}, i32 0
+  return _mm512_cvtsi512_si32(a);
+}
+
 #ifdef __x86_64__
 unsigned long long test_mm_cvt_roundsd_u64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_u64

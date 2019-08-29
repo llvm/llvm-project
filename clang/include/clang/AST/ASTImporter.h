@@ -90,6 +90,8 @@ class TypeSourceInfo;
     using FileIDImportHandlerType =
         std::function<void(FileID /*ToID*/, FileID /*FromID*/)>;
 
+    enum class ODRHandlingType { Conservative, Liberal };
+
     // An ImportPath is the list of the AST nodes which we visit during an
     // Import call.
     // If node `A` depends on node `B` then the path contains an `A`->`B` edge.
@@ -236,6 +238,8 @@ class TypeSourceInfo;
     /// Whether to perform a minimal import.
     bool Minimal;
 
+    ODRHandlingType ODRHandling;
+
     /// Whether the last diagnostic came from the "from" context.
     bool LastDiagFromFrom = false;
 
@@ -325,6 +329,8 @@ class TypeSourceInfo;
     /// Whether the importer will perform a minimal import, creating
     /// to-be-completed forward declarations when possible.
     bool isMinimalImport() const { return Minimal; }
+
+    void setODRHandling(ODRHandlingType T) { ODRHandling = T; }
 
     /// \brief Import the given object, returns the result.
     ///
@@ -517,12 +523,11 @@ class TypeSourceInfo;
     ///
     /// \param NumDecls the number of conflicting declarations in \p Decls.
     ///
-    /// \returns the name that the newly-imported declaration should have.
-    virtual DeclarationName HandleNameConflict(DeclarationName Name,
-                                               DeclContext *DC,
-                                               unsigned IDNS,
-                                               NamedDecl **Decls,
-                                               unsigned NumDecls);
+    /// \returns the name that the newly-imported declaration should have. Or
+    /// an error if we can't handle the name conflict.
+    virtual Expected<DeclarationName>
+    HandleNameConflict(DeclarationName Name, DeclContext *DC, unsigned IDNS,
+                       NamedDecl **Decls, unsigned NumDecls);
 
     /// Retrieve the context that AST nodes are being imported into.
     ASTContext &getToContext() const { return ToContext; }

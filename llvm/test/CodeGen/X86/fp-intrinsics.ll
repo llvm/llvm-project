@@ -286,6 +286,39 @@ entry:
   ret double %rem
 }
 
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown. The expansion should have only one conversion instruction.
+; Verify that no gross errors happen.
+; CHECK-LABEL: @f20u
+; NO-FMA: cmpltsd
+; NO-FMA: movapd
+; NO-FMA: andpd
+; NO-FMA: xorl
+; NO-FMA: ucomisd
+; NO-FMA: subsd
+; NO-FMA: andnpd
+; NO-FMA: orpd
+; NO-FMA: cvttsd2si
+; NO-FMA: setae
+; NO-FMA: shll
+; NO-FMA: xorl
+;
+; HAS-FMA: vcmpltsd
+; HAS-FMA: vsubsd
+; HAS-FMA: vblendvpd
+; HAS-FMA: vcvttsd2si
+; HAS-FMA: xorl
+; HAS-FMA: vucomisd
+; HAS-FMA: setae
+; HAS-FMA: shll
+; HAS-FMA: xorl
+define i32 @f20u(double %x) {
+entry:
+  %result = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x,
+                                               metadata !"fpexcept.strict")
+  ret i32 %result
+}
+
 ; Verify that round(42.1) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
@@ -329,6 +362,7 @@ declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadat
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
 declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
+declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
+declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
-

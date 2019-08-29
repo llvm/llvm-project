@@ -186,10 +186,8 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_branch BB4_3
 ; GCN-NEXT:  BB4_2: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v3i16@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@gotpcrel32@hi+4
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_add_u32 s4, s4, func_v3i16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@rel32@hi+4
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:  BB4_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
@@ -232,10 +230,8 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_branch BB5_3
 ; GCN-NEXT:  BB5_2: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v3f16@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@gotpcrel32@hi+4
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_add_u32 s4, s4, func_v3f16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@rel32@hi+4
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:  BB5_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
@@ -261,8 +257,8 @@ declare hidden <2 x float> @func_v2f32() #0
 declare hidden <3 x float> @func_v3f32() #0
 declare hidden <4 x float> @func_v4f32() #0
 declare hidden <4 x half> @func_v4f16() #0
-declare <3 x i16> @func_v3i16()
-declare <3 x half> @func_v3f16()
+declare hidden <3 x i16> @func_v3i16()
+declare hidden <3 x half> @func_v3f16()
 
 declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 

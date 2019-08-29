@@ -6,7 +6,7 @@
 ; RUN: llvm-rc -- %t.implicit.rc
 ; RUN: llvm-readobj %t.implicit.res | FileCheck --check-prefix=MENU %s
 
-; MENU: Resource type (int): 4
+; MENU: Resource type (int): MENU (ID 4)
 ; MENU-NEXT: Resource name (string): CHECKRECURSION
 ; MENU-NEXT: Data version: 0
 ; MENU-NEXT: Memory flags: 0x1030
@@ -25,7 +25,7 @@
 ; MENU-NEXT:   0060: 66006700 0000                        |f.g...|
 ; MENU-NEXT: )
 
-; MENU-DAG: Resource type (int): 4
+; MENU-DAG: Resource type (int): MENU (ID 4)
 ; MENU-NEXT: Resource name (string): CHECKFLAGS
 ; MENU-NEXT: Data version: 0
 ; MENU-NEXT: Memory flags: 0x1030
@@ -50,7 +50,7 @@
 ; MENU-NEXT:   00C0: 63006400 65006600 0000               |c.d.e.f...|
 ; MENU-NEXT: )
 
-; MENU-DAG: Resource type (int): 4
+; MENU-DAG: Resource type (int): MENU (ID 4)
 ; MENU-NEXT: Resource name (string): CHECKOPTS
 ; MENU-NEXT: Data version: 0
 ; MENU-NEXT: Memory flags: 0x1030

@@ -50,15 +50,8 @@ public:
   /// \param[in] data
   ///     A data extractor configured to read the DWARF location expression's
   ///     bytecode.
-  ///
-  /// \param[in] data_offset
-  ///     The offset of the location expression in the extractor.
-  ///
-  /// \param[in] data_length
-  ///     The byte length of the location expression.
   DWARFExpression(lldb::ModuleSP module, const DataExtractor &data,
-                  const DWARFUnit *dwarf_cu, lldb::offset_t data_offset,
-                  lldb::offset_t data_length);
+                  const DWARFUnit *dwarf_cu);
 
   /// Destructor
   virtual ~DWARFExpression();
@@ -211,12 +204,6 @@ public:
   ///     in the case where an expression needs to be evaluated while building
   ///     the stack frame list, this short-cut is available.
   ///
-  /// \param[in] offset
-  ///     The offset of the location expression in the data extractor.
-  ///
-  /// \param[in] length
-  ///     The length in bytes of the location expression.
-  ///
   /// \param[in] reg_set
   ///     The call-frame-info style register kind.
   ///
@@ -236,8 +223,7 @@ public:
   ///     details of the failure are provided through it.
   static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP opcode_ctx, const DataExtractor &opcodes,
-                       const DWARFUnit *dwarf_cu, const lldb::offset_t offset,
-                       const lldb::offset_t length,
+                       const DWARFUnit *dwarf_cu,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
                        const Value *object_address_ptr, Value &result,
@@ -251,10 +237,6 @@ public:
   bool DumpLocationForAddress(Stream *s, lldb::DescriptionLevel level,
                               lldb::addr_t loclist_base_load_addr,
                               lldb::addr_t address, ABI *abi);
-
-  static size_t LocationListSize(const DWARFUnit *dwarf_cu,
-                                 const DataExtractor &debug_loc_data,
-                                 lldb::offset_t offset);
 
   static bool PrintDWARFExpression(Stream &s, const DataExtractor &data,
                                    int address_size, int dwarf_ref_size,

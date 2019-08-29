@@ -83,6 +83,11 @@ llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
 /// the main file.
 bool isInsideMainFile(SourceLocation Loc, const SourceManager &SM);
 
+/// Returns the #include location through which IncludedFIle was loaded.
+/// Where SM.getIncludeLoc() returns the location of the *filename*, which may
+/// be in a macro, includeHashLoc() returns the location of the #.
+SourceLocation includeHashLoc(FileID IncludedFile, const SourceManager &SM);
+
 /// Returns true if the token at Loc is spelled in the source code.
 /// This is not the case for:
 ///   * symbols formed via macro concatenation, the spelling location will

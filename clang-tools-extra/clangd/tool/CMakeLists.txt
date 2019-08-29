@@ -26,6 +26,7 @@ target_link_libraries(clangd
   clangSema
   clangTooling
   clangToolingCore
+  clangToolingRefactoring
   clangToolingSyntax
   ${CLANGD_XPC_LIBS}
   )

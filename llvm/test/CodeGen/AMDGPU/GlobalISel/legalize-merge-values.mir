@@ -702,10 +702,10 @@ body: |
     ; CHECK: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C20]], [[TRUNC10]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC10]](s32), [[C20]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC10]](s32), [[C]]
-    ; CHECK: [[SHL15:%[0-9]+]]:_(s136) = G_SHL [[UV1]], [[TRUNC10]](s32)
-    ; CHECK: [[SHL16:%[0-9]+]]:_(s136) = G_SHL [[UV1]], [[TRUNC10]](s32)
+    ; CHECK: [[SHL15:%[0-9]+]]:_(s136) = G_SHL [[UV]], [[TRUNC10]](s32)
     ; CHECK: [[LSHR:%[0-9]+]]:_(s136) = G_LSHR [[UV]], [[SUB1]](s32)
-    ; CHECK: [[OR15:%[0-9]+]]:_(s136) = G_OR [[SHL16]], [[LSHR]]
+    ; CHECK: [[SHL16:%[0-9]+]]:_(s136) = G_SHL [[UV1]], [[TRUNC10]](s32)
+    ; CHECK: [[OR15:%[0-9]+]]:_(s136) = G_OR [[LSHR]], [[SHL16]]
     ; CHECK: [[C21:%[0-9]+]]:_(s136) = G_CONSTANT i136 0
     ; CHECK: [[SHL17:%[0-9]+]]:_(s136) = G_SHL [[UV]], [[SUB]](s32)
     ; CHECK: [[SELECT:%[0-9]+]]:_(s136) = G_SELECT [[ICMP]](s1), [[SHL15]], [[C21]]

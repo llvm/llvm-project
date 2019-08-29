@@ -91,6 +91,13 @@ class CommandLineCompletionTestCase(TestBase):
                                'arm64'])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_ambiguous_long_opt(self):
+        self.completions_match('breakpoint modify --th',
+                               ['--thread-id',
+                                '--thread-index',
+                                '--thread-name'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_plugin_load(self):
         self.complete_from_to('plugin load ', [])
 
@@ -136,6 +143,13 @@ class CommandLineCompletionTestCase(TestBase):
         src_dir =  os.path.dirname(os.path.realpath(__file__)) + '/'
         self.complete_from_to('log enable lldb expr -f ' + src_dir,
                               ['main.cpp'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_dir(self):
+        # Complete our source directory.
+        src_dir =  os.path.dirname(os.path.realpath(__file__))
+        self.complete_from_to('log enable lldb expr -f ' + src_dir,
+                              [src_dir + os.sep], turn_off_re_match=True)
 
     # <rdar://problem/11052829>
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot

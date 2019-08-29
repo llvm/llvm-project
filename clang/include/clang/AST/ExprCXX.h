@@ -4340,9 +4340,6 @@ private:
   };
   llvm::PointerUnion<Stmt *, ExtraState *> State;
 
-  void initializeExtraState(const ValueDecl *ExtendedBy,
-                            unsigned ManglingNumber);
-
 public:
   MaterializeTemporaryExpr(QualType T, Expr *Temporary,
                            bool BoundToLvalueReference)

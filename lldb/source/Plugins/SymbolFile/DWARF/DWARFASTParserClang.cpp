@@ -2186,9 +2186,10 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 std::vector<DWARFDIE> DWARFASTParserClang::GetDIEForDeclContext(
     lldb_private::CompilerDeclContext decl_context) {
   std::vector<DWARFDIE> result;
-  for (auto it = m_decl_ctx_to_die.find(
-           (clang::DeclContext *)decl_context.GetOpaqueDeclContext());
-       it != m_decl_ctx_to_die.end(); it++)
+  auto opaque_decl_ctx =
+      (clang::DeclContext *)decl_context.GetOpaqueDeclContext();
+  for (auto it = m_decl_ctx_to_die.find(opaque_decl_ctx);
+       it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx; it++)
     result.push_back(it->second);
   return result;
 }
@@ -2532,9 +2533,11 @@ bool DWARFASTParserClang::ParseChildMembers(
                 if (DWARFExpression::Evaluate(
                         nullptr, // ExecutionContext *
                         nullptr, // RegisterContext *
-                        module_sp, debug_info_data, die.GetCU(), block_offset,
-                        block_length, eRegisterKindDWARF, &initialValue,
-                        nullptr, memberOffset, nullptr)) {
+                        module_sp,
+                        DataExtractor(debug_info_data, block_offset,
+                                      block_length),
+                        die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                        memberOffset, nullptr)) {
                   member_byte_offset =
                       memberOffset.ResolveValue(nullptr).UInt();
                 }
@@ -2967,11 +2970,12 @@ bool DWARFASTParserClang::ParseChildMembers(
                 uint32_t block_length = form_value.Unsigned();
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
-                if (DWARFExpression::Evaluate(nullptr, nullptr, module_sp,
-                                              debug_info_data, die.GetCU(),
-                                              block_offset, block_length,
-                                              eRegisterKindDWARF, &initialValue,
-                                              nullptr, memberOffset, nullptr)) {
+                if (DWARFExpression::Evaluate(
+                        nullptr, nullptr, module_sp,
+                        DataExtractor(debug_info_data, block_offset,
+                                      block_length),
+                        die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                        memberOffset, nullptr)) {
                   member_byte_offset =
                       memberOffset.ResolveValue(nullptr).UInt();
                 }

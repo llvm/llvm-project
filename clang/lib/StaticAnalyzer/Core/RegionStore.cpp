@@ -155,28 +155,42 @@ class RegionBindingsRef : public llvm::ImmutableMapRef<const MemRegion *,
                                  ClusterBindings> {
   ClusterBindings::Factory *CBFactory;
 
+  // This flag indicates whether the current bindings are within the analysis
+  // that has started from main(). It affects how we perform loads from
+  // global variables that have initializers: if we have observed the
+  // program execution from the start and we know that these variables
+  // have not been overwritten yet, we can be sure that their initializers
+  // are still relevant. This flag never gets changed when the bindings are
+  // updated, so it could potentially be moved into RegionStoreManager
+  // (as if it's the same bindings but a different loading procedure)
+  // however that would have made the manager needlessly stateful.
+  bool IsMainAnalysis;
+
 public:
   typedef llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>
           ParentTy;
 
   RegionBindingsRef(ClusterBindings::Factory &CBFactory,
                     const RegionBindings::TreeTy *T,
-                    RegionBindings::TreeTy::Factory *F)
+                    RegionBindings::TreeTy::Factory *F,
+                    bool IsMainAnalysis)
       : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(T, F),
-        CBFactory(&CBFactory) {}
+        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
 
-  RegionBindingsRef(const ParentTy &P, ClusterBindings::Factory &CBFactory)
+  RegionBindingsRef(const ParentTy &P,
+                    ClusterBindings::Factory &CBFactory,
+                    bool IsMainAnalysis)
       : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(P),
-        CBFactory(&CBFactory) {}
+        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
 
   RegionBindingsRef add(key_type_ref K, data_type_ref D) const {
     return RegionBindingsRef(static_cast<const ParentTy *>(this)->add(K, D),
-                             *CBFactory);
+                             *CBFactory, IsMainAnalysis);
   }
 
   RegionBindingsRef remove(key_type_ref K) const {
     return RegionBindingsRef(static_cast<const ParentTy *>(this)->remove(K),
-                             *CBFactory);
+                             *CBFactory, IsMainAnalysis);
   }
 
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
@@ -206,7 +220,13 @@ public:
 
   /// Return the internal tree as a Store.
   Store asStore() const {
-    return asImmutableMap().getRootWithoutRetain();
+    llvm::PointerIntPair<Store, 1, bool> Ptr = {
+        asImmutableMap().getRootWithoutRetain(), IsMainAnalysis};
+    return reinterpret_cast<Store>(Ptr.getOpaqueValue());
+  }
+
+  bool isMainAnalysis() const {
+    return IsMainAnalysis;
   }
 
   void printJson(raw_ostream &Out, const char *NL = "\n",
@@ -381,8 +401,15 @@ public:
   ///  casts from arrays to pointers.
   SVal ArrayToPointer(Loc Array, QualType ElementTy) override;
 
+  /// Creates the Store that correctly represents memory contents before
+  /// the beginning of the analysis of the given top-level stack frame.
   StoreRef getInitialStore(const LocationContext *InitLoc) override {
-    return StoreRef(RBFactory.getEmptyMap().getRootWithoutRetain(), *this);
+    bool IsMainAnalysis = false;
+    if (const auto *FD = dyn_cast<FunctionDecl>(InitLoc->getDecl()))
+      IsMainAnalysis = FD->isMain() && !Ctx.getLangOpts().CPlusPlus;
+    return StoreRef(RegionBindingsRef(
+        RegionBindingsRef::ParentTy(RBFactory.getEmptyMap(), RBFactory),
+        CBFactory, IsMainAnalysis).asStore(), *this);
   }
 
   //===-------------------------------------------------------------------===//
@@ -608,9 +635,13 @@ public: // Part of public interface to class.
   //===------------------------------------------------------------------===//
 
   RegionBindingsRef getRegionBindings(Store store) const {
-    return RegionBindingsRef(CBFactory,
-                             static_cast<const RegionBindings::TreeTy*>(store),
-                             RBFactory.getTreeFactory());
+    llvm::PointerIntPair<Store, 1, bool> Ptr;
+    Ptr.setFromOpaqueValue(const_cast<void *>(store));
+    return RegionBindingsRef(
+        CBFactory,
+        static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
+        RBFactory.getTreeFactory(),
+        Ptr.getInt());
   }
 
   void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
@@ -1671,10 +1702,12 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       return svalBuilder.makeIntVal(c, T);
     }
   } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
-    // Check if the containing array is const and has an initialized value.
+    // Check if the containing array has an initialized value that we can trust.
+    // We can trust a const value or a value of a global initializer in main().
     const VarDecl *VD = VR->getDecl();
-    // Either the array or the array element has to be const.
-    if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
+    if (VD->getType().isConstQualified() ||
+        R->getElementType().isConstQualified() ||
+        (B.isMainAnalysis() && VD->hasGlobalStorage())) {
       if (const Expr *Init = VD->getAnyInitializer()) {
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           // The array index has to be known.
@@ -1763,8 +1796,11 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
     const VarDecl *VD = VR->getDecl();
     QualType RecordVarTy = VD->getType();
     unsigned Index = FD->getFieldIndex();
-    // Either the record variable or the field has to be const qualified.
-    if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
+    // Either the record variable or the field has an initializer that we can
+    // trust. We trust initializers of constants and, additionally, respect
+    // initializers of globals when analyzing main().
+    if (RecordVarTy.isConstQualified() || Ty.isConstQualified() ||
+        (B.isMainAnalysis() && VD->hasGlobalStorage()))
       if (const Expr *Init = VD->getAnyInitializer())
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           if (Index < InitList->getNumInits()) {
@@ -1981,6 +2017,12 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
   if (isa<GlobalsSpaceRegion>(MS)) {
     QualType T = VD->getType();
+
+    // If we're in main(), then global initializers have not become stale yet.
+    if (B.isMainAnalysis())
+      if (const Expr *Init = VD->getAnyInitializer())
+        if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
+          return *V;
 
     // Function-scoped static variables are default-initialized to 0; if they
     // have an initializer, it would have been processed by now.
@@ -2249,8 +2291,7 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
                                                  const TypedValueRegion* R,
                                                  SVal V) {
   QualType T = R->getValueType();
-  assert(T->isVectorType());
-  const VectorType *VT = T->getAs<VectorType>(); // Use getAs for typedefs.
+  const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
   // Handle lazy compound values and symbolic values.
   if (V.getAs<nonloc::LazyCompoundVal>() || V.getAs<nonloc::SymbolVal>())
@@ -2335,7 +2376,7 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const RecordType* RT = T->getAs<RecordType>();
+  const RecordType* RT = T->castAs<RecordType>();
   const RecordDecl *RD = RT->getDecl();
 
   if (!RD->isCompleteDefinition())

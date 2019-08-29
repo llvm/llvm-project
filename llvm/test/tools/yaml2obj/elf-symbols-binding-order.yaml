@@ -1,18 +1,34 @@
-## Check we restrict placing local symbols after global in .symtab
-## We might want to change it later to allow doing that
-## for producing broken outputs.
+## Check we allow placing local symbols after global to
+## .symtab and .dynsym. This allows us to produce broken outputs.
 
-# RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
-# CHECK: error: Local symbol 'bar' after global in Symbols list.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --symbols %t | FileCheck %s
+
+# CHECK:      Symbol table '.dynsym' contains 3 entries:
+# CHECK-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+# CHECK-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+# CHECK-NEXT:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND dynamicGlobal
+# CHECK-NEXT:      2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND dynamicLocal
+
+# CHECK:      Symbol table '.symtab' contains 3 entries:
+# CHECK-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+# CHECK-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+# CHECK-NEXT:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND staticGlobal
+# CHECK-NEXT:      2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND staticLocal
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
 Symbols:
-  - Name:    foo
+  - Name:    staticGlobal
     Binding: STB_GLOBAL
-  - Name:    bar
+  - Name:    staticLocal
+    Binding: STB_LOCAL
+DynamicSymbols:
+  - Name:    dynamicGlobal
+    Binding: STB_GLOBAL
+  - Name:    dynamicLocal
     Binding: STB_LOCAL

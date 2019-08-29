@@ -171,6 +171,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_EXTEND:
     R = ScalarizeVecRes_StrictFPOp(N);
     break;
@@ -604,6 +606,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::UINT_TO_FP:
       Res = ScalarizeVecOp_UnaryOp(N);
       break;
+    case ISD::STRICT_FP_TO_SINT:
+    case ISD::STRICT_FP_TO_UINT:
+      Res = ScalarizeVecOp_UnaryOp_StrictFP(N);
+      break;
     case ISD::CONCAT_VECTORS:
       Res = ScalarizeVecOp_CONCAT_VECTORS(N);
       break;
@@ -677,6 +683,23 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
   // Revectorize the result so the types line up with what the uses of this
   // expression expect.
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
+}
+
+/// If the input is a vector that needs to be scalarized, it must be <1 x ty>.
+/// Do the strict FP operation on the element instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp_StrictFP(SDNode *N) {
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Unexpected vector type!");
+  SDValue Elt = GetScalarizedVector(N->getOperand(1));
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N),
+                            { N->getValueType(0).getScalarType(), MVT::Other },
+                            { N->getOperand(0), Elt });
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  // Revectorize the result so the types line up with what the uses of this
+  // expression expect.
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Res);
 }
 
 /// The vectors to concatenate have length one - use a BUILD_VECTOR instead.
@@ -883,7 +906,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_TO_SINT:
+  case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FSIN:
@@ -1987,6 +2012,8 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
       break;
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
+    case ISD::STRICT_FP_TO_SINT:
+    case ISD::STRICT_FP_TO_UINT:
     case ISD::CTTZ:
     case ISD::CTLZ:
     case ISD::CTPOP:
@@ -2814,6 +2841,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::STRICT_FP_EXTEND:
   case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
     Res = WidenVecRes_Convert_StrictFP(N);
     break;
 
@@ -4129,7 +4158,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_TO_SINT:
+  case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::TRUNCATE:
