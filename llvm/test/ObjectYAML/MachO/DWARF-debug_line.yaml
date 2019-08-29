@@ -557,21 +557,21 @@ DWARF:
 #CHECK:           SubOpcode:       DW_LNE_set_address
 #CHECK:           Data:            4294971216
 #CHECK:         - Opcode:          0x14
-#CHECK:           Data:            4294971216
+#CHECK:           Data:            0
 #CHECK:         - Opcode:          DW_LNS_set_column
 #CHECK:           Data:            3
 #CHECK:         - Opcode:          DW_LNS_set_prologue_end
-#CHECK:           Data:            3
+#CHECK:           Data:            0
 #CHECK:         - Opcode:          DW_LNS_const_add_pc
-#CHECK:           Data:            3
+#CHECK:           Data:            0
 #CHECK:         - Opcode:          0xBB
-#CHECK:           Data:            3
+#CHECK:           Data:            0
 #CHECK:         - Opcode:          0xBB
-#CHECK:           Data:            3
+#CHECK:           Data:            0
 #CHECK:         - Opcode:          DW_LNS_advance_pc
 #CHECK:           Data:            11
 #CHECK:         - Opcode:          DW_LNS_extended_op
 #CHECK:           ExtLen:          1
 #CHECK:           SubOpcode:       DW_LNE_end_sequence
-#CHECK:           Data:            11
+#CHECK:           Data:            0
 #CHECK: ...

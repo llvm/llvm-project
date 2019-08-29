@@ -10,6 +10,9 @@ main:
   # CHECK:  i64.atomic.wait 0 # encoding: [0xfe,0x02,0x03,0x00]
   i64.atomic.wait 0
 
+  # CHECK: atomic.fence # encoding: [0xfe,0x03,0x00]
+  atomic.fence
+
   # CHECK: i32.atomic.load 0 # encoding: [0xfe,0x10,0x02,0x00]
   i32.atomic.load 0
   # CHECK: i64.atomic.load 4 # encoding: [0xfe,0x11,0x03,0x04]

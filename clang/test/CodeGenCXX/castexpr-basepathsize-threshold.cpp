@@ -3,9 +3,9 @@
 // https://bugs.llvm.org/show_bug.cgi?id=38356
 // We only check that we do not crash.
 
-// ASAN increases stack usage, so we are hitting stack overflow before reaching
-// recursive template instantiation limit.
-// XFAIL: darwin && asan
+// This test can exceed stack usage in some configurations, so unless we can
+// properly handle that don't run it.
+// REQUIRES: thread_support
 
 template <typename a, a b(unsigned), int c, unsigned...>
 struct d : d<a, b, c - 1> {};

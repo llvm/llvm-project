@@ -988,12 +988,14 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     }
 
     // If one of the GEPs has all zero indices, recurse.
-    if (GEPLHS->hasAllZeroIndices())
+    // FIXME: Handle vector of pointers.
+    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
       return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
                          ICmpInst::getSwappedPredicate(Cond), I);
 
     // If the other GEP has all zero indices, recurse.
-    if (GEPRHS->hasAllZeroIndices())
+    // FIXME: Handle vector of pointers.
+    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
       return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
 
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();

@@ -290,8 +290,7 @@ define i64 @shl_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    subu $3, $1, $6
 ; MIPS32-NEXT:    ori $8, $zero, 0
 ; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    xor $9, $6, $8
-; MIPS32-NEXT:    sltiu $9, $9, 1
+; MIPS32-NEXT:    sltiu $9, $6, 1
 ; MIPS32-NEXT:    sllv $10, $4, $6
 ; MIPS32-NEXT:    srlv $3, $4, $3
 ; MIPS32-NEXT:    sllv $6, $5, $6
@@ -321,10 +320,8 @@ define i64 @ashl_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    ori $1, $zero, 32
 ; MIPS32-NEXT:    subu $2, $6, $1
 ; MIPS32-NEXT:    subu $3, $1, $6
-; MIPS32-NEXT:    ori $8, $zero, 0
 ; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    xor $8, $6, $8
-; MIPS32-NEXT:    sltiu $8, $8, 1
+; MIPS32-NEXT:    sltiu $8, $6, 1
 ; MIPS32-NEXT:    srav $9, $5, $6
 ; MIPS32-NEXT:    srlv $6, $4, $6
 ; MIPS32-NEXT:    sllv $3, $5, $3
@@ -354,8 +351,7 @@ define i64 @lshr_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    subu $3, $1, $6
 ; MIPS32-NEXT:    ori $8, $zero, 0
 ; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    xor $9, $6, $8
-; MIPS32-NEXT:    sltiu $9, $9, 1
+; MIPS32-NEXT:    sltiu $9, $6, 1
 ; MIPS32-NEXT:    srlv $10, $5, $6
 ; MIPS32-NEXT:    srlv $6, $4, $6
 ; MIPS32-NEXT:    sllv $3, $5, $3

@@ -302,6 +302,13 @@ namespace ISD {
     STRICT_FRINT, STRICT_FNEARBYINT, STRICT_FMAXNUM, STRICT_FMINNUM,
     STRICT_FCEIL, STRICT_FFLOOR, STRICT_FROUND, STRICT_FTRUNC,
 
+    /// STRICT_FP_TO_[US]INT - Convert a floating point value to a signed or
+    /// unsigned integer. These have the same semantics as fptosi and fptoui 
+    /// in IR.
+    /// They are used to limit optimizations while the DAG is being optimized.
+    STRICT_FP_TO_SINT,
+    STRICT_FP_TO_UINT,
+
     /// X = STRICT_FP_ROUND(Y, TRUNC) - Rounding 'Y' from a larger floating 
     /// point type down to the precision of the destination VT.  TRUNC is a 
     /// flag, which is always an integer that is zero or one.  If TRUNC is 0,

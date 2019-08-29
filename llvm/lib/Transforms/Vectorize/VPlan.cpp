@@ -309,6 +309,14 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, V, Part);
     break;
   }
+  case Instruction::Select: {
+    Value *Cond = State.get(getOperand(0), Part);
+    Value *Op1 = State.get(getOperand(1), Part);
+    Value *Op2 = State.get(getOperand(2), Part);
+    Value *V = Builder.CreateSelect(Cond, Op1, Op2);
+    State.set(this, V, Part);
+    break;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }

@@ -17,4 +17,4 @@ def VGPRRegBank : RegisterBank<"VGPR",
 def SCCRegBank : RegisterBank <"SCC", [SReg_32, SCC_CLASS]>;
 
 // It is helpful to distinguish conditions from ordinary SGPRs.
-def VCCRegBank : RegisterBank <"VCC", [SReg_64]>;
+def VCCRegBank : RegisterBank <"VCC", [SReg_1]>;

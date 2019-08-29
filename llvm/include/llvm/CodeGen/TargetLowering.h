@@ -960,6 +960,8 @@ public:
       case ISD::STRICT_FFLOOR: EqOpc = ISD::FFLOOR; break;
       case ISD::STRICT_FROUND: EqOpc = ISD::FROUND; break;
       case ISD::STRICT_FTRUNC: EqOpc = ISD::FTRUNC; break;
+      case ISD::STRICT_FP_TO_SINT: EqOpc = ISD::FP_TO_SINT; break;
+      case ISD::STRICT_FP_TO_UINT: EqOpc = ISD::FP_TO_UINT; break;
       case ISD::STRICT_FP_ROUND: EqOpc = ISD::FP_ROUND; break;
       case ISD::STRICT_FP_EXTEND: EqOpc = ISD::FP_EXTEND; break;
     }
@@ -1810,6 +1812,11 @@ public:
   /// Returns true if arguments should be sign-extended in lib calls.
   virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
     return IsSigned;
+  }
+
+  /// Returns true if arguments should be extended in lib calls.
+  virtual bool shouldExtendTypeInLibCall(EVT Type) const {
+    return true;
   }
 
   /// Returns how the given (atomic) load should be expanded by the
@@ -2985,7 +2992,8 @@ public:
 
   void softenSetCCOperands(SelectionDAG &DAG, EVT VT, SDValue &NewLHS,
                            SDValue &NewRHS, ISD::CondCode &CCCode,
-                           const SDLoc &DL) const;
+                           const SDLoc &DL, const SDValue OldLHS,
+                           const SDValue OldRHS) const;
 
   /// Returns a pair of (return value, chain).
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
@@ -3191,6 +3199,14 @@ public:
   virtual SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
       SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
       SelectionDAG &DAG, unsigned Depth) const;
+
+  /// Tries to build a legal vector shuffle using the provided parameters
+  /// or equivalent variations. The Mask argument maybe be modified as the
+  /// function tries different variations.
+  /// Returns an empty SDValue if the operation fails.
+  SDValue buildLegalVectorShuffle(EVT VT, const SDLoc &DL, SDValue N0,
+                                  SDValue N1, MutableArrayRef<int> Mask,
+                                  SelectionDAG &DAG) const;
 
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
@@ -3523,6 +3539,11 @@ public:
 
   /// This structure is used to pass arguments to makeLibCall function.
   struct MakeLibCallOptions {
+    // By passing the node before soften to makeLibCall, the target hook
+    // shouldExtendTypeInLibCall can get the original type before soften.
+    // It could be generalized by passing orignal type lists if necessary
+    // in the future.
+    SDNode *NodeBeforeSoften = nullptr;
     bool IsSExt : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
@@ -3549,6 +3570,11 @@ public:
 
     MakeLibCallOptions &setIsPostTypeLegalization(bool Value = true) {
       IsPostTypeLegalization = Value;
+      return *this;
+    }
+
+    MakeLibCallOptions &setNodeBeforeSoften(SDNode *N) {
+      NodeBeforeSoften = N;
       return *this;
     }
   };
@@ -3991,7 +4017,7 @@ public:
   /// \param N Node to expand
   /// \param Result output after conversion
   /// \returns True, if the expansion was successful, false otherwise
-  bool expandFP_TO_UINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  bool expandFP_TO_UINT(SDNode *N, SDValue &Result, SDValue &Chain, SelectionDAG &DAG) const;
 
   /// Expand UINT(i64) to double(f64) conversion
   /// \param N Node to expand

@@ -474,11 +474,6 @@ template <class ELFT> static void createSyntheticSections() {
     add(in.ppc64LongBranchTarget);
   }
 
-  if (config->emachine == EM_RISCV) {
-    in.riscvSdata = make<RISCVSdataSection>();
-    add(in.riscvSdata);
-  }
-
   in.gotPlt = make<GotPltSection>();
   add(in.gotPlt);
   in.igotPlt = make<IgotPltSection>();
@@ -1701,12 +1696,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
 
-  // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800 if not defined.
-  // This symbol should only be defined in an executable.
-  if (config->emachine == EM_RISCV && !config->shared)
+  // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800. This symbol
+  // should only be defined in an executable. If .sdata does not exist, its
+  // value/section does not matter but it has to be relative, so set its
+  // st_shndx arbitrarily to 1 (Out::elfHeader).
+  if (config->emachine == EM_RISCV && !config->shared) {
+    OutputSection *sec = findSection(".sdata");
     ElfSym::riscvGlobalPointer =
-        addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800,
-                           STV_DEFAULT, STB_GLOBAL);
+        addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader,
+                           0x800, STV_DEFAULT, STB_GLOBAL);
+  }
 
   if (config->emachine == EM_X86_64) {
     // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
@@ -1881,7 +1880,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(in.plt);
   finalizeSynthetic(in.iplt);
   finalizeSynthetic(in.ppc32Got2);
-  finalizeSynthetic(in.riscvSdata);
   finalizeSynthetic(in.partIndex);
 
   // Dynamic section must be the last one in this list and dynamic
@@ -2226,10 +2224,9 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // and non-executable segments.
       //
       // TODO Enable this technique on all targets.
-      bool enable = config->emachine == EM_386 ||
-                    config->emachine == EM_AARCH64 ||
-                    config->emachine == EM_ARM || config->emachine == EM_PPC ||
-                    config->emachine == EM_PPC64;
+      bool enable = config->emachine != EM_HEXAGON &&
+                    config->emachine != EM_MIPS &&
+                    config->emachine != EM_X86_64;
 
       if (!enable || (config->zSeparateCode && prev &&
                       (prev->p_flags & PF_X) != (p->p_flags & PF_X)))

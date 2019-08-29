@@ -9,6 +9,13 @@ bool foobool(int argc) {
   return argc;
 }
 
+void xxx(int argc) {
+  int map; // expected-note {{initialize the variable 'map' to silence this warning}}
+#pragma omp target parallel for simd map(map) // expected-warning {{variable 'map' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 struct S1; // expected-note 2 {{declared here}}
 extern S1 a;
 class S2 {

@@ -80,6 +80,9 @@ public:
     Register SwiftErrorVReg = 0;
 
     MDNode *KnownCallees = nullptr;
+
+    /// True if the call must be tail call optimized.
+    bool IsMustTailCall = false;
   };
 
   /// Argument handling is mostly uniform between the four places that

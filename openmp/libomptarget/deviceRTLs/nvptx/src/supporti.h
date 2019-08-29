@@ -206,9 +206,8 @@ INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 INLINE void IncParallelLevel(bool ActiveParallel) {
   unsigned Active = __ACTIVEMASK();
   __kmpc_impl_syncwarp(Active);
-  unsigned LaneMaskLt;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
-  unsigned Rank = __popc(Active & LaneMaskLt);
+  unsigned LaneMaskLt = __kmpc_impl_lanemask_lt();
+  unsigned Rank = __kmpc_impl_popc(Active & LaneMaskLt);
   if (Rank == 0) {
     parallelLevel[GetWarpId()] +=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
@@ -220,9 +219,8 @@ INLINE void IncParallelLevel(bool ActiveParallel) {
 INLINE void DecParallelLevel(bool ActiveParallel) {
   unsigned Active = __ACTIVEMASK();
   __kmpc_impl_syncwarp(Active);
-  unsigned LaneMaskLt;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(LaneMaskLt));
-  unsigned Rank = __popc(Active & LaneMaskLt);
+  unsigned LaneMaskLt = __kmpc_impl_lanemask_lt();
+  unsigned Rank = __kmpc_impl_popc(Active & LaneMaskLt);
   if (Rank == 0) {
     parallelLevel[GetWarpId()] -=
         (1 + (ActiveParallel ? OMP_ACTIVE_PARALLEL_LEVEL : 0));

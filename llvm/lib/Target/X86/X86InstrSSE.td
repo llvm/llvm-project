@@ -5326,11 +5326,13 @@ let ExeDomain = SSEPackedSingle in {
 let Predicates = [UseAVX] in {
   // If we're inserting an element from a vbroadcast of a load, fold the
   // load into the X86insertps instruction.
+  // FIXME: Why are these here? This looks like a demanded bits issue.
+  // FIXME: Missing AVX512 equivalents.
   def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1),
                 (X86VBroadcast (loadf32 addr:$src2)), imm:$src3)),
             (VINSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
   def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1),
-                (X86VBroadcast (loadv4f32 addr:$src2)), imm:$src3)),
+                (X86VBroadcast (v4f32 (nonvolatile_load addr:$src2))), imm:$src3)),
             (VINSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
 }
 
@@ -7562,7 +7564,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
             (VMOVDDUPrr VR128:$src)>;
-  def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (X86VBroadcast (v2f64 (nonvolatile_load addr:$src)))),
             (VMOVDDUPrm addr:$src)>;
   def : Pat<(v2f64 (X86VBroadcast (v2f64 (X86vzload64 addr:$src)))),
             (VMOVDDUPrm addr:$src)>;

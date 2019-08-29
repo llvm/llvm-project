@@ -237,6 +237,7 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   case XCOFF::C_ECOML:
   case XCOFF::C_DWARF:
     assert(false && "This StorageClass for the symbol is not yet implemented.");
+    return "";
   default:
     return "Value";
   }

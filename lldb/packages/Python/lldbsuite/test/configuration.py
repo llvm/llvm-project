@@ -57,10 +57,6 @@ cflags_extras = ''
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
 
-# Parsable mode silences headers, and any other output this script might generate, and instead
-# prints machine-readable output similar to what clang tests produce.
-parsable = False
-
 # The regular expression pattern to match against eligible filenames as
 # our test cases.
 regexp = None
@@ -124,7 +120,6 @@ test_result = None
 
 # Test rerun configuration vars
 rerun_all_issues = False
-rerun_max_file_threhold = 0
 
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.

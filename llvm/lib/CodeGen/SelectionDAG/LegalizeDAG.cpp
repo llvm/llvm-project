@@ -236,6 +236,16 @@ public:
     }
     ReplacedNode(Old);
   }
+
+  void ReplaceNodeWithValue(SDValue Old, SDValue New) {
+    LLVM_DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG);
+               dbgs() << "     with:      "; New->dump(&DAG));
+
+    DAG.ReplaceAllUsesOfValueWith(Old, New);
+    if (UpdatedNodes)
+      UpdatedNodes->insert(New.getNode());
+    ReplacedNode(Old.getNode());
+  }
 };
 
 } // end anonymous namespace
@@ -2880,9 +2890,26 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
+  case ISD::STRICT_FP_TO_SINT:
+    if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG)) {
+      ReplaceNode(Node, Tmp1.getNode());
+      LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_TO_SINT node\n");
+      return true;
+    }
+    break;
   case ISD::FP_TO_UINT:
-    if (TLI.expandFP_TO_UINT(Node, Tmp1, DAG))
+    if (TLI.expandFP_TO_UINT(Node, Tmp1, Tmp2, DAG))
       Results.push_back(Tmp1);
+    break;
+  case ISD::STRICT_FP_TO_UINT:
+    if (TLI.expandFP_TO_UINT(Node, Tmp1, Tmp2, DAG)) {
+      // Relink the chain.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Node,1), Tmp2);
+      // Replace the new UINT result.
+      ReplaceNodeWithValue(SDValue(Node, 0), Tmp1);
+      LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_TO_UINT node\n");
+      return true;
+    }
     break;
   case ISD::LROUND:
     Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LROUND_F32,

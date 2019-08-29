@@ -292,7 +292,8 @@ void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 }
 
 llvm::Optional<ParsedAST>
-ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
+ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
+                 llvm::ArrayRef<Diag> CompilerInvocationDiags,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
@@ -459,10 +460,15 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   // So just inform the preprocessor of EOF, while keeping everything alive.
   Clang->getPreprocessor().EndSourceFile();
 
-  std::vector<Diag> Diags = ASTDiags.take(CTContext.getPointer());
+  std::vector<Diag> Diags = CompilerInvocationDiags;
   // Add diagnostics from the preamble, if any.
   if (Preamble)
-    Diags.insert(Diags.begin(), Preamble->Diags.begin(), Preamble->Diags.end());
+    Diags.insert(Diags.end(), Preamble->Diags.begin(), Preamble->Diags.end());
+  // Finally, add diagnostics coming from the AST.
+  {
+    std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
+    Diags.insert(Diags.end(), D.begin(), D.end());
+  }
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
                    std::move(Tokens), std::move(ParsedDecls), std::move(Diags),
                    std::move(Includes), std::move(CanonIncludes));
@@ -646,6 +652,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
 
 llvm::Optional<ParsedAST>
 buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
+         llvm::ArrayRef<Diag> CompilerInvocationDiags,
          const ParseInputs &Inputs,
          std::shared_ptr<const PreambleData> Preamble) {
   trace::Span Tracer("BuildAST");
@@ -661,7 +668,8 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   }
 
   return ParsedAST::build(
-      std::make_unique<CompilerInvocation>(*Invocation), Preamble,
+      std::make_unique<CompilerInvocation>(*Invocation),
+      CompilerInvocationDiags, Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName),
       std::move(VFS), Inputs.Index, Inputs.Opts);
 }

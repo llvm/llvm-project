@@ -25,15 +25,25 @@
 # object file with only our entry points exposed. However, this does not work at
 # present, see PR30750.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+set -x
+set -e
+set -u
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
 TARGE_DIR=$(readlink -f $1)
-
-LLVM_SRC="${LLVM_SRC:-$SCRIPT_DIR/../../../../../..}"
+COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
+LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
+if [[ ! -d "${LLVM_SRC}/../llvm" ]] ; then
+  LLVM_SRC=$(readlink -f ${COMPILER_RT_SRC}/../../../llvm)
+fi
+LIBCXX_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxx)
+LIBCXXABI_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxxabi)
 
-if [[ ! -d "${LLVM_SRC}/projects/libcxxabi" ||
-      ! -d "${LLVM_SRC}/projects/libcxx" ]]; then
+if [[ ! -d "${LLVM_SRC}/../llvm" ||
+      ! -d "${LIBCXX_SRC}" ||
+      ! -d "${LIBCXXABI_SRC}" ]]; then
   echo "Missing or incomplete LLVM_SRC"
   exit 1
 fi
@@ -88,8 +98,13 @@ make -j${J} libz.a
 if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
-  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined -I${LLVM_SRC}/projects/libcxxabi/include"
+  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined -I${LIBCXX_SRC}/include"
+  PROJECTS=
+  if [[ ! -d $LLVM_SRC/projects/libcxxabi ]] ; then
+    PROJECTS="-DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi'"
+  fi
   cmake -GNinja \
+    ${PROJECTS} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \

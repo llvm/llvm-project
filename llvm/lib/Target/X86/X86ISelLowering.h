@@ -873,11 +873,7 @@ namespace llvm {
       return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
     }
 
-    bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-      if (DAG.getMachineFunction().getFunction().hasMinSize())
-        return false;
-      return true;
-    }
+    bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
 
     bool shouldSplatInsEltVarIndex(EVT VT) const override;
 

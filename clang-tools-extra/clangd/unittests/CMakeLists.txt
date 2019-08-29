@@ -90,6 +90,7 @@ target_link_libraries(ClangdTests
   clangTooling
   clangToolingCore
   clangToolingInclusions
+  clangToolingRefactoring
   clangToolingSyntax
   LLVMSupport
   LLVMTestingSupport

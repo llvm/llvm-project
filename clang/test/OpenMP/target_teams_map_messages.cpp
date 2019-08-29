@@ -21,6 +21,14 @@ void foo(int arg) {
   {}
 }
 #else
+
+void xxx(int argc) {
+  int map; // expected-note {{initialize the variable 'map' to silence this warning}}
+#pragma omp target teams map(tofrom: map) // expected-warning {{variable 'map' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 template <typename T, int I>
 struct SA {
   static int ss;
