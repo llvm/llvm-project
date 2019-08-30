@@ -2550,6 +2550,18 @@ static unsigned getHiPELiteral(
                      + " required but not provided");
 }
 
+// Return true if there are no non-ehpad successors to MBB and there are no
+// non-meta instructions between MBBI and MBB.end().
+bool blockEndIsUnreachable(const MachineBasicBlock &MBB,
+                           MachineBasicBlock::const_iterator MBBI) {
+  return std::all_of(
+             MBB.succ_begin(), MBB.succ_end(),
+             [](const MachineBasicBlock *Succ) { return Succ->isEHPad(); }) &&
+         std::all_of(MBBI, MBB.end(), [](const MachineInstr &MI) {
+           return MI.isMetaInstruction();
+         });
+}
+
 /// Erlang programs may need a special prologue to handle the stack size they
 /// might need at runtime. That is because Erlang/OTP does not implement a C
 /// stack but uses a custom implementation of hybrid stack/heap architecture.
@@ -2783,7 +2795,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
   unsigned Opcode = I->getOpcode();
   bool isDestroy = Opcode == TII.getCallFrameDestroyOpcode();
   DebugLoc DL = I->getDebugLoc();
-  uint64_t Amount = !reserveCallFrame ? TII.getFrameSize(*I) : 0;
+  uint64_t Amount = TII.getFrameSize(*I);
   uint64_t InternalAmt = (isDestroy || Amount) ? TII.getFrameAdjustment(*I) : 0;
   I = MBB.erase(I);
   auto InsertPos = skipDebugInstructionsForward(I, MBB.end());
@@ -2872,7 +2884,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     return I;
   }
 
-  if (isDestroy && InternalAmt) {
+  if (isDestroy && InternalAmt && !blockEndIsUnreachable(MBB, I)) {
     // If we are performing frame pointer elimination and if the callee pops
     // something off the stack pointer, add it back.  We do this until we have
     // more advanced stack pointer tracking ability.

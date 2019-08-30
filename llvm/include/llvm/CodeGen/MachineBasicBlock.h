@@ -636,6 +636,18 @@ public:
     return Insts.insertAfter(I.getInstrIterator(), MI);
   }
 
+  /// If I is bundled then insert MI into the instruction list after the end of
+  /// the bundle, otherwise insert MI immediately after I.
+  instr_iterator insertAfterBundle(instr_iterator I, MachineInstr *MI) {
+    assert((I == instr_end() || I->getParent() == this) &&
+           "iterator points outside of basic block");
+    assert(!MI->isBundledWithPred() && !MI->isBundledWithSucc() &&
+           "Cannot insert instruction with bundle flags");
+    while (I->isBundledWithSucc())
+      ++I;
+    return Insts.insertAfter(I, MI);
+  }
+
   /// Remove an instruction from the instruction list and delete it.
   ///
   /// If the instruction is part of a bundle, the other instructions in the

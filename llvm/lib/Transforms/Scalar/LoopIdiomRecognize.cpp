@@ -41,6 +41,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -77,16 +78,20 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -102,6 +107,7 @@ using namespace llvm;
 
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
+STATISTIC(NumBCmp, "Number of memcmp's formed from loop 2xload+eq-compare");
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
@@ -110,6 +116,26 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
     cl::init(true), cl::Hidden);
 
 namespace {
+
+// FIXME: reinventing the wheel much? Is there a cleaner solution?
+struct PMAbstraction {
+  virtual void markLoopAsDeleted(Loop *L) = 0;
+  virtual ~PMAbstraction() = default;
+};
+struct LegacyPMAbstraction : PMAbstraction {
+  LPPassManager &LPM;
+  LegacyPMAbstraction(LPPassManager &LPM) : LPM(LPM) {}
+  virtual ~LegacyPMAbstraction() = default;
+  void markLoopAsDeleted(Loop *L) override { LPM.markLoopAsDeleted(*L); }
+};
+struct NewPMAbstraction : PMAbstraction {
+  LPMUpdater &Updater;
+  NewPMAbstraction(LPMUpdater &Updater) : Updater(Updater) {}
+  virtual ~NewPMAbstraction() = default;
+  void markLoopAsDeleted(Loop *L) override {
+    Updater.markLoopAsDeleted(*L, L->getName());
+  }
+};
 
 class LoopIdiomRecognize {
   Loop *CurLoop = nullptr;
@@ -120,6 +146,7 @@ class LoopIdiomRecognize {
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
+  PMAbstraction &LoopDeleter;
   OptimizationRemarkEmitter &ORE;
   bool ApplyCodeSizeHeuristics;
 
@@ -128,9 +155,10 @@ public:
                               LoopInfo *LI, ScalarEvolution *SE,
                               TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI,
-                              const DataLayout *DL,
+                              const DataLayout *DL, PMAbstraction &LoopDeleter,
                               OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {}
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL),
+        LoopDeleter(LoopDeleter), ORE(ORE) {}
 
   bool runOnLoop(Loop *L);
 
@@ -144,6 +172,8 @@ private:
   bool HasMemset;
   bool HasMemsetPattern;
   bool HasMemcpy;
+  bool HasMemCmp;
+  bool HasBCmp;
 
   /// Return code for isLegalStore()
   enum LegalStoreKind {
@@ -186,6 +216,32 @@ private:
 
   bool runOnNoncountableLoop();
 
+  struct CmpLoopStructure {
+    Value *BCmpValue, *LatchCmpValue;
+    BasicBlock *HeaderBrEqualBB, *HeaderBrUnequalBB;
+    BasicBlock *LatchBrFinishBB, *LatchBrContinueBB;
+  };
+  bool matchBCmpLoopStructure(CmpLoopStructure &CmpLoop) const;
+  struct CmpOfLoads {
+    ICmpInst::Predicate BCmpPred;
+    Value *LoadSrcA, *LoadSrcB;
+    Value *LoadA, *LoadB;
+  };
+  bool matchBCmpOfLoads(Value *BCmpValue, CmpOfLoads &CmpOfLoads) const;
+  bool recognizeBCmpLoopControlFlow(const CmpOfLoads &CmpOfLoads,
+                                    CmpLoopStructure &CmpLoop) const;
+  bool recognizeBCmpLoopSCEV(uint64_t BCmpTyBytes, CmpOfLoads &CmpOfLoads,
+                             const SCEV *&SrcA, const SCEV *&SrcB,
+                             const SCEV *&Iterations) const;
+  bool detectBCmpIdiom(ICmpInst *&BCmpInst, CmpInst *&LatchCmpInst,
+                       LoadInst *&LoadA, LoadInst *&LoadB, const SCEV *&SrcA,
+                       const SCEV *&SrcB, const SCEV *&NBytes) const;
+  BasicBlock *transformBCmpControlFlow(ICmpInst *ComparedEqual);
+  void transformLoopToBCmp(ICmpInst *BCmpInst, CmpInst *LatchCmpInst,
+                           LoadInst *LoadA, LoadInst *LoadB, const SCEV *SrcA,
+                           const SCEV *SrcB, const SCEV *NBytes);
+  bool recognizeBCmp();
+
   bool recognizePopcount();
   void transformLoopToPopcount(BasicBlock *PreCondBB, Instruction *CntInst,
                                PHINode *CntPhi, Value *Var);
@@ -222,13 +278,14 @@ public:
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
             *L->getHeader()->getParent());
     const DataLayout *DL = &L->getHeader()->getModule()->getDataLayout();
+    LegacyPMAbstraction LoopDeleter(LPM);
 
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
 
-    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL, ORE);
+    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL, LoopDeleter, ORE);
     return LIR.runOnLoop(L);
   }
 
@@ -247,7 +304,7 @@ char LoopIdiomRecognizeLegacyPass::ID = 0;
 
 PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
-                                              LPMUpdater &) {
+                                              LPMUpdater &Updater) {
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
   const auto &FAM =
@@ -261,8 +318,9 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
         "LoopIdiomRecognizePass: OptimizationRemarkEmitterAnalysis not cached "
         "at a higher level");
 
+  NewPMAbstraction LoopDeleter(Updater);
   LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI, DL,
-                         *ORE);
+                         LoopDeleter, *ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -299,7 +357,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Disable loop idiom recognition if the function's name is a common idiom.
   StringRef Name = L->getHeader()->getParent()->getName();
-  if (Name == "memset" || Name == "memcpy")
+  if (Name == "memset" || Name == "memcpy" || Name == "memcmp" ||
+      Name == "bcmp")
     return false;
 
   // Determine if code size heuristics need to be applied.
@@ -309,8 +368,10 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemset = TLI->has(LibFunc_memset);
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
+  HasMemCmp = TLI->has(LibFunc_memcmp);
+  HasBCmp = TLI->has(LibFunc_bcmp);
 
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
+  if (HasMemset || HasMemsetPattern || HasMemcpy || HasMemCmp || HasBCmp)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -1149,7 +1210,7 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
                     << "] Noncountable Loop %"
                     << CurLoop->getHeader()->getName() << "\n");
 
-  return recognizePopcount() || recognizeAndInsertFFS();
+  return recognizeBCmp() || recognizePopcount() || recognizeAndInsertFFS();
 }
 
 /// Check if the given conditional branch is based on the comparison between
@@ -1822,4 +1883,804 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   // step 5: Forget the "non-computable" trip-count SCEV associated with the
   //   loop. The loop would otherwise not be deleted even if it becomes empty.
   SE->forgetLoop(CurLoop);
+}
+
+bool LoopIdiomRecognize::matchBCmpLoopStructure(
+    CmpLoopStructure &CmpLoop) const {
+  ICmpInst::Predicate BCmpPred;
+
+  // We are looking for the following basic layout:
+  //  PreheaderBB: <preheader>              ; preds = ???
+  //    <...>
+  //    br label %LoopHeaderBB
+  //  LoopHeaderBB: <header,exiting>        ; preds = %PreheaderBB,%LoopLatchBB
+  //    <...>
+  //    %BCmpValue = icmp <...>
+  //    br i1 %BCmpValue, label %LoopLatchBB, label %Successor0
+  //  LoopLatchBB: <latch,exiting>          ; preds = %LoopHeaderBB
+  //    <...>
+  //    %LatchCmpValue = <are we done, or do next iteration?>
+  //    br i1 %LatchCmpValue, label %Successor1, label %LoopHeaderBB
+  //  Successor0: <exit>                    ; preds = %LoopHeaderBB
+  //    <...>
+  //  Successor1: <exit>                    ; preds = %LoopLatchBB
+  //    <...>
+  //
+  // Successor0 and Successor1 may or may not be the same basic block.
+
+  // Match basic frame-work of this supposedly-comparison loop.
+  using namespace PatternMatch;
+  if (!match(CurLoop->getHeader()->getTerminator(),
+             m_Br(m_CombineAnd(m_ICmp(BCmpPred, m_Value(), m_Value()),
+                               m_Value(CmpLoop.BCmpValue)),
+                  CmpLoop.HeaderBrEqualBB, CmpLoop.HeaderBrUnequalBB)) ||
+      !match(CurLoop->getLoopLatch()->getTerminator(),
+             m_Br(m_CombineAnd(m_Cmp(), m_Value(CmpLoop.LatchCmpValue)),
+                  CmpLoop.LatchBrFinishBB, CmpLoop.LatchBrContinueBB))) {
+    LLVM_DEBUG(dbgs() << "Basic control-flow layout unrecognized.\n");
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "Recognized basic control-flow layout.\n");
+  return true;
+};
+
+bool LoopIdiomRecognize::matchBCmpOfLoads(Value *BCmpValue,
+                                          CmpOfLoads &CmpOfLoads) const {
+  using namespace PatternMatch;
+  LLVM_DEBUG(dbgs() << "Analyzing header icmp " << *BCmpValue
+                    << "   as bcmp pattern.\n");
+
+  // Match bcmp-style loop header cmp. It must be an eq-icmp of loads. Example:
+  //    %v0 = load <...>, <...>* %LoadSrcA
+  //    %v1 = load <...>, <...>* %LoadSrcB
+  //    %CmpLoop.BCmpValue = icmp eq <...> %v0, %v1
+  // There won't be any no-op bitcasts between load and icmp,
+  // they would have been transformed into a load of bitcast.
+  // FIXME: {b,mem}cmp() calls have the same semantics as icmp. Match them too.
+  if (!match(BCmpValue,
+             m_ICmp(CmpOfLoads.BCmpPred,
+                    m_CombineAnd(m_Load(m_Value(CmpOfLoads.LoadSrcA)),
+                                 m_Value(CmpOfLoads.LoadA)),
+                    m_CombineAnd(m_Load(m_Value(CmpOfLoads.LoadSrcB)),
+                                 m_Value(CmpOfLoads.LoadB)))) ||
+      !ICmpInst::isEquality(CmpOfLoads.BCmpPred)) {
+    LLVM_DEBUG(dbgs() << "Loop header icmp did not match bcmp pattern.\n");
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "Recognized header icmp as bcmp pattern with loads:\n\t"
+                    << *CmpOfLoads.LoadA << "\n\t" << *CmpOfLoads.LoadB
+                    << "\n");
+  // FIXME: handle memcmp pattern?
+  return true;
+}
+
+bool LoopIdiomRecognize::recognizeBCmpLoopControlFlow(
+    const CmpOfLoads &CmpOfLoads, CmpLoopStructure &CmpLoop) const {
+  BasicBlock *LoopHeaderBB = CurLoop->getHeader();
+  BasicBlock *LoopLatchBB = CurLoop->getLoopLatch();
+
+  // Be wary, comparisons can be inverted, canonicalize order.
+  // If this 'element' comparison passed, we expect to proceed to the next elt.
+  if (CmpOfLoads.BCmpPred != ICmpInst::Predicate::ICMP_EQ)
+    std::swap(CmpLoop.HeaderBrEqualBB, CmpLoop.HeaderBrUnequalBB);
+  // The predicate on loop latch does not matter, just canonicalize some order.
+  if (CmpLoop.LatchBrContinueBB != LoopHeaderBB)
+    std::swap(CmpLoop.LatchBrFinishBB, CmpLoop.LatchBrContinueBB);
+
+  // Check that control-flow between blocks is as expected.
+  if (CmpLoop.HeaderBrEqualBB != LoopLatchBB ||
+      CmpLoop.LatchBrContinueBB != LoopHeaderBB) {
+    LLVM_DEBUG(dbgs() << "Loop control-flow not recognized.\n");
+    return false;
+  }
+
+  SmallVector<BasicBlock *, 2> ExitBlocks;
+  CurLoop->getUniqueExitBlocks(ExitBlocks);
+  assert(ExitBlocks.size() <= 2U && "Can't have more than two exit blocks.");
+
+  assert(!is_contained(ExitBlocks, CmpLoop.HeaderBrEqualBB) &&
+         is_contained(ExitBlocks, CmpLoop.HeaderBrUnequalBB) &&
+         !is_contained(ExitBlocks, CmpLoop.LatchBrContinueBB) &&
+         is_contained(ExitBlocks, CmpLoop.LatchBrFinishBB) &&
+         "Unexpected exit edges.");
+
+  LLVM_DEBUG(dbgs() << "Recognized loop control-flow.\n");
+
+  LLVM_DEBUG(dbgs() << "Performing side-effect analysis on the loop.\n");
+  assert(CurLoop->isLCSSAForm(*DT) && "Should only get LCSSA-form loops here.");
+  // No loop instructions must be used outside of the loop. Since we are in
+  // LCSSA form, we only need to check successor block's PHI nodes's incoming
+  // values for incoming blocks that are the loop basic blocks.
+  for (const BasicBlock *ExitBB : ExitBlocks) {
+    for (const PHINode &PHI : ExitBB->phis()) {
+      for (const BasicBlock *LoopBB :
+           make_filter_range(PHI.blocks(), [this](BasicBlock *PredecessorBB) {
+             return CurLoop->contains(PredecessorBB);
+           })) {
+        const auto *I =
+            dyn_cast<Instruction>(PHI.getIncomingValueForBlock(LoopBB));
+        if (I && CurLoop->contains(I)) {
+          LLVM_DEBUG(dbgs()
+                     << "Loop contains instruction " << *I
+                     << "   which is used outside of the loop in basic block  "
+                     << ExitBB->getName() << "  in phi node  " << PHI << "\n");
+          return false;
+        }
+      }
+    }
+  }
+  // Similarly, the loop should not have any other observable side-effects
+  // other than the final comparison result.
+  for (BasicBlock *LoopBB : CurLoop->blocks()) {
+    for (Instruction &I : *LoopBB) {
+      if (isa<DbgInfoIntrinsic>(I)) // Ignore dbginfo.
+        continue;                   // FIXME: anything else? lifetime info?
+      if ((I.mayHaveSideEffects() || I.isAtomic() || I.isFenceLike()) &&
+          &I != CmpOfLoads.LoadA && &I != CmpOfLoads.LoadB) {
+        LLVM_DEBUG(
+            dbgs() << "Loop contains instruction with potential side-effects: "
+                   << I << "\n");
+        return false;
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "No loop instructions deemed to have side-effects.\n");
+  return true;
+}
+
+bool LoopIdiomRecognize::recognizeBCmpLoopSCEV(uint64_t BCmpTyBytes,
+                                               CmpOfLoads &CmpOfLoads,
+                                               const SCEV *&SrcA,
+                                               const SCEV *&SrcB,
+                                               const SCEV *&Iterations) const {
+  // Try to compute SCEV of the loads, for this loop's scope.
+  const auto *ScevForSrcA = dyn_cast<SCEVAddRecExpr>(
+      SE->getSCEVAtScope(CmpOfLoads.LoadSrcA, CurLoop));
+  const auto *ScevForSrcB = dyn_cast<SCEVAddRecExpr>(
+      SE->getSCEVAtScope(CmpOfLoads.LoadSrcB, CurLoop));
+  if (!ScevForSrcA || !ScevForSrcB) {
+    LLVM_DEBUG(dbgs() << "Failed to get SCEV expressions for load sources.\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Got SCEV expressions (at loop scope) for loads:\n\t"
+                    << *ScevForSrcA << "\n\t" << *ScevForSrcB << "\n");
+
+  // Loads must have folloving SCEV exprs:  {%ptr,+,BCmpTyBytes}<%LoopHeaderBB>
+  const SCEV *RecStepForA = ScevForSrcA->getStepRecurrence(*SE);
+  const SCEV *RecStepForB = ScevForSrcB->getStepRecurrence(*SE);
+  if (!ScevForSrcA->isAffine() || !ScevForSrcB->isAffine() ||
+      RecStepForA != RecStepForB || !isa<SCEVConstant>(RecStepForA) ||
+      cast<SCEVConstant>(RecStepForA)->getAPInt() != BCmpTyBytes) {
+    LLVM_DEBUG(
+        dbgs() << "Unsupported SCEV expressions for loads. Only support affine "
+                  "SCEV expressions with identical constant positive step, "
+                  "equal to the count of bytes compared. Got:\n\t"
+               << *RecStepForA << "\n\t" << *RecStepForB << "\n");
+    return false;
+    // FIXME: can support BCmpTyBytes > Step.
+    // But will need to account for the extra bytes compared at the end.
+  }
+
+  SrcA = ScevForSrcA->getStart();
+  SrcB = ScevForSrcB->getStart();
+  LLVM_DEBUG(dbgs() << "Got SCEV expressions for load sources:\n\t" << *SrcA
+                    << "\n\t" << *SrcB << "\n");
+
+  // The load sources must be loop-invants that dominate the loop header.
+  if (SrcA == SE->getCouldNotCompute() || SrcB == SE->getCouldNotCompute() ||
+      !SE->isAvailableAtLoopEntry(SrcA, CurLoop) ||
+      !SE->isAvailableAtLoopEntry(SrcB, CurLoop)) {
+    LLVM_DEBUG(dbgs() << "Unsupported SCEV expressions for loads, unavaliable "
+                         "prior to loop header.\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "SCEV expressions for loads are acceptable.\n");
+
+  // For how many iterations is loop guaranteed not to exit via LoopLatch?
+  // This is one less than the maximal number of comparisons,and is:  n + -1
+  const SCEV *LoopExitCount =
+      SE->getExitCount(CurLoop, CurLoop->getLoopLatch());
+  LLVM_DEBUG(dbgs() << "Got SCEV expression for loop latch exit count: "
+                    << *LoopExitCount << "\n");
+  // Exit count, similarly, must be loop-invant that dominates the loop header.
+  if (LoopExitCount == SE->getCouldNotCompute() ||
+      !LoopExitCount->getType()->isIntOrPtrTy() ||
+      !SE->isAvailableAtLoopEntry(LoopExitCount, CurLoop)) {
+    LLVM_DEBUG(dbgs() << "Unsupported SCEV expression for loop latch exit.\n");
+    return false;
+  }
+
+  // LoopExitCount is always one less than the actual count of iterations.
+  // Do this before cast, else we will be stuck with   1 + zext(-1 + n)
+  Iterations = SE->getAddExpr(
+      LoopExitCount, SE->getOne(LoopExitCount->getType()), SCEV::FlagNUW);
+  assert(Iterations != SE->getCouldNotCompute() &&
+         "Shouldn't fail to increment by one.");
+
+  LLVM_DEBUG(dbgs() << "Computed iteration count: " << *Iterations << "\n");
+  return true;
+}
+
+/// Return true iff the bcmp idiom is detected in the loop.
+///
+/// Additionally:
+/// 1) \p BCmpInst is set to the root byte-comparison instruction.
+/// 2) \p LatchCmpInst is set to the comparison that controls the latch.
+/// 3) \p LoadA is set to the first  LoadInst.
+/// 4) \p LoadB is set to the second LoadInst.
+/// 5) \p SrcA is set to the first  source location that is being compared.
+/// 6) \p SrcB is set to the second source location that is being compared.
+/// 7) \p NBytes is set to the number of bytes to compare.
+bool LoopIdiomRecognize::detectBCmpIdiom(ICmpInst *&BCmpInst,
+                                         CmpInst *&LatchCmpInst,
+                                         LoadInst *&LoadA, LoadInst *&LoadB,
+                                         const SCEV *&SrcA, const SCEV *&SrcB,
+                                         const SCEV *&NBytes) const {
+  LLVM_DEBUG(dbgs() << "Recognizing bcmp idiom\n");
+
+  // Give up if the loop is not in normal form, or has more than 2 blocks.
+  if (!CurLoop->isLoopSimplifyForm() || CurLoop->getNumBlocks() > 2) {
+    LLVM_DEBUG(dbgs() << "Basic loop structure unrecognized.\n");
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "Recognized basic loop structure.\n");
+
+  CmpLoopStructure CmpLoop;
+  if (!matchBCmpLoopStructure(CmpLoop))
+    return false;
+
+  CmpOfLoads CmpOfLoads;
+  if (!matchBCmpOfLoads(CmpLoop.BCmpValue, CmpOfLoads))
+    return false;
+
+  if (!recognizeBCmpLoopControlFlow(CmpOfLoads, CmpLoop))
+    return false;
+
+  BCmpInst = cast<ICmpInst>(CmpLoop.BCmpValue);        // FIXME: is there no
+  LatchCmpInst = cast<CmpInst>(CmpLoop.LatchCmpValue); // way to combine
+  LoadA = cast<LoadInst>(CmpOfLoads.LoadA);            // these cast with
+  LoadB = cast<LoadInst>(CmpOfLoads.LoadB);            // m_Value() matcher?
+
+  Type *BCmpValTy = BCmpInst->getOperand(0)->getType();
+  LLVMContext &Context = BCmpValTy->getContext();
+  uint64_t BCmpTyBits = DL->getTypeSizeInBits(BCmpValTy);
+  static constexpr uint64_t ByteTyBits = 8;
+
+  LLVM_DEBUG(dbgs() << "Got comparison between values of type " << *BCmpValTy
+                    << " of size " << BCmpTyBits
+                    << " bits (while byte = " << ByteTyBits << " bits).\n");
+  // bcmp()/memcmp() minimal unit of work is a byte. Therefore we must check
+  // that we are dealing with a multiple of a byte here.
+  if (BCmpTyBits % ByteTyBits != 0) {
+    LLVM_DEBUG(dbgs() << "Value size is not a multiple of byte.\n");
+    return false;
+    // FIXME: could still be done under a run-time check that the total bit
+    // count is a multiple of a byte i guess? Or handle remainder separately?
+  }
+
+  // Each comparison is done on this many bytes.
+  uint64_t BCmpTyBytes = BCmpTyBits / ByteTyBits;
+  LLVM_DEBUG(dbgs() << "Size is exactly " << BCmpTyBytes
+                    << " bytes, eligible for bcmp conversion.\n");
+
+  const SCEV *Iterations;
+  if (!recognizeBCmpLoopSCEV(BCmpTyBytes, CmpOfLoads, SrcA, SrcB, Iterations))
+    return false;
+
+  // bcmp / memcmp take length argument as size_t, do promotion now.
+  Type *CmpFuncSizeTy = DL->getIntPtrType(Context);
+  Iterations = SE->getNoopOrZeroExtend(Iterations, CmpFuncSizeTy);
+  assert(Iterations != SE->getCouldNotCompute() && "Promotion failed.");
+  // Note that it didn't do ptrtoint cast, we will need to do it manually.
+
+  // We will be comparing *bytes*, not BCmpTy, we need to recalculate size.
+  // It's a multiplication, and it *could* overflow. But for it to overflow
+  // we'd want to compare more bytes than could be represented by size_t, But
+  // allocation functions also take size_t. So how'd you produce such buffer?
+  // FIXME: we likely need to actually check that we know this won't overflow,
+  //        via llvm::computeOverflowForUnsignedMul().
+  NBytes = SE->getMulExpr(
+      Iterations, SE->getConstant(CmpFuncSizeTy, BCmpTyBytes), SCEV::FlagNUW);
+  assert(NBytes != SE->getCouldNotCompute() &&
+         "Shouldn't fail to increment by one.");
+
+  LLVM_DEBUG(dbgs() << "Computed total byte count: " << *NBytes << "\n");
+
+  if (LoadA->getPointerAddressSpace() != LoadB->getPointerAddressSpace() ||
+      LoadA->getPointerAddressSpace() != 0 || !LoadA->isSimple() ||
+      !LoadB->isSimple()) {
+    StringLiteral L("Unsupported loads in idiom - only support identical, "
+                    "simple loads from address space 0.\n");
+    LLVM_DEBUG(dbgs() << L);
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "BCmpIdiomUnsupportedLoads",
+                                      BCmpInst->getDebugLoc(),
+                                      CurLoop->getHeader())
+             << L;
+    });
+    return false; // FIXME
+  }
+
+  LLVM_DEBUG(dbgs() << "Recognized bcmp idiom\n");
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "RecognizedBCmpIdiom",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+           << "Loop recognized as a bcmp idiom";
+  });
+
+  return true;
+}
+
+BasicBlock *
+LoopIdiomRecognize::transformBCmpControlFlow(ICmpInst *ComparedEqual) {
+  LLVM_DEBUG(dbgs() << "Transforming control-flow.\n");
+  SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+
+  BasicBlock *PreheaderBB = CurLoop->getLoopPreheader();
+  BasicBlock *HeaderBB = CurLoop->getHeader();
+  BasicBlock *LoopLatchBB = CurLoop->getLoopLatch();
+  SmallString<32> LoopName = CurLoop->getName();
+  Function *Func = PreheaderBB->getParent();
+  LLVMContext &Context = Func->getContext();
+
+  // Before doing anything, drop SCEV info.
+  SE->forgetLoop(CurLoop);
+
+  // Here we start with: (0/6)
+  //  PreheaderBB: <preheader>        ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    br label %LoopHeaderBB
+  //  LoopHeaderBB: <header,exiting>  ; preds = %PreheaderBB,%LoopLatchBB
+  //    <...>
+  //    br i1 %<...>, label %LoopLatchBB, label %Successor0BB
+  //  LoopLatchBB: <latch,exiting>    ; preds = %LoopHeaderBB
+  //    <...>
+  //    br i1 %<...>, label %Successor1BB, label %LoopHeaderBB
+  //  Successor0BB: <exit>            ; preds = %LoopHeaderBB
+  //    %S0PHI = phi <...> [ <...>, %LoopHeaderBB ]
+  //    <...>
+  //  Successor1BB: <exit>            ; preds = %LoopLatchBB
+  //    %S1PHI = phi <...> [ <...>, %LoopLatchBB ]
+  //    <...>
+  //
+  // Successor0 and Successor1 may or may not be the same basic block.
+
+  // Decouple the edge between loop preheader basic block and loop header basic
+  // block. Thus the loop has become unreachable.
+  assert(cast<BranchInst>(PreheaderBB->getTerminator())->isUnconditional() &&
+         PreheaderBB->getTerminator()->getSuccessor(0) == HeaderBB &&
+         "Preheader bb must end with an unconditional branch to header bb.");
+  PreheaderBB->getTerminator()->eraseFromParent();
+  DTUpdates.push_back({DominatorTree::Delete, PreheaderBB, HeaderBB});
+
+  // Create a new preheader basic block before loop header basic block.
+  auto *PhonyPreheaderBB = BasicBlock::Create(
+      Context, LoopName + ".phonypreheaderbb", Func, HeaderBB);
+  // And insert an unconditional branch from phony preheader basic block to
+  // loop header basic block.
+  IRBuilder<>(PhonyPreheaderBB).CreateBr(HeaderBB);
+  DTUpdates.push_back({DominatorTree::Insert, PhonyPreheaderBB, HeaderBB});
+
+  // Create a *single* new empty block that we will substitute as a
+  // successor basic block for the loop's exits. This one is temporary.
+  // Much like phony preheader basic block, it is not connected.
+  auto *PhonySuccessorBB =
+      BasicBlock::Create(Context, LoopName + ".phonysuccessorbb", Func,
+                         LoopLatchBB->getNextNode());
+  // That block must have *some* non-PHI instruction, or else deleteDeadLoop()
+  // will mess up cleanup of dbginfo, and verifier will complain.
+  IRBuilder<>(PhonySuccessorBB).CreateUnreachable();
+
+  // Create two new empty blocks that we will use to preserve the original
+  // loop exit control-flow, and preserve the incoming values in the PHI nodes
+  // in loop's successor exit blocks. These will live one.
+  auto *ComparedUnequalBB =
+      BasicBlock::Create(Context, ComparedEqual->getName() + ".unequalbb", Func,
+                         PhonySuccessorBB->getNextNode());
+  auto *ComparedEqualBB =
+      BasicBlock::Create(Context, ComparedEqual->getName() + ".equalbb", Func,
+                         PhonySuccessorBB->getNextNode());
+
+  // By now we have: (1/6)
+  //  PreheaderBB:                    ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    [no terminator instruction!]
+  //  PhonyPreheaderBB: <preheader>   ; No preds, UNREACHABLE!
+  //    br label %LoopHeaderBB
+  //  LoopHeaderBB: <header,exiting>  ; preds = %PhonyPreheaderBB, %LoopLatchBB
+  //    <...>
+  //    br i1 %<...>, label %LoopLatchBB, label %Successor0BB
+  //  LoopLatchBB: <latch,exiting>    ; preds = %LoopHeaderBB
+  //    <...>
+  //    br i1 %<...>, label %Successor1BB, label %LoopHeaderBB
+  //  PhonySuccessorBB:               ; No preds, UNREACHABLE!
+  //    unreachable
+  //  EqualBB:                        ; No preds, UNREACHABLE!
+  //    [no terminator instruction!]
+  //  UnequalBB:                      ; No preds, UNREACHABLE!
+  //    [no terminator instruction!]
+  //  Successor0BB: <exit>            ; preds = %LoopHeaderBB
+  //    %S0PHI = phi <...> [ <...>, %LoopHeaderBB ]
+  //    <...>
+  //  Successor1BB: <exit>            ; preds = %LoopLatchBB
+  //    %S1PHI = phi <...> [ <...>, %LoopLatchBB ]
+  //    <...>
+
+  // What is the mapping/replacement basic block for exiting out of the loop
+  // from either of old's loop basic blocks?
+  auto GetReplacementBB = [this, ComparedEqualBB,
+                           ComparedUnequalBB](const BasicBlock *OldBB) {
+    assert(CurLoop->contains(OldBB) && "Only for loop's basic blocks.");
+    if (OldBB == CurLoop->getLoopLatch()) // "all elements compared equal".
+      return ComparedEqualBB;
+    if (OldBB == CurLoop->getHeader()) // "element compared unequal".
+      return ComparedUnequalBB;
+    llvm_unreachable("Only had two basic blocks in loop.");
+  };
+
+  // What are the exits out of this loop?
+  SmallVector<Loop::Edge, 2> LoopExitEdges;
+  CurLoop->getExitEdges(LoopExitEdges);
+  assert(LoopExitEdges.size() == 2 && "Should have only to two exit edges.");
+
+  // Populate new basic blocks, update the exiting control-flow, PHI nodes.
+  for (const Loop::Edge &Edge : LoopExitEdges) {
+    auto *OldLoopBB = const_cast<BasicBlock *>(Edge.first);
+    auto *SuccessorBB = const_cast<BasicBlock *>(Edge.second);
+    assert(CurLoop->contains(OldLoopBB) && !CurLoop->contains(SuccessorBB) &&
+           "Unexpected edge.");
+
+    // If we would exit the loop from this loop's basic block,
+    // what semantically would that mean? Did comparison succeed or fail?
+    BasicBlock *NewBB = GetReplacementBB(OldLoopBB);
+    assert(NewBB->empty() && "Should not get same new basic block here twice.");
+    IRBuilder<> Builder(NewBB);
+    Builder.SetCurrentDebugLocation(OldLoopBB->getTerminator()->getDebugLoc());
+    Builder.CreateBr(SuccessorBB);
+    DTUpdates.push_back({DominatorTree::Insert, NewBB, SuccessorBB});
+    // Also, be *REALLY* careful with PHI nodes in successor basic block,
+    // update them to recieve the same input value, but not from current loop's
+    // basic block, but from new basic block instead.
+    SuccessorBB->replacePhiUsesWith(OldLoopBB, NewBB);
+    // Also, change loop control-flow. This loop's basic block shall no longer
+    // exit from the loop to it's original successor basic block, but to our new
+    // phony successor basic block. Note that new successor will be unique exit.
+    OldLoopBB->getTerminator()->replaceSuccessorWith(SuccessorBB,
+                                                     PhonySuccessorBB);
+    DTUpdates.push_back({DominatorTree::Delete, OldLoopBB, SuccessorBB});
+    DTUpdates.push_back({DominatorTree::Insert, OldLoopBB, PhonySuccessorBB});
+  }
+
+  // Inform DomTree about edge changes. Note that LoopInfo is still out-of-date.
+  assert(DTUpdates.size() == 8 && "Update count prediction failed.");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  DTU.applyUpdates(DTUpdates);
+  DTUpdates.clear();
+
+  // By now we have: (2/6)
+  //  PreheaderBB:                    ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    [no terminator instruction!]
+  //  PhonyPreheaderBB: <preheader>   ; No preds, UNREACHABLE!
+  //    br label %LoopHeaderBB
+  //  LoopHeaderBB: <header,exiting>  ; preds = %PhonyPreheaderBB, %LoopLatchBB
+  //    <...>
+  //    br i1 %<...>, label %LoopLatchBB, label %PhonySuccessorBB
+  //  LoopLatchBB: <latch,exiting>    ; preds = %LoopHeaderBB
+  //    <...>
+  //    br i1 %<...>, label %PhonySuccessorBB, label %LoopHeaderBB
+  //  PhonySuccessorBB: <uniq. exit>  ; preds = %LoopHeaderBB, %LoopLatchBB
+  //    unreachable
+  //  EqualBB:                        ; No preds, UNREACHABLE!
+  //    br label %Successor1BB
+  //  UnequalBB:                      ; No preds, UNREACHABLE!
+  //    br label %Successor0BB
+  //  Successor0BB:                   ; preds = %UnequalBB
+  //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+  //    <...>
+  //  Successor1BB:                   ; preds = %EqualBB
+  //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+  //    <...>
+
+  // *Finally*, zap the original loop. Record it's parent loop though.
+  Loop *ParentLoop = CurLoop->getParentLoop();
+  LLVM_DEBUG(dbgs() << "Deleting old loop.\n");
+  LoopDeleter.markLoopAsDeleted(CurLoop); // Mark as deleted *BEFORE* deleting!
+  deleteDeadLoop(CurLoop, DT, SE, LI);    // And actually delete the loop.
+  CurLoop = nullptr;
+
+  // By now we have: (3/6)
+  //  PreheaderBB:                    ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    [no terminator instruction!]
+  //  PhonyPreheaderBB:               ; No preds, UNREACHABLE!
+  //    br label %PhonySuccessorBB
+  //  PhonySuccessorBB:               ; preds = %PhonyPreheaderBB
+  //    unreachable
+  //  EqualBB:                        ; No preds, UNREACHABLE!
+  //    br label %Successor1BB
+  //  UnequalBB:                      ; No preds, UNREACHABLE!
+  //    br label %Successor0BB
+  //  Successor0BB:                   ; preds = %UnequalBB
+  //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+  //    <...>
+  //  Successor1BB:                   ; preds = %EqualBB
+  //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+  //    <...>
+
+  // Now, actually restore the CFG.
+
+  // Insert an unconditional branch from an actual preheader basic block to
+  // phony preheader basic block.
+  IRBuilder<>(PreheaderBB).CreateBr(PhonyPreheaderBB);
+  DTUpdates.push_back({DominatorTree::Insert, PhonyPreheaderBB, HeaderBB});
+  // Insert proper conditional branch from phony successor basic block to the
+  // "dispatch" basic blocks, which were used to preserve incoming values in
+  // original loop's successor basic blocks.
+  assert(isa<UnreachableInst>(PhonySuccessorBB->getTerminator()) &&
+         "Yep, that's the one we created to keep deleteDeadLoop() happy.");
+  PhonySuccessorBB->getTerminator()->eraseFromParent();
+  {
+    IRBuilder<> Builder(PhonySuccessorBB);
+    Builder.SetCurrentDebugLocation(ComparedEqual->getDebugLoc());
+    Builder.CreateCondBr(ComparedEqual, ComparedEqualBB, ComparedUnequalBB);
+  }
+  DTUpdates.push_back(
+      {DominatorTree::Insert, PhonySuccessorBB, ComparedEqualBB});
+  DTUpdates.push_back(
+      {DominatorTree::Insert, PhonySuccessorBB, ComparedUnequalBB});
+
+  BasicBlock *DispatchBB = PhonySuccessorBB;
+  DispatchBB->setName(LoopName + ".bcmpdispatchbb");
+
+  assert(DTUpdates.size() == 3 && "Update count prediction failed.");
+  DTU.applyUpdates(DTUpdates);
+  DTUpdates.clear();
+
+  // By now we have: (4/6)
+  //  PreheaderBB:                    ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    br label %PhonyPreheaderBB
+  //  PhonyPreheaderBB:               ; preds = %PreheaderBB
+  //    br label %DispatchBB
+  //  DispatchBB:                     ; preds = %PhonyPreheaderBB
+  //    br i1 %ComparedEqual, label %EqualBB, label %UnequalBB
+  //  EqualBB:                        ; preds = %DispatchBB
+  //    br label %Successor1BB
+  //  UnequalBB:                      ; preds = %DispatchBB
+  //    br label %Successor0BB
+  //  Successor0BB:                   ; preds = %UnequalBB
+  //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+  //    <...>
+  //  Successor1BB:                   ; preds = %EqualBB
+  //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+  //    <...>
+
+  // The basic CFG has been restored! Now let's merge redundant basic blocks.
+
+  // Merge phony successor basic block into it's only predecessor,
+  // phony preheader basic block. It is fully pointlessly redundant.
+  MergeBasicBlockIntoOnlyPred(DispatchBB, &DTU);
+
+  // By now we have: (5/6)
+  //  PreheaderBB:                    ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    br label %DispatchBB
+  //  DispatchBB:                     ; preds = %PreheaderBB
+  //    br i1 %ComparedEqual, label %EqualBB, label %UnequalBB
+  //  EqualBB:                        ; preds = %DispatchBB
+  //    br label %Successor1BB
+  //  UnequalBB:                      ; preds = %DispatchBB
+  //    br label %Successor0BB
+  //  Successor0BB:                   ; preds = %UnequalBB
+  //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+  //    <...>
+  //  Successor1BB:                   ; preds = %EqualBB
+  //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+  //    <...>
+
+  // Was this loop nested?
+  if (!ParentLoop) {
+    // If the loop was *NOT* nested, then let's also merge phony successor
+    // basic block into it's only predecessor, preheader basic block.
+    // Also, here we need to update LoopInfo.
+    LI->removeBlock(PreheaderBB);
+    MergeBasicBlockIntoOnlyPred(DispatchBB, &DTU);
+
+    // By now we have: (6/6)
+    //  DispatchBB:                   ; preds = ???
+    //    <...>
+    //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+    //    %ComparedEqual = icmp eq <...> %memcmp, 0
+    //    br i1 %ComparedEqual, label %EqualBB, label %UnequalBB
+    //  EqualBB:                      ; preds = %DispatchBB
+    //    br label %Successor1BB
+    //  UnequalBB:                    ; preds = %DispatchBB
+    //    br label %Successor0BB
+    //  Successor0BB:                 ; preds = %UnequalBB
+    //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+    //    <...>
+    //  Successor1BB:                 ; preds = %EqualBB
+    //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+    //    <...>
+
+    return DispatchBB;
+  }
+
+  // Otherwise, we need to "preserve" the LoopSimplify form of the deleted loop.
+  // To achieve that, we shall keep the preheader basic block (mainly so that
+  // the loop header block will be guaranteed to have a predecessor outside of
+  // the loop), and create a phony loop with all these new three basic blocks.
+  Loop *PhonyLoop = LI->AllocateLoop();
+  ParentLoop->addChildLoop(PhonyLoop);
+  PhonyLoop->addBasicBlockToLoop(DispatchBB, *LI);
+  PhonyLoop->addBasicBlockToLoop(ComparedEqualBB, *LI);
+  PhonyLoop->addBasicBlockToLoop(ComparedUnequalBB, *LI);
+
+  // But we only have a preheader basic block, a header basic block block and
+  // two exiting basic blocks. For a proper loop we also need a backedge from
+  // non-header basic block to header bb.
+  // Let's just add a never-taken branch from both of the exiting basic blocks.
+  for (BasicBlock *BB : {ComparedEqualBB, ComparedUnequalBB}) {
+    BranchInst *OldTerminator = cast<BranchInst>(BB->getTerminator());
+    assert(OldTerminator->isUnconditional() && "That's the one we created.");
+    BasicBlock *SuccessorBB = OldTerminator->getSuccessor(0);
+
+    IRBuilder<> Builder(OldTerminator);
+    Builder.SetCurrentDebugLocation(OldTerminator->getDebugLoc());
+    Builder.CreateCondBr(ConstantInt::getTrue(Context), SuccessorBB,
+                         DispatchBB);
+    OldTerminator->eraseFromParent();
+    // Yes, the backedge will never be taken. The control-flow is redundant.
+    // If it can be simplified further, other passes will take care.
+    DTUpdates.push_back({DominatorTree::Delete, BB, SuccessorBB});
+    DTUpdates.push_back({DominatorTree::Insert, BB, SuccessorBB});
+    DTUpdates.push_back({DominatorTree::Insert, BB, DispatchBB});
+  }
+  assert(DTUpdates.size() == 6 && "Update count prediction failed.");
+  DTU.applyUpdates(DTUpdates);
+  DTUpdates.clear();
+
+  // By now we have: (6/6)
+  //  PreheaderBB: <preheader>        ; preds = ???
+  //    <...>
+  //    %memcmp = call i32 @memcmp(i8* %LoadSrcA, i8* %LoadSrcB, i64 %Nbytes)
+  //    %ComparedEqual = icmp eq <...> %memcmp, 0
+  //    br label %BCmpDispatchBB
+  //  BCmpDispatchBB: <header>        ; preds = %PreheaderBB
+  //    br i1 %ComparedEqual, label %EqualBB, label %UnequalBB
+  //  EqualBB: <latch,exiting>        ; preds = %BCmpDispatchBB
+  //    br i1 %true, label %Successor1BB, label %BCmpDispatchBB
+  //  UnequalBB: <latch,exiting>      ; preds = %BCmpDispatchBB
+  //    br i1 %true, label %Successor0BB, label %BCmpDispatchBB
+  //  Successor0BB:                   ; preds = %UnequalBB
+  //    %S0PHI = phi <...> [ <...>, %UnequalBB ]
+  //    <...>
+  //  Successor1BB:                   ; preds = %EqualBB
+  //    %S0PHI = phi <...> [ <...>, %EqualBB ]
+  //    <...>
+
+  // Finally fully DONE!
+  return DispatchBB;
+}
+
+void LoopIdiomRecognize::transformLoopToBCmp(ICmpInst *BCmpInst,
+                                             CmpInst *LatchCmpInst,
+                                             LoadInst *LoadA, LoadInst *LoadB,
+                                             const SCEV *SrcA, const SCEV *SrcB,
+                                             const SCEV *NBytes) {
+  // We will be inserting before the terminator instruction of preheader block.
+  IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
+
+  LLVM_DEBUG(dbgs() << "Transforming bcmp loop idiom into a call.\n");
+  LLVM_DEBUG(dbgs() << "Emitting new instructions.\n");
+
+  // Expand the SCEV expressions for both sources to compare, and produce value
+  // for the byte len (beware of Iterations potentially being a pointer, and
+  // account for element size being BCmpTyBytes bytes, which may be not 1 byte)
+  Value *PtrA, *PtrB, *Len;
+  {
+    SCEVExpander SExp(*SE, *DL, "LoopToBCmp");
+    SExp.setInsertPoint(&*Builder.GetInsertPoint());
+
+    auto HandlePtr = [&SExp](LoadInst *Load, const SCEV *Src) {
+      SExp.SetCurrentDebugLocation(DebugLoc());
+      // If the pointer operand of original load had dbgloc - use it.
+      if (const auto *I = dyn_cast<Instruction>(Load->getPointerOperand()))
+        SExp.SetCurrentDebugLocation(I->getDebugLoc());
+      return SExp.expandCodeFor(Src);
+    };
+    PtrA = HandlePtr(LoadA, SrcA);
+    PtrB = HandlePtr(LoadB, SrcB);
+
+    // For len calculation let's use dbgloc for the loop's latch condition.
+    Builder.SetCurrentDebugLocation(LatchCmpInst->getDebugLoc());
+    SExp.SetCurrentDebugLocation(LatchCmpInst->getDebugLoc());
+    Len = SExp.expandCodeFor(NBytes);
+
+    Type *CmpFuncSizeTy = DL->getIntPtrType(Builder.getContext());
+    assert(SE->getTypeSizeInBits(Len->getType()) ==
+               DL->getTypeSizeInBits(CmpFuncSizeTy) &&
+           "Len should already have the correct size.");
+
+    // Make sure that iteration count is a number, insert ptrtoint cast if not.
+    if (Len->getType()->isPointerTy())
+      Len = Builder.CreatePtrToInt(Len, CmpFuncSizeTy);
+    assert(Len->getType() == CmpFuncSizeTy && "Should have correct type now.");
+
+    Len->setName(Len->getName() + ".bytecount");
+
+    // There is no legality check needed. We want to compare that the memory
+    // regions [PtrA, PtrA+Len) and [PtrB, PtrB+Len) are fully identical, equal.
+    // For them to be fully equal, they must match bit-by-bit. And likewise,
+    // for them to *NOT* be fully equal, they have to differ just by one bit.
+    // The step of comparison (bits compared at once) simply does not matter.
+  }
+
+  // For the rest of new instructions, dbgloc should point at the value cmp.
+  Builder.SetCurrentDebugLocation(BCmpInst->getDebugLoc());
+
+  // Emit the comparison itself.
+  auto *CmpCall =
+      cast<CallInst>(HasBCmp ? emitBCmp(PtrA, PtrB, Len, Builder, *DL, TLI)
+                             : emitMemCmp(PtrA, PtrB, Len, Builder, *DL, TLI));
+  // FIXME: add {B,Mem}CmpInst with MemoryCompareInst
+  //        (based on MemIntrinsicBase) as base?
+  // FIXME: propagate metadata from loads? (alignments, AS, TBAA, ...)
+
+  // {b,mem}cmp returned 0 if they were equal, or non-zero if not equal.
+  auto *ComparedEqual = cast<ICmpInst>(Builder.CreateICmpEQ(
+      CmpCall, ConstantInt::get(CmpCall->getType(), 0),
+      PtrA->getName() + ".vs." + PtrB->getName() + ".eqcmp"));
+
+  BasicBlock *BB = transformBCmpControlFlow(ComparedEqual);
+  Builder.ClearInsertionPoint();
+
+  // We're done.
+  LLVM_DEBUG(dbgs() << "Transformed loop bcmp idiom into a call.\n");
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "TransformedBCmpIdiomToCall",
+                              CmpCall->getDebugLoc(), BB)
+           << "Transformed bcmp idiom into a call to "
+           << ore::NV("NewFunction", CmpCall->getCalledFunction())
+           << "() function";
+  });
+  ++NumBCmp;
+}
+
+/// Recognizes a bcmp idiom in a non-countable loop.
+///
+/// If detected, transforms the relevant code to issue the bcmp (or memcmp)
+/// intrinsic function call, and returns true; otherwise, returns false.
+bool LoopIdiomRecognize::recognizeBCmp() {
+  if (!HasMemCmp && !HasBCmp)
+    return false;
+
+  ICmpInst *BCmpInst;
+  CmpInst *LatchCmpInst;
+  LoadInst *LoadA, *LoadB;
+  const SCEV *SrcA, *SrcB, *NBytes;
+  if (!detectBCmpIdiom(BCmpInst, LatchCmpInst, LoadA, LoadB, SrcA, SrcB,
+                       NBytes)) {
+    LLVM_DEBUG(dbgs() << "bcmp idiom recognition failed.\n");
+    return false;
+  }
+
+  transformLoopToBCmp(BCmpInst, LatchCmpInst, LoadA, LoadB, SrcA, SrcB, NBytes);
+  return true;
 }

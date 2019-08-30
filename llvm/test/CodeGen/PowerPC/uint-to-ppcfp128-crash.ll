@@ -9,7 +9,7 @@ entry:
   %conv = uitofp i16 %0 to ppc_fp128
   ret ppc_fp128 %conv
 ; CHECK: lhz [[LD:[0-9]+]], 0(3)
-; CHECK: mtvsrwa [[MV:[0-9]+]], [[LD]]
+; CHECK: mtfprwa [[MV:[0-9]+]], [[LD]]
 ; CHECK: xscvsxddp [[CONV:[0-9]+]], [[MV]]
 ; CHECK: bl __gcc_qadd
 }

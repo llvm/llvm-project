@@ -482,7 +482,46 @@ static bool regIsPICBase(unsigned BaseReg, const MachineRegisterInfo &MRI) {
 bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                                      AliasAnalysis *AA) const {
   switch (MI.getOpcode()) {
-  default: break;
+  default:
+    // This function should only be called for opcodes with the ReMaterializable
+    // flag set.
+    llvm_unreachable("Unknown rematerializable operation!");
+    break;
+
+  case X86::LOAD_STACK_GUARD:
+  case X86::AVX1_SETALLONES:
+  case X86::AVX2_SETALLONES:
+  case X86::AVX512_128_SET0:
+  case X86::AVX512_256_SET0:
+  case X86::AVX512_512_SET0:
+  case X86::AVX512_512_SETALLONES:
+  case X86::AVX512_FsFLD0SD:
+  case X86::AVX512_FsFLD0SS:
+  case X86::AVX_SET0:
+  case X86::FsFLD0SD:
+  case X86::FsFLD0SS:
+  case X86::KSET0D:
+  case X86::KSET0Q:
+  case X86::KSET0W:
+  case X86::KSET1D:
+  case X86::KSET1Q:
+  case X86::KSET1W:
+  case X86::MMX_SET0:
+  case X86::MOV32ImmSExti8:
+  case X86::MOV32r0:
+  case X86::MOV32r1:
+  case X86::MOV32r_1:
+  case X86::MOV32ri64:
+  case X86::MOV64ImmSExti8:
+  case X86::V_SET0:
+  case X86::V_SETALLONES:
+  case X86::MOV16ri:
+  case X86::MOV32ri:
+  case X86::MOV64ri:
+  case X86::MOV64ri32:
+  case X86::MOV8ri:
+    return true;
+
   case X86::MOV8rm:
   case X86::MOV8rm_NOREX:
   case X86::MOV16rm:
@@ -594,10 +633,6 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
     return false;
   }
   }
-
-  // All other instructions marked M_REMATERIALIZABLE are always trivially
-  // rematerializable.
-  return true;
 }
 
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,

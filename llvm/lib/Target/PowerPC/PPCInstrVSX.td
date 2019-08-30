@@ -1593,16 +1593,33 @@ let Predicates = [HasDirectMove] in {
   def MFVSRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsfrc:$XT),
                                "mfvsrwz $rA, $XT", IIC_VecGeneral,
                                [(set i32:$rA, (PPCmfvsr f64:$XT))]>;
+  let isCodeGenOnly = 1 in
+  def MFVRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsrc:$XT),
+                               "mfvsrwz $rA, $XT", IIC_VecGeneral,
+                               []>;
   def MTVSRD : XX1_RS6_RD5_XO<31, 179, (outs vsfrc:$XT), (ins g8rc:$rA),
                               "mtvsrd $XT, $rA", IIC_VecGeneral,
                               [(set f64:$XT, (PPCmtvsra i64:$rA))]>,
       Requires<[In64BitMode]>;
+  let isCodeGenOnly = 1 in
+  def MTVRD : XX1_RS6_RD5_XO<31, 179, (outs vsrc:$XT), (ins g8rc:$rA),
+                              "mtvsrd $XT, $rA", IIC_VecGeneral,
+                              []>,
+      Requires<[In64BitMode]>;
   def MTVSRWA : XX1_RS6_RD5_XO<31, 211, (outs vsfrc:$XT), (ins gprc:$rA),
                                "mtvsrwa $XT, $rA", IIC_VecGeneral,
                                [(set f64:$XT, (PPCmtvsra i32:$rA))]>;
+  let isCodeGenOnly = 1 in
+  def MTVRWA : XX1_RS6_RD5_XO<31, 211, (outs vsrc:$XT), (ins gprc:$rA),
+                               "mtvsrwa $XT, $rA", IIC_VecGeneral,
+                               []>;
   def MTVSRWZ : XX1_RS6_RD5_XO<31, 243, (outs vsfrc:$XT), (ins gprc:$rA),
                                "mtvsrwz $XT, $rA", IIC_VecGeneral,
                                [(set f64:$XT, (PPCmtvsrz i32:$rA))]>;
+  let isCodeGenOnly = 1 in
+  def MTVRWZ : XX1_RS6_RD5_XO<31, 243, (outs vsrc:$XT), (ins gprc:$rA),
+                               "mtvsrwz $XT, $rA", IIC_VecGeneral,
+                               []>;
 } // HasDirectMove
 
 let Predicates = [IsISA3_0, HasDirectMove] in {
@@ -1626,6 +1643,22 @@ def : InstAlias<"mfvrd $rA, $XT",
                 (MFVRD g8rc:$rA, vrrc:$XT), 0>;
 def : InstAlias<"mffprd $rA, $src",
                 (MFVSRD g8rc:$rA, f8rc:$src)>;
+def : InstAlias<"mtvrd $XT, $rA",
+                (MTVRD vrrc:$XT, g8rc:$rA), 0>;
+def : InstAlias<"mtfprd $dst, $rA",
+                (MTVSRD f8rc:$dst, g8rc:$rA)>;
+def : InstAlias<"mfvrwz $rA, $XT",
+                (MFVRWZ gprc:$rA, vrrc:$XT), 0>;
+def : InstAlias<"mffprwz $rA, $src",
+                (MFVSRWZ gprc:$rA, f8rc:$src)>;
+def : InstAlias<"mtvrwa $XT, $rA",
+                (MTVRWA vrrc:$XT, gprc:$rA), 0>;
+def : InstAlias<"mtfprwa $dst, $rA",
+                (MTVSRWA f8rc:$dst, gprc:$rA)>;
+def : InstAlias<"mtvrwz $XT, $rA",
+                (MTVRWZ vrrc:$XT, gprc:$rA), 0>;
+def : InstAlias<"mtfprwz $dst, $rA",
+                (MTVSRWZ f8rc:$dst, gprc:$rA)>;
 
 /*  Direct moves of various widths from GPR's into VSR's. Each move lines
     the value up into element 0 (both BE and LE). Namely, entities smaller than

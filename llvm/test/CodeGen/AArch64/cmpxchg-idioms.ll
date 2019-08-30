@@ -111,7 +111,7 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK: mov w22, #2
 ; CHECK-NOT: mov w22, #4
 ; CHECK-NOT: cmn w22, #4
-; CHECK: b [[LOOP2:LBB[0-9]+_[0-9]+]]
+; CHECK: [[LOOP2:LBB[0-9]+_[0-9]+]]: ; %for.cond
 ; CHECK-NOT: b.ne [[LOOP2]]
 ; CHECK-NOT: b {{LBB[0-9]+_[0-9]+}}
 ; CHECK: bl _foo

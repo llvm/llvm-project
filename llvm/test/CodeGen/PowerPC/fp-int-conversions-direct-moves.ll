@@ -25,7 +25,7 @@ entry:
 define float @_Z6testfcc(i8 zeroext %arg) {
 ; CHECK-LABEL: _Z6testfcc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stb r3, -1(r1)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -58,7 +58,7 @@ entry:
 define double @_Z6testdcc(i8 zeroext %arg) {
 ; CHECK-LABEL: _Z6testdcc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stb r3, -1(r1)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -91,7 +91,7 @@ entry:
 define float @_Z7testfuch(i8 zeroext %arg) {
 ; CHECK-LABEL: _Z7testfuch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stb r3, -1(r1)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -124,7 +124,7 @@ entry:
 define double @_Z7testduch(i8 zeroext %arg) {
 ; CHECK-LABEL: _Z7testduch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stb r3, -1(r1)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -142,7 +142,7 @@ define signext i16 @_Z6testsff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -157,7 +157,7 @@ entry:
 define float @_Z6testfss(i16 signext %arg) {
 ; CHECK-LABEL: _Z6testfss:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa f0, r3
+; CHECK-NEXT:    mtfprwa f0, r3
 ; CHECK-NEXT:    sth r3, -2(r1)
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -175,7 +175,7 @@ define signext i16 @_Z6testsdd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -190,7 +190,7 @@ entry:
 define double @_Z6testdss(i16 signext %arg) {
 ; CHECK-LABEL: _Z6testdss:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa f0, r3
+; CHECK-NEXT:    mtfprwa f0, r3
 ; CHECK-NEXT:    sth r3, -2(r1)
 ; CHECK-NEXT:    xscvsxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -223,7 +223,7 @@ entry:
 define float @_Z7testfust(i16 zeroext %arg) {
 ; CHECK-LABEL: _Z7testfust:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    sth r3, -2(r1)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -256,7 +256,7 @@ entry:
 define double @_Z7testdust(i16 zeroext %arg) {
 ; CHECK-LABEL: _Z7testdust:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    sth r3, -2(r1)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -274,7 +274,7 @@ define signext i32 @_Z6testiff(float %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -289,7 +289,7 @@ entry:
 define float @_Z6testfii(i32 signext %arg) {
 ; CHECK-LABEL: _Z6testfii:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa f0, r3
+; CHECK-NEXT:    mtfprwa f0, r3
 ; CHECK-NEXT:    stw r3, -4(r1)
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -307,7 +307,7 @@ define signext i32 @_Z6testidd(double %arg) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
-; CHECK-NEXT:    mfvsrwz r3, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -322,7 +322,7 @@ entry:
 define double @_Z6testdii(i32 signext %arg) {
 ; CHECK-LABEL: _Z6testdii:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa f0, r3
+; CHECK-NEXT:    mtfprwa f0, r3
 ; CHECK-NEXT:    stw r3, -4(r1)
 ; CHECK-NEXT:    xscvsxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -355,7 +355,7 @@ entry:
 define float @_Z7testfuij(i32 zeroext %arg) {
 ; CHECK-LABEL: _Z7testfuij:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stw r3, -4(r1)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -388,7 +388,7 @@ entry:
 define double @_Z7testduij(i32 zeroext %arg) {
 ; CHECK-LABEL: _Z7testduij:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwz f0, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    stw r3, -4(r1)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -420,7 +420,7 @@ entry:
 define float @_Z7testfllx(i64 %arg) {
 ; CHECK-LABEL: _Z7testfllx:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -452,7 +452,7 @@ entry:
 define double @_Z7testdllx(i64 %arg) {
 ; CHECK-LABEL: _Z7testdllx:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    xscvsxddp f1, f0
 ; CHECK-NEXT:    blr
@@ -484,7 +484,7 @@ entry:
 define float @_Z8testfully(i64 %arg) {
 ; CHECK-LABEL: _Z8testfully:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
@@ -516,7 +516,7 @@ entry:
 define double @_Z8testdully(i64 %arg) {
 ; CHECK-LABEL: _Z8testdully:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrd f0, r3
+; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr

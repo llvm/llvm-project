@@ -227,6 +227,14 @@ private:
     return selectShiftedRegister(Root);
   }
 
+  /// Instructions that accept extend modifiers like UXTW expect the register
+  /// being extended to be a GPR32. Narrow ExtReg to a 32-bit register using a
+  /// subregister copy if necessary. Return either ExtReg, or the result of the
+  /// new copy.
+  Register narrowExtendRegIfNeeded(Register ExtReg,
+                                             MachineIRBuilder &MIB) const;
+  ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
+
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I) const;
   void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I) const;
@@ -245,6 +253,11 @@ private:
 
   /// Return true if \p MI is a load or store of \p NumBytes bytes.
   bool isLoadStoreOfNumBytes(const MachineInstr &MI, unsigned NumBytes) const;
+
+  /// Returns true if \p MI is guaranteed to have the high-half of a 64-bit
+  /// register zeroed out. In other words, the result of MI has been explicitly
+  /// zero extended.
+  bool isDef32(const MachineInstr &MI) const;
 
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
@@ -363,7 +376,7 @@ static bool getSubRegForClass(const TargetRegisterClass *RC,
     SubReg = AArch64::hsub;
     break;
   case 32:
-    if (RC == &AArch64::GPR32RegClass)
+    if (RC != &AArch64::FPR32RegClass)
       SubReg = AArch64::sub_32;
     else
       SubReg = AArch64::ssub;
@@ -676,35 +689,35 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       return false;
     }
 
-    // Is this a cross-bank copy?
-    if (DstRegBank.getID() != SrcRegBank.getID()) {
-      // If we're doing a cross-bank copy on different-sized registers, we need
-      // to do a bit more work.
-      unsigned SrcSize = TRI.getRegSizeInBits(*SrcRC);
-      unsigned DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SrcSize = TRI.getRegSizeInBits(*SrcRC);
+    unsigned DstSize = TRI.getRegSizeInBits(*DstRC);
 
-      if (SrcSize > DstSize) {
-        // We're doing a cross-bank copy into a smaller register. We need a
-        // subregister copy. First, get a register class that's on the same bank
-        // as the destination, but the same size as the source.
-        const TargetRegisterClass *SubregRC =
-            getMinClassForRegBank(DstRegBank, SrcSize, true);
-        assert(SubregRC && "Didn't get a register class for subreg?");
+    // If we're doing a cross-bank copy on different-sized registers, we need
+    // to do a bit more work.
+    if (SrcSize > DstSize) {
+      // We're doing a cross-bank copy into a smaller register. We need a
+      // subregister copy. First, get a register class that's on the same bank
+      // as the destination, but the same size as the source.
+      const TargetRegisterClass *SubregRC =
+          getMinClassForRegBank(DstRegBank, SrcSize, true);
+      assert(SubregRC && "Didn't get a register class for subreg?");
 
-        // Get the appropriate subregister for the destination.
-        unsigned SubReg = 0;
-        if (!getSubRegForClass(DstRC, TRI, SubReg)) {
-          LLVM_DEBUG(dbgs() << "Couldn't determine subregister for copy.\n");
-          return false;
-        }
-
-        // Now, insert a subregister copy using the new register class.
-        selectSubregisterCopy(I, MRI, RBI, SrcReg, SubregRC, DstRC, SubReg);
-        return CheckCopy();
+      // Get the appropriate subregister for the destination.
+      unsigned SubReg = 0;
+      if (!getSubRegForClass(DstRC, TRI, SubReg)) {
+        LLVM_DEBUG(dbgs() << "Couldn't determine subregister for copy.\n");
+        return false;
       }
 
-      else if (DstRegBank.getID() == AArch64::GPRRegBankID && DstSize == 32 &&
-               SrcSize == 16) {
+      // Now, insert a subregister copy using the new register class.
+      selectSubregisterCopy(I, MRI, RBI, SrcReg, SubregRC, DstRC, SubReg);
+      return CheckCopy();
+    }
+
+    // Is this a cross-bank copy?
+    if (DstRegBank.getID() != SrcRegBank.getID()) {
+      if (DstRegBank.getID() == AArch64::GPRRegBankID && DstSize == 32 &&
+          SrcSize == 16) {
         // Special case for FPR16 to GPR32.
         // FIXME: This can probably be generalized like the above case.
         Register PromoteReg =
@@ -4472,6 +4485,146 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(ShiftVal); }}};
 }
 
+/// Get the correct ShiftExtendType for an extend instruction.
+static AArch64_AM::ShiftExtendType
+getExtendTypeForInst(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  unsigned Opc = MI.getOpcode();
+
+  // Handle explicit extend instructions first.
+  if (Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG) {
+    unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    assert(Size != 64 && "Extend from 64 bits?");
+    switch (Size) {
+    case 8:
+      return AArch64_AM::SXTB;
+    case 16:
+      return AArch64_AM::SXTH;
+    case 32:
+      return AArch64_AM::SXTW;
+    default:
+      return AArch64_AM::InvalidShiftExtend;
+    }
+  }
+
+  if (Opc == TargetOpcode::G_ZEXT || Opc == TargetOpcode::G_ANYEXT) {
+    unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    assert(Size != 64 && "Extend from 64 bits?");
+    switch (Size) {
+    case 8:
+      return AArch64_AM::UXTB;
+    case 16:
+      return AArch64_AM::UXTH;
+    case 32:
+      return AArch64_AM::UXTW;
+    default:
+      return AArch64_AM::InvalidShiftExtend;
+    }
+  }
+
+  // Don't have an explicit extend. Try to handle a G_AND with a constant mask
+  // on the RHS.
+  if (Opc != TargetOpcode::G_AND)
+    return AArch64_AM::InvalidShiftExtend;
+
+  Optional<uint64_t> MaybeAndMask = getImmedFromMO(MI.getOperand(2));
+  if (!MaybeAndMask)
+    return AArch64_AM::InvalidShiftExtend;
+  uint64_t AndMask = *MaybeAndMask;
+  switch (AndMask) {
+  default:
+    return AArch64_AM::InvalidShiftExtend;
+  case 0xFF:
+    return AArch64_AM::UXTB;
+  case 0xFFFF:
+    return AArch64_AM::UXTH;
+  case 0xFFFFFFFF:
+    return AArch64_AM::UXTW;
+  }
+}
+
+Register AArch64InstructionSelector::narrowExtendRegIfNeeded(
+    Register ExtReg, MachineIRBuilder &MIB) const {
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  if (MRI.getType(ExtReg).getSizeInBits() == 32)
+    return ExtReg;
+
+  // Insert a copy to move ExtReg to GPR32.
+  Register NarrowReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+  auto Copy = MIB.buildCopy({NarrowReg}, {ExtReg});
+
+  // Select the copy into a subregister copy.
+  selectCopy(*Copy, TII, MRI, TRI, RBI);
+  return Copy.getReg(0);
+}
+
+/// Select an "extended register" operand. This operand folds in an extend
+/// followed by an optional left shift.
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectArithExtendedRegister(
+    MachineOperand &Root) const {
+  if (!Root.isReg())
+    return None;
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  uint64_t ShiftVal = 0;
+  Register ExtReg;
+  AArch64_AM::ShiftExtendType Ext;
+  MachineInstr *RootDef = getDefIgnoringCopies(Root.getReg(), MRI);
+  if (!RootDef)
+    return None;
+
+  if (!isWorthFoldingIntoExtendedReg(*RootDef, MRI))
+    return None;
+
+  // Check if we can fold a shift and an extend.
+  if (RootDef->getOpcode() == TargetOpcode::G_SHL) {
+    // Look for a constant on the RHS of the shift.
+    MachineOperand &RHS = RootDef->getOperand(2);
+    Optional<uint64_t> MaybeShiftVal = getImmedFromMO(RHS);
+    if (!MaybeShiftVal)
+      return None;
+    ShiftVal = *MaybeShiftVal;
+    if (ShiftVal > 4)
+      return None;
+    // Look for a valid extend instruction on the LHS of the shift.
+    MachineOperand &LHS = RootDef->getOperand(1);
+    MachineInstr *ExtDef = getDefIgnoringCopies(LHS.getReg(), MRI);
+    if (!ExtDef)
+      return None;
+    Ext = getExtendTypeForInst(*ExtDef, MRI);
+    if (Ext == AArch64_AM::InvalidShiftExtend)
+      return None;
+    ExtReg = ExtDef->getOperand(1).getReg();
+  } else {
+    // Didn't get a shift. Try just folding an extend.
+    Ext = getExtendTypeForInst(*RootDef, MRI);
+    if (Ext == AArch64_AM::InvalidShiftExtend)
+      return None;
+    ExtReg = RootDef->getOperand(1).getReg();
+
+    // If we have a 32 bit instruction which zeroes out the high half of a
+    // register, we get an implicit zero extend for free. Check if we have one.
+    // FIXME: We actually emit the extend right now even though we don't have
+    // to.
+    if (Ext == AArch64_AM::UXTW && MRI.getType(ExtReg).getSizeInBits() == 32) {
+      MachineInstr *ExtInst = MRI.getVRegDef(ExtReg);
+      if (ExtInst && isDef32(*ExtInst))
+        return None;
+    }
+  }
+
+  // We require a GPR32 here. Narrow the ExtReg if needed using a subregister
+  // copy.
+  MachineIRBuilder MIB(*RootDef);
+  ExtReg = narrowExtendRegIfNeeded(ExtReg, MIB);
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); },
+           [=](MachineInstrBuilder &MIB) {
+             MIB.addImm(getArithExtendImm(Ext, ShiftVal));
+           }}};
+}
+
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,
                                                 const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
@@ -4504,6 +4657,26 @@ bool AArch64InstructionSelector::isLoadStoreOfNumBytes(
   assert(MI.hasOneMemOperand() &&
          "Expected load/store to have only one mem op!");
   return (*MI.memoperands_begin())->getSize() == NumBytes;
+}
+
+bool AArch64InstructionSelector::isDef32(const MachineInstr &MI) const {
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() != 32)
+    return false;
+
+  // Only return true if we know the operation will zero-out the high half of
+  // the 64-bit register. Truncates can be subregister copies, which don't
+  // zero out the high bits. Copies and other copy-like instructions can be
+  // fed by truncates, or could be lowered as subregister copies.
+  switch (MI.getOpcode()) {
+  default:
+    return true;
+  case TargetOpcode::COPY:
+  case TargetOpcode::G_BITCAST:
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_PHI:
+    return false;
+  }
 }
 
 namespace llvm {

@@ -538,18 +538,64 @@
 # CHECK-BE: mfvsrd 3, 40                       # encoding: [0x7d,0x03,0x00,0x67]
 # CHECK-LE: mfvsrd 3, 40                       # encoding: [0x67,0x00,0x03,0x7d]
             mfvrd 3, 8
-# CHECK-BE: mfvsrwz 5, 0                       # encoding: [0x7c,0x05,0x00,0xe6]
-# CHECK-LE: mfvsrwz 5, 0                       # encoding: [0xe6,0x00,0x05,0x7c]
+# CHECK-BE: mffprd 0, 3                        # encoding: [0x7c,0x60,0x00,0x66]
+# CHECK-LE: mffprd 0, 3                        # encoding: [0x66,0x00,0x60,0x7c]
+            mfvsrd 0, 3 
+# CHECK-BE: mffprd 0, 3                        # encoding: [0x7c,0x60,0x00,0x66]
+# CHECK-LE: mffprd 0, 3                        # encoding: [0x66,0x00,0x60,0x7c]
+            mffprd 0, 3 
+
+# CHECK-BE: mfvsrwz 5, 40                      # encoding: [0x7d,0x05,0x00,0xe7]
+# CHECK-LE: mfvsrwz 5, 40                      # encoding: [0xe7,0x00,0x05,0x7d]
+            mfvsrwz 5, 40
+# CHECK-BE: mfvsrwz 5, 40                      # encoding: [0x7d,0x05,0x00,0xe7]
+# CHECK-LE: mfvsrwz 5, 40                      # encoding: [0xe7,0x00,0x05,0x7d]
+            mfvrwz 5, 8 
+# CHECK-BE: mffprwz 5, 0                       # encoding: [0x7c,0x05,0x00,0xe6]
+# CHECK-LE: mffprwz 5, 0                       # encoding: [0xe6,0x00,0x05,0x7c]
             mfvsrwz 5, 0
-# CHECK-BE: mtvsrd 0, 3                        # encoding: [0x7c,0x03,0x01,0x66]
-# CHECK-LE: mtvsrd 0, 3                        # encoding: [0x66,0x01,0x03,0x7c]
+# CHECK-BE: mffprwz 5, 0                       # encoding: [0x7c,0x05,0x00,0xe6]
+# CHECK-LE: mffprwz 5, 0                       # encoding: [0xe6,0x00,0x05,0x7c]
+            mffprwz 5, 0
+
+# CHECK-BE: mtvsrd 40, 3                       # encoding: [0x7d,0x03,0x01,0x67]
+# CHECK-LE: mtvsrd 40, 3                       # encoding: [0x67,0x01,0x03,0x7d]
+            mtvsrd 40, 3 
+# CHECK-BE: mtvsrd 40, 3                       # encoding: [0x7d,0x03,0x01,0x67]
+# CHECK-LE: mtvsrd 40, 3                       # encoding: [0x67,0x01,0x03,0x7d]
+            mtvrd 8, 3 
+# CHECK-BE: mtfprd 0, 3                        # encoding: [0x7c,0x03,0x01,0x66]
+# CHECK-LE: mtfprd 0, 3                        # encoding: [0x66,0x01,0x03,0x7c]
             mtvsrd 0, 3
-# CHECK-BE: mtvsrwa 0, 3                       # encoding: [0x7c,0x03,0x01,0xa6]
-# CHECK-LE: mtvsrwa 0, 3                       # encoding: [0xa6,0x01,0x03,0x7c]
+# CHECK-BE: mtfprd 0, 3                        # encoding: [0x7c,0x03,0x01,0x66]
+# CHECK-LE: mtfprd 0, 3                        # encoding: [0x66,0x01,0x03,0x7c]
+            mtfprd 0, 3
+
+# CHECK-BE: mtvsrwa 40, 3                      # encoding: [0x7d,0x03,0x01,0xa7]
+# CHECK-LE: mtvsrwa 40, 3                      # encoding: [0xa7,0x01,0x03,0x7d]
+            mtvsrwa 40, 3
+# CHECK-BE: mtvsrwa 40, 3                      # encoding: [0x7d,0x03,0x01,0xa7]
+# CHECK-LE: mtvsrwa 40, 3                      # encoding: [0xa7,0x01,0x03,0x7d]
+            mtvrwa 8, 3
+# CHECK-BE: mtfprwa 0, 3                       # encoding: [0x7c,0x03,0x01,0xa6]
+# CHECK-LE: mtfprwa 0, 3                       # encoding: [0xa6,0x01,0x03,0x7c]
             mtvsrwa 0, 3
-# CHECK-BE: mtvsrwz 0, 3                       # encoding: [0x7c,0x03,0x01,0xe6]
-# CHECK-LE: mtvsrwz 0, 3                       # encoding: [0xe6,0x01,0x03,0x7c]
+# CHECK-BE: mtfprwa 0, 3                       # encoding: [0x7c,0x03,0x01,0xa6]
+# CHECK-LE: mtfprwa 0, 3                       # encoding: [0xa6,0x01,0x03,0x7c]
+            mtfprwa 0, 3
+
+# CHECK-BE: mtvsrwz 40, 3                      # encoding: [0x7d,0x03,0x01,0xe7]
+# CHECK-LE: mtvsrwz 40, 3                      # encoding: [0xe7,0x01,0x03,0x7d]
+            mtvsrwz 40, 3
+# CHECK-BE: mtvsrwz 40, 3                      # encoding: [0x7d,0x03,0x01,0xe7]
+# CHECK-LE: mtvsrwz 40, 3                      # encoding: [0xe7,0x01,0x03,0x7d]
+            mtvrwz 8, 3
+# CHECK-BE: mtfprwz 0, 3                       # encoding: [0x7c,0x03,0x01,0xe6]
+# CHECK-LE: mtfprwz 0, 3                       # encoding: [0xe6,0x01,0x03,0x7c]
             mtvsrwz 0, 3
+# CHECK-BE: mtfprwz 0, 3                       # encoding: [0x7c,0x03,0x01,0xe6]
+# CHECK-LE: mtfprwz 0, 3                       # encoding: [0xe6,0x01,0x03,0x7c]
+            mtfprwz 0, 3
 
 # Power9 Instructions:
 
