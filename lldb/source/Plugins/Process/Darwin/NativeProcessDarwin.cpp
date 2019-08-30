@@ -263,7 +263,7 @@ bool NativeProcessDarwin::ProcessUsingBackBoard() const {
 // has already been copied.
 void NativeProcessDarwin::ExceptionMessageReceived(
     const MachException::Message &message) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   std::lock_guard<std::recursive_mutex> locker(m_exception_messages_mutex);
   if (m_exception_messages.empty()) {
@@ -280,7 +280,7 @@ void NativeProcessDarwin::ExceptionMessageReceived(
 }
 
 void *NativeProcessDarwin::ExceptionThread(void *arg) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
   if (!arg) {
     LLDB_LOGF(log,
               "NativeProcessDarwin::%s(): cannot run mach exception "
@@ -293,7 +293,7 @@ void *NativeProcessDarwin::ExceptionThread(void *arg) {
 }
 
 void *NativeProcessDarwin::DoExceptionThread() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   LLDB_LOGF(log, "NativeProcessDarwin::%s(arg=%p) starting thread...",
             __FUNCTION__, this);
@@ -1357,7 +1357,7 @@ NativeProcessDarwin::GetTaskBasicInfo(task_t task,
   }
 
   Log *verbose_log(
-      GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
+      GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
   if (verbose_log) {
     float user = (float)info->user_time.seconds +
                  (float)info->user_time.microseconds / 1000000.0f;
