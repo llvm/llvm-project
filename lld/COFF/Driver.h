@@ -98,6 +98,10 @@ private:
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> searchPaths;
 
+  // Convert resource files and potentially merge input resource object
+  // trees into one resource tree.
+  void convertResources();
+
   void maybeExportMinGWSymbols(const llvm::opt::InputArgList &args);
 
   // We don't want to add the same file more than once.
@@ -184,7 +188,8 @@ void assignExportOrdinals();
 void checkFailIfMismatch(StringRef arg, InputFile *source);
 
 // Convert Windows resource files (.res files) to a .obj file.
-MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs);
+MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
+                                 ArrayRef<ObjFile *> objs);
 
 void runMSVCLinker(std::string rsp, ArrayRef<StringRef> objects);
 

@@ -134,15 +134,15 @@ private:
 
 TEST(CrossTranslationUnit, CanLoadFunctionDefinition) {
   bool Success = false;
-  EXPECT_TRUE(
-      tooling::runToolOnCode(new CTUAction(&Success, 1u), "int f(int);"));
+  EXPECT_TRUE(tooling::runToolOnCode(std::make_unique<CTUAction>(&Success, 1u),
+                                     "int f(int);"));
   EXPECT_TRUE(Success);
 }
 
 TEST(CrossTranslationUnit, RespectsLoadThreshold) {
   bool Success = false;
-  EXPECT_TRUE(
-      tooling::runToolOnCode(new CTUAction(&Success, 0u), "int f(int);"));
+  EXPECT_TRUE(tooling::runToolOnCode(std::make_unique<CTUAction>(&Success, 0u),
+                                     "int f(int);"));
   EXPECT_FALSE(Success);
 }
 

@@ -21,21 +21,21 @@ using namespace dependencies;
 
 namespace {
 
-/// Prints out all of the gathered dependencies into a string.
-class DependencyPrinter : public DependencyFileGenerator {
+/// Forwards the gatherered dependencies to the consumer.
+class DependencyConsumerForwarder : public DependencyFileGenerator {
 public:
-  DependencyPrinter(std::unique_ptr<DependencyOutputOptions> Opts,
-                    std::string &S)
-      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), S(S) {}
+  DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
+                              DependencyConsumer &C)
+      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
-    llvm::raw_string_ostream OS(S);
-    outputDependencyFile(OS);
+    for (const auto &File : getDependencies())
+      C.handleFileDependency(*Opts, File);
   }
 
 private:
   std::unique_ptr<DependencyOutputOptions> Opts;
-  std::string &S;
+  DependencyConsumer &C;
 };
 
 /// A proxy file system that doesn't call `chdir` when changing the working
@@ -65,10 +65,9 @@ private:
 class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
-      StringRef WorkingDirectory, std::string &DependencyFileContents,
+      StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
-      : WorkingDirectory(WorkingDirectory),
-        DependencyFileContents(DependencyFileContents),
+      : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -121,8 +120,9 @@ public:
     // We need at least one -MT equivalent for the generator to work.
     if (Opts->Targets.empty())
       Opts->Targets = {"clang-scan-deps dependency"};
-    Compiler.addDependencyCollector(std::make_shared<DependencyPrinter>(
-        std::move(Opts), DependencyFileContents));
+    Compiler.addDependencyCollector(
+        std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
+                                                      Consumer));
 
     auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
@@ -133,8 +133,7 @@ public:
 
 private:
   StringRef WorkingDirectory;
-  /// The dependency file will be written to this string.
-  std::string &DependencyFileContents;
+  DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 };
 
@@ -148,32 +147,39 @@ DependencyScanningWorker::DependencyScanningWorker(
   if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
     DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
                                                    RealFS);
+  if (Service.canReuseFileManager())
+    Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
-llvm::Expected<std::string>
-DependencyScanningWorker::getDependencyFile(const std::string &Input,
-                                            StringRef WorkingDirectory,
-                                            const CompilationDatabase &CDB) {
+static llvm::Error runWithDiags(
+    DiagnosticOptions *DiagOpts,
+    llvm::function_ref<bool(DiagnosticConsumer &DC)> BodyShouldSucceed) {
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.get());
+  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts);
 
+  if (BodyShouldSucceed(DiagPrinter))
+    return llvm::Error::success();
+  return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
+                                             llvm::inconvertibleErrorCode());
+}
+
+llvm::Error DependencyScanningWorker::computeDependencies(
+    const std::string &Input, StringRef WorkingDirectory,
+    const CompilationDatabase &CDB, DependencyConsumer &Consumer) {
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-  /// Create the tool that uses the underlying file system to ensure that any
-  /// file system requests that are made by the driver do not go through the
-  /// dependency scanning filesystem.
-  tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS);
-  Tool.clearArgumentsAdjusters();
-  Tool.setRestoreWorkingDir(false);
-  Tool.setPrintErrorMessage(false);
-  Tool.setDiagnosticConsumer(&DiagPrinter);
-  std::string Output;
-  DependencyScanningAction Action(WorkingDirectory, Output, DepFS);
-  if (Tool.run(&Action)) {
-    return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
-                                               llvm::inconvertibleErrorCode());
-  }
-  return Output;
+  return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
+    /// Create the tool that uses the underlying file system to ensure that any
+    /// file system requests that are made by the driver do not go through the
+    /// dependency scanning filesystem.
+    tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS, Files);
+    Tool.clearArgumentsAdjusters();
+    Tool.setRestoreWorkingDir(false);
+    Tool.setPrintErrorMessage(false);
+    Tool.setDiagnosticConsumer(&DC);
+    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS);
+    return !Tool.run(&Action);
+  });
 }

@@ -66,6 +66,10 @@ void JSONNodeDumper::Visit(const Stmt *S) {
 
 void JSONNodeDumper::Visit(const Type *T) {
   JOS.attribute("id", createPointerRepresentation(T));
+
+  if (!T)
+    return;
+
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
   JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
   attributeOnlyIfTrue("isDependent", T->isDependentType());

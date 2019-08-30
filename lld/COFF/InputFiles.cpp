@@ -206,10 +206,6 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   if (def)
     c->checksum = def->CheckSum;
 
-  // link.exe uses the presence of .rsrc$01 for LNK4078, so match that.
-  if (name == ".rsrc$01")
-    isResourceObjFile = true;
-
   // CodeView sections are stored to a different vector because they are not
   // linked in the regular manner.
   if (c->isCodeView())
@@ -226,10 +222,16 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
     // for string literals) are subject to string tail merging.
     MergeChunk::addSection(c);
+  else if (name == ".rsrc" || name.startswith(".rsrc$"))
+    resourceChunks.push_back(c);
   else
     chunks.push_back(c);
 
   return c;
+}
+
+void ObjFile::includeResourceChunks() {
+  chunks.insert(chunks.end(), resourceChunks.begin(), resourceChunks.end());
 }
 
 void ObjFile::readAssociativeDefinition(

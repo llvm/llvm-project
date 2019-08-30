@@ -991,30 +991,37 @@ static void parsePDBAltPath(StringRef altPath) {
   config->pdbAltPath = buf;
 }
 
-/// Check that at most one resource obj file was used.
+/// Convert resource files and potentially merge input resource object
+/// trees into one resource tree.
 /// Call after ObjFile::Instances is complete.
-static void diagnoseMultipleResourceObjFiles() {
-  // The .rsrc$01 section in a resource obj file contains a tree description
-  // of resources.  Merging multiple resource obj files would require merging
-  // the trees instead of using usual linker section merging semantics.
-  // Since link.exe disallows linking more than one resource obj file with
-  // LNK4078, mirror that.  The normal use of resource files is to give the
-  // linker many .res files, which are then converted to a single resource obj
-  // file internally, so this is not a big restriction in practice.
-  ObjFile *resourceObjFile = nullptr;
+void LinkerDriver::convertResources() {
+  std::vector<ObjFile *> resourceObjFiles;
+
   for (ObjFile *f : ObjFile::instances) {
-    if (!f->isResourceObjFile)
-      continue;
-
-    if (!resourceObjFile) {
-      resourceObjFile = f;
-      continue;
-    }
-
-    error(toString(f) +
-          ": more than one resource obj file not allowed, already got " +
-          toString(resourceObjFile));
+    if (f->isResourceObjFile())
+      resourceObjFiles.push_back(f);
   }
+
+  if (!config->mingw &&
+      (resourceObjFiles.size() > 1 ||
+       (resourceObjFiles.size() == 1 && !resources.empty()))) {
+    error((!resources.empty() ? "internal .obj file created from .res files"
+                              : toString(resourceObjFiles[1])) +
+          ": more than one resource obj file not allowed, already got " +
+          toString(resourceObjFiles.front()));
+    return;
+  }
+
+  if (resources.empty() && resourceObjFiles.size() <= 1) {
+    // No resources to convert, and max one resource object file in
+    // the input. Keep that preconverted resource section as is.
+    for (ObjFile *f : resourceObjFiles)
+      f->includeResourceChunks();
+    return;
+  }
+  ObjFile *f = make<ObjFile>(convertResToCOFF(resources, resourceObjFiles));
+  symtab->addFile(f);
+  f->includeResourceChunks();
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -1583,12 +1590,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg, config->machine);
 
-  // Input files can be Windows resource files (.res files). We use
-  // WindowsResource to convert resource files to a regular COFF file,
-  // then link the resulting file normally.
-  if (!resources.empty())
-    symtab->addFile(make<ObjFile>(convertResToCOFF(resources)));
-
   if (tar)
     tar->append("response.txt",
                 createResponseFile(args, filePaths,
@@ -1906,7 +1907,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     markLive(symtab->getChunks());
 
   // Needs to happen after the last call to addFile().
-  diagnoseMultipleResourceObjFiles();
+  convertResources();
 
   // Identify identical COMDAT sections to merge them.
   if (config->doICF) {

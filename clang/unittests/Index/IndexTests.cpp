@@ -155,7 +155,8 @@ MATCHER_P(HasRole, Role, "") { return arg.Roles & static_cast<unsigned>(Role); }
 
 TEST(IndexTest, Simple) {
   auto Index = std::make_shared<Indexer>();
-  tooling::runToolOnCode(new IndexAction(Index), "class X {}; void f() {}");
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index),
+                         "class X {}; void f() {}");
   EXPECT_THAT(Index->Symbols, UnorderedElementsAre(QName("X"), QName("f")));
 }
 
@@ -164,12 +165,12 @@ TEST(IndexTest, IndexPreprocessorMacros) {
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
   Opts.IndexMacrosInPreprocessor = true;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols, Contains(QName("INDEX_MAC")));
 
   Opts.IndexMacrosInPreprocessor = false;
   Index->Symbols.clear();
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols, UnorderedElementsAre());
 }
 
@@ -179,12 +180,12 @@ TEST(IndexTest, IndexParametersInDecls) {
   IndexingOptions Opts;
   Opts.IndexFunctionLocals = true;
   Opts.IndexParametersInDeclarations = true;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols, Contains(QName("bar")));
 
   Opts.IndexParametersInDeclarations = false;
   Index->Symbols.clear();
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols, Not(Contains(QName("bar"))));
 }
 
@@ -201,7 +202,7 @@ TEST(IndexTest, IndexExplicitTemplateInstantiation) {
   )cpp";
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols,
               AllOf(Contains(AllOf(QName("Foo"), WrittenAt(Position(8, 7)),
                                    DeclAt(Position(5, 12)))),
@@ -222,7 +223,7 @@ TEST(IndexTest, IndexTemplateInstantiationPartial) {
   )cpp";
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols,
               Contains(AllOf(QName("Foo"), WrittenAt(Position(8, 7)),
                              DeclAt(Position(5, 12)))));
@@ -238,7 +239,7 @@ TEST(IndexTest, IndexTypeParmDecls) {
   )cpp";
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols, AllOf(Not(Contains(QName("Foo::T"))),
                                     Not(Contains(QName("Foo::I"))),
                                     Not(Contains(QName("Foo::C"))),
@@ -246,7 +247,7 @@ TEST(IndexTest, IndexTypeParmDecls) {
 
   Opts.IndexTemplateParameters = true;
   Index->Symbols.clear();
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols,
               AllOf(Contains(QName("Foo::T")), Contains(QName("Foo::I")),
                     Contains(QName("Foo::C")), Contains(QName("Foo::NoRef"))));
@@ -261,7 +262,7 @@ TEST(IndexTest, UsingDecls) {
   )cpp";
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols,
               Contains(AllOf(QName("std::foo"), Kind(SymbolKind::Using))));
 }
@@ -275,7 +276,7 @@ TEST(IndexTest, Constructors) {
   )cpp";
   auto Index = std::make_shared<Indexer>();
   IndexingOptions Opts;
-  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(
       Index->Symbols,
       UnorderedElementsAre(

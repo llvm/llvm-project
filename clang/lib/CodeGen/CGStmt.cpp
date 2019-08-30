@@ -2326,7 +2326,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         const Expr *OutExpr = S.getOutputExpr(i);
         CGM.Error(
             OutExpr->getExprLoc(),
-            "impossible constraint in asm: can't store struct into a register");
+            "impossible constraint in asm: can't store value into a register");
         return;
       }
       Dest = MakeAddrLValue(A, Ty);

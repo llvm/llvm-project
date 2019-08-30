@@ -105,6 +105,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // be removed.
     r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
     r.VisibleToRegularObj = config->relocatable || sym->isUsedInRegularObj ||
+                            sym->isNoStrip() ||
                             (r.Prevailing && sym->isExported());
     if (r.Prevailing)
       undefine(sym);

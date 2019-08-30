@@ -109,7 +109,7 @@ trap at runtime (functions that contain only an ``unreachable`` instruction)
 and use these stub functions at the otherwise invalid call sites.
 
 The default behaviour is to generate these stub function and to produce
-a warning.  The ``--falal-warnings`` flag can be used to disable this behaviour
+a warning.  The ``--fatal-warnings`` flag can be used to disable this behaviour
 and error out if mismatched are found.
 
 Imports and Exports
