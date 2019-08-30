@@ -488,3 +488,18 @@ class RegisterCommandsTestCase(TestBase):
 
         self.expect("register read --set 0 r", error=True,
                     substrs=["the --set <set> option can't be used when registers names are supplied as arguments"])
+
+        self.expect("register write a", error=True,
+                    substrs=["register write takes exactly 2 arguments: <reg-name> <value>"])
+        self.expect("register write a b c", error=True,
+                    substrs=["register write takes exactly 2 arguments: <reg-name> <value>"])
+
+    @skipIfiOSSimulator
+    @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @expectedFailureNetBSD
+    def test_write_unknown_register(self):
+        self.build()
+        self.common_setup()
+
+        self.expect("register write blub 1", error=True,
+                    substrs=["error: Register not found for 'blub'."])
