@@ -16,7 +16,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Edit/EditsReceiver.h"
@@ -27,7 +26,6 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -216,50 +214,6 @@ private:
   std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
-class LoggingDiagnosticConsumer : public clang::DiagnosticConsumer {
-public:
-  LoggingDiagnosticConsumer() {
-    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    m_passthrough.reset(new clang::TextDiagnosticBuffer);
-  }
-
-  LoggingDiagnosticConsumer(
-      const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough) {
-    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    m_passthrough = passthrough;
-  }
-
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &Info) {
-    if (m_log) {
-      llvm::SmallVector<char, 32> diag_str;
-      Info.FormatDiagnostic(diag_str);
-      diag_str.push_back('\0');
-      const char *data = diag_str.data();
-      m_log->Printf("[clang] COMPILER DIAGNOSTIC: %s", data);
-
-      lldbassert(Info.getID() != clang::diag::err_unsupported_ast_node &&
-                 "'log enable lldb expr' to investigate.");
-    }
-
-    m_passthrough->HandleDiagnostic(DiagLevel, Info);
-  }
-
-  void FlushDiagnostics(DiagnosticsEngine &Diags) {
-    m_passthrough->FlushDiagnostics(Diags);
-  }
-
-  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
-    return new LoggingDiagnosticConsumer(m_passthrough);
-  }
-
-  clang::TextDiagnosticBuffer *GetPassthrough() { return m_passthrough.get(); }
-
-private:
-  Log *m_log;
-  std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
-};
-
 static void
 SetupModuleHeaderPaths(CompilerInstance *compiler,
                        std::vector<ConstString> include_directories,
@@ -354,15 +308,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  // Register the support for object-file-wrapped Clang modules.
-  std::shared_ptr<clang::PCHContainerOperations> pch_operations =
-      m_compiler->getPCHContainerOperations();
-  pch_operations->registerWriter(
-      std::make_unique<ObjectFilePCHContainerWriter>());
-  pch_operations->registerReader(
-      std::make_unique<ObjectFilePCHContainerReader>());
-
-  // 2. Install the target.
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
@@ -409,9 +354,6 @@ ClangExpressionParser::ClangExpressionParser(
     LLDB_LOGF(log, "Using default target triple of %s",
               m_compiler->getTargetOpts().Triple.c_str());
   }
-
-  m_compiler->getTargetOpts().CPU = "";
-
   // Now add some special fixes for known architectures: Any arm32 iOS
   // environment, but not on arm64
   if (m_compiler->getTargetOpts().Triple.find("arm64") == std::string::npos &&
@@ -1249,17 +1191,6 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
-  }
-
-  for (llvm::Function &function : *llvm_module_up.get()) {
-    llvm::AttributeList attributes = function.getAttributes();
-    llvm::AttrBuilder attributes_to_remove;
-
-    attributes_to_remove.addAttribute("target-cpu");
-
-    function.setAttributes(attributes.removeAttributes(
-        function.getContext(), llvm::AttributeList::FunctionIndex,
-        attributes_to_remove));
   }
 
   ConstString function_name;

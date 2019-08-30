@@ -69,10 +69,6 @@ public:
       const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
-  lldb::LanguageType
-  GetLanguageAttributeValue(SymbolFileDWARF *dwarf2Data,
-                            const DWARFUnit *cu) const;
-
   DWARFDIE GetAttributeValueAsReference(
       const DWARFUnit *cu, const dw_attr_t attr,
       bool check_specification_or_abstract_origin = false) const;
