@@ -1,5 +1,7 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj  \
 # RUN:   | llvm-readobj --unwind | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -run-pass=aarch64-ldst-opt \
+# RUN:   | FileCheck %s --check-prefix=CHECK-LDSTOPT
 # This test case checks the basic validity of the .xdata section.  It's
 # documented at:
 # https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
@@ -7,7 +9,7 @@
 # We expect to see the following in the .xdata section:
 
 # CHECK: 	 ExceptionData {
-# CHECK-NEXT:      FunctionLength: 92
+# CHECK-NEXT:      FunctionLength: 96
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
 # CHECK-NEXT:      EpiloguePacked: No
@@ -24,7 +26,7 @@
 # CHECK-NEXT:      ]
 # CHECK-NEXT:      EpilogueScopes [
 # CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 15
+# CHECK-NEXT:          StartOffset: 16
 # CHECK-NEXT:          EpilogueStartIndex: 13
 # CHECK-NEXT:          Opcodes [
 # CHECK-NEXT:            0xc808              ; ldp x19, x20, [sp, #64]
@@ -39,6 +41,12 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
+
+# Check that the load-store optimizer does not merge the two
+# callee-saved stores in the prologue.
+# CHECK-LDSTOPT: name: test
+# CHECK-LDSTOPT: frame-setup STRXui killed $x21, $sp, 6
+# CHECK-LDSTOPT: frame-setup STRXui killed $x22, $sp, 7
 ...
 ---
 name:            test
