@@ -172,11 +172,6 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return (bool)file_spec.GetDirectory();
 }
 
-bool HostInfoMacOSX::ComputeSupportFileDirectory(FileSpec &file_spec) {
-  // The bundle's Resources directory, just like for executables
-  return HostInfoMacOSX::ComputeSupportExeDirectory(file_spec);
-}
-
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec = GetShlibDir();
   if (!lldb_file_spec)
