@@ -613,7 +613,7 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
       if (!Clang->hasDiagnostics())
         return AMD_COMGR_STATUS_ERROR;
       if (!CompilerInvocation::CreateFromArgs(
-              Clang->getInvocation(), Argv.data(), Argv.data() + Argv.size(),
+              Clang->getInvocation(), Argv,
               Clang->getDiagnostics()))
         return AMD_COMGR_STATUS_ERROR;
       if (!ExecuteCompilerInvocation(Clang.get()))
