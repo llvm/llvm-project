@@ -977,20 +977,6 @@ protected:
     }
   }
 
-  bool IOHandlerIsInputComplete(IOHandler &io_handler,
-                                StringList &lines) override {
-    // An empty lines is used to indicate the end of input
-    const size_t num_lines = lines.GetSize();
-    if (num_lines > 0 && lines[num_lines - 1].empty()) {
-      // Remove the last empty line from "lines" so it doesn't appear
-      // in our resulting input and return true to indicate we are done
-      // getting lines
-      lines.PopBack();
-      return true;
-    }
-    return false;
-  }
-
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
