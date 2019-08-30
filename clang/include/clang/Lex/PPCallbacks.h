@@ -307,7 +307,7 @@ public:
   /// Hook called when a '__has_include' or '__has_include_next' directive is
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                          const FileEntry *File,
+                          Optional<FileEntryRef> File,
                           SrcMgr::CharacteristicKind FileType) {}
 
   /// Hook called when a source range is skipped.
@@ -489,7 +489,7 @@ public:
   }
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  const FileEntry *File,
+                  Optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override {
     First->HasInclude(Loc, FileName, IsAngled, File, FileType);
     Second->HasInclude(Loc, FileName, IsAngled, File, FileType);

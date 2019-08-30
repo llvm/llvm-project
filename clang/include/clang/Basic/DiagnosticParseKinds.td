@@ -119,18 +119,16 @@ def warn_microsoft_qualifiers_ignored : Warning<
   "qualifiers after comma in declarator list are ignored">,
   InGroup<IgnoredAttributes>;
 
-def ext_c11_generic_selection : Extension<
-  "generic selections are a C11-specific feature">, InGroup<C11>;
 def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
 
+def ext_c99_feature : Extension<
+  "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
-  "%0 is a C11 extension">, InGroup<C11>;
+  "'%0' is a C11 extension">, InGroup<C11>;
 
-def ext_c11_noreturn : Extension<
-  "_Noreturn functions are a C11-specific feature">, InGroup<C11>;
 def err_c11_noreturn_misplaced : Error<
   "'_Noreturn' keyword must precede function declarator">;
 
@@ -374,8 +372,6 @@ def err_unexpected_token_in_nested_name_spec : Error<
   "'%0' cannot be a part of nested name specifier; did you mean ':'?">;
 def err_bool_redeclaration : Error<
   "redeclaration of C++ built-in type 'bool'">;
-def ext_c11_static_assert : Extension<
-  "_Static_assert is a C11-specific feature">, InGroup<C11>;
 def warn_cxx98_compat_static_assert : Warning<
   "static_assert declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;

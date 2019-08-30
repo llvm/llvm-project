@@ -8,16 +8,19 @@
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
-// READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        0000c0 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
+// READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000100 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
 
 // READOBJ: Relocation section '.rela.rodata' at offset
 // READOBJ: 0000000000000010 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 10
 // READOBJ: 0000000000000050 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 110
 // READOBJ: 0000000000000090 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 210
+// READOBJ: 00000000000000d0 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 310
 
 // READOBJ: Symbol table '.symtab' contains {{[0-9]+}} entries:
 // READOBJ: {{[0-9]+}}: 0000000000000100  0 FUNC    LOCAL  PROTECTED 2 complete
 // READOBJ: {{[0-9]+}}: 0000000000000040 64 OBJECT  LOCAL  DEFAULT   3 complete.kd
+// READOBJ: {{[0-9]+}}: 0000000000000300  0 FUNC    LOCAL  PROTECTED 2 disabled_user_sgpr
+// READOBJ: {{[0-9]+}}: 00000000000000c0 64 OBJECT  LOCAL  DEFAULT   3 disabled_user_sgpr.kd
 // READOBJ: {{[0-9]+}}: 0000000000000000  0 FUNC    LOCAL  PROTECTED 2 minimal
 // READOBJ: {{[0-9]+}}: 0000000000000000 64 OBJECT  LOCAL  DEFAULT   3 minimal.kd
 // READOBJ: {{[0-9]+}}: 0000000000000200  0 FUNC    LOCAL  PROTECTED 2 special_sgpr
@@ -40,6 +43,11 @@
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00a0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00b0 00010000 80000000 00000000 00000000
+// disabled_user_sgpr
+// OBJDUMP-NEXT: 00c0 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 00d0 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 00f0 0000ac00 80000000 00000000 00000000
 
 .text
 // ASM: .text
@@ -60,6 +68,11 @@ complete:
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
+  s_endpgm
+
+.p2align 8
+.type disabled_user_sgpr,@function
+disabled_user_sgpr:
   s_endpgm
 
 .rodata
@@ -180,6 +193,20 @@ special_sgpr:
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM-NEXT: .amdhsa_dx10_clamp 0
 // ASM-NEXT: .amdhsa_ieee_mode 0
+// ASM: .end_amdhsa_kernel
+
+// Test that explicitly disabling user_sgpr's does not affect the user_sgpr
+// count, i.e. this should produce the same descriptor as minimal.
+.p2align 6
+.amdhsa_kernel disabled_user_sgpr
+  .amdhsa_user_sgpr_private_segment_buffer 0
+  .amdhsa_next_free_vgpr 0
+  .amdhsa_next_free_sgpr 0
+.end_amdhsa_kernel
+
+// ASM: .amdhsa_kernel disabled_user_sgpr
+// ASM: .amdhsa_next_free_vgpr 0
+// ASM-NEXT: .amdhsa_next_free_sgpr 0
 // ASM: .end_amdhsa_kernel
 
 .section .foo

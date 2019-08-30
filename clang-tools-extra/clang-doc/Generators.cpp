@@ -21,8 +21,8 @@ findGeneratorByName(llvm::StringRef Format) {
       continue;
     return I->instantiate();
   }
-  return llvm::make_error<llvm::StringError>("Can't find generator: " + Format,
-                                             llvm::inconvertibleErrorCode());
+  return createStringError(llvm::inconvertibleErrorCode(),
+                           "can't find generator: " + Format);
 }
 
 // Enum conversion

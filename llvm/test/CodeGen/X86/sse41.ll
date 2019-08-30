@@ -1559,9 +1559,8 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
-; X86-AVX512-NEXT:    vbroadcastss (%ecx,%eax,4), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x0c,0x81]
-; X86-AVX512-NEXT:    vinsertps $48, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x30]
-; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
+; X86-AVX512-NEXT:    vinsertps $48, (%ecx,%eax,4), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x04,0x81,0x30]
+; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: insertps_from_broadcast_loadf32:
@@ -1578,9 +1577,8 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
 ;
 ; X64-AVX512-LABEL: insertps_from_broadcast_loadf32:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vbroadcastss (%rdi,%rsi,4), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x0c,0xb7]
-; X64-AVX512-NEXT:    vinsertps $48, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x30]
-; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
+; X64-AVX512-NEXT:    vinsertps $48, (%rdi,%rsi,4), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x04,0xb7,0x30]
+; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %1 = getelementptr inbounds float, float* %fb, i64 %index
   %2 = load float, float* %1, align 4
@@ -1611,9 +1609,8 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
 ; X86-AVX512-LABEL: insertps_from_broadcast_loadv4f32:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX512-NEXT:    vbroadcastss (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x08]
-; X86-AVX512-NEXT:    vinsertps $48, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x30]
-; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
+; X86-AVX512-NEXT:    vinsertps $48, (%eax), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x00,0x30]
+; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: insertps_from_broadcast_loadv4f32:
@@ -1631,9 +1628,8 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
 ;
 ; X64-AVX512-LABEL: insertps_from_broadcast_loadv4f32:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vbroadcastss (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x0f]
-; X64-AVX512-NEXT:    vinsertps $48, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x30]
-; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
+; X64-AVX512-NEXT:    vinsertps $48, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x07,0x30]
+; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %1 = load <4 x float>, <4 x float>* %b, align 4
   %2 = extractelement <4 x float> %1, i32 0

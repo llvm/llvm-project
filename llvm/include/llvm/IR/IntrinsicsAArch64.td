@@ -748,3 +748,31 @@ def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
                           Intrinsic<[llvm_i64_ty], [],
                                     [IntrNoMem, IntrHasSideEffects]>;
 }
+
+//===----------------------------------------------------------------------===//
+// SVE
+
+def llvm_nxv2i1_ty  : LLVMType<nxv2i1>;
+def llvm_nxv4i1_ty  : LLVMType<nxv4i1>;
+def llvm_nxv8i1_ty  : LLVMType<nxv8i1>;
+def llvm_nxv16i1_ty : LLVMType<nxv16i1>;
+def llvm_nxv16i8_ty : LLVMType<nxv16i8>;
+def llvm_nxv4i32_ty : LLVMType<nxv4i32>;
+def llvm_nxv2i64_ty : LLVMType<nxv2i64>;
+def llvm_nxv8f16_ty : LLVMType<nxv8f16>;
+def llvm_nxv4f32_ty : LLVMType<nxv4f32>;
+def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
+
+let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+  // This class of intrinsics are not intended to be useful within LLVM IR but
+  // are instead here to support some of the more regid parts of the ACLE.
+  class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
+  : GCCBuiltin<"__builtin_sve_" # name>,
+    Intrinsic<[OUT], [OUT, llvm_nxv16i1_ty, IN], [IntrNoMem]>;
+}
+
+//
+// Floating-point comparisons
+//
+
+def int_aarch64_sve_fcvtzs_i32f16 : Builtin_SVCVT<"svcvt_s32_f16_m", llvm_nxv4i32_ty, llvm_nxv8f16_ty>;

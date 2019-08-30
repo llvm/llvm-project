@@ -204,19 +204,27 @@ def : Pat<(relaxed_store<atomic_store_64>
 
 def ldxr_1 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 1); }];
+}
 
 def ldxr_2 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 2); }];
+}
 
 def ldxr_4 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 4); }];
+}
 
 def ldxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 8); }];
+}
 
 def : Pat<(ldxr_1 GPR64sp:$addr),
           (SUBREG_TO_REG (i64 0), (LDXRB GPR64sp:$addr), sub_32)>;
@@ -237,19 +245,27 @@ def : Pat<(and (ldxr_4 GPR64sp:$addr), 0xffffffff),
 
 def ldaxr_1 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 1); }];
+}
 
 def ldaxr_2 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 2); }];
+}
 
 def ldaxr_4 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 4); }];
+}
 
 def ldaxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 8); }];
+}
 
 def : Pat<(ldaxr_1 GPR64sp:$addr),
           (SUBREG_TO_REG (i64 0), (LDAXRB GPR64sp:$addr), sub_32)>;
@@ -271,22 +287,30 @@ def : Pat<(and (ldaxr_4 GPR64sp:$addr), 0xffffffff),
 def stxr_1 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 1); }];
+}
 
 def stxr_2 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 2); }];
+}
 
 def stxr_4 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 4); }];
+}
 
 def stxr_8 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 8); }];
+}
 
 
 def : Pat<(stxr_1 GPR64:$val, GPR64sp:$addr),
@@ -317,22 +341,30 @@ def : Pat<(stxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
 def stlxr_1 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stlxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 1); }];
+}
 
 def stlxr_2 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stlxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 2); }];
+}
 
 def stlxr_4 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stlxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 4); }];
+}
 
 def stlxr_8 : PatFrag<(ops node:$val, node:$ptr),
                      (int_aarch64_stlxr node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isLoadStoreOfNumBytes(MI, 8); }];
+}
 
 
 def : Pat<(stlxr_1 GPR64:$val, GPR64sp:$addr),
@@ -422,4 +454,3 @@ let Predicates = [HasLSE] in {
   defm : LDOPregister_patterns_mod<"LDADD", "atomic_load_sub", "SUB">;
   defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
 }
-

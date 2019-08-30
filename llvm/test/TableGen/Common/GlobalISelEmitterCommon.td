@@ -7,6 +7,7 @@ def GPR32 : RegisterClass<"MyTarget", [i32], 32, (add R0)>;
 def GPR32Op : RegisterOperand<GPR32>;
 def F0 : Register<"f0"> { let Namespace = "MyTarget"; }
 def FPR32 : RegisterClass<"MyTarget", [f32], 32, (add F0)>;
+def FPR32Op : RegisterOperand<FPR32>;
 def p0 : PtrValueType <i32, 0>;
 
 class I<dag OOps, dag IOps, list<dag> Pat>

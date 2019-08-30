@@ -219,13 +219,12 @@ public:
 
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection(uint32_t offset)
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM), elemOffset(offset) {}
+  ElemSection()
+      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
   bool isNeeded() const override { return indirectFunctions.size() > 0; };
   void writeBody() override;
   void addEntry(FunctionSymbol *sym);
   uint32_t numEntries() const { return indirectFunctions.size(); }
-  uint32_t elemOffset;
 
 protected:
   std::vector<const FunctionSymbol *> indirectFunctions;

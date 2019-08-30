@@ -7,104 +7,131 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/SwapByteOrder.h"
+
 using namespace llvm;
+
+static void unexpectedEndReached(Error *E) {
+  if (E)
+    *E = createStringError(errc::illegal_byte_sequence,
+                           "unexpected end of data");
+}
+
+static bool isError(Error *E) { return E && *E; }
 
 template <typename T>
 static T getU(uint64_t *offset_ptr, const DataExtractor *de,
-              bool isLittleEndian, const char *Data) {
+              bool isLittleEndian, const char *Data, llvm::Error *Err) {
+  ErrorAsOutParameter ErrAsOut(Err);
   T val = 0;
-  uint64_t offset = *offset_ptr;
-  if (de->isValidOffsetForDataOfSize(offset, sizeof(val))) {
-    std::memcpy(&val, &Data[offset], sizeof(val));
-    if (sys::IsLittleEndianHost != isLittleEndian)
-      sys::swapByteOrder(val);
+  if (isError(Err))
+    return val;
 
-    // Advance the offset
-    *offset_ptr += sizeof(val);
+  uint64_t offset = *offset_ptr;
+  if (!de->isValidOffsetForDataOfSize(offset, sizeof(T))) {
+    unexpectedEndReached(Err);
+    return val;
   }
+  std::memcpy(&val, &Data[offset], sizeof(val));
+  if (sys::IsLittleEndianHost != isLittleEndian)
+    sys::swapByteOrder(val);
+
+  // Advance the offset
+  *offset_ptr += sizeof(val);
   return val;
 }
 
 template <typename T>
 static T *getUs(uint64_t *offset_ptr, T *dst, uint32_t count,
-                const DataExtractor *de, bool isLittleEndian, const char *Data){
+                const DataExtractor *de, bool isLittleEndian, const char *Data,
+                llvm::Error *Err) {
+  ErrorAsOutParameter ErrAsOut(Err);
+  if (isError(Err))
+    return nullptr;
+
   uint64_t offset = *offset_ptr;
 
-  if (count > 0 && de->isValidOffsetForDataOfSize(offset, sizeof(*dst)*count)) {
-    for (T *value_ptr = dst, *end = dst + count; value_ptr != end;
-        ++value_ptr, offset += sizeof(*dst))
-      *value_ptr = getU<T>(offset_ptr, de, isLittleEndian, Data);
-    // Advance the offset
-    *offset_ptr = offset;
-    // Return a non-NULL pointer to the converted data as an indicator of
-    // success
-    return dst;
+  if (!de->isValidOffsetForDataOfSize(offset, sizeof(*dst) * count)) {
+    unexpectedEndReached(Err);
+    return nullptr;
   }
-  return nullptr;
+  for (T *value_ptr = dst, *end = dst + count; value_ptr != end;
+       ++value_ptr, offset += sizeof(*dst))
+    *value_ptr = getU<T>(offset_ptr, de, isLittleEndian, Data, Err);
+  // Advance the offset
+  *offset_ptr = offset;
+  // Return a non-NULL pointer to the converted data as an indicator of
+  // success
+  return dst;
 }
 
-uint8_t DataExtractor::getU8(uint64_t *offset_ptr) const {
-  return getU<uint8_t>(offset_ptr, this, IsLittleEndian, Data.data());
+uint8_t DataExtractor::getU8(uint64_t *offset_ptr, llvm::Error *Err) const {
+  return getU<uint8_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
 }
 
 uint8_t *
 DataExtractor::getU8(uint64_t *offset_ptr, uint8_t *dst, uint32_t count) const {
   return getUs<uint8_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                       Data.data());
+                        Data.data(), nullptr);
 }
 
-uint16_t DataExtractor::getU16(uint64_t *offset_ptr) const {
-  return getU<uint16_t>(offset_ptr, this, IsLittleEndian, Data.data());
+uint8_t *DataExtractor::getU8(Cursor &C, uint8_t *Dst, uint32_t Count) const {
+  return getUs<uint8_t>(&C.Offset, Dst, Count, this, IsLittleEndian,
+                        Data.data(), &C.Err);
+}
+
+uint16_t DataExtractor::getU16(uint64_t *offset_ptr, llvm::Error *Err) const {
+  return getU<uint16_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
 }
 
 uint16_t *DataExtractor::getU16(uint64_t *offset_ptr, uint16_t *dst,
                                 uint32_t count) const {
   return getUs<uint16_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                        Data.data());
+                         Data.data(), nullptr);
 }
 
 uint32_t DataExtractor::getU24(uint64_t *offset_ptr) const {
   uint24_t ExtractedVal =
-      getU<uint24_t>(offset_ptr, this, IsLittleEndian, Data.data());
+      getU<uint24_t>(offset_ptr, this, IsLittleEndian, Data.data(), nullptr);
   // The 3 bytes are in the correct byte order for the host.
   return ExtractedVal.getAsUint32(sys::IsLittleEndianHost);
 }
 
-uint32_t DataExtractor::getU32(uint64_t *offset_ptr) const {
-  return getU<uint32_t>(offset_ptr, this, IsLittleEndian, Data.data());
+uint32_t DataExtractor::getU32(uint64_t *offset_ptr, llvm::Error *Err) const {
+  return getU<uint32_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
 }
 
 uint32_t *DataExtractor::getU32(uint64_t *offset_ptr, uint32_t *dst,
                                 uint32_t count) const {
   return getUs<uint32_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                        Data.data());
+                         Data.data(), nullptr);
 }
 
-uint64_t DataExtractor::getU64(uint64_t *offset_ptr) const {
-  return getU<uint64_t>(offset_ptr, this, IsLittleEndian, Data.data());
+uint64_t DataExtractor::getU64(uint64_t *offset_ptr, llvm::Error *Err) const {
+  return getU<uint64_t>(offset_ptr, this, IsLittleEndian, Data.data(), Err);
 }
 
 uint64_t *DataExtractor::getU64(uint64_t *offset_ptr, uint64_t *dst,
                                 uint32_t count) const {
   return getUs<uint64_t>(offset_ptr, dst, count, this, IsLittleEndian,
-                        Data.data());
+                         Data.data(), nullptr);
 }
 
-uint64_t
-DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size) const {
+uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
+                                    llvm::Error *Err) const {
   switch (byte_size) {
   case 1:
-    return getU8(offset_ptr);
+    return getU8(offset_ptr, Err);
   case 2:
-    return getU16(offset_ptr);
+    return getU16(offset_ptr, Err);
   case 4:
-    return getU32(offset_ptr);
+    return getU32(offset_ptr, Err);
   case 8:
-    return getU64(offset_ptr);
+    return getU64(offset_ptr, Err);
   }
   llvm_unreachable("getUnsigned unhandled case!");
 }
@@ -144,16 +171,23 @@ StringRef DataExtractor::getCStrRef(uint64_t *offset_ptr) const {
   return StringRef();
 }
 
-uint64_t DataExtractor::getULEB128(uint64_t *offset_ptr) const {
+uint64_t DataExtractor::getULEB128(uint64_t *offset_ptr,
+                                   llvm::Error *Err) const {
   assert(*offset_ptr <= Data.size());
+  ErrorAsOutParameter ErrAsOut(Err);
+  if (isError(Err))
+    return 0;
 
   const char *error;
   unsigned bytes_read;
   uint64_t result = decodeULEB128(
       reinterpret_cast<const uint8_t *>(Data.data() + *offset_ptr), &bytes_read,
       reinterpret_cast<const uint8_t *>(Data.data() + Data.size()), &error);
-  if (error)
+  if (error) {
+    if (Err)
+      *Err = createStringError(errc::illegal_byte_sequence, error);
     return 0;
+  }
   *offset_ptr += bytes_read;
   return result;
 }
@@ -170,4 +204,15 @@ int64_t DataExtractor::getSLEB128(uint64_t *offset_ptr) const {
     return 0;
   *offset_ptr += bytes_read;
   return result;
+}
+
+void DataExtractor::skip(Cursor &C, uint64_t Length) const {
+  ErrorAsOutParameter ErrAsOut(&C.Err);
+  if (isError(&C.Err))
+    return;
+
+  if (isValidOffsetForDataOfSize(C.Offset, Length))
+    C.Offset += Length;
+  else
+    unexpectedEndReached(&C.Err);
 }

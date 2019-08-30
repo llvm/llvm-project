@@ -41,6 +41,7 @@
 #include <cstring>
 #include <string>
 #include <utility>
+#include <type_traits>
 
 using namespace clang;
 
@@ -81,6 +82,16 @@ const char *Stmt::getStmtClassName() const {
 #define STMT(CLASS, PARENT) \
   static_assert(!std::is_polymorphic<CLASS>::value, \
                 #CLASS " should not be polymorphic!");
+#include "clang/AST/StmtNodes.inc"
+
+// Check that no statement / expression class has a non-trival destructor.
+// Statements and expressions are allocated with the BumpPtrAllocator from
+// ASTContext and therefore their destructor is not executed.
+#define STMT(CLASS, PARENT)                                                    \
+  static_assert(std::is_trivially_destructible<CLASS>::value,                  \
+                #CLASS " should be trivially destructible!");
+// FIXME: InitListExpr is not trivially destructible due to its ASTVector.
+#define INITLISTEXPR(CLASS, PARENT)
 #include "clang/AST/StmtNodes.inc"
 
 void Stmt::PrintStats() {

@@ -12,8 +12,8 @@
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x12000
-// CHECK-NEXT:    Offset: 0x2000
+// CHECK-NEXT:    Address: 0x12124
+// CHECK-NEXT:    Offset: 0x124
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Link:
 // CHECK-NEXT:    Info:
@@ -25,7 +25,7 @@
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x12000
+// CHECK-NEXT:    Address: 0x13124
 // CHECK-NEXT:    Offset:
 // CHECK-NEXT:    Size: 20
 // CHECK-NEXT:    Link:
@@ -36,7 +36,7 @@
 
 // CHECK:       Symbol {
 // CHECK:       Name: bar
-// CHECK-NEXT:    Value: 0x12000
+// CHECK-NEXT:    Value: 0x13124
 // CHECK-NEXT:    Size: 10
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object
@@ -45,7 +45,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: obj
-// CHECK-NEXT:    Value: 0x1200A
+// CHECK-NEXT:    Value: 0x1312E
 // CHECK-NEXT:    Size: 10
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object
@@ -55,13 +55,13 @@
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT :_start:
-// DISASM-NEXT   11000:       1e ff 2f e1     bx      lr
+// DISASM-NEXT   11114:       1e ff 2f e1     bx      lr
 // Offset 0 from .got = bar
-// DISASM        11004:       00 00 00 00
+// DISASM        11118:       00 10 00 00
 // Offset 10 from .got = obj
-// DISASM-NEXT   11008:       0a 00 00 00
+// DISASM-NEXT   1111c:       0a 10 00 00
 // Offset 15 from .got = obj +5
-// DISASM-NEXT   1100c:       0f 00 00 00
+// DISASM-NEXT   11120:       0f 10 00 00
  .syntax unified
  .globl _start
 _start:

@@ -1286,6 +1286,8 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return getVectorInstrCost(I->getOpcode(),
                                    IE->getType(), Idx);
   }
+  case Instruction::ExtractValue:
+    return 0; // Model all ExtractValue nodes as free.
   case Instruction::ShuffleVector: {
     const ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
     Type *Ty = Shuffle->getType();

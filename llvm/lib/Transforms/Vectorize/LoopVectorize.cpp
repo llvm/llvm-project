@@ -3678,6 +3678,26 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
 
   setDebugLocFromInst(Builder, LoopExitInst);
 
+  // If tail is folded by masking, the vector value to leave the loop should be
+  // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
+  // instead of the former.
+  if (Cost->foldTailByMasking()) {
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *VecLoopExitInst =
+          VectorLoopValueMap.getVectorValue(LoopExitInst, Part);
+      Value *Sel = nullptr;
+      for (User *U : VecLoopExitInst->users()) {
+        if (isa<SelectInst>(U)) {
+          assert(!Sel && "Reduction exit feeding two selects");
+          Sel = U;
+        } else
+          assert(isa<PHINode>(U) && "Reduction exit must feed Phi's or select");
+      }
+      assert(Sel && "Reduction exit feeds no select");
+      VectorLoopValueMap.resetVectorValue(LoopExitInst, Part, Sel);
+    }
+  }
+
   // If the vector reduction can be performed in a smaller type, we truncate
   // then extend the loop exit value to enable InstCombine to evaluate the
   // entire expression in the smaller type.
@@ -6939,8 +6959,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
 
   // If the tail is to be folded by masking, the primary induction variable
   // needs to be represented in VPlan for it to model early-exit masking.
-  if (CM.foldTailByMasking())
+  // Also, both the Phi and the live-out instruction of each reduction are
+  // required in order to introduce a select between them in VPlan.
+  if (CM.foldTailByMasking()) {
     NeedDef.insert(Legal->getPrimaryInduction());
+    for (auto &Reduction : *Legal->getReductionVars()) {
+      NeedDef.insert(Reduction.first);
+      NeedDef.insert(Reduction.second.getLoopExitInstr());
+    }
+  }
 
   // Collect instructions from the original loop that will become trivially dead
   // in the vectorized loop. We don't need to vectorize these instructions. For
@@ -7066,6 +7093,18 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBlockBase *Entry = Plan->setEntry(PreEntry->getSingleSuccessor());
   VPBlockUtils::disconnectBlocks(PreEntry, Entry);
   delete PreEntry;
+
+  // Finally, if tail is folded by masking, introduce selects between the phi
+  // and the live-out instruction of each reduction, at the end of the latch.
+  if (CM.foldTailByMasking()) {
+    Builder.setInsertPoint(VPBB);
+    auto *Cond = RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
+    for (auto &Reduction : *Legal->getReductionVars()) {
+      VPValue *Phi = Plan->getVPValue(Reduction.first);
+      VPValue *Red = Plan->getVPValue(Reduction.second.getLoopExitInstr());
+      Builder.createNaryOp(Instruction::Select, {Cond, Red, Phi});
+    }
+  }
 
   std::string PlanName;
   raw_string_ostream RSO(PlanName);

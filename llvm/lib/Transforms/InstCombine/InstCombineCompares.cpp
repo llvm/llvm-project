@@ -832,6 +832,10 @@ getAsConstantIndexedAddress(Value *V, const DataLayout &DL) {
 static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
                                               ICmpInst::Predicate Cond,
                                               const DataLayout &DL) {
+  // FIXME: Support vector of pointers.
+  if (GEPLHS->getType()->isVectorTy())
+    return nullptr;
+
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
@@ -882,7 +886,9 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     RHS = RHS->stripPointerCasts();
 
   Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && GEPLHS->isInBounds()) {
+  // FIXME: Support vector pointer GEPs.
+  if (PtrBase == RHS && GEPLHS->isInBounds() &&
+      !GEPLHS->getType()->isVectorTy()) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     // This transformation (ignoring the base and scales) is valid because we
     // know pointers can't overflow since the gep is inbounds.  See if we can
@@ -894,10 +900,12 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       Offset = EmitGEPOffset(GEPLHS);
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
                         Constant::getNullValue(Offset->getType()));
-  } else if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-             isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
-             !NullPointerIsDefined(I.getFunction(),
-                                   RHS->getType()->getPointerAddressSpace())) {
+  }
+
+  if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
+      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      !NullPointerIsDefined(I.getFunction(),
+                            RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
     // itself is treated as a 0 size allocation in the in bounds rules.  Thus,
     // the only valid inbounds address derived from null, is null itself.
@@ -945,11 +953,13 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       // If we're comparing GEPs with two base pointers that only differ in type
       // and both GEPs have only constant indices or just one use, then fold
       // the compare with the adjusted indices.
+      // FIXME: Support vector of pointers.
       if (GEPLHS->isInBounds() && GEPRHS->isInBounds() &&
           (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
           (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse()) &&
           PtrBase->stripPointerCasts() ==
-              GEPRHS->getOperand(0)->stripPointerCasts()) {
+              GEPRHS->getOperand(0)->stripPointerCasts() &&
+          !GEPLHS->getType()->isVectorTy()) {
         Value *LOffset = EmitGEPOffset(GEPLHS);
         Value *ROffset = EmitGEPOffset(GEPRHS);
 
@@ -978,12 +988,14 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     }
 
     // If one of the GEPs has all zero indices, recurse.
-    if (GEPLHS->hasAllZeroIndices())
+    // FIXME: Handle vector of pointers.
+    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
       return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
                          ICmpInst::getSwappedPredicate(Cond), I);
 
     // If the other GEP has all zero indices, recurse.
-    if (GEPRHS->hasAllZeroIndices())
+    // FIXME: Handle vector of pointers.
+    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
       return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
 
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
@@ -993,15 +1005,20 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       unsigned DiffOperand = 0;     // The operand that differs.
       for (unsigned i = 1, e = GEPRHS->getNumOperands(); i != e; ++i)
         if (GEPLHS->getOperand(i) != GEPRHS->getOperand(i)) {
-          if (GEPLHS->getOperand(i)->getType()->getPrimitiveSizeInBits() !=
-                   GEPRHS->getOperand(i)->getType()->getPrimitiveSizeInBits()) {
+          Type *LHSType = GEPLHS->getOperand(i)->getType();
+          Type *RHSType = GEPRHS->getOperand(i)->getType();
+          // FIXME: Better support for vector of pointers.
+          if (LHSType->getPrimitiveSizeInBits() !=
+                   RHSType->getPrimitiveSizeInBits() ||
+              (GEPLHS->getType()->isVectorTy() &&
+               (!LHSType->isVectorTy() || !RHSType->isVectorTy()))) {
             // Irreconcilable differences.
             NumDifferences = 2;
             break;
-          } else {
-            if (NumDifferences++) break;
-            DiffOperand = i;
           }
+
+          if (NumDifferences++) break;
+          DiffOperand = i;
         }
 
       if (NumDifferences == 0)   // SAME GEP?
@@ -3362,7 +3379,7 @@ foldICmpWithTruncSignExtendedVal(ICmpInst &I,
 // we should move shifts to the same hand of 'and', i.e. rewrite as
 //   icmp eq/ne (and (x shift (Q+K)), y), 0  iff (Q+K) u< bitwidth(x)
 // We are only interested in opposite logical shifts here.
-// One of the shifts can be truncated. For now, it can only be 'shl'.
+// One of the shifts can be truncated.
 // If we can, we want to end up creating 'lshr' shift.
 static Value *
 foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
@@ -3395,14 +3412,6 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
   assert(NarrowestShift->getType() == I.getOperand(0)->getType() &&
          "We did not look past any shifts while matching XShift though.");
   bool HadTrunc = WidestTy != I.getOperand(0)->getType();
-
-  if (HadTrunc) {
-    // We did indeed have a truncation. For now, let's only proceed if the 'shl'
-    // was truncated, since that does not require any extra legality checks.
-    // FIXME: trunc-of-lshr.
-    if (!match(YShift, m_Shl(m_Value(), m_Value())))
-      return nullptr;
-  }
 
   // If YShift is a 'lshr', swap the shifts around.
   if (match(YShift, m_LShr(m_Value(), m_Value())))
@@ -3445,16 +3454,68 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
                       /*isNUW=*/false, SQ.getWithInstruction(&I)));
   if (!NewShAmt)
     return nullptr;
+  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, WidestTy);
+  unsigned WidestBitWidth = WidestTy->getScalarSizeInBits();
+
   // Is the new shift amount smaller than the bit width?
   // FIXME: could also rely on ConstantRange.
-  if (!match(NewShAmt, m_SpecificInt_ICMP(
-                           ICmpInst::Predicate::ICMP_ULT,
-                           APInt(NewShAmt->getType()->getScalarSizeInBits(),
-                                 WidestTy->getScalarSizeInBits()))))
+  if (!match(NewShAmt,
+             m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                APInt(WidestBitWidth, WidestBitWidth))))
     return nullptr;
+
+  // An extra legality check is needed if we had trunc-of-lshr.
+  if (HadTrunc && match(WidestShift, m_LShr(m_Value(), m_Value()))) {
+    auto CanFold = [NewShAmt, WidestBitWidth, NarrowestShift, SQ,
+                    WidestShift]() {
+      // It isn't obvious whether it's worth it to analyze non-constants here.
+      // Also, let's basically give up on non-splat cases, pessimizing vectors.
+      // If *any* of these preconditions matches we can perform the fold.
+      Constant *NewShAmtSplat = NewShAmt->getType()->isVectorTy()
+                                    ? NewShAmt->getSplatValue()
+                                    : NewShAmt;
+      // If it's edge-case shift (by 0 or by WidestBitWidth-1) we can fold.
+      if (NewShAmtSplat &&
+          (NewShAmtSplat->isNullValue() ||
+           NewShAmtSplat->getUniqueInteger() == WidestBitWidth - 1))
+        return true;
+      // We consider *min* leading zeros so a single outlier
+      // blocks the transform as opposed to allowing it.
+      if (auto *C = dyn_cast<Constant>(NarrowestShift->getOperand(0))) {
+        KnownBits Known = computeKnownBits(C, SQ.DL);
+        unsigned MinLeadZero = Known.countMinLeadingZeros();
+        // If the value being shifted has at most lowest bit set we can fold.
+        unsigned MaxActiveBits = Known.getBitWidth() - MinLeadZero;
+        if (MaxActiveBits <= 1)
+          return true;
+        // Precondition:  NewShAmt u<= countLeadingZeros(C)
+        if (NewShAmtSplat && NewShAmtSplat->getUniqueInteger().ule(MinLeadZero))
+          return true;
+      }
+      if (auto *C = dyn_cast<Constant>(WidestShift->getOperand(0))) {
+        KnownBits Known = computeKnownBits(C, SQ.DL);
+        unsigned MinLeadZero = Known.countMinLeadingZeros();
+        // If the value being shifted has at most lowest bit set we can fold.
+        unsigned MaxActiveBits = Known.getBitWidth() - MinLeadZero;
+        if (MaxActiveBits <= 1)
+          return true;
+        // Precondition:  ((WidestBitWidth-1)-NewShAmt) u<= countLeadingZeros(C)
+        if (NewShAmtSplat) {
+          APInt AdjNewShAmt =
+              (WidestBitWidth - 1) - NewShAmtSplat->getUniqueInteger();
+          if (AdjNewShAmt.ule(MinLeadZero))
+            return true;
+        }
+      }
+      return false; // Can't tell if it's ok.
+    };
+    if (!CanFold())
+      return nullptr;
+  }
+
   // All good, we can do this fold.
-  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, WidestTy);
   X = Builder.CreateZExt(X, WidestTy);
+  Y = Builder.CreateZExt(Y, WidestTy);
   // The shift is the same that was for X.
   Value *T0 = XShiftOpcode == Instruction::BinaryOps::LShr
                   ? Builder.CreateLShr(X, NewShAmt)
@@ -3462,6 +3523,73 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
   Value *T1 = Builder.CreateAnd(T0, Y);
   return Builder.CreateICmp(I.getPredicate(), T1,
                             Constant::getNullValue(WidestTy));
+}
+
+/// Fold
+///   (-1 u/ x) u< y
+///   ((x * y) u/ x) != y
+/// to
+///   @llvm.umul.with.overflow(x, y) plus extraction of overflow bit
+/// Note that the comparison is commutative, while inverted (u>=, ==) predicate
+/// will mean that we are looking for the opposite answer.
+Value *InstCombiner::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
+  ICmpInst::Predicate Pred;
+  Value *X, *Y;
+  Instruction *Mul;
+  bool NeedNegation;
+  // Look for: (-1 u/ x) u</u>= y
+  if (!I.isEquality() &&
+      match(&I, m_c_ICmp(Pred, m_OneUse(m_UDiv(m_AllOnes(), m_Value(X))),
+                         m_Value(Y)))) {
+    Mul = nullptr;
+    // Canonicalize as-if y was on RHS.
+    if (I.getOperand(1) != Y)
+      Pred = I.getSwappedPredicate();
+
+    // Are we checking that overflow does not happen, or does happen?
+    switch (Pred) {
+    case ICmpInst::Predicate::ICMP_ULT:
+      NeedNegation = false;
+      break; // OK
+    case ICmpInst::Predicate::ICMP_UGE:
+      NeedNegation = true;
+      break; // OK
+    default:
+      return nullptr; // Wrong predicate.
+    }
+  } else // Look for: ((x * y) u/ x) !=/== y
+      if (I.isEquality() &&
+          match(&I, m_c_ICmp(Pred, m_Value(Y),
+                             m_OneUse(m_UDiv(m_CombineAnd(m_c_Mul(m_Deferred(Y),
+                                                                  m_Value(X)),
+                                                          m_Instruction(Mul)),
+                                             m_Deferred(X)))))) {
+    NeedNegation = Pred == ICmpInst::Predicate::ICMP_EQ;
+  } else
+    return nullptr;
+
+  BuilderTy::InsertPointGuard Guard(Builder);
+  // If the pattern included (x * y), we'll want to insert new instructions
+  // right before that original multiplication so that we can replace it.
+  bool MulHadOtherUses = Mul && !Mul->hasOneUse();
+  if (MulHadOtherUses)
+    Builder.SetInsertPoint(Mul);
+
+  Function *F = Intrinsic::getDeclaration(
+      I.getModule(), Intrinsic::umul_with_overflow, X->getType());
+  CallInst *Call = Builder.CreateCall(F, {X, Y}, "umul");
+
+  // If the multiplication was used elsewhere, to ensure that we don't leave
+  // "duplicate" instructions, replace uses of that original multiplication
+  // with the multiplication result from the with.overflow intrinsic.
+  if (MulHadOtherUses)
+    replaceInstUsesWith(*Mul, Builder.CreateExtractValue(Call, 0, "umul.val"));
+
+  Value *Res = Builder.CreateExtractValue(Call, 1, "umul.ov");
+  if (NeedNegation) // This technically increases instruction count.
+    Res = Builder.CreateNot(Res, "umul.not.ov");
+
+  return Res;
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
@@ -3812,6 +3940,9 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
       return new ICmpInst(ICmpInst::ICMP_NE, Op1, Zero);
     }
   }
+
+  if (Value *V = foldUnsignedMultiplicationOverflowCheck(I))
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -4964,9 +5095,9 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   // For scalars, SimplifyICmpInst should have already handled
   // the edge cases for us, so we just assert on them.
   // For vectors, we must handle the edge cases.
-  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+  if (isa<ConstantInt>(C)) {
     // A <= MAX -> TRUE ; A >= MIN -> TRUE
-    assert(ConstantIsOk(CI));
+    assert(ConstantIsOk(cast<ConstantInt>(C)));
   } else if (Type->isVectorTy()) {
     // TODO? If the edge cases for vectors were guaranteed to be handled as they
     // are for scalar, we could remove the min/max checks. However, to do that,

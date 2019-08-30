@@ -83,7 +83,7 @@ private:
   void PragmaDiagnosticPop(SourceLocation Loc, StringRef) override;
   void PragmaDiagnostic(SourceLocation Loc, StringRef, diag::Severity,
                         StringRef) override;
-  void HasInclude(SourceLocation Loc, StringRef, bool, const FileEntry *,
+  void HasInclude(SourceLocation Loc, StringRef, bool, Optional<FileEntryRef> ,
                   SrcMgr::CharacteristicKind) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *,
                              SourceLocation StateLoc, unsigned) override;

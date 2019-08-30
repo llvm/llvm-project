@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // global data tables
@@ -106,7 +107,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   }
   if (!RequiresOMPRuntime) {
     // Runtime is not required - exit.
-    __SYNCTHREADS();
+    __kmpc_impl_syncthreads();
     return;
   }
 
@@ -125,8 +126,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     // init team context
     currTeamDescr.InitTeamDescr();
   }
-  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
-  __SYNCTHREADS();
+  __kmpc_impl_syncthreads();
 
   omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
@@ -168,8 +168,7 @@ EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
   if (!RequiresOMPRuntime)
     return;
 
-  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
-  __SYNCTHREADS();
+  __kmpc_impl_syncthreads();
   int threadId = GetThreadIdInBlock();
   if (threadId == 0) {
     // Enqueue omp state object for use by another team.

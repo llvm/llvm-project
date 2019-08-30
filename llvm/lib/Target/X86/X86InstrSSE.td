@@ -5323,17 +5323,6 @@ let ExeDomain = SSEPackedSingle in {
     defm INSERTPS : SS41I_insertf32<0x21, "insertps", 1>;
 }
 
-let Predicates = [UseAVX] in {
-  // If we're inserting an element from a vbroadcast of a load, fold the
-  // load into the X86insertps instruction.
-  def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1),
-                (X86VBroadcast (loadf32 addr:$src2)), imm:$src3)),
-            (VINSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
-  def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1),
-                (X86VBroadcast (loadv4f32 addr:$src2)), imm:$src3)),
-            (VINSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
-}
-
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Round Instructions
 //===----------------------------------------------------------------------===//
@@ -6944,15 +6933,6 @@ let ExeDomain = SSEPackedDouble, Predicates = [HasAVX2, NoVLX] in
 def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
                                          v4f64, v2f64, WriteFShuffle256>, VEX_L;
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4f32 (X86VBroadcast (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
-            (VBROADCASTSSrm addr:$src)>;
-  def : Pat<(v8f32 (X86VBroadcast (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
-            (VBROADCASTSSYrm addr:$src)>;
-  def : Pat<(v4f64 (X86VBroadcast (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
-            (VBROADCASTSDYrm addr:$src)>;
-}
-
 //===----------------------------------------------------------------------===//
 // VBROADCAST*128 - Load from memory and broadcast 128-bit vector to both
 //                  halves of a 256-bit vector.
@@ -7454,15 +7434,6 @@ let Predicates = [HasAVX2, NoVLX] in {
             (VPBROADCASTQrm addr:$src)>;
   def : Pat<(v4i64 (X86VBroadcast (v2i64 (X86vzload64 addr:$src)))),
             (VPBROADCASTQYrm addr:$src)>;
-
-  def : Pat<(v4i32 (X86VBroadcast (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
-            (VPBROADCASTDrm addr:$src)>;
-  def : Pat<(v8i32 (X86VBroadcast (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
-            (VPBROADCASTDYrm addr:$src)>;
-  def : Pat<(v2i64 (X86VBroadcast (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
-            (VPBROADCASTQrm addr:$src)>;
-  def : Pat<(v4i64 (X86VBroadcast (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
-            (VPBROADCASTQYrm addr:$src)>;
 }
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
@@ -7483,17 +7454,6 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   def : Pat<(v16i16 (X86VBroadcast
               (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
             (VPBROADCASTWYrm addr:$src)>;
-}
-
-let Predicates = [HasAVX2, NoVLX] in {
-  // Provide aliases for broadcast from the same register class that
-  // automatically does the extract.
-  def : Pat<(v8f32 (X86VBroadcast (v8f32 VR256:$src))),
-            (VBROADCASTSSYrr (v4f32 (EXTRACT_SUBREG (v8f32 VR256:$src),
-                                                    sub_xmm)))>;
-  def : Pat<(v4f64 (X86VBroadcast (v4f64 VR256:$src))),
-            (VBROADCASTSDYrr (v2f64 (EXTRACT_SUBREG (v4f64 VR256:$src),
-                                                    sub_xmm)))>;
 }
 
 let Predicates = [HasAVX2, NoVLX] in {
@@ -7562,7 +7522,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
             (VMOVDDUPrr VR128:$src)>;
-  def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (X86VBroadcast (v2f64 (nonvolatile_load addr:$src)))),
             (VMOVDDUPrm addr:$src)>;
   def : Pat<(v2f64 (X86VBroadcast (v2f64 (X86vzload64 addr:$src)))),
             (VMOVDDUPrm addr:$src)>;

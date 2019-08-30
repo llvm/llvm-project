@@ -112,6 +112,38 @@ struct XCOFFStringTable {
   const char *Data;
 };
 
+struct XCOFFCsectAuxEnt32 {
+  support::ubig32_t SectionLen;
+  support::ubig32_t ParameterHashIndex;
+  support::ubig16_t TypeChkSectNum;
+  uint8_t SymbolAlignmentAndType;
+  XCOFF::StorageMappingClass StorageMappingClass;
+  support::ubig32_t StabInfoIndex;
+  support::ubig16_t StabSectNum;
+};
+
+struct XCOFFFileAuxEnt {
+  typedef struct {
+    support::big32_t Magic; // Zero indicates name in string table.
+    support::ubig32_t Offset;
+    char NamePad[XCOFF::FileNamePadSize];
+  } NameInStrTblType;
+  union {
+    char Name[XCOFF::NameSize + XCOFF::FileNamePadSize];
+    NameInStrTblType NameInStrTbl;
+  };
+  XCOFF::CFileStringType Type;
+  uint8_t ReservedZeros[2];
+  uint8_t AuxType; // 64-bit XCOFF file only.
+};
+
+struct XCOFFSectAuxEntForStat {
+  support::ubig32_t SectionLength;
+  support::ubig16_t NumberOfRelocEnt;
+  support::ubig16_t NumberOfLineNum;
+  uint8_t Pad[10];
+};
+
 class XCOFFObjectFile : public ObjectFile {
 private:
   const void *FileHeader = nullptr;
@@ -131,18 +163,18 @@ private:
 
   const XCOFFSectionHeader32 *toSection32(DataRefImpl Ref) const;
   const XCOFFSectionHeader64 *toSection64(DataRefImpl Ref) const;
-  void checkSectionAddress(uintptr_t Addr, uintptr_t TableAddr) const;
   uintptr_t getSectionHeaderTableAddress() const;
+  uintptr_t getEndOfSymbolTableAddress() const;
 
   // This returns a pointer to the start of the storage for the name field of
   // the 32-bit or 64-bit SectionHeader struct. This string is *not* necessarily
   // null-terminated.
   const char *getSectionNameInternal(DataRefImpl Sec) const;
 
-  int32_t getSectionFlags(DataRefImpl Sec) const;
+  // This function returns string table entry.
+  Expected<StringRef> getStringTableEntry(uint32_t Offset) const;
 
   static bool isReservedSectionNumber(int16_t SectionNumber);
-  Expected<DataRefImpl> getSectionByNum(int16_t Num) const;
 
   // Constructor and "create" factory function. The constructor is only a thin
   // wrapper around the base constructor. The "create" function fills out the
@@ -159,6 +191,8 @@ private:
   // Make a friend so it can call the private 'create' function.
   friend Expected<std::unique_ptr<ObjectFile>>
   ObjectFile::createXCOFFObjectFile(MemoryBufferRef Object, unsigned FileType);
+
+  void checkSectionAddress(uintptr_t Addr, uintptr_t TableAddr) const;
 
 public:
   // Interface inherited from base classes.
@@ -238,14 +272,40 @@ public:
   uint32_t getLogicalNumberOfSymbolTableEntries32() const;
 
   uint32_t getNumberOfSymbolTableEntries64() const;
+  uint32_t getSymbolIndex(uintptr_t SymEntPtr) const;
 
+  Expected<StringRef> getCFileName(const XCOFFFileAuxEnt *CFileEntPtr) const;
   uint16_t getOptionalHeaderSize() const;
   uint16_t getFlags() const;
 
   // Section header table related interfaces.
   ArrayRef<XCOFFSectionHeader32> sections32() const;
   ArrayRef<XCOFFSectionHeader64> sections64() const;
+
+  int32_t getSectionFlags(DataRefImpl Sec) const;
+  Expected<DataRefImpl> getSectionByNum(int16_t Num) const;
+
+  void checkSymbolEntryPointer(uintptr_t SymbolEntPtr) const;
 }; // XCOFFObjectFile
+
+class XCOFFSymbolRef {
+  const DataRefImpl SymEntDataRef;
+  const XCOFFObjectFile *const OwningObjectPtr;
+
+public:
+  XCOFFSymbolRef(DataRefImpl SymEntDataRef,
+                 const XCOFFObjectFile *OwningObjectPtr)
+      : SymEntDataRef(SymEntDataRef), OwningObjectPtr(OwningObjectPtr){};
+
+  XCOFF::StorageClass getStorageClass() const;
+  uint8_t getNumberOfAuxEntries() const;
+  const XCOFFCsectAuxEnt32 *getXCOFFCsectAuxEnt32() const;
+  uint16_t getType() const;
+  int16_t getSectionNumber() const;
+
+  bool hasCsectAuxEnt() const;
+  bool isFunction() const;
+};
 
 } // namespace object
 } // namespace llvm

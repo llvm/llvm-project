@@ -143,6 +143,10 @@ void a_function() {
 // CHECK: define void @a_function() [[A_FUNCTION:#[0-9]+]]
 }
 
+kernel void default_kernel() {
+// CHECK: define amdgpu_kernel void @default_kernel() [[DEFAULT_KERNEL_ATTRS:#[0-9]+]]
+}
+
 
 // Make sure this is silently accepted on other targets.
 // X86-NOT: "amdgpu-flat-work-group-size"
@@ -158,23 +162,25 @@ void a_function() {
 // CHECK-NOT: "amdgpu-num-sgpr"="0"
 // CHECK-NOT: "amdgpu-num-vgpr"="0"
 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="64,64" "amdgpu-implicitarg-num-bytes"="56" 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="16,128" "amdgpu-implicitarg-num-bytes"="56" 
-// CHECK-DAG: attributes [[WAVES_PER_EU_2]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" 
-// CHECK-DAG: attributes [[NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" 
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="64,64" "amdgpu-implicitarg-num-bytes"="56"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="16,128" "amdgpu-implicitarg-num-bytes"="56"
+
+// CHECK-DAG: attributes [[WAVES_PER_EU_2]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256"  "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2"
+
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32"
+// CHECK-DAG: attributes [[NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64"
 
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" 
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[NUM_SGPR_32_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" 
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[NUM_SGPR_32_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64"
 
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
@@ -185,3 +191,4 @@ void a_function() {
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
 
 // CHECK-DAG: attributes [[A_FUNCTION]] = { convergent noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false"
+// CHECK-DAG: attributes [[DEFAULT_KERNEL_ATTRS]] = { convergent noinline nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56"

@@ -107,7 +107,8 @@ suite('SemanticHighlighting Tests', () => {
     highlighter.highlight('file1', []);
     assert.deepEqual(highlighter.applicationUriHistory, [ 'file1' ]);
     highlighter.initialize(tm);
-    assert.deepEqual(highlighter.applicationUriHistory, [ 'file1', 'file1', 'file2' ]);
+    assert.deepEqual(highlighter.applicationUriHistory,
+                     [ 'file1', 'file1', 'file2' ]);
     // Groups decorations into the scopes used.
     let highlightingsInLine: semanticHighlighting.SemanticHighlightingLine[] = [
       {

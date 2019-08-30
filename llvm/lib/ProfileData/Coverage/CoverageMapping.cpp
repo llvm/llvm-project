@@ -270,6 +270,16 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   return std::move(Coverage);
 }
 
+// If E is a no_data_found error, returns success. Otherwise returns E.
+static Error handleMaybeNoDataFoundError(Error E) {
+  return handleErrors(
+      std::move(E), [](const CoverageMapError &CME) {
+        if (CME.get() == coveragemap_error::no_data_found)
+          return static_cast<Error>(Error::success());
+        return make_error<CoverageMapError>(CME.get());
+      });
+}
+
 Expected<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
                       StringRef ProfileFilename, ArrayRef<StringRef> Arches) {
@@ -289,12 +299,21 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
         CovMappingBufOrErr.get()->getMemBufferRef();
     auto CoverageReadersOrErr =
         BinaryCoverageReader::create(CovMappingBufRef, Arch, Buffers);
-    if (Error E = CoverageReadersOrErr.takeError())
-      return std::move(E);
+    if (Error E = CoverageReadersOrErr.takeError()) {
+      E = handleMaybeNoDataFoundError(std::move(E));
+      if (E)
+        return std::move(E);
+      // E == success (originally a no_data_found error).
+      continue;
+    }
     for (auto &Reader : CoverageReadersOrErr.get())
       Readers.push_back(std::move(Reader));
     Buffers.push_back(std::move(CovMappingBufOrErr.get()));
   }
+  // If no readers were created, either no objects were provided or none of them
+  // had coverage data. Return an error in the latter case.
+  if (Readers.empty() && !ObjectFilenames.empty())
+    return make_error<CoverageMapError>(coveragemap_error::no_data_found);
   return load(Readers, *ProfileReader);
 }
 

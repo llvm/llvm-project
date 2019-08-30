@@ -389,18 +389,8 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef File) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef ArchiveName,
-                                         StringRef FileName,
+LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
+                                         StringRef ArchiveName,
                                          StringRef ArchitectureName) {
   assert(E);
   WithColor::error(errs(), ToolName);
@@ -1752,15 +1742,15 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
   const StringRef FileName = O->getFileName();
   for (auto I = O->symbol_begin(), E = O->symbol_end(); I != E; ++I) {
     const SymbolRef &Symbol = *I;
-    uint64_t Address = unwrapOrError(Symbol.getAddress(), ArchiveName, FileName,
+    uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName, ArchiveName,
                                      ArchitectureName);
     if ((Address < StartAddress) || (Address > StopAddress))
       continue;
-    SymbolRef::Type Type = unwrapOrError(Symbol.getType(), ArchiveName,
-                                         FileName, ArchitectureName);
+    SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName,
+                                         ArchiveName, ArchitectureName);
     uint32_t Flags = Symbol.getFlags();
-    section_iterator Section = unwrapOrError(Symbol.getSection(), ArchiveName,
-                                             FileName, ArchitectureName);
+    section_iterator Section = unwrapOrError(Symbol.getSection(), FileName,
+                                             ArchiveName, ArchitectureName);
     StringRef Name;
     if (Type == SymbolRef::ST_Debug && Section != O->section_end()) {
       if (Expected<StringRef> NameOrErr = Section->getName())
@@ -1769,7 +1759,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
         consumeError(NameOrErr.takeError());
 
     } else {
-      Name = unwrapOrError(Symbol.getName(), ArchiveName, FileName,
+      Name = unwrapOrError(Symbol.getName(), FileName, ArchiveName,
                            ArchitectureName);
     }
 
@@ -2156,7 +2146,7 @@ static void dumpArchive(const Archive *A) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-        reportError(std::move(E), A->getFileName(), getFileNameForError(C, I));
+        reportError(std::move(E), getFileNameForError(C, I), A->getFileName());
       continue;
     }
     if (ObjectFile *O = dyn_cast<ObjectFile>(&*ChildOrErr.get()))

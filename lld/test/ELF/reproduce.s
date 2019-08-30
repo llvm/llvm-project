@@ -13,7 +13,7 @@
 
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
 # RSP: {{^}}--hash-style gnu{{$}}
-# RSP-NOT: repro{{[/\\]}}
+# RSP-NOT: {{^}}repro{{[/\\]}}
 # RSP-NEXT: {{[/\\]}}foo.o
 # RSP-NEXT: -o bar
 # RSP-NEXT: -shared

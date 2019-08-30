@@ -31,7 +31,7 @@ class B {
 // CHECK-NEXT:    8: [B1.7]
 // CHECK-NEXT:    9: [B1.5] = [B1.8] (OperatorCall)
 // CHECK-NEXT:   10: ~variant_0::B() (Temporary object destructor)
-// CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   11: [B1.2].~variant_0::B() (Implicit destructor)
 void foo(int) {
   B i;
   i = {};
@@ -71,7 +71,7 @@ class B {
 // CHECK-NEXT:    6: {} (CXXConstructExpr, class variant_1::B)
 // CHECK-NEXT:    7: [B1.6]
 // CHECK-NEXT:    8: [B1.5] = [B1.7] (OperatorCall)
-// CHECK-NEXT:    9: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:    9: [B1.2].~variant_1::B() (Implicit destructor)
 template <typename T> void foo(T) {
   B i;
   i = {};
@@ -114,7 +114,7 @@ public:
 // CHECK-NEXT:    9: [B1.8]
 // CHECK-NEXT:   10: [B1.5] = [B1.9] (OperatorCall)
 // CHECK-NEXT:   11: ~variant_2::B() (Temporary object destructor)
-// CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   12: [B1.2].~variant_2::B() (Implicit destructor)
 template <typename T> void foo(T) {
   B i;
   i = {};

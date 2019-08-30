@@ -384,4 +384,24 @@ entry:
   ret <2 x i64> %s
 }
 
-
+define arm_aapcs_vfpcc <4 x i32> @vpnot_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LABEL: vpnot_v4i1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmp.s32 lt, q0, zr
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.s32 gt, q1, zr
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 eq, q2, zr
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c1 = icmp slt <4 x i32> %a, zeroinitializer
+  %c2 = icmp sgt <4 x i32> %b, zeroinitializer
+  %c3 = icmp eq <4 x i32> %c, zeroinitializer
+  %o1 = and <4 x i1> %c1, %c2
+  %o2 = xor <4 x i1> %o1, <i1 -1, i1 -1, i1 -1, i1 -1>
+  %o = and <4 x i1> %c3, %o2
+  %s = select <4 x i1> %o, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}

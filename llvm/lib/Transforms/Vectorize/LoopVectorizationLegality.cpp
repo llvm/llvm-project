@@ -1176,18 +1176,17 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
     return false;
   }
 
-  // TODO: handle reductions when tail is folded by masking.
-  if (!Reductions.empty()) {
-    reportVectorizationFailure(
-        "Loop has reductions, cannot fold tail by masking",
-        "Cannot fold tail by masking in the presence of reductions.",
-        "ReductionFoldingTailByMasking", ORE, TheLoop);
-    return false;
-  }
+  SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
-  // TODO: handle outside users when tail is folded by masking.
+  for (auto &Reduction : *getReductionVars())
+    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
+
+  // TODO: handle non-reduction outside users when tail is folded by masking.
   for (auto *AE : AllowedExit) {
-    // Check that all users of allowed exit values are inside the loop.
+    // Check that all users of allowed exit values are inside the loop or
+    // are the live-out of a reduction.
+    if (ReductionLiveOuts.count(AE))
+      continue;
     for (User *U : AE->users()) {
       Instruction *UI = cast<Instruction>(U);
       if (TheLoop->contains(UI))

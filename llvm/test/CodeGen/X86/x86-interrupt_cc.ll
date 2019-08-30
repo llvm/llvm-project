@@ -294,7 +294,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK64-SKX-NEXT:    kmovq %k0, {{[0-9]+}}(%rsp) ## 8-byte Spill
 ; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x84,0x24,0x30,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    vmovups %zmm31, {{[0-9]+}}(%rsp) ## 64-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x11,0xbc,0x24,0xe0,0x07,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x11,0x7c,0x24,0x1f]
 ; CHECK64-SKX-NEXT:    vmovups %zmm30, {{[0-9]+}}(%rsp) ## 64-byte Spill
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x11,0x74,0x24,0x1e]
 ; CHECK64-SKX-NEXT:    vmovups %zmm29, {{[0-9]+}}(%rsp) ## 64-byte Spill
@@ -398,7 +398,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK64-SKX-NEXT:    .cfi_offset %xmm28, -448
 ; CHECK64-SKX-NEXT:    .cfi_offset %xmm29, -384
 ; CHECK64-SKX-NEXT:    .cfi_offset %xmm30, -320
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm31, -224
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm31, -256
 ; CHECK64-SKX-NEXT:    .cfi_offset %k0, -144
 ; CHECK64-SKX-NEXT:    .cfi_offset %k1, -136
 ; CHECK64-SKX-NEXT:    .cfi_offset %k2, -128
@@ -474,7 +474,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK64-SKX-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm30 ## 64-byte Reload
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x10,0x74,0x24,0x1e]
 ; CHECK64-SKX-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm31 ## 64-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x10,0xbc,0x24,0xe0,0x07,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x10,0x7c,0x24,0x1f]
 ; CHECK64-SKX-NEXT:    kmovq {{[0-9]+}}(%rsp), %k0 ## 8-byte Reload
 ; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x84,0x24,0x30,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[0-9]+}}(%rsp), %k1 ## 8-byte Reload
@@ -635,7 +635,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK32-SKX-NEXT:    kmovq %k0, {{[0-9]+}}(%esp) ## 8-byte Spill
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x84,0x24,0x30,0x02,0x00,0x00]
 ; CHECK32-SKX-NEXT:    vmovups %zmm7, {{[0-9]+}}(%esp) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xbc,0x24,0xe0,0x01,0x00,0x00]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x7c,0x24,0x07]
 ; CHECK32-SKX-NEXT:    vmovups %zmm6, {{[0-9]+}}(%esp) ## 64-byte Spill
 ; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x74,0x24,0x06]
 ; CHECK32-SKX-NEXT:    vmovups %zmm5, {{[0-9]+}}(%esp) ## 64-byte Spill
@@ -661,7 +661,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK32-SKX-NEXT:    .cfi_offset %xmm4, -384
 ; CHECK32-SKX-NEXT:    .cfi_offset %xmm5, -320
 ; CHECK32-SKX-NEXT:    .cfi_offset %xmm6, -256
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm7, -160
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm7, -192
 ; CHECK32-SKX-NEXT:    .cfi_offset %k0, -80
 ; CHECK32-SKX-NEXT:    .cfi_offset %k1, -72
 ; CHECK32-SKX-NEXT:    .cfi_offset %k2, -64
@@ -689,7 +689,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK32-SKX-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm6 ## 64-byte Reload
 ; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x74,0x24,0x06]
 ; CHECK32-SKX-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm7 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xbc,0x24,0xe0,0x01,0x00,0x00]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x7c,0x24,0x07]
 ; CHECK32-SKX-NEXT:    kmovq {{[0-9]+}}(%esp), %k0 ## 8-byte Reload
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x84,0x24,0x30,0x02,0x00,0x00]
 ; CHECK32-SKX-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 ## 8-byte Reload

@@ -9,7 +9,7 @@
 ; CHECK: [[GEP16:%[^ ]+]] = getelementptr i16, i16* [[CAST_GEP8]], i32 6
 ; CHECK: [[CAST_GEP16:%[^ ]+]] = bitcast i16* [[GEP16]] to i32*
 ; CHECK: [[LOAD_UNDEF:%[^ ]+]] = load i32, i32* [[CAST_GEP16]], align 2
-; CHECK: call i32 @llvm.arm.smladx(i32 [[LOAD_A]], i32 [[LOAD_UNDEF]], i32 undef)
+; CHECK: call i32 @llvm.arm.smladx(i32 [[LOAD_UNDEF]], i32 [[LOAD_A]], i32 undef)
 define void @undef_no_return(i16* %a) {
 entry:
   %incdec.ptr21 = getelementptr inbounds i16, i16* %a, i32 3
@@ -48,7 +48,7 @@ for.body:
 ; CHECK: [[GEP16:%[^ ]+]] = getelementptr i16, i16* [[CAST_GEP8]], i32 %iv
 ; CHECK: [[CAST_GEP16:%[^ ]+]] = bitcast i16* [[GEP16]] to i32*
 ; CHECK: [[LOAD_B:%[^ ]+]] = load i32, i32* [[CAST_GEP16]], align 2
-; CHECK: [[ACC_NEXT]] = call i32 @llvm.arm.smladx(i32 [[LOAD_A]], i32 [[LOAD_B]], i32 [[ACC]])
+; CHECK: [[ACC_NEXT]] = call i32 @llvm.arm.smladx(i32 [[LOAD_B]], i32 [[LOAD_A]], i32 [[ACC]])
 define i32 @return(i16* %a, i8* %b, i32 %N) {
 entry:
   %incdec.ptr21 = getelementptr inbounds i16, i16* %a, i32 3

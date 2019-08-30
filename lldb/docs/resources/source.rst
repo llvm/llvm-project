@@ -2,7 +2,7 @@ Getting the Sources
 ===================
 
 Refer to the `LLVM Getting Started Guide
-<http://llvm.org/docs/GettingStarted.html#getting-started-with-llvm>`_
+<https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm>`_
 for general instructions on how to check out source. Note that LLDB
 depends on having a working checkout of LLVM and Clang, so the first
 step is to download and build as described at the above URL. The same
@@ -17,7 +17,7 @@ Contributing to LLDB
 --------------------
 
 Please refer to the `LLVM Developer Policy
-<http://llvm.org/docs/DeveloperPolicy.html>`_ for information about
+<https://llvm.org/docs/DeveloperPolicy.html>`_ for information about
 authoring and uploading a patch. LLDB differs from the LLVM Developer
 Policy in the following respects.
 
@@ -40,9 +40,9 @@ rules of thumb:
 * Invalid input.  To deal with invalid input, such as malformed DWARF,
   missing object files, or otherwise inconsistent debug info, LLVM's
   error handling types such as `llvm::Expected<T>
-  <http://llvm.org/doxygen/classllvm_1_1Expected.html>`_ or
+  <https://llvm.org/doxygen/classllvm_1_1Expected.html>`_ or
   `llvm::Optional<T>
-  <http://llvm.org/doxygen/classllvm_1_1Optional.html>`_ should be
+  <https://llvm.org/doxygen/classllvm_1_1Optional.html>`_ should be
   used. Functions that may fail should return their result using these
   wrapper types instead of using a bool to indicate success. Returning
   a default value when an error occurred is also discouraged.
@@ -74,7 +74,7 @@ rules of thumb:
 * Fatal errors.  Aborting LLDB's process using
   `llvm::report_fatal_error()` or `abort()` should be avoided at all
   costs.  It's acceptable to use `llvm_unreachable()
-  <http://llvm.org/doxygen/Support_2ErrorHandling_8h.html>`_ for
+  <https://llvm.org/doxygen/Support_2ErrorHandling_8h.html>`_ for
   actually unreachable code such as the default in an otherwise
   exhaustive switch statement.
 

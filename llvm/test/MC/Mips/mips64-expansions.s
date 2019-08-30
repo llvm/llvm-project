@@ -472,12 +472,12 @@ sym:
   lw $10, symbol($4)
 # CHECK: ld      $10, %got_disp(symbol)($gp) # encoding: [A,A,0x8a,0xdf]
 # CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK-FIXME: daddu   $10, $10, $4         # encoding: [0x2d,0x50,0x44,0x01]
+# CHECK: daddu   $10, $10, $4               # encoding: [0x2d,0x50,0x44,0x01]
 # CHECK: lw      $10, 0($10)                # encoding: [0x00,0x00,0x4a,0x8d]
   sw $10, symbol($9)
 # CHECK: ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
 # CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK-FIXME: daddu    $1, $1, $9          # encoding: [0x2d,0x08,0x29,0x00]
+# CHECK: daddu   $1, $1, $9                 # encoding: [0x2d,0x08,0x29,0x00]
 # CHECK: sw      $10, 0($1)                 # encoding: [0x00,0x00,0x2a,0xac]
 
   lw $8, sym+8

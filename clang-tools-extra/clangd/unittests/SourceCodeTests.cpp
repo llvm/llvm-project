@@ -11,9 +11,11 @@
 #include "SourceCode.h"
 #include "TestTU.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -503,6 +505,53 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
   CheckRange("d");
   CheckRange("e");
   CheckRange("f");
+}
+
+TEST(SourceCodeTests, HalfOpenFileRangePathologicalPreprocessor) {
+  const char *Case = R"cpp(
+#define MACRO while(1)
+    void test() {
+[[#include "Expand.inc"
+        br^eak]];
+    }
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
+  auto AST = TU.build();
+
+  const auto &Func = cast<FunctionDecl>(findDecl(AST, "test"));
+  const auto &Body = cast<CompoundStmt>(Func.getBody());
+  const auto &Loop = cast<WhileStmt>(*Body->child_begin());
+  llvm::Optional<SourceRange> Range = toHalfOpenFileRange(
+      AST.getSourceManager(), AST.getASTContext().getLangOpts(),
+      Loop->getSourceRange());
+  ASSERT_TRUE(Range) << "Failed to get file range";
+  EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getBegin()),
+            Test.llvm::Annotations::range().Begin);
+  EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getEnd()),
+            Test.llvm::Annotations::range().End);
+}
+
+TEST(SourceCodeTests, IncludeHashLoc) {
+  const char *Case = R"cpp(
+$foo^#include "foo.inc"
+#define HEADER "bar.inc"
+  $bar^#  include HEADER
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo.inc"] = "int foo;\n";
+  TU.AdditionalFiles["bar.inc"] = "int bar;\n";
+  auto AST = TU.build();
+  const auto& SM = AST.getSourceManager();
+
+  FileID Foo = SM.getFileID(findDecl(AST, "foo").getLocation());
+  EXPECT_EQ(SM.getFileOffset(includeHashLoc(Foo, SM)),
+            Test.llvm::Annotations::point("foo"));
+  FileID Bar = SM.getFileID(findDecl(AST, "bar").getLocation());
+  EXPECT_EQ(SM.getFileOffset(includeHashLoc(Bar, SM)),
+            Test.llvm::Annotations::point("bar"));
 }
 
 } // namespace

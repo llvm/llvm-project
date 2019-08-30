@@ -193,6 +193,11 @@ static cl::opt<bool> ClRecover(
     cl::desc("Enable recovery mode (continue-after-error)."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClInsertVersionCheck(
+    "asan-guard-against-version-mismatch",
+    cl::desc("Guard against compiler/runtime version mismatch."),
+    cl::Hidden, cl::init(true));
+
 // This flag may need to be replaced with -f[no-]asan-reads.
 static cl::opt<bool> ClInstrumentReads("asan-instrument-reads",
                                        cl::desc("instrument read instructions"),
@@ -2426,8 +2431,9 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
 
   // Create a module constructor. A destructor is created lazily because not all
   // platforms, and not all modules need it.
+  std::string AsanVersion = std::to_string(GetAsanVersion(M));
   std::string VersionCheckName =
-      kAsanVersionCheckNamePrefix + std::to_string(GetAsanVersion(M));
+      ClInsertVersionCheck ? (kAsanVersionCheckNamePrefix + AsanVersion) : "";
   std::tie(AsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
       M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
       /*InitArgs=*/{}, VersionCheckName);

@@ -9,7 +9,10 @@
 #include "AST.h"
 #include "Annotations.h"
 #include "ClangdUnit.h"
+#include "Compiler.h"
+#include "Diagnostics.h"
 #include "SourceCode.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/TokenKinds.h"
@@ -242,6 +245,21 @@ TEST(ClangdUnitTest, NoCrashOnTokensWithTidyCheck) {
   EXPECT_EQ(T.expandedTokens().back().kind(), tok::eof);
   // Check the token before 'eof'.
   EXPECT_EQ(T.expandedTokens().drop_back().back().text(SM), "}");
+}
+
+TEST(ClangdUnitTest, CanBuildInvocationWithUnknownArgs) {
+  // Unknown flags should not prevent a build of compiler invocation.
+  ParseInputs Inputs;
+  Inputs.FS = buildTestFS({{testPath("foo.cpp"), "void test() {}"}});
+  Inputs.CompileCommand.CommandLine = {"clang", "-fsome-unknown-flag",
+                                       testPath("foo.cpp")};
+  IgnoreDiagnostics IgnoreDiags;
+  EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
+
+  // Unknown forwarded to -cc1 should not a failure either.
+  Inputs.CompileCommand.CommandLine = {
+      "clang", "-Xclang", "-fsome-unknown-flag", testPath("foo.cpp")};
+  EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
 }
 
 } // namespace

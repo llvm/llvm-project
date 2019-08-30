@@ -1759,6 +1759,77 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q,
   return nullptr;
 }
 
+/// Check that the Op1 is in expected form, i.e.:
+///   %Agg = tail call { i4, i1 } @llvm.[us]mul.with.overflow.i4(i4 %X, i4 %???)
+///   %Op1 = extractvalue { i4, i1 } %Agg, 1
+static bool omitCheckForZeroBeforeMulWithOverflowInternal(Value *Op1,
+                                                          Value *X) {
+  auto *Extract = dyn_cast<ExtractValueInst>(Op1);
+  // We should only be extracting the overflow bit.
+  if (!Extract || !Extract->getIndices().equals(1))
+    return false;
+  Value *Agg = Extract->getAggregateOperand();
+  // This should be a multiplication-with-overflow intrinsic.
+  if (!match(Agg, m_CombineOr(m_Intrinsic<Intrinsic::umul_with_overflow>(),
+                              m_Intrinsic<Intrinsic::smul_with_overflow>())))
+    return false;
+  // One of its multipliers should be the value we checked for zero before.
+  if (!match(Agg, m_CombineOr(m_Argument<0>(m_Specific(X)),
+                              m_Argument<1>(m_Specific(X)))))
+    return false;
+  return true;
+}
+
+/// The @llvm.[us]mul.with.overflow intrinsic could have been folded from some
+/// other form of check, e.g. one that was using division; it may have been
+/// guarded against division-by-zero. We can drop that check now.
+/// Look for:
+///   %Op0 = icmp ne i4 %X, 0
+///   %Agg = tail call { i4, i1 } @llvm.[us]mul.with.overflow.i4(i4 %X, i4 %???)
+///   %Op1 = extractvalue { i4, i1 } %Agg, 1
+///   %??? = and i1 %Op0, %Op1
+/// We can just return  %Op1
+static Value *omitCheckForZeroBeforeMulWithOverflow(Value *Op0, Value *Op1) {
+  ICmpInst::Predicate Pred;
+  Value *X;
+  if (!match(Op0, m_ICmp(Pred, m_Value(X), m_Zero())) ||
+      Pred != ICmpInst::Predicate::ICMP_NE)
+    return nullptr;
+  // Is Op1 in expected form?
+  if (!omitCheckForZeroBeforeMulWithOverflowInternal(Op1, X))
+    return nullptr;
+  // Can omit 'and', and just return the overflow bit.
+  return Op1;
+}
+
+/// The @llvm.[us]mul.with.overflow intrinsic could have been folded from some
+/// other form of check, e.g. one that was using division; it may have been
+/// guarded against division-by-zero. We can drop that check now.
+/// Look for:
+///   %Op0 = icmp eq i4 %X, 0
+///   %Agg = tail call { i4, i1 } @llvm.[us]mul.with.overflow.i4(i4 %X, i4 %???)
+///   %Op1 = extractvalue { i4, i1 } %Agg, 1
+///   %NotOp1 = xor i1 %Op1, true
+///   %or = or i1 %Op0, %NotOp1
+/// We can just return  %NotOp1
+static Value *omitCheckForZeroBeforeInvertedMulWithOverflow(Value *Op0,
+                                                            Value *NotOp1) {
+  ICmpInst::Predicate Pred;
+  Value *X;
+  if (!match(Op0, m_ICmp(Pred, m_Value(X), m_Zero())) ||
+      Pred != ICmpInst::Predicate::ICMP_EQ)
+    return nullptr;
+  // We expect the other hand of an 'or' to be a 'not'.
+  Value *Op1;
+  if (!match(NotOp1, m_Not(m_Value(Op1))))
+    return nullptr;
+  // Is Op1 in expected form?
+  if (!omitCheckForZeroBeforeMulWithOverflowInternal(Op1, X))
+    return nullptr;
+  // Can omit 'and', and just return the inverted overflow bit.
+  return NotOp1;
+}
+
 /// Given operands for an And, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -1812,6 +1883,14 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
         (~(*Mask)).shl(*ShAmt).isNullValue())
       return Op0;
   }
+
+  // If we have a multiplication overflow check that is being 'and'ed with a
+  // check that one of the multipliers is not zero, we can omit the 'and', and
+  // only keep the overflow check.
+  if (Value *V = omitCheckForZeroBeforeMulWithOverflow(Op0, Op1))
+    return V;
+  if (Value *V = omitCheckForZeroBeforeMulWithOverflow(Op1, Op0))
+    return V;
 
   // A & (-A) = A if A is a power of two or zero.
   if (match(Op0, m_Neg(m_Specific(Op1))) ||
@@ -1985,6 +2064,14 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Op0;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, false))
+    return V;
+
+  // If we have a multiplication overflow check that is being 'and'ed with a
+  // check that one of the multipliers is not zero, we can omit the 'and', and
+  // only keep the overflow check.
+  if (Value *V = omitCheckForZeroBeforeInvertedMulWithOverflow(Op0, Op1))
+    return V;
+  if (Value *V = omitCheckForZeroBeforeInvertedMulWithOverflow(Op1, Op0))
     return V;
 
   // Try some generic simplifications for associative operations.
@@ -5222,14 +5309,16 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
 /// If we have a pre-simplified value in 'SimpleV', that is forcibly used to
 /// replace the instruction 'I'. Otherwise, we simply add 'I' to the list of
 /// instructions to process and attempt to simplify it using
-/// InstructionSimplify.
+/// InstructionSimplify. Recursively visited users which could not be
+/// simplified themselves are to the optional UnsimplifiedUsers set for
+/// further processing by the caller.
 ///
 /// This routine returns 'true' only when *it* simplifies something. The passed
 /// in simplified value does not count toward this.
-static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
-                                              const TargetLibraryInfo *TLI,
-                                              const DominatorTree *DT,
-                                              AssumptionCache *AC) {
+static bool replaceAndRecursivelySimplifyImpl(
+    Instruction *I, Value *SimpleV, const TargetLibraryInfo *TLI,
+    const DominatorTree *DT, AssumptionCache *AC,
+    SmallSetVector<Instruction *, 8> *UnsimplifiedUsers = nullptr) {
   bool Simplified = false;
   SmallSetVector<Instruction *, 8> Worklist;
   const DataLayout &DL = I->getModule()->getDataLayout();
@@ -5259,8 +5348,11 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
 
     // See if this instruction simplifies.
     SimpleV = SimplifyInstruction(I, {DL, TLI, DT, AC});
-    if (!SimpleV)
+    if (!SimpleV) {
+      if (UnsimplifiedUsers)
+        UnsimplifiedUsers->insert(I);
       continue;
+    }
 
     Simplified = true;
 
@@ -5286,16 +5378,17 @@ bool llvm::recursivelySimplifyInstruction(Instruction *I,
                                           const TargetLibraryInfo *TLI,
                                           const DominatorTree *DT,
                                           AssumptionCache *AC) {
-  return replaceAndRecursivelySimplifyImpl(I, nullptr, TLI, DT, AC);
+  return replaceAndRecursivelySimplifyImpl(I, nullptr, TLI, DT, AC, nullptr);
 }
 
-bool llvm::replaceAndRecursivelySimplify(Instruction *I, Value *SimpleV,
-                                         const TargetLibraryInfo *TLI,
-                                         const DominatorTree *DT,
-                                         AssumptionCache *AC) {
+bool llvm::replaceAndRecursivelySimplify(
+    Instruction *I, Value *SimpleV, const TargetLibraryInfo *TLI,
+    const DominatorTree *DT, AssumptionCache *AC,
+    SmallSetVector<Instruction *, 8> *UnsimplifiedUsers) {
   assert(I != SimpleV && "replaceAndRecursivelySimplify(X,X) is not valid!");
   assert(SimpleV && "Must provide a simplified value.");
-  return replaceAndRecursivelySimplifyImpl(I, SimpleV, TLI, DT, AC);
+  return replaceAndRecursivelySimplifyImpl(I, SimpleV, TLI, DT, AC,
+                                           UnsimplifiedUsers);
 }
 
 namespace llvm {

@@ -44,33 +44,33 @@ _start:
  movw r2, :lower16:label2 + 4 - .
  movw r3, :lower16:label3 - .
  movw r4, :lower16:label3 + 0x103c - .
-// 0x20000 - 0x11028 = :lower16:0xefd8 (61400)
-// CHECK: 11028:       movw    r0, #61400
-// 0x20004 = 0x1102c = :lower16:0xefd8 (61400)
-// CHECK: 1102c:       movw    r1, #61400
-// 0x20008 - 0x11030 + 4 = :lower16:0xefdc (61404)
-// CHECK: 11030:       movw    r2, #61404
-// 0x2fffc - 0x11034 = :lower16:0x1efc8 (61384)
-// CHECK: 11034:       movw    r3, #61384
-// 0x2fffc - 0x11038 +0x103c :lower16:0x20000 (0)
-// CHECK: 11038:       movw    r4, #0
+// 0x20000 - . = 61188
+// CHECK: 110fc:       movw    r0, #61188
+// 0x20004 - . = 61188
+// CHECK: 11100:       movw    r1, #61188
+// 0x20008 - . + 4 = 61192
+// CHECK: 11104:       movw    r2, #61192
+// 0x2fffc - . = 61172
+// CHECK: 11108:       movw    r3, #61172
+// 0x2fffc - . +0x103c = 65324
+// CHECK: 1110c:       movw    r4, #65324
 
 .section .R_ARM_MOVT_PREL, "ax",%progbits
  movt r0, :upper16:label - .
  movt r1, :upper16:label1 - .
  movt r2, :upper16:label2 + 0x4 - .
  movt r3, :upper16:label3 - .
- movt r4, :upper16:label3 + 0x1050 - .
-// 0x20000 - 0x1103c = :upper16:0xefc4  = 0
-// CHECK: 1103c:       movt    r0, #0
-// 0x20004 - 0x11040 = :upper16:0xefc0 = 0
-// CHECK: 11040:       movt    r1, #0
-// 0x20008 - 0x11044 + 4 = :upper16:0xefc8 = 0
-// CHECK: 11044:       movt    r2, #0
-// 0x2fffc - 0x11048 = :upper16:0x1efb4 = 1
-// CHECK: 11048:       movt    r3, #1
-// 0x2fffc - 0x1104c + 0x1050 = :upper16:0x20000 = 2
-// CHECK: 1104c:       movt    r4, #2
+ movt r4, :upper16:label3 + 0x1120 - .
+// 0x20000 - . = :upper16:0xeef0  = 0
+// CHECK: 11110:       movt    r0, #0
+// 0x20004 - . = :upper16:0xeef0 = 0
+// CHECK: 11114:       movt    r1, #0
+// 0x20008 - . + 4 = :upper16:0xeef4 = 0
+// CHECK: 11118:       movt    r2, #0
+// 0x2fffc - . = :upper16:0x1eee0 = 1
+// CHECK: 1111c:       movt    r3, #1
+// 0x2fffc - . + 0x1120 = :upper16:0x20000 = 2
+// CHECK: 11120:       movt    r4, #1
  .section .destination, "aw",%progbits
  .balign 65536
 // 0x20000

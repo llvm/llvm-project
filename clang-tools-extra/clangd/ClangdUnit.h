@@ -25,6 +25,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -76,10 +77,11 @@ public:
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
   build(std::unique_ptr<clang::CompilerInvocation> CI,
+        llvm::ArrayRef<Diag> CompilerInvocationDiags,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
-        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const SymbolIndex *Index,
-        const ParseOptions &Opts);
+        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+        const SymbolIndex *Index, const ParseOptions &Opts);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);
@@ -174,6 +176,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
 /// result of calling buildPreamble.
 llvm::Optional<ParsedAST>
 buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
+         llvm::ArrayRef<Diag> CompilerInvocationDiags,
          const ParseInputs &Inputs,
          std::shared_ptr<const PreambleData> Preamble);
 

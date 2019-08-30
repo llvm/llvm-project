@@ -223,8 +223,8 @@ public:
                            uint32_t addr_byte_size) = 0;
 
   /// Return a new persistent variable name with the specified prefix.
-  virtual ConstString GetNextPersistentVariableName(Target &target,
-                                                    llvm::StringRef prefix) = 0;
+  ConstString GetNextPersistentVariableName(Target &target,
+                                            llvm::StringRef prefix);
 
   virtual llvm::StringRef
   GetPersistentVariablePrefix(bool is_error = false) const = 0;

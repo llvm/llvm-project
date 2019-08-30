@@ -568,7 +568,15 @@ private:
 /// NOTE: The mechanics of adding a new "concrete" abstract attribute are
 ///       described in the file comment.
 struct Attributor {
-  Attributor(InformationCache &InfoCache) : InfoCache(InfoCache) {}
+  /// Constructor
+  ///
+  /// \param InformationCache Cache to hold various information accessible for
+  ///                         the abstract attributes.
+  /// \param DepRecomputeInterval Number of iterations until the dependences
+  ///                             between abstract attributes are recomputed.
+  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval)
+      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval) {}
+
   ~Attributor() { DeleteContainerPointers(AllAbstractAttributes); }
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
@@ -635,8 +643,7 @@ struct Attributor {
   /// `getAAFor` to explicitly record true dependences through this method.
   void recordDependence(const AbstractAttribute &FromAA,
                         const AbstractAttribute &ToAA) {
-    QueryMap[const_cast<AbstractAttribute *>(&FromAA)].insert(
-        const_cast<AbstractAttribute *>(&ToAA));
+    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
   }
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
@@ -674,6 +681,15 @@ struct Attributor {
   /// various places.
   void identifyDefaultAbstractAttributes(
       Function &F, DenseSet<const char *> *Whitelist = nullptr);
+
+  /// Record that \p I is deleted after information was manifested.
+  void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
+
+  /// Record that \p BB is deleted after information was manifested.
+  void deleteAfterManifest(BasicBlock &BB) { ToBeDeletedBlocks.insert(&BB); }
+
+  /// Record that \p F is deleted after information was manifested.
+  void deleteAfterManifest(Function &F) { ToBeDeletedFunctions.insert(&F); }
 
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
@@ -759,12 +775,24 @@ private:
   /// to the getAAFor<...>(...) method.
   ///{
   using QueryMapTy =
-      MapVector<AbstractAttribute *, SetVector<AbstractAttribute *>>;
+      MapVector<const AbstractAttribute *, SetVector<AbstractAttribute *>>;
   QueryMapTy QueryMap;
   ///}
 
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
+
+  /// Number of iterations until the dependences between abstract attributes are
+  /// recomputed.
+  const unsigned DepRecomputeInterval;
+
+  /// Functions, blocks, and instructions we delete after manifest is done.
+  ///
+  ///{
+  SmallPtrSet<Function *, 8> ToBeDeletedFunctions;
+  SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
+  SmallPtrSet<Instruction *, 8> ToBeDeletedInsts;
+  ///}
 };
 
 /// An interface to query the internal state of an abstract attribute.
@@ -920,6 +948,13 @@ struct IntegerState : public AbstractState {
   ///       \p R is not dependent on additional assumed state.
   IntegerState operator^=(const IntegerState &R) {
     takeAssumedMinimum(R.Assumed);
+    return *this;
+  }
+
+  /// "Clamp" this state with \p R. The result is the maximum of the known
+  /// information but not more than what was assumed before.
+  IntegerState operator+=(const IntegerState &R) {
+    takeKnownMaximum(R.Known);
     return *this;
   }
 
@@ -1425,6 +1460,13 @@ struct DerefState : AbstractState {
   DerefState operator^=(const DerefState &R) {
     DerefBytesState ^= R.DerefBytesState;
     GlobalState ^= R.GlobalState;
+    return *this;
+  }
+
+  /// See IntegerState::operator+=
+  DerefState operator+=(const DerefState &R) {
+    DerefBytesState += R.DerefBytesState;
+    GlobalState += R.GlobalState;
     return *this;
   }
 

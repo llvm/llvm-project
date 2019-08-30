@@ -186,8 +186,6 @@ define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag
 ; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    multu $4, $5
 ; MIPS32-NEXT:    mfhi $2
-; MIPS32-NEXT:    ori $3, $zero, 0
-; MIPS32-NEXT:    xor $2, $2, $3
 ; MIPS32-NEXT:    sltu $2, $zero, $2
 ; MIPS32-NEXT:    ori $3, $zero, 1
 ; MIPS32-NEXT:    and $2, $2, $3

@@ -239,6 +239,11 @@ bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   return true;
 }
 
+bool MmapFixedSuperNoReserve(uptr fixed_addr, uptr size, const char *name) {
+  // FIXME: Windows support large pages too. Might be worth checking
+  return MmapFixedNoReserve(fixed_addr, size, name);
+}
+
 // Memory space mapped by 'MmapFixedOrDie' must have been reserved by
 // 'MmapFixedNoAccess'.
 void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name) {
