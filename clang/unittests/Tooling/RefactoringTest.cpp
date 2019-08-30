@@ -1360,7 +1360,7 @@ public:
         ResultHandler(std::move(ResultHandler)) {}
 
   bool runOver(StringRef Code) {
-    return runToolOnCode(new TestAction(this), Code);
+    return runToolOnCode(std::make_unique<TestAction>(this), Code);
   }
 
   bool succeeded() const { return Success; }
