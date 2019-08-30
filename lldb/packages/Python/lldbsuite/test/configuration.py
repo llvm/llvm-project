@@ -112,6 +112,9 @@ lldb_platform_working_dir = None
 # The base directory in which the tests are being built.
 test_build_dir = None
 
+# The clang module cache directory used by lldb.
+module_cache_dir = None
+
 # The only directory to scan for tests. If multiple test directories are
 # specified, and an exclusive test subdirectory is specified, the latter option
 # takes precedence.

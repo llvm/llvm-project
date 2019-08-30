@@ -85,6 +85,7 @@ add_subdirectory(docs)
 
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
 if(LLDB_INCLUDE_TESTS)
+  set(LLDB_TEST_BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
   # Set the path to the default lldb test executable.
   set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")

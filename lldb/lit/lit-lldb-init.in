@@ -3,3 +3,4 @@ env DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@' LD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@' SI
 settings set symbols.enable-external-lookup false
 settings set plugin.process.gdb-remote.packet-timeout 60
 settings set interpreter.echo-comment-commands false
+settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB@"

@@ -55,7 +55,7 @@ def get_dotest_invocation():
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
     if fpath == None:
-      return False
+        return False
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
@@ -243,7 +243,7 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
 
     # Only print the args if being verbose.
-    if args.v and not args.q:
+    if args.v:
         print(get_dotest_invocation())
 
     if args.h:
@@ -274,10 +274,10 @@ def parseOptionsAndInitTestdirs():
                     break
 
     if args.dsymutil:
-      os.environ['DSYMUTIL'] = args.dsymutil
+        os.environ['DSYMUTIL'] = args.dsymutil
     elif platform_system == 'Darwin':
-      os.environ['DSYMUTIL'] = seven.get_command_output(
-          'xcrun -find -toolchain default dsymutil')
+        os.environ['DSYMUTIL'] = seven.get_command_output(
+            'xcrun -find -toolchain default dsymutil')
 
     if args.filecheck:
         # The lldb-dotest script produced by the CMake build passes in a path
@@ -433,6 +433,11 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
+    if args.module_cache_dir:
+        configuration.module_cache_dir = args.module_cache_dir
+    else:
+        configuration.module_cache_dir = os.path.join(configuration.test_build_dir,
+                                                      'module-cache-lldb')
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -876,16 +881,16 @@ def canRunWatchpointTests():
 
     platform = lldbplatformutil.getPlatform()
     if platform == "netbsd":
-      if os.geteuid() == 0:
-        return True, "root can always write dbregs"
-      try:
-        output = subprocess.check_output(["/sbin/sysctl", "-n",
-          "security.models.extensions.user_set_dbregs"]).decode().strip()
-        if output == "1":
-          return True, "security.models.extensions.user_set_dbregs enabled"
-      except subprocess.CalledProcessError:
-        pass
-      return False, "security.models.extensions.user_set_dbregs disabled"
+        if os.geteuid() == 0:
+            return True, "root can always write dbregs"
+        try:
+            output = subprocess.check_output(["/sbin/sysctl", "-n",
+              "security.models.extensions.user_set_dbregs"]).decode().strip()
+            if output == "1":
+                return True, "security.models.extensions.user_set_dbregs enabled"
+        except subprocess.CalledProcessError:
+            pass
+        return False, "security.models.extensions.user_set_dbregs disabled"
     return True, "watchpoint support available"
 
 def checkWatchpointSupport():

@@ -53,8 +53,6 @@ set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
-  --build-dir
-  ${CMAKE_BINARY_DIR}/lldb-test-build.noindex
   -S nm
   -u CXXFLAGS
   -u CFLAGS
