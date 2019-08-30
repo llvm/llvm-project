@@ -69,9 +69,9 @@ void lld::wasm::markLive() {
   if (!config->entry.empty())
     enqueue(symtab->find(config->entry));
 
-  // We need to preserve any exported symbol
+  // We need to preserve any no-strip or exported symbol
   for (Symbol *sym : symtab->getSymbols())
-    if (sym->isExported())
+    if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 
   // For relocatable output, we need to preserve all the ctor functions

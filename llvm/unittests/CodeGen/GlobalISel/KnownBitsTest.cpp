@@ -86,3 +86,19 @@ TEST_F(GISelMITest, TestKnownBits) {
   APInt Zeroes = Info.getKnownZeroes(SrcReg);
   EXPECT_EQ(Known.Zero, Zeroes);
 }
+
+TEST_F(GISelMITest, TestSignBitIsZero) {
+  if (!TM)
+    return;
+
+  const LLT S32 = LLT::scalar(32);
+  auto SignBit = B.buildConstant(S32, 0x8000000);
+  auto Zero = B.buildConstant(S32, 0);
+
+  GISelKnownBits KnownBits(*MF);
+
+  EXPECT_TRUE(KnownBits.signBitIsZero(Zero.getReg(0)));
+  EXPECT_FALSE(KnownBits.signBitIsZero(Zero.getReg(0)));
+  EXPECT_FALSE(KnownBits.signBitIsZero(SignBit.getReg(0)));
+  EXPECT_TRUE(KnownBits.signBitIsZero(SignBit.getReg(0)));
+}

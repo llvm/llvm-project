@@ -1311,8 +1311,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
         // Add any DBG_VALUE instructions necessitated by spills.
         for (auto &TR : Transfers)
-          MBB->insertAfter(MachineBasicBlock::iterator(*TR.TransferInst),
-                           TR.DebugInst);
+          MBB->insertAfterBundle(TR.TransferInst->getIterator(), TR.DebugInst);
         Transfers.clear();
 
         LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,

@@ -61,8 +61,9 @@ public:
 
 // Test that marking s.x as live would also make s live.
 TEST(SymbolReaper, SuperRegionLiveness) {
-  EXPECT_TRUE(tooling::runToolOnCode(new SuperRegionLivenessAction,
-                                     "void foo() { struct S { int x; } s; }"));
+  EXPECT_TRUE(
+      tooling::runToolOnCode(std::make_unique<SuperRegionLivenessAction>(),
+                             "void foo() { struct S { int x; } s; }"));
 }
 
 } // namespace

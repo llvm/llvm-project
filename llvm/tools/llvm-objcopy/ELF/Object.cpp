@@ -1161,11 +1161,12 @@ void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   Twine Prefix = Twine("_binary_") + SanitizedFilename;
 
   SymTab->addSymbol(Prefix + "_start", STB_GLOBAL, STT_NOTYPE, &DataSection,
-                    /*Value=*/0, STV_DEFAULT, 0, 0);
+                    /*Value=*/0, NewSymbolVisibility, 0, 0);
   SymTab->addSymbol(Prefix + "_end", STB_GLOBAL, STT_NOTYPE, &DataSection,
-                    /*Value=*/DataSection.Size, STV_DEFAULT, 0, 0);
+                    /*Value=*/DataSection.Size, NewSymbolVisibility, 0, 0);
   SymTab->addSymbol(Prefix + "_size", STB_GLOBAL, STT_NOTYPE, nullptr,
-                    /*Value=*/DataSection.Size, STV_DEFAULT, SHN_ABS, 0);
+                    /*Value=*/DataSection.Size, NewSymbolVisibility, SHN_ABS,
+                    0);
 }
 
 std::unique_ptr<Object> BinaryELFBuilder::build() {
@@ -1610,7 +1611,7 @@ Writer::~Writer() {}
 Reader::~Reader() {}
 
 std::unique_ptr<Object> BinaryReader::create() const {
-  return BinaryELFBuilder(MInfo.EMachine, MemBuf).build();
+  return BinaryELFBuilder(MInfo.EMachine, MemBuf, NewSymbolVisibility).build();
 }
 
 Expected<std::vector<IHexRecord>> IHexReader::parse() const {

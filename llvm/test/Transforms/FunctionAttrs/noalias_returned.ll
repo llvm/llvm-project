@@ -1,4 +1,4 @@
-; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=8 < %s | FileCheck %s
+; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=5 < %s | FileCheck %s
 
 ; TEST 1 - negative.
 
@@ -142,8 +142,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 ; TEST 9
 ; Simple Argument Test
 define internal void @test9(i8* %a, i8* %b) {
-; FIXME: missing noalias
-; CHECK: define internal void @test9(i8* %a, i8* %b)
+; CHECK: define internal void @test9(i8* noalias %a, i8* %b)
   ret void
 }
 define void @test9_helper(i8* %a, i8* %b) {
@@ -156,12 +155,18 @@ define void @test9_helper(i8* %a, i8* %b) {
 ; TEST 10
 ; Simple CallSite Test
 
-declare void @test10_helper(i8* %a)
+declare void @test10_helper_1(i8* %a)
+define void @test10_helper_2(i8* noalias %a) {
+  ret void
+}
 define void @test10(i8* noalias %a) {
 ; CHECK: define void @test10(i8* noalias %a)
 ; FIXME: missing noalias
-; CHECK-NEXT:   tail call void @test10_helper(i8* %a)
-  tail call void @test10_helper(i8* %a)
+; CHECK-NEXT:   tail call void @test10_helper_1(i8* %a)
+  tail call void @test10_helper_1(i8* %a)
+
+; CHECK-NEXT:   tail call void @test10_helper_2(i8* noalias %a)
+  tail call void @test10_helper_2(i8* %a)
   ret void
 }
 

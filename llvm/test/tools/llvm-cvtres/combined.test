@@ -34,6 +34,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 57
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -57,6 +59,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 808
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -75,6 +79,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 808
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -98,6 +104,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 48
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -116,6 +124,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 46
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -139,6 +149,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 108
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -162,6 +174,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 24
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:      Language: (ID 2052) [
@@ -175,6 +189,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 24
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -193,6 +209,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 24
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]
@@ -216,6 +234,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 54
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:      Language: (ID 2052) [
@@ -229,6 +249,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 67
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:      Language: (ID 4103) [
@@ -242,6 +264,8 @@ CHECK-NEXT:          DataRVA: 0x0
 CHECK-NEXT:          DataSize: 66
 CHECK-NEXT:          Codepage: 0
 CHECK-NEXT:          Reserved: 0
+CHECK-NEXT:          Data (
+CHECK:               )
 CHECK-NEXT:        ]
 CHECK-NEXT:      ]
 CHECK-NEXT:    ]

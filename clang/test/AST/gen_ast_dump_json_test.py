@@ -20,7 +20,7 @@ def normalize(dict_var):
                     normalize(e)
         elif type(v) is unicode:
             st = v.encode('utf-8')
-            if re.match(r"0x[0-9A-Fa-f]+", v):
+            if v != "0x0" and re.match(r"0x[0-9A-Fa-f]+", v):
                 dict_var[k] = u'0x{{.*}}'
             elif os.path.isfile(v):
                 dict_var[k] = u'{{.*}}'

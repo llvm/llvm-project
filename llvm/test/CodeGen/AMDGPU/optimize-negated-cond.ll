@@ -3,11 +3,11 @@
 ; GCN-LABEL: {{^}}negated_cond:
 ; GCN: BB0_1:
 ; GCN:   v_cmp_eq_u32_e64 [[CC:[^,]+]],
-; GCN: BB0_2:
+; GCN: BB0_3:
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_cmp
 ; GCN:   s_andn2_b64 vcc, exec, [[CC]]
-; GCN:   s_cbranch_vccnz BB0_4
+; GCN:   s_cbranch_vccnz BB0_2
 define amdgpu_kernel void @negated_cond(i32 addrspace(1)* %arg1) {
 bb:
   br label %bb1
@@ -36,11 +36,11 @@ bb4:
 
 ; GCN-LABEL: {{^}}negated_cond_dominated_blocks:
 ; GCN:   v_cmp_eq_u32_e64 [[CC:[^,]+]],
-; GCN: BB1_1:
+; GCN: %bb4
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_cmp
 ; GCN:   s_andn2_b64 vcc, exec, [[CC]]
-; GCN:   s_cbranch_vccz BB1_3
+; GCN:   s_cbranch_vccnz BB1_1
 define amdgpu_kernel void @negated_cond_dominated_blocks(i32 addrspace(1)* %arg1) {
 bb:
   br label %bb2

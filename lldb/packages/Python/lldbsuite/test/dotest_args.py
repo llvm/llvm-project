@@ -147,6 +147,11 @@ def create_parser():
         metavar='Test build directory',
         default='lldb-test-build.noindex',
         help='The root build directory for the tests. It will be removed before running.')
+    group.add_argument(
+        '--module-cache-dir',
+        dest='module_cache_dir',
+        metavar='The clang module cache directory used by LLDB',
+        help='The clang module cache directory used by LLDB. This is not the one used by the makefiles. Defaults to <test build directory>/module-cache-lldb.')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')
@@ -198,10 +203,6 @@ def create_parser():
 
     # Test results support.
     group = parser.add_argument_group('Test results options')
-    group.add_argument(
-        '--curses',
-        action='store_true',
-        help='Shortcut for specifying test results using the curses formatter')
     group.add_argument(
         '--results-file',
         action='store',

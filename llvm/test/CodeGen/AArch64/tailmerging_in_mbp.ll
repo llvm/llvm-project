@@ -1,9 +1,8 @@
 ; RUN: llc <%s -mtriple=aarch64-eabi -verify-machine-dom-info | FileCheck %s
 
 ; CHECK-LABEL: test:
-; CHECK:       LBB0_7:
-; CHECK:         b.hi	
-; CHECK-NEXT:    b	
+; CHECK-LABEL: %cond.false12.i
+; CHECK:         b.gt	
 ; CHECK-NEXT:  LBB0_8:
 ; CHECK-NEXT:    mov	 x8, x9
 ; CHECK-NEXT:  LBB0_9:

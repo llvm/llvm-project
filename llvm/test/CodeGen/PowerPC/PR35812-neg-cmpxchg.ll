@@ -8,14 +8,12 @@
 @str.1 = private unnamed_addr constant [59 x i8] c"FAILED: __atomic_compare_exchange_n() set the wrong value.\00"
 @str.2 = private unnamed_addr constant [7 x i8] c"PASSED\00"
 
-define signext i32 @main() {
+define signext i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    li 3, -32477
 ; CHECK-NEXT:    li 6, 234
 ; CHECK-NEXT:    addi 5, 1, 46
@@ -72,8 +70,6 @@ define signext i32 @main() {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -48(1)
-; CHECK-P7-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-P7-NEXT:    .cfi_offset lr, 16
 ; CHECK-P7-NEXT:    li 3, -32477
 ; CHECK-P7-NEXT:    lis 5, 0
 ; CHECK-P7-NEXT:    addi 4, 1, 46

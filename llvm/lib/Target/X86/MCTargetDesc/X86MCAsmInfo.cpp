@@ -163,5 +163,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
 
   TextAlignFillValue = 0x90;
 
+  AllowAtInName = true;
+
   UseIntegratedAssembler = true;
 }

@@ -154,18 +154,10 @@ inline std::unique_ptr<FrontendActionFactory> newFrontendActionFactory(
 ///                         clang modules.
 ///
 /// \return - True if 'ToolAction' was successfully executed.
-bool runToolOnCode(FrontendAction *ToolAction, const Twine &Code,
+bool runToolOnCode(std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
                    const Twine &FileName = "input.cc",
                    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                        std::make_shared<PCHContainerOperations>());
-
-inline bool
-runToolOnCode(std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
-              const Twine &FileName = "input.cc",
-              std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                  std::make_shared<PCHContainerOperations>()) {
-  return runToolOnCode(ToolAction.release(), Code, FileName, PCHContainerOps);
-}
 
 /// The first part of the pair is the filename, the second part the
 /// file-content.
@@ -185,43 +177,21 @@ using FileContentMappings = std::vector<std::pair<std::string, std::string>>;
 ///
 /// \return - True if 'ToolAction' was successfully executed.
 bool runToolOnCodeWithArgs(
-    FrontendAction *ToolAction, const Twine &Code,
+    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
     const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
     const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings());
 
-inline bool runToolOnCodeWithArgs(
-    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
-    const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
-    const Twine &ToolName = "clang-tool",
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-        std::make_shared<PCHContainerOperations>(),
-    const FileContentMappings &VirtualMappedFiles = FileContentMappings()) {
-  return runToolOnCodeWithArgs(ToolAction.release(), Code, Args, FileName,
-                               ToolName, PCHContainerOps, VirtualMappedFiles);
-}
-
 // Similar to the overload except this takes a VFS.
 bool runToolOnCodeWithArgs(
-    FrontendAction *ToolAction, const Twine &Code,
+    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
     const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>());
-
-inline bool runToolOnCodeWithArgs(
-    std::unique_ptr<FrontendAction> ToolAction, const Twine &Code,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-    const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
-    const Twine &ToolName = "clang-tool",
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-        std::make_shared<PCHContainerOperations>()) {
-  return runToolOnCodeWithArgs(ToolAction.release(), Code, VFS, Args, FileName,
-                               ToolName, PCHContainerOps);
-}
 
 /// Builds an AST for 'Code'.
 ///
@@ -265,22 +235,15 @@ public:
   /// uses its binary name (CommandLine[0]) to locate its builtin headers.
   /// Callers have to ensure that they are installed in a compatible location
   /// (see clang driver implementation) or mapped in via mapVirtualFile.
-  /// \param FAction The action to be executed. Class takes ownership.
+  /// \param FAction The action to be executed.
   /// \param Files The FileManager used for the execution. Class does not take
   /// ownership.
   /// \param PCHContainerOps The PCHContainerOperations for loading and creating
   /// clang modules.
-  ToolInvocation(std::vector<std::string> CommandLine, FrontendAction *FAction,
-                 FileManager *Files,
-                 std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                     std::make_shared<PCHContainerOperations>());
-
   ToolInvocation(std::vector<std::string> CommandLine,
                  std::unique_ptr<FrontendAction> FAction, FileManager *Files,
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                     std::make_shared<PCHContainerOperations>())
-      : ToolInvocation(std::move(CommandLine), FAction.release(), Files,
-                       PCHContainerOps) {}
+                     std::make_shared<PCHContainerOperations>());
 
   /// Create a tool invocation.
   ///
@@ -349,12 +312,15 @@ public:
   /// clang modules.
   /// \param BaseFS VFS used for all underlying file accesses when running the
   /// tool.
+  /// \param Files The file manager to use for underlying file operations when
+  /// running the tool.
   ClangTool(const CompilationDatabase &Compilations,
             ArrayRef<std::string> SourcePaths,
             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                 std::make_shared<PCHContainerOperations>(),
             IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
-                llvm::vfs::getRealFileSystem());
+                llvm::vfs::getRealFileSystem(),
+            IntrusiveRefCntPtr<FileManager> Files = nullptr);
 
   ~ClangTool();
 

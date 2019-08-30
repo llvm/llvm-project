@@ -40,7 +40,7 @@ entry:
   ret double %0
 ; CHECK-P7: std 3,
 ; CHECK-P7: lfd 1,
-; CHECK: mtvsrd 1, 3
+; CHECK: mtfprd 1, 3
 }
 
 define zeroext i32 @f32toi32u(float %a) {
@@ -80,5 +80,5 @@ entry:
   ret double %0
 ; CHECK-P7: std 3,
 ; CHECK-P7: lfd 1,
-; CHECK: mtvsrd 1, 3
+; CHECK: mtfprd 1, 3
 }

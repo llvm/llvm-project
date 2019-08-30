@@ -33,7 +33,7 @@ Symbols:
     Section:  .text
     Value:    0x1001
     Size:     4
-    Visibility: STV_HIDDEN
+    Other:    [ STV_HIDDEN ]
     Binding:  STB_GLOBAL
   - Name:     foo
     Type:     STT_FUNC
@@ -45,7 +45,7 @@ Symbols:
     Section:  .data
     Value:    0x2002
     Size:     2
-    Visibility: STV_INTERNAL
+    Other:    [ STV_INTERNAL ]
     Binding:  STB_GLOBAL
   - Name:     bar
     Type:     STT_OBJECT

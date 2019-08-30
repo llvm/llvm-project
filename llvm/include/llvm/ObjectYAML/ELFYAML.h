@@ -54,8 +54,6 @@ LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_SHF)
 LLVM_YAML_STRONG_TYPEDEF(uint16_t, ELF_SHN)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STB)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STT)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STV)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STO)
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_ABI_FP)
@@ -108,11 +106,6 @@ struct Symbol {
   llvm::yaml::Hex64 Value;
   llvm::yaml::Hex64 Size;
   Optional<uint8_t> Other;
-
-  // This can be used to set any custom value for the st_other field
-  // when it is not possible to do so using the "Other" field, which only takes
-  // specific named constants.
-  Optional<uint8_t> StOther;
 };
 
 struct SectionOrType {
@@ -399,16 +392,6 @@ template <> struct ScalarEnumerationTraits<ELFYAML::ELF_STB> {
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_STT> {
   static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
-};
-
-template <>
-struct ScalarEnumerationTraits<ELFYAML::ELF_STV> {
-  static void enumeration(IO &IO, ELFYAML::ELF_STV &Value);
-};
-
-template <>
-struct ScalarBitSetTraits<ELFYAML::ELF_STO> {
-  static void bitset(IO &IO, ELFYAML::ELF_STO &Value);
 };
 
 template <>

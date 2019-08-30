@@ -196,7 +196,7 @@ Now we can combine all of the above into a small example program:
 
       int main(int argc, char **argv) {
         if (argc > 1) {
-          clang::tooling::runToolOnCode(new FindNamedClassAction, argv[1]);
+          clang::tooling::runToolOnCode(std::make_unique<FindNamedClassAction>(), argv[1]);
         }
       }
 

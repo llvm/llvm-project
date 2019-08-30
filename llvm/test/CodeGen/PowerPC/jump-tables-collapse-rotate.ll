@@ -3,14 +3,12 @@
 ; RUN:   -ppc-asm-full-reg-names -verify-machineinstrs %s | FileCheck %s
 
 ; Function Attrs: nounwind
-define dso_local zeroext i32 @test(i32 signext %l) {
+define dso_local zeroext i32 @test(i32 signext %l) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r3, r3, -1
 ; CHECK-NEXT:    cmplwi r3, 5
 ; CHECK-NEXT:    bgt cr0, .LBB0_3

@@ -78,6 +78,5 @@ unittest("ADTTests") {
     "TinyPtrVectorTest.cpp",
     "TripleTest.cpp",
     "TwineTest.cpp",
-    "VariadicFunctionTest.cpp",
   ]
 }

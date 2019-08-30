@@ -1,4 +1,4 @@
-; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=9 < %s | FileCheck %s
+; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=8 < %s | FileCheck %s
 
 define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
 entry:

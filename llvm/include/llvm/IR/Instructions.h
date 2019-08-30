@@ -5255,22 +5255,29 @@ public:
 
 /// A helper function that returns the pointer operand of a load or store
 /// instruction. Returns nullptr if not load or store.
-inline Value *getLoadStorePointerOperand(Value *V) {
+inline const Value *getLoadStorePointerOperand(const Value *V) {
   if (auto *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerOperand();
   if (auto *Store = dyn_cast<StoreInst>(V))
     return Store->getPointerOperand();
   return nullptr;
 }
+inline Value *getLoadStorePointerOperand(Value *V) {
+  return const_cast<Value *>(
+      getLoadStorePointerOperand(static_cast<const Value *>(V)));
+}
 
 /// A helper function that returns the pointer operand of a load, store
 /// or GEP instruction. Returns nullptr if not load, store, or GEP.
-inline Value *getPointerOperand(Value *V) {
+inline const Value *getPointerOperand(const Value *V) {
   if (auto *Ptr = getLoadStorePointerOperand(V))
     return Ptr;
   if (auto *Gep = dyn_cast<GetElementPtrInst>(V))
     return Gep->getPointerOperand();
   return nullptr;
+}
+inline Value *getPointerOperand(Value *V) {
+  return const_cast<Value *>(getPointerOperand(static_cast<const Value *>(V)));
 }
 
 /// A helper function that returns the alignment of load or store instruction.

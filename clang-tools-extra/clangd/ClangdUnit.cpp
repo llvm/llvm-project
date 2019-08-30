@@ -22,6 +22,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -32,6 +33,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
@@ -101,6 +103,28 @@ protected:
 
 private:
   std::vector<Decl *> TopLevelDecls;
+};
+
+// CollectMainFileMacroExpansions and CollectMainFileMacros are two different
+// classes as CollectMainFileMacroExpansions is only used when building the AST
+// for the main file. CollectMainFileMacros is only used when building the
+// preamble.
+class CollectMainFileMacroExpansions : public PPCallbacks {
+  const SourceManager &SM;
+  std::vector<SourceLocation> &MainFileMacroLocs;
+
+public:
+  CollectMainFileMacroExpansions(const SourceManager &SM,
+                                 std::vector<SourceLocation> &MainFileMacroLocs)
+      : SM(SM), MainFileMacroLocs(MainFileMacroLocs) {}
+
+  virtual void MacroExpands(const Token &MacroNameTok,
+                            const MacroDefinition &MD, SourceRange Range,
+                            const MacroArgs *Args) {
+    SourceLocation L = MacroNameTok.getLocation();
+    if (!L.isMacroID() && isInsideMainFile(L, SM))
+      MainFileMacroLocs.push_back(L);
+  }
 };
 
 class CollectMainFileMacros : public PPCallbacks {
@@ -417,6 +441,11 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Clang->getPreprocessor().addPPCallbacks(
       collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+  // Collect the macro expansions in the main file.
+  std::vector<SourceLocation> MainFileMacroExpLocs;
+  Clang->getPreprocessor().addPPCallbacks(
+      std::make_unique<CollectMainFileMacroExpansions>(
+          Clang->getSourceManager(), MainFileMacroExpLocs));
 
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
@@ -470,7 +499,8 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
     Diags.insert(Diags.end(), D.begin(), D.end());
   }
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
-                   std::move(Tokens), std::move(ParsedDecls), std::move(Diags),
+                   std::move(Tokens), std::move(MainFileMacroExpLocs),
+                   std::move(ParsedDecls), std::move(Diags),
                    std::move(Includes), std::move(CanonIncludes));
 }
 
@@ -507,6 +537,10 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
 
 llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
   return LocalTopLevelDecls;
+}
+
+llvm::ArrayRef<SourceLocation> ParsedAST::getMainFileExpansions() const {
+  return MainFileMacroExpLocs;
 }
 
 const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
@@ -565,11 +599,13 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens,
+                     std::vector<SourceLocation> MainFileMacroExpLocs,
                      std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, IncludeStructure Includes,
                      CanonicalIncludes CanonIncludes)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
+      MainFileMacroExpLocs(std::move(MainFileMacroExpLocs)),
       Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {

@@ -145,6 +145,7 @@ struct CopyConfig {
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
+  Optional<uint8_t> NewSymbolVisibility;
 
   // Repeated options
   std::vector<StringRef> AddSection;

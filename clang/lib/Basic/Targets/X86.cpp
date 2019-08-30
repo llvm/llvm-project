@@ -198,7 +198,6 @@ IcelakeCommon:
 SkylakeCommon:
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
-    setFeatureEnabledImpl(Features, "mpx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
@@ -277,7 +276,6 @@ SkylakeCommon:
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
-    setFeatureEnabledImpl(Features, "mpx", true);
     setFeatureEnabledImpl(Features, "fsgsbase", true);
     setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
@@ -798,8 +796,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VP2INTERSECT = true;
     } else if (Feature == "+sha") {
       HasSHA = true;
-    } else if (Feature == "+mpx") {
-      HasMPX = true;
     } else if (Feature == "+shstk") {
       HasSHSTK = true;
     } else if (Feature == "+movbe") {
@@ -1220,8 +1216,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CLWB__");
   if (HasWBNOINVD)
     Builder.defineMacro("__WBNOINVD__");
-  if (HasMPX)
-    Builder.defineMacro("__MPX__");
   if (HasSHSTK)
     Builder.defineMacro("__SHSTK__");
   if (HasSGX)
@@ -1378,7 +1372,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("movbe", true)
       .Case("movdiri", true)
       .Case("movdir64b", true)
-      .Case("mpx", true)
       .Case("mwaitx", true)
       .Case("pclmul", true)
       .Case("pconfig", true)
@@ -1462,7 +1455,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("movbe", HasMOVBE)
       .Case("movdiri", HasMOVDIRI)
       .Case("movdir64b", HasMOVDIR64B)
-      .Case("mpx", HasMPX)
       .Case("mwaitx", HasMWAITX)
       .Case("pclmul", HasPCLMUL)
       .Case("pconfig", HasPCONFIG)

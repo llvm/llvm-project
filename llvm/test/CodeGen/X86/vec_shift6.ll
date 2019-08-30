@@ -162,13 +162,23 @@ define <32 x i16> @test7(<32 x i16> %a) {
 ; SSE-NEXT:    pmullw %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test7:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [2,2,4,8,128,1,512,2048,2,2,4,8,128,1,512,2048]
-; AVX-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX-NEXT:    retq
+; AVX2-LABEL: test7:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [2,2,4,8,128,1,512,2048,2,2,4,8,128,1,512,2048]
+; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test7:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [2,2,4,8,128,1,512,2048,2,2,4,8,128,1,512,2048]
+; AVX512-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
   %shl = shl <32 x i16> %a, <i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11, i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11, i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11, i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11>
   ret <32 x i16> %shl
 }

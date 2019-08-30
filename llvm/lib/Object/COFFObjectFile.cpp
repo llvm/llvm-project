@@ -1744,3 +1744,120 @@ ResourceSectionRef::getTableEntry(const coff_resource_dir_table &Table,
   return getTableEntryAtOffset(TableOffset + sizeof(Table) +
                                Index * sizeof(coff_resource_dir_entry));
 }
+
+Error ResourceSectionRef::load(const COFFObjectFile *O) {
+  for (const SectionRef &S : O->sections()) {
+    Expected<StringRef> Name = S.getName();
+    if (!Name)
+      return Name.takeError();
+
+    if (*Name == ".rsrc" || *Name == ".rsrc$01")
+      return load(O, S);
+  }
+  return createStringError(object_error::parse_failed,
+                           "no resource section found");
+}
+
+Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
+  Obj = O;
+  Section = S;
+  Expected<StringRef> Contents = Section.getContents();
+  if (!Contents)
+    return Contents.takeError();
+  BBS = BinaryByteStream(*Contents, support::little);
+  const coff_section *COFFSect = Obj->getCOFFSection(Section);
+  ArrayRef<coff_relocation> OrigRelocs = Obj->getRelocations(COFFSect);
+  Relocs.reserve(OrigRelocs.size());
+  for (const coff_relocation &R : OrigRelocs)
+    Relocs.push_back(&R);
+  std::sort(Relocs.begin(), Relocs.end(),
+            [](const coff_relocation *A, const coff_relocation *B) {
+              return A->VirtualAddress < B->VirtualAddress;
+            });
+  return Error::success();
+}
+
+Expected<StringRef>
+ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
+  if (!Obj)
+    return createStringError(object_error::parse_failed, "no object provided");
+
+  // Find a potential relocation at the DataRVA field (first member of
+  // the coff_resource_data_entry struct).
+  const uint8_t *EntryPtr = reinterpret_cast<const uint8_t *>(&Entry);
+  ptrdiff_t EntryOffset = EntryPtr - BBS.data().data();
+  coff_relocation RelocTarget{ulittle32_t(EntryOffset), ulittle32_t(0),
+                              ulittle16_t(0)};
+  auto RelocsForOffset =
+      std::equal_range(Relocs.begin(), Relocs.end(), &RelocTarget,
+                       [](const coff_relocation *A, const coff_relocation *B) {
+                         return A->VirtualAddress < B->VirtualAddress;
+                       });
+
+  if (RelocsForOffset.first != RelocsForOffset.second) {
+    // We found a relocation with the right offset. Check that it does have
+    // the expected type.
+    const coff_relocation &R = **RelocsForOffset.first;
+    uint16_t RVAReloc;
+    switch (Obj->getMachine()) {
+    case COFF::IMAGE_FILE_MACHINE_I386:
+      RVAReloc = COFF::IMAGE_REL_I386_DIR32NB;
+      break;
+    case COFF::IMAGE_FILE_MACHINE_AMD64:
+      RVAReloc = COFF::IMAGE_REL_AMD64_ADDR32NB;
+      break;
+    case COFF::IMAGE_FILE_MACHINE_ARMNT:
+      RVAReloc = COFF::IMAGE_REL_ARM_ADDR32NB;
+      break;
+    case COFF::IMAGE_FILE_MACHINE_ARM64:
+      RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
+      break;
+    default:
+      return createStringError(object_error::parse_failed,
+                               "unsupported architecture");
+    }
+    if (R.Type != RVAReloc)
+      return createStringError(object_error::parse_failed,
+                               "unexpected relocation type");
+    // Get the relocation's symbol
+    Expected<COFFSymbolRef> Sym = Obj->getSymbol(R.SymbolTableIndex);
+    if (!Sym)
+      return Sym.takeError();
+    const coff_section *Section = nullptr;
+    // And the symbol's section
+    if (std::error_code EC = Obj->getSection(Sym->getSectionNumber(), Section))
+      return errorCodeToError(EC);
+    // Add the initial value of DataRVA to the symbol's offset to find the
+    // data it points at.
+    uint64_t Offset = Entry.DataRVA + Sym->getValue();
+    ArrayRef<uint8_t> Contents;
+    if (Error E = Obj->getSectionContents(Section, Contents))
+      return std::move(E);
+    if (Offset + Entry.DataSize > Contents.size())
+      return createStringError(object_error::parse_failed,
+                               "data outside of section");
+    // Return a reference to the data inside the section.
+    return StringRef(reinterpret_cast<const char *>(Contents.data()) + Offset,
+                     Entry.DataSize);
+  } else {
+    // Relocatable objects need a relocation for the DataRVA field.
+    if (Obj->isRelocatableObject())
+      return createStringError(object_error::parse_failed,
+                               "no relocation found for DataRVA");
+
+    // Locate the section that contains the address that DataRVA points at.
+    uint64_t VA = Entry.DataRVA + Obj->getImageBase();
+    for (const SectionRef &S : Obj->sections()) {
+      if (VA >= S.getAddress() &&
+          VA + Entry.DataSize <= S.getAddress() + S.getSize()) {
+        uint64_t Offset = VA - S.getAddress();
+        Expected<StringRef> Contents = S.getContents();
+        if (!Contents)
+          return Contents.takeError();
+        return Contents->slice(Offset, Offset + Entry.DataSize);
+      }
+    }
+    return createStringError(object_error::parse_failed,
+                             "address not found in image");
+  }
+}

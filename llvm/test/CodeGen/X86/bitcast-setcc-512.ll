@@ -51,12 +51,14 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b) {
 ;
 ; AVX512F-LABEL: v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %ecx
-; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm0
-; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    shll $16, %eax
@@ -256,10 +258,12 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b) {
 ;
 ; AVX512F-LABEL: v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX512F-NEXT:    vpmovmskb %ymm1, %eax
+; AVX512F-NEXT:    vpmovmskb %ymm2, %eax
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %rcx, %rax
 ; AVX512F-NEXT:    vzeroupper
@@ -446,6 +450,7 @@ define void @bitcast_64i8_store(i64* %p, <64 x i8> %a0) {
 ;
 ; AVX512F-LABEL: bitcast_64i8_store:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm3
@@ -515,6 +520,7 @@ define void @bitcast_32i16_store(i32* %p, <32 x i16> %a0) {
 ;
 ; AVX512F-LABEL: bitcast_32i16_store:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0

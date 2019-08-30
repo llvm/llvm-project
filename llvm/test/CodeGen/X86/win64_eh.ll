@@ -125,11 +125,11 @@ endtryfinally:
 ; WIN64-LABEL: foo4:
 ; WIN64: .seh_proc foo4
 ; WIN64: .seh_handler _d_eh_personality, @unwind, @except
-; NORM:  subq $56, %rsp
-; ATOM:  leaq -56(%rsp), %rsp
-; WIN64: .seh_stackalloc 56
+; NORM:  subq $40, %rsp
+; ATOM:  leaq -40(%rsp), %rsp
+; WIN64: .seh_stackalloc 40
 ; WIN64: .seh_endprologue
-; WIN64: addq $56, %rsp
+; WIN64: addq $40, %rsp
 ; WIN64: ret
 ; WIN64: .seh_handlerdata
 ; WIN64: .seh_endproc

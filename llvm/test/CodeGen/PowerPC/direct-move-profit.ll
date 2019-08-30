@@ -69,7 +69,7 @@ entry:
   store i32 %add, i32* %arrayidx6, align 4, !tbaa !1
   ret void
 
-; CHECK: mtvsrwa
+; CHECK: mtfprwa
 ; CHECK: blr
 
 }

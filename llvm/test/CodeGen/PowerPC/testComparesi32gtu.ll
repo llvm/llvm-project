@@ -12,14 +12,12 @@
 declare signext i32 @fn2(...) local_unnamed_addr #1
 
 ; Function Attrs: nounwind
-define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) {
+define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind {
 ; BE-LABEL: testCompare1:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
-; BE-NEXT:    .cfi_def_cfa_offset 112
-; BE-NEXT:    .cfi_offset lr, 16
 ; BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; BE-NEXT:    lbz r3, 0(r3)
 ; BE-NEXT:    ld r4, .LC0@toc@l(r4)
@@ -42,8 +40,6 @@ define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) {
 ; LE-NEXT:    mflr r0
 ; LE-NEXT:    std r0, 16(r1)
 ; LE-NEXT:    stdu r1, -32(r1)
-; LE-NEXT:    .cfi_def_cfa_offset 32
-; LE-NEXT:    .cfi_offset lr, 16
 ; LE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; LE-NEXT:    lbz r3, 0(r3)
 ; LE-NEXT:    ld r4, .LC0@toc@l(r4)

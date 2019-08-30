@@ -13,8 +13,8 @@ entry:
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: foo
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
-; CHECK-NEXT:     Flags [ (0x20)
-; CHECK-NEXT:       EXPORTED (0x20)
+; CHECK-NEXT:     Flags [ (0x80)
+; CHECK-NEXT:       NO_STRIP (0x80)
 ; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }

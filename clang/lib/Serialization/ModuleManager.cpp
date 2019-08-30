@@ -185,9 +185,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
       // Get a buffer of the file and close the file descriptor when done.
-      Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*isVolatile=*/false,
-                                     /*ShouldClose=*/true);
+      Buf = FileMgr.getBufferForFile(NewModule->File, /*isVolatile=*/false);
     }
 
     if (!Buf) {

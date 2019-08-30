@@ -294,3 +294,29 @@ define <4 x i32> @extract_add_1(<4 x i32> %i) nounwind {
   %out = or <4 x i32> %ii, %rhs
   ret <4 x i32> %out
 }
+
+define <4 x i32> @extract_add_1_comut(<4 x i32> %i) nounwind {
+; CHECK-LABEL: extract_add_1_comut:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ii = add <4 x i32> %i, %i
+  %lhs = lshr <4 x i32> %i, <i32 31, i32 31, i32 31, i32 31>
+  %out = or <4 x i32> %lhs, %ii
+  ret <4 x i32> %out
+}
+
+define <4 x i32> @no_extract_add_1(<4 x i32> %i) nounwind {
+; CHECK-LABEL: no_extract_add_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrld $27, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ii = add <4 x i32> %i, %i
+  %rhs = lshr <4 x i32> %i, <i32 27, i32 27, i32 27, i32 27>
+  %out = or <4 x i32> %ii, %rhs
+  ret <4 x i32> %out
+}
