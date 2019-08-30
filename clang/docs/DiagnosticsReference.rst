@@ -6028,6 +6028,17 @@ Some of the diagnostics controlled by this flag are enabled by default.
 Controls `-Wincomplete-umbrella`_, `-Wnon-modular-include-in-module`_.
 
 
+-Wincomplete-setjmp-declaration
+-------------------------------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`declaration of built-in function '`:placeholder:`A`:diagtext:`' requires the declaration of the 'jmp\_buf' type, commonly provided in the header <setjmp.h>.`|
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
 -Wincomplete-umbrella
 ---------------------
 This diagnostic is enabled by default.
