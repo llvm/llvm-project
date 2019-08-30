@@ -3,7 +3,7 @@
 # RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck --check-prefix OBJ %s
 
 # OBJ:      Symbol {
-# OBJ:        Name: default (1)
+# OBJ:        Name: default1
 # OBJ-NEXT:   Value: 0x0
 # OBJ-NEXT:   Size: 0
 # OBJ-NEXT:   Binding: Local (0x0)
@@ -12,7 +12,16 @@
 # OBJ-NEXT:   Section: Undefined (0x0)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
-# OBJ-NEXT:   Name: internal (16)
+# OBJ-NEXT:   Name: default2
+# OBJ-NEXT:   Value: 0x0
+# OBJ-NEXT:   Size: 0
+# OBJ-NEXT:   Binding: Local (0x0)
+# OBJ-NEXT:   Type: None (0x0)
+# OBJ-NEXT:   Other: 0
+# OBJ-NEXT:   Section: Undefined (0x0)
+# OBJ-NEXT: }
+# OBJ-NEXT: Symbol {
+# OBJ-NEXT:   Name: internal
 # OBJ-NEXT:   Value: 0x0
 # OBJ-NEXT:   Size: 0
 # OBJ-NEXT:   Binding: Local (0x0)
@@ -23,7 +32,7 @@
 # OBJ-NEXT:   Section: Undefined (0x0)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
-# OBJ-NEXT:   Name: hidden (9)
+# OBJ-NEXT:   Name: hidden
 # OBJ-NEXT:   Value: 0x0
 # OBJ-NEXT:   Size: 0
 # OBJ-NEXT:   Binding: Local (0x0)
@@ -34,7 +43,7 @@
 # OBJ-NEXT:   Section: Undefined (0x0)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
-# OBJ-NEXT:   Name: protected (25)
+# OBJ-NEXT:   Name: protected
 # OBJ-NEXT:   Value: 0x0
 # OBJ-NEXT:   Size: 0
 # OBJ-NEXT:   Binding: Local (0x0)
@@ -52,11 +61,12 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
-  - Name:       default
-    Visibility: STV_DEFAULT
-  - Name:       internal
-    Visibility: STV_INTERNAL
-  - Name:       hidden
-    Visibility: STV_HIDDEN
-  - Name:       protected
-    Visibility: STV_PROTECTED
+  - Name:  default1
+  - Name:  default2
+    Other: [ STV_DEFAULT ]
+  - Name:  internal
+    Other: [ STV_INTERNAL ]
+  - Name:  hidden
+    Other: [ STV_HIDDEN ]
+  - Name:  protected
+    Other: [ STV_PROTECTED ]

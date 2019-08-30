@@ -45,8 +45,8 @@ define ppc_fp128 @test(%struct.S* byval %x) nounwind {
 ;
 ; CHECK-P9-LABEL: test:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrd 1, 5
-; CHECK-P9-NEXT:    mtvsrd 2, 6
+; CHECK-P9-NEXT:    mtfprd 1, 5
+; CHECK-P9-NEXT:    mtfprd 2, 6
 ; CHECK-P9-NEXT:    std 6, 72(1)
 ; CHECK-P9-NEXT:    std 5, 64(1)
 ; CHECK-P9-NEXT:    std 3, 48(1)

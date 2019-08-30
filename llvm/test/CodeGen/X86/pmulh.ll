@@ -132,8 +132,11 @@ define <32 x i16> @mulhuw_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ;
 ; AVX512F-LABEL: mulhuw_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mulhuw_v32i16:
@@ -165,8 +168,11 @@ define <32 x i16> @mulhw_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ;
 ; AVX512F-LABEL: mulhw_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmulhw %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmulhw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmulhw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mulhw_v32i16:

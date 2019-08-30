@@ -4,6 +4,7 @@
 // RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_BIG -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_BIG
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -DPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-X
 // RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_X
+// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES
 
 // Make sure Clang doesn't treat |lockval| as asm input.
 void _raw_spin_lock(void) {
@@ -57,7 +58,7 @@ void odd_struct(void) {
       : "=r"(str));
 #endif
 }
-// CHECK-IMPOSSIBLE_ODD: impossible constraint in asm
+// CHECK-IMPOSSIBLE_ODD: impossible constraint in asm: can't store value into a register
 
 // Check Clang reports an error if attempting to return a big structure via a register.
 void big_struct(void) {
@@ -69,7 +70,7 @@ void big_struct(void) {
       : "=r"(str));
 #endif
 }
-// CHECK-IMPOSSIBLE_BIG: impossible constraint in asm
+// CHECK-IMPOSSIBLE_BIG: impossible constraint in asm: can't store value into a register
 
 // Clang is able to emit LLVM IR for an 16-byte structure.
 void x_constraint_fit() {
@@ -100,3 +101,17 @@ void x_constraint_nofit() {
 }
 
 // CHECK-IMPOSSIBLE_X: invalid output size for constraint
+
+// http://crbug.com/999160
+// Clang used to report the following message:
+//   "impossible constraint in asm: can't store struct into a register"
+// for the assembly directive below, although there's no struct.
+void crbug_999160_regtest() {
+#ifdef IMPOSSIBLE_9BYTES
+  char buf[9];
+  asm(""
+      : "=r"(buf));
+#endif
+}
+
+// CHECK-IMPOSSIBLE_9BYTES: impossible constraint in asm: can't store value into a register

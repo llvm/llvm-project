@@ -1766,7 +1766,10 @@ void COFFDumper::printCOFFResources() {
     StringRef Ref = unwrapOrError(Obj->getFileName(), S.getContents());
 
     if ((Name == ".rsrc") || (Name == ".rsrc$01")) {
-      ResourceSectionRef RSF(Ref);
+      ResourceSectionRef RSF;
+      Error E = RSF.load(Obj, S);
+      if (E)
+        reportError(std::move(E), Obj->getFileName());
       auto &BaseTable = unwrapOrError(Obj->getFileName(), RSF.getBaseTable());
       W.printNumber("Total Number of Resources",
                     countTotalTableEntries(RSF, BaseTable, "Type"));
@@ -1871,6 +1874,9 @@ void COFFDumper::printResourceDirectoryTable(
       W.printNumber("DataSize", DataEntry.DataSize);
       W.printNumber("Codepage", DataEntry.Codepage);
       W.printNumber("Reserved", DataEntry.Reserved);
+      StringRef Contents =
+          unwrapOrError(Obj->getFileName(), RSF.getContents(DataEntry));
+      W.printBinaryBlock("Data", Contents);
     }
   }
 }

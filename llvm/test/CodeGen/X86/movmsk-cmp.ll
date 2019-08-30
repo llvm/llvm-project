@@ -224,6 +224,7 @@ define i1 @allones_v64i8_sign(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allones_v64i8_sign:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
 ; KNL-NEXT:    shlq $32, %rax
 ; KNL-NEXT:    vpmovmskb %ymm0, %ecx
@@ -292,6 +293,7 @@ define i1 @allzeros_v64i8_sign(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allzeros_v64i8_sign:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
 ; KNL-NEXT:    shlq $32, %rax
 ; KNL-NEXT:    vpmovmskb %ymm0, %ecx
@@ -545,6 +547,7 @@ define i1 @allones_v32i16_sign(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allones_v32i16_sign:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
@@ -612,6 +615,7 @@ define i1 @allzeros_v32i16_sign(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allzeros_v32i16_sign:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
@@ -1459,6 +1463,7 @@ define i1 @allones_v64i8_and1(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allones_v64i8_and1:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
@@ -1540,6 +1545,7 @@ define i1 @allzeros_v64i8_and1(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allzeros_v64i8_and1:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
@@ -1762,6 +1768,7 @@ define i1 @allones_v32i16_and1(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allones_v32i16_and1:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
@@ -1841,6 +1848,7 @@ define i1 @allzeros_v32i16_and1(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allzeros_v32i16_and1:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
@@ -2864,6 +2872,7 @@ define i1 @allones_v64i8_and4(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allones_v64i8_and4:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $5, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
@@ -2945,6 +2954,7 @@ define i1 @allzeros_v64i8_and4(<64 x i8> %arg) {
 ;
 ; KNL-LABEL: allzeros_v64i8_and4:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $5, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovmskb %ymm1, %eax
@@ -3167,6 +3177,7 @@ define i1 @allones_v32i16_and4(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allones_v32i16_and4:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $13, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
@@ -3246,6 +3257,7 @@ define i1 @allzeros_v32i16_and4(<32 x i16> %arg) {
 ;
 ; KNL-LABEL: allzeros_v32i16_and4:
 ; KNL:       # %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpsllw $13, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0

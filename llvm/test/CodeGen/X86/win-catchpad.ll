@@ -123,11 +123,11 @@ try.cont:
 ; X64-LABEL: try_catch_catch:
 ; X64: Lfunc_begin0:
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $[[STCK_ALLOC:.*]], %rsp
 ; X64: .seh_stackalloc [[STCK_ALLOC]]
 ; X64: leaq [[STCK_ALLOC]](%rsp), %rbp
-; X64: .seh_setframe 5, [[STCK_ALLOC]]
+; X64: .seh_setframe %rbp, [[STCK_ALLOC]]
 ; X64: .seh_endprologue
 ; X64: movq $-2, -16(%rbp)
 ; X64: .Ltmp0
@@ -144,7 +144,7 @@ try.cont:
 ; X64: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
 ; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
@@ -161,7 +161,7 @@ try.cont:
 ; X64: LBB0_[[catch2bb]]: # %handler2{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
 ; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
@@ -278,11 +278,11 @@ try.cont:
 ; X64-LABEL: branch_to_normal_dest:
 ; X64: # %entry
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $48, %rsp
 ; X64: .seh_stackalloc 48
 ; X64: leaq 48(%rsp), %rbp
-; X64: .seh_setframe 5, 48
+; X64: .seh_setframe %rbp, 48
 ; X64: .seh_endprologue
 ; X64: .Ltmp[[before_call:[0-9]+]]:
 ; X64: callq f
@@ -297,7 +297,7 @@ try.cont:
 ; X64: LBB1_[[catchbb]]: # %catch{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
 ; X64: leaq 48(%rdx), %rbp

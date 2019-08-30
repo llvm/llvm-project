@@ -317,8 +317,7 @@ public:
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
-                   bool ShouldCloseOpenFile = true);
+  getBufferForFile(const FileEntry *Entry, bool isVolatile = false);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false) {
     return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile);
@@ -337,9 +336,6 @@ public:
   /// \returns a \c std::error_code describing an error, if there was one
   std::error_code getNoncachedStatValue(StringRef Path,
                                         llvm::vfs::Status &Result);
-
-  /// Remove the real file \p Entry from the cache.
-  void invalidateCache(const FileEntry *Entry);
 
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given

@@ -25,14 +25,12 @@
 
 ; Because this test function is trying to pass float argument by stack,
 ; so the fpr is only used to load/store float argument
-define signext i32 @test() {
+define signext i32 @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -192(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, a1@toc@ha
 ; CHECK-NEXT:    lfd 1, a1@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a2@toc@ha

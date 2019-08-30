@@ -42,7 +42,7 @@ declare i32 @__CxxFrameHandler3(...)
 ; Emit CFI for pushing RBP.
 ; CHECK: movq    %rdx, 16(%rsp)
 ; CHECK: pushq   %rbp
-; CHECK: .seh_pushreg 5
+; CHECK: .seh_pushreg %rbp
 
 ; Emit CFI for allocating from the stack pointer.
 ; CHECK: subq    $32, %rsp
@@ -72,7 +72,7 @@ declare i32 @__CxxFrameHandler3(...)
 ; Emit CFI for pushing RBP.
 ; CHECK: movq    %rdx, 16(%rsp)
 ; CHECK: pushq   %rbp
-; CHECK: .seh_pushreg 5
+; CHECK: .seh_pushreg %rbp
 
 ; Emit CFI for allocating from the stack pointer.
 ; CHECK: subq    $32, %rsp

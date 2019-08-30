@@ -4,8 +4,7 @@
 ## to a different machine type to what is specified by the YAML.
 
 # RUN: not yaml2obj --docnum=1 2>&1 %s | FileCheck %s --check-prefix=ERR
-# ERR:      error: unknown bit value
-# ERR-NEXT: Other: [ STO_MIPS_OPTIONAL ]
+# ERR: error: an unknown value is used for symbol's 'Other' field: STO_MIPS_OPTIONAL.
 
 --- !ELF
 FileHeader:
@@ -38,52 +37,23 @@ Symbols:
   - Name:  foo
     Other: [ STO_MIPS_OPTIONAL ]
 
-## Test that instead of using the "Other" field we can use the "StOther" field
-## to set st_other to any arbitrary value.
+## Test that we can mix named and unnamed constants and set
+## st_other to any arbitrary value.
 
 # RUN: yaml2obj --docnum=3 %s > %t3
-# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefix=USE-STOTHER
-# RUN: yaml2obj --docnum=4 %s > %t4
-# RUN: llvm-readobj --symbols %t4 | FileCheck %s --check-prefix=USE-STOTHER
+# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefix=VALUE
 
-# USE-STOTHER:      Name: foo
-# USE-STOTHER:      Other [
-# USE-STOTHER-SAME: (0x4)
+# VALUE:      Name: foo
+# VALUE:      Other [
+# VALUE-SAME: (0x4)
 
-# USE-STOTHER:      Name: bar
-# USE-STOTHER:      Other [
-# USE-STOTHER-SAME: (0xFF)
+# VALUE:      Name: bar
+# VALUE:      Other [
+# VALUE-SAME: (0x7)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_MIPS
-Symbols:
-  - Name:    foo
-    StOther: 4
-  - Name:    bar
-    StOther: 0xff
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
-Symbols:
-  - Name:    foo
-    StOther: 4
-  - Name:    bar
-    StOther: 0xff
-
-## Check we can't set StOther for a symbol if Visibility or Other is also specified.
-
-# RUN: not yaml2obj --docnum=5 2>&1 %s | FileCheck %s --check-prefix=ERR2
-# RUN: not yaml2obj --docnum=6 2>&1 %s | FileCheck %s --check-prefix=ERR2
-
-# ERR2: error: StOther cannot be specified for Symbol with either Visibility or Other
+# VALUE:      Name: zed
+# VALUE:      Other [
+# VALUE-SAME: (0xFF)
 
 --- !ELF
 FileHeader:
@@ -92,17 +62,9 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_MIPS
 Symbols:
-  - Name:    foo
-    StOther: 0
-    Other: [ STO_MIPS_OPTIONAL ]
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_MIPS
-Symbols:
-  - Name:    foo
-    StOther: 0
-    Visibility: STV_DEFAULT
+  - Name:  foo
+    Other: [ 0x4 ]
+  - Name:  bar
+    Other: [ STV_PROTECTED, 4 ]
+  - Name:  zed
+    Other: [ STV_PROTECTED, STO_MIPS_OPTIONAL, 0xf8 ]

@@ -929,8 +929,10 @@ define <64 x i8> @test_abs_lt_v64i8(<64 x i8> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_abs_lt_v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpabsb %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1 # encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xc1,0x01]
 ; AVX512F-NEXT:    vpabsb %ymm1, %ymm1 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc9]
+; AVX512F-NEXT:    vpabsb %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x3a,0xc1,0x01]
 ; AVX512F-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512BW-LABEL: test_abs_lt_v64i8:
@@ -1000,8 +1002,10 @@ define <32 x i16> @test_abs_gt_v32i16(<32 x i16> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_abs_gt_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpabsw %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1 # encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xc1,0x01]
 ; AVX512F-NEXT:    vpabsw %ymm1, %ymm1 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc9]
+; AVX512F-NEXT:    vpabsw %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x3a,0xc1,0x01]
 ; AVX512F-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512BW-LABEL: test_abs_gt_v32i16:

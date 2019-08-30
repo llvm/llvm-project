@@ -1953,10 +1953,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (C && !C->isAllOnesValue() && !C->isOne() &&
         (C->getAPIntValue() | HighMask).isAllOnesValue()) {
       SDValue Neg1 = TLO.DAG.getAllOnesConstant(dl, VT);
-      // We can't guarantee that the new math op doesn't wrap, so explicitly
-      // clear those flags to prevent folding with a potential existing node
-      // that has those flags set.
-      SDNodeFlags Flags;
+      // Disable the nsw and nuw flags. We can no longer guarantee that we
+      // won't wrap after simplification.
       Flags.setNoSignedWrap(false);
       Flags.setNoUnsignedWrap(false);
       SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Neg1, Flags);

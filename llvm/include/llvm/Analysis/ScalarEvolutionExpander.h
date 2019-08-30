@@ -275,8 +275,16 @@ namespace llvm {
 
     /// Clear the current insertion point. This is useful if the instruction
     /// that had been serving as the insertion point may have been deleted.
-    void clearInsertPoint() {
-      Builder.ClearInsertionPoint();
+    void clearInsertPoint() { Builder.ClearInsertionPoint(); }
+
+    /// Set location information used by debugging information.
+    void SetCurrentDebugLocation(DebugLoc L) {
+      Builder.SetCurrentDebugLocation(std::move(L));
+    }
+
+    /// Get location information used by debugging information.
+    const DebugLoc &getCurrentDebugLocation() const {
+      return Builder.getCurrentDebugLocation();
     }
 
     /// Return true if the specified instruction was inserted by the code

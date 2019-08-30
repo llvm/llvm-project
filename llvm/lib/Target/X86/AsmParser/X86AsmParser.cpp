@@ -870,6 +870,15 @@ private:
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
 
+  /// SEH directives.
+  bool parseSEHRegisterNumber(unsigned RegClassID, unsigned &RegNo);
+  bool parseDirectiveSEHPushReg(SMLoc);
+  bool parseDirectiveSEHSetFrame(SMLoc);
+  bool parseDirectiveSEHAllocStack(SMLoc);
+  bool parseDirectiveSEHSaveReg(SMLoc);
+  bool parseDirectiveSEHSaveXMM(SMLoc);
+  bool parseDirectiveSEHPushFrame(SMLoc);
+
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
@@ -3590,6 +3599,16 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
     return parseDirectiveFPOEndProc(DirectiveID.getLoc());
+  else if (IDVal == ".seh_pushreg")
+    return parseDirectiveSEHPushReg(DirectiveID.getLoc());
+  else if (IDVal == ".seh_setframe")
+    return parseDirectiveSEHSetFrame(DirectiveID.getLoc());
+  else if (IDVal == ".seh_savereg")
+    return parseDirectiveSEHSaveReg(DirectiveID.getLoc());
+  else if (IDVal == ".seh_savexmm")
+    return parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
+  else if (IDVal == ".seh_pushframe")
+    return parseDirectiveSEHPushFrame(DirectiveID.getLoc());
 
   return true;
 }
@@ -3724,6 +3743,154 @@ bool X86AsmParser::parseDirectiveFPOEndProc(SMLoc L) {
   if (Parser.parseEOL("unexpected tokens"))
     return addErrorSuffix(" in '.cv_fpo_endproc' directive");
   return getTargetStreamer().emitFPOEndProc(L);
+}
+
+bool X86AsmParser::parseSEHRegisterNumber(unsigned RegClassID,
+                                          unsigned &RegNo) {
+  SMLoc startLoc = getLexer().getLoc();
+  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
+
+  // A percent indicates a symbolic register name. Parse it as usual and check
+  // the register class.
+  if (getLexer().is(AsmToken::Percent)) {
+    SMLoc endLoc;
+    if (getParser().getTargetParser().ParseRegister(RegNo, startLoc, endLoc))
+      return true;
+
+    if (!X86MCRegisterClasses[RegClassID].contains(RegNo)) {
+      return Error(startLoc,
+                   "register is not supported for use with this directive");
+    }
+  } else {
+    // Otherwise, an integer number matching the encoding of the desired
+    // register may appear.
+    int64_t EncodedReg;
+    if (getParser().parseAbsoluteExpression(EncodedReg))
+      return true;
+
+    // The SEH register number is the same as the encoding register number. Map
+    // from the encoding back to the LLVM register number.
+    RegNo = 0;
+    for (MCPhysReg Reg : X86MCRegisterClasses[RegClassID]) {
+      if (MRI->getEncodingValue(Reg) == EncodedReg) {
+        RegNo = Reg;
+        break;
+      }
+    }
+    if (RegNo == 0) {
+      return Error(startLoc,
+                   "incorrect register number for use with this directive");
+    }
+  }
+
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
+  unsigned Reg = 0;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFIPushReg(Reg, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
+  unsigned Reg = 0;
+  int64_t Off;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
+    return true;
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("you must specify a stack pointer offset");
+
+  getParser().Lex();
+  if (getParser().parseAbsoluteExpression(Off))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFISetFrame(Reg, Off, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHAllocStack(SMLoc Loc) {
+  int64_t Size;
+  if (getParser().parseAbsoluteExpression(Size))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFIAllocStack(Size, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHSaveReg(SMLoc Loc) {
+  unsigned Reg = 0;
+  int64_t Off;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
+    return true;
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("you must specify an offset on the stack");
+
+  getParser().Lex();
+  if (getParser().parseAbsoluteExpression(Off))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFISaveReg(Reg, Off, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
+  unsigned Reg = 0;
+  int64_t Off;
+  if (parseSEHRegisterNumber(X86::VR128XRegClassID, Reg))
+    return true;
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("you must specify an offset on the stack");
+
+  getParser().Lex();
+  if (getParser().parseAbsoluteExpression(Off))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFISaveXMM(Reg, Off, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
+  bool Code = false;
+  StringRef CodeID;
+  if (getLexer().is(AsmToken::At)) {
+    SMLoc startLoc = getLexer().getLoc();
+    getParser().Lex();
+    if (!getParser().parseIdentifier(CodeID)) {
+      if (CodeID != "code")
+        return Error(startLoc, "expected @code");
+      Code = true;
+    }
+  }
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  getParser().Lex();
+  getStreamer().EmitWinCFIPushFrame(Code, Loc);
+  return false;
 }
 
 // Force static initialization.

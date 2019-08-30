@@ -239,6 +239,9 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
                             "#SEH_EndPrologue", []>;
   def SEH_Epilogue : I<0, Pseudo, (outs), (ins),
                             "#SEH_Epilogue", []>;
+  let hasSideEffects = 1 in
+    def SEH_NoReturn : I<0, Pseudo, (outs), (ins),
+                         "#SEH_NoReturn", [(X86SehNoReturn)]>;
 }
 
 //===----------------------------------------------------------------------===//

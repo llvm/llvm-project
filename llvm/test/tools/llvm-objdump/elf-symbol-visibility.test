@@ -23,13 +23,13 @@ Symbols:
   - Name:    default
     Section: .text
   - Name:    internal
-    Visibility: STV_INTERNAL
+    Other:   [ STV_INTERNAL ]
     Section: .text
   - Name:    hidden
-    Visibility: STV_HIDDEN
+    Other:   [ STV_HIDDEN ]
     Section: .text
   - Name:    protected
-    Visibility: STV_PROTECTED
+    Other:   [ STV_PROTECTED ]
     Section: .text
   - Name:    mips_pic
     Other:   [ STO_MIPS_PIC ]

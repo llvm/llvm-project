@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/WithColor.h"
 #include <cassert>
 #include <cstdint>
 
@@ -592,34 +594,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
   IO.enumFallback<Hex8>(Value);
 }
 
-void ScalarEnumerationTraits<ELFYAML::ELF_STV>::enumeration(
-    IO &IO, ELFYAML::ELF_STV &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X)
-  ECase(STV_DEFAULT);
-  ECase(STV_INTERNAL);
-  ECase(STV_HIDDEN);
-  ECase(STV_PROTECTED);
-#undef ECase
-}
-
-void ScalarBitSetTraits<ELFYAML::ELF_STO>::bitset(IO &IO,
-                                                  ELFYAML::ELF_STO &Value) {
-  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
-  assert(Object && "The IO context is not initialized");
-#define BCase(X) IO.bitSetCase(Value, #X, ELF::X)
-  switch (Object->Header.Machine) {
-  case ELF::EM_MIPS:
-    BCase(STO_MIPS_OPTIONAL);
-    BCase(STO_MIPS_PLT);
-    BCase(STO_MIPS_PIC);
-    BCase(STO_MIPS_MICROMIPS);
-    break;
-  default:
-    break; // Nothing to do
-  }
-#undef BCase
-#undef BCaseMask
-}
 
 void ScalarEnumerationTraits<ELFYAML::ELF_RSS>::enumeration(
     IO &IO, ELFYAML::ELF_RSS &Value) {
@@ -863,31 +837,112 @@ void MappingTraits<ELFYAML::ProgramHeader>::mapping(
   IO.mapOptional("Offset", Phdr.Offset);
 }
 
+LLVM_YAML_STRONG_TYPEDEF(StringRef, StOtherPiece)
+
+template <> struct ScalarTraits<StOtherPiece> {
+  static void output(const StOtherPiece &Val, void *, raw_ostream &Out) {
+    Out << Val;
+  }
+  static StringRef input(StringRef Scalar, void *, StOtherPiece &Val) {
+    Val = Scalar;
+    return {};
+  }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+template <> struct SequenceElementTraits<StOtherPiece> {
+  static const bool flow = true;
+};
+
 namespace {
 
 struct NormalizedOther {
-  NormalizedOther(IO &) {}
-  NormalizedOther(IO &, Optional<uint8_t> Original) {
-    if (uint8_t Val = *Original & 0x3)
-      Visibility = Val;
-    if (uint8_t Val = *Original & ~0x3)
-      Other = Val;
+  NormalizedOther(IO &IO) : YamlIO(IO) {}
+  NormalizedOther(IO &IO, Optional<uint8_t> Original) : YamlIO(IO) {
+    assert(Original && "This constructor is only used for outputting YAML and "
+                       "assumes a non-empty Original");
+    std::vector<StOtherPiece> Ret;
+    const auto *Object = static_cast<ELFYAML::Object *>(YamlIO.getContext());
+    for (std::pair<StringRef, uint8_t> &P :
+         getFlags(Object->Header.Machine).takeVector()) {
+      uint8_t FlagValue = P.second;
+      if ((*Original & FlagValue) != FlagValue)
+        continue;
+      *Original &= ~FlagValue;
+      Ret.push_back({P.first});
+    }
+
+    if (*Original != 0) {
+      UnknownFlagsHolder = std::to_string(*Original);
+      Ret.push_back({UnknownFlagsHolder});
+    }
+
+    if (!Ret.empty())
+      Other = std::move(Ret);
+  }
+
+  uint8_t toValue(StringRef Name) {
+    const auto *Object = static_cast<ELFYAML::Object *>(YamlIO.getContext());
+    MapVector<StringRef, uint8_t> Flags = getFlags(Object->Header.Machine);
+
+    auto It = Flags.find(Name);
+    if (It != Flags.end())
+      return It->second;
+
+    uint8_t Val;
+    if (to_integer(Name, Val))
+      return Val;
+
+    llvm::WithColor::error()
+        << "an unknown value is used for symbol's 'Other' field: " << Name
+        << ".\n";
+    exit(1);
   }
 
   Optional<uint8_t> denormalize(IO &) {
-    if (!Visibility && !Other)
+    if (!Other)
       return None;
-
     uint8_t Ret = 0;
-    if (Visibility)
-      Ret |= *Visibility;
-    if (Other)
-      Ret |= *Other;
+    for (StOtherPiece &Val : *Other)
+      Ret |= toValue(Val);
     return Ret;
   }
 
-  Optional<ELFYAML::ELF_STV> Visibility;
-  Optional<ELFYAML::ELF_STO> Other;
+  // st_other field is used to encode symbol visibility and platform-dependent
+  // flags and values. This method returns a name to value map that is used for
+  // parsing and encoding this field.
+  MapVector<StringRef, uint8_t> getFlags(unsigned EMachine) {
+    MapVector<StringRef, uint8_t> Map;
+    // STV_* values are just enumeration values. We add them in a reversed order
+    // because when we convert the st_other to named constants when printing
+    // YAML we want to use a maximum number of bits on each step:
+    // when we have st_other == 3, we want to print it as STV_PROTECTED (3), but
+    // not as STV_HIDDEN (2) + STV_INTERNAL (1).
+    Map["STV_PROTECTED"] = ELF::STV_PROTECTED;
+    Map["STV_HIDDEN"] = ELF::STV_HIDDEN;
+    Map["STV_INTERNAL"] = ELF::STV_INTERNAL;
+    // STV_DEFAULT is used to represent the default visibility and has a value
+    // 0. We want to be able to read it from YAML documents, but there is no
+    // reason to print it.
+    if (!YamlIO.outputting())
+      Map["STV_DEFAULT"] = ELF::STV_DEFAULT;
+
+    // MIPS is not consistent. All of the STO_MIPS_* values are bit flags,
+    // except STO_MIPS_MIPS16 which overlaps them. It should be checked and
+    // consumed first when we print the output, because we do not want to print
+    // any other flags that have the same bits instead.
+    if (EMachine == ELF::EM_MIPS) {
+      Map["STO_MIPS_MIPS16"] = ELF::STO_MIPS_MIPS16;
+      Map["STO_MIPS_MICROMIPS"] = ELF::STO_MIPS_MICROMIPS;
+      Map["STO_MIPS_PIC"] = ELF::STO_MIPS_PIC;
+      Map["STO_MIPS_PLT"] = ELF::STO_MIPS_PLT;
+      Map["STO_MIPS_OPTIONAL"] = ELF::STO_MIPS_OPTIONAL;
+    }
+    return Map;
+  }
+
+  const IO &YamlIO;
+  Optional<std::vector<StOtherPiece>> Other;
+  std::string UnknownFlagsHolder;
 };
 
 } // end anonymous namespace
@@ -902,22 +957,13 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Value", Symbol.Value, Hex64(0));
   IO.mapOptional("Size", Symbol.Size, Hex64(0));
 
-  // Symbol's Other field is a bit special. It is a bit field that represents
-  // st_other and usually holds symbol visibility. When we write a YAML document
-  // we split it into two fields named "Visibility" and "Other". The latter one
-  // usually holds no value, and so is almost never printed, although some
-  // targets (e.g. MIPS) may use it to specify the named bits to set (e.g.
-  // STO_MIPS_OPTIONAL). For producing broken objects we want to allow writing
-  // any value to st_other. To do this we allow one more field called "StOther".
-  // If it is present in a YAML document, we set st_other to its integer value
-  // whatever it is.
-  // obj2yaml should not print 'StOther', it should print 'Visibility' and
-  // 'Other' fields instead.
-  assert(!IO.outputting() || !Symbol.StOther.hasValue());
-  IO.mapOptional("StOther", Symbol.StOther);
+  // Symbol's Other field is a bit special. It is usually a field that
+  // represents st_other and holds the symbol visibility. However, on some
+  // platforms, it can contain bit fields and regular values, or even sometimes a
+  // crazy mix of them (see comments for NormalizedOther). Because of this, we
+  // need special handling.
   MappingNormalization<NormalizedOther, Optional<uint8_t>> Keys(IO,
                                                                 Symbol.Other);
-  IO.mapOptional("Visibility", Keys->Visibility);
   IO.mapOptional("Other", Keys->Other);
 }
 
@@ -927,8 +973,6 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
     return "Index and Section cannot both be specified for Symbol";
   if (Symbol.NameIndex && !Symbol.Name.empty())
     return "Name and NameIndex cannot both be specified for Symbol";
-  if (Symbol.StOther && Symbol.Other)
-    return "StOther cannot be specified for Symbol with either Visibility or Other";
   return StringRef();
 }
 

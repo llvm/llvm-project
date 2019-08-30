@@ -31,6 +31,7 @@ namespace llvm {
 
 class APInt;
 class APFloat;
+class GISelKnownBits;
 class MachineInstr;
 class MachineInstrBuilder;
 class MachineFunction;
@@ -381,11 +382,15 @@ public:
   virtual bool select(MachineInstr &I) = 0;
 
   CodeGenCoverage *CoverageInfo = nullptr;
+  GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
 
   /// Setup per-MF selector state.
-  virtual void setupMF(MachineFunction &mf, CodeGenCoverage &covinfo) {
+  virtual void setupMF(MachineFunction &mf,
+                       GISelKnownBits &KB,
+                       CodeGenCoverage &covinfo) {
     CoverageInfo = &covinfo;
+    KnownBits = &KB;
     MF = &mf;
   }
 

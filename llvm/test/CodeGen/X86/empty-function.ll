@@ -15,7 +15,7 @@ entry:
 
 ; CHECK-LABEL: f:
 ; WIN32: nop
-; WIN64: ud2
+; WIN64: nop
 ; LINUX-NOT: nop
 ; LINUX-NOT: ud2
 

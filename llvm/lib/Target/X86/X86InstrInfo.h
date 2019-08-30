@@ -317,22 +317,10 @@ public:
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
-  void storeRegToAddr(MachineFunction &MF, unsigned SrcReg, bool isKill,
-                      SmallVectorImpl<MachineOperand> &Addr,
-                      const TargetRegisterClass *RC,
-                      ArrayRef<MachineMemOperand *> MMOs,
-                      SmallVectorImpl<MachineInstr *> &NewMIs) const;
-
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, unsigned DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
-
-  void loadRegFromAddr(MachineFunction &MF, unsigned DestReg,
-                       SmallVectorImpl<MachineOperand> &Addr,
-                       const TargetRegisterClass *RC,
-                       ArrayRef<MachineMemOperand *> MMOs,
-                       SmallVectorImpl<MachineInstr *> &NewMIs) const;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 

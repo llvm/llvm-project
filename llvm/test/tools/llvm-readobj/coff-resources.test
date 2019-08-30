@@ -33,6 +33,11 @@ ZERO-NEXT:          DataRVA: 0x0
 ZERO-NEXT:          DataSize: 42
 ZERO-NEXT:          Codepage: 0
 ZERO-NEXT:          Reserved: 0
+ZERO-NEXT:          Data (
+ZERO-NEXT:            0000: 00000500 48006500 6C006C00 6F000000  |....H.e.l.l.o...|
+ZERO-NEXT:            0010: 00000000 00000000 00000000 00000000  |................|
+ZERO-NEXT:            0020: 00000000 00000000 0000               |..........|
+ZERO-NEXT:          )
 ZERO-NEXT:        ]
 ZERO-NEXT:      ]
 ZERO-NEXT:    ]
@@ -62,6 +67,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 808
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -80,6 +87,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 808
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -103,6 +112,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 48
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -121,6 +132,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 46
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -144,6 +157,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 108
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -167,6 +182,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 24
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]
@@ -185,6 +202,8 @@ TEST_RES-NEXT:          DataRVA: 0x0
 TEST_RES-NEXT:          DataSize: 24
 TEST_RES-NEXT:          Codepage: 0
 TEST_RES-NEXT:          Reserved: 0
+TEST_RES-NEXT:          Data (
+TEST_RES:               )
 TEST_RES-NEXT:        ]
 TEST_RES-NEXT:      ]
 TEST_RES-NEXT:    ]

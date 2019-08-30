@@ -499,6 +499,54 @@ void foo() {
 } // end namespace pr37688_deleted_union_destructor
 
 
+namespace return_statement_expression {
+int unknown();
+
+// CHECK-LABEL: int foo()
+// CHECK:       [B6 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B1]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: return [B1.1];
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:       [B2]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: ({ ... ; [B2.1] })
+// CHECK-NEXT:    3: return [B2.2];
+// CHECK-NEXT:    Preds (1): B4
+// CHECK-NEXT:    Succs (1): B0
+// FIXME: Why do we have [B3] at all?
+// CHECK:       [B3]
+// CHECK-NEXT:    Succs (1): B4
+// CHECK:       [B4]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-NEXT:    T: while [B4.2]
+// CHECK-NEXT:    Preds (2): B3 B5
+// CHECK-NEXT:    Succs (2): NULL B2
+// CHECK:       [B5]
+// CHECK-NEXT:    1: unknown
+// CHECK-NEXT:    2: [B5.1] (ImplicitCastExpr, FunctionToPointerDecay, int (*)(void))
+// CHECK-NEXT:    3: [B5.2]()
+// CHECK-NEXT:    4: [B5.3] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-NEXT:    T: if [B5.4]
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (2): B4 B1
+// CHECK:       [B0 (EXIT)]
+// CHECK-NEXT:    Preds (2): B1 B2
+int foo() {
+  if (unknown())
+    return ({
+      while (0)
+        ;
+      0;
+    });
+  else
+    return 0;
+}
+} // namespace statement_expression_in_return
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
@@ -522,4 +570,3 @@ template <class T> T *PR18472() {
 void PR18472_helper() {
   PR18472<int>();
 }
-

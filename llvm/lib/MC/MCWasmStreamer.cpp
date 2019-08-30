@@ -122,7 +122,7 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_NoDeadStrip:
-    Symbol->setExported();
+    Symbol->setNoStrip();
     break;
 
   default:

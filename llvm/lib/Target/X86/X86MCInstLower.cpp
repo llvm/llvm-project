@@ -1562,8 +1562,6 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
   assert(getSubtarget().isOSWindows() && "SEH_ instruction Windows only");
-  const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
   if (EmitFPOData) {
@@ -1601,17 +1599,16 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   // Otherwise, use the .seh_ directives for all other Windows platforms.
   switch (MI->getOpcode()) {
   case X86::SEH_PushReg:
-    OutStreamer->EmitWinCFIPushReg(
-        RI->getSEHRegNum(MI->getOperand(0).getImm()));
+    OutStreamer->EmitWinCFIPushReg(MI->getOperand(0).getImm());
     break;
 
   case X86::SEH_SaveReg:
-    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+    OutStreamer->EmitWinCFISaveReg(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_SaveXMM:
-    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+    OutStreamer->EmitWinCFISaveXMM(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
@@ -1620,9 +1617,8 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     break;
 
   case X86::SEH_SetFrame:
-    OutStreamer->EmitWinCFISetFrame(
-        RI->getSEHRegNum(MI->getOperand(0).getImm()),
-        MI->getOperand(1).getImm());
+    OutStreamer->EmitWinCFISetFrame(MI->getOperand(0).getImm(),
+                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_PushFrame:
@@ -1721,8 +1717,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::MASKPAIR16LOAD: {
     int64_t Disp = MI->getOperand(1 + X86::AddrDisp).getImm();
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
-    const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
     Register Reg = MI->getOperand(0).getReg();
     Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
@@ -1754,8 +1748,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::MASKPAIR16STORE: {
     int64_t Disp = MI->getOperand(X86::AddrDisp).getImm();
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
-    const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
     Register Reg = MI->getOperand(X86::AddrNumOperands).getReg();
     Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
@@ -1925,6 +1917,20 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
         break;
       }
+    }
+    return;
+  }
+
+  case X86::SEH_NoReturn: {
+    // Materialize an int3 if this instruction is in the last basic block in the
+    // function. The int3 serves the same purpose as the noop emitted above for
+    // SEH_Epilogue, which is to make the Win64 unwinder happy. If the return
+    // address of the preceding call appears to precede an epilogue or a new
+    // function, then the unwinder may get lost.
+    const MachineBasicBlock *MBB = MI->getParent();
+    const MachineBasicBlock *NextMBB = MBB->getNextNode();
+    if (!NextMBB || NextMBB->isEHPad()) {
+      EmitAndCountInstruction(MCInstBuilder(X86::INT3));
     }
     return;
   }

@@ -34,7 +34,7 @@ Symbols:
     Section:  .text
     Value:    0x1008
     Size:     8
-    Visibility: STV_HIDDEN
+    Other:    [ STV_HIDDEN ]
   - Name:     defaultGlobal
     Type:     STT_FUNC
     Size:     8
@@ -46,14 +46,14 @@ Symbols:
     Section:  .data
     Value:    0x2006
     Size:     2
-    Visibility: STV_HIDDEN
+    Other:    [ STV_HIDDEN ]
     Binding:  STB_GLOBAL
   - Name:     hiddenGlobalCommon
     Type:     STT_OBJECT
     Index:    SHN_COMMON
     Value:    0x2006
     Size:     2
-    Visibility: STV_HIDDEN
+    Other:    [ STV_HIDDEN ]
     Binding:  STB_GLOBAL
   - Name:     undefGlobal
     Type:     STT_FUNC
@@ -64,21 +64,21 @@ Symbols:
     Section:  .data
     Value:    0x2002
     Size:     2
-    Visibility: STV_INTERNAL
+    Other:    [ STV_INTERNAL ]
     Binding:  STB_GLOBAL
   - Name:     protectedGlobal
     Type:     STT_OBJECT
     Section:  .data
     Value:    0x2000
     Size:     4
-    Visibility: STV_PROTECTED
+    Other:    [ STV_PROTECTED ]
     Binding:  STB_GLOBAL
   - Name:     hiddenWeak
     Type:     STT_FUNC
     Section:  .text
     Value:    0x1010
     Size:     8
-    Visibility: STV_HIDDEN
+    Other:    [ STV_HIDDEN ]
     Binding:  STB_WEAK
 
 #CHECK:     Relocations [

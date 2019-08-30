@@ -275,6 +275,7 @@ Clang-Tidy Checks
    llvm-include-order
    llvm-namespace-comment
    llvm-prefer-isa-or-dyn-cast-in-conditionals
+   llvm-prefer-register-over-unsigned
    llvm-twine-local
    misc-definitions-in-headers
    misc-misplaced-const
