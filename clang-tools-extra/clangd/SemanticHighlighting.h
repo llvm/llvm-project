@@ -38,6 +38,7 @@ enum class HighlightingKind {
   Namespace,
   TemplateParameter,
   Primitive,
+  Macro,
 
   NumKinds,
 };

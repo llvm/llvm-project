@@ -5,6 +5,7 @@ add_clang_library(clangTidyLLVMModule
   IncludeOrderCheck.cpp
   LLVMTidyModule.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
+  PreferRegisterOverUnsignedCheck.cpp
   TwineLocalCheck.cpp
 
   LINK_LIBS

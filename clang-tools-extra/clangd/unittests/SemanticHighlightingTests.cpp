@@ -47,7 +47,8 @@ std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
       {HighlightingKind::Method, "Method"},
       {HighlightingKind::StaticMethod, "StaticMethod"},
       {HighlightingKind::TemplateParameter, "TemplateParameter"},
-      {HighlightingKind::Primitive, "Primitive"}};
+      {HighlightingKind::Primitive, "Primitive"},
+      {HighlightingKind::Macro, "Macro"}};
   std::vector<HighlightingToken> ExpectedTokens;
   for (const auto &KindString : KindToString) {
     std::vector<HighlightingToken> Toks = makeHighlightingTokens(
@@ -391,9 +392,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       R"cpp(
       #define DEF_MULTIPLE(X) namespace X { class X { int X; }; }
       #define DEF_CLASS(T) class T {};
-      DEF_MULTIPLE(XYZ);
-      DEF_MULTIPLE(XYZW);
-      DEF_CLASS($Class[[A]])
+      $Macro[[DEF_MULTIPLE]](XYZ);
+      $Macro[[DEF_MULTIPLE]](XYZW);
+      $Macro[[DEF_CLASS]]($Class[[A]])
       #define MACRO_CONCAT(X, V, T) T foo##X = V
       #define DEF_VAR(X, V) int X = V
       #define DEF_VAR_T(T, X, V) T X = V
@@ -404,26 +405,27 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       #define SOME_NAME_SET variable2 = 123
       #define INC_VAR(X) X += 2
       $Primitive[[void]] $Function[[foo]]() {
-        DEF_VAR($LocalVariable[[X]],  123);
-        DEF_VAR_REV(908, $LocalVariable[[XY]]);
-        $Primitive[[int]] CPY( $LocalVariable[[XX]] );
-        DEF_VAR_TYPE($Class[[A]], $LocalVariable[[AA]]);
-        $Primitive[[double]] SOME_NAME;
-        $Primitive[[int]] SOME_NAME_SET;
+        $Macro[[DEF_VAR]]($LocalVariable[[X]],  123);
+        $Macro[[DEF_VAR_REV]](908, $LocalVariable[[XY]]);
+        $Primitive[[int]] $Macro[[CPY]]( $LocalVariable[[XX]] );
+        $Macro[[DEF_VAR_TYPE]]($Class[[A]], $LocalVariable[[AA]]);
+        $Primitive[[double]] $Macro[[SOME_NAME]];
+        $Primitive[[int]] $Macro[[SOME_NAME_SET]];
         $LocalVariable[[variable]] = 20.1;
-        MACRO_CONCAT(var, 2, $Primitive[[float]]);
-        DEF_VAR_T($Class[[A]], CPY(CPY($LocalVariable[[Nested]])),
-              CPY($Class[[A]]()));
-        INC_VAR($LocalVariable[[variable]]);
+        $Macro[[MACRO_CONCAT]](var, 2, $Primitive[[float]]);
+        $Macro[[DEF_VAR_T]]($Class[[A]], $Macro[[CPY]](
+              $Macro[[CPY]]($LocalVariable[[Nested]])),
+            $Macro[[CPY]]($Class[[A]]()));
+        $Macro[[INC_VAR]]($LocalVariable[[variable]]);
       }
-      $Primitive[[void]] SOME_NAME();
-      DEF_VAR($Variable[[XYZ]], 567);
-      DEF_VAR_REV(756, $Variable[[AB]]);
+      $Primitive[[void]] $Macro[[SOME_NAME]]();
+      $Macro[[DEF_VAR]]($Variable[[XYZ]], 567);
+      $Macro[[DEF_VAR_REV]](756, $Variable[[AB]]);
 
       #define CALL_FN(F) F();
       #define DEF_FN(F) void F ()
-      DEF_FN($Function[[g]]) {
-        CALL_FN($Function[[foo]]);
+      $Macro[[DEF_FN]]($Function[[g]]) {
+        $Macro[[CALL_FN]]($Function[[foo]]);
       }
     )cpp",
       R"cpp(
@@ -433,8 +435,23 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       $Primitive[[int]] $Variable[[y]];
       $Primitive[[int]] $Function[[f]]();
       $Primitive[[void]] $Function[[foo]]() {
-        assert($Variable[[x]] != $Variable[[y]]);
-        assert($Variable[[x]] != $Function[[f]]());
+        $Macro[[assert]]($Variable[[x]] != $Variable[[y]]);
+        $Macro[[assert]]($Variable[[x]] != $Function[[f]]());
+      }
+    )cpp",
+    R"cpp(
+      struct $Class[[S]] {
+        $Primitive[[float]] $Field[[Value]];
+        $Class[[S]] *$Field[[Next]];
+      };
+      $Class[[S]] $Variable[[Global]][2] = {$Class[[S]](), $Class[[S]]()};
+      $Primitive[[void]] $Function[[f]]($Class[[S]] $Parameter[[P]]) {
+        $Primitive[[int]] $LocalVariable[[A]][2] = {1,2};
+        auto [$Variable[[B1]], $Variable[[B2]]] = $LocalVariable[[A]];
+        auto [$Variable[[G1]], $Variable[[G2]]] = $Variable[[Global]];
+        $Class[[auto]] [$Variable[[P1]], $Variable[[P2]]] = $Parameter[[P]];
+        // Highlights references to BindingDecls.
+        $Variable[[B1]]++;
       }
     )cpp"};
   for (const auto &TestCase : TestCases) {
@@ -455,8 +472,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
   // A separate test for macros in headers.
   checkHighlightings(R"cpp(
     #include "imp.h"
-    DEFINE_Y
-    DXYZ_Y(A);
+    $Macro[[DEFINE_Y]]
+    $Macro[[DXYZ_Y]](A);
   )cpp",
                      {{"imp.h", R"cpp(
     #define DXYZ(X) class X {};

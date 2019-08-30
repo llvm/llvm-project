@@ -85,6 +85,13 @@ Improvements to clang-tidy
   Finds uses of deprecated Googletest APIs with names containing ``case`` and
   replaces them with equivalent APIs with ``suite``.
 
+- New :doc:`llvm-prefer-register-over-unsigned
+  <clang-tidy/checks/llvm-prefer-register-over-unsigned>` check.
+
+  Finds historical use of ``unsigned`` to hold vregs and physregs and rewrites
+  them to use ``Register``
+
+
 Improvements to include-fixer
 -----------------------------
 
