@@ -205,8 +205,9 @@ private:
       addToken(Loc, HighlightingKind::Class);
       return;
     }
-    if (isa<CXXMethodDecl>(D)) {
-      addToken(Loc, HighlightingKind::Method);
+    if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      addToken(Loc, MD->isStatic() ? HighlightingKind::StaticMethod
+                                   : HighlightingKind::Method);
       return;
     }
     if (isa<FieldDecl>(D)) {
@@ -226,8 +227,10 @@ private:
       return;
     }
     if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      addToken(Loc, VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
-                                         : HighlightingKind::Variable);
+      addToken(Loc, VD->isStaticDataMember()
+                        ? HighlightingKind::StaticField
+                        : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
+                                               : HighlightingKind::Variable);
       return;
     }
     if (isa<FunctionDecl>(D)) {
@@ -435,6 +438,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.function.cpp";
   case HighlightingKind::Method:
     return "entity.name.function.method.cpp";
+  case HighlightingKind::StaticMethod:
+    return "entity.name.function.method.static.cpp";
   case HighlightingKind::Variable:
     return "variable.other.cpp";
   case HighlightingKind::LocalVariable:
@@ -443,6 +448,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "variable.parameter.cpp";
   case HighlightingKind::Field:
     return "variable.other.field.cpp";
+  case HighlightingKind::StaticField:
+    return "variable.other.field.static.cpp";
   case HighlightingKind::Class:
     return "entity.name.type.class.cpp";
   case HighlightingKind::Enum:

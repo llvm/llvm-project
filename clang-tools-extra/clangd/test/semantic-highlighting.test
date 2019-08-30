@@ -20,7 +20,13 @@
 # CHECK-NEXT:            "entity.name.function.method.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.function.method.static.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
 # CHECK-NEXT:            "variable.other.field.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "variable.other.field.static.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.type.class.cpp"
@@ -49,7 +55,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADAAsAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADAA0AAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -64,11 +70,11 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADAAsAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADAA0AAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADAAsAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADAA0AAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -83,7 +89,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADAAsAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADAA0AAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {

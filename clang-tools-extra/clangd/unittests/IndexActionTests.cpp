@@ -88,7 +88,7 @@ public:
     Args.push_back(MainFilePath);
 
     tooling::ToolInvocation Invocation(
-        Args, Action.release(), Files.get(),
+        Args, std::move(Action), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
     Invocation.run();
