@@ -1522,6 +1522,41 @@ uint32_t GVN::ValueTable::phiTranslate(const BasicBlock *Pred,
   return NewNum;
 }
 
+// Return true if the value number \p Num and NewNum have equal value.
+// Return false if the result is unknown.
+bool GVN::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
+                                       const BasicBlock *Pred,
+                                       const BasicBlock *PhiBlock, GVN &Gvn) {
+  CallInst *Call = nullptr;
+  LeaderTableEntry *Vals = &Gvn.LeaderTable[Num];
+  while (Vals) {
+    Call = dyn_cast<CallInst>(Vals->Val);
+    if (Call && Call->getParent() == PhiBlock)
+      break;
+    Vals = Vals->Next;
+  }
+
+  if (AA->doesNotAccessMemory(Call))
+    return true;
+
+  if (!MD || !AA->onlyReadsMemory(Call))
+    return false;
+
+  MemDepResult local_dep = MD->getDependency(Call);
+  if (!local_dep.isNonLocal())
+    return false;
+
+  const MemoryDependenceResults::NonLocalDepInfo &deps =
+      MD->getNonLocalCallDependency(Call);
+
+  // Check to see if the Call has no function local clobber.
+  for (unsigned i = 0; i < deps.size(); i++) {
+    if (deps[i].getResult().isNonFuncLocal())
+      return true;
+  }
+  return false;
+}
+
 /// Translate value number \p Num using phis, so that it has the values of
 /// the phis in BB.
 uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
@@ -1568,8 +1603,11 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
     }
   }
 
-  if (uint32_t NewNum = expressionNumbering[Exp])
+  if (uint32_t NewNum = expressionNumbering[Exp]) {
+    if (Exp.opcode == Instruction::Call && NewNum != Num)
+      return areCallValsEqual(Num, NewNum, Pred, PhiBlock, Gvn) ? NewNum : Num;
     return NewNum;
+  }
   return Num;
 }
 

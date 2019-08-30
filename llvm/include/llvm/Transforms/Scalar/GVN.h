@@ -120,6 +120,8 @@ public:
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVN &Gvn);
+    bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
+                          const BasicBlock *PhiBlock, GVN &Gvn);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
     bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVN &Gvn);
 
