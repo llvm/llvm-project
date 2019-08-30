@@ -29,7 +29,7 @@ class Defined;
 class DefinedAbsolute;
 class DefinedRegular;
 class DefinedRelative;
-class Lazy;
+class LazyArchive;
 class SectionChunk;
 class Symbol;
 
@@ -86,7 +86,8 @@ public:
   Symbol *addAbsolute(StringRef n, uint64_t va);
 
   Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
-  void addLazy(ArchiveFile *f, const Archive::Symbol &sym);
+  void addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym);
+  void addLazyObject(LazyObjFile *f, StringRef n);
   Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
   Symbol *addRegular(InputFile *f, StringRef n,
                      const llvm::object::coff_symbol_generic *s = nullptr,

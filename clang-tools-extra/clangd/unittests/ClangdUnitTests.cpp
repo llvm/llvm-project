@@ -262,6 +262,56 @@ TEST(ClangdUnitTest, CanBuildInvocationWithUnknownArgs) {
   EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
 }
 
+TEST(ClangdUnitTest, CollectsMainFileMacroExpansions) {
+  Annotations TestCase(R"cpp(
+    #define MACRO_ARGS(X, Y) X Y
+    ^ID(int A);
+    // Macro arguments included.
+    ^MACRO_ARGS(^MACRO_ARGS(^MACRO_EXP(int), A), ^ID(= 2));
+
+    // Macro names inside other macros not included.
+    #define FOO BAR
+    #define BAR 1
+    int A = ^FOO;
+
+    // Macros from token concatenations not included.
+    #define CONCAT(X) X##A()
+    #define PREPEND(X) MACRO##X()
+    #define MACROA() 123
+    int B = ^CONCAT(MACRO);
+    int D = ^PREPEND(A)
+
+    // Macros included not from preamble not included.
+    #include "foo.inc"
+
+    #define assert(COND) if (!(COND)) { printf("%s", #COND); exit(0); }
+
+    void test() {
+      // Includes macro expansions in arguments that are expressions
+      ^assert(0 <= ^BAR);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(TestCase.code());
+  TU.HeaderCode = R"cpp(
+    #define ID(X) X
+    #define MACRO_EXP(X) ID(X)
+    MACRO_EXP(int B);
+  )cpp";
+  TU.AdditionalFiles["foo.inc"] = R"cpp(
+    int C = ID(1);
+    #define DEF 1
+    int D = DEF;
+  )cpp";
+  ParsedAST AST = TU.build();
+  const std::vector<SourceLocation> &MacroExpansionLocations =
+      AST.getMainFileExpansions();
+  std::vector<Position> MacroExpansionPositions;
+  for (const auto &L : MacroExpansionLocations)
+    MacroExpansionPositions.push_back(
+        sourceLocToPosition(AST.getSourceManager(), L));
+  EXPECT_EQ(MacroExpansionPositions, TestCase.points());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

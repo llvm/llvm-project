@@ -61,8 +61,7 @@ private:
 
   StructuredData::ObjectSP RetrieveReportData(ExecutionContextRef exe_ctx_ref);
 
-  std::string FormatDescription(StructuredData::ObjectSP report,
-                                bool &is_swift_access_race);
+  std::string FormatDescription(StructuredData::ObjectSP report);
 
   std::string GenerateSummary(StructuredData::ObjectSP report);
 

@@ -34,9 +34,11 @@ enum class ScanningMode {
 /// the invidual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(ScanningMode Mode);
+  DependencyScanningService(ScanningMode Mode, bool ReuseFileManager = true);
 
   ScanningMode getMode() const { return Mode; }
+
+  bool canReuseFileManager() const { return ReuseFileManager; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
@@ -44,6 +46,7 @@ public:
 
 private:
   const ScanningMode Mode;
+  const bool ReuseFileManager;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
 };

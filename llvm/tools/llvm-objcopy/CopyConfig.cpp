@@ -177,7 +177,8 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
-static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
+static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
+                                                  uint8_t DefaultVisibility) {
   // Parse value given with --add-symbol option and create the
   // new symbol if possible. The value format for --add-symbol is:
   //
@@ -221,6 +222,8 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   if (Flags[0].getAsInteger(0, SI.Value))
     return createStringError(errc::invalid_argument, "bad symbol value: '%s'",
                              Flags[0].str().c_str());
+
+  SI.Visibility = DefaultVisibility;
 
   using Functor = std::function<void(void)>;
   SmallVector<StringRef, 6> UnsupportedFlags;
@@ -488,6 +491,21 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.BinaryArch = *MI;
   }
 
+  if (opt::Arg *A = InputArgs.getLastArg(OBJCOPY_new_symbol_visibility)) {
+    const uint8_t Invalid = 0xff;
+    Config.NewSymbolVisibility = StringSwitch<uint8_t>(A->getValue())
+                                     .Case("default", ELF::STV_DEFAULT)
+                                     .Case("hidden", ELF::STV_HIDDEN)
+                                     .Case("internal", ELF::STV_INTERNAL)
+                                     .Case("protected", ELF::STV_PROTECTED)
+                                     .Default(Invalid);
+
+    if (Config.NewSymbolVisibility == Invalid)
+      return createStringError(
+          errc::invalid_argument, "'%s' is not a valid symbol visibility",
+          InputArgs.getLastArgValue(OBJCOPY_new_symbol_visibility).str().c_str());
+  }
+
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
@@ -696,7 +714,9 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
-    Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(Arg->getValue());
+    Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(
+        Arg->getValue(),
+        Config.NewSymbolVisibility.getValueOr(ELF::STV_DEFAULT));
     if (!NSI)
       return NSI.takeError();
     Config.SymbolsToAdd.push_back(*NSI);

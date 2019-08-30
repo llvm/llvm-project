@@ -191,6 +191,8 @@ std::string EVT::getEVTString() const {
   case MVT::v3f16:   return "v3f16";
   case MVT::v4f16:   return "v4f16";
   case MVT::v8f16:   return "v8f16";
+  case MVT::v16f16:  return "v16f16";
+  case MVT::v32f16:  return "v32f16";
   case MVT::v3f32:   return "v3f32";
   case MVT::v4f32:   return "v4f32";
   case MVT::v5f32:   return "v5f32";

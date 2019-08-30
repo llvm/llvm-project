@@ -1809,7 +1809,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
       // offsets to its parts don't wrap either.
       SDValue Ptr = DAG.getObjectPtrOffset(getCurSDLoc(), RetPtr, Offsets[i]);
 
-      SDValue Val = RetOp.getValue(i);
+      SDValue Val = RetOp.getValue(RetOp.getResNo() + i);
       if (MemVTs[i] != ValueVTs[i])
         Val = DAG.getPtrExtOrTrunc(Val, getCurSDLoc(), MemVTs[i]);
       Chains[i] = DAG.getStore(Chain, getCurSDLoc(), Val,

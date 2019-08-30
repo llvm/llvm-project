@@ -5,9 +5,13 @@ define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_2: # %body
+; CHECK-NEXT:  .LBB0_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %r9
+; CHECK-NEXT:    cmpq %rcx, %r9
+; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %body
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $1, (%rdx,%r9,4)
 ; CHECK-NEXT:    movzbl (%rdi,%r9,4), %r8d
@@ -17,12 +21,8 @@ define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {
 ; CHECK-NEXT:    movl %eax, (%rdi,%r9,4)
 ; CHECK-NEXT:    incq %r9
 ; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .LBB0_1: # %loop
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %r9
-; CHECK-NEXT:    cmpq %rcx, %r9
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %endloop
+; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:  .LBB0_3: # %endloop
 ; CHECK-NEXT:    retq
 %i = alloca i64
 store i64 0, i64* %i

@@ -3,9 +3,9 @@
 
 ; CHECK: memub
 ; CHECK: memub
+; CHECK: cmp.eq
 ; CHECK: memub
 ; CHECK-NOT: if{{.*}}jump .LBB
-; CHECK: cmp.eq
 
 target triple = "hexagon-unknown--elf"
 

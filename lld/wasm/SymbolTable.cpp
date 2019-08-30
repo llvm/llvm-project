@@ -425,9 +425,16 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
     }
     if (!existingFunction->signature && sig)
       existingFunction->signature = sig;
-    if (isCalledDirectly && !signatureMatches(existingFunction, sig))
-      if (getFunctionVariant(s, sig, file, &s))
+    if (isCalledDirectly && !signatureMatches(existingFunction, sig)) {
+      auto* existingUndefined = dyn_cast<UndefinedFunction>(existingFunction);
+      // If the existing undefined functions is not called direcltly then let
+      // this one take precedence.  Otherwise the existing function is either
+      // direclty called or defined, in which case we need a function variant.
+      if (existingUndefined && !existingUndefined->isCalledDirectly)
         replaceSym();
+      else if (getFunctionVariant(s, sig, file, &s))
+        replaceSym();
+    }
   }
 
   return s;

@@ -72,8 +72,8 @@
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mmpx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=MPX %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-mpx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-MPX %s
-// MPX: "-target-feature" "+mpx"
-// NO-MPX: "-target-feature" "-mpx"
+// MPX: the flag '-mmpx' has been deprecated and will be ignored
+// NO-MPX: the flag '-mno-mpx' has been deprecated and will be ignored
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mshstk %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CETSS %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-shstk %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-CETSS %s

@@ -755,7 +755,9 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out) {
-  BinaryReader Reader(Config.BinaryArch, &In);
+  uint8_t NewSymbolVisibility =
+      Config.NewSymbolVisibility.getValueOr(ELF::STV_DEFAULT);
+  BinaryReader Reader(Config.BinaryArch, &In, NewSymbolVisibility);
   std::unique_ptr<Object> Obj = Reader.create();
 
   // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch

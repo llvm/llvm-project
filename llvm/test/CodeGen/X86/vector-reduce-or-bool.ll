@@ -754,6 +754,7 @@ define i1 @trunc_v32i16_v32i1(<32 x i16>) {
 ;
 ; AVX512F-LABEL: trunc_v32i16_v32i1:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -870,6 +871,7 @@ define i1 @trunc_v64i8_v64i1(<64 x i8>) {
 ;
 ; AVX512F-LABEL: trunc_v64i8_v64i1:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; AVX512F-NEXT:    vpor %xmm2, %xmm3, %xmm2
@@ -1682,6 +1684,7 @@ define i1 @icmp_v32i16_v32i1(<32 x i16>) {
 ;
 ; AVX512F-LABEL: icmp_v32i16_v32i1:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
@@ -1769,6 +1772,7 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>) {
 ;
 ; AVX512F-LABEL: icmp_v64i8_v64i1:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0

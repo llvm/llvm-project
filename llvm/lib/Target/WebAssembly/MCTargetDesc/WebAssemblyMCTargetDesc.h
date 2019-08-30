@@ -38,7 +38,7 @@ MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
 std::unique_ptr<MCObjectTargetWriter>
-createWebAssemblyWasmObjectWriter(bool Is64Bit);
+createWebAssemblyWasmObjectWriter(bool Is64Bit, bool IsEmscripten);
 
 namespace WebAssembly {
 enum OperandType {

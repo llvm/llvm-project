@@ -889,11 +889,13 @@ public:
 
 class BinaryELFBuilder : public BasicELFBuilder {
   MemoryBuffer *MemBuf;
+  uint8_t NewSymbolVisibility;
   void addData(SymbolTableSection *SymTab);
 
 public:
-  BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB)
-      : BasicELFBuilder(EM), MemBuf(MB) {}
+  BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB, uint8_t NewSymbolVisibility)
+      : BasicELFBuilder(EM), MemBuf(MB),
+        NewSymbolVisibility(NewSymbolVisibility) {}
 
   std::unique_ptr<Object> build();
 };
@@ -942,10 +944,12 @@ public:
 class BinaryReader : public Reader {
   const MachineInfo &MInfo;
   MemoryBuffer *MemBuf;
+  uint8_t NewSymbolVisibility;
 
 public:
-  BinaryReader(const MachineInfo &MI, MemoryBuffer *MB)
-      : MInfo(MI), MemBuf(MB) {}
+  BinaryReader(const MachineInfo &MI, MemoryBuffer *MB,
+               const uint8_t NewSymbolVisibility)
+      : MInfo(MI), MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
   std::unique_ptr<Object> create() const override;
 };
 

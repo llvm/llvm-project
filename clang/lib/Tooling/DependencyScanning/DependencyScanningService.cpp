@@ -12,5 +12,6 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-DependencyScanningService::DependencyScanningService(ScanningMode Mode)
-    : Mode(Mode) {}
+DependencyScanningService::DependencyScanningService(ScanningMode Mode,
+                                                     bool ReuseFileManager)
+    : Mode(Mode), ReuseFileManager(ReuseFileManager) {}

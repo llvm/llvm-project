@@ -426,8 +426,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
-                              bool ShouldCloseOpenFile) {
+FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile) {
   uint64_t FileSize = Entry->getSize();
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
@@ -440,10 +439,7 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
     auto Result =
         Entry->File->getBuffer(Filename, FileSize,
                                /*RequiresNullTerminator=*/true, isVolatile);
-    // FIXME: we need a set of APIs that can make guarantees about whether a
-    // FileEntry is open or not.
-    if (ShouldCloseOpenFile)
-      Entry->closeFile();
+    Entry->closeFile();
     return Result;
   }
 
@@ -496,20 +492,6 @@ FileManager::getNoncachedStatValue(StringRef Path,
     return S.getError();
   Result = *S;
   return std::error_code();
-}
-
-void FileManager::invalidateCache(const FileEntry *Entry) {
-  assert(Entry && "Cannot invalidate a NULL FileEntry");
-
-  SeenFileEntries.erase(Entry->getName());
-
-  // FileEntry invalidation should not block future optimizations in the file
-  // caches. Possible alternatives are cache truncation (invalidate last N) or
-  // invalidation of the whole cache.
-  //
-  // FIXME: This is broken. We sometimes have the same FileEntry* shared
-  // between multiple SeenFileEntries, so this can leave dangling pointers.
-  UniqueRealFiles.erase(Entry->getUniqueID());
 }
 
 void FileManager::GetUniqueIDMapping(

@@ -12,14 +12,17 @@ define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    incq %rsi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_4: # %inner_loop_latch
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    addq $2, %rsi
 ; CHECK-NEXT:  .LBB0_2: # %inner_loop_top
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB0_4 Depth 2
+; CHECK-NEXT:    cmpb $0, (%rsi)
+; CHECK-NEXT:    js .LBB0_3
+; CHECK-NEXT:  .LBB0_4: # %inner_loop_latch
+; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    addq $2, %rsi
 ; CHECK-NEXT:    cmpb $0, (%rsi)
 ; CHECK-NEXT:    jns .LBB0_4
 ; CHECK-NEXT:    jmp .LBB0_3
@@ -130,58 +133,58 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB1_18
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
+; CHECK-NEXT:  .LBB1_9: # %shared_loop_header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testq %rbx, %rbx
 ; CHECK-NEXT:    jne .LBB1_27
-; CHECK-NEXT:  # %bb.9: # %inner_loop_body
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:  # %bb.10: # %inner_loop_body
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jns .LBB1_8
-; CHECK-NEXT:  # %bb.10: # %if.end96.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jns .LBB1_9
+; CHECK-NEXT:  # %bb.11: # %if.end96.i
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    cmpl $3, %ebp
 ; CHECK-NEXT:    jae .LBB1_22
-; CHECK-NEXT:  # %bb.11: # %if.end287.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:  # %bb.12: # %if.end287.i
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    cmpl $1, %ebp
 ; CHECK-NEXT:    setne %dl
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_15
-; CHECK-NEXT:  # %bb.12: # %if.end308.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jne .LBB1_16
+; CHECK-NEXT:  # %bb.13: # %if.end308.i
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_17
-; CHECK-NEXT:  # %bb.13: # %if.end335.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    je .LBB1_7
+; CHECK-NEXT:  # %bb.14: # %if.end335.i
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    movl $0, %esi
-; CHECK-NEXT:    jne .LBB1_7
-; CHECK-NEXT:  # %bb.14: # %merge_other
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jne .LBB1_8
+; CHECK-NEXT:  # %bb.15: # %merge_other
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    jmp .LBB1_16
-; CHECK-NEXT:  .LBB1_15: # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jmp .LBB1_17
+; CHECK-NEXT:  .LBB1_16: # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    movb %dl, %sil
 ; CHECK-NEXT:    addl $3, %esi
-; CHECK-NEXT:  .LBB1_16: # %outer_loop_latch
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:  .LBB1_17: # %outer_loop_latch
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    # implicit-def: $dl
-; CHECK-NEXT:    jmp .LBB1_7
-; CHECK-NEXT:  .LBB1_17: # %merge_predecessor_split
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jmp .LBB1_8
+; CHECK-NEXT:  .LBB1_7: # %merge_predecessor_split
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    movb $32, %dl
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:  .LBB1_7: # %outer_loop_latch
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:  .LBB1_8: # %outer_loop_latch
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    movzwl %si, %esi
 ; CHECK-NEXT:    decl %esi
 ; CHECK-NEXT:    movzwl %si, %esi
 ; CHECK-NEXT:    leaq 1(%rcx,%rsi), %rcx
 ; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    jne .LBB1_8
+; CHECK-NEXT:    jne .LBB1_9
 ; CHECK-NEXT:  .LBB1_18: # %while.cond.us1412.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al

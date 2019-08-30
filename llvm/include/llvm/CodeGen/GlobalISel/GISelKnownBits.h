@@ -47,6 +47,17 @@ public:
   APInt getKnownZeroes(Register R);
   APInt getKnownOnes(Register R);
 
+  /// \return true if 'V & Mask' is known to be zero in DemandedElts. We use
+  /// this predicate to simplify operations downstream.
+  /// Mask is known to be zero for bits that V cannot have.
+  bool maskedValueIsZero(Register Val, const APInt &Mask) {
+    return Mask.isSubsetOf(getKnownBits(Val).Zero);
+  }
+
+  /// \return true if the sign bit of Op is known to be zero.  We use this
+  /// predicate to simplify operations downstream.
+  bool signBitIsZero(Register Op);
+
   // FIXME: Is this the right place for G_FRAME_INDEX? Should it be in
   // TargetLowering?
   void computeKnownBitsForFrameIndex(Register R, KnownBits &Known,

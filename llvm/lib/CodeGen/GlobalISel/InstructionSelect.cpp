@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -45,6 +46,7 @@ INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
                       "Select target instructions out of generic instructions",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
@@ -53,6 +55,8 @@ InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) { }
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
+  AU.addRequired<GISelKnownBitsAnalysis>();
+  AU.addPreserved<GISelKnownBitsAnalysis>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -64,12 +68,13 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   LLVM_DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
+  GISelKnownBits &KB = getAnalysis<GISelKnownBitsAnalysis>().get(MF);
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
   CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, CoverageInfo);
+  ISel->setupMF(MF, KB, CoverageInfo);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);

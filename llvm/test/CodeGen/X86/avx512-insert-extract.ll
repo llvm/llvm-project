@@ -618,11 +618,11 @@ define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, i32* %ptr) {
 define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; KNL-LABEL: insert_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm2
-; KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
-; KNL-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; KNL-NEXT:    vpinsrw $1, %edi, %xmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v32i16:
@@ -669,11 +669,13 @@ define <8 x i16> @insert_v8i16(<8 x i16> %x, i16 %y, i16* %ptr) {
 define <64 x i8> @insert_v64i8(<64 x i8> %x, i8 %y, i8* %ptr) {
 ; KNL-LABEL: insert_v64i8:
 ; KNL:       ## %bb.0:
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; KNL-NEXT:    vpinsrb $2, %edi, %xmm2, %xmm2
 ; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v64i8:
@@ -1015,10 +1017,12 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: test_extractelement_v64i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti128 $1, %ymm3, %xmm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; KNL-NEXT:    vpminub %xmm0, %xmm1, %xmm0
-; KNL-NEXT:    vpcmpeqb %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
+; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1049,10 +1053,12 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: extractelement_v64i1_alt:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti128 $1, %ymm3, %xmm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; KNL-NEXT:    vpminub %xmm0, %xmm1, %xmm0
-; KNL-NEXT:    vpcmpeqb %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
+; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1352,7 +1358,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
 ; KNL-NEXT:    ## kill: def $edi killed $edi def $rdi
-; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovaps %ymm0, (%rsp)
 ; KNL-NEXT:    andl $31, %edi
 ; KNL-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -1428,7 +1434,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
 ; KNL-NEXT:    ## kill: def $edi killed $edi def $rdi
-; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovaps %ymm0, (%rsp)
 ; KNL-NEXT:    andl $63, %edi
 ; KNL-NEXT:    movb (%rsp,%rdi), %al
@@ -1470,7 +1476,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
 ; KNL-NEXT:    addb %dil, %dil
-; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovaps %ymm0, (%rsp)
 ; KNL-NEXT:    movzbl %dil, %eax
 ; KNL-NEXT:    andl $63, %eax
@@ -1764,6 +1770,7 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
 ; KNL-NEXT:    ## kill: def $esi killed $esi def $rsi
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0

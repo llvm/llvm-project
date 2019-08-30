@@ -1537,8 +1537,11 @@ define <64 x i8> @avg_v64i8_3(<64 x i8> %a, <64 x i8> %b) nounwind {
 ;
 ; AVX512F-LABEL: avg_v64i8_3:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpavgb %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpavgb %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpavgb %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpavgb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: avg_v64i8_3:

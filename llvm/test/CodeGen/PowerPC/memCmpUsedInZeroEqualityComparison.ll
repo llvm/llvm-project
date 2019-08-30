@@ -196,14 +196,12 @@ define signext i32 @equalityFoldOneConstant(i8* %X) {
   ret i32 %cond
 }
 
-define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) {
+define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) nounwind {
 ; CHECK-LABEL: length2_eq_nobuiltin_attr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    nop

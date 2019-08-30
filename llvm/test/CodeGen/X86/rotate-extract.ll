@@ -288,3 +288,47 @@ define i32 @extract_add_1(i32 %i) nounwind {
   %out = or i32 %ii, %rhs
   ret i32 %out
 }
+
+define i32 @extract_add_1_comut(i32 %i) nounwind {
+; X86-LABEL: extract_add_1_comut:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax), %ecx
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: extract_add_1_comut:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    shrl $31, %edi
+; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    retq
+  %ii = add i32 %i, %i
+  %lhs = lshr i32 %i, 31
+  %out = or i32 %lhs, %ii
+  ret i32 %out
+}
+
+define i32 @no_extract_add_1(i32 %i) nounwind {
+; X86-LABEL: no_extract_add_1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx), %eax
+; X86-NEXT:    shrl $27, %ecx
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: no_extract_add_1:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    shrl $27, %edi
+; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    retq
+  %ii = add i32 %i, %i
+  %rhs = lshr i32 %i, 27
+  %out = or i32 %ii, %rhs
+  ret i32 %out
+}

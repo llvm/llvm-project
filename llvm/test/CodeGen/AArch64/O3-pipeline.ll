@@ -97,6 +97,7 @@
 ; CHECK-NEXT:       Early If-Conversion
 ; CHECK-NEXT:       AArch64 Store Pair Suppression
 ; CHECK-NEXT:       AArch64 SIMD instructions optimization pass
+; CHECK-NEXT:       AArch64 Stack Tagging PreRA
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion

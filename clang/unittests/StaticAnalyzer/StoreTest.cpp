@@ -96,8 +96,8 @@ public:
 };
 
 TEST(Store, VariableBind) {
-  EXPECT_TRUE(tooling::runToolOnCode(
-      new VariableBindAction, "void foo() { int x0, y0, z0, x1, y1; }"));
+  EXPECT_TRUE(tooling::runToolOnCode(std::make_unique<VariableBindAction>(),
+                                     "void foo() { int x0, y0, z0, x1, y1; }"));
 }
 
 } // namespace

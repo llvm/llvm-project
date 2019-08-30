@@ -4,9 +4,9 @@
 ; This situation can arise due to tail duplication.
 
 ; CHECK: loop1([[LP:.LBB0_[0-9]+]]
+; CHECK: endloop1
 ; CHECK: [[LP]]:
 ; CHECK-NOT: loop1(
-; CHECK: endloop1
 ; CHECK: endloop1
 
 %s.0 = type { i32, i8* }

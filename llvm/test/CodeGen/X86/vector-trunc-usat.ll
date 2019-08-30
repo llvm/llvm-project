@@ -2392,6 +2392,7 @@ define <32 x i8> @trunc_usat_v32i16_v32i8(<32 x i16> %a0) {
 ;
 ; AVX512F-LABEL: trunc_usat_v32i16_v32i8:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512F-NEXT:    vpminuw %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpminuw %ymm2, %ymm0, %ymm0
@@ -2404,6 +2405,7 @@ define <32 x i8> @trunc_usat_v32i16_v32i8(<32 x i16> %a0) {
 ;
 ; AVX512VL-LABEL: trunc_usat_v32i16_v32i8:
 ; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512VL-NEXT:    vpminuw %ymm2, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpminuw %ymm2, %ymm0, %ymm0

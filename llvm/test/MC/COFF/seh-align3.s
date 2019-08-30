@@ -68,9 +68,9 @@
     .def func; .scl 2; .type 32; .endef
     .seh_proc func
     push %r12
-    .seh_pushreg 12
+    .seh_pushreg %r12
     push %r13
-    .seh_pushreg 13
+    .seh_pushreg %r13
     .seh_handler __C_specific_handler, @except, @unwind
     .seh_handlerdata
     .long 0xcafebabe
