@@ -29,9 +29,9 @@ class MultiThreadTestCase(TestBase):
         self.step_2_line = line_number('main.c', '// Step location 2')
 
     def thread_is_stopped(self, threads, ref_thread):
-        for thread in threads :
+        for thread in threads:
             self.assertTrue(thread.IsValid())
-            if thread.GetThreadID() == ref_thread.GetThreadID() :
+            if thread.GetThreadID() == ref_thread.GetThreadID():
                 return True
         return False
 
@@ -52,16 +52,17 @@ class MultiThreadTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         thread = process.GetThreadAtIndex(8)
         threads = get_stopped_threads(process, lldb.eStopReasonBreakpoint)
-        while not self.thread_is_stopped(threads, thread) :
+        while not self.thread_is_stopped(threads, thread):
             process.Continue()
             threads = get_stopped_threads(process, lldb.eStopReasonBreakpoint)
 
         target.BreakpointDelete(breakpoint.GetID())
 
         frame0 = thread.GetFrameAtIndex(0)
-        while frame0.GetLineEntry().GetLine() != self.step_1_line :
+        while frame0.GetLineEntry().GetLine() != self.step_1_line:
             thread.StepOver()
-            self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+            self.assertTrue(thread.GetStopReason()
+                            == lldb.eStopReasonPlanComplete)
             self.assertTrue(thread.GetNumFrames() == 2)
             frame0 = thread.GetFrameAtIndex(0)
 
@@ -70,35 +71,39 @@ class MultiThreadTestCase(TestBase):
         self.assertTrue(thread.GetNumFrames() == 3)
 
         frame0 = thread.GetFrameAtIndex(0)
-        while frame0.GetLineEntry().GetLine() != self.step_2_line :
+        while frame0.GetLineEntry().GetLine() != self.step_2_line:
             thread.StepOver()
-            self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+            self.assertTrue(thread.GetStopReason()
+                            == lldb.eStopReasonPlanComplete)
             self.assertTrue(thread.GetNumFrames() == 3)
             frame0 = thread.GetFrameAtIndex(0)
 
         frame0 = thread.GetFrameAtIndex(0)
         self.runCmd("disassemble --pc --count 1")
-        while not re.search("call", self.res.GetOutput()) :
+        while not re.search("call", self.res.GetOutput()):
             thread.StepInstruction(False)
-            self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+            self.assertTrue(thread.GetStopReason()
+                            == lldb.eStopReasonPlanComplete)
             self.assertTrue(thread.GetNumFrames() == 3)
             self.runCmd("disassemble --pc --count 1")
 
-
         thread.StepInstruction(False)
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertTrue(thread.GetStopReason()
+                        == lldb.eStopReasonPlanComplete)
         self.assertTrue(thread.GetNumFrames() == 4)
 
         frame0 = thread.GetFrameAtIndex(0)
-        while frame0.GetLineEntry().GetLine() != self.step_2_line :
+        while frame0.GetLineEntry().GetLine() != self.step_2_line:
             thread.StepOver()
-            self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+            self.assertTrue(thread.GetStopReason()
+                            == lldb.eStopReasonPlanComplete)
             frame0 = thread.GetFrameAtIndex(0)
 
         self.runCmd("disassemble --pc --count 1")
-        while not re.search("call", self.res.GetOutput()) :
+        while not re.search("call", self.res.GetOutput()):
             thread.StepInstruction(False)
-            self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+            self.assertTrue(thread.GetStopReason()
+                            == lldb.eStopReasonPlanComplete)
             self.assertTrue(thread.GetNumFrames() == 4)
             self.runCmd("disassemble --pc --count 1")
 
