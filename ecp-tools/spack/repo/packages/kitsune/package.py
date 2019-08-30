@@ -4,6 +4,64 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 from spack import *
+from spack.directives import *
+import llnl.util.tty as tty
+
+def build_variant_helpers(default_dict):
+    """Build helper variant and project functions
+
+    This returns two functions itself, closing over the dictionary passed as a way
+    of faking a convenient static class variable that can still be used to define
+    variants, dependencies and conflicts.
+    """
+
+    def _kitsune_variant(name, description, project=False, default=False,
+                     values=None, deps={}, cmake_args=[]):
+        """Make an LLVM variant
+        
+        Similar to `variant()` but allows more information to be associated with the
+        variant in one place.  This function only exists to ensure the presence of
+        default values for keys in `llvm_variants`.
+
+        Args:
+
+        name (str): Name of the variant
+        description (str): Description of the variant
+        project (bool): Whether this represents a project in the monorepo
+        default(bool): Whether to enable this variant by default
+        values (tuple or callable): same as spack `variant`
+        deps (dict): Dict of dependencies, with the key being the dependency and
+          the values being kwargs passed to `depends_on` merged with 
+          when='+<name>'
+        cmake_args (list): list of extra args to pass to cmake when this variant
+          is enabled
+    """
+        if name in default_dict:
+                raise ValueError(
+                    '{} is already declared as a Kitsune variant'.format(name))
+        
+        default_dict[name] = {
+            'description' : description,
+            'project' : project,
+            'default' : default,
+            'values' : values,
+            'deps' : deps,
+            'cmake_args' : cmake_args,
+        }
+
+    def _kitsune_project(name, desc, **kwargs):
+        """Define a variant that corresponds to an LLVM project
+
+        Unless otherwise specified, this enables the variant (default=True), and
+        ensures that the variant name is added to the LLVM_ENABLE_PROJECTS CMake
+        variable
+        """
+
+        if 'default' not in kwargs:
+            _kitsune_variant(name, desc, project=True, default=True, **kwargs)
+        else:
+            _kitsune_variant(name, desc, project=True, **kwargs)
+    return _kitsune_variant, _kitsune_project
 
 
 class Kitsune(CMakePackage):
@@ -14,166 +72,199 @@ class Kitsune(CMakePackage):
 
     homepage = 'https://github.com/lanl/kitsune'
     url = 'https://github.com/lanl/kitsune/archive/kitsune-0.8.0.tar.gz'
-
-
     family = 'compiler'  # Used by lmod
+    git = 'https://github.com/lanl/kitsune.git'
+
+    version('0.8.0', tag='kitsune-0.8.0')
+    version('develop', branch='release/8.x')
 
 
+    # will hold all variants defined by kitsune_variant()
+    kitsune_variants={}
 
-    # each 'project' here is one that can be enabled in the LLVM_ENABLE_PROJECTS
-    # CMake var and has the effect of enabling projects defined in the top-level
-    # of the kitsune project. This does not necessarily imply they are part of
+    kitsune_variant, kitsune_project = build_variant_helpers(kitsune_variants)
+
+
+    kitsune_variant(
+        'shared_libs',
+        'Build all components as shared libraries, faster, less memory to build,\
+        less stable',
+        cmake_args=['-DBUILD_SHARED_LIBS:Bool=ON']
+    )
+
+    kitsune_variant(
+        'link_dylib',
+        'Build and link the libLLVM shared library rather than static',
+        cmake_args=['-DLLVM_LINK_LLVM_DYLIB:Bool=ON']
+    )
+
+    kitsune_variant(
+        'all_targets',
+        'Build all supported targets, default targets <current arch>,NVPTX,AMDGPU,CppBackend',
+        cmake_args=['-DBUILD_SHARED_LIBS:Bool=ON']
+        # NOTE: (probably?) Can't specify LLVM_TARGETS_TO_BUILD here because
+        # we need a handle on spec.architecure.target
+        # TODO: Test this
+    )
+
+    kitsune_variant(
+        'build_type',
+        'CMake build type',
+        default='Release',
+        values=('Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel')
+        # NOTE: The debug version of LLVM is an order of magnitude larger than
+        # the release version, and may take up 20-30 GB of space. If you want
+        # to save space, build with `build_type=Release`.
+    )
+
+    kitsune_variant(
+        'python',
+        'Install python bindings',
+        deps={'python':{}}
+    )
+
+    kitsune_variant(
+        'gold',
+        'Add support for LTO with the gold linker plugin',
+        default=True,
+        deps={'binutils+gold':{}}        
+    )
+
+ 
+    # Each project is one that can be enabled in the LLVM_ENABLE_PROJECTS CMake
+    # var and has the effect of including projects defined in the top-level of
+    # the Kitsune project. This does not necessarily imply they are part of
     # LLVM_ALL_PROJECTS (referenced with -DLLVM_ENABLE_PROJECTS=all) which has
     # been a moving target during the monorepo transition.
-    projects = {
-        "clang" : {
-            "default" : False,
-            "description" : "Build the LLVM C/C++/Objective-C compiler frontend",
-        },
-        "clang-extra-tools" : {
-            "default" : False,
-            "description" : "Build the LLVM C/C++/Objective-C compiler frontend",
-        },
-        "libcxx" : {
-            "default" : False,
-            "description" : "Build the LLVM C++ standard library",
-        },
-        "libcxxabi" : {
-            "default" : False,
-            "description" : "Build the LLVM C++ ABI library",
-        },
-        "libunwind" : {
-            "default" : False,
-            "description" : "Build the libcxxabi libunwind"
-        },
-        "lldb" : {
-            "default" : False,
-            "description" : "Build the LLVM debugger",
-        },
-        "compiler-rt" : {
-            "default" : False,
-            "description" : "Build LLVM compiler runtime, including sanitizers",
-        },
-        "lld" : {
-            "default" : False,
-            "description" : "Build the LLVM linker",
-        },
-        "polly" : {
-            "default" : False,
-            "description" : "Build the LLVM polyhedral optimization plugin",
-        },
-        "debuginfo-tests" : {
-            "default" : False,
-            "description" : "Build tests for checking debug info generated by clang",
-        },
+
+    kitsune_project(
+        'clang',
+        'Build the LLVM C/C++/Objective-C compiler frontend',
+    )
+
+    kitsune_project(
+        'clang-tools-extra',
+        'Build extra Clang-based tools (clangd, clang-tidy, etc.)',
+    )
+
+    kitsune_project(
+        'libcxx',
+        'Build the LLVM C++ standard library',
+        cmake_args=['-DCLANG_DEFAULT_CXX_STDLIB=libc++']
+    )
+
+    kitsune_project(
+        'libcxxabi',
+        'Build the LLVM C++ ABI library',
+    )
+
+    kitsune_project(
+        'libunwind',
+        'Build the libcxxabi libunwind',
+    )
+
+    kitsune_project(
+        'lldb',
+        'Build the LLVM debugger',
+        deps={'ncurses':{}, 'swig':{}, 'libedit':{}}
+    )
+
+    kitsune_project(
+        'compiler-rt',
+        'Build LLVM compiler runtime, including sanitizers',
+    )
+
+    kitsune_project(
+        'lld',
+        'Build the LLVM linker',
+    )
+
+    kitsune_project(
+        'polly',
+        'Build the LLVM polyhedral optimization plugin',
+        cmake_args=["-DLLVM_LINK_POLLY_INTO_TOOLS:Bool=ON"]
+    )
+
+    kitsune_project(
+        'debuginfo-tests',
+        'Build tests for checking debug info generated by clang'
+    )
+
+    kitsune_project(
+        'openmp',
+        'Build LLVM\'s libomp'
+    )
+
+
+
+    # Actually make the variant and dependency declarations here
+    for v_name, v_dict in kitsune_variants.items():
+        v_deps       = v_dict['deps']
+        v_vals       = v_dict['values']
+        v_desc       = v_dict['description']
+        v_default    = v_dict['default']
+
+        variant(v_name,
+                description = v_desc,
+                default     = v_default,
+                values      = v_vals)
+
+        for dep, args in v_deps.items():
+            # pop this out separately, because we may need to modify it
+            when_arg = args.pop('when','')
+
+            # When dealing with the dependency of a toggle-type variant
+            # (+variant, ~variant), `when='+variant'` is implicit, so we build
+            # it manually along with any other `when` spec in the dependency's
+            # dictionary
+            if v_default == True or v_default == False:
+                when_arg = '+{}{}'.format(v_name, when_arg)
+
+            # make the dependency declaration here, including anything else in
+            # the dictionary
+            depends_on(dep, when=when_arg, **args)
+
+
+    # mapping of Spack spec architecture to (lower-case) the corresponding LLVM
+    # target (as used in the CMake var LLVM_TARGETS_TO_BUILD)
+    target_arch_mapping = {
+        'x86'     : 'X86',
+        'arm'     : 'ARM',
+        'aarch64' : 'AArch64',
+        'sparc'   : 'Sparc',
+        'ppc'     : 'PowerPC',
+        'power'   : 'PowerPC',
     }
 
-    for pname, args in projects.items():
-        # NOTE: if the structure of the `projects` dict changes, the dict-splat
-        # (**) for kwargs may not be valid in the call to `variant` here
-        variant(pname, **args)
-
-
-    variant('shared_libs', default=False,
-            description="Build all components as shared libraries, faster, "
-            "less memory to build, less stable")
-    variant('link_dylib', default=False,
-            description="Build and link the libLLVM shared library rather "
-            "than static")
-    variant('all_targets', default=False,
-            description="Build all supported targets, default targets "
-            "<current arch>,NVPTX,AMDGPU,CppBackend")
-
-    # NOTE: The debug version of LLVM is an order of magnitude larger than
-    # the release version, and may take up 20-30 GB of space. If you want
-    # to save space, build with `build_type=Release`.
-    variant('build_type', default='Release',
-            description='CMake build type',
-            values=('Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'))
-    variant('python', default=False, description="Install python bindings")
+    # TODO: make this conflict with project variants so
+    #
+    # This variant roughly corresponds in intent to -DLLVM_ENABLE_PROJECTS=all,
+    # with the additional CMake variables each enabled project variant defines
+    # variant('default_projects',
+    #         default=True,
+    #         "Enable a reasonable default set of (i.e. most) LLVM subprojects")
+    
+    
     extends('python', when='+python')
 
-    # Build dependency
+    
+    # *** dependencies
+    
+    # NOTE: if libclc project is added, need to require 3.9.2+ here
     depends_on('cmake@3.4.3:', type='build')
+
+    # even if we're not installing python bindings, we still need python to build
     depends_on('python', when='~python', type='build')
 
-    # Universal dependency
-    depends_on('python', when='+python')
+    # openmp uses Data::Dumper in openmp/runtime/tools/lib/tools.pm
+    depends_on('perl-data-dumper', when="+openmp", type='build')
 
-    # openmp dependencies
-    depends_on('perl-data-dumper', type=('build'))
+    # We only need this when both lldb and python variants are specified, so
+    # this dependency must be specified manually (rather than as a 'deps' fields
+    # of the variants dict)
+    depends_on('py-six', when='+lldb +python')
 
-    # lldb dependencies
-    depends_on('ncurses', when='+lldb')
-    depends_on('swig', when='+lldb')
-    depends_on('libedit', when='+lldb')
-    depends_on('py-six', when='@5.0.0: +lldb +python')
-
-    # gold support
-    depends_on('binutils+gold', when='+gold')
-
-    # polly plugin
-    depends_on('gmp', when='@:3.6.999 +polly')
-    depends_on('isl', when='@:3.6.999 +polly')
-
-    repo_url = 'https://github.com/lanl/kitsune.git'
-
-    version(0.8.0)
-    version('develop', git=repo_url, branch='release/8.x')
-
-
-    for release in releases:
-        if release['version'] == 'develop':
-            version(release['version'], svn=release['repo'])
-
-            for rname, repo in release['resources'].items():
-                resource(name=rname,
-                         svn=repo,
-                         destination=resources[rname]['destination'],
-                         when='@%s%s' % (release['version'],
-                                         resources[rname].get('variant', "")),
-                         placement=resources[rname].get('placement', None))
-        else:
-            version(release['version'], release['md5'], url=llvm_url % release)
-
-            for rname, md5 in release['resources'].items():
-                resource(name=rname,
-                         url=resources[rname]['url'] % release,
-                         md5=md5,
-                         destination=resources[rname]['destination'],
-                         when='@%s%s' % (release['version'],
-                                         resources[rname].get('variant', "")),
-                         placement=resources[rname].get('placement', None))
-
-    for release in flang_releases:
-        if release['version'] == 'develop':
-            version('flang-' + release['version'], git=flang_llvm_url, branch=release['branch'])
-
-            for rname, branch in release['resources'].items():
-                flang_resource = flang_resources[rname]
-                resource(name=rname,
-                         git=flang_resource['git'],
-                         branch=branch,
-                         destination=flang_resource['destination'],
-                         placement=flang_resource['placement'],
-                         when='@flang-' + release['version'])
-
-        else:
-            version('flang-' + release['version'], git=flang_llvm_url, commit=release['commit'])
-
-            for rname, commit in release['resources'].items():
-                flang_resource = flang_resources[rname]
-                resource(name=rname,
-                         git=flang_resource['git'],
-                         commit=commit,
-                         destination=flang_resource['destination'],
-                         placement=flang_resource['placement'],
-                         when='@flang-' + release['version'])
-
-
-
-    conflicts('+clang_extra', when='~clang')
-    conflicts('+lldb',        when='~clang')
+    # conflicts('+lldb',        when='~clang')
 
     @run_before('cmake')
     def check_darwin_lldb_codesign_requirement(self):
@@ -232,69 +323,63 @@ class Kitsune(CMakePackage):
         ]
 
         # TODO: Instead of unconditionally disabling CUDA, add a "cuda" variant
-        #       (see TODO above), and set the paths if enabled.
+        #       (see TODO in llvm spack package), and set the paths if enabled.
         cmake_args.extend([
             '-DCUDA_TOOLKIT_ROOT_DIR:PATH=IGNORE',
             '-DCUDA_SDK_ROOT_DIR:PATH=IGNORE',
             '-DCUDA_NVCC_EXECUTABLE:FILEPATH=IGNORE',
             '-DLIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES:STRING=IGNORE'])
 
+        enable_projects=[]
+        for vrnt_name, vrnt_descr in variants.items():
+            variant_on = '+{}'.format(vrnt_name) in spec
+            variant_off = '~{}'.format(vrnt_name) in spec
+            is_project = vrnt_descr.get('project')
+
+            if variant_on:
+                cmake_args.extend(vrnt_descr.get('cmake_args'))
+                
+                if is_project:
+                    # We have to enable each sub-project one by one, even if all
+                    # are enabled, since the 'all' alias for
+                    # LLVM_ENABLE_PROJECTS isn't reliable
+                    enabled_projects.append(vrnt_name)
+                    if '+all_projects' in spec:
+                        tty.warn('+{} is redudant with +all_projects'.format(vrnt_name))
+                        
+        
+        cmake_args.append(
+            '-DLLVM_ENABLE_PROJECTS={}'.format(';'.join(enabled_projects)))
+    
+        
+        # I'm pretty sure this has to be computed here, rather than in the
+        # variants declaration, since it depends on the binutils dependency spec
         if '+gold' in spec:
             cmake_args.append('-DLLVM_BINUTILS_INCDIR=' +
                               spec['binutils'].prefix.include)
-        if '+polly' in spec:
-            cmake_args.append('-DLINK_POLLY_INTO_TOOLS:Bool=ON')
-        else:
-            cmake_args.extend(['-DLLVM_EXTERNAL_POLLY_BUILD:Bool=OFF',
-                               '-DLLVM_TOOL_POLLY_BUILD:Bool=OFF',
-                               '-DLLVM_POLLY_BUILD:Bool=OFF',
-                               '-DLLVM_POLLY_LINK_INTO_TOOLS:Bool=OFF'])
 
-        if '+python' in spec and '+lldb' in spec and spec.satisfies('@5.0.0:'):
+        # since this depends on two variants, it also cannot be expressed in the
+        # variant dict
+        if '+python' in spec and '+lldb' in spec:
             cmake_args.append('-DLLDB_USE_SYSTEM_SIX:Bool=TRUE')
-        if '+clang' not in spec:
-            cmake_args.append('-DLLVM_EXTERNAL_CLANG_BUILD:Bool=OFF')
-        if '+lldb' not in spec:
-            cmake_args.extend(['-DLLVM_EXTERNAL_LLDB_BUILD:Bool=OFF',
-                               '-DLLVM_TOOL_LLDB_BUILD:Bool=OFF'])
-        if '+lld' not in spec:
-            cmake_args.append('-DLLVM_TOOL_LLD_BUILD:Bool=OFF')
-        if '+internal_unwind' not in spec:
-            cmake_args.append('-DLLVM_EXTERNAL_LIBUNWIND_BUILD:Bool=OFF')
-        if '+libcxx' in spec:
-            cmake_args.append('-DCLANG_DEFAULT_CXX_STDLIB=libc++')
-        else:
-            cmake_args.append('-DLLVM_EXTERNAL_LIBCXX_BUILD:Bool=OFF')
-            cmake_args.append('-DLLVM_EXTERNAL_LIBCXXABI_BUILD:Bool=OFF')
-        if '+compiler-rt' not in spec:
-            cmake_args.append('-DLLVM_EXTERNAL_COMPILER_RT_BUILD:Bool=OFF')
 
-        if '+shared_libs' in spec:
-            cmake_args.append('-DBUILD_SHARED_LIBS:Bool=ON')
-
-        if '+link_dylib' in spec:
-            cmake_args.append('-DLLVM_LINK_LLVM_DYLIB:Bool=ON')
 
         if '+all_targets' not in spec:  # all is default on cmake
 
             targets = ['NVPTX', 'AMDGPU']
-
-            if 'x86' in spec.architecture.target.lower():
-                targets.append('X86')
-            elif 'arm' in spec.architecture.target.lower():
-                targets.append('ARM')
-            elif 'aarch64' in spec.architecture.target.lower():
-                targets.append('AArch64')
-            elif 'sparc' in spec.architecture.target.lower():
-                targets.append('Sparc')
-            elif ('ppc' in spec.architecture.target.lower() or
-                  'power' in spec.architecture.target.lower()):
-                targets.append('PowerPC')
+            this_arch = spec.architecture.target
+            this_target = target_arch_mapping.get(this_arch.lower())
+            if this_target:
+                targets.append(this_target)
+            else:
+                tty.warn("Target {} not identified as supported by LLVM".format(this_arch))
 
             cmake_args.append(
                 '-DLLVM_TARGETS_TO_BUILD:STRING=' + ';'.join(targets))
 
-        if spec.satisfies('@4.0.0:') and spec.satisfies('platform=linux'):
+        if spec.satisfies('platform=linux'):
+            # set the RPATH to the install path at build time (rather than
+            # relinking at install time)
             cmake_args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH=1')
         return cmake_args
 
@@ -303,9 +388,7 @@ class Kitsune(CMakePackage):
         with working_dir(self.build_directory):
             # When building shared libraries these need to be installed first
             make('install-LLVMTableGen')
-            if self.spec.version >= Version('4.0.0'):
-                # LLVMDemangle target was added in 4.0.0
-                make('install-LLVMDemangle')
+            make('install-LLVMDemangle')
             make('install-LLVMSupport')
 
     @run_after('install')
