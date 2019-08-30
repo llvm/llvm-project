@@ -231,7 +231,7 @@ void TypeServerSource::enqueue(const ObjFile *dependentFile,
   if (!it.second)
     return; // another OBJ already scheduled this PDB for load
 
-  driver->enqueuePath(*p, false);
+  driver->enqueuePath(*p, false, false);
 }
 
 // Create an instance of TypeServerSource or an error string if the PDB couldn't

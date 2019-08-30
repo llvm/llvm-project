@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 # RUN: yaml2obj < %s > %t.o
 
 # Test that we get both the resource and the code from a single object

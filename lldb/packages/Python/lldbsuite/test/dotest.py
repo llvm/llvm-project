@@ -243,7 +243,7 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
 
     # Only print the args if being verbose.
-    if args.v and not args.q:
+    if args.v:
         print(get_dotest_invocation())
 
     if args.h:
